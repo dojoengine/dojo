@@ -49,7 +49,7 @@ enum Command {
 
 impl RelayClient {
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn new(relay_addr: String) -> Result<Self, Error> {
+    pub fn new(relay_addr: String, replica: bool) -> Result<Self, Error> {
         let local_key = identity::Keypair::generate_ed25519();
         let peer_id = PeerId::from(local_key.public());
 
@@ -87,6 +87,10 @@ impl RelayClient {
             })
             .build();
 
+        if replica {
+            swarm.behaviour_mut().gossipsub.subscribe(&IdentTopic::new(constants::UPDATE_MESSAGING_TOPIC))?;
+        }
+
         info!(target: LOG_TARGET, addr = %relay_addr, "Dialing relay.");
         swarm.dial(relay_addr.parse::<Multiaddr>()?)?;
 
@@ -98,7 +102,8 @@ impl RelayClient {
     }
 
     #[cfg(target_arch = "wasm32")]
-    pub fn new(relay_addr: String) -> Result<Self, Error> {
+    // We are never gonna be a replica in the browser.
+    pub fn new(relay_addr: String, _replica: bool) -> Result<Self, Error> {
         let local_key = identity::Keypair::generate_ed25519();
         let peer_id = PeerId::from(local_key.public());
 
