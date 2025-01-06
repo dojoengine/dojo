@@ -65,21 +65,9 @@ impl EventsArgs {
 
             let provider = Arc::new(provider);
 
-            // Define a maximum block range (e.g., 50,000 blocks)
-            const MAX_BLOCK_RANGE: u64 = 50_000;
+            let from_block = self.from_block.map(BlockId::Number);
 
-            // Adjust the starting block range dynamically
-            let from_block = if let Some(start_block) = self.from_block {
-                let current_block = self.get_current_block(); // Replace with actual logic to get the current block number
-                if current_block > start_block + MAX_BLOCK_RANGE {
-                    // Ensure the range does not exceed the maximum limit
-                    Some(BlockId::Number(start_block + MAX_BLOCK_RANGE))
-                } else {
-                    Some(BlockId::Number(start_block))
-                }
-            } else {
-                None
-            };
+
             let to_block = self.to_block.map(BlockId::Number);
             let keys = self.events.map(|e|
                 vec![
