@@ -10,7 +10,6 @@ use katana_primitives::chain::ChainId;
 use katana_primitives::class::ClassHash;
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::da::L1DataAvailabilityMode;
-use katana_primitives::eth::{self, Address as EthAddress};
 use katana_primitives::genesis::allocation::{DevAllocationsGenerator, GenesisAllocation};
 use katana_primitives::genesis::constant::{
     get_fee_token_balance_base_storage_address, DEFAULT_ACCOUNT_CLASS_PUBKEY_STORAGE_SLOT,
@@ -24,7 +23,7 @@ use katana_primitives::genesis::Genesis;
 use katana_primitives::state::StateUpdatesWithClasses;
 use katana_primitives::utils::split_u256;
 use katana_primitives::version::{ProtocolVersion, CURRENT_STARKNET_VERSION};
-use katana_primitives::Felt;
+use katana_primitives::{eth, Felt};
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use starknet::core::utils::cairo_short_string_to_felt;
@@ -63,7 +62,7 @@ pub struct FeeContracts {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(tag = "type", rename_all = "camelCase")]
 pub enum SettlementLayer {
     Ethereum {
         // The id of the settlement chain.
@@ -72,11 +71,11 @@ pub enum SettlementLayer {
         // url for ethereum rpc provider
         rpc_url: Url,
 
-        account: EthAddress,
+        /// account on the ethereum network
+        account: eth::Address,
 
         // - The core appchain contract used to settlement
-        // - This is deployed on the L1
-        core_contract: EthAddress,
+        core_contract: eth::Address,
     },
 
     Starknet {
@@ -86,11 +85,10 @@ pub enum SettlementLayer {
         // url for starknet rpc provider
         rpc_url: Url,
 
-        // the account address that was used to initialized the l1 deployments
+        /// account on the starknet network
         account: ContractAddress,
 
         // - The core appchain contract used to settlement
-        // - This is deployed on the L1
         core_contract: ContractAddress,
     },
 }
