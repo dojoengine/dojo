@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1735941642602,
+  "lastUpdate": 1736132627237,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -42895,6 +42895,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8254178,
             "range": "± 335885",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d9e93c441859dbffd07522554936ab74e4f87587",
+          "message": "fix(torii-core): remove old check for StoreUpdateMember processor (#2858)\n\n* fix: remove old check for StoreUpdateMember processor\r\n\r\n* fix: update StoreUpdateMember processor to latest db schema\r\n\r\n* feat: add spawn and move function to update member\r\n\r\n* check keys\r\n\r\n* remove does not exist check\r\n\r\n* add validate to update record\r\n\r\n* remove validates since not needed\r\n\r\n* add update test\r\n\r\n* clippy\r\n\r\n* tests: update tests database and policies\r\n\r\n---------\r\n\r\nCo-authored-by: Nasr <larko236@outlook.com>",
+          "timestamp": "2025-01-05T20:47:23-06:00",
+          "tree_id": "87ccd0d472d3dee0b6a6eb4cc3ef23988c82abba",
+          "url": "https://github.com/dojoengine/dojo/commit/d9e93c441859dbffd07522554936ab74e4f87587"
+        },
+        "date": 1736132625153,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10469555215,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
