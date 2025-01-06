@@ -17,4 +17,4 @@ starknet.workspace = true
 url.workspace = true
 
 [features]
-controller = [  ]
+controller = [ "katana-primitives/controller" ]
