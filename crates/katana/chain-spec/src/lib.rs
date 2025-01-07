@@ -10,21 +10,21 @@ use katana_primitives::chain::ChainId;
 use katana_primitives::class::ClassHash;
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::da::L1DataAvailabilityMode;
-use katana_primitives::genesis::Genesis;
 use katana_primitives::genesis::allocation::{DevAllocationsGenerator, GenesisAllocation};
 use katana_primitives::genesis::constant::{
-    DEFAULT_ACCOUNT_CLASS_PUBKEY_STORAGE_SLOT, DEFAULT_ETH_FEE_TOKEN_ADDRESS,
-    DEFAULT_LEGACY_ERC20_CLASS, DEFAULT_LEGACY_ERC20_CLASS_HASH, DEFAULT_LEGACY_UDC_CLASS,
-    DEFAULT_LEGACY_UDC_CLASS_HASH, DEFAULT_LEGACY_UDC_COMPILED_CLASS_HASH,
-    DEFAULT_PREFUNDED_ACCOUNT_BALANCE, DEFAULT_STRK_FEE_TOKEN_ADDRESS, DEFAULT_UDC_ADDRESS,
-    ERC20_DECIMAL_STORAGE_SLOT, ERC20_NAME_STORAGE_SLOT, ERC20_SYMBOL_STORAGE_SLOT,
-    ERC20_TOTAL_SUPPLY_STORAGE_SLOT, get_fee_token_balance_base_storage_address,
+    get_fee_token_balance_base_storage_address, DEFAULT_ACCOUNT_CLASS_PUBKEY_STORAGE_SLOT,
+    DEFAULT_ETH_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CLASS, DEFAULT_LEGACY_ERC20_CLASS_HASH,
+    DEFAULT_LEGACY_UDC_CLASS, DEFAULT_LEGACY_UDC_CLASS_HASH,
+    DEFAULT_LEGACY_UDC_COMPILED_CLASS_HASH, DEFAULT_PREFUNDED_ACCOUNT_BALANCE,
+    DEFAULT_STRK_FEE_TOKEN_ADDRESS, DEFAULT_UDC_ADDRESS, ERC20_DECIMAL_STORAGE_SLOT,
+    ERC20_NAME_STORAGE_SLOT, ERC20_SYMBOL_STORAGE_SLOT, ERC20_TOTAL_SUPPLY_STORAGE_SLOT,
 };
 use katana_primitives::genesis::json::GenesisJson;
+use katana_primitives::genesis::Genesis;
 use katana_primitives::state::StateUpdatesWithClasses;
 use katana_primitives::utils::split_u256;
-use katana_primitives::version::{CURRENT_STARKNET_VERSION, ProtocolVersion};
-use katana_primitives::{Felt, eth};
+use katana_primitives::version::{ProtocolVersion, CURRENT_STARKNET_VERSION};
+use katana_primitives::{eth, Felt};
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use starknet::core::utils::cairo_short_string_to_felt;
@@ -360,7 +360,6 @@ mod tests {
     use katana_primitives::address;
     use katana_primitives::block::{Block, GasPrices, Header};
     use katana_primitives::da::L1DataAvailabilityMode;
-    use katana_primitives::genesis::GenesisClass;
     use katana_primitives::genesis::allocation::{
         GenesisAccount, GenesisAccountAlloc, GenesisContractAlloc,
     };
@@ -372,6 +371,7 @@ mod tests {
         DEFAULT_LEGACY_ERC20_CLASS, DEFAULT_LEGACY_ERC20_COMPILED_CLASS_HASH,
         DEFAULT_LEGACY_UDC_CLASS, DEFAULT_LEGACY_UDC_COMPILED_CLASS_HASH,
     };
+    use katana_primitives::genesis::GenesisClass;
     use katana_primitives::version::CURRENT_STARKNET_VERSION;
     use starknet::macros::felt;
 
@@ -396,23 +396,35 @@ mod tests {
         // setup initial states to test
 
         let classes = BTreeMap::from([
-            (DEFAULT_LEGACY_UDC_CLASS_HASH, GenesisClass {
-                class: DEFAULT_LEGACY_UDC_CLASS.clone().into(),
-                compiled_class_hash: DEFAULT_LEGACY_UDC_COMPILED_CLASS_HASH,
-            }),
-            (DEFAULT_LEGACY_ERC20_CLASS_HASH, GenesisClass {
-                class: DEFAULT_LEGACY_ERC20_CLASS.clone().into(),
-                compiled_class_hash: DEFAULT_LEGACY_ERC20_COMPILED_CLASS_HASH,
-            }),
-            (DEFAULT_ACCOUNT_CLASS_HASH, GenesisClass {
-                compiled_class_hash: DEFAULT_ACCOUNT_COMPILED_CLASS_HASH,
-                class: DEFAULT_ACCOUNT_CLASS.clone().into(),
-            }),
+            (
+                DEFAULT_LEGACY_UDC_CLASS_HASH,
+                GenesisClass {
+                    class: DEFAULT_LEGACY_UDC_CLASS.clone().into(),
+                    compiled_class_hash: DEFAULT_LEGACY_UDC_COMPILED_CLASS_HASH,
+                },
+            ),
+            (
+                DEFAULT_LEGACY_ERC20_CLASS_HASH,
+                GenesisClass {
+                    class: DEFAULT_LEGACY_ERC20_CLASS.clone().into(),
+                    compiled_class_hash: DEFAULT_LEGACY_ERC20_COMPILED_CLASS_HASH,
+                },
+            ),
+            (
+                DEFAULT_ACCOUNT_CLASS_HASH,
+                GenesisClass {
+                    compiled_class_hash: DEFAULT_ACCOUNT_COMPILED_CLASS_HASH,
+                    class: DEFAULT_ACCOUNT_CLASS.clone().into(),
+                },
+            ),
             #[cfg(feature = "controller")]
-            (CONTROLLER_CLASS_HASH, GenesisClass {
-                compiled_class_hash: CONTROLLER_CLASS_HASH,
-                class: CONTROLLER_ACCOUNT_CLASS.clone().into(),
-            }),
+            (
+                CONTROLLER_CLASS_HASH,
+                GenesisClass {
+                    compiled_class_hash: CONTROLLER_CLASS_HASH,
+                    class: CONTROLLER_ACCOUNT_CLASS.clone().into(),
+                },
+            ),
         ]);
 
         let allocations = [
