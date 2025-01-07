@@ -388,7 +388,7 @@ fn to_db_key(key: &DatabaseKey<'_>) -> models::trie::TrieDatabaseKey {
 
 #[cfg(test)]
 mod tests {
-    use katana_primitives::hash::{Pedersen, StarkHash};
+    use katana_primitives::hash::{Pedersen, Poseidon, StarkHash};
     use katana_primitives::{felt, hash};
     use katana_trie::{verify_proof, ClassesTrie, CommitId};
     use starknet::macros::short_string;
@@ -447,7 +447,7 @@ mod tests {
 
             let proofs0 = snapshot0.multiproof(vec![felt!("0x9999")]);
             let verify_result0 =
-                verify_proof::<Pedersen>(&proofs0, snapshot_root0, vec![felt!("0x9999")]);
+                verify_proof::<Poseidon>(&proofs0, snapshot_root0, vec![felt!("0x9999")]);
 
             let value =
                 hash::Poseidon::hash(&short_string!("CONTRACT_CLASS_LEAF_V0"), &felt!("0xdead"));
@@ -464,7 +464,7 @@ mod tests {
 
             let proofs1 = snapshot1.multiproof(vec![felt!("0x6969")]);
             let verify_result1 =
-                verify_proof::<Pedersen>(&proofs1, snapshot_root1, vec![felt!("0x6969")]);
+                verify_proof::<Poseidon>(&proofs1, snapshot_root1, vec![felt!("0x6969")]);
 
             let value =
                 hash::Poseidon::hash(&short_string!("CONTRACT_CLASS_LEAF_V0"), &felt!("0x80085"));
@@ -475,7 +475,7 @@ mod tests {
             let root = trie.root();
             let proofs = trie.multiproof(vec![felt!("0x6969"), felt!("0x9999")]);
             let result =
-                verify_proof::<Pedersen>(&proofs, root, vec![felt!("0x6969"), felt!("0x9999")]);
+                verify_proof::<Poseidon>(&proofs, root, vec![felt!("0x6969"), felt!("0x9999")]);
 
             let value0 =
                 hash::Poseidon::hash(&short_string!("CONTRACT_CLASS_LEAF_V0"), &felt!("0x80085"));
