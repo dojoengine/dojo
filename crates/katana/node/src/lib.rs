@@ -18,7 +18,7 @@ use dojo_metrics::{Report, Server as MetricsServer};
 use hyper::Method;
 use jsonrpsee::RpcModule;
 use katana_chain_spec::SettlementLayer;
-use katana_core::backend::gas_oracle::L1GasOracle;
+use katana_core::backend::gas_oracle::GasOracle;
 use katana_core::backend::storage::Blockchain;
 use katana_core::backend::Backend;
 use katana_core::constants::{
@@ -202,20 +202,17 @@ pub async fn build(mut config: Config) -> Result<Node> {
     // Check if the user specify a fixed gas price in the dev config.
     let gas_oracle = if let Some(fixed_prices) = &config.dev.fixed_gas_prices {
         // Use fixed gas prices if provided in the configuration
-        L1GasOracle::fixed(fixed_prices.gas_price.clone(), fixed_prices.data_gas_price.clone())
+        GasOracle::fixed(fixed_prices.gas_price.clone(), fixed_prices.data_gas_price.clone())
     } else if let Some(settlement) = &config.chain.settlement {
         match settlement {
+            SettlementLayer::Starknet { .. } => GasOracle::sampled_starknet(),
             SettlementLayer::Ethereum { rpc_url, .. } => {
-                // Default to a sampled gas oracle using the given provider
-                L1GasOracle::sampled(rpc_url.clone())
-            }
-            SettlementLayer::Starknet { .. } => {
-                todo!("starknet gas oracle")
+                GasOracle::sampled_ethereum(rpc_url.clone())
             }
         }
     } else {
         // Use default fixed gas prices if no url and if no fixed prices are provided
-        L1GasOracle::fixed(
+        GasOracle::fixed(
             GasPrices { eth: DEFAULT_ETH_L1_GAS_PRICE, strk: DEFAULT_STRK_L1_GAS_PRICE },
             GasPrices { eth: DEFAULT_ETH_L1_DATA_GAS_PRICE, strk: DEFAULT_STRK_L1_DATA_GAS_PRICE },
         )

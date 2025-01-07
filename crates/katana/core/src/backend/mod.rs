@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use gas_oracle::L1GasOracle;
+use gas_oracle::GasOracle;
 use katana_chain_spec::ChainSpec;
 use katana_executor::{ExecutionOutput, ExecutionResult, ExecutorFactory};
 use katana_primitives::block::{
@@ -42,7 +42,7 @@ pub struct Backend<EF: ExecutorFactory> {
 
     pub executor_factory: Arc<EF>,
 
-    pub gas_oracle: L1GasOracle,
+    pub gas_oracle: GasOracle,
 }
 
 impl<EF: ExecutorFactory> Backend<EF> {
