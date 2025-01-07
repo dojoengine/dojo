@@ -13,13 +13,11 @@ use std::sync::Arc;
 use alloy_primitives::U256;
 use base64::prelude::*;
 use katana_cairo::cairo_vm::types::errors::program_errors::ProgramError;
-use katana_cairo::lang::starknet_classes::casm_contract_class::StarknetSierraCompilationError;
 use serde::de::value::MapAccessDeserializer;
 use serde::de::Visitor;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
-use starknet::core::types::contract::legacy::LegacyContractClass;
-use starknet::core::types::contract::{ComputeClassHashError, JsonError};
+use starknet::core::types::contract::JsonError;
 
 use super::allocation::{
     DevGenesisAccount, GenesisAccount, GenesisAccountAlloc, GenesisContractAlloc,
@@ -31,10 +29,12 @@ use super::constant::{
 };
 use super::{Genesis, GenesisAllocation};
 use crate::block::{BlockHash, BlockNumber, GasPrices};
-use crate::class::{ClassHash, ContractClass, SierraContractClass};
+use crate::class::{
+    ClassHash, ComputeClassHashError, ContractClass, ContractClassCompilationError,
+    LegacyContractClass, SierraContractClass,
+};
 use crate::contract::{ContractAddress, StorageKey, StorageValue};
 use crate::genesis::GenesisClass;
-use crate::utils::class::{parse_compiled_class_v1, parse_deprecated_compiled_class};
 use crate::Felt;
 
 type Object = Map<String, Value>;
@@ -176,9 +176,6 @@ pub enum GenesisJsonError {
     ComputeClassHash(#[from] ComputeClassHashError),
 
     #[error(transparent)]
-    SierraCompilation(#[from] StarknetSierraCompilationError),
-
-    #[error(transparent)]
     ProgramError(#[from] ProgramError),
 
     #[error("Missing class entry for class hash {0}")]
@@ -201,6 +198,9 @@ pub enum GenesisJsonError {
 
     #[error("Class name '{0}' not found in the genesis classes")]
     UnknownClassName(String),
+
+    #[error(transparent)]
+    ContractClassCompilation(#[from] ContractClassCompilationError),
 
     #[error(transparent)]
     Other(#[from] anyhow::Error),
@@ -309,36 +309,28 @@ impl TryFrom<GenesisJson> for Genesis {
                 }
             };
 
-            let sierra = serde_json::from_value::<SierraContractClass>(artifact.clone());
+            let (class_hash, compiled_class_hash, class) =
+                match serde_json::from_value::<SierraContractClass>(artifact.clone()) {
+                    Ok(class) => {
+                        let class = ContractClass::Class(class);
+                        let class_hash =
+                            if let Some(hash) = class_hash { hash } else { class.class_hash()? };
+                        let compiled_hash = class.clone().compile()?.class_hash()?;
 
-            let (class_hash, compiled_class_hash, class) = match sierra {
-                Ok(sierra) => {
-                    let casm = parse_compiled_class_v1(artifact)?;
+                        (class_hash, compiled_hash, Arc::new(class))
+                    }
 
-                    // check if the class hash is provided, otherwise compute it from the
-                    // artifacts
-                    let class = ContractClass::Class(sierra);
-                    let class_hash = class_hash
-                        .unwrap_or_else(|| class.class_hash().expect("failed to compute hash"));
-                    let compiled_hash = casm.compiled_class_hash();
+                    // if the artifact is not a sierra contract, we check if it's a legacy contract
+                    Err(_) => {
+                        let class = serde_json::from_value::<LegacyContractClass>(artifact)?;
 
-                    (class_hash, compiled_hash, Arc::new(class))
-                }
+                        let class = ContractClass::Legacy(class);
+                        let class_hash =
+                            if let Some(hash) = class_hash { hash } else { class.class_hash()? };
 
-                // if the artifact is not a sierra contract, we check if it's a legacy contract
-                Err(_) => {
-                    let casm = parse_deprecated_compiled_class(artifact.clone())?;
-
-                    let class_hash = if let Some(class_hash) = class_hash {
-                        class_hash
-                    } else {
-                        let casm: LegacyContractClass = serde_json::from_value(artifact.clone())?;
-                        casm.class_hash()?
-                    };
-
-                    (class_hash, class_hash, Arc::new(ContractClass::Legacy(casm)))
-                }
-            };
+                        (class_hash, class_hash, Arc::new(class))
+                    }
+                };
 
             // if the class has a name, we add it to the lookup table to use later when we're
             // parsing the contracts
