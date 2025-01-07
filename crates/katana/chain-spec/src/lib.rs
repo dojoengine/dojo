@@ -22,7 +22,7 @@ use katana_primitives::genesis::json::GenesisJson;
 use katana_primitives::genesis::Genesis;
 use katana_primitives::state::StateUpdatesWithClasses;
 use katana_primitives::utils::split_u256;
-use katana_primitives::version::{ProtocolVersion, CURRENT_STARKNET_VERSION};
+use katana_primitives::version::CURRENT_STARKNET_VERSION;
 use katana_primitives::{eth, Felt};
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
@@ -41,9 +41,6 @@ pub struct ChainSpec {
 
     /// The chain fee token contract.
     pub fee_contracts: FeeContracts,
-
-    // TODO: Maybe remove? Doesn't seem like this should belong here.
-    pub version: ProtocolVersion,
 
     /// The chain's settlement layer configurations.
     ///
@@ -111,13 +108,7 @@ impl ChainSpec {
         let genesis_json: GenesisJson = serde_json::from_reader(BufReader::new(file))?;
         let genesis = Genesis::try_from(genesis_json)?;
 
-        Ok(Self {
-            genesis,
-            id: cs.id,
-            version: cs.version,
-            settlement: cs.settlement,
-            fee_contracts: cs.fee_contracts,
-        })
+        Ok(Self { genesis, id: cs.id, settlement: cs.settlement, fee_contracts: cs.fee_contracts })
     }
 
     pub fn store<P: AsRef<Path>>(self, path: P) -> anyhow::Result<()> {
@@ -127,7 +118,6 @@ impl ChainSpec {
 
         let stored = ChainSpecFile {
             id: self.id,
-            version: self.version,
             genesis: genesis_path,
             settlement: self.settlement,
             fee_contracts: self.fee_contracts,
@@ -145,7 +135,7 @@ impl ChainSpec {
     pub fn block(&self) -> Block {
         let header = Header {
             state_diff_length: 0,
-            protocol_version: self.version.clone(),
+            protocol_version: CURRENT_STARKNET_VERSION,
             number: self.genesis.number,
             timestamp: self.genesis.timestamp,
             events_count: 0,
@@ -218,7 +208,6 @@ impl Default for ChainSpec {
 struct ChainSpecFile {
     id: ChainId,
     fee_contracts: FeeContracts,
-    version: ProtocolVersion,
     #[serde(skip_serializing_if = "Option::is_none")]
     settlement: Option<SettlementLayer>,
     genesis: PathBuf,
@@ -250,7 +239,6 @@ lazy_static! {
             genesis,
             fee_contracts,
             settlement: None,
-            version: CURRENT_STARKNET_VERSION,
         }
     };
 }
@@ -468,7 +456,6 @@ mod tests {
         ];
         let chain_spec = ChainSpec {
             id: ChainId::SEPOLIA,
-            version: CURRENT_STARKNET_VERSION,
             genesis: Genesis {
                 classes,
                 allocations: BTreeMap::from(allocations.clone()),
