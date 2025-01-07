@@ -9,7 +9,6 @@ use katana_primitives::block::{
 use katana_primitives::da::L1DataAvailabilityMode;
 use katana_primitives::hash::{self, StarkHash};
 use katana_primitives::state::StateUpdatesWithClasses;
-use katana_primitives::version::ProtocolVersion;
 use katana_provider::providers::db::DbProvider;
 use katana_provider::providers::fork::ForkedProvider;
 use katana_provider::traits::block::{BlockProvider, BlockWriter};
@@ -160,7 +159,6 @@ impl Blockchain {
         let block_num = forked_block.block_number;
 
         chain.id = chain_id.into();
-        chain.version = ProtocolVersion::parse(&forked_block.starknet_version)?;
 
         // adjust the genesis to match the forked block
         chain.genesis.timestamp = forked_block.timestamp;
