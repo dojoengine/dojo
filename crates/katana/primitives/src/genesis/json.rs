@@ -807,8 +807,13 @@ mod tests {
             (
                 CONTROLLER_CLASS_HASH,
                 GenesisClass {
-                    compiled_class_hash: CONTROLLER_CLASS_HASH,
                     class: CONTROLLER_ACCOUNT_CLASS.clone().into(),
+                    compiled_class_hash: CONTROLLER_ACCOUNT_CLASS
+                        .clone()
+                        .compile()
+                        .unwrap()
+                        .class_hash()
+                        .unwrap(),
                 },
             ),
         ]);
@@ -998,7 +1003,12 @@ mod tests {
                 CONTROLLER_CLASS_HASH,
                 GenesisClass {
                     class: CONTROLLER_ACCOUNT_CLASS.clone().into(),
-                    compiled_class_hash: CONTROLLER_CLASS_HASH,
+                    compiled_class_hash: CONTROLLER_ACCOUNT_CLASS
+                        .clone()
+                        .compile()
+                        .unwrap()
+                        .class_hash()
+                        .unwrap(),
                 },
             ),
         ]);
