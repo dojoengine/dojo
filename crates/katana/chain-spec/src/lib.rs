@@ -19,6 +19,7 @@ use katana_primitives::genesis::constant::{
     DEFAULT_STRK_FEE_TOKEN_ADDRESS, DEFAULT_UDC_ADDRESS, ERC20_DECIMAL_STORAGE_SLOT,
     ERC20_NAME_STORAGE_SLOT, ERC20_SYMBOL_STORAGE_SLOT, ERC20_TOTAL_SUPPLY_STORAGE_SLOT,
 };
+use katana_primitives::genesis::json::GenesisJson;
 use katana_primitives::genesis::Genesis;
 use katana_primitives::state::StateUpdatesWithClasses;
 use katana_primitives::utils::split_u256;
@@ -31,6 +32,7 @@ use url::Url;
 
 /// The rollup chain specification.
 #[derive(Debug, Clone)]
+#[cfg_attr(test, derive(PartialEq))]
 pub struct ChainSpec {
     /// The rollup network chain id.
     pub id: ChainId,
@@ -54,6 +56,7 @@ pub struct ChainSpec {
 /// supported on Starknet.
 // TODO: include both l1 and l2 addresses
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(test, derive(PartialEq))]
 pub struct FeeContracts {
     /// L2 ETH fee token address. Used for paying pre-V3 transactions.
     pub eth: ContractAddress,
@@ -62,6 +65,7 @@ pub struct FeeContracts {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(test, derive(PartialEq))]
 #[serde(tag = "type", rename_all = "camelCase")]
 pub enum SettlementLayer {
     Ethereum {
@@ -103,7 +107,10 @@ impl ChainSpec {
         let cs = serde_json::from_str::<ChainSpecFile>(&content)?;
 
         let file = File::open(&cs.genesis).context("failed to open genesis file")?;
-        let genesis: Genesis = serde_json::from_reader(BufReader::new(file))?;
+
+        // the genesis file is stored as its JSON representation
+        let genesis_json: GenesisJson = serde_json::from_reader(BufReader::new(file))?;
+        let genesis = Genesis::try_from(genesis_json)?;
 
         Ok(Self {
             genesis,
@@ -127,8 +134,11 @@ impl ChainSpec {
             fee_contracts: self.fee_contracts,
         };
 
+        // convert the genesis to its JSON representation and store it
+        let genesis_json = GenesisJson::try_from(self.genesis)?;
+
         serde_json::to_writer_pretty(File::create(cfg_path)?, &stored)?;
-        serde_json::to_writer_pretty(File::create(stored.genesis)?, &self.genesis)?;
+        serde_json::to_writer_pretty(File::create(stored.genesis)?, &genesis_json)?;
 
         Ok(())
     }
@@ -368,6 +378,20 @@ mod tests {
     use super::*;
 
     #[test]
+    fn chainspec_load_store_rt() {
+        let chainspec = ChainSpec::default();
+
+        // Create a temporary file and store the ChainSpec
+        let temp = tempfile::NamedTempFile::new().unwrap();
+        chainspec.clone().store(temp.path()).unwrap();
+
+        // Load the ChainSpec back from the file
+        let loaded_chainspec = ChainSpec::load(temp.path()).unwrap();
+
+        similar_asserts::assert_eq!(chainspec, loaded_chainspec);
+    }
+
+    #[test]
     fn genesis_block_and_state_updates() {
         // setup initial states to test
 
@@ -488,22 +512,7 @@ mod tests {
         let actual_block = chain_spec.block();
         let actual_state_updates = chain_spec.state_updates();
 
-        // assert individual fields of the block
-
-        assert_eq!(actual_block.header.number, expected_block.header.number);
-        assert_eq!(actual_block.header.timestamp, expected_block.header.timestamp);
-        assert_eq!(actual_block.header.parent_hash, expected_block.header.parent_hash);
-        assert_eq!(actual_block.header.sequencer_address, expected_block.header.sequencer_address);
-        assert_eq!(actual_block.header.l1_gas_prices, expected_block.header.l1_gas_prices);
-        assert_eq!(
-            actual_block.header.l1_data_gas_prices,
-            expected_block.header.l1_data_gas_prices
-        );
-        assert_eq!(actual_block.header.l1_da_mode, expected_block.header.l1_da_mode);
-        assert_eq!(actual_block.header.protocol_version, expected_block.header.protocol_version);
-        assert_eq!(actual_block.header.transaction_count, expected_block.header.transaction_count);
-        assert_eq!(actual_block.header.events_count, expected_block.header.events_count);
-        assert_eq!(actual_block.body, expected_block.body);
+        similar_asserts::assert_eq!(actual_block, expected_block);
 
         if cfg!(feature = "controller") {
             assert!(actual_state_updates.classes.len() == 4);
