@@ -16,24 +16,22 @@ const BUFFER_SIZE: usize = 60;
 const INTERVAL: Duration = Duration::from_secs(60);
 const ONE_GWEI: u128 = 1_000_000_000;
 
-// TODO: implement a proper gas oracle function - sample the l1 gas and data gas prices
-// currently this just return the hardcoded value set from the cli or if not set, the default value.
 #[derive(Debug)]
-pub enum L1GasOracle {
-    Fixed(FixedL1GasOracle),
-    Sampled(SampledL1GasOracle),
+pub enum GasOracle {
+    Fixed(FixedGasOracle),
+    Sampled(EthereumSampledGasOracle),
 }
 
 #[derive(Debug)]
-pub struct FixedL1GasOracle {
+pub struct FixedGasOracle {
     gas_prices: GasPrices,
     data_gas_prices: GasPrices,
 }
 
 #[derive(Debug, Clone)]
-pub struct SampledL1GasOracle {
+pub struct EthereumSampledGasOracle {
     prices: Arc<Mutex<SampledPrices>>,
-    l1_provider: Url,
+    provider: Url,
 }
 
 #[derive(Debug, Default)]
@@ -50,29 +48,39 @@ pub struct GasOracleWorker {
     pub data_gas_price_buffer: GasPriceBuffer,
 }
 
-impl L1GasOracle {
+impl GasOracle {
     pub fn fixed(gas_prices: GasPrices, data_gas_prices: GasPrices) -> Self {
-        L1GasOracle::Fixed(FixedL1GasOracle { gas_prices, data_gas_prices })
+        GasOracle::Fixed(FixedGasOracle { gas_prices, data_gas_prices })
     }
 
-    pub fn sampled(l1_provider: Url) -> Self {
+    /// Creates a new gas oracle that samples the gas prices from an Ethereum chain.
+    pub fn sampled_ethereum(eth_provider: Url) -> Self {
         let prices: Arc<Mutex<SampledPrices>> = Arc::new(Mutex::new(SampledPrices::default()));
-        L1GasOracle::Sampled(SampledL1GasOracle { prices, l1_provider })
+        GasOracle::Sampled(EthereumSampledGasOracle { prices, provider: eth_provider })
+    }
+
+    /// This is just placeholder for now, as Starknet doesn't provide a way to get the L2 gas
+    /// prices, we just return a fixed gas price values of 0. This is equivalent to calling
+    /// [`GasOracle::fixed`] with 0 values for both gas and data prices.
+    ///
+    /// The result of this is the same as running the node with fee disabled.
+    pub fn sampled_starknet() -> Self {
+        Self::fixed(GasPrices { eth: 0, strk: 0 }, GasPrices { eth: 0, strk: 0 })
     }
 
     /// Returns the current gas prices.
     pub fn current_gas_prices(&self) -> GasPrices {
         match self {
-            L1GasOracle::Fixed(fixed) => fixed.current_gas_prices(),
-            L1GasOracle::Sampled(sampled) => sampled.prices.lock().gas_prices.clone(),
+            GasOracle::Fixed(fixed) => fixed.current_gas_prices(),
+            GasOracle::Sampled(sampled) => sampled.prices.lock().gas_prices.clone(),
         }
     }
 
     /// Returns the current data gas prices.
     pub fn current_data_gas_prices(&self) -> GasPrices {
         match self {
-            L1GasOracle::Fixed(fixed) => fixed.current_data_gas_prices(),
-            L1GasOracle::Sampled(sampled) => sampled.prices.lock().data_gas_prices.clone(),
+            GasOracle::Fixed(fixed) => fixed.current_data_gas_prices(),
+            GasOracle::Sampled(sampled) => sampled.prices.lock().data_gas_prices.clone(),
         }
     }
 
@@ -81,7 +89,7 @@ impl L1GasOracle {
             Self::Fixed(..) => {}
             Self::Sampled(oracle) => {
                 let prices = oracle.prices.clone();
-                let l1_provider = oracle.l1_provider.clone();
+                let l1_provider = oracle.provider.clone();
 
                 task_spawner.build_task().critical().name("L1 Gas Oracle Worker").spawn(
                     async move {
@@ -97,7 +105,7 @@ impl L1GasOracle {
     }
 }
 
-impl SampledL1GasOracle {
+impl EthereumSampledGasOracle {
     pub fn current_data_gas_prices(&self) -> GasPrices {
         self.prices.lock().data_gas_prices.clone()
     }
@@ -107,7 +115,7 @@ impl SampledL1GasOracle {
     }
 }
 
-impl FixedL1GasOracle {
+impl FixedGasOracle {
     pub fn current_data_gas_prices(&self) -> GasPrices {
         self.data_gas_prices.clone()
     }
@@ -289,10 +297,10 @@ mod tests {
     #[ignore = "Requires external assumption"]
     async fn test_gas_oracle() {
         let url = Url::parse("https://eth.merkle.io/").expect("Invalid URL");
-        let oracle = L1GasOracle::sampled(url.clone());
+        let oracle = GasOracle::sampled_ethereum(url.clone());
 
         let shared_prices = match &oracle {
-            L1GasOracle::Sampled(sampled) => sampled.prices.clone(),
+            GasOracle::Sampled(sampled) => sampled.prices.clone(),
             _ => panic!("Expected sampled oracle"),
         };
 
