@@ -59,9 +59,9 @@ impl GasOracle {
         GasOracle::Sampled(EthereumSampledGasOracle { prices, provider: eth_provider })
     }
 
-    /// For now, as Starknet doesn't provide a way to get the L2 gas prices, we just return a fixed
-    /// gas price values of 0. This is equivalent to calling [`GasOracle::fixed`] with 0 values for
-    /// both gas and data prices.
+    /// This is just placeholder for now, as Starknet doesn't provide a way to get the L2 gas
+    /// prices, we just return a fixed gas price values of 0. This is equivalent to calling
+    /// [`GasOracle::fixed`] with 0 values for both gas and data prices.
     ///
     /// The result of this is the same as running the node with fee disabled.
     pub fn sampled_starknet() -> Self {
