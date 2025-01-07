@@ -286,16 +286,22 @@ impl TryFrom<GenesisJson> for Genesis {
         let mut classes: BTreeMap<ClassHash, GenesisClass> = BTreeMap::new();
 
         #[cfg(feature = "controller")]
-        // Merely a band aid fix for now.
-        // Adding this by default so that we can support mounting the genesis file from k8s
-        // ConfigMap when we embed the Controller class, and its capacity is only limited to 1MiB.
-        classes.insert(
-            CONTROLLER_CLASS_HASH,
-            GenesisClass {
-                class: CONTROLLER_ACCOUNT_CLASS.clone().into(),
-                compiled_class_hash: CONTROLLER_CLASS_HASH,
-            },
-        );
+        {
+            // Merely a band aid fix for now.
+            // Adding this by default so that we can support mounting the genesis file from k8s
+            // ConfigMap when we embed the Controller class, and its capacity is only limited to
+            // 1MiB.
+            classes.insert(
+                CONTROLLER_CLASS_HASH,
+                GenesisClass {
+                    class: CONTROLLER_ACCOUNT_CLASS.clone().into(),
+                    compiled_class_hash: CONTROLLER_ACCOUNT_CLASS
+                        .clone()
+                        .compile()?
+                        .class_hash()?,
+                },
+            );
+        }
 
         for entry in value.classes {
             let GenesisClassJson { class, class_hash, name } = entry;
@@ -471,7 +477,7 @@ impl TryFrom<Genesis> for GenesisJson {
     fn try_from(value: Genesis) -> Result<Self, Self::Error> {
         let mut contracts = BTreeMap::new();
         let mut accounts = BTreeMap::new();
-        let mut classes = Vec::new();
+        let mut classes = Vec::with_capacity(value.classes.len());
 
         for (hash, class) in value.classes {
             // Convert the class to an artifact Value
