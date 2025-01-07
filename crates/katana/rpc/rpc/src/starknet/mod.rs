@@ -16,6 +16,7 @@ use katana_primitives::da::L1DataAvailabilityMode;
 use katana_primitives::env::BlockEnv;
 use katana_primitives::event::MaybeForkedContinuationToken;
 use katana_primitives::transaction::{ExecutableTxWithHash, TxHash, TxWithHash};
+use katana_primitives::version::CURRENT_STARKNET_VERSION;
 use katana_primitives::Felt;
 use katana_provider::error::ProviderError;
 use katana_provider::traits::block::{BlockHashProvider, BlockIdReader, BlockNumberProvider};
@@ -613,7 +614,7 @@ where
                             parent_hash: latest_hash,
                             timestamp: block_env.timestamp,
                             sequencer_address: block_env.sequencer_address,
-                            protocol_version: this.inner.backend.chain_spec.version.clone(),
+                            protocol_version: CURRENT_STARKNET_VERSION,
                         };
 
                         // TODO(kariy): create a method that can perform this filtering for us
@@ -679,7 +680,7 @@ where
                             timestamp: block_env.timestamp,
                             l1_da_mode: L1DataAvailabilityMode::Calldata,
                             sequencer_address: block_env.sequencer_address,
-                            protocol_version: this.inner.backend.chain_spec.version.clone(),
+                            protocol_version: CURRENT_STARKNET_VERSION,
                         };
 
                         let receipts = executor
@@ -743,7 +744,7 @@ where
                             number: block_env.number,
                             parent_hash: latest_hash,
                             timestamp: block_env.timestamp,
-                            protocol_version: this.inner.backend.chain_spec.version.clone(),
+                            protocol_version: CURRENT_STARKNET_VERSION,
                             sequencer_address: block_env.sequencer_address,
                         };
 

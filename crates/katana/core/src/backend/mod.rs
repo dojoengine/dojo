@@ -11,6 +11,7 @@ use katana_primitives::env::BlockEnv;
 use katana_primitives::receipt::{Event, ReceiptWithTxHash};
 use katana_primitives::state::{compute_state_diff_hash, StateUpdates};
 use katana_primitives::transaction::{TxHash, TxWithHash};
+use katana_primitives::version::CURRENT_STARKNET_VERSION;
 use katana_primitives::Felt;
 use katana_provider::traits::block::{BlockHashProvider, BlockWriter};
 use katana_provider::traits::trie::TrieWriter;
@@ -138,7 +139,7 @@ impl<EF: ExecutorFactory> Backend<EF> {
             parent_hash,
             number: block_env.number,
             timestamp: block_env.timestamp,
-            protocol_version: self.chain_spec.version.clone(),
+            protocol_version: CURRENT_STARKNET_VERSION,
             sequencer_address: block_env.sequencer_address,
             l1_gas_prices: block_env.l1_gas_prices,
             l1_data_gas_prices: block_env.l1_data_gas_prices,

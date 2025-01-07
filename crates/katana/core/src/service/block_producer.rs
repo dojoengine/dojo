@@ -15,6 +15,7 @@ use katana_primitives::da::L1DataAvailabilityMode;
 use katana_primitives::receipt::Receipt;
 use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::{ExecutableTxWithHash, TxHash, TxWithHash};
+use katana_primitives::version::CURRENT_STARKNET_VERSION;
 use katana_provider::error::ProviderError;
 use katana_provider::traits::block::{BlockHashProvider, BlockNumberProvider};
 use katana_provider::traits::env::BlockEnvProvider;
@@ -578,7 +579,7 @@ impl<EF: ExecutorFactory> InstantBlockProducer<EF> {
                 parent_hash,
                 number: block_env.number,
                 timestamp: block_env.timestamp,
-                protocol_version: backend.chain_spec.version.clone(),
+                protocol_version: CURRENT_STARKNET_VERSION,
                 sequencer_address: block_env.sequencer_address,
                 l1_da_mode: L1DataAvailabilityMode::Calldata,
                 l1_gas_prices: block_env.l1_gas_prices.clone(),
