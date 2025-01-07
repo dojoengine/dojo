@@ -40,7 +40,6 @@ impl core::fmt::Debug for GenesisClass {
 }
 
 /// Genesis block configuration.
-#[serde_with::serde_as]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Genesis {
     /// The genesis block parent hash.
@@ -128,7 +127,12 @@ impl Default for Genesis {
             (
                 CONTROLLER_CLASS_HASH,
                 GenesisClass {
-                    compiled_class_hash: CONTROLLER_CLASS_HASH,
+                    compiled_class_hash: CONTROLLER_ACCOUNT_CLASS
+                        .clone()
+                        .compile()
+                        .expect("failed to compile")
+                        .class_hash()
+                        .expect("failed to compute class hash"),
                     class: CONTROLLER_ACCOUNT_CLASS.clone().into(),
                 },
             ),
