@@ -122,7 +122,7 @@ async fn genesis_states() {
 
     let classes_proof = MultiProof::from(proofs.classes_proof.nodes);
     let classes_tree_root = proofs.global_roots.classes_tree_root;
-    let classes_verification_result = katana_trie::verify_proof::<hash::Pedersen>(
+    let classes_verification_result = katana_trie::verify_proof::<hash::Poseidon>(
         &classes_proof,
         classes_tree_root,
         genesis_classes,
