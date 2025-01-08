@@ -7,7 +7,7 @@ version.workspace = true
 
 [features]
 client = [  ]
-default = [ "server" ]
+default = [ "client", "server" ]
 server = [ "dep:sqlx", "dep:torii-core" ]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -29,6 +29,8 @@ starknet-crypto.workspace = true
 thiserror.workspace = true
 torii-typed-data.workspace = true
 tracing.workspace = true
+sqlx = { workspace = true, optional = true }
+torii-core = { workspace = true, optional = true }
 
 [dev-dependencies]
 katana-runner.workspace = true

@@ -36,9 +36,10 @@ use crate::error::Error;
 
 mod events;
 
+use torii_typed_data::typed_data::{parse_value_to_ty, PrimitiveType, TypedData};
+
 use crate::server::events::ServerEvent;
 use crate::types::Message;
-use torii_typed_data::typed_data::{parse_value_to_ty, PrimitiveType, TypedData};
 
 pub(crate) const LOG_TARGET: &str = "torii::relay::server";
 

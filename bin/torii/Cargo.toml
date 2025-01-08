@@ -39,7 +39,7 @@ torii-cli.workspace = true
 torii-core.workspace = true
 torii-graphql.workspace = true
 torii-grpc = { workspace = true, features = [ "server" ] }
-torii-relay = { workspace = true, features = [ "server" ] }
+torii-relay.workspace = true
 torii-server.workspace = true
 tower.workspace = true
 

@@ -6,7 +6,6 @@ use libp2p::gossipsub::{PublishError, SubscriptionError};
 use libp2p::noise;
 use starknet::providers::ProviderError;
 use thiserror::Error;
-
 use torii_typed_data::error::Error as TypedDataError;
 
 #[derive(Error, Debug)]

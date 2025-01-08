@@ -234,11 +234,10 @@ pub(crate) fn get_value_type(
 }
 
 fn get_hex(value: &str) -> Result<Felt, Error> {
-    Felt::from_str(value)
-        .or_else(|_| {
-            cairo_short_string_to_felt(value)
-                .map_err(|e| Error::ParseError(format!("Invalid shortstring for felt: {}", e)))
-        })
+    Felt::from_str(value).or_else(|_| {
+        cairo_short_string_to_felt(value)
+            .map_err(|e| Error::ParseError(format!("Invalid shortstring for felt: {}", e)))
+    })
 }
 
 impl PrimitiveType {
@@ -256,9 +255,10 @@ impl PrimitiveType {
                 let mut hashes = Vec::new();
 
                 if ctx.base_type == "enum" {
-                    let (variant_name, value) = obj.first()
-                        .ok_or_else(|| Error::InvalidEnum("Enum value must be populated".to_string()))?;
-                    
+                    let (variant_name, value) = obj.first().ok_or_else(|| {
+                        Error::InvalidEnum("Enum value must be populated".to_string())
+                    })?;
+
                     let variant_type = get_value_type(variant_name, types)?;
 
                     // variant index
@@ -298,10 +298,7 @@ impl PrimitiveType {
                 let type_hash =
                     encode_type(r#type, if ctx.is_preset { preset_types } else { types })?;
                 hashes.push(get_selector_from_name(&type_hash).map_err(|e| {
-                    Error::ParseError(format!(
-                        "Invalid type {} for selector: {}",
-                        r#type, e
-                    ))
+                    Error::ParseError(format!("Invalid type {} for selector: {}", r#type, e))
                 })?);
 
                 for (field_name, value) in obj {
@@ -386,9 +383,8 @@ impl PrimitiveType {
                 _ => Err(Error::InvalidType(format!("Invalid type {} for string", r#type))),
             },
             PrimitiveType::Number(number) => {
-                let felt = Felt::from_str(&number.to_string()).map_err(|_| {
-                    Error::ParseError(format!("Invalid number {}", number))
-                })?;
+                let felt = Felt::from_str(&number.to_string())
+                    .map_err(|_| Error::ParseError(format!("Invalid number {}", number)))?;
                 Ok(felt)
             }
         }
@@ -416,16 +412,14 @@ impl Domain {
 
     pub fn encode(&self, types: &IndexMap<String, Vec<Field>>) -> Result<Felt, Error> {
         if self.revision.as_deref().unwrap_or("1") != "1" {
-            return Err(Error::InvalidDomain(
-                "Legacy revision 0 is not supported".to_string()
-            ));
+            return Err(Error::InvalidDomain("Legacy revision 0 is not supported".to_string()));
         }
 
         let mut object = IndexMap::new();
         object.insert("name".to_string(), PrimitiveType::String(self.name.clone()));
         object.insert("version".to_string(), PrimitiveType::String(self.version.clone()));
         object.insert("chainId".to_string(), PrimitiveType::String(self.chain_id.clone()));
-        
+
         if let Some(revision) = &self.revision {
             object.insert("revision".to_string(), PrimitiveType::String(revision.clone()));
         }
@@ -486,9 +480,9 @@ pub fn parse_value_to_ty(value: &PrimitiveType, ty: &mut Ty) -> Result<(), Error
             // where the K is the variant name
             // and the value is the variant value
             Ty::Enum(enum_) => {
-                let (option_name, value) = object.first().ok_or_else(|| {
-                    Error::InvalidEnum("Enum variant not found".to_string())
-                })?;
+                let (option_name, value) = object
+                    .first()
+                    .ok_or_else(|| Error::InvalidEnum("Enum variant not found".to_string()))?;
 
                 enum_.options.iter_mut().for_each(|option| {
                     if option.name == *option_name {
@@ -496,15 +490,12 @@ pub fn parse_value_to_ty(value: &PrimitiveType, ty: &mut Ty) -> Result<(), Error
                     }
                 });
 
-                enum_.set_option(option_name).map_err(|e| {
-                    Error::InvalidEnum(format!("Failed to set enum option: {}", e))
-                })?;
+                enum_
+                    .set_option(option_name)
+                    .map_err(|e| Error::InvalidEnum(format!("Failed to set enum option: {}", e)))?;
             }
             _ => {
-                return Err(Error::InvalidType(format!(
-                    "Invalid object type for {}",
-                    ty.name()
-                )));
+                return Err(Error::InvalidType(format!("Invalid object type for {}", ty.name())));
             }
         },
         PrimitiveType::Array(values) => match ty {
@@ -532,10 +523,7 @@ pub fn parse_value_to_ty(value: &PrimitiveType, ty: &mut Ty) -> Result<(), Error
                 }
             }
             _ => {
-                return Err(Error::InvalidType(format!(
-                    "Invalid array type for {}",
-                    ty.name()
-                )));
+                return Err(Error::InvalidType(format!("Invalid array type for {}", ty.name())));
             }
         },
         PrimitiveType::Number(number) => match ty {
@@ -575,10 +563,7 @@ pub fn parse_value_to_ty(value: &PrimitiveType, ty: &mut Ty) -> Result<(), Error
                 }
             },
             _ => {
-                return Err(Error::InvalidType(format!(
-                    "Invalid number type for {}",
-                    ty.name()
-                )));
+                return Err(Error::InvalidType(format!("Invalid number type for {}", ty.name())));
             }
         },
         PrimitiveType::Bool(boolean) => {
@@ -639,10 +624,7 @@ pub fn parse_value_to_ty(value: &PrimitiveType, ty: &mut Ty) -> Result<(), Error
                 s.clone_from(string);
             }
             _ => {
-                return Err(Error::InvalidType(format!(
-                    "Invalid string type for {}",
-                    ty.name()
-                )));
+                return Err(Error::InvalidType(format!("Invalid string type for {}", ty.name())));
             }
         },
     }
@@ -661,9 +643,8 @@ pub fn map_ty_to_primitive(ty: &Ty) -> Result<PrimitiveType, Error> {
         }
         Ty::Enum(enum_) => {
             let mut object = IndexMap::new();
-            let option = enum_
-                .option
-                .ok_or(Error::InvalidEnum("Enum option not found".to_string()))?;
+            let option =
+                enum_.option.ok_or(Error::InvalidEnum("Enum option not found".to_string()))?;
             let option = enum_
                 .options
                 .get(option as usize)
@@ -894,13 +875,12 @@ impl TypedData {
 
         let domain_hash = self.domain.encode(&self.types)?;
 
-        let message_hash = PrimitiveType::Object(self.message.clone())
-            .encode(
-                &self.primary_type,
-                &self.types,
-                &preset_types,
-                &mut Default::default(),
-            )?;
+        let message_hash = PrimitiveType::Object(self.message.clone()).encode(
+            &self.primary_type,
+            &self.types,
+            &preset_types,
+            &mut Default::default(),
+        )?;
 
         Ok(poseidon_hash_many(&[prefix_message, domain_hash, account, message_hash]))
     }
