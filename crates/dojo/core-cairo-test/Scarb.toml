@@ -1,15 +1,15 @@
 [package]
-cairo-version = "=2.9.1"
+cairo-version = "=2.9.2"
 edition = "2024_07"
 description = "Testing library for Dojo using Cairo test runner."
 name = "dojo_cairo_test"
 version = "1.0.5"
 
 [dependencies]
-starknet = "=2.9.1"
+starknet = "=2.9.2"
 dojo = { path = "../core" }
 
 [dev-dependencies]
-cairo_test = "=2.9.1"
+cairo_test = "=2.9.2"
 
 [lib]
