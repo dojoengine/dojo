@@ -388,7 +388,7 @@ fn to_db_key(key: &DatabaseKey<'_>) -> models::trie::TrieDatabaseKey {
 
 #[cfg(test)]
 mod tests {
-    use katana_primitives::hash::{Pedersen, Poseidon, StarkHash};
+    use katana_primitives::hash::{Poseidon, StarkHash};
     use katana_primitives::{felt, hash};
     use katana_trie::{verify_proof, ClassesTrie, CommitId};
     use starknet::macros::short_string;
