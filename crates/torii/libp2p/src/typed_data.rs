@@ -450,7 +450,8 @@ macro_rules! from_str {
             <$type>::from_str_radix(&$string[2..], 16)
         } else {
             <$type>::from_str($string)
-        }.map_err(|e| Error::InvalidMessageError(format!("Failed to parse number: {}", e)))
+        }
+        .map_err(|e| Error::InvalidMessageError(format!("Failed to parse number: {}", e)))
     };
 }
 
