@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1736366063580,
+  "lastUpdate": 1736366252015,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -43471,6 +43471,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10613410824,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "longxiangqiao@qq.com",
+            "name": "Long FlyBridge",
+            "username": "longxiangqiao"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5d1d30857fdaf66df015a7a25c5579a55b621988",
+          "message": "chore: fix some typos in comment (#2880)\n\nSigned-off-by: longxiangqiao <longxiangqiao@qq.com>",
+          "timestamp": "2025-01-08T19:37:40Z",
+          "tree_id": "e0beb789fca68b8610217d159e6b95caa05ec0af",
+          "url": "https://github.com/dojoengine/dojo/commit/5d1d30857fdaf66df015a7a25c5579a55b621988"
+        },
+        "date": 1736366249934,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2430158,
+            "range": "± 68244",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8363894,
+            "range": "± 391540",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3672338020,
+            "range": "± 719203372",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8100256,
+            "range": "± 49500",
             "unit": "ns/iter"
           }
         ]
