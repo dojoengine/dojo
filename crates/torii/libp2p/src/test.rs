@@ -1,4 +1,3 @@
-
 use std::error::Error;
 
 use torii_typed_data::typed_data::{
