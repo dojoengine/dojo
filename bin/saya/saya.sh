@@ -23,7 +23,7 @@ SAYA_PILTOVER_STARTING_STATE_ROOT=0
 SAYA_CONFIG_HASH=42
 SAYA_PROGRAM_HASH=0x2aa9e430c145b26d681a8087819ed5bff93f5596105d0e74f00fc7caa46fa18 #need to be reupdated
 
-# Set after runnig the script
+# Set after running the script
 
 SAYA_WORLD_ADDRESS=""
 SAYA_WORLD_PREPARED="" # Set to anything after preparing the world successfully for the first time
