@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1736348758379,
+  "lastUpdate": 1736366063580,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -43441,6 +43441,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8025235,
             "range": "± 19684",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "longxiangqiao@qq.com",
+            "name": "Long FlyBridge",
+            "username": "longxiangqiao"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5d1d30857fdaf66df015a7a25c5579a55b621988",
+          "message": "chore: fix some typos in comment (#2880)\n\nSigned-off-by: longxiangqiao <longxiangqiao@qq.com>",
+          "timestamp": "2025-01-08T19:37:40Z",
+          "tree_id": "e0beb789fca68b8610217d159e6b95caa05ec0af",
+          "url": "https://github.com/dojoengine/dojo/commit/5d1d30857fdaf66df015a7a25c5579a55b621988"
+        },
+        "date": 1736366061792,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10613410824,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
