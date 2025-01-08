@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1736348612240,
+  "lastUpdate": 1736348758379,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -43393,6 +43393,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 11017117042,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "baf0ce91be46a9c5c933feb2efe811067a8b7455",
+          "message": "refactor(torii): fragment into different modules (#2856)\n\n* refactor: start fragmenting torii\r\n\r\n* engine and qslite\r\n\r\n* use torii_sqlite in engine\r\n\r\n* rename to indexer\r\n\r\n* move tests to indexer\r\n\r\n* update all crates to use new fragmented torii\r\n\r\n* fmt\r\n\r\n* sotre update member\r\n\r\n* add back tests\r\n\r\n* fmt",
+          "timestamp": "2025-01-08T08:46:06-06:00",
+          "tree_id": "b9f874a2242dc766eb8d43c6948ee06d41d3a11f",
+          "url": "https://github.com/dojoengine/dojo/commit/baf0ce91be46a9c5c933feb2efe811067a8b7455"
+        },
+        "date": 1736348755795,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2425214,
+            "range": "± 34388",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8317701,
+            "range": "± 225572",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3562647088,
+            "range": "± 849043387",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8025235,
+            "range": "± 19684",
             "unit": "ns/iter"
           }
         ]
