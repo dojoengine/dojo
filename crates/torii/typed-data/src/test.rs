@@ -1,5 +1,6 @@
 use crypto_bigint::U256;
-use dojo_types::{primitive::Primitive, schema::{Enum, EnumOption, Member, Struct, Ty}};
+use dojo_types::primitive::Primitive;
+use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
 use serde_json::Number;
 use starknet_crypto::Felt;
 

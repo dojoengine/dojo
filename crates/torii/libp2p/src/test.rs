@@ -1,6 +1,5 @@
 use std::error::Error;
 
-
 use crate::client::RelayClient;
 
 #[cfg(target_arch = "wasm32")]
