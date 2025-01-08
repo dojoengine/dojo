@@ -112,7 +112,7 @@ pub fn run(command: Commands, config: &Config) -> Result<()> {
         Commands::Clean(args) => args.run(config),
         Commands::Call(args) => args.run(config),
         Commands::Test(args) => args.run(config),
-        Commands::Hash(args) => args.run().map(|_| ()),
+        Commands::Hash(args) => args.run(config).map(|_| ()),
         Commands::Init(args) => args.run(config),
         Commands::Model(args) => args.run(config),
         Commands::Events(args) => args.run(config),

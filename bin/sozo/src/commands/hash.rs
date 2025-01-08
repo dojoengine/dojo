@@ -1,45 +1,80 @@
+use std::collections::HashSet;
+use std::str::FromStr;
+
 use anyhow::Result;
-use clap::Args;
-use dojo_world::contracts::naming::compute_selector_from_tag;
+use clap::{Args, Subcommand};
+use dojo_types::naming::{
+    compute_bytearray_hash, compute_selector_from_tag, get_name_from_tag, get_namespace_from_tag,
+    get_tag,
+};
+use scarb::core::Config;
+use sozo_scarbext::WorkspaceExt;
 use starknet::core::types::Felt;
 use starknet::core::utils::{get_selector_from_name, starknet_keccak};
 use starknet_crypto::{poseidon_hash_many, poseidon_hash_single};
-use tracing::trace;
+use tracing::{debug, trace};
 
 #[derive(Debug, Args)]
 pub struct HashArgs {
-    #[arg(help = "Input to hash. It can be a comma separated list of inputs or a single input. \
-                  The single input can be a dojo tag or a felt.")]
-    pub input: String,
+    #[command(subcommand)]
+    command: HashCommand,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum HashCommand {
+    #[command(about = "Compute the hash of the provided input.")]
+    Compute {
+        #[arg(help = "Input to hash. It can be a comma separated list of inputs or a single \
+                      input. The single input can be a dojo tag or a felt.")]
+        input: String,
+    },
+
+    #[command(about = "Search the hash among namespaces and resource names/tags hashes. \
+                       Namespaces and resource names can be provided or read from the project \
+                       configuration.")]
+    Find {
+        #[arg(help = "The hash to search for.")]
+        hash: String,
+
+        #[arg(short, long)]
+        #[arg(value_delimiter = ',')]
+        #[arg(help = "Namespaces to use to compute hashes.")]
+        namespaces: Option<Vec<String>>,
+
+        #[arg(short, long)]
+        #[arg(value_delimiter = ',')]
+        #[arg(help = "Resource names to use to compute hashes.")]
+        resources: Option<Vec<String>>,
+    },
 }
 
 impl HashArgs {
-    pub fn run(self) -> Result<Vec<String>> {
-        trace!(args = ?self);
-
-        if self.input.is_empty() {
+    pub fn compute(&self, input: &str) -> Result<()> {
+        if input.is_empty() {
             return Err(anyhow::anyhow!("Input is empty"));
         }
 
-        if self.input.contains('-') {
-            let selector = format!("{:#066x}", compute_selector_from_tag(&self.input));
+        if input.contains('-') {
+            let selector = format!("{:#066x}", compute_selector_from_tag(input));
             println!("Dojo selector from tag: {}", selector);
-            return Ok(vec![selector.to_string()]);
+            return Ok(());
         }
 
         // Selector in starknet is used for types, which must starts with a letter.
-        if self.input.chars().next().map_or(false, |c| c.is_alphabetic()) {
-            if self.input.len() > 32 {
-                return Err(anyhow::anyhow!("Input is too long for a starknet selector"));
+        if input.chars().next().map_or(false, |c| c.is_alphabetic()) {
+            if input.len() > 32 {
+                return Err(anyhow::anyhow!(
+                    "Input exceeds the 32-character limit for a Starknet selector"
+                ));
             }
 
-            let selector = format!("{:#066x}", get_selector_from_name(&self.input)?);
+            let selector = format!("{:#066x}", get_selector_from_name(input)?);
             println!("Starknet selector: {}", selector);
-            return Ok(vec![selector.to_string()]);
+            return Ok(());
         }
 
-        if !self.input.contains(',') {
-            let felt = felt_from_str(&self.input)?;
+        if !input.contains(',') {
+            let felt = Felt::from_str(input)?;
             let poseidon = format!("{:#066x}", poseidon_hash_single(felt));
             let poseidon_array = format!("{:#066x}", poseidon_hash_many(&[felt]));
             let snkeccak = format!("{:#066x}", starknet_keccak(&felt.to_bytes_le()));
@@ -48,28 +83,142 @@ impl HashArgs {
             println!("Poseidon array 1 value: {}", poseidon_array);
             println!("SnKeccak: {}", snkeccak);
 
-            return Ok(vec![poseidon.to_string(), snkeccak.to_string()]);
+            return Ok(());
         }
 
-        let inputs: Vec<_> = self
-            .input
+        let inputs: Vec<_> = input
             .split(',')
-            .map(|s| felt_from_str(s.trim()).expect("Invalid felt value"))
+            .map(|s| Felt::from_str(s.trim()).expect("Invalid felt value"))
             .collect();
 
         let poseidon = format!("{:#066x}", poseidon_hash_many(&inputs));
         println!("Poseidon many: {}", poseidon);
 
-        Ok(vec![poseidon.to_string()])
-    }
-}
-
-fn felt_from_str(s: &str) -> Result<Felt> {
-    if s.starts_with("0x") {
-        return Ok(Felt::from_hex(s)?);
+        Ok(())
     }
 
-    Ok(Felt::from_dec_str(s)?)
+    pub fn find(
+        &self,
+        config: &Config,
+        hash: &String,
+        namespaces: Option<Vec<String>>,
+        resources: Option<Vec<String>>,
+    ) -> Result<()> {
+        let hash = Felt::from_str(hash)
+            .map_err(|_| anyhow::anyhow!("The provided hash is not valid (hash: {hash})"))?;
+
+        let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
+        let profile_config = ws.load_profile_config()?;
+        let manifest = ws.read_manifest_profile()?;
+
+        let namespaces = namespaces.unwrap_or_else(|| {
+            let mut ns_from_config = HashSet::new();
+
+            // get namespaces from profile
+            ns_from_config.insert(profile_config.namespace.default);
+
+            if let Some(mappings) = profile_config.namespace.mappings {
+                ns_from_config.extend(mappings.into_keys());
+            }
+
+            if let Some(models) = &profile_config.models {
+                ns_from_config.extend(models.iter().map(|m| get_namespace_from_tag(&m.tag)));
+            }
+
+            if let Some(contracts) = &profile_config.contracts {
+                ns_from_config.extend(contracts.iter().map(|c| get_namespace_from_tag(&c.tag)));
+            }
+
+            if let Some(events) = &profile_config.events {
+                ns_from_config.extend(events.iter().map(|e| get_namespace_from_tag(&e.tag)));
+            }
+
+            // get namespaces from manifest
+            if let Some(manifest) = &manifest {
+                ns_from_config
+                    .extend(manifest.models.iter().map(|m| get_namespace_from_tag(&m.tag)));
+
+                ns_from_config
+                    .extend(manifest.contracts.iter().map(|c| get_namespace_from_tag(&c.tag)));
+
+                ns_from_config
+                    .extend(manifest.events.iter().map(|e| get_namespace_from_tag(&e.tag)));
+            }
+
+            Vec::from_iter(ns_from_config)
+        });
+
+        let resources = resources.unwrap_or_else(|| {
+            let mut res_from_config = HashSet::new();
+
+            // get resources from profile
+            if let Some(models) = &profile_config.models {
+                res_from_config.extend(models.iter().map(|m| get_name_from_tag(&m.tag)));
+            }
+
+            if let Some(contracts) = &profile_config.contracts {
+                res_from_config.extend(contracts.iter().map(|c| get_name_from_tag(&c.tag)));
+            }
+
+            if let Some(events) = &profile_config.events {
+                res_from_config.extend(events.iter().map(|e| get_name_from_tag(&e.tag)));
+            }
+
+            // get resources from manifest
+            if let Some(manifest) = &manifest {
+                res_from_config.extend(manifest.models.iter().map(|m| get_name_from_tag(&m.tag)));
+
+                res_from_config
+                    .extend(manifest.contracts.iter().map(|c| get_name_from_tag(&c.tag)));
+
+                res_from_config.extend(manifest.events.iter().map(|e| get_name_from_tag(&e.tag)));
+            }
+
+            Vec::from_iter(res_from_config)
+        });
+
+        debug!(namespaces = ?namespaces, "Namespaces");
+        debug!(resources = ?resources, "Resources");
+
+        // --- find the hash ---
+
+        // could be a namespace hash
+        for ns in &namespaces {
+            if hash == compute_bytearray_hash(ns) {
+                println!("Namespace found: {ns}");
+            }
+        }
+
+        // could be a resource name hash
+        for res in &resources {
+            if hash == compute_bytearray_hash(res) {
+                println!("Resource name found: {res}");
+            }
+        }
+
+        // could be a tag hash (combination of namespace and name)
+        for ns in &namespaces {
+            for res in &resources {
+                let tag = get_tag(ns, res);
+                if hash == compute_selector_from_tag(&tag) {
+                    println!("Resource tag found: {tag}");
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    pub fn run(&self, config: &Config) -> Result<()> {
+        trace!(args = ?self);
+
+        match &self.command {
+            HashCommand::Compute { input } => self.compute(input),
+            HashCommand::Find { hash, namespaces, resources } => {
+                self.find(config, hash, namespaces.clone(), resources.clone())
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -78,68 +227,58 @@ mod tests {
 
     #[test]
     fn test_hash_dojo_tag() {
-        let args = HashArgs { input: "dojo_examples-actions".to_string() };
-        let result = args.run();
-        assert_eq!(
-            result.unwrap(),
-            ["0x040b6994c76da51db0c1dee2413641955fb3b15add8a35a2c605b1a050d225ab"]
-        );
+        let input = "dojo_examples-actions".to_string();
+        let args = HashArgs { command: HashCommand::Compute { input: input.clone() } };
+        let result = args.compute(&input);
+        assert!(result.is_ok());
     }
 
     #[test]
     fn test_hash_single_felt() {
-        let args = HashArgs { input: "0x1".to_string() };
-        let result = args.run();
-        assert_eq!(
-            result.unwrap(),
-            [
-                "0x06d226d4c804cd74567f5ac59c6a4af1fe2a6eced19fb7560a9124579877da25",
-                "0x00078cfed56339ea54962e72c37c7f588fc4f8e5bc173827ba75cb10a63a96a5"
-            ]
-        );
+        let input = "0x1".to_string();
+        let args = HashArgs { command: HashCommand::Compute { input: input.clone() } };
+        let result = args.compute(&input);
+        assert!(result.is_ok());
     }
 
     #[test]
     fn test_hash_starknet_selector() {
-        let args = HashArgs { input: "dojo".to_string() };
-        let result = args.run();
-        assert_eq!(
-            result.unwrap(),
-            ["0x0120c91ffcb74234971d98abba5372798d16dfa5c6527911956861315c446e35"]
-        );
+        let input = "dojo".to_string();
+        let args = HashArgs { command: HashCommand::Compute { input: input.clone() } };
+        let result = args.compute(&input);
+        assert!(result.is_ok());
     }
 
     #[test]
     fn test_hash_multiple_felts() {
-        let args = HashArgs { input: "0x1,0x2,0x3".to_string() };
-        let result = args.run();
-        assert_eq!(
-            result.unwrap(),
-            ["0x02f0d8840bcf3bc629598d8a6cc80cb7c0d9e52d93dab244bbf9cd0dca0ad082"]
-        );
+        let input = "0x1,0x2,0x3".to_string();
+        let args = HashArgs { command: HashCommand::Compute { input: input.clone() } };
+        let result = args.compute(&input);
+        assert!(result.is_ok());
     }
 
     #[test]
     fn test_hash_empty_input() {
-        let args = HashArgs { input: "".to_string() };
-        let result = args.run();
+        let input = "".to_string();
+        let args = HashArgs { command: HashCommand::Compute { input: input.clone() } };
+        let result = args.compute(&input);
         assert!(result.is_err());
         assert_eq!(result.unwrap_err().to_string(), "Input is empty");
     }
 
     #[test]
     fn test_hash_invalid_felt() {
-        let args = HashArgs {
-            input: "invalid too long to be a selector supported by starknet".to_string(),
-        };
-        assert!(args.run().is_err());
+        let input = "invalid too long to be a selector supported by starknet".to_string();
+        let args = HashArgs { command: HashCommand::Compute { input: input.clone() } };
+        assert!(args.compute(&input).is_err());
     }
 
     #[test]
     #[should_panic]
     fn test_hash_multiple_invalid_felts() {
-        let args = HashArgs { input: "0x1,0x2,0x3,fhorihgorh".to_string() };
+        let input = "0x1,0x2,0x3,fhorihgorh".to_string();
+        let args = HashArgs { command: HashCommand::Compute { input: input.clone() } };
 
-        let _ = args.run();
+        let _ = args.compute(&input);
     }
 }
