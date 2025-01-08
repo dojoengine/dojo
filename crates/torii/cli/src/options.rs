@@ -5,7 +5,7 @@ use anyhow::Context;
 use serde::ser::SerializeSeq;
 use serde::{Deserialize, Serialize};
 use starknet::core::types::Felt;
-use torii_core::types::{Contract, ContractType};
+use torii_sqlite::types::{Contract, ContractType};
 
 pub const DEFAULT_HTTP_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::LOCALHOST);
 pub const DEFAULT_HTTP_PORT: u16 = 8080;
@@ -157,6 +157,19 @@ pub struct IndexingOptions {
     )]
     #[serde(default)]
     pub namespaces: Vec<String>,
+
+    /// The block number to start indexing the world from.
+    ///
+    /// Warning: In the current implementation, this will break the indexing of tokens, if any.
+    /// Since the tokens require the chain to be indexed from the beginning, to ensure correct
+    /// balance updates.
+    #[arg(
+        long = "indexing.world_block",
+        help = "The block number to start indexing from.",
+        default_value_t = 0
+    )]
+    #[serde(default)]
+    pub world_block: u64,
 }
 
 impl Default for IndexingOptions {
@@ -170,6 +183,7 @@ impl Default for IndexingOptions {
             polling_interval: DEFAULT_POLLING_INTERVAL,
             max_concurrent_tasks: DEFAULT_MAX_CONCURRENT_TASKS,
             namespaces: vec![],
+            world_block: 0,
         }
     }
 }
@@ -207,6 +221,10 @@ impl IndexingOptions {
 
             if self.namespaces.is_empty() {
                 self.namespaces = other.namespaces.clone();
+            }
+
+            if self.world_block == 0 {
+                self.world_block = other.world_block;
             }
         }
     }

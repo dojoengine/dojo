@@ -1,7 +1,7 @@
 {
   "world": {
-    "class_hash": "0x45575a88cc5cef1e444c77ce60b7b4c9e73a01cbbe20926d5a4c72a94011410",
-    "address": "0x64613f376f05242dfcc9fe360fa2ce1fdd6b00b1ce73dae2ea649ea118fd9be",
+    "class_hash": "0xf212887cb11e8fd60b85cdd1893fc0211b3961bf93b3f6c9ab568ce0c125cd",
+    "address": "0x18350f68b38e5e814b40682077abe3c80e6f0192255f6fba11a81bbd27c8be2",
     "seed": "simple",
     "name": "simple",
     "entrypoints": [
@@ -1252,8 +1252,8 @@
   },
   "contracts": [
     {
-      "address": "0x1958afba5b86ac51f48313047357981a59ac274170e353f79d84eedc89219e3",
-      "class_hash": "0x340e197b0fac61961591acdd872a89b0cb862893272ab72455356f5534baa7e",
+      "address": "0x41b80c74e37320c993bd82eca8f01e095435d2b5763b2d5b4de57c6c7e424ea",
+      "class_hash": "0x2531b688864dfde492af091dfe2bcfec3ae4899c50b8c94938edb3a7b29ba9",
       "abi": [
         {
           "type": "impl",
@@ -1510,8 +1510,8 @@
       ]
     },
     {
-      "address": "0x5d9f3674dd96f173735f949d303abf107d1761b838a733703e95b31cc479270",
-      "class_hash": "0x2a400df88b0add6c980d281dc96354a5cfc2b886547e9ed621b097e21842ee6",
+      "address": "0x275318edbed7789413302f4ca4edff17f7f2566b2a0bec71c91742d84705b76",
+      "class_hash": "0x6eee6b876560b8e3314481f8404c023664bc792e07af43de445d9423315f906",
       "abi": [
         {
           "type": "impl",
@@ -1686,184 +1686,8 @@
       ]
     },
     {
-      "address": "0x38b6e133a81a3ef41438752fbcf497ed74f284fe64a70e02652c3fb434d4e8",
-      "class_hash": "0x7cc8d15e576873d544640f7fd124bd430bd19c0f31e203fb069b4fc2f5c0ab9",
-      "abi": [
-        {
-          "type": "impl",
-          "name": "c3__ContractImpl",
-          "interface_name": "dojo::contract::interface::IContract"
-        },
-        {
-          "type": "interface",
-          "name": "dojo::contract::interface::IContract",
-          "items": []
-        },
-        {
-          "type": "impl",
-          "name": "c3__DeployedContractImpl",
-          "interface_name": "dojo::meta::interface::IDeployedResource"
-        },
-        {
-          "type": "struct",
-          "name": "core::byte_array::ByteArray",
-          "members": [
-            {
-              "name": "data",
-              "type": "core::array::Array::<core::bytes_31::bytes31>"
-            },
-            {
-              "name": "pending_word",
-              "type": "core::felt252"
-            },
-            {
-              "name": "pending_word_len",
-              "type": "core::integer::u32"
-            }
-          ]
-        },
-        {
-          "type": "interface",
-          "name": "dojo::meta::interface::IDeployedResource",
-          "items": [
-            {
-              "type": "function",
-              "name": "dojo_name",
-              "inputs": [],
-              "outputs": [
-                {
-                  "type": "core::byte_array::ByteArray"
-                }
-              ],
-              "state_mutability": "view"
-            }
-          ]
-        },
-        {
-          "type": "function",
-          "name": "dojo_init",
-          "inputs": [],
-          "outputs": [],
-          "state_mutability": "view"
-        },
-        {
-          "type": "impl",
-          "name": "WorldProviderImpl",
-          "interface_name": "dojo::contract::components::world_provider::IWorldProvider"
-        },
-        {
-          "type": "struct",
-          "name": "dojo::world::iworld::IWorldDispatcher",
-          "members": [
-            {
-              "name": "contract_address",
-              "type": "core::starknet::contract_address::ContractAddress"
-            }
-          ]
-        },
-        {
-          "type": "interface",
-          "name": "dojo::contract::components::world_provider::IWorldProvider",
-          "items": [
-            {
-              "type": "function",
-              "name": "world_dispatcher",
-              "inputs": [],
-              "outputs": [
-                {
-                  "type": "dojo::world::iworld::IWorldDispatcher"
-                }
-              ],
-              "state_mutability": "view"
-            }
-          ]
-        },
-        {
-          "type": "impl",
-          "name": "UpgradeableImpl",
-          "interface_name": "dojo::contract::components::upgradeable::IUpgradeable"
-        },
-        {
-          "type": "interface",
-          "name": "dojo::contract::components::upgradeable::IUpgradeable",
-          "items": [
-            {
-              "type": "function",
-              "name": "upgrade",
-              "inputs": [
-                {
-                  "name": "new_class_hash",
-                  "type": "core::starknet::class_hash::ClassHash"
-                }
-              ],
-              "outputs": [],
-              "state_mutability": "external"
-            }
-          ]
-        },
-        {
-          "type": "constructor",
-          "name": "constructor",
-          "inputs": []
-        },
-        {
-          "type": "event",
-          "name": "dojo::contract::components::upgradeable::upgradeable_cpt::Upgraded",
-          "kind": "struct",
-          "members": [
-            {
-              "name": "class_hash",
-              "type": "core::starknet::class_hash::ClassHash",
-              "kind": "data"
-            }
-          ]
-        },
-        {
-          "type": "event",
-          "name": "dojo::contract::components::upgradeable::upgradeable_cpt::Event",
-          "kind": "enum",
-          "variants": [
-            {
-              "name": "Upgraded",
-              "type": "dojo::contract::components::upgradeable::upgradeable_cpt::Upgraded",
-              "kind": "nested"
-            }
-          ]
-        },
-        {
-          "type": "event",
-          "name": "dojo::contract::components::world_provider::world_provider_cpt::Event",
-          "kind": "enum",
-          "variants": []
-        },
-        {
-          "type": "event",
-          "name": "dojo_simple::c3::Event",
-          "kind": "enum",
-          "variants": [
-            {
-              "name": "UpgradeableEvent",
-              "type": "dojo::contract::components::upgradeable::upgradeable_cpt::Event",
-              "kind": "nested"
-            },
-            {
-              "name": "WorldProviderEvent",
-              "type": "dojo::contract::components::world_provider::world_provider_cpt::Event",
-              "kind": "nested"
-            }
-          ]
-        }
-      ],
-      "init_calldata": [],
-      "tag": "ns-c3",
-      "selector": "0x69bd1ce04aa3945bacae701a68e86c58b44d21c4debee8a65fa921b4a717c5f",
-      "systems": [
-        "upgrade"
-      ]
-    },
-    {
-      "address": "0x47882727700801173a3ff731928c9d41303237e142104bd155f48fac3806814",
-      "class_hash": "0x340e197b0fac61961591acdd872a89b0cb862893272ab72455356f5534baa7e",
+      "address": "0x52f5c9a44935b1667c792578726a858127ffed489a7e89fa5e82415a5259a91",
+      "class_hash": "0x2531b688864dfde492af091dfe2bcfec3ae4899c50b8c94938edb3a7b29ba9",
       "abi": [
         {
           "type": "impl",
@@ -2123,13 +1947,13 @@
   "models": [
     {
       "members": [],
-      "class_hash": "0x506d770b7301fc791cf3a19705848647524a0e2595a4d38365df917b4d1d246",
+      "class_hash": "0x6cf9d76cf4d19a94d91e99935d8e0cb78a925722f32963bea9d5286f70ac499",
       "tag": "ns-M",
       "selector": "0x50aac05281bbfaa5393cacacc12e86f59ab7d5f3ee619427dd33a0756526f24"
     },
     {
       "members": [],
-      "class_hash": "0x506d770b7301fc791cf3a19705848647524a0e2595a4d38365df917b4d1d246",
+      "class_hash": "0x6cf9d76cf4d19a94d91e99935d8e0cb78a925722f32963bea9d5286f70ac499",
       "tag": "ns2-M",
       "selector": "0x3b26427a55dd1d51738b0e3e989fe6f25649e1311295f30f0a4fa2db439aa2c"
     }
@@ -2137,13 +1961,13 @@
   "events": [
     {
       "members": [],
-      "class_hash": "0x943620824729c411797e6be26c3078924893be417ab08789489532d9c6aebb",
+      "class_hash": "0x5d8575f82fa0bf70efdbe1111a511d5767754bb0940cbf95f4451ec6f2b5242",
       "tag": "ns-E",
       "selector": "0x260e0511a6fa454a7d4ed8bea5fa52fc80fc588e33ba4cb58c65bbeeadf7565"
     },
     {
       "members": [],
-      "class_hash": "0x5ed10e08c25eb6a1cb7e221209eac3baab14be36a3ea0b55f789d8302712310",
+      "class_hash": "0x1b5ff2cb3c052bfe25f6d37a9464e39c7abfcb4f432eaff4bdd90bdb2aa5353",
       "tag": "ns-EH",
       "selector": "0x4c6c7772b19b700cf97d078d02a419670d11d2b689a7a3647eac311b2817ced"
     }

@@ -31,15 +31,15 @@ use tempfile::{NamedTempFile, TempDir};
 use tokio::sync::broadcast;
 use tokio::sync::broadcast::Sender;
 use tokio_stream::StreamExt;
-use torii_core::engine::{Engine, EngineConfig, IndexingFlags, Processors};
-use torii_core::executor::Executor;
-use torii_core::processors::store_transaction::StoreTransactionProcessor;
-use torii_core::processors::EventProcessorConfig;
-use torii_core::simple_broker::SimpleBroker;
-use torii_core::sql::cache::ModelCache;
-use torii_core::sql::Sql;
-use torii_core::types::{Contract, ContractType, Model};
+use torii_indexer::engine::{Engine, EngineConfig, IndexingFlags, Processors};
+use torii_indexer::processors::store_transaction::StoreTransactionProcessor;
+use torii_indexer::processors::EventProcessorConfig;
 use torii_server::proxy::Proxy;
+use torii_sqlite::cache::ModelCache;
+use torii_sqlite::executor::Executor;
+use torii_sqlite::simple_broker::SimpleBroker;
+use torii_sqlite::types::{Contract, ContractType, Model};
+use torii_sqlite::Sql;
 use tracing::{error, info};
 use tracing_subscriber::{fmt, EnvFilter};
 use url::form_urlencoded;
@@ -164,6 +164,7 @@ async fn main() -> anyhow::Result<()> {
                 historical_events: args.events.historical.into_iter().collect(),
                 namespaces: args.indexing.namespaces.into_iter().collect(),
             },
+            world_block: args.indexing.world_block,
         },
         shutdown_tx.clone(),
         Some(block_tx),

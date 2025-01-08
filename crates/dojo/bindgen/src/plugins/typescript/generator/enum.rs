@@ -3,12 +3,8 @@ use cainome::parser::tokens::{Composite, CompositeType};
 use super::constants::{CAIRO_ENUM_IMPORT, CAIRO_ENUM_TOKEN, SN_IMPORT_SEARCH};
 use super::token_is_custom_enum;
 use crate::error::BindgenResult;
-use crate::plugins::typescript::generator::JsType;
+use crate::plugins::typescript::generator::JsPrimitiveType;
 use crate::plugins::{BindgenModelGenerator, Buffer};
-
-const CAIRO_ENUM_TYPE_IMPL: &str = "export type TypedCairoEnum<T> = CairoCustomEnum & \
-                                    {\n\tvariant: { [K in keyof T]: T[K] | undefined \
-                                    };\n\tunwrap(): T[keyof T];\n}\n";
 
 pub(crate) struct TsEnumGenerator;
 
@@ -23,10 +19,6 @@ impl TsEnumGenerator {
                 // If 'starknet' import is present, we add CairoEnum to the imported types
                 buffer.insert_after(format!(" {CAIRO_ENUM_TOKEN}"), SN_IMPORT_SEARCH, "{", 1);
             }
-        }
-        if !buffer.has(CAIRO_ENUM_TYPE_IMPL) {
-            let pos = buffer.pos(SN_IMPORT_SEARCH).unwrap();
-            buffer.insert_at_index(CAIRO_ENUM_TYPE_IMPL.to_owned(), pos + 1);
         }
     }
 }
@@ -44,14 +36,16 @@ impl BindgenModelGenerator for TsEnumGenerator {
 export type {name} = {{
 {variants}
 }}
-export type {name}Enum = TypedCairoEnum<{name}>;
+export type {name}Enum = CairoCustomEnum;
 ",
                 path = token.type_path,
                 name = token.type_name(),
                 variants = token
                     .inners
                     .iter()
-                    .map(|inner| { format!("\t{}: {};", inner.name, JsType::from(&inner.token)) })
+                    .map(|inner| {
+                        format!("\t{}: {};", inner.name, JsPrimitiveType::from(&inner.token))
+                    })
                     .collect::<Vec<String>>()
                     .join("\n")
             )

@@ -22,11 +22,11 @@ use starknet::providers::{JsonRpcClient, Provider};
 use starknet_crypto::poseidon_hash_many;
 use tempfile::NamedTempFile;
 use tokio::sync::broadcast;
-use torii_core::engine::{Engine, EngineConfig, Processors};
-use torii_core::executor::Executor;
-use torii_core::sql::cache::ModelCache;
-use torii_core::sql::Sql;
-use torii_core::types::{Contract, ContractType};
+use torii_indexer::engine::{Engine, EngineConfig, Processors};
+use torii_sqlite::cache::ModelCache;
+use torii_sqlite::executor::Executor;
+use torii_sqlite::types::{Contract, ContractType};
+use torii_sqlite::Sql;
 
 use crate::proto::types::KeysClause;
 use crate::server::DojoWorld;
@@ -141,6 +141,8 @@ async fn test_entities_queries(sequencer: &RunnerCtx) {
             Some(1),
             None,
             false,
+            None,
+            vec!["ns-Moves".to_string(), "ns-Position".to_string()],
             None,
         )
         .await
