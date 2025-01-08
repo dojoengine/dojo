@@ -139,7 +139,7 @@ pub mod actions {
             // Don't need to read the model here, we directly overwrite the member "name".
             world
                 .write_member(
-                    Model::<PlayerConfig>::ptr_from_keys(player), selector!("name"), name
+                    Model::<PlayerConfig>::ptr_from_keys(player), selector!("name"), name,
                 );
         }
 

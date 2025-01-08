@@ -74,6 +74,7 @@ pub fn verify_cairo_version_compatibility(manifest_path: &Utf8PathBuf) -> Result
     // only when cairo version is found in manifest file confirm that it matches
     let version_req = cairo_version.as_defined().unwrap();
     let version = Version::from_str(scarb_cairo_version.version).unwrap();
+    dbg!(&version_req, &version);
     if !version_req.matches(&version) {
         anyhow::bail!(
             "Cairo version {} found in {} is not supported by dojo (expecting {}). Please change \
