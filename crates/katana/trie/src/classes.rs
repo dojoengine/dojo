@@ -1,10 +1,9 @@
 use bonsai_trie::{BonsaiDatabase, BonsaiPersistentDatabase, MultiProof};
 use katana_primitives::block::BlockNumber;
 use katana_primitives::class::{ClassHash, CompiledClassHash};
-use katana_primitives::hash::Pedersen;
+use katana_primitives::hash::{Poseidon, StarkHash};
 use katana_primitives::Felt;
 use starknet::macros::short_string;
-use starknet_types_core::hash::{Poseidon, StarkHash};
 
 use crate::id::CommitId;
 
@@ -15,7 +14,7 @@ impl ClassesMultiProof {
     // TODO: maybe perform results check in this method as well. make it accept the compiled class
     // hashes
     pub fn verify(&self, root: Felt, class_hashes: Vec<ClassHash>) -> Vec<Felt> {
-        crate::verify_proof::<Pedersen>(&self.0, root, class_hashes)
+        crate::verify_proof::<Poseidon>(&self.0, root, class_hashes)
     }
 }
 
@@ -27,7 +26,7 @@ impl From<MultiProof> for ClassesMultiProof {
 
 #[derive(Debug)]
 pub struct ClassesTrie<DB: BonsaiDatabase> {
-    trie: crate::BonsaiTrie<DB, Pedersen>,
+    trie: crate::BonsaiTrie<DB, Poseidon>,
 }
 
 //////////////////////////////////////////////////////////////
