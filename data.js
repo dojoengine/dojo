@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1736309823743,
+  "lastUpdate": 1736310034049,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -43315,6 +43315,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10928843043,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "eb65d8106460efabb30e8a663b4185380e01261f",
+          "message": "feat(katana): classes trie hash (#2876)\n\nIt was set to Pedersen based on the [Starknet docs](https://docs.starknet.io/architecture-and-concepts/network-architecture/starknet-state/#merkle_patricia_trie) but Pathfinder is using [Poseidon](https://github.com/glihm/pathfinder/blob/fc2d3f8da66638492bc1b2c9b5c22ca1b9be01ff/crates/merkle-tree/src/contract.rs#L28-L38). Based on my experience, it's better to just follow what Pathfinder is doing.",
+          "timestamp": "2025-01-08T12:00:25+08:00",
+          "tree_id": "b26bc6e1ae9c56c78614fb41e05f0a0d6bd4908f",
+          "url": "https://github.com/dojoengine/dojo/commit/eb65d8106460efabb30e8a663b4185380e01261f"
+        },
+        "date": 1736310032264,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2434968,
+            "range": "± 35259",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8443146,
+            "range": "± 1333324",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3612005596,
+            "range": "± 657437403",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 9522008,
+            "range": "± 1337381",
             "unit": "ns/iter"
           }
         ]
