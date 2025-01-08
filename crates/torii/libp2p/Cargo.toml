@@ -5,6 +5,11 @@ name = "torii-relay"
 repository.workspace = true
 version.workspace = true
 
+[features]
+client = [  ]
+default = [ "server" ]
+server = [ "dep:sqlx", "dep:torii-core" ]
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
@@ -13,16 +18,16 @@ rand.workspace = true
 serde.workspace = true
 # preserve order
 anyhow.workspace = true
-cainome.workspace = true
 chrono.workspace = true
 crypto-bigint.workspace = true
 dojo-types.workspace = true
 dojo-world.workspace = true
 indexmap.workspace = true
 serde_json.workspace = true
-starknet-crypto.workspace = true
 starknet.workspace = true
+starknet-crypto.workspace = true
 thiserror.workspace = true
+torii-typed-data.workspace = true
 tracing.workspace = true
 
 [dev-dependencies]
@@ -34,8 +39,6 @@ tracing-subscriber.workspace = true
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 libp2p = { git = "https://github.com/libp2p/rust-libp2p", features = [ "dns", "ed25519", "gossipsub", "identify", "macros", "noise", "ping", "quic", "relay", "tcp", "tokio", "websocket", "yamux" ], rev = "cdc9638" }
 libp2p-webrtc = { git = "https://github.com/libp2p/rust-libp2p", features = [ "pem", "tokio" ], rev = "cdc9638" }
-sqlx.workspace = true
-torii-core.workspace = true
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 libp2p = { git = "https://github.com/libp2p/rust-libp2p", features = [ "ed25519", "gossipsub", "identify", "macros", "noise", "ping", "tcp", "wasm-bindgen", "yamux" ], rev = "cdc9638" }

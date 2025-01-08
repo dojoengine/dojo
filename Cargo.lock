@@ -15870,7 +15870,6 @@ name = "torii-relay"
 version = "1.0.9"
 dependencies = [
  "anyhow",
- "cainome 0.4.11",
  "chrono",
  "crypto-bigint",
  "dojo-types 1.0.9",
@@ -15885,13 +15884,12 @@ dependencies = [
  "rand 0.8.5",
  "serde",
  "serde_json",
- "sqlx",
  "starknet 0.12.0",
  "starknet-crypto 0.7.2",
  "tempfile",
  "thiserror 1.0.63",
  "tokio",
- "torii-core",
+ "torii-typed-data",
  "tracing",
  "tracing-subscriber",
  "tracing-wasm",
@@ -15932,6 +15930,24 @@ dependencies = [
  "tower-http 0.4.4",
  "tracing",
  "warp",
+]
+
+[[package]]
+name = "torii-typed-data"
+version = "1.0.9"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "crypto-bigint",
+ "dojo-types 1.0.9",
+ "dojo-world",
+ "indexmap 2.5.0",
+ "serde",
+ "serde_json",
+ "starknet 0.12.0",
+ "starknet-crypto 0.7.2",
+ "thiserror 1.0.63",
+ "tracing",
 ]
 
 [[package]]

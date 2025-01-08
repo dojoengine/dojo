@@ -1,9 +1,7 @@
-#[cfg(test)]
-mod test {
     use std::error::Error;
 
     use crate::client::RelayClient;
-    use crate::typed_data::{
+    use torii_typed_data::typed_data::{
         map_ty_to_primitive, parse_value_to_ty, Domain, PrimitiveType, TypedData,
     };
 
@@ -545,7 +543,7 @@ mod test {
         use torii_core::types::{Contract, ContractType};
 
         use crate::server::Relay;
-        use crate::typed_data::{Domain, Field, SimpleField, TypedData};
+        use torii_typed_data::typed_data::{Domain, Field, SimpleField, TypedData};
         use crate::types::Message;
 
         let _ = tracing_subscriber::fmt()
@@ -677,12 +675,12 @@ mod test {
         );
         typed_data.message.insert(
             "identity".to_string(),
-            crate::typed_data::PrimitiveType::String(account.address.to_string()),
+            torii_typed_data::typed_data::PrimitiveType::String(account.address.to_string()),
         );
 
         typed_data.message.insert(
             "message".to_string(),
-            crate::typed_data::PrimitiveType::String("mimi".to_string()),
+            torii_typed_data::typed_data::PrimitiveType::String("mimi".to_string()),
         );
 
         let message_hash = typed_data.encode(account.address).unwrap();
@@ -752,4 +750,3 @@ mod test {
             }
         }
     }
-}

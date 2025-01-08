@@ -21,7 +21,7 @@ starknet-crypto.workspace = true
 thiserror.workspace = true
 tokio = { version = "1.32.0", features = [ "sync" ], default-features = false }
 torii-grpc = { workspace = true, features = [ "client" ] }
-torii-relay = { workspace = true }
+torii-relay = { workspace = true, features = [ "client" ] }
 url.workspace = true
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
