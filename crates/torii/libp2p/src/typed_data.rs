@@ -444,6 +444,16 @@ impl Domain {
     }
 }
 
+macro_rules! from_str {
+    ($string:expr, $type:ty) => {
+        if $string.starts_with("0x") || $string.starts_with("0X") {
+            <$type>::from_str_radix(&$string[2..], 16)
+        } else {
+            <$type>::from_str($string)
+        }.map_err(|e| Error::InvalidMessageError(format!("Failed to parse number: {}", e)))
+    };
+}
+
 pub fn parse_value_to_ty(value: &PrimitiveType, ty: &mut Ty) -> Result<(), Error> {
     match value {
         PrimitiveType::Object(object) => match ty {
@@ -581,37 +591,37 @@ pub fn parse_value_to_ty(value: &PrimitiveType, ty: &mut Ty) -> Result<(), Error
         PrimitiveType::String(string) => match ty {
             Ty::Primitive(primitive) => match primitive {
                 Primitive::I8(v) => {
-                    *v = Some(i8::from_str(string).unwrap());
+                    *v = Some(from_str!(string, i8)?);
                 }
                 Primitive::I16(v) => {
-                    *v = Some(i16::from_str(string).unwrap());
+                    *v = Some(from_str!(string, i16)?);
                 }
                 Primitive::I32(v) => {
-                    *v = Some(i32::from_str(string).unwrap());
+                    *v = Some(from_str!(string, i32)?);
                 }
                 Primitive::I64(v) => {
-                    *v = Some(i64::from_str(string).unwrap());
+                    *v = Some(from_str!(string, i64)?);
                 }
                 Primitive::I128(v) => {
-                    *v = Some(i128::from_str(string).unwrap());
+                    *v = Some(from_str!(string, i128)?);
                 }
                 Primitive::U8(v) => {
-                    *v = Some(u8::from_str(string).unwrap());
+                    *v = Some(from_str!(string, u8)?);
                 }
                 Primitive::U16(v) => {
-                    *v = Some(u16::from_str(string).unwrap());
+                    *v = Some(from_str!(string, u16)?);
                 }
                 Primitive::U32(v) => {
-                    *v = Some(u32::from_str(string).unwrap());
+                    *v = Some(from_str!(string, u32)?);
                 }
                 Primitive::U64(v) => {
-                    *v = Some(u64::from_str(string).unwrap());
+                    *v = Some(from_str!(string, u64)?);
                 }
                 Primitive::U128(v) => {
-                    *v = Some(u128::from_str(string).unwrap());
+                    *v = Some(from_str!(string, u128)?);
                 }
                 Primitive::USize(v) => {
-                    *v = Some(u32::from_str(string).unwrap());
+                    *v = Some(from_str!(string, u32)?);
                 }
                 Primitive::Felt252(v) => {
                     *v = Some(Felt::from_str(string).unwrap());
