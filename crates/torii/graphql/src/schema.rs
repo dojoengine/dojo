@@ -2,7 +2,7 @@ use anyhow::Result;
 use async_graphql::dynamic::{Object, Scalar, Schema, Subscription, Union};
 use dojo_types::schema::Ty;
 use sqlx::SqlitePool;
-use torii_core::types::Model;
+use torii_sqlite::types::Model;
 
 use super::object::connection::page_info::PageInfoObject;
 use super::object::entity::EntityObject;

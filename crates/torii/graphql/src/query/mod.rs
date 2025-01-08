@@ -10,7 +10,7 @@ use dojo_types::schema::Ty;
 use regex::Regex;
 use sqlx::sqlite::SqliteRow;
 use sqlx::Row;
-use torii_core::constants::SQL_FELT_DELIMITER;
+use torii_sqlite::constants::SQL_FELT_DELIMITER;
 
 use crate::constants::{
     BOOLEAN_TRUE, ENTITY_ID_COLUMN, EVENT_MESSAGE_ID_COLUMN, INTERNAL_ENTITY_ID_KEY,
