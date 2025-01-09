@@ -19,14 +19,8 @@ use url::Url;
 use super::{Error, MessagingConfig, Messenger, MessengerResult, LOG_TARGET};
 
 /// As messaging in starknet is only possible with EthAddress in the `to_address`
-/// field, we have to set magic value to understand what the user want to do.
-/// In the case of execution -> the felt 'EXE' will be passed.
-/// And for normal messages, the felt 'MSG' is used.
-/// Those values are very not likely a valid account address on starknet.
+/// field, in teh current design we set the `to_address` to the `MSG` magic value.
 const MSG_MAGIC: Felt = felt!("0x4d5347");
-const EXE_MAGIC: Felt = felt!("0x455845");
-
-pub const HASH_EXEC: Felt = felt!("0xee");
 
 #[derive(Debug)]
 pub struct StarknetMessaging {
@@ -73,11 +67,11 @@ impl StarknetMessaging {
             from_block: Some(from_block),
             to_block: Some(to_block),
             address: Some(self.messaging_contract_address),
-            // TODO: this might come from the configuration actually.
-            keys: None,
+            // TODO: This may come from the configuration actually.
+            keys: Some(vec![vec![selector!("MessageSent")]]),
         };
 
-        // TODO: this chunk_size may also come from configuration?
+        // TODO: This chunk_size may also come from configuration?
         let chunk_size = 200;
         let mut continuation_token: Option<String> = None;
 
@@ -127,9 +121,7 @@ impl StarknetMessaging {
     }
 
     /// Sends messages hashes to settlement layer by sending a transaction.
-    async fn send_hashes(&self, mut hashes: Vec<Felt>) -> MessengerResult<Felt> {
-        hashes.retain(|&x| x != HASH_EXEC);
-
+    async fn send_hashes(&self, hashes: Vec<Felt>) -> MessengerResult<Felt> {
         if hashes.is_empty() {
             return Ok(Felt::ZERO);
         }
@@ -251,56 +243,34 @@ fn parse_messages(messages: &[MessageToL1]) -> MessengerResult<(Vec<Felt>, Vec<C
 
     for m in messages {
         // Field `to_address` is restricted to eth addresses space. So the
-        // `to_address` is set to 'EXE'/'MSG' to indicate that the message
-        // has to be executed or sent normally.
+        // `to_address` is set to 'MSG' to indicate that the message
+        // has to be sent to the L2 messaging contract.
         let magic = m.to_address;
 
-        if magic == EXE_MAGIC {
-            if m.payload.len() < 2 {
-                error!(
-                    target: LOG_TARGET,
-                    "Message execution is expecting a payload of at least length \
-                     2. With [0] being the contract address, and [1] the selector.",
-                );
-            }
+        // In the case or regular message, we compute the message's hash
+        // which will then be sent in a transaction to be registered as being
+        // ready for consumption by the L2 messaging contract.
 
-            let to = m.payload[0];
-            let selector = m.payload[1];
+        // As to_address is used by the magic, the `to_address` we want
+        // is the first element of the payload.
+        let to_address = m.payload[0];
+        
+        // TEST to see where it actually fails.
+        let to_address = m.to_address;
 
-            let mut calldata = vec![];
-            // We must exclude the `to_address` and `selector` from the actual payload.
-            if m.payload.len() >= 3 {
-                calldata.extend(m.payload[2..].to_vec());
-            }
+        // Then, the payload must be changed to only keep the rest of the
+        // data, without the first element that was the `to_address`.
+        let payload = &m.payload[1..];
 
-            calls.push(Call { to, selector, calldata });
-            hashes.push(HASH_EXEC);
-        } else if magic == MSG_MAGIC {
-            // In the case or regular message, we compute the message's hash
-            // which will then be sent in a transaction to be registered.
-
-            // As to_address is used by the magic, the `to_address` we want
-            // is the first element of the payload.
-            let to_address = m.payload[0];
-
-            // Then, the payload must be changed to only keep the rest of the
-            // data, without the first element that was the `to_address`.
-            let payload = &m.payload[1..];
-
-            let mut buf: Vec<u8> = vec![];
-            buf.extend(m.from_address.to_bytes_be());
-            buf.extend(to_address.to_bytes_be());
-            buf.extend(Felt::from(payload.len()).to_bytes_be());
-            for p in payload {
-                buf.extend(p.to_bytes_be());
-            }
-
-            hashes.push(starknet_keccak(&buf));
-        } else {
-            // Skip the message if no valid magic number found.
-            warn!(target: LOG_TARGET, magic = ?magic, "Invalid message to_address magic value.");
-            continue;
+        let mut buf: Vec<u8> = vec![];
+        buf.extend(m.from_address.to_bytes_be());
+        buf.extend(to_address.to_bytes_be());
+        buf.extend(Felt::from(payload.len()).to_bytes_be());
+        for p in payload {
+            buf.extend(p.to_bytes_be());
         }
+
+        hashes.push(starknet_keccak(&buf));
     }
 
     Ok((hashes, calls))
@@ -369,11 +339,6 @@ mod tests {
                 to_address: MSG_MAGIC,
                 payload: payload_msg,
             },
-            MessageToL1 {
-                from_address: from_address.into(),
-                to_address: EXE_MAGIC,
-                payload: payload_exe.clone(),
-            },
         ];
 
         let (hashes, calls) = parse_messages(&messages).unwrap();
@@ -386,7 +351,6 @@ mod tests {
                     "0x03a1d2e131360f15e26dd4f6ff10550685611cc25f75e7950b704adb04b36162"
                 )
                 .unwrap(),
-                HASH_EXEC,
             ]
         );
 
@@ -406,21 +370,6 @@ mod tests {
             from_address: from_address.into(),
             to_address: MSG_MAGIC,
             payload: payload_msg,
-        }];
-
-        parse_messages(&messages).unwrap();
-    }
-
-    #[test]
-    #[should_panic]
-    fn parse_messages_exe_bad_payload() {
-        let from_address = selector!("from_address");
-        let payload_exe = vec![Felt::ONE];
-
-        let messages = vec![MessageToL1 {
-            from_address: from_address.into(),
-            to_address: EXE_MAGIC,
-            payload: payload_exe,
         }];
 
         parse_messages(&messages).unwrap();
