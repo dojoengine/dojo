@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1736366252015,
+  "lastUpdate": 1736407470052,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -43519,6 +43519,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8100256,
             "range": "± 49500",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "703616457585d2a3d02d49c4ed9a931e8695b41a",
+          "message": "refactor(libp2p): typed data crate + client server feature set (#2877)\n\n* refactor(typed-data): parse number string macro\n\n* fmt\n\n* refactor(libp2p): modularize & client server features\n\n* fmt\n\n* lint\n\n* fmt\n\n* fix tests\n\n* fmt\n\n* fix clippy\n\n* move mocks to td\n\n* fix deps\n\n* log targets\n\n* fmt",
+          "timestamp": "2025-01-09T14:07:46+07:00",
+          "tree_id": "70b1a737b71abd766832719eae2413b3660d6c12",
+          "url": "https://github.com/dojoengine/dojo/commit/703616457585d2a3d02d49c4ed9a931e8695b41a"
+        },
+        "date": 1736407467928,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10434592437,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
