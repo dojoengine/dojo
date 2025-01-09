@@ -8,7 +8,6 @@ use katana_primitives::transaction::L1HandlerTx;
 use katana_primitives::utils::transaction::compute_l2_to_l1_message_hash;
 use starknet::accounts::{Account, ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::types::{BlockId, BlockTag, Call, EmittedEvent, EventFilter, Felt};
-use starknet::core::utils::starknet_keccak;
 use starknet::macros::{felt, selector};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{AnyProvider, JsonRpcClient, Provider};
@@ -20,7 +19,13 @@ use super::{Error, MessagingConfig, Messenger, MessengerResult, LOG_TARGET};
 
 /// As messaging in starknet is only possible with EthAddress in the `to_address`
 /// field, in teh current design we set the `to_address` to the `MSG` magic value.
+///
+/// Blockifier is the one responsible for this out of range error.
+/// <https://github.com/starkware-libs/sequencer/blob/f4b25dd4689ba8ddec3c7db57ea7e8fd7ce32eab/crates/blockifier/src/execution/call_info.rs#L41>
 const MSG_MAGIC: Felt = felt!("0x4d5347");
+
+/// TODO: This may come from the configuration.
+const MESSAGE_SENT_EVENT_KEY: Felt = selector!("MessageSent");
 
 #[derive(Debug)]
 pub struct StarknetMessaging {
@@ -67,8 +72,7 @@ impl StarknetMessaging {
             from_block: Some(from_block),
             to_block: Some(to_block),
             address: Some(self.messaging_contract_address),
-            // TODO: This may come from the configuration actually.
-            keys: Some(vec![vec![selector!("MessageSent")]]),
+            keys: Some(vec![vec![MESSAGE_SENT_EVENT_KEY]]),
         };
 
         // TODO: This chunk_size may also come from configuration?
@@ -213,20 +217,7 @@ impl Messenger for StarknetMessaging {
             return Ok(vec![]);
         }
 
-        let (hashes, calls) = parse_messages(messages)?;
-
-        if !calls.is_empty() {
-            match self.send_invoke_tx(calls).await {
-                Ok(tx_hash) => {
-                    trace!(target: LOG_TARGET, tx_hash = %format!("{:#064x}", tx_hash), "Invoke transaction hash.");
-                }
-                Err(e) => {
-                    error!(target: LOG_TARGET, error = %e, "Sending invoke tx on Starknet.");
-                    return Err(Error::SendError);
-                }
-            };
-        }
-
+        let hashes = parse_messages(messages)?;
         self.send_hashes(hashes.clone()).await?;
 
         Ok(hashes)
@@ -237,15 +228,22 @@ impl Messenger for StarknetMessaging {
 ///
 /// Messages can also be labelled as EXE, which in this case generate a `Call`
 /// additionally to the hash.
-fn parse_messages(messages: &[MessageToL1]) -> MessengerResult<(Vec<Felt>, Vec<Call>)> {
+fn parse_messages(messages: &[MessageToL1]) -> MessengerResult<Vec<Felt>> {
     let mut hashes: Vec<Felt> = vec![];
-    let mut calls: Vec<Call> = vec![];
 
     for m in messages {
         // Field `to_address` is restricted to eth addresses space. So the
         // `to_address` is set to 'MSG' to indicate that the message
         // has to be sent to the L2 messaging contract.
+        //
+        // Blockifier is the one responsible for this out of range error.
+        // <https://github.com/starkware-libs/sequencer/blob/f4b25dd4689ba8ddec3c7db57ea7e8fd7ce32eab/crates/blockifier/src/execution/call_info.rs#L41>
         let magic = m.to_address;
+
+        if magic != MSG_MAGIC {
+            warn!(target: LOG_TARGET, magic = %magic, "Skipping message with non-MSG magic.");
+            continue;
+        }
 
         // In the case or regular message, we compute the message's hash
         // which will then be sent in a transaction to be registered as being
@@ -254,30 +252,25 @@ fn parse_messages(messages: &[MessageToL1]) -> MessengerResult<(Vec<Felt>, Vec<C
         // As to_address is used by the magic, the `to_address` we want
         // is the first element of the payload.
         let to_address = m.payload[0];
-        
-        // TEST to see where it actually fails.
-        let to_address = m.to_address;
 
         // Then, the payload must be changed to only keep the rest of the
         // data, without the first element that was the `to_address`.
         let payload = &m.payload[1..];
 
-        let mut buf: Vec<u8> = vec![];
-        buf.extend(m.from_address.to_bytes_be());
-        buf.extend(to_address.to_bytes_be());
-        buf.extend(Felt::from(payload.len()).to_bytes_be());
+        let mut buf: Vec<Felt> = vec![m.from_address.into(), to_address, Felt::from(payload.len())];
         for p in payload {
-            buf.extend(p.to_bytes_be());
+            buf.push(*p);
         }
 
-        hashes.push(starknet_keccak(&buf));
+        // Piltover uses poseidon hash for all hashes computation.
+        hashes.push(starknet_crypto::poseidon_hash_many(&buf));
     }
 
-    Ok((hashes, calls))
+    Ok(hashes)
 }
 
 fn l1_handler_tx_from_event(event: &EmittedEvent, chain_id: ChainId) -> Result<L1HandlerTx> {
-    if event.keys[0] != selector!("MessageSentToAppchain") {
+    if event.keys[0] != MESSAGE_SENT_EVENT_KEY {
         debug!(
             target: LOG_TARGET,
             event_key = ?event.keys[0],
@@ -302,6 +295,7 @@ fn l1_handler_tx_from_event(event: &EmittedEvent, chain_id: ChainId) -> Result<L
     calldata.extend(&event.data[3..]);
 
     // TODO: this should be using the l1 -> l2 hash computation instead.
+    // This needs to be adjusted to piltover, which actually uses poseidon.
     let message_hash = compute_l2_to_l1_message_hash(from_address, to_address, &calldata);
 
     Ok(L1HandlerTx {
@@ -331,33 +325,23 @@ mod tests {
         let to_address = selector!("to_address");
         let selector = selector!("selector");
         let payload_msg = vec![to_address, Felt::ONE, Felt::TWO];
-        let payload_exe = vec![to_address, selector, Felt::ONE, Felt::TWO];
 
-        let messages = vec![
-            MessageToL1 {
-                from_address: from_address.into(),
-                to_address: MSG_MAGIC,
-                payload: payload_msg,
-            },
-        ];
+        let messages = vec![MessageToL1 {
+            from_address: from_address.into(),
+            to_address: MSG_MAGIC,
+            payload: payload_msg,
+        }];
 
-        let (hashes, calls) = parse_messages(&messages).unwrap();
+        let hashes = parse_messages(&messages).unwrap();
 
         assert_eq!(hashes.len(), 2);
         assert_eq!(
             hashes,
-            vec![
-                Felt::from_hex(
-                    "0x03a1d2e131360f15e26dd4f6ff10550685611cc25f75e7950b704adb04b36162"
-                )
-                .unwrap(),
-            ]
+            vec![Felt::from_hex(
+                "0x03a1d2e131360f15e26dd4f6ff10550685611cc25f75e7950b704adb04b36162"
+            )
+            .unwrap(),]
         );
-
-        assert_eq!(calls.len(), 1);
-        assert_eq!(calls[0].to, to_address);
-        assert_eq!(calls[0].selector, selector);
-        assert_eq!(calls[0].calldata, payload_exe[2..].to_vec());
     }
 
     #[test]

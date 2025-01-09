@@ -8558,6 +8558,7 @@ dependencies = [
  "serde",
  "serde_json",
  "starknet 0.12.0",
+ "starknet-crypto 0.7.2",
  "starknet-types-core",
  "tempfile",
  "thiserror 1.0.63",
