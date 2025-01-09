@@ -126,6 +126,7 @@ torii-grpc = { path = "crates/torii/grpc" }
 torii-relay = { path = "crates/torii/libp2p" }
 torii-server = { path = "crates/torii/server" }
 torii-runner = { path = "crates/torii/runner" }
+torii-typed-data = { path = "crates/torii/typed-data" }
 
 # saya
 saya-core = { path = "crates/saya/core" }

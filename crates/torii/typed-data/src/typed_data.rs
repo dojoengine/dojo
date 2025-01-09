@@ -11,7 +11,7 @@ use starknet::core::types::Felt;
 use starknet::core::utils::{cairo_short_string_to_felt, get_selector_from_name};
 use starknet_crypto::poseidon_hash_many;
 
-use crate::errors::Error;
+use crate::error::Error;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SimpleField {
@@ -93,11 +93,7 @@ fn get_preset_types() -> IndexMap<String, Vec<Field>> {
 // Looks up both the types hashmap as well as the preset types
 // Returns the fields and the hashmap of types
 fn get_fields(name: &str, types: &IndexMap<String, Vec<Field>>) -> Result<Vec<Field>, Error> {
-    if let Some(fields) = types.get(name) {
-        return Ok(fields.clone());
-    }
-
-    Err(Error::InvalidMessageError(format!("Type {} not found", name)))
+    types.get(name).cloned().ok_or_else(|| Error::TypeNotFound(name.to_string()))
 }
 
 fn get_dependencies(
@@ -234,17 +230,14 @@ pub(crate) fn get_value_type(
         }
     }
 
-    Err(Error::InvalidMessageError(format!("Field {} not found in types", name)))
+    Err(Error::FieldNotFound(name.to_string()))
 }
 
 fn get_hex(value: &str) -> Result<Felt, Error> {
-    if let Ok(felt) = Felt::from_str(value) {
-        Ok(felt)
-    } else {
-        // assume its a short string and encode
+    Felt::from_str(value).or_else(|_| {
         cairo_short_string_to_felt(value)
-            .map_err(|e| Error::InvalidMessageError(format!("Invalid shortstring for felt: {}", e)))
-    }
+            .map_err(|e| Error::ParseError(format!("Invalid shortstring for felt: {}", e)))
+    })
 }
 
 impl PrimitiveType {
@@ -263,8 +256,9 @@ impl PrimitiveType {
 
                 if ctx.base_type == "enum" {
                     let (variant_name, value) = obj.first().ok_or_else(|| {
-                        Error::InvalidMessageError("Enum value must be populated".to_string())
+                        Error::InvalidEnum("Enum value must be populated".to_string())
                     })?;
+
                     let variant_type = get_value_type(variant_name, types)?;
 
                     // variant index
@@ -282,9 +276,7 @@ impl PrimitiveType {
                                     .split(',')
                                     .nth(idx)
                                     .ok_or_else(|| {
-                                        Error::InvalidMessageError(
-                                            "Invalid enum variant type".to_string(),
-                                        )
+                                        Error::InvalidEnum("Invalid enum variant type".to_string())
                                     })?;
 
                                 let field_hash =
@@ -306,10 +298,7 @@ impl PrimitiveType {
                 let type_hash =
                     encode_type(r#type, if ctx.is_preset { preset_types } else { types })?;
                 hashes.push(get_selector_from_name(&type_hash).map_err(|e| {
-                    Error::InvalidMessageError(format!(
-                        "Invalid type {} for selector: {}",
-                        r#type, e
-                    ))
+                    Error::ParseError(format!("Invalid type {} for selector: {}", r#type, e))
                 })?);
 
                 for (field_name, value) in obj {
@@ -339,9 +328,7 @@ impl PrimitiveType {
                         .collect::<Vec<&str>>();
 
                     if inner_types.len() != array.len() {
-                        return Err(Error::InvalidMessageError(
-                            "Tuple length mismatch".to_string(),
-                        ));
+                        return Err(Error::InvalidValue("Tuple length mismatch".to_string()));
                     }
 
                     let mut hashes = Vec::new();
@@ -371,7 +358,7 @@ impl PrimitiveType {
                 "string" => {
                     // split the string into short strings and encode
                     let byte_array = ByteArray::from_string(string).map_err(|e| {
-                        Error::InvalidMessageError(format!("Invalid string for bytearray: {}", e))
+                        Error::ParseError(format!("Invalid string for bytearray: {}", e))
                     })?;
 
                     let mut hashes = vec![Felt::from(byte_array.data.len())];
@@ -386,19 +373,18 @@ impl PrimitiveType {
                     Ok(poseidon_hash_many(hashes.as_slice()))
                 }
                 "selector" => get_selector_from_name(string)
-                    .map_err(|e| Error::InvalidMessageError(format!("Invalid selector: {}", e))),
+                    .map_err(|e| Error::ParseError(format!("Invalid selector: {}", e))),
                 "felt" => get_hex(string),
                 "ContractAddress" => get_hex(string),
                 "ClassHash" => get_hex(string),
                 "timestamp" => get_hex(string),
                 "u128" => get_hex(string),
                 "i128" => get_hex(string),
-                _ => Err(Error::InvalidMessageError(format!("Invalid type {} for string", r#type))),
+                _ => Err(Error::InvalidType(format!("Invalid type {} for string", r#type))),
             },
             PrimitiveType::Number(number) => {
-                let felt = Felt::from_str(&number.to_string()).map_err(|_| {
-                    Error::InvalidMessageError(format!("Invalid number {}", number))
-                })?;
+                let felt = Felt::from_str(&number.to_string())
+                    .map_err(|_| Error::ParseError(format!("Invalid number {}", number)))?;
                 Ok(felt)
             }
         }
@@ -425,16 +411,19 @@ impl Domain {
     }
 
     pub fn encode(&self, types: &IndexMap<String, Vec<Field>>) -> Result<Felt, Error> {
-        let mut object = IndexMap::new();
+        if self.revision.as_deref().unwrap_or("1") != "1" {
+            return Err(Error::InvalidDomain("Legacy revision 0 is not supported".to_string()));
+        }
 
+        let mut object = IndexMap::new();
         object.insert("name".to_string(), PrimitiveType::String(self.name.clone()));
         object.insert("version".to_string(), PrimitiveType::String(self.version.clone()));
         object.insert("chainId".to_string(), PrimitiveType::String(self.chain_id.clone()));
+
         if let Some(revision) = &self.revision {
             object.insert("revision".to_string(), PrimitiveType::String(revision.clone()));
         }
 
-        // we dont need to pass our preset types here. domain should never use a preset type
         PrimitiveType::Object(object).encode(
             "StarknetDomain",
             types,
@@ -444,6 +433,17 @@ impl Domain {
     }
 }
 
+macro_rules! from_str {
+    ($string:expr, $type:ty) => {
+        if $string.starts_with("0x") || $string.starts_with("0X") {
+            <$type>::from_str_radix(&$string[2..], 16)
+        } else {
+            <$type>::from_str($string)
+        }
+        .map_err(|e| Error::ParseError(format!("Failed to parse number: {}", e)))
+    };
+}
+
 pub fn parse_value_to_ty(value: &PrimitiveType, ty: &mut Ty) -> Result<(), Error> {
     match value {
         PrimitiveType::Object(object) => match ty {
@@ -451,7 +451,7 @@ pub fn parse_value_to_ty(value: &PrimitiveType, ty: &mut Ty) -> Result<(), Error
                 for (key, value) in object {
                     let member =
                         struct_.children.iter_mut().find(|member| member.name == *key).ok_or_else(
-                            || Error::InvalidMessageError(format!("Member {} not found", key)),
+                            || Error::FieldNotFound(format!("Member {} not found", key)),
                         )?;
 
                     parse_value_to_ty(value, &mut member.ty)?;
@@ -480,9 +480,9 @@ pub fn parse_value_to_ty(value: &PrimitiveType, ty: &mut Ty) -> Result<(), Error
             // where the K is the variant name
             // and the value is the variant value
             Ty::Enum(enum_) => {
-                let (option_name, value) = object.first().ok_or_else(|| {
-                    Error::InvalidMessageError("Enum variant not found".to_string())
-                })?;
+                let (option_name, value) = object
+                    .first()
+                    .ok_or_else(|| Error::InvalidEnum("Enum variant not found".to_string()))?;
 
                 enum_.options.iter_mut().for_each(|option| {
                     if option.name == *option_name {
@@ -490,15 +490,12 @@ pub fn parse_value_to_ty(value: &PrimitiveType, ty: &mut Ty) -> Result<(), Error
                     }
                 });
 
-                enum_.set_option(option_name).map_err(|e| {
-                    Error::InvalidMessageError(format!("Failed to set enum option: {}", e))
-                })?;
+                enum_
+                    .set_option(option_name)
+                    .map_err(|e| Error::InvalidEnum(format!("Failed to set enum option: {}", e)))?;
             }
             _ => {
-                return Err(Error::InvalidMessageError(format!(
-                    "Invalid object type for {}",
-                    ty.name()
-                )));
+                return Err(Error::InvalidType(format!("Invalid object type for {}", ty.name())));
             }
         },
         PrimitiveType::Array(values) => match ty {
@@ -518,7 +515,7 @@ pub fn parse_value_to_ty(value: &PrimitiveType, ty: &mut Ty) -> Result<(), Error
             Ty::Tuple(tuple) => {
                 // our array values need to match the length of the tuple
                 if tuple.len() != values.len() {
-                    return Err(Error::InvalidMessageError("Tuple length mismatch".to_string()));
+                    return Err(Error::InvalidValue("Tuple length mismatch".to_string()));
                 }
 
                 for (i, value) in tuple.iter_mut().enumerate() {
@@ -526,10 +523,7 @@ pub fn parse_value_to_ty(value: &PrimitiveType, ty: &mut Ty) -> Result<(), Error
                 }
             }
             _ => {
-                return Err(Error::InvalidMessageError(format!(
-                    "Invalid array type for {}",
-                    ty.name()
-                )));
+                return Err(Error::InvalidType(format!("Invalid array type for {}", ty.name())));
             }
         },
         PrimitiveType::Number(number) => match ty {
@@ -562,17 +556,14 @@ pub fn parse_value_to_ty(value: &PrimitiveType, ty: &mut Ty) -> Result<(), Error
                     *usize = Some(number.as_u64().unwrap() as u32);
                 }
                 _ => {
-                    return Err(Error::InvalidMessageError(format!(
+                    return Err(Error::InvalidType(format!(
                         "Invalid number type for {}",
                         ty.name()
                     )));
                 }
             },
             _ => {
-                return Err(Error::InvalidMessageError(format!(
-                    "Invalid number type for {}",
-                    ty.name()
-                )));
+                return Err(Error::InvalidType(format!("Invalid number type for {}", ty.name())));
             }
         },
         PrimitiveType::Bool(boolean) => {
@@ -581,37 +572,37 @@ pub fn parse_value_to_ty(value: &PrimitiveType, ty: &mut Ty) -> Result<(), Error
         PrimitiveType::String(string) => match ty {
             Ty::Primitive(primitive) => match primitive {
                 Primitive::I8(v) => {
-                    *v = Some(i8::from_str(string).unwrap());
+                    *v = Some(from_str!(string, i8)?);
                 }
                 Primitive::I16(v) => {
-                    *v = Some(i16::from_str(string).unwrap());
+                    *v = Some(from_str!(string, i16)?);
                 }
                 Primitive::I32(v) => {
-                    *v = Some(i32::from_str(string).unwrap());
+                    *v = Some(from_str!(string, i32)?);
                 }
                 Primitive::I64(v) => {
-                    *v = Some(i64::from_str(string).unwrap());
+                    *v = Some(from_str!(string, i64)?);
                 }
                 Primitive::I128(v) => {
-                    *v = Some(i128::from_str(string).unwrap());
+                    *v = Some(from_str!(string, i128)?);
                 }
                 Primitive::U8(v) => {
-                    *v = Some(u8::from_str(string).unwrap());
+                    *v = Some(from_str!(string, u8)?);
                 }
                 Primitive::U16(v) => {
-                    *v = Some(u16::from_str(string).unwrap());
+                    *v = Some(from_str!(string, u16)?);
                 }
                 Primitive::U32(v) => {
-                    *v = Some(u32::from_str(string).unwrap());
+                    *v = Some(from_str!(string, u32)?);
                 }
                 Primitive::U64(v) => {
-                    *v = Some(u64::from_str(string).unwrap());
+                    *v = Some(from_str!(string, u64)?);
                 }
                 Primitive::U128(v) => {
-                    *v = Some(u128::from_str(string).unwrap());
+                    *v = Some(from_str!(string, u128)?);
                 }
                 Primitive::USize(v) => {
-                    *v = Some(u32::from_str(string).unwrap());
+                    *v = Some(from_str!(string, u32)?);
                 }
                 Primitive::Felt252(v) => {
                     *v = Some(Felt::from_str(string).unwrap());
@@ -626,17 +617,14 @@ pub fn parse_value_to_ty(value: &PrimitiveType, ty: &mut Ty) -> Result<(), Error
                     *v = Some(bool::from_str(string).unwrap());
                 }
                 _ => {
-                    return Err(Error::InvalidMessageError("Invalid primitive type".to_string()));
+                    return Err(Error::InvalidType("Invalid primitive type".to_string()));
                 }
             },
             Ty::ByteArray(s) => {
                 s.clone_from(string);
             }
             _ => {
-                return Err(Error::InvalidMessageError(format!(
-                    "Invalid string type for {}",
-                    ty.name()
-                )));
+                return Err(Error::InvalidType(format!("Invalid string type for {}", ty.name())));
             }
         },
     }
@@ -655,13 +643,12 @@ pub fn map_ty_to_primitive(ty: &Ty) -> Result<PrimitiveType, Error> {
         }
         Ty::Enum(enum_) => {
             let mut object = IndexMap::new();
-            let option = enum_
-                .option
-                .ok_or(Error::InvalidMessageError("Enum option not found".to_string()))?;
+            let option =
+                enum_.option.ok_or(Error::InvalidEnum("Enum option not found".to_string()))?;
             let option = enum_
                 .options
                 .get(option as usize)
-                .ok_or(Error::InvalidMessageError("Enum option not found".to_string()))?;
+                .ok_or(Error::InvalidEnum("Enum option not found".to_string()))?;
             object.insert(option.name.clone(), map_ty_to_primitive(&option.ty)?);
             Ok(PrimitiveType::Object(object))
         }
@@ -883,18 +870,11 @@ impl TypedData {
     pub fn encode(&self, account: Felt) -> Result<Felt, Error> {
         let preset_types = get_preset_types();
 
-        if self.domain.revision.clone().unwrap_or("1".to_string()) != "1" {
-            return Err(Error::InvalidMessageError(
-                "Legacy revision 0 is not supported".to_string(),
-            ));
-        }
+        let prefix_message = cairo_short_string_to_felt("StarkNet Message")
+            .map_err(|e| Error::CryptoError(e.to_string()))?;
 
-        let prefix_message = cairo_short_string_to_felt("StarkNet Message").unwrap();
-
-        // encode domain separator
         let domain_hash = self.domain.encode(&self.types)?;
 
-        // encode message
         let message_hash = PrimitiveType::Object(self.message.clone()).encode(
             &self.primary_type,
             &self.types,
@@ -902,8 +882,7 @@ impl TypedData {
             &mut Default::default(),
         )?;
 
-        // return full hash
-        Ok(poseidon_hash_many(vec![prefix_message, domain_hash, account, message_hash].as_slice()))
+        Ok(poseidon_hash_many(&[prefix_message, domain_hash, account, message_hash]))
     }
 }
 

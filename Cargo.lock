@@ -2001,7 +2001,7 @@ dependencies = [
  "bitflags 2.6.0",
  "cexpr",
  "clang-sys",
- "itertools 0.12.1",
+ "itertools 0.11.0",
  "lazy_static",
  "lazycell",
  "log",
@@ -11594,8 +11594,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "22505a5c94da8e3b7c2996394d1c933236c4d743e81a410bcca4e6989fc066a4"
 dependencies = [
  "bytes",
- "heck 0.5.0",
- "itertools 0.12.1",
+ "heck 0.4.1",
+ "itertools 0.11.0",
  "log",
  "multimap",
  "once_cell",
@@ -11615,7 +11615,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0c1318b19085f08681016926435853bbf7858f9c082d0999b80550ff5d9abe15"
 dependencies = [
  "bytes",
- "heck 0.5.0",
+ "heck 0.4.1",
  "itertools 0.13.0",
  "log",
  "multimap",
@@ -11636,7 +11636,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "81bddcdb20abf9501610992b6759a4c888aef7d1a7247ef75e2404275ac24af1"
 dependencies = [
  "anyhow",
- "itertools 0.12.1",
+ "itertools 0.11.0",
  "proc-macro2",
  "quote",
  "syn 2.0.90",
@@ -15810,9 +15810,7 @@ name = "torii-relay"
 version = "1.0.9"
 dependencies = [
  "anyhow",
- "cainome 0.4.11",
  "chrono",
- "crypto-bigint",
  "dojo-types 1.0.9",
  "dojo-world",
  "futures",
@@ -15832,6 +15830,7 @@ dependencies = [
  "thiserror 1.0.63",
  "tokio",
  "torii-sqlite",
+ "torii-typed-data",
  "tracing",
  "tracing-subscriber",
  "tracing-wasm",
@@ -15959,6 +15958,21 @@ dependencies = [
  "tokio-util",
  "torii-indexer",
  "tracing",
+]
+
+[[package]]
+name = "torii-typed-data"
+version = "1.0.9"
+dependencies = [
+ "cainome 0.4.11",
+ "crypto-bigint",
+ "dojo-types 1.0.9",
+ "indexmap 2.5.0",
+ "serde",
+ "serde_json",
+ "starknet 0.12.0",
+ "starknet-crypto 0.7.2",
+ "thiserror 1.0.63",
 ]
 
 [[package]]
