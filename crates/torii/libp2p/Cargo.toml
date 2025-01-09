@@ -7,7 +7,7 @@ version.workspace = true
 
 [features]
 client = [  ]
-server = [ "dep:sqlx", "dep:torii-core", "dep:dojo-types", "dep:dojo-world", "dep:starknet-crypto", "dep:chrono", "dep:libp2p-webrtc", "dep:rand" ]
+server = [ "dep:sqlx", "dep:torii-sqlite", "dep:dojo-types", "dep:dojo-world", "dep:starknet-crypto", "dep:chrono", "dep:libp2p-webrtc", "dep:rand" ]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

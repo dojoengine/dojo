@@ -4,8 +4,8 @@ use async_graphql::dynamic::{
 };
 use async_graphql::{Name, Value};
 use tokio_stream::StreamExt;
-use torii_core::simple_broker::SimpleBroker;
-use torii_core::types::Model;
+use torii_sqlite::simple_broker::SimpleBroker;
+use torii_sqlite::types::Model;
 
 use super::{resolve_many, BasicObject, ResolvableObject, TypeMapping, ValueMapping};
 use crate::constants::{

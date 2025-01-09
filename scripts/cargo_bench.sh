@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euxo pipefail
 
-# Can be run for one intergration test with: `--test TEST_NAME`
+# Can be run for one integration test with: `--test TEST_NAME`
 
 # prepare contract
 sozo --manifest-path crates/benches/contracts/Scarb.toml build
