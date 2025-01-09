@@ -11,7 +11,7 @@ use tracing::info;
 
 use super::{EventProcessor, EventProcessorConfig};
 
-pub(crate) const LOG_TARGET: &str = "torii_core::processors::store_update_member";
+pub(crate) const LOG_TARGET: &str = "torii_indexer::processors::store_update_member";
 
 #[derive(Default, Debug)]
 pub struct StoreUpdateMemberProcessor;
