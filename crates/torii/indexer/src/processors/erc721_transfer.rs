@@ -9,7 +9,7 @@ use tracing::debug;
 
 use super::{EventProcessor, EventProcessorConfig};
 
-pub(crate) const LOG_TARGET: &str = "torii_core::processors::erc721_transfer";
+pub(crate) const LOG_TARGET: &str = "torii_indexer::processors::erc721_transfer";
 
 #[derive(Default, Debug)]
 pub struct Erc721TransferProcessor;
