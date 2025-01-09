@@ -3,7 +3,7 @@ cairo-version = "=2.8.4"
 edition = "2024_07"
 description = "The Dojo Core library for autonomous worlds."
 name = "dojo"
-version = "1.0.9"
+version = "1.0.10"
 
 [dependencies]
 starknet = "=2.8.4"
