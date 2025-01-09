@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1736436296748,
+  "lastUpdate": 1736436405593,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -43626,6 +43626,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 10349856861,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "77180998fead4da6b0772953482ce8007f48a6cf",
+          "message": "refactor(torii): torii-runner (#2881)\n\n* refactor(torii): torii-runner\n\n* fmt\n\n* clippy\n\n* relay server feature",
+          "timestamp": "2025-01-09T09:10:14-06:00",
+          "tree_id": "ade24e46d3ca43b449a4d592b1a2e7269b53d7df",
+          "url": "https://github.com/dojoengine/dojo/commit/77180998fead4da6b0772953482ce8007f48a6cf"
+        },
+        "date": 1736436403608,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10360295341,
             "range": "± 0",
             "unit": "ns/iter"
           }
