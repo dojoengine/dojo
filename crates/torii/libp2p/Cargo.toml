@@ -22,7 +22,7 @@ thiserror.workspace = true
 torii-typed-data.workspace = true
 tracing.workspace = true
 sqlx = { workspace = true, optional = true }
-torii-core = { workspace = true, optional = true }
+torii-sqlite = { workspace = true, optional = true }
 dojo-types = { workspace = true, optional = true }
 dojo-world = { workspace = true, optional = true }
 rand = { workspace = true, optional = true }
