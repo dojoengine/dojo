@@ -3797,7 +3797,6 @@ dependencies = [
  "anstyle",
  "clap_lex",
  "strsim 0.11.1",
- "terminal_size",
 ]
 
 [[package]]
@@ -3807,20 +3806,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8937760c3f4c60871870b8c3ee5f9b30771f792a7045c48bcbba999d7d6b3b8e"
 dependencies = [
  "clap",
-]
-
-[[package]]
-name = "clap_config"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "46efb9cbf691f5505d0b7b2c8055aec0c9a770eaac8a06834b6d84b5be93279a"
-dependencies = [
- "clap",
- "heck 0.5.0",
- "proc-macro2",
- "quote",
- "serde",
- "syn 2.0.90",
 ]
 
 [[package]]
@@ -15135,16 +15120,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "terminal_size"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "21bebf2b7c9e0a515f6e0f8c51dc0f8e4696391e6f1ff30379559f8365fb0df7"
-dependencies = [
- "rustix 0.38.37",
- "windows-sys 0.48.0",
-]
-
-[[package]]
 name = "termtree"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -15651,50 +15626,10 @@ name = "torii"
 version = "1.0.9"
 dependencies = [
  "anyhow",
- "assert_matches",
- "async-trait",
- "base64 0.21.7",
- "camino",
- "chrono",
  "clap",
- "clap_complete",
- "clap_config",
- "ctrlc",
- "dojo-metrics",
- "dojo-types 1.0.9",
- "dojo-utils",
- "dojo-world",
- "either",
- "futures",
- "http 0.2.12",
- "http-body 0.4.6",
- "hyper 0.14.30",
- "hyper-reverse-proxy",
- "indexmap 2.5.0",
- "lazy_static",
- "serde",
- "serde_json",
- "sqlx",
- "starknet 0.12.0",
- "starknet-crypto 0.7.2",
- "tempfile",
  "tokio",
- "tokio-stream",
- "tokio-util",
- "toml 0.8.19",
  "torii-cli",
- "torii-graphql",
- "torii-grpc",
- "torii-indexer",
- "torii-relay",
- "torii-server",
- "torii-sqlite",
- "tower 0.4.13",
- "tower-http 0.4.4",
- "tracing",
- "tracing-subscriber",
- "url",
- "webbrowser",
+ "torii-runner",
 ]
 
 [[package]]
@@ -15903,6 +15838,54 @@ dependencies = [
  "wasm-bindgen-futures",
  "wasm-bindgen-test",
  "wasm-timer",
+]
+
+[[package]]
+name = "torii-runner"
+version = "1.0.9"
+dependencies = [
+ "anyhow",
+ "assert_matches",
+ "async-trait",
+ "base64 0.21.7",
+ "camino",
+ "chrono",
+ "ctrlc",
+ "dojo-metrics",
+ "dojo-types 1.0.9",
+ "dojo-utils",
+ "dojo-world",
+ "either",
+ "futures",
+ "http 0.2.12",
+ "http-body 0.4.6",
+ "hyper 0.14.30",
+ "hyper-reverse-proxy",
+ "indexmap 2.5.0",
+ "lazy_static",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "starknet 0.12.0",
+ "starknet-crypto 0.7.2",
+ "tempfile",
+ "tokio",
+ "tokio-stream",
+ "tokio-util",
+ "toml 0.8.19",
+ "torii-cli",
+ "torii-graphql",
+ "torii-grpc",
+ "torii-indexer",
+ "torii-relay",
+ "torii-server",
+ "torii-sqlite",
+ "tower 0.4.13",
+ "tower-http 0.4.4",
+ "tracing",
+ "tracing-subscriber",
+ "url",
+ "webbrowser",
 ]
 
 [[package]]
