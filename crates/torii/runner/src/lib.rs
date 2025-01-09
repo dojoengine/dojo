@@ -45,6 +45,7 @@ use url::form_urlencoded;
 
 pub(crate) const LOG_TARGET: &str = "torii_runner";
 
+#[derive(Debug, Clone)]
 pub struct Runner {
     args: ToriiArgs,
 }
