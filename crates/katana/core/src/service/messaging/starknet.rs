@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
+use alloy_primitives::B256;
 use anyhow::Result;
 use async_trait::async_trait;
 use katana_primitives::chain::ChainId;
 use katana_primitives::receipt::MessageToL1;
 use katana_primitives::transaction::L1HandlerTx;
-use katana_primitives::utils::transaction::compute_l2_to_l1_message_hash;
 use starknet::accounts::{Account, ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::types::{BlockId, BlockTag, Call, EmittedEvent, EventFilter, Felt};
 use starknet::macros::{felt, selector};
@@ -25,7 +25,7 @@ use super::{Error, MessagingConfig, Messenger, MessengerResult, LOG_TARGET};
 const MSG_MAGIC: Felt = felt!("0x4d5347");
 
 /// TODO: This may come from the configuration.
-const MESSAGE_SENT_EVENT_KEY: Felt = selector!("MessageSent");
+pub const MESSAGE_SENT_EVENT_KEY: Felt = selector!("MessageSent");
 
 #[derive(Debug)]
 pub struct StarknetMessaging {
@@ -224,10 +224,7 @@ impl Messenger for StarknetMessaging {
     }
 }
 
-/// Parses messages sent by cairo contracts to compute their hashes.
-///
-/// Messages can also be labelled as EXE, which in this case generate a `Call`
-/// additionally to the hash.
+/// Parses messages sent by cairo contracts on the appchain to compute their hashes.
 fn parse_messages(messages: &[MessageToL1]) -> MessengerResult<Vec<Felt>> {
     let mut hashes: Vec<Felt> = vec![];
 
@@ -257,13 +254,9 @@ fn parse_messages(messages: &[MessageToL1]) -> MessengerResult<Vec<Felt>> {
         // data, without the first element that was the `to_address`.
         let payload = &m.payload[1..];
 
-        let mut buf: Vec<Felt> = vec![m.from_address.into(), to_address, Felt::from(payload.len())];
-        for p in payload {
-            buf.push(*p);
-        }
-
-        // Piltover uses poseidon hash for all hashes computation.
-        hashes.push(starknet_crypto::poseidon_hash_many(&buf));
+        let message_hash =
+            compute_appchain_to_starknet_message_hash(m.from_address.into(), to_address, payload);
+        hashes.push(message_hash);
     }
 
     Ok(hashes)
@@ -271,7 +264,7 @@ fn parse_messages(messages: &[MessageToL1]) -> MessengerResult<Vec<Felt>> {
 
 fn l1_handler_tx_from_event(event: &EmittedEvent, chain_id: ChainId) -> Result<L1HandlerTx> {
     if event.keys[0] != MESSAGE_SENT_EVENT_KEY {
-        debug!(
+        error!(
             target: LOG_TARGET,
             event_key = ?event.keys[0],
             "Event can't be converted into L1HandlerTx."
@@ -294,9 +287,15 @@ fn l1_handler_tx_from_event(event: &EmittedEvent, chain_id: ChainId) -> Result<L
     let mut calldata = vec![from_address];
     calldata.extend(&event.data[3..]);
 
-    // TODO: this should be using the l1 -> l2 hash computation instead.
-    // This needs to be adjusted to piltover, which actually uses poseidon.
-    let message_hash = compute_l2_to_l1_message_hash(from_address, to_address, &calldata);
+    let message_hash = compute_starknet_to_appchain_message_hash(
+        from_address,
+        to_address,
+        nonce,
+        entry_point_selector,
+        &calldata,
+    );
+
+    let message_hash = B256::from_slice(message_hash.to_bytes_be().as_slice());
 
     Ok(L1HandlerTx {
         nonce,
@@ -304,11 +303,49 @@ fn l1_handler_tx_from_event(event: &EmittedEvent, chain_id: ChainId) -> Result<L
         chain_id,
         message_hash,
         // This is the min value paid on L1 for the message to be sent to L2.
+        // This doesn't apply for l2-l3 messaging in the current setting.
         paid_fee_on_l1: 30000_u128,
         entry_point_selector,
         version: Felt::ZERO,
         contract_address: to_address.into(),
     })
+}
+
+/// Computes the hash of a L2 to L3 message.
+///
+/// Piltover uses poseidon hash for all hashes computation.
+/// <https://github.com/keep-starknet-strange/piltover/blob/a9c015eada5082076185a7b1413163a3da247009/src/messaging/hash.cairo#L22>
+fn compute_starknet_to_appchain_message_hash(
+    from_address: Felt,
+    to_address: Felt,
+    nonce: Felt,
+    entry_point_selector: Felt,
+    payload: &[Felt],
+) -> Felt {
+    let mut buf: Vec<Felt> =
+        vec![from_address, to_address, nonce, entry_point_selector, Felt::from(payload.len())];
+    for p in payload {
+        buf.push(*p);
+    }
+
+    starknet_crypto::poseidon_hash_many(&buf)
+}
+
+/// Computes the hash of a L3 to L2 message.
+///
+/// Piltover uses poseidon hash for all hashes computation.
+/// <https://github.com/keep-starknet-strange/piltover/blob/a9c015eada5082076185a7b1413163a3da247009/src/messaging/hash.cairo#L58>
+fn compute_appchain_to_starknet_message_hash(
+    from_address: Felt,
+    to_address: Felt,
+    payload: &[Felt],
+) -> Felt {
+    let mut buf: Vec<Felt> = vec![from_address, to_address, Felt::from(payload.len())];
+    for p in payload {
+        buf.push(*p);
+    }
+
+    starknet_crypto::poseidon_hash_many(&buf)
 }
 
 #[cfg(test)]
@@ -323,7 +360,7 @@ mod tests {
     fn parse_messages_msg() {
         let from_address = selector!("from_address");
         let to_address = selector!("to_address");
-        let selector = selector!("selector");
+        let _selector = selector!("selector");
         let payload_msg = vec![to_address, Felt::ONE, Felt::TWO];
 
         let messages = vec![MessageToL1 {
@@ -334,13 +371,13 @@ mod tests {
 
         let hashes = parse_messages(&messages).unwrap();
 
-        assert_eq!(hashes.len(), 2);
+        assert_eq!(hashes.len(), 1);
         assert_eq!(
             hashes,
-            vec![Felt::from_hex(
-                "0x03a1d2e131360f15e26dd4f6ff10550685611cc25f75e7950b704adb04b36162"
-            )
-            .unwrap(),]
+            vec![
+                Felt::from_hex("0x5063bd24379be4da83d607725d1a9f7e5571cb1be30784b4a7a22996f59ff22")
+                    .unwrap(),
+            ]
         );
     }
 
@@ -381,25 +418,26 @@ mod tests {
             from_address: felt!(
                 "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"
             ),
-            keys: vec![
-                selector!("MessageSentToAppchain"),
-                selector!("random_hash"),
-                from_address,
-                to_address,
-            ],
+            keys: vec![MESSAGE_SENT_EVENT_KEY, selector!("random_hash"), from_address, to_address],
             data: vec![selector, nonce, Felt::from(calldata.len() as u128), Felt::THREE],
             block_hash: Some(selector!("block_hash")),
             block_number: Some(0),
             transaction_hash,
         };
 
-        let message_hash = compute_l2_to_l1_message_hash(from_address, to_address, &calldata);
+        let message_hash = compute_starknet_to_appchain_message_hash(
+            from_address,
+            to_address,
+            nonce,
+            selector,
+            &calldata,
+        );
 
         let expected = L1HandlerTx {
             nonce,
             calldata,
             chain_id,
-            message_hash,
+            message_hash: B256::from_slice(message_hash.to_bytes_be().as_slice()),
             paid_fee_on_l1: 30000_u128,
             version: Felt::ZERO,
             entry_point_selector: selector,
