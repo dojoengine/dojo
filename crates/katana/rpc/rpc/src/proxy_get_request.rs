@@ -158,5 +158,9 @@ fn get_account_balance(query: Option<&str>) -> (Box<JsonRawValue>, std::string::
     let unit = params.get("unit").unwrap_or(&default);
 
     let json_string = format!(r#"{{"address":"{}", "unit":"{}"}}"#, address, unit);
-    (JsonRawValue::from_string(json_string).unwrap(), "dev_accountBalance".to_string())
+    let raw_value = match JsonRawValue::from_string(json_string) {
+        Ok(val) => val,
+        Err(_) => JsonRawValue::from_string(r#"{}"#.to_string()).unwrap(),
+    };
+    (raw_value, "dev_accountBalance".to_string())
 }
