@@ -172,6 +172,11 @@ pub fn value_mapping_from_row(
                 TypeData::List(_) => {
                     let value = fetch_value(row, &column_name, "String", is_internal, snake_case)?;
                     if let Value::String(json_str) = value {
+                        if json_str.is_empty() {
+                            value_mapping.insert(Name::new(field_name), Value::List(vec![]));
+                            continue;
+                        }
+                        
                         let mut array_value: Value =
                             serde_json::from_str(&json_str).map_err(|e| {
                                 sqlx::Error::Protocol(format!("JSON parse error: {}", e))
