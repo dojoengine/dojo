@@ -16,7 +16,7 @@ use tracing::{error, info};
 
 use super::{EventProcessor, EventProcessorConfig};
 
-pub(crate) const LOG_TARGET: &str = "torii_core::processors::metadata_update";
+pub(crate) const LOG_TARGET: &str = "torii_indexer::processors::metadata_update";
 
 #[derive(Default, Debug)]
 pub struct MetadataUpdateProcessor;

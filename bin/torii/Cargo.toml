@@ -40,7 +40,7 @@ torii-indexer.workspace = true
 torii-sqlite.workspace = true
 torii-graphql.workspace = true
 torii-grpc = { workspace = true, features = [ "server" ] }
-torii-relay.workspace = true
+torii-relay = { workspace = true, features = [ "client", "server" ] }
 torii-server.workspace = true
 tower.workspace = true
 

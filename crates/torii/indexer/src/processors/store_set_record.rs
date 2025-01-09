@@ -10,7 +10,7 @@ use tracing::{debug, info};
 
 use super::{EventProcessor, EventProcessorConfig};
 
-pub(crate) const LOG_TARGET: &str = "torii_core::processors::store_set_record";
+pub(crate) const LOG_TARGET: &str = "torii_indexer::processors::store_set_record";
 
 #[derive(Default, Debug)]
 pub struct StoreSetRecordProcessor;
