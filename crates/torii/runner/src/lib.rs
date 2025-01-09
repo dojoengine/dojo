@@ -45,9 +45,8 @@ use url::form_urlencoded;
 
 pub(crate) const LOG_TARGET: &str = "torii_runner";
 
-
 pub struct Runner {
-    args: ToriiArgs
+    args: ToriiArgs,
 }
 
 impl Runner {
@@ -62,10 +61,10 @@ impl Runner {
             return Err(anyhow::anyhow!("Please specify a world address."));
         };
 
-        self.args.indexing.contracts.push(Contract { 
-            address: world_address, 
-            r#type: ContractType::WORLD 
-        });
+        self.args
+            .indexing
+            .contracts
+            .push(Contract { address: world_address, r#type: ContractType::WORLD });
 
         let filter_layer = EnvFilter::try_from_default_env()
             .unwrap_or_else(|_| EnvFilter::new("info,hyper_reverse_proxy=off"));
@@ -104,7 +103,8 @@ impl Runner {
         options = options.journal_mode(SqliteJournalMode::Wal);
         options = options.synchronous(SqliteSynchronous::Normal);
 
-        let pool = SqlitePoolOptions::new().min_connections(1).connect_with(options.clone()).await?;
+        let pool =
+            SqlitePoolOptions::new().min_connections(1).connect_with(options.clone()).await?;
 
         let readonly_options = options.read_only(true);
         let readonly_pool = SqlitePoolOptions::new()
@@ -135,8 +135,13 @@ impl Runner {
         let executor_handle = tokio::spawn(async move { executor.run().await });
 
         let model_cache = Arc::new(ModelCache::new(readonly_pool.clone()));
-        let db = Sql::new(pool.clone(), sender.clone(), &self.args.indexing.contracts, model_cache.clone())
-            .await?;
+        let db = Sql::new(
+            pool.clone(),
+            sender.clone(),
+            &self.args.indexing.contracts,
+            model_cache.clone(),
+        )
+        .await?;
 
         let processors = Processors {
             transaction: vec![Box::new(StoreTransactionProcessor)],
@@ -190,8 +195,10 @@ impl Runner {
         .await?;
 
         let temp_dir = TempDir::new()?;
-        let artifacts_path =
-            self.args.artifacts_path.unwrap_or_else(|| Utf8PathBuf::from(temp_dir.path().to_str().unwrap()));
+        let artifacts_path = self
+            .args
+            .artifacts_path
+            .unwrap_or_else(|| Utf8PathBuf::from(temp_dir.path().to_str().unwrap()));
 
         tokio::fs::create_dir_all(&artifacts_path).await?;
         let absolute_path = artifacts_path.canonicalize_utf8()?;
@@ -232,9 +239,10 @@ impl Runner {
         );
 
         let gql_endpoint = format!("{addr}/graphql");
-        let encoded: String =
-            form_urlencoded::byte_serialize(gql_endpoint.replace("0.0.0.0", "localhost").as_bytes())
-                .collect();
+        let encoded: String = form_urlencoded::byte_serialize(
+            gql_endpoint.replace("0.0.0.0", "localhost").as_bytes(),
+        )
+        .collect();
         let explorer_url = format!("https://worlds.dev/torii?url={}", encoded);
         info!(target: LOG_TARGET, endpoint = %addr, "Starting torii endpoint.");
         info!(target: LOG_TARGET, endpoint = %gql_endpoint, "Serving Graphql playground.");
@@ -248,7 +256,8 @@ impl Runner {
         }
 
         if self.args.metrics.metrics {
-            let addr = SocketAddr::new(self.args.metrics.metrics_addr, self.args.metrics.metrics_port);
+            let addr =
+                SocketAddr::new(self.args.metrics.metrics_addr, self.args.metrics.metrics_port);
             info!(target: LOG_TARGET, %addr, "Starting metrics endpoint.");
             let prometheus_handle = PrometheusRecorder::install("torii")?;
             let server = dojo_metrics::Server::new(prometheus_handle).with_process_metrics();
@@ -260,7 +269,8 @@ impl Runner {
             tokio::spawn(async move { proxy_server.start(shutdown_tx.subscribe()).await });
         let graphql_server_handle = tokio::spawn(graphql_server);
         let grpc_server_handle = tokio::spawn(grpc_server);
-        let libp2p_relay_server_handle = tokio::spawn(async move { libp2p_relay_server.run().await });
+        let libp2p_relay_server_handle =
+            tokio::spawn(async move { libp2p_relay_server.run().await });
         let artifacts_server_handle = tokio::spawn(artifacts_server);
 
         tokio::select! {
