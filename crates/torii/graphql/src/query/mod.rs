@@ -176,7 +176,7 @@ pub fn value_mapping_from_row(
                             value_mapping.insert(Name::new(field_name), Value::List(vec![]));
                             continue;
                         }
-                        
+
                         let mut array_value: Value =
                             serde_json::from_str(&json_str).map_err(|e| {
                                 sqlx::Error::Protocol(format!("JSON parse error: {}", e))
