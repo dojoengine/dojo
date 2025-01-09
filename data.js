@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1736436621818,
+  "lastUpdate": 1736452019752,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -43753,6 +43753,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8077827,
             "range": "± 162131",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1829ce52245ecfc9fe1a498e927e501bd20eb2f1",
+          "message": "refactor(katana-messaging): remove message execution and fix hashing (#2884)\n\n* refactor: remove the hash functionnality to only have conventional messaging\r\n\r\n* fix: use poseidon for appchain message hash computation\r\n\r\n* fix: match piltover message hash computation\r\n\r\n* tests: update tests db",
+          "timestamp": "2025-01-09T13:30:13-06:00",
+          "tree_id": "902cff02c82b5a93c9c5a5ea740e6b7b70aecd37",
+          "url": "https://github.com/dojoengine/dojo/commit/1829ce52245ecfc9fe1a498e927e501bd20eb2f1"
+        },
+        "date": 1736452017930,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10427308811,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
