@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1736516632213,
+  "lastUpdate": 1736516830264,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -43939,6 +43939,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10556365331,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "80ac6d1cdf35a855aeb550463e50546dc24a09cc",
+          "message": "fix(torii-grpc): nullable enum array deser (#2887)\n\n* fix(torii-grpc): nullable enum array deser\n\n* remove print",
+          "timestamp": "2025-01-10T07:27:00-06:00",
+          "tree_id": "09f84cdda002cf3fd85fa5dc20530dc1f9d7ccc3",
+          "url": "https://github.com/dojoengine/dojo/commit/80ac6d1cdf35a855aeb550463e50546dc24a09cc"
+        },
+        "date": 1736516827785,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2473791,
+            "range": "± 14818",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8567788,
+            "range": "± 330779",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3735381235,
+            "range": "± 843830862",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8450615,
+            "range": "± 386683",
             "unit": "ns/iter"
           }
         ]
