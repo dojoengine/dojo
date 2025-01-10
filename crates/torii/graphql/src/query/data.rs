@@ -1,7 +1,7 @@
 use async_graphql::connection::PageInfo;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{Result, Row, SqliteConnection};
-use torii_core::constants::WORLD_CONTRACT_TYPE;
+use torii_sqlite::constants::WORLD_CONTRACT_TYPE;
 
 use super::filter::{Filter, FilterValue};
 use super::order::{CursorDirection, Direction, Order};

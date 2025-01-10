@@ -60,7 +60,7 @@ edition = "2021"
 license = "Apache-2.0"
 license-file = "LICENSE"
 repository = "https://github.com/dojoengine/dojo/"
-version = "1.0.9"
+version = "1.0.10"
 
 [profile.performance]
 codegen-units = 1
@@ -73,8 +73,8 @@ debug = true
 inherits = "release"
 
 [workspace.dependencies]
-cainome = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.4.10", features = [ "abigen-rs" ] }
-cainome-cairo-serde = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.4.10" }
+cainome = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.4.11", features = [ "abigen-rs" ] }
+cainome-cairo-serde = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.4.11" }
 dojo-utils = { path = "crates/dojo/utils" }
 
 # metrics
@@ -119,11 +119,14 @@ katana-trie = { path = "crates/katana/trie" }
 # torii
 torii-cli = { path = "crates/torii/cli" }
 torii-client = { path = "crates/torii/client" }
-torii-core = { path = "crates/torii/core" }
+torii-indexer = { path = "crates/torii/indexer" }
+torii-sqlite = { path = "crates/torii/sqlite" }
 torii-graphql = { path = "crates/torii/graphql" }
 torii-grpc = { path = "crates/torii/grpc" }
 torii-relay = { path = "crates/torii/libp2p" }
 torii-server = { path = "crates/torii/server" }
+torii-runner = { path = "crates/torii/runner" }
+torii-typed-data = { path = "crates/torii/typed-data" }
 
 # saya
 saya-core = { path = "crates/saya/core" }

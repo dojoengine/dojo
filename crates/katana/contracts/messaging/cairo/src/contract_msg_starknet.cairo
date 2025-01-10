@@ -4,10 +4,9 @@
 //! This contract can sends messages using the send message to l1
 //! syscall as we normally do for messaging.
 //!
-//! If the message contains a `to_address` that is not zero, the message
-//! hash will be sent to starknet to be registered.
-//! If the `to_address` is zero, then the message will then fire a transaction
-//! on the starknet to directly execute the message content.
+//! However, the `to_address` is set to the `MSG` magic value since
+//! this field is restricted to a valid Ethereum address, too small to
+//! be a valid Starknet address.
 use starknet::ContractAddress;
 
 #[starknet::interface]
@@ -21,20 +20,6 @@ trait IContractAppchain<T> {
     /// * `to_address` - Contract address on Starknet.
     /// * `value` - Value to be sent in the payload.
     fn send_message(ref self: T, to_address: ContractAddress, value: felt252);
-
-    /// Executes a message on Starknet. When the Katana will see this message
-    /// with `to_address` set to 0, an invoke transaction will be fired.
-    /// So basically this function can invoke any contract on Starknet, the fees on starknet
-    /// being paid by the sequencer. We can here imagine several scenarios. :)
-    /// The invoke though is not directly done to the destination contract, but the
-    /// app messaging contract that will forward the execution.
-    ///
-    /// # Arguments
-    ///
-    /// * `to_address` - Contract address on Starknet.
-    /// * `selector` - Selector.
-    /// * `value` - Value to be sent as argument to the contract being executed on starknet.
-    fn execute_message(ref self: T, to_address: ContractAddress, selector: felt252, value: felt252);
 }
 
 #[starknet::contract]
@@ -66,13 +51,6 @@ mod contract_msg_starknet {
         fn send_message(ref self: ContractState, to_address: ContractAddress, value: felt252) {
             let buf: Array<felt252> = array![to_address.into(), value];
             starknet::send_message_to_l1_syscall('MSG', buf.span()).unwrap_syscall();
-        }
-
-        fn execute_message(
-            ref self: ContractState, to_address: ContractAddress, selector: felt252, value: felt252,
-        ) {
-            let buf: Array<felt252> = array![to_address.into(), selector, value];
-            starknet::send_message_to_l1_syscall('EXE', buf.span()).unwrap_syscall();
         }
     }
 }
