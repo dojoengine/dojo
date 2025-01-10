@@ -41,11 +41,11 @@ pub fn parse_members(
     members: &[MemberAst],
     diagnostics: &mut Vec<PluginDiagnostic>,
 ) -> Vec<Member> {
-    let mut keys = true;
+    let mut parsing_keys = true;
     members
         .iter()
         .filter_map(|member_ast| {
-            let key = member_ast.has_attr(db, "key");
+            let is_key = member_ast.has_attr(db, "key");
 
             let member = Member {
                 name: member_ast.name(db).text(db).to_string(),
@@ -56,22 +56,20 @@ pub fn parse_members(
                     .get_text(db)
                     .trim()
                     .to_string(),
-                key,
+                key: is_key,
             };
 
             // Make sure all keys are before values in the model.
-            if key {
-                if !keys {
-                    diagnostics.push(PluginDiagnostic {
-                        message: "Key members must be defined before non-key members.".into(),
-                        stable_ptr: member_ast.name(db).stable_ptr().untyped(),
-                        severity: Severity::Error,
-                    });
-                    return None;
-                }
-            } else {
-                keys = false;
+            if is_key && !parsing_keys {
+                diagnostics.push(PluginDiagnostic {
+                    message: "Key members must be defined before non-key members.".into(),
+                    stable_ptr: member_ast.name(db).stable_ptr().untyped(),
+                    severity: Severity::Error,
+                });
+                return None;
             }
+            parsing_keys &= is_key;
+
             // validate key member
             if member.key && member.ty == "u256" {
                 diagnostics.push(PluginDiagnostic {
