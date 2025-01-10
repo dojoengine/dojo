@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1736526988384,
+  "lastUpdate": 1736527112846,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -44016,6 +44016,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 10558637683,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "907225865@qq.com",
+            "name": "dashangcun",
+            "username": "dashangcun"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "dd1cccef56d3995aa15cbbc796fb6af66a5b70d1",
+          "message": "chore: fix wrong keywords in comment (#2885)\n\nSigned-off-by: dashangcun <907225865@qq.com>",
+          "timestamp": "2025-01-10T10:21:06-06:00",
+          "tree_id": "34ecef7357884530109ca50240d1178c6fae1baf",
+          "url": "https://github.com/dojoengine/dojo/commit/dd1cccef56d3995aa15cbbc796fb6af66a5b70d1"
+        },
+        "date": 1736527110921,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10777573310,
             "range": "± 0",
             "unit": "ns/iter"
           }
