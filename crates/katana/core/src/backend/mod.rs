@@ -11,7 +11,7 @@ use katana_primitives::env::BlockEnv;
 use katana_primitives::receipt::{Event, ReceiptWithTxHash};
 use katana_primitives::state::{compute_state_diff_hash, StateUpdates};
 use katana_primitives::transaction::{TxHash, TxWithHash};
-use katana_primitives::Felt;
+use katana_primitives::{address, ContractAddress, Felt};
 use katana_provider::traits::block::{BlockHashProvider, BlockWriter};
 use katana_provider::traits::trie::TrieWriter;
 use katana_trie::compute_merkle_root;
@@ -49,7 +49,7 @@ impl<EF: ExecutorFactory> Backend<EF> {
     pub fn do_mine_block(
         &self,
         block_env: &BlockEnv,
-        execution_output: ExecutionOutput,
+        mut execution_output: ExecutionOutput,
     ) -> Result<MinedBlockOutcome, BlockProductionError> {
         // we optimistically allocate the maximum amount possible
         let mut txs = Vec::with_capacity(execution_output.transactions.len());
@@ -67,6 +67,9 @@ impl<EF: ExecutorFactory> Backend<EF> {
 
         let tx_count = txs.len() as u32;
         let tx_hashes = txs.iter().map(|tx| tx.hash).collect::<Vec<TxHash>>();
+
+        // Update special contract address 0x1
+        self.update_block_hash(&mut execution_output.states.state_updates, block_env.number)?;
 
         // create a new block and compute its commitment
         let block = self.commit_block(
@@ -91,6 +94,29 @@ impl<EF: ExecutorFactory> Backend<EF> {
 
         info!(target: LOG_TARGET, %block_number, %tx_count, "Block mined.");
         Ok(MinedBlockOutcome { block_number, txs: tx_hashes, stats: execution_output.stats })
+    }
+
+    // https://docs.starknet.io/architecture-and-concepts/network-architecture/starknet-state/#address_0x1
+    fn update_block_hash(
+        &self,
+        state_updates: &mut StateUpdates,
+        block_number: u64,
+    ) -> Result<(), BlockProductionError> {
+        const STORED_BLOCK_HASH_BUFFER: u64 = 10;
+
+        if block_number >= STORED_BLOCK_HASH_BUFFER {
+            let block_number = block_number - STORED_BLOCK_HASH_BUFFER;
+            let block_hash = self
+                .blockchain
+                .provider()
+                .block_hash_by_num(block_number)?
+                .expect("qed; missing block hash");
+
+            let storages = state_updates.storage_updates.entry(address!("0x1")).or_default();
+            storages.insert(block_number.into(), block_hash);
+        }
+
+        Ok(())
     }
 
     pub fn update_block_env(&self, block_env: &mut BlockEnv) {
