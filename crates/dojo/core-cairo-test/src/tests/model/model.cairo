@@ -25,11 +25,21 @@ struct Foo2 {
     v2: u32
 }
 
+
+#[derive(Copy, Drop, Serde, Debug)]
+#[dojo::model]
+struct ModelWithFixedArray {
+    #[key]
+    k1: u8,
+    v1: [u16; 3]
+}
+
 fn namespace_def() -> NamespaceDef {
     NamespaceDef {
         namespace: "dojo_cairo_test", resources: [
             TestResource::Model(m_Foo::TEST_CLASS_HASH.try_into().unwrap()),
             TestResource::Model(m_Foo2::TEST_CLASS_HASH.try_into().unwrap()),
+            TestResource::Model(m_ModelWithFixedArray::TEST_CLASS_HASH.try_into().unwrap()),
         ].span()
     }
 }
@@ -180,4 +190,20 @@ fn test_model_ptr_from_entity_id() {
     world.write_model(@foo);
     let v1 = world.read_member(ptr, selector!("v1"));
     assert!(foo.v1 == v1);
+}
+
+#[test]
+fn test_model_with_fixed_array() {
+    let mut world = spawn_foo_world();
+    let model = ModelWithFixedArray { k1: 1, v1: [4, 32, 256] };
+
+    world.write_model(@model);
+    let read_model: ModelWithFixedArray = world.read_model(model.keys());
+
+    assert!(model.v1 == read_model.v1);
+
+    world.erase_model(@model);
+    let read_model: ModelWithFixedArray = world.read_model(model.keys());
+
+    assert!(read_model.v1 == [0, 0, 0]);
 }
