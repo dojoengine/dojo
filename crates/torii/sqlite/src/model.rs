@@ -376,6 +376,10 @@ pub fn map_row_to_ty(
         Ty::Array(ty) => {
             let schema = ty[0].clone();
             let serialized_array = row.try_get::<String, &str>(column_name)?;
+            if serialized_array.is_empty() {
+                *ty = vec![];
+                return Ok(());
+            }
 
             let values: Vec<JsonValue> =
                 serde_json::from_str(&serialized_array).map_err(ParseError::FromJsonStr)?;
@@ -533,6 +537,7 @@ pub async fn fetch_entities(
                 query += &format!(" OFFSET {}", offset);
             }
 
+            println!("{}", query);
             // Execute main query
             let mut stmt = sqlx::query(&query);
             for value in &bind_values {
