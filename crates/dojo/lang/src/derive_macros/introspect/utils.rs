@@ -1,7 +1,9 @@
-use regex::Regex;
 use std::collections::HashMap;
 
-const FIXED_ARRAY_REGEX: &str = r"\[.+;\s*(\d{1,10}|([a-zA-Z_{1}][a-zA-Z0-9_]*))\s*\]"; // Matches [*;(u32 or variable_name)]
+use regex::Regex;
+
+// Matches [*;(u32 or variable_name)]
+const FIXED_ARRAY_REGEX: &str = r"\[.+;\s*(\d{1,10}|([a-zA-Z_{1}][a-zA-Z0-9_]*))\s*\]";
 
 #[derive(Clone, Default, Debug)]
 pub struct TypeIntrospection(pub usize, pub Vec<usize>);
