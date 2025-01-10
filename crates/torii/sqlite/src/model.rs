@@ -537,7 +537,6 @@ pub async fn fetch_entities(
                 query += &format!(" OFFSET {}", offset);
             }
 
-            println!("{}", query);
             // Execute main query
             let mut stmt = sqlx::query(&query);
             for value in &bind_values {
