@@ -69,7 +69,10 @@ impl<EF: ExecutorFactory> Backend<EF> {
         let tx_hashes = txs.iter().map(|tx| tx.hash).collect::<Vec<TxHash>>();
 
         // Update special contract address 0x1
-        self.update_block_hash(&mut execution_output.states.state_updates, block_env.number)?;
+        self.update_block_hash_registry_contract(
+            &mut execution_output.states.state_updates,
+            block_env.number,
+        )?;
 
         // create a new block and compute its commitment
         let block = self.commit_block(
@@ -96,8 +99,9 @@ impl<EF: ExecutorFactory> Backend<EF> {
         Ok(MinedBlockOutcome { block_number, txs: tx_hashes, stats: execution_output.stats })
     }
 
+    // TODO: create a dedicated class for this contract.
     // https://docs.starknet.io/architecture-and-concepts/network-architecture/starknet-state/#address_0x1
-    fn update_block_hash(
+    fn update_block_hash_registry_contract(
         &self,
         state_updates: &mut StateUpdates,
         block_number: u64,
