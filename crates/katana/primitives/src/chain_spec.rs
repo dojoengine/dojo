@@ -80,7 +80,12 @@ impl ChainSpec {
         for (class_hash, class) in &self.genesis.classes {
             let class_hash = *class_hash;
 
-            states.state_updates.declared_classes.insert(class_hash, class.compiled_class_hash);
+            if class.class.is_legacy() {
+                states.state_updates.deprecated_declared_classes.insert(class_hash);
+            } else {
+                states.state_updates.declared_classes.insert(class_hash, class.compiled_class_hash);
+            }
+
             states.classes.insert(class_hash, class.class.as_ref().clone());
         }
 
@@ -412,7 +417,7 @@ mod tests {
         assert_eq!(
             actual_state_updates
                 .state_updates
-                .declared_classes
+                .deprecated_declared_classes
                 .get(&DEFAULT_LEGACY_ERC20_CLASS_HASH),
             Some(&DEFAULT_LEGACY_ERC20_COMPILED_CLASS_HASH),
         );
@@ -444,7 +449,10 @@ mod tests {
         );
 
         assert_eq!(
-            actual_state_updates.state_updates.declared_classes.get(&DEFAULT_LEGACY_UDC_CLASS_HASH),
+            actual_state_updates
+                .state_updates
+                .deprecated_declared_classes
+                .get(&DEFAULT_LEGACY_UDC_CLASS_HASH),
             Some(&DEFAULT_LEGACY_UDC_COMPILED_CLASS_HASH),
             "The default universal deployer class should be declared"
         );
