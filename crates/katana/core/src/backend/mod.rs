@@ -3,7 +3,7 @@ use std::sync::Arc;
 use gas_oracle::L1GasOracle;
 use katana_executor::{ExecutionOutput, ExecutionResult, ExecutorFactory};
 use katana_primitives::block::{
-    FinalityStatus, Header, PartialHeader, SealedBlock, SealedBlockWithStatus,
+    BlockNumber, FinalityStatus, Header, PartialHeader, SealedBlock, SealedBlockWithStatus,
 };
 use katana_primitives::chain_spec::ChainSpec;
 use katana_primitives::da::L1DataAvailabilityMode;
@@ -104,7 +104,7 @@ impl<EF: ExecutorFactory> Backend<EF> {
     fn update_block_hash_registry_contract(
         &self,
         state_updates: &mut StateUpdates,
-        block_number: u64,
+        block_number: BlockNumber,
     ) -> Result<(), BlockProductionError> {
         const STORED_BLOCK_HASH_BUFFER: u64 = 10;
 
