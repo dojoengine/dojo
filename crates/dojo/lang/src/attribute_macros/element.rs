@@ -43,32 +43,10 @@ pub fn parse_members(
 ) -> Vec<Member> {
     members
         .iter()
-        .filter_map(|member_ast| {
-            let member = Member {
-                name: member_ast.name(db).text(db).to_string(),
-                ty: member_ast
-                    .type_clause(db)
-                    .ty(db)
-                    .as_syntax_node()
-                    .get_text(db)
-                    .trim()
-                    .to_string(),
-                key: member_ast.has_attr(db, "key"),
-            };
-
-            // validate key member
-            if member.key && member.ty == "u256" {
-                diagnostics.push(PluginDiagnostic {
-                    message: "Key is only supported for core types that are 1 felt long once \
-                              serialized. `u256` is a struct of 2 u128, hence not supported."
-                        .into(),
-                    stable_ptr: member_ast.name(db).stable_ptr().untyped(),
-                    severity: Severity::Error,
-                });
-                None
-            } else {
-                Some(member)
-            }
+        .map(|member_ast| Member {
+            name: member_ast.name(db).text(db).to_string(),
+            ty: member_ast.type_clause(db).ty(db).as_syntax_node().get_text(db).trim().to_string(),
+            key: member_ast.has_attr(db, "key"),
         })
         .collect::<Vec<_>>()
 }
