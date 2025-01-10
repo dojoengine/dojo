@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1736527184925,
+  "lastUpdate": 1736527278131,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -44095,6 +44095,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8240966,
             "range": "± 155225",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "907225865@qq.com",
+            "name": "dashangcun",
+            "username": "dashangcun"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "dd1cccef56d3995aa15cbbc796fb6af66a5b70d1",
+          "message": "chore: fix wrong keywords in comment (#2885)\n\nSigned-off-by: dashangcun <907225865@qq.com>",
+          "timestamp": "2025-01-10T10:21:06-06:00",
+          "tree_id": "34ecef7357884530109ca50240d1178c6fae1baf",
+          "url": "https://github.com/dojoengine/dojo/commit/dd1cccef56d3995aa15cbbc796fb6af66a5b70d1"
+        },
+        "date": 1736527276154,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2484141,
+            "range": "± 23552",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8349962,
+            "range": "± 342921",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3953077467,
+            "range": "± 799271426",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8078134,
+            "range": "± 50495",
             "unit": "ns/iter"
           }
         ]
