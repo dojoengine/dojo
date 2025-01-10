@@ -59,7 +59,7 @@ pub fn parse_members(
                 key,
             };
 
-            // validate key member
+            // Make sure all keys are before values in the model.
             if key {
                 if !keys {
                     diagnostics.push(PluginDiagnostic {
@@ -72,7 +72,7 @@ pub fn parse_members(
             } else {
                 keys = false;
             }
-
+            // validate key member
             if member.key && member.ty == "u256" {
                 diagnostics.push(PluginDiagnostic {
                     message: "Key is only supported for core types that are 1 felt long once \
