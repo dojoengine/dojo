@@ -211,7 +211,6 @@ pub fn compute_fixed_array_size_from_type(array_type: &str) -> Vec<String> {
     let inner_type_size = compute_item_size_from_type(&inner_type);
 
     (0..array_size.trim().parse().unwrap())
-        .map(|_| inner_type_size.clone())
-        .flatten()
+        .flat_map(|_| inner_type_size.clone())
         .collect::<Vec<_>>()
 }
