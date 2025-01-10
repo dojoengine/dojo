@@ -57,13 +57,6 @@ impl ContractClass {
         }
     }
 
-    /// Checks if this contract class is a Sierra class.
-    ///
-    /// Returns `true` if the contract class is a Sierra class, `false` otherwise.
-    pub fn is_class(&self) -> bool {
-        matches!(self, Self::Class(_))
-    }
-
     /// Checks if this contract class is a Cairo 0 legacy class.
     ///
     /// Returns `true` if the contract class is a legacy class, `false` otherwise.
