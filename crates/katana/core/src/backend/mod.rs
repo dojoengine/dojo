@@ -100,7 +100,7 @@ impl<EF: ExecutorFactory> Backend<EF> {
         Ok(MinedBlockOutcome { block_number, txs: tx_hashes, stats: execution_output.stats })
     }
 
-    // TODO: create a dedicated class for this contract.
+    // TODO: create a dedicated struct for this contract.
     // https://docs.starknet.io/architecture-and-concepts/network-architecture/starknet-state/#address_0x1
     fn update_block_hash_registry_contract(
         &self,
