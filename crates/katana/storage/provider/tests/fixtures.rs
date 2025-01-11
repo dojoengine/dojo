@@ -69,8 +69,8 @@ pub fn db_provider() -> BlockchainProvider<DbProvider> {
 
 #[rstest::fixture]
 pub fn mock_state_updates() -> [StateUpdatesWithClasses; 3] {
-    let address_1 = address!("1");
-    let address_2 = address!("2");
+    let address_1 = address!("1337");
+    let address_2 = address!("80085");
 
     let class_hash_1 = felt!("11");
     let compiled_class_hash_1 = felt!("1000");
