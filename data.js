@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1736527278131,
+  "lastUpdate": 1736554900635,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -44143,6 +44143,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8078134,
             "range": "± 50495",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b5e45c34ae2987a03e3d039bca126018943ef5ab",
+          "message": "fix(katana): genesis deprecated declared classes in state updates (#2893)",
+          "timestamp": "2025-01-11T08:04:29+08:00",
+          "tree_id": "2bada89efb9be394962cce204d9da1b4808be140",
+          "url": "https://github.com/dojoengine/dojo/commit/b5e45c34ae2987a03e3d039bca126018943ef5ab"
+        },
+        "date": 1736554898193,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10809930949,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
