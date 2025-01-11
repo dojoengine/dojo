@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1736623133764,
+  "lastUpdate": 1736623214844,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -44407,6 +44407,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10640516876,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a5377ac673ee84a1653cdc5625538600faa226dd",
+          "message": "fix(katana-cli): ensure compilation without server feature (#2896)",
+          "timestamp": "2025-01-11T13:01:39-06:00",
+          "tree_id": "7cb16b65eadc60380e4e21f90b782303a7834767",
+          "url": "https://github.com/dojoengine/dojo/commit/a5377ac673ee84a1653cdc5625538600faa226dd"
+        },
+        "date": 1736623212971,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2445239,
+            "range": "± 43094",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 9259796,
+            "range": "± 465862",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2683239901,
+            "range": "± 238454218",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8500693,
+            "range": "± 444398",
             "unit": "ns/iter"
           }
         ]
