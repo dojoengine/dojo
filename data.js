@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1736574028352,
+  "lastUpdate": 1736623133764,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -44376,6 +44376,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 10548433878,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a5377ac673ee84a1653cdc5625538600faa226dd",
+          "message": "fix(katana-cli): ensure compilation without server feature (#2896)",
+          "timestamp": "2025-01-11T13:01:39-06:00",
+          "tree_id": "7cb16b65eadc60380e4e21f90b782303a7834767",
+          "url": "https://github.com/dojoengine/dojo/commit/a5377ac673ee84a1653cdc5625538600faa226dd"
+        },
+        "date": 1736623132038,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10640516876,
             "range": "± 0",
             "unit": "ns/iter"
           }
