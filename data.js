@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1736558253127,
+  "lastUpdate": 1736573938443,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -44299,6 +44299,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8179352,
             "range": "± 339844",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c93a058a2e081afb191427297b5fdcf95d2cb063",
+          "message": "feat(katana): special block hash registry contract (#2894)",
+          "timestamp": "2025-01-11T05:20:56Z",
+          "tree_id": "b258ce00f3128c46931fa9145a40013adc0bcc45",
+          "url": "https://github.com/dojoengine/dojo/commit/c93a058a2e081afb191427297b5fdcf95d2cb063"
+        },
+        "date": 1736573936179,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2427136,
+            "range": "± 34032",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8390313,
+            "range": "± 104062",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2469402324,
+            "range": "± 220737318",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8316727,
+            "range": "± 127489",
             "unit": "ns/iter"
           }
         ]
