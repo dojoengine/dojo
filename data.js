@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1736554900635,
+  "lastUpdate": 1736555108761,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -44173,6 +44173,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10809930949,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b5e45c34ae2987a03e3d039bca126018943ef5ab",
+          "message": "fix(katana): genesis deprecated declared classes in state updates (#2893)",
+          "timestamp": "2025-01-11T08:04:29+08:00",
+          "tree_id": "2bada89efb9be394962cce204d9da1b4808be140",
+          "url": "https://github.com/dojoengine/dojo/commit/b5e45c34ae2987a03e3d039bca126018943ef5ab"
+        },
+        "date": 1736555106471,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2413592,
+            "range": "± 33219",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8410658,
+            "range": "± 220211",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3717768300,
+            "range": "± 852634423",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8630088,
+            "range": "± 203188",
             "unit": "ns/iter"
           }
         ]
