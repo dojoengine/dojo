@@ -10,7 +10,7 @@ use starknet::core::types::Felt;
 
 use crate::utils::map_column_decode_error;
 
-#[derive(FromRow, Deserialize, Debug, Clone)]
+#[derive(FromRow, Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Entity {
     pub id: String,
@@ -44,7 +44,7 @@ pub struct OptimisticEntity {
     pub deleted: bool,
 }
 
-#[derive(FromRow, Deserialize, Debug, Clone)]
+#[derive(FromRow, Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct EventMessage {
     pub id: String,
@@ -78,7 +78,7 @@ pub struct OptimisticEventMessage {
     pub historical: bool,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Model {
     pub selector: Felt,
@@ -121,7 +121,7 @@ impl FromRow<'_, SqliteRow> for Model {
     }
 }
 
-#[derive(FromRow, Deserialize, Debug, Clone)]
+#[derive(FromRow, Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Event {
     pub id: String,
@@ -195,7 +195,7 @@ impl std::fmt::Display for ContractType {
     }
 }
 
-#[derive(Deserialize, Debug, Clone, Default)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct ContractCursor {
     pub head: i64,

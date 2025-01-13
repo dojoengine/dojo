@@ -1,6 +1,8 @@
+use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 
+use dojo_types::naming::compute_selector_from_tag;
 use dojo_world::contracts::abigen::model::Layout;
 use futures::channel::mpsc::{UnboundedReceiver, UnboundedSender};
 use futures::channel::oneshot;
@@ -13,8 +15,10 @@ use libp2p::swarm::{NetworkBehaviour, Swarm, SwarmEvent};
 #[cfg(not(target_arch = "wasm32"))]
 use libp2p::tcp;
 use libp2p::{identify, identity, noise, ping, yamux, Multiaddr, PeerId};
-use torii_sqlite::Sql;
+use starknet::core::types::Event;
+use starknet_crypto::Felt;
 use torii_sqlite::executor::QueryMessage;
+use torii_sqlite::Sql;
 use tracing::info;
 
 pub mod events;
@@ -215,26 +219,74 @@ impl EventLoop {
         // TODO: Implement update handling.
         info!(target: LOG_TARGET, update = ?update, "Received update.");
         // We can safely unwrap because we subscribe to updates only if replica_db is provided.
-        let sql = self.sql.unwrap();
+        let sql = self.sql.as_mut().unwrap();
 
         match update {
             Update::Head(cursor) => {
-                sql.set_head(cursor.head, cursor.last_block_timestamp, 0, cursor.contract_address).await.unwrap();
+                sql.set_head(
+                    cursor.head as u64,
+                    cursor.last_block_timestamp as u64,
+                    0,
+                    cursor.contract_address,
+                )
+                .await
+                .unwrap();
             }
             Update::Model(model) => {
-                let schema: Ty = serde_json::from_slice(&model.schema).unwrap();
-                let layout: Layout = serde_json::from_slice(&model.layout).unwrap();
-                let block_timestamp = model.executed_at.timestamp();
-                sql.register_model(&model.namespace, &schema, layout, model.class_hash, model.contract_address, model.packed_size, model.unpacked_size, block_timestamp, None).await.unwrap();
+                sql.register_model(
+                    &model.namespace,
+                    &model.schema,
+                    model.layout,
+                    model.class_hash,
+                    model.contract_address,
+                    model.packed_size,
+                    model.unpacked_size,
+                    model.executed_at.timestamp() as u64,
+                    None,
+                )
+                .await
+                .unwrap();
             }
             Update::Entity(entity) => {
-                // TODO: Handle entity update.
+                let id = Felt::from_str(&entity.id).unwrap();
+                let model = entity.updated_model.unwrap();
+                let model_id = compute_selector_from_tag(&model.name());
+                if entity.deleted {
+                    sql.delete_entity(
+                        id,
+                        model_id,
+                        model,
+                        &entity.event_id,
+                        entity.executed_at.timestamp() as u64,
+                    )
+                    .await
+                    .unwrap();
+                } else {
+                    sql.set_entity(
+                        model,
+                        &entity.event_id,
+                        entity.executed_at.timestamp() as u64,
+                        id,
+                        model_id,
+                        Some(&entity.keys),
+                    )
+                    .await
+                    .unwrap();
+                }
             }
             Update::EventMessage(event_message) => {
-                // TODO: Handle event message update.
+                let model = event_message.updated_model.unwrap();
+                sql.set_event_message(
+                    model,
+                    &event_message.event_id,
+                    event_message.executed_at.timestamp() as u64,
+                    event_message.historical,
+                )
+                .await
+                .unwrap();
             }
             Update::Event(event) => {
-                // TODO: Handle event update.
+                // TODO
             }
         }
     }

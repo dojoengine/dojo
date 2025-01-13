@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use starknet::core::types::Felt;
-use torii_sqlite::types::{ContractCursor, Model};
+use torii_sqlite::types::{ContractCursor, Entity, Event, EventMessage, Model};
 use torii_typed_data::TypedData;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
