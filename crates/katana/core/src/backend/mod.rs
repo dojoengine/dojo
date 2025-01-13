@@ -21,6 +21,7 @@ use katana_provider::traits::block::{BlockHashProvider, BlockWriter};
 use katana_provider::traits::trie::TrieWriter;
 use katana_trie::compute_merkle_root;
 use parking_lot::RwLock;
+use rayon::prelude::*;
 use starknet::macros::short_string;
 use starknet_types_core::hash::{self, StarkHash};
 use tracing::info;
@@ -363,11 +364,57 @@ impl<'a, P: TrieWriter> UncommittedBlock<'a, P> {
         let transaction_count = self.transactions.len() as u32;
         let state_diff_length = self.state_updates.len() as u32;
 
+        // optimisation 1
         let state_root = self.compute_new_state_root();
         let transactions_commitment = self.compute_transaction_commitment();
         let events_commitment = self.compute_event_commitment();
         let receipts_commitment = self.compute_receipt_commitment();
         let state_diff_commitment = self.compute_state_diff_commitment();
+
+        let header = Header {
+            state_root,
+            parent_hash,
+            events_count,
+            state_diff_length,
+            transaction_count,
+            events_commitment,
+            receipts_commitment,
+            state_diff_commitment,
+            transactions_commitment,
+            number: self.header.number,
+            timestamp: self.header.timestamp,
+            l1_da_mode: self.header.l1_da_mode,
+            l1_gas_prices: self.header.l1_gas_prices,
+            l1_data_gas_prices: self.header.l1_data_gas_prices,
+            sequencer_address: self.header.sequencer_address,
+            protocol_version: self.header.protocol_version,
+        };
+
+        let hash = header.compute_hash();
+
+        SealedBlock { hash, header, body: self.transactions }
+    }
+
+    pub fn commit_parallel(self) -> SealedBlock {
+        // get the hash of the latest committed block
+        let parent_hash = self.header.parent_hash;
+        let events_count = self.receipts.iter().map(|r| r.events().len() as u32).sum::<u32>();
+        let transaction_count = self.transactions.len() as u32;
+        let state_diff_length = self.state_updates.len() as u32;
+
+        let mut state_root = Felt::default();
+        let mut transactions_commitment = Felt::default();
+        let mut events_commitment = Felt::default();
+        let mut receipts_commitment = Felt::default();
+        let mut state_diff_commitment = Felt::default();
+
+        rayon::scope(|s| {
+            s.spawn(|_| state_root = self.compute_new_state_root());
+            s.spawn(|_| transactions_commitment = self.compute_transaction_commitment());
+            s.spawn(|_| events_commitment = self.compute_event_commitment_parallel());
+            s.spawn(|_| receipts_commitment = self.compute_receipt_commitment_parallel());
+            s.spawn(|_| state_diff_commitment = self.compute_state_diff_commitment());
+        });
 
         let header = Header {
             state_root,
@@ -403,6 +450,12 @@ impl<'a, P: TrieWriter> UncommittedBlock<'a, P> {
         compute_merkle_root::<hash::Poseidon>(&receipt_hashes).unwrap()
     }
 
+    fn compute_receipt_commitment_parallel(&self) -> Felt {
+        let receipt_hashes =
+            self.receipts.par_iter().map(|r| r.compute_hash()).collect::<Vec<Felt>>();
+        compute_merkle_root::<hash::Poseidon>(&receipt_hashes).unwrap()
+    }
+
     fn compute_state_diff_commitment(&self) -> Felt {
         compute_state_diff_hash(self.state_updates.clone())
     }
@@ -418,12 +471,32 @@ impl<'a, P: TrieWriter> UncommittedBlock<'a, P> {
         // the iterator will yield all events from all the receipts, each one paired with the
         // transaction hash that emitted it: (tx hash, event).
         let events = self.receipts.iter().flat_map(|r| r.events().iter().map(|e| (r.tx_hash, e)));
-
         let mut hashes = Vec::new();
         for (tx, event) in events {
             let event_hash = event_hash(tx, event);
             hashes.push(event_hash);
         }
+
+        // compute events commitment
+        compute_merkle_root::<hash::Poseidon>(&hashes).unwrap()
+    }
+
+    fn compute_event_commitment_parallel(&self) -> Felt {
+        // h(emitter_address, tx_hash, h(keys), h(data))
+        fn event_hash(tx: TxHash, event: &Event) -> Felt {
+            let keys_hash = hash::Poseidon::hash_array(&event.keys);
+            let data_hash = hash::Poseidon::hash_array(&event.data);
+            hash::Poseidon::hash_array(&[tx, event.from_address.into(), keys_hash, data_hash])
+        }
+
+        // the iterator will yield all events from all the receipts, each one paired with the
+        // transaction hash that emitted it: (tx hash, event).
+        let events = self.receipts.iter().flat_map(|r| r.events().iter().map(|e| (r.tx_hash, e)));
+        let hashes = events
+            .par_bridge()
+            .into_par_iter()
+            .map(|(tx, event)| event_hash(tx, event))
+            .collect::<Vec<_>>();
 
         // compute events commitment
         compute_merkle_root::<hash::Poseidon>(&hashes).unwrap()
