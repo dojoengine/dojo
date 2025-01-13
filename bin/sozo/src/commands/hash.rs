@@ -213,11 +213,7 @@ impl HashArgs {
             }
         }
 
-        if hash_found {
-            Ok(())
-        } else {
-            bail!("No resource matches the provided hash.")
-        }
+        if hash_found { Ok(()) } else { bail!("No resource matches the provided hash.") }
     }
 
     pub fn run(&self, config: &Config) -> Result<()> {
