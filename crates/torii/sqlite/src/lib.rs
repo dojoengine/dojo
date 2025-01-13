@@ -4,6 +4,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::{anyhow, Context, Result};
+use chrono::DateTime;
 use dojo_types::naming::get_tag;
 use dojo_types::schema::{Struct, Ty};
 use dojo_world::config::WorldMetadata;
@@ -14,6 +15,7 @@ use sqlx::{Pool, Sqlite};
 use starknet::core::types::{Event, Felt, InvokeTransaction, Transaction};
 use starknet_crypto::poseidon_hash_many;
 use tokio::sync::mpsc::UnboundedSender;
+use types::Model;
 use utils::felts_to_sql_string;
 
 use crate::constants::SQL_FELT_DELIMITER;
@@ -37,7 +39,7 @@ pub mod simple_broker;
 pub mod types;
 pub mod utils;
 
-use cache::{LocalCache, Model, ModelCache};
+use cache::{LocalCache, ModelCache};
 
 #[derive(Debug, Clone)]
 pub struct Sql {
@@ -299,15 +301,16 @@ impl Sql {
             .set(
                 selector,
                 Model {
+                    selector,
                     namespace: namespace.to_string(),
                     name: model.name().to_string(),
-                    selector,
                     class_hash,
                     contract_address,
                     packed_size,
                     unpacked_size,
                     layout,
                     schema: namespaced_schema,
+                    executed_at: DateTime::from_timestamp(block_timestamp as i64, 0).unwrap(),
                 },
             )
             .await;

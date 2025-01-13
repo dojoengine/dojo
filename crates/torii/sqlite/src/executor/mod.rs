@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::mem;
-use std::str::FromStr;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -339,7 +338,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 for cursor in &mut cursors {
                     if let Some(new_cursor) = reset_heads
                         .cursor_map
-                        .get(&Felt::from_str(&cursor.contract_address).unwrap())
+                        .get(&cursor.contract_address)
                     {
                         let cursor_timestamp: u64 =
                             cursor.last_block_timestamp.try_into().expect("doesn't fit in i64");
@@ -368,9 +367,9 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                     )
                     .bind(cursor.head)
                     .bind(cursor.last_block_timestamp)
-                    .bind(&cursor.last_pending_block_tx)
-                    .bind(&cursor.last_pending_block_contract_tx)
-                    .bind(&cursor.contract_address)
+                    .bind(cursor.last_pending_block_tx.map(|felt| felt_to_sql_string(&felt)))
+                    .bind(cursor.last_pending_block_contract_tx.map(|felt| felt_to_sql_string(&felt)))
+                    .bind(felt_to_sql_string(&cursor.contract_address))
                     .execute(&mut **tx)
                     .await?;
 
@@ -390,7 +389,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 for cursor in &mut cursors {
                     if let Some(new_cursor) = update_cursors
                         .cursor_map
-                        .get(&Felt::from_str(&cursor.contract_address).unwrap())
+                        .get(&cursor.contract_address)
                     {
                         let cursor_timestamp: u64 =
                             cursor.last_block_timestamp.try_into().expect("doesn't fit in i64");
@@ -407,7 +406,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                         };
 
                         cursor.last_pending_block_contract_tx =
-                            Some(felt_to_sql_string(&new_cursor.0));
+                            Some(new_cursor.0);
                         cursor.tps = new_tps.try_into().expect("does't fit in i64");
                     } else {
                         cursor.tps = 0;
@@ -418,7 +417,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                         .expect("doesn't fit in i64");
                     cursor.head = new_head;
                     cursor.last_pending_block_tx =
-                        update_cursors.last_pending_block_tx.map(|felt| felt_to_sql_string(&felt));
+                        update_cursors.last_pending_block_tx;
 
                     sqlx::query(
                         "UPDATE contracts SET head = ?, last_block_timestamp = ?, \
@@ -427,9 +426,9 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                     )
                     .bind(cursor.head)
                     .bind(cursor.last_block_timestamp)
-                    .bind(&cursor.last_pending_block_tx)
-                    .bind(&cursor.last_pending_block_contract_tx)
-                    .bind(&cursor.contract_address)
+                    .bind(cursor.last_pending_block_tx.map(|felt| felt_to_sql_string(&felt)))
+                    .bind(cursor.last_pending_block_contract_tx.map(|felt| felt_to_sql_string(&felt)))
+                    .bind(felt_to_sql_string(&cursor.contract_address))
                     .execute(&mut **tx)
                     .await?;
 

@@ -1,33 +1,13 @@
 use std::collections::{HashMap, HashSet};
 
-use dojo_types::schema::Ty;
-use dojo_world::contracts::abigen::model::Layout;
 use sqlx::{Pool, Sqlite, SqlitePool};
 use starknet_crypto::Felt;
 use tokio::sync::RwLock;
 
 use crate::constants::TOKEN_BALANCE_TABLE;
-use crate::error::{Error, ParseError};
-use crate::types::ContractType;
+use crate::error::Error;
+use crate::types::{ContractType, Model};
 use crate::utils::I256;
-
-#[derive(Debug, Clone)]
-pub struct Model {
-    /// Namespace of the model
-    pub namespace: String,
-    /// The name of the model
-    pub name: String,
-    /// The selector of the model
-    pub selector: Felt,
-    /// The class hash of the model
-    pub class_hash: Felt,
-    /// The contract address of the model
-    pub contract_address: Felt,
-    pub packed_size: u32,
-    pub unpacked_size: u32,
-    pub layout: Layout,
-    pub schema: Ty,
-}
 
 #[derive(Debug)]
 pub struct ModelCache {
@@ -65,42 +45,15 @@ impl ModelCache {
     }
 
     async fn update_model(&self, selector: &Felt) -> Result<Model, Error> {
-        let (
-            namespace,
-            name,
-            class_hash,
-            contract_address,
-            packed_size,
-            unpacked_size,
-            layout,
-            schema,
-        ): (String, String, String, String, u32, u32, String, String) = sqlx::query_as(
-            "SELECT namespace, name, class_hash, contract_address, packed_size, unpacked_size, \
-             layout, schema FROM models WHERE id = ?",
+        let model: Model = sqlx::query_as(
+            "SELECT id, namespace, name, class_hash, contract_address, transaction_hash, packed_size, unpacked_size, \
+             layout, schema, executed_at, created_at FROM models WHERE id = ?",
         )
         .bind(format!("{:#x}", selector))
         .fetch_one(&self.pool)
         .await?;
 
-        let class_hash = Felt::from_hex(&class_hash).map_err(ParseError::FromStr)?;
-        let contract_address = Felt::from_hex(&contract_address).map_err(ParseError::FromStr)?;
-
-        let layout = serde_json::from_str(&layout).map_err(ParseError::FromJsonStr)?;
-        let schema = serde_json::from_str(&schema).map_err(ParseError::FromJsonStr)?;
-
         let mut cache = self.model_cache.write().await;
-
-        let model = Model {
-            namespace,
-            name,
-            selector: *selector,
-            class_hash,
-            contract_address,
-            packed_size,
-            unpacked_size,
-            layout,
-            schema,
-        };
         cache.insert(*selector, model.clone());
 
         Ok(model)

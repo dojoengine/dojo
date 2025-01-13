@@ -13,14 +13,14 @@ use libp2p::swarm::{NetworkBehaviour, Swarm, SwarmEvent};
 #[cfg(not(target_arch = "wasm32"))]
 use libp2p::tcp;
 use libp2p::{identify, identity, noise, ping, yamux, Multiaddr, PeerId};
-use torii_core::executor::QueryMessage;
-use torii_core::sql::Sql;
+use torii_sqlite::Sql;
+use torii_sqlite::executor::QueryMessage;
 use tracing::info;
 
 pub mod events;
 use crate::client::events::ClientEvent;
 use crate::constants;
-use crate::errors::Error;
+use crate::error::Error;
 use crate::types::{Message, Update};
 
 pub(crate) const LOG_TARGET: &str = "torii::relay::client";
@@ -219,11 +219,7 @@ impl EventLoop {
 
         match update {
             Update::Head(cursor) => {
-                sql.executor.send(QueryMessage::new(
-                    "UPDATE contracts SET head = ?, last_block_timestamp = ?, contract_address = ?, last_pending_block_tx = ?, last_pending_block_contract_tx = ?".to_string(),
-                    vec![Argument::Int(cursor.head), Argument::Int(cursor.last_block_timestamp), Argument::FieldElement(cursor.contract_address), Argument::FieldElement(cursor.last_pending_block_tx), Argument::FieldElement(cursor.last_pending_block_contract_tx)],
-                    QueryType::Other,
-                )).await.unwrap();
+                sql.set_head(cursor.head, cursor.last_block_timestamp, 0, cursor.contract_address).await.unwrap();
             }
             Update::Model(model) => {
                 let schema: Ty = serde_json::from_slice(&model.schema).unwrap();
