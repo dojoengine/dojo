@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1736785550476,
+  "lastUpdate": 1736785636225,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -44485,6 +44485,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10626955216,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "56e0bf3616807e795d77a37db209f9e50edd94cc",
+          "message": "fix: ensure dev flags enables dev api (#2901)",
+          "timestamp": "2025-01-13T16:09:03Z",
+          "tree_id": "4ac1de74f5c82f2476a37aef461f7f6784c44daf",
+          "url": "https://github.com/dojoengine/dojo/commit/56e0bf3616807e795d77a37db209f9e50edd94cc"
+        },
+        "date": 1736785633618,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2439745,
+            "range": "± 26746",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8436038,
+            "range": "± 245955",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2502525820,
+            "range": "± 217021459",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8133802,
+            "range": "± 61246",
             "unit": "ns/iter"
           }
         ]
