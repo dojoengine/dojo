@@ -216,7 +216,14 @@ impl NodeArgs {
                 modules.clone()
             } else {
                 // Expose the default modules if none is specified.
-                RpcModulesList::default()
+                let mut modules = RpcModulesList::default();
+
+                // Ensures the `--dev` flag enabled the dev module.
+                if self.development.dev {
+                    modules.add(RpcModuleKind::Dev);
+                }
+
+                modules
             };
 
             Ok(RpcConfig {
@@ -672,5 +679,13 @@ chain_id.Named = "Mainnet"
             err.to_string()
                 .contains("The `dev` module can only be enabled in dev mode (ie `--dev` flag)")
         );
+    }
+
+    #[test]
+    fn test_dev_api_enabled() {
+        let args = NodeArgs::parse_from(["katana", "--dev"]);
+        let config = args.config().unwrap();
+
+        assert!(config.rpc.apis.contains(&RpcModuleKind::Dev));
     }
 }
