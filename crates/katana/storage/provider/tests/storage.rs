@@ -39,11 +39,11 @@ mod latest {
     #[rstest::rstest]
     #[case(
         vec![
-            (ContractAddress::from(felt!("1")), felt!("1"), Some(felt!("111"))),
-            (ContractAddress::from(felt!("1")), felt!("2"), Some(felt!("222"))),
-            (ContractAddress::from(felt!("1")), felt!("3"), Some(felt!("77"))),
-            (ContractAddress::from(felt!("2")), felt!("1"), Some(felt!("12"))),
-            (ContractAddress::from(felt!("2")), felt!("2"), Some(felt!("13")))
+            (ContractAddress::from(felt!("1337")), felt!("1"), Some(felt!("111"))),
+            (ContractAddress::from(felt!("1337")), felt!("2"), Some(felt!("222"))),
+            (ContractAddress::from(felt!("1337")), felt!("3"), Some(felt!("77"))),
+            (ContractAddress::from(felt!("80085")), felt!("1"), Some(felt!("12"))),
+            (ContractAddress::from(felt!("80085")), felt!("2"), Some(felt!("13")))
         ]
     )]
     fn test_latest_storage_read<Db>(
@@ -95,38 +95,38 @@ mod historical {
     #[case::storage_at_block_0(
         0,
         vec![
-            (ContractAddress::from(felt!("1")), felt!("1"), None),
-            (ContractAddress::from(felt!("1")), felt!("2"), None),
-            (ContractAddress::from(felt!("2")), felt!("1"), None),
-            (ContractAddress::from(felt!("2")), felt!("2"), None)
+            (ContractAddress::from(felt!("1337")), felt!("1"), None),
+            (ContractAddress::from(felt!("1337")), felt!("2"), None),
+            (ContractAddress::from(felt!("80085")), felt!("1"), None),
+            (ContractAddress::from(felt!("80085")), felt!("2"), None)
         ])
     ]
     #[case::storage_at_block_1(
         1,
         vec![
-            (ContractAddress::from(felt!("1")), felt!("1"), Some(felt!("100"))),
-            (ContractAddress::from(felt!("1")), felt!("2"), Some(felt!("101"))),
-            (ContractAddress::from(felt!("2")), felt!("1"), Some(felt!("200"))),
-            (ContractAddress::from(felt!("2")), felt!("2"), Some(felt!("201"))),
+            (ContractAddress::from(felt!("1337")), felt!("1"), Some(felt!("100"))),
+            (ContractAddress::from(felt!("1337")), felt!("2"), Some(felt!("101"))),
+            (ContractAddress::from(felt!("80085")), felt!("1"), Some(felt!("200"))),
+            (ContractAddress::from(felt!("80085")), felt!("2"), Some(felt!("201"))),
         ])
     ]
     #[case::storage_at_block_4(
         4,
         vec![
-            (ContractAddress::from(felt!("1")), felt!("1"), Some(felt!("111"))),
-            (ContractAddress::from(felt!("1")), felt!("2"), Some(felt!("222"))),
-            (ContractAddress::from(felt!("2")), felt!("1"), Some(felt!("200"))),
-            (ContractAddress::from(felt!("2")), felt!("2"), Some(felt!("201"))),
+            (ContractAddress::from(felt!("1337")), felt!("1"), Some(felt!("111"))),
+            (ContractAddress::from(felt!("1337")), felt!("2"), Some(felt!("222"))),
+            (ContractAddress::from(felt!("80085")), felt!("1"), Some(felt!("200"))),
+            (ContractAddress::from(felt!("80085")), felt!("2"), Some(felt!("201"))),
         ])
     ]
     #[case::storage_at_block_5(
         5,
         vec![
-            (ContractAddress::from(felt!("1")), felt!("1"), Some(felt!("111"))),
-            (ContractAddress::from(felt!("1")), felt!("2"), Some(felt!("222"))),
-            (ContractAddress::from(felt!("1")), felt!("3"), Some(felt!("77"))),
-            (ContractAddress::from(felt!("2")), felt!("1"), Some(felt!("12"))),
-            (ContractAddress::from(felt!("2")), felt!("2"), Some(felt!("13"))),
+            (ContractAddress::from(felt!("1337")), felt!("1"), Some(felt!("111"))),
+            (ContractAddress::from(felt!("1337")), felt!("2"), Some(felt!("222"))),
+            (ContractAddress::from(felt!("1337")), felt!("3"), Some(felt!("77"))),
+            (ContractAddress::from(felt!("80085")), felt!("1"), Some(felt!("12"))),
+            (ContractAddress::from(felt!("80085")), felt!("2"), Some(felt!("13"))),
         ])
     ]
     fn test_historical_storage_read(

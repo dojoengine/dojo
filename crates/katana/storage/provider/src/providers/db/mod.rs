@@ -702,6 +702,11 @@ impl<Db: Database> BlockWriter for DbProvider<Db> {
                 db_tx.put::<tables::ClassDeclarations>(block_number, class_hash)?
             }
 
+            for class_hash in states.state_updates.deprecated_declared_classes {
+                db_tx.put::<tables::ClassDeclarationBlock>(class_hash, block_number)?;
+                db_tx.put::<tables::ClassDeclarations>(block_number, class_hash)?
+            }
+
             for (class_hash, class) in states.classes {
                 // generate the compiled class
                 let compiled = class.clone().compile()?;

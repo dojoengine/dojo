@@ -12,9 +12,9 @@ use tokio::sync::mpsc::{
     channel, unbounded_channel, Receiver, Sender, UnboundedReceiver, UnboundedSender,
 };
 use tokio::sync::RwLock;
-use torii_core::error::{Error, ParseError};
-use torii_core::simple_broker::SimpleBroker;
-use torii_core::types::TokenBalance;
+use torii_sqlite::error::{Error, ParseError};
+use torii_sqlite::simple_broker::SimpleBroker;
+use torii_sqlite::types::TokenBalance;
 use tracing::{error, trace};
 
 use crate::proto;

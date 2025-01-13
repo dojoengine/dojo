@@ -25,19 +25,20 @@ use starknet::core::types::{BlockId, BlockTag, Felt, FunctionCall};
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
 use starknet_crypto::poseidon_hash_many;
-use torii_core::executor::QueryMessage;
-use torii_core::sql::utils::felts_to_sql_string;
-use torii_core::sql::Sql;
+use torii_sqlite::executor::QueryMessage;
+use torii_sqlite::utils::felts_to_sql_string;
+use torii_sqlite::Sql;
 use tracing::{info, warn};
 use webrtc::tokio::Certificate;
 
 use crate::constants;
-use crate::errors::Error;
+use crate::error::Error;
 
 mod events;
 
+use torii_typed_data::typed_data::{parse_value_to_ty, PrimitiveType, TypedData};
+
 use crate::server::events::ServerEvent;
-use crate::typed_data::{parse_value_to_ty, PrimitiveType, TypedData};
 use crate::types::Message;
 
 pub(crate) const LOG_TARGET: &str = "torii::relay::server";
@@ -128,7 +129,7 @@ impl<P: Provider + Sync> Relay<P> {
                     relay: relay::Behaviour::new(key.public().to_peer_id(), Default::default()),
                     ping: ping::Behaviour::new(ping::Config::new()),
                     identify: identify::Behaviour::new(identify::Config::new(
-                        format!("/torii-relay/{}", env!("CARGO_PKG_VERSION")),
+                        format!("/{}/{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION")),
                         key.public(),
                     )),
                     gossipsub: gossipsub::Behaviour::new(
