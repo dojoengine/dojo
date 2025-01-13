@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use std::str::FromStr;
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use clap::{Args, Subcommand};
 use dojo_types::naming::{
     compute_bytearray_hash, compute_selector_from_tag, get_name_from_tag, get_namespace_from_tag,
@@ -69,7 +69,10 @@ impl HashArgs {
             }
 
             let selector = format!("{:#066x}", get_selector_from_name(input)?);
+            let ba_hash = format!("{:#066x}", compute_bytearray_hash(input));
+
             println!("Starknet selector: {}", selector);
+            println!("ByteArray hash: {}", ba_hash);
             return Ok(());
         }
 
@@ -181,11 +184,13 @@ impl HashArgs {
         debug!(resources = ?resources, "Resources");
 
         // --- find the hash ---
+        let mut hash_found = false;
 
         // could be a namespace hash
         for ns in &namespaces {
             if hash == compute_bytearray_hash(ns) {
                 println!("Namespace found: {ns}");
+                hash_found = true;
             }
         }
 
@@ -193,6 +198,7 @@ impl HashArgs {
         for res in &resources {
             if hash == compute_bytearray_hash(res) {
                 println!("Resource name found: {res}");
+                hash_found = true;
             }
         }
 
@@ -202,11 +208,16 @@ impl HashArgs {
                 let tag = get_tag(ns, res);
                 if hash == compute_selector_from_tag(&tag) {
                     println!("Resource tag found: {tag}");
+                    hash_found = true;
                 }
             }
         }
 
-        Ok(())
+        if hash_found {
+            Ok(())
+        } else {
+            bail!("No resource matches the provided hash.")
+        }
     }
 
     pub fn run(&self, config: &Config) -> Result<()> {
