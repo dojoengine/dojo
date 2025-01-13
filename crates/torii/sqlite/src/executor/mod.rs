@@ -101,16 +101,6 @@ pub struct EventMessageQuery {
 }
 
 #[derive(Debug, Clone)]
-pub enum TransactionCommand {
-    // Similar to execute but doesn't create a new transaction
-    Flush,
-    // Commits current transaction and starts a new one
-    Commit,
-    // Rollbacks the current transaction and starts a new one 
-    Rollback,
-}
-
-#[derive(Debug, Clone)]
 pub enum QueryType {
     SetHead(SetHeadQuery),
     ResetCursors(ResetCursorsQuery),
@@ -121,16 +111,36 @@ pub enum QueryType {
     ApplyBalanceDiff(ApplyBalanceDiffQuery),
     RegisterErc721Token(RegisterErc721TokenQuery),
     RegisterErc20Token(RegisterErc20TokenQuery),
-    StoreEvent,
     TokenTransfer,
     RegisterModel,
+    StoreEvent,
+    // similar to execute but doesn't create a new transaction
+    Flush,
+    Execute,
+    // rollback's the current transaction and starts a new one
+    Rollback,
     Other,
 }
 
 #[derive(Debug)]
-pub enum ExecutorMessage {
-    Query(QueryMessage),
-    Transaction(TransactionCommand),
+pub struct Executor<'c, P: Provider + Sync + Send + 'static> {
+    // Queries should use `transaction` instead of `pool`
+    // This `pool` is only used to create a new `transaction`
+    pool: Pool<Sqlite>,
+    transaction: Transaction<'c, Sqlite>,
+    publish_queue: Vec<BrokerMessage>,
+    rx: UnboundedReceiver<QueryMessage>,
+    shutdown_rx: Receiver<()>,
+    // These tasks are spawned to fetch ERC721 token metadata from the chain
+    // to not block the main loop
+    register_tasks: JoinSet<Result<RegisterErc721TokenMetadata>>,
+    // Some queries depends on the metadata being registered, so we defer them
+    // until the metadata is fetched
+    deferred_query_messages: Vec<QueryMessage>,
+    // It is used to make RPC calls to fetch token_uri data for erc721 contracts
+    provider: Arc<P>,
+    // Used to limit number of tasks that run in parallel to fetch metadata
+    semaphore: Arc<Semaphore>,
 }
 
 #[derive(Debug)]
@@ -610,7 +620,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 .fetch_one(&mut **tx)
                 .await;
 
-                // If we find a token already registeredregistered for this contract_address we dont need to
+                // If we find a token already registered for this contract_address we dont need to
                 // refetch the data since its same for all ERC721 tokens
                 let (name, symbol) = match res {
                     Ok((name, symbol)) => {
