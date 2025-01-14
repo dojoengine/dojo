@@ -61,12 +61,10 @@ async fn declare_and_deploy_contract() -> Result<()> {
     let state_update = provider.get_state_update(BlockId::Tag(BlockTag::Latest)).await?;
     match state_update {
         MaybePendingStateUpdate::Update(update) => {
-            assert!(update
-                .state_diff
-                .declared_classes
-                .iter()
-                .any(|item| item.class_hash == class_hash
-                    && item.compiled_class_hash == compiled_class_hash));
+            assert!(
+                update.state_diff.declared_classes.iter().any(|item| item.class_hash == class_hash
+                    && item.compiled_class_hash == compiled_class_hash)
+            );
         }
         _ => panic!("Expected Update, got PendingUpdate"),
     }
