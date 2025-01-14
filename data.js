@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1736876718492,
+  "lastUpdate": 1736876789574,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -44875,6 +44875,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 11457889533,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c54c4273cc759c8d3afb962a7c6f665b9c3e555b",
+          "message": "feat(torii-graphql): filter on nested values (#2905)\n\n* feat(torii-graphql): filter on nested values\n\n* fmt\n\n* support truly nested types in where input\n\n* remove prints\n\n* correctly handle enum option filtering\n\n* fmt",
+          "timestamp": "2025-01-14T11:27:59-06:00",
+          "tree_id": "f75b52869c6ebee943fd52035d9cc43a9b506e2d",
+          "url": "https://github.com/dojoengine/dojo/commit/c54c4273cc759c8d3afb962a7c6f665b9c3e555b"
+        },
+        "date": 1736876787476,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2525484,
+            "range": "± 58769",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8519861,
+            "range": "± 192587",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2605972291,
+            "range": "± 205339425",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8482910,
+            "range": "± 630213",
             "unit": "ns/iter"
           }
         ]
