@@ -19,26 +19,67 @@ pub struct WhereInputObject {
 }
 
 impl WhereInputObject {
-    // Iterate through an object's type mapping and create a new mapping for whereInput. For each of
-    // the object type (model member), we add 6 additional types for comparators (great than,
-    // not equal, etc)
-    pub fn new(type_name: &str, object_types: &TypeMapping) -> Self {
-        let where_mapping = object_types
+    fn build_mapping(prefix: &str, types: &TypeMapping) -> TypeMapping {
+        types
             .iter()
-            .filter(|(_, type_data)| !type_data.is_nested() && !type_data.is_list())
+            .filter(|(_, type_data)| !type_data.is_list())
             .flat_map(|(type_name, type_data)| {
-                // TODO: filter on nested and enum objects
+                let field_name = if prefix.is_empty() {
+                    type_name.to_string()
+                } else {
+                    format!("{}_{}", prefix.replace('.', "_"), type_name)
+                };
+
                 if type_data.type_ref() == TypeRef::named("Enum")
                     || type_data.type_ref() == TypeRef::named("bool")
                 {
-                    return vec![(Name::new(type_name), type_data.clone())];
+                    return vec![(Name::new(field_name), type_data.clone())];
                 }
 
-                Comparator::iter().fold(
-                    vec![(Name::new(type_name), type_data.clone())],
-                    |mut acc, comparator| {
-                        let name = format!("{}{}", type_name, comparator.as_ref());
+                // Handle nested types
+                if type_data.is_nested() {
+                    if let TypeData::Nested((_, nested_types)) = type_data {
+                        return nested_types
+                            .iter()
+                            .flat_map(|(nested_name, nested_type)| {
+                                if !nested_type.is_nested() || nested_type.type_ref() == TypeRef::named("Enum") {
+                                    let nested_field = format!("{}_{}", field_name, nested_name);
+                                    return Comparator::iter().fold(
+                                        vec![(Name::new(&nested_field), nested_type.clone())],
+                                        |mut acc, comparator| {
+                                            let name = format!("{}{}", nested_field, comparator.as_ref());
+                                            match comparator {
+                                                Comparator::In | Comparator::NotIn => acc.push((
+                                                    Name::new(name),
+                                                    TypeData::List(Box::new(nested_type.clone())),
+                                                )),
+                                                _ => {
+                                                    acc.push((Name::new(name), nested_type.clone()));
+                                                }
+                                            }
+                                            acc
+                                        },
+                                    );
+                                }
+                                
+                                if let TypeData::Nested((_, further_nested_types)) = nested_type {
+                                    let new_prefix = format!("{}_{}", field_name, nested_name);
+                                    return Self::build_mapping(&new_prefix, further_nested_types)
+                                        .into_iter()
+                                        .collect();
+                                }
+                                
+                                vec![]
+                            })
+                            .collect();
+                    }
+                }
 
+                // Handle regular fields with comparators
+                Comparator::iter().fold(
+                    vec![(Name::new(&field_name), type_data.clone())],
+                    |mut acc, comparator| {
+                        let name = format!("{}{}", field_name, comparator.as_ref());
                         match comparator {
                             Comparator::In | Comparator::NotIn => acc.push((
                                 Name::new(name),
@@ -48,12 +89,15 @@ impl WhereInputObject {
                                 acc.push((Name::new(name), type_data.clone()));
                             }
                         }
-
                         acc
                     },
                 )
             })
-            .collect();
+            .collect()
+    }
+
+    pub fn new(type_name: &str, object_types: &TypeMapping) -> Self {
+        let where_mapping = Self::build_mapping("", object_types);
 
         Self { type_name: format!("{}WhereInput", type_name), type_mapping: where_mapping }
     }
