@@ -148,7 +148,11 @@ fn parse_where_value(
         TypeData::Simple(_) => {
             if type_data.type_ref() == TypeRef::named("Enum") {
                 let value = input.string()?;
-                return Ok(vec![parse_filter(&Name::new(field_path), FilterValue::String(value.to_string()))]);
+                let mut filter = parse_filter(&Name::new(field_path), FilterValue::String(value.to_string()));
+                // complex enums have a nested option field for their variant name.
+                // we trim the .option suffix to get the actual db field name
+                filter.field = filter.field.trim_end_matches(".option").to_string();
+                return Ok(vec![filter]);
             }
 
             let primitive = Primitive::from_str(&type_data.type_ref().to_string())?;
