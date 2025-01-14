@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1736811294081,
+  "lastUpdate": 1736818530690,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -44563,6 +44563,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10588214790,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "remy.baranx@gmail.com",
+            "name": "Rémy Baranx",
+            "username": "remybar"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "fde72d763f369edd4c7fbf069655e999d6d9b36e",
+          "message": "feat(sozo): split hash command into 'hash compute' and 'hash find' (#2892)\n\n* sozo: split hash command into hash compute and hash find\r\n\r\n* after review\r\n\r\n* fix: run fmt\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2025-01-13T17:18:13-06:00",
+          "tree_id": "e68b1210ed4bf89170668c7bb5cfa681a9cb3e80",
+          "url": "https://github.com/dojoengine/dojo/commit/fde72d763f369edd4c7fbf069655e999d6d9b36e"
+        },
+        "date": 1736818528794,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2439465,
+            "range": "± 41207",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8456246,
+            "range": "± 407851",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2611125590,
+            "range": "± 176547357",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8311438,
+            "range": "± 68945",
             "unit": "ns/iter"
           }
         ]
