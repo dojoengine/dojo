@@ -144,7 +144,6 @@ fn parse_where_value(
     field_path: &str,
     type_data: &TypeData,
 ) -> Result<Vec<Filter>> {
-    println!("Parsing where value for {}: {:?}", field_path, type_data);
     match type_data {
         TypeData::Simple(_) => {
             if type_data.type_ref() == TypeRef::named("Enum") {
@@ -176,7 +175,6 @@ fn parse_where_value(
             Ok(vec![parse_filter(&Name::new(field_path), FilterValue::List(values))])
         }
         TypeData::Nested(_) => {
-            println!("Processing nested type for {}", field_path);
             parse_nested_where(&input, field_path, type_data)
         }
     }
@@ -186,17 +184,12 @@ pub fn parse_where_argument(
     ctx: &ResolverContext<'_>,
     where_mapping: &TypeMapping,
 ) -> Result<Option<Vec<Filter>>> {
-    println!("Parsing where argument");
     ctx.args.get("where").map_or(Ok(None), |where_input| {
-        println!("Where input: {:?}", where_input.as_value());
         let input_object = where_input.object()?;
-        println!("Input object: {:?}", input_object.as_index_map());
         where_mapping
             .iter()
             .filter_map(|(field_name, type_data)| {
-                println!("Processing field: {} with type: {:?}", field_name, type_data);
                 input_object.get(field_name).map(|input| {
-                    println!("Found input for field {}: {:?}", field_name, input.as_value());
                     parse_where_value(input, field_name, type_data)
                 })
             })

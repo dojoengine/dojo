@@ -102,7 +102,6 @@ impl ResolvableObject for ModelDataObject {
                 let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
                 let order = parse_order_argument(&ctx);
                 let filters = parse_where_argument(&ctx, &where_mapping)?;
-                println!("Filters: {:?}", filters);
                 let connection = parse_connection_arguments(&ctx)?;
 
 
