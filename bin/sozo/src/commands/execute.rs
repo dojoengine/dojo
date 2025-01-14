@@ -106,8 +106,9 @@ impl ExecuteArgs {
             let mut arg_iter = self.calls.into_iter();
 
             while let Some(arg) = arg_iter.next() {
-                let tag_or_address = ResourceDescriptor::from_string(&arg)?;
-                let descriptor = tag_or_address.ensure_namespace(&profile_config.namespace.default);
+                let tag_or_address = arg;
+                let descriptor = ResourceDescriptor::from_string(&tag_or_address)?
+                    .ensure_namespace(&profile_config.namespace.default);
 
                 let contract_address = match &descriptor {
                     ResourceDescriptor::Address(address) => Some(*address),
@@ -128,8 +129,12 @@ impl ExecuteArgs {
                     anyhow!(message)
                 })?;
 
-                let entrypoint =
-                    arg_iter.next().ok_or_else(|| anyhow!("Unexpected number of arguments"))?;
+                let entrypoint = arg_iter.next().ok_or_else(|| {
+                    anyhow!(
+                        "You must specify the entry point of {tag_or_address} to call, and \
+                         optionally the calldata."
+                    )
+                })?;
 
                 let mut calldata = vec![];
                 for arg in &mut arg_iter {
