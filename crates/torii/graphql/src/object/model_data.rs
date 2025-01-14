@@ -74,7 +74,10 @@ impl BasicObject for ModelDataObject {
 
 impl ResolvableObject for ModelDataObject {
     fn input_objects(&self) -> Option<Vec<InputObject>> {
-        Some(vec![self.where_input.input_object(), self.order_input.input_object()])
+        let mut objects = vec![];
+        objects.extend(self.where_input.input_objects());
+        objects.push(self.order_input.input_object());
+        Some(objects)
     }
 
     fn enum_objects(&self) -> Option<Vec<Enum>> {
@@ -99,7 +102,9 @@ impl ResolvableObject for ModelDataObject {
                 let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
                 let order = parse_order_argument(&ctx);
                 let filters = parse_where_argument(&ctx, &where_mapping)?;
+                println!("Filters: {:?}", filters);
                 let connection = parse_connection_arguments(&ctx)?;
+
 
                 let total_count = count_rows(&mut conn, &table_name, &None, &filters).await?;
                 let (data, page_info) = fetch_multiple_rows(

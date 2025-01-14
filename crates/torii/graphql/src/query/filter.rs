@@ -57,7 +57,7 @@ pub fn parse_filter(input: &Name, value: FilterValue) -> Filter {
     for comparator in Comparator::iter() {
         if let Some(field) = input.strip_suffix(comparator.as_ref()) {
             return Filter {
-                field: field.to_string().replace('_', "."),
+                field: field.to_string(),
                 comparator: comparator.clone(),
                 value,
             };
@@ -65,5 +65,5 @@ pub fn parse_filter(input: &Name, value: FilterValue) -> Filter {
     }
 
     // If no suffix found assume equality comparison
-    Filter { field: input.to_string().replace('_', "."), comparator: Comparator::Eq, value }
+    Filter { field: input.to_string(), comparator: Comparator::Eq, value }
 }

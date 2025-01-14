@@ -1,8 +1,5 @@
 use std::str::FromStr;
-
-use async_graphql::dynamic::{
-    Field, InputObject, InputValue, ResolverContext, TypeRef, ValueAccessor,
-};
+use async_graphql::dynamic::{Field, InputObject, InputValue, ResolverContext, TypeRef, ValueAccessor};
 use async_graphql::{Error as GqlError, Name, Result};
 use dojo_types::primitive::{Primitive, SqlType};
 use strum::IntoEnumIterator;
@@ -16,96 +13,81 @@ use crate::types::TypeData;
 pub struct WhereInputObject {
     pub type_name: String,
     pub type_mapping: TypeMapping,
+    pub nested_inputs: Vec<WhereInputObject>,
 }
 
 impl WhereInputObject {
-    fn build_mapping(prefix: &str, types: &TypeMapping) -> TypeMapping {
-        types
-            .iter()
-            .filter(|(_, type_data)| !type_data.is_list())
-            .flat_map(|(type_name, type_data)| {
-                let field_name = if prefix.is_empty() {
-                    type_name.to_string()
-                } else {
-                    format!("{}_{}", prefix.replace('.', "_"), type_name)
-                };
+    fn build_field_mapping(type_name: &str, type_data: &TypeData) -> Vec<(Name, TypeData)> {
+        if type_data.type_ref() == TypeRef::named("Enum") 
+            || type_data.type_ref() == TypeRef::named("bool") {
+            return vec![(Name::new(type_name), type_data.clone())];
+        }
 
-                if type_data.type_ref() == TypeRef::named("Enum")
-                    || type_data.type_ref() == TypeRef::named("bool")
-                {
-                    return vec![(Name::new(field_name), type_data.clone())];
-                }
-
-                // Handle nested types
-                if type_data.is_nested() {
-                    if let TypeData::Nested((_, nested_types)) = type_data {
-                        return nested_types
-                            .iter()
-                            .flat_map(|(nested_name, nested_type)| {
-                                if !nested_type.is_nested()
-                                    || nested_type.type_ref() == TypeRef::named("Enum")
-                                {
-                                    let nested_field = format!("{}_{}", field_name, nested_name);
-                                    return Comparator::iter().fold(
-                                        vec![(Name::new(&nested_field), nested_type.clone())],
-                                        |mut acc, comparator| {
-                                            let name =
-                                                format!("{}{}", nested_field, comparator.as_ref());
-                                            match comparator {
-                                                Comparator::In | Comparator::NotIn => acc.push((
-                                                    Name::new(name),
-                                                    TypeData::List(Box::new(nested_type.clone())),
-                                                )),
-                                                _ => {
-                                                    acc.push((
-                                                        Name::new(name),
-                                                        nested_type.clone(),
-                                                    ));
-                                                }
-                                            }
-                                            acc
-                                        },
-                                    );
-                                }
-
-                                if let TypeData::Nested((_, further_nested_types)) = nested_type {
-                                    let new_prefix = format!("{}_{}", field_name, nested_name);
-                                    return Self::build_mapping(&new_prefix, further_nested_types)
-                                        .into_iter()
-                                        .collect();
-                                }
-
-                                vec![]
-                            })
-                            .collect();
+        Comparator::iter()
+            .fold(vec![(Name::new(type_name), type_data.clone())], |mut acc, comparator| {
+                let name = format!("{}{}", type_name, comparator.as_ref());
+                match comparator {
+                    Comparator::In | Comparator::NotIn => acc.push((
+                        Name::new(name),
+                        TypeData::List(Box::new(type_data.clone())),
+                    )),
+                    _ => {
+                        acc.push((Name::new(name), type_data.clone()));
                     }
                 }
-
-                // Handle regular fields with comparators
-                Comparator::iter().fold(
-                    vec![(Name::new(&field_name), type_data.clone())],
-                    |mut acc, comparator| {
-                        let name = format!("{}{}", field_name, comparator.as_ref());
-                        match comparator {
-                            Comparator::In | Comparator::NotIn => acc.push((
-                                Name::new(name),
-                                TypeData::List(Box::new(type_data.clone())),
-                            )),
-                            _ => {
-                                acc.push((Name::new(name), type_data.clone()));
-                            }
-                        }
-                        acc
-                    },
-                )
+                acc
             })
-            .collect()
     }
 
     pub fn new(type_name: &str, object_types: &TypeMapping) -> Self {
-        let where_mapping = Self::build_mapping("", object_types);
+        let mut nested_inputs = Vec::new();
+        let mut where_mapping = TypeMapping::new();
 
-        Self { type_name: format!("{}WhereInput", type_name), type_mapping: where_mapping }
+        for (field_name, type_data) in object_types {
+            if !type_data.is_list() {
+                match type_data {
+                    TypeData::Nested((_, nested_types)) => {
+                        // Create nested input object
+                        let nested_input = WhereInputObject::new(
+                            &format!("{}_{}", type_name, field_name),
+                            nested_types,
+                        );
+                        
+                        // Add field for the nested input using TypeData::Nested
+                        where_mapping.insert(
+                            Name::new(field_name),
+                            TypeData::Nested((
+                                TypeRef::named(&nested_input.type_name),
+                                nested_types.clone()
+                            ))
+                        );
+                        nested_inputs.push(nested_input);
+                    }
+                    _ => {
+                        // Add regular field with comparators
+                        for (name, mapped_type) in Self::build_field_mapping(field_name, type_data) {
+                            where_mapping.insert(name, mapped_type);
+                        }
+                    }
+                }
+            }
+        }
+
+        Self {
+            type_name: format!("{}WhereInput", type_name),
+            type_mapping: where_mapping,
+            nested_inputs,
+        }
+    }
+}
+
+impl WhereInputObject {
+    pub fn input_objects(&self) -> Vec<InputObject> {
+        let mut objects = vec![self.input_object()];
+        for nested in &self.nested_inputs {
+            objects.extend(nested.input_objects());
+        }
+        objects
     }
 }
 
@@ -125,58 +107,104 @@ impl InputObjectTrait for WhereInputObject {
     }
 }
 
+
 pub fn where_argument(field: Field, type_name: &str) -> Field {
     field.argument(InputValue::new("where", TypeRef::named(format!("{}WhereInput", type_name))))
+}
+
+fn parse_nested_where(
+    input_object: &ValueAccessor,
+    type_name: &str,
+    type_data: &TypeData,
+) -> Result<Vec<Filter>> {
+    match type_data {
+        TypeData::Nested((_, nested_mapping)) => {
+            let nested_input = input_object.object()?;
+            nested_mapping
+                .iter()
+                .filter_map(|(field_name, field_type)| {
+                    nested_input.get(field_name).map(|input| {
+                        let nested_filters = parse_where_value(
+                            input,
+                            &format!("{}.{}", type_name, field_name),
+                            field_type,
+                        )?;
+                        Ok(nested_filters)
+                    })
+                })
+                .collect::<Result<Vec<_>>>()
+                .map(|filters| filters.into_iter().flatten().collect())
+        }
+        _ => Ok(vec![]),
+    }
+}
+
+fn parse_where_value(
+    input: ValueAccessor,
+    field_path: &str,
+    type_data: &TypeData,
+) -> Result<Vec<Filter>> {
+    println!("Parsing where value for {}: {:?}", field_path, type_data);
+    match type_data {
+        TypeData::Simple(_) => {
+            if type_data.type_ref() == TypeRef::named("Enum") {
+                let value = input.string()?;
+                return Ok(vec![parse_filter(&Name::new(field_path), FilterValue::String(value.to_string()))]);
+            }
+
+            let primitive = Primitive::from_str(&type_data.type_ref().to_string())?;
+            let filter_value = match primitive.to_sql_type() {
+                SqlType::Integer => parse_integer(input, field_path, primitive)?,
+                SqlType::Text => parse_string(input, field_path, primitive)?,
+            };
+
+            Ok(vec![parse_filter(&Name::new(field_path), filter_value)])
+        }
+        TypeData::List(inner) => {
+            let list = input.list()?;
+            let values = list
+                .iter()
+                .map(|value| {
+                    let primitive = Primitive::from_str(&inner.type_ref().to_string())?;
+                    match primitive.to_sql_type() {
+                        SqlType::Integer => parse_integer(value, field_path, primitive),
+                        SqlType::Text => parse_string(value, field_path, primitive),
+                    }
+                })
+                .collect::<Result<Vec<_>>>()?;
+
+            Ok(vec![parse_filter(&Name::new(field_path), FilterValue::List(values))])
+        }
+        TypeData::Nested(_) => {
+            println!("Processing nested type for {}", field_path);
+            parse_nested_where(&input, field_path, type_data)
+        }
+    }
 }
 
 pub fn parse_where_argument(
     ctx: &ResolverContext<'_>,
     where_mapping: &TypeMapping,
 ) -> Result<Option<Vec<Filter>>> {
+    println!("Parsing where argument");
     ctx.args.get("where").map_or(Ok(None), |where_input| {
+        println!("Where input: {:?}", where_input.as_value());
         let input_object = where_input.object()?;
+        println!("Input object: {:?}", input_object.as_index_map());
         where_mapping
             .iter()
-            .filter_map(|(type_name, type_data)| {
-                input_object.get(type_name).map(|input| match type_data {
-                    TypeData::Simple(_) => {
-                        if type_data.type_ref() == TypeRef::named("Enum") {
-                            let value = input.string().unwrap();
-                            return Ok(Some(parse_filter(
-                                type_name,
-                                FilterValue::String(value.to_string()),
-                            )));
-                        }
-
-                        let primitive = Primitive::from_str(&type_data.type_ref().to_string())?;
-                        let filter_value = match primitive.to_sql_type() {
-                            SqlType::Integer => parse_integer(input, type_name, primitive)?,
-                            SqlType::Text => parse_string(input, type_name, primitive)?,
-                        };
-
-                        Ok(Some(parse_filter(type_name, filter_value)))
-                    }
-                    TypeData::List(inner) => {
-                        let list = input.list()?;
-                        let values = list
-                            .iter()
-                            .map(|value| {
-                                let primitive = Primitive::from_str(&inner.type_ref().to_string())?;
-                                match primitive.to_sql_type() {
-                                    SqlType::Integer => parse_integer(value, type_name, primitive),
-                                    SqlType::Text => parse_string(value, type_name, primitive),
-                                }
-                            })
-                            .collect::<Result<Vec<_>>>()?;
-
-                        Ok(Some(parse_filter(type_name, FilterValue::List(values))))
-                    }
-                    _ => Err(GqlError::new("Nested types are not supported")),
+            .filter_map(|(field_name, type_data)| {
+                println!("Processing field: {} with type: {:?}", field_name, type_data);
+                input_object.get(field_name).map(|input| {
+                    println!("Found input for field {}: {:?}", field_name, input.as_value());
+                    parse_where_value(input, field_name, type_data)
                 })
             })
-            .collect::<Result<Option<Vec<_>>>>()
+            .collect::<Result<Vec<_>>>()
+            .map(|filters| Some(filters.into_iter().flatten().collect()))
     })
 }
+
 
 fn parse_integer(
     input: ValueAccessor<'_>,
