@@ -1,5 +1,8 @@
 use std::str::FromStr;
-use async_graphql::dynamic::{Field, InputObject, InputValue, ResolverContext, TypeRef, ValueAccessor};
+
+use async_graphql::dynamic::{
+    Field, InputObject, InputValue, ResolverContext, TypeRef, ValueAccessor,
+};
 use async_graphql::{Error as GqlError, Name, Result};
 use dojo_types::primitive::{Primitive, SqlType};
 use strum::IntoEnumIterator;
@@ -18,25 +21,27 @@ pub struct WhereInputObject {
 
 impl WhereInputObject {
     fn build_field_mapping(type_name: &str, type_data: &TypeData) -> Vec<(Name, TypeData)> {
-        if type_data.type_ref() == TypeRef::named("Enum") 
-            || type_data.type_ref() == TypeRef::named("bool") {
+        if type_data.type_ref() == TypeRef::named("Enum")
+            || type_data.type_ref() == TypeRef::named("bool")
+        {
             return vec![(Name::new(type_name), type_data.clone())];
         }
 
-        Comparator::iter()
-            .fold(vec![(Name::new(type_name), type_data.clone())], |mut acc, comparator| {
+        Comparator::iter().fold(
+            vec![(Name::new(type_name), type_data.clone())],
+            |mut acc, comparator| {
                 let name = format!("{}{}", type_name, comparator.as_ref());
                 match comparator {
-                    Comparator::In | Comparator::NotIn => acc.push((
-                        Name::new(name),
-                        TypeData::List(Box::new(type_data.clone())),
-                    )),
+                    Comparator::In | Comparator::NotIn => {
+                        acc.push((Name::new(name), TypeData::List(Box::new(type_data.clone()))))
+                    }
                     _ => {
                         acc.push((Name::new(name), type_data.clone()));
                     }
                 }
                 acc
-            })
+            },
+        )
     }
 
     pub fn new(type_name: &str, object_types: &TypeMapping) -> Self {
@@ -52,20 +57,21 @@ impl WhereInputObject {
                             &format!("{}_{}", type_name, field_name),
                             nested_types,
                         );
-                        
+
                         // Add field for the nested input using TypeData::Nested
                         where_mapping.insert(
                             Name::new(field_name),
                             TypeData::Nested((
                                 TypeRef::named(&nested_input.type_name),
-                                nested_types.clone()
-                            ))
+                                nested_types.clone(),
+                            )),
                         );
                         nested_inputs.push(nested_input);
                     }
                     _ => {
                         // Add regular field with comparators
-                        for (name, mapped_type) in Self::build_field_mapping(field_name, type_data) {
+                        for (name, mapped_type) in Self::build_field_mapping(field_name, type_data)
+                        {
                             where_mapping.insert(name, mapped_type);
                         }
                     }
@@ -107,7 +113,6 @@ impl InputObjectTrait for WhereInputObject {
     }
 }
 
-
 pub fn where_argument(field: Field, type_name: &str) -> Field {
     field.argument(InputValue::new("where", TypeRef::named(format!("{}WhereInput", type_name))))
 }
@@ -148,7 +153,8 @@ fn parse_where_value(
         TypeData::Simple(_) => {
             if type_data.type_ref() == TypeRef::named("Enum") {
                 let value = input.string()?;
-                let mut filter = parse_filter(&Name::new(field_path), FilterValue::String(value.to_string()));
+                let mut filter =
+                    parse_filter(&Name::new(field_path), FilterValue::String(value.to_string()));
                 // complex enums have a nested option field for their variant name.
                 // we trim the .option suffix to get the actual db field name
                 filter.field = filter.field.trim_end_matches(".option").to_string();
@@ -178,9 +184,7 @@ fn parse_where_value(
 
             Ok(vec![parse_filter(&Name::new(field_path), FilterValue::List(values))])
         }
-        TypeData::Nested(_) => {
-            parse_nested_where(&input, field_path, type_data)
-        }
+        TypeData::Nested(_) => parse_nested_where(&input, field_path, type_data),
     }
 }
 
@@ -193,15 +197,14 @@ pub fn parse_where_argument(
         where_mapping
             .iter()
             .filter_map(|(field_name, type_data)| {
-                input_object.get(field_name).map(|input| {
-                    parse_where_value(input, field_name, type_data)
-                })
+                input_object
+                    .get(field_name)
+                    .map(|input| parse_where_value(input, field_name, type_data))
             })
             .collect::<Result<Vec<_>>>()
             .map(|filters| Some(filters.into_iter().flatten().collect()))
     })
 }
-
 
 fn parse_integer(
     input: ValueAccessor<'_>,

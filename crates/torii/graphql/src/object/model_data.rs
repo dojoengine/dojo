@@ -104,7 +104,6 @@ impl ResolvableObject for ModelDataObject {
                 let filters = parse_where_argument(&ctx, &where_mapping)?;
                 let connection = parse_connection_arguments(&ctx)?;
 
-
                 let total_count = count_rows(&mut conn, &table_name, &None, &filters).await?;
                 let (data, page_info) = fetch_multiple_rows(
                     &mut conn,
