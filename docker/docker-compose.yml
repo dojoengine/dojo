@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  katana:
+    image: dojoengine:latest
+    command: katana --dev --dev.no-fee --http.cors_origins "*" --http.addr 0.0.0.0
+    ports:
+      - "5050:5050"
+  torii:
+    image: dojoengine:latest
+    command: torii --config /etc/torii/torii.toml
+    volumes:
+      - ./torii.toml:/etc/torii/torii.toml
+    ports:
+      - "8080:8080"
+      - "9090:9090"
+      - "9091:9091"
+      - "9092:9092"
+      - "9200:9200"
+
