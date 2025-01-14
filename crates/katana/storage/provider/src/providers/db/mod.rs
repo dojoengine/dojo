@@ -304,20 +304,21 @@ impl<Db: Database> StateUpdateProvider for DbProvider<Db> {
             let mut declared_classes = BTreeMap::new();
             let mut deprecated_declared_classes = BTreeSet::new();
 
-            dup_entries::<Db, tables::ClassDeclarations, _, _>(&db_tx, block_num, |entry| {
-                let (_, class_hash) = entry?;
-
-                match db_tx.get::<tables::CompiledClassHashes>(class_hash)? {
-                    Some(compiled_hash) => {
-                        declared_classes.insert(class_hash, compiled_hash);
-                    }
-                    None => {
-                        deprecated_declared_classes.insert(class_hash);
+            if let Some(block_entries) =
+                db_tx.cursor_dup::<tables::ClassDeclarations>()?.walk_dup(Some(block_num), None)?
+            {
+                for entry in block_entries {
+                    let (_, class_hash) = entry?;
+                    match db_tx.get::<tables::CompiledClassHashes>(class_hash)? {
+                        Some(compiled_hash) => {
+                            declared_classes.insert(class_hash, compiled_hash);
+                        }
+                        None => {
+                            deprecated_declared_classes.insert(class_hash);
+                        }
                     }
                 }
-
-                Ok(())
-            })?;
+            }
 
             let storage_updates = {
                 let entries = dup_entries::<

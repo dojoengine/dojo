@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, BTreeSet, HashSet};
+use std::collections::{BTreeMap, BTreeSet};
 use std::num::NonZeroU128;
 use std::sync::Arc;
 
@@ -435,6 +435,8 @@ pub(super) fn state_update_from_cached_state<S: StateDb>(
     let mut declared_classes = BTreeMap::new();
     let mut deprecated_declared_classes = BTreeSet::new();
 
+    // TODO: Legacy class shouldn't have a compiled class hash. This is a hack we added
+    // in our fork of `blockifier. Check if it's possible to remove it now.
     for (class_hash, compiled_hash) in state_diff.compiled_class_hashes {
         let hash = class_hash.0;
         let class = state.class(hash).unwrap().expect("must exist if declared");
