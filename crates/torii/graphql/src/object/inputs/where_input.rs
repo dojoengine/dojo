@@ -118,7 +118,7 @@ pub fn where_argument(field: Field, type_name: &str) -> Field {
 }
 
 fn parse_nested_where(
-    input_object: &ValueAccessor,
+    input_object: &ValueAccessor<'_>,
     type_name: &str,
     type_data: &TypeData,
 ) -> Result<Vec<Filter>> {
@@ -145,7 +145,7 @@ fn parse_nested_where(
 }
 
 fn parse_where_value(
-    input: ValueAccessor,
+    input: ValueAccessor<'_>,
     field_path: &str,
     type_data: &TypeData,
 ) -> Result<Vec<Filter>> {
