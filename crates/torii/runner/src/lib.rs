@@ -43,7 +43,7 @@ use tracing::{error, info};
 use tracing_subscriber::{fmt, EnvFilter};
 use url::form_urlencoded;
 
-pub(crate) const LOG_TARGET: &str = "torii_runner";
+pub(crate) const LOG_TARGET: &str = "torii:runner";
 
 #[derive(Debug, Clone)]
 pub struct Runner {
