@@ -1,7 +1,7 @@
 pub mod state;
 pub mod trie;
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Debug;
 use std::ops::{Range, RangeInclusive};
 
@@ -301,19 +301,22 @@ impl<Db: Database> StateUpdateProvider for DbProvider<Db> {
                 Ok((contract_address, class_hash))
             })?;
 
-            let declared_classes = dup_entries::<
-                Db,
-                tables::ClassDeclarations,
-                BTreeMap<ClassHash, CompiledClassHash>,
-                _,
-            >(&db_tx, block_num, |entry| {
+            let mut declared_classes = BTreeMap::new();
+            let mut deprecated_declared_classes = BTreeSet::new();
+
+            dup_entries::<Db, tables::ClassDeclarations, _, _>(&db_tx, block_num, |entry| {
                 let (_, class_hash) = entry?;
 
-                let compiled_hash = db_tx
-                    .get::<tables::CompiledClassHashes>(class_hash)?
-                    .ok_or(ProviderError::MissingCompiledClassHash(class_hash))?;
+                match db_tx.get::<tables::CompiledClassHashes>(class_hash)? {
+                    Some(compiled_hash) => {
+                        declared_classes.insert(class_hash, compiled_hash);
+                    }
+                    None => {
+                        deprecated_declared_classes.insert(class_hash);
+                    }
+                }
 
-                Ok((class_hash, compiled_hash))
+                Ok(())
             })?;
 
             let storage_updates = {
@@ -337,12 +340,14 @@ impl<Db: Database> StateUpdateProvider for DbProvider<Db> {
             };
 
             db_tx.commit()?;
+
             Ok(Some(StateUpdates {
                 nonce_updates,
                 storage_updates,
                 deployed_contracts,
                 declared_classes,
-                ..Default::default()
+                deprecated_declared_classes,
+                replaced_classes: BTreeMap::default(),
             }))
         } else {
             Ok(None)
