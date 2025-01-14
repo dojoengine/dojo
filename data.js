@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1736868586805,
+  "lastUpdate": 1736870226424,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -44689,6 +44689,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8425809,
             "range": "± 680157",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2caf241285cdce31bae71dc00145241600672d81",
+          "message": "refactor: log targets not snakecase (#2904)",
+          "timestamp": "2025-01-14T09:40:10-06:00",
+          "tree_id": "679bb93718522e4f33e8306f5bb9fd33abb24f30",
+          "url": "https://github.com/dojoengine/dojo/commit/2caf241285cdce31bae71dc00145241600672d81"
+        },
+        "date": 1736870224654,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10983811233,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
