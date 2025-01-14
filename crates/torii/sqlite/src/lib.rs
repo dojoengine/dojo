@@ -4,7 +4,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::{anyhow, Context, Result};
-use chrono::DateTime;
+use chrono::{DateTime, Utc};
 use dojo_types::naming::get_tag;
 use dojo_types::schema::{Struct, Ty};
 use dojo_world::config::WorldMetadata;
@@ -301,7 +301,7 @@ impl Sql {
             .set(
                 selector,
                 Model {
-                    selector,
+                    id: selector,
                     namespace: namespace.to_string(),
                     name: model.name().to_string(),
                     class_hash,
@@ -311,6 +311,8 @@ impl Sql {
                     layout,
                     schema: namespaced_schema,
                     executed_at: DateTime::from_timestamp(block_timestamp as i64, 0).unwrap(),
+                    // we're not using the true created_at
+                    created_at: Utc::now(),
                 },
             )
             .await;

@@ -115,8 +115,7 @@ impl Service {
         update: &ContractUpdated,
     ) -> Result<(), Error> {
         let mut closed_stream = Vec::new();
-        let contract_address =
-            Felt::from_str(&update.contract_address).map_err(ParseError::FromStr)?;
+        let contract_address = update.contract_address;
 
         for (idx, sub) in subs.subscribers.read().await.iter() {
             if sub.contract_address != Felt::ZERO && sub.contract_address != contract_address {

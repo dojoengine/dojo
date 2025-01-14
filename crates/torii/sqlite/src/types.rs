@@ -1,11 +1,10 @@
-use core::fmt;
 use std::str::FromStr;
 
 use chrono::{DateTime, Utc};
 use dojo_types::schema::Ty;
 use dojo_world::contracts::abigen::model::Layout;
 use serde::{Deserialize, Serialize};
-use sqlx::{sqlite::SqliteRow, FromRow, Row, Sqlite};
+use sqlx::{sqlite::SqliteRow, FromRow, Row};
 use starknet::core::types::Felt;
 
 use crate::utils::map_column_decode_error;
@@ -81,7 +80,7 @@ pub struct OptimisticEventMessage {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Model {
-    pub selector: Felt,
+    pub id: Felt,
     pub namespace: String,
     pub name: String,
     pub class_hash: Felt,
@@ -91,19 +90,19 @@ pub struct Model {
     pub layout: Layout,
     pub schema: Ty,
     pub executed_at: DateTime<Utc>,
+    pub created_at: DateTime<Utc>,
 }
 
 impl FromRow<'_, SqliteRow> for Model {
     fn from_row(row: &'_ SqliteRow) -> sqlx::Result<Self> {
-        let selector = row.try_get::<String, &str>("id")?;
-        let class_hash = row.try_get::<String, &str>("class_hash")?;
-        let contract_address = row.try_get::<String, &str>("contract_address")?;
-        let layout = row.try_get::<String, &str>("layout")?;
-        let schema = row.try_get::<String, &str>("schema")?;
+        let id = row.get::<String, &str>("id");
+        let class_hash = row.get::<String, &str>("class_hash");
+        let contract_address = row.get::<String, &str>("contract_address");
+        let layout = row.get::<String, &str>("layout");
+        let schema = row.get::<String, &str>("schema");
 
         Ok(Model {
-            selector: Felt::from_str(&selector)
-                .map_err(|e| map_column_decode_error("id", Box::new(e)))?,
+            id: Felt::from_str(&id).map_err(|e| map_column_decode_error("id", Box::new(e)))?,
             namespace: row.get("namespace"),
             name: row.get("name"),
             class_hash: Felt::from_str(&class_hash)
@@ -117,6 +116,7 @@ impl FromRow<'_, SqliteRow> for Model {
             schema: serde_json::from_str(&schema)
                 .map_err(|e| map_column_decode_error("schema", Box::new(e)))?,
             executed_at: row.get("executed_at"),
+            created_at: row.get("created_at"),
         })
     }
 }
@@ -208,10 +208,10 @@ pub struct ContractCursor {
 
 impl FromRow<'_, SqliteRow> for ContractCursor {
     fn from_row(row: &'_ SqliteRow) -> sqlx::Result<Self> {
-        let contract_address = row.try_get::<String, &str>("contract_address")?;
-        let last_pending_block_tx = row.try_get::<Option<String>, &str>("last_pending_block_tx")?;
+        let contract_address = row.get::<String, &str>("contract_address");
+        let last_pending_block_tx = row.get::<Option<String>, &str>("last_pending_block_tx");
         let last_pending_block_contract_tx =
-            row.try_get::<Option<String>, &str>("last_pending_block_contract_tx")?;
+            row.get::<Option<String>, &str>("last_pending_block_contract_tx");
 
         Ok(ContractCursor {
             head: row.get("head"),

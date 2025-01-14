@@ -49,7 +49,7 @@ impl Client {
     ) -> Result<Self, Error> {
         let mut grpc_client = torii_grpc::client::WorldClient::new(torii_url, world).await?;
 
-        let relay_client = torii_relay::client::RelayClient::new(relay_url, false)?;
+        let relay_client = torii_relay::client::RelayClient::new(relay_url, None)?;
 
         let metadata = grpc_client.metadata().await?;
 
