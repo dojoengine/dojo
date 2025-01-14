@@ -30,7 +30,7 @@ use crate::utils::{felt_to_sql_string, I256};
 pub mod erc;
 pub use erc::{RegisterErc20TokenQuery, RegisterErc721TokenMetadata, RegisterErc721TokenQuery};
 
-pub(crate) const LOG_TARGET: &str = "torii_sqlite::executor";
+pub(crate) const LOG_TARGET: &str = "torii::sqlite::executor";
 
 #[derive(Debug, Clone)]
 pub enum Argument {
