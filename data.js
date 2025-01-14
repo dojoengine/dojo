@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1736818530690,
+  "lastUpdate": 1736868470350,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -44611,6 +44611,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8311438,
             "range": "± 68945",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "valentin@pupucecorp.com",
+            "name": "Brother MartianGreed",
+            "username": "MartianGreed"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a295c2293e635b2ee07967f7c610d8a41498b9dc",
+          "message": "feat: change enum to CairoCustomEnum (#2907)",
+          "timestamp": "2025-01-14T09:10:50-06:00",
+          "tree_id": "15ff2c27601358246b54d86e3981584b1fb8415b",
+          "url": "https://github.com/dojoengine/dojo/commit/a295c2293e635b2ee07967f7c610d8a41498b9dc"
+        },
+        "date": 1736868468570,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 11386775708,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
