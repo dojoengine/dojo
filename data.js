@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1736872015288,
+  "lastUpdate": 1736872142620,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -44797,6 +44797,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10907672423,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1ca1257707a100b75def79d50921fc5302be38f9",
+          "message": "fix(katana): separate deprecated declared class (#2903)\n\nCurrently, we're including both legacy and non-legacy into the same map in the `StateUpdates` struct, while instead the legacy should be put into a different map ie `deprecated_declared_classes`.",
+          "timestamp": "2025-01-15T00:10:08+08:00",
+          "tree_id": "b23d5919402d6a197d1d8d183c0189601ebc170e",
+          "url": "https://github.com/dojoengine/dojo/commit/1ca1257707a100b75def79d50921fc5302be38f9"
+        },
+        "date": 1736872139818,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2522884,
+            "range": "± 13450",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8737985,
+            "range": "± 609422",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2685683740,
+            "range": "± 208585431",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8096563,
+            "range": "± 108637",
             "unit": "ns/iter"
           }
         ]
