@@ -56,7 +56,11 @@ pub struct Filter {
 pub fn parse_filter(input: &Name, value: FilterValue) -> Filter {
     for comparator in Comparator::iter() {
         if let Some(field) = input.strip_suffix(comparator.as_ref()) {
-            return Filter { field: field.to_string().replace('_', "."), comparator: comparator.clone(), value };
+            return Filter {
+                field: field.to_string().replace('_', "."),
+                comparator: comparator.clone(),
+                value,
+            };
         }
     }
 

@@ -42,33 +42,39 @@ impl WhereInputObject {
                         return nested_types
                             .iter()
                             .flat_map(|(nested_name, nested_type)| {
-                                if !nested_type.is_nested() || nested_type.type_ref() == TypeRef::named("Enum") {
+                                if !nested_type.is_nested()
+                                    || nested_type.type_ref() == TypeRef::named("Enum")
+                                {
                                     let nested_field = format!("{}_{}", field_name, nested_name);
                                     return Comparator::iter().fold(
                                         vec![(Name::new(&nested_field), nested_type.clone())],
                                         |mut acc, comparator| {
-                                            let name = format!("{}{}", nested_field, comparator.as_ref());
+                                            let name =
+                                                format!("{}{}", nested_field, comparator.as_ref());
                                             match comparator {
                                                 Comparator::In | Comparator::NotIn => acc.push((
                                                     Name::new(name),
                                                     TypeData::List(Box::new(nested_type.clone())),
                                                 )),
                                                 _ => {
-                                                    acc.push((Name::new(name), nested_type.clone()));
+                                                    acc.push((
+                                                        Name::new(name),
+                                                        nested_type.clone(),
+                                                    ));
                                                 }
                                             }
                                             acc
                                         },
                                     );
                                 }
-                                
+
                                 if let TypeData::Nested((_, further_nested_types)) = nested_type {
                                     let new_prefix = format!("{}_{}", field_name, nested_name);
                                     return Self::build_mapping(&new_prefix, further_nested_types)
                                         .into_iter()
                                         .collect();
                                 }
-                                
+
                                 vec![]
                             })
                             .collect();
