@@ -1,22 +1,23 @@
 use jsonrpsee::core::{async_trait, Error, RpcResult};
 use katana_executor::{EntryPointCall, ExecutorFactory};
 use katana_primitives::block::BlockIdOrTag;
+use katana_primitives::class::ClassHash;
 use katana_primitives::transaction::{ExecutableTx, ExecutableTxWithHash, TxHash};
-use katana_primitives::Felt;
+use katana_primitives::{ContractAddress, Felt};
 use katana_rpc_api::starknet::StarknetApiServer;
 use katana_rpc_types::block::{
     BlockHashAndNumber, MaybePendingBlockWithReceipts, MaybePendingBlockWithTxHashes,
     MaybePendingBlockWithTxs,
 };
+use katana_rpc_types::class::RpcContractClass;
 use katana_rpc_types::error::starknet::StarknetApiError;
 use katana_rpc_types::event::{EventFilterWithPage, EventsPage};
 use katana_rpc_types::message::MsgFromL1;
 use katana_rpc_types::receipt::TxReceiptWithBlockInfo;
 use katana_rpc_types::state_update::MaybePendingStateUpdate;
 use katana_rpc_types::transaction::{BroadcastedTx, Tx};
-use katana_rpc_types::{
-    ContractClass, FeeEstimate, FeltAsHex, FunctionCall, SimulationFlagForEstimateFee,
-};
+use katana_rpc_types::trie::{ContractStorageKeys, GetStorageProofResponse};
+use katana_rpc_types::{FeeEstimate, FeltAsHex, FunctionCall, SimulationFlagForEstimateFee};
 use starknet::core::types::TransactionStatus;
 
 use super::StarknetApi;
@@ -51,7 +52,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
         &self,
         block_id: BlockIdOrTag,
         contract_address: Felt,
-    ) -> RpcResult<ContractClass> {
+    ) -> RpcResult<RpcContractClass> {
         Ok(self.class_at_address(block_id, contract_address.into()).await?)
     }
 
@@ -115,7 +116,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
         &self,
         block_id: BlockIdOrTag,
         class_hash: Felt,
-    ) -> RpcResult<ContractClass> {
+    ) -> RpcResult<RpcContractClass> {
         Ok(self.class_at_hash(block_id, class_hash).await?)
     }
 
@@ -265,5 +266,18 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
         transaction_hash: TxHash,
     ) -> RpcResult<TransactionStatus> {
         Ok(self.transaction_status(transaction_hash).await?)
+    }
+
+    async fn get_storage_proof(
+        &self,
+        block_id: BlockIdOrTag,
+        class_hashes: Option<Vec<ClassHash>>,
+        contract_addresses: Option<Vec<ContractAddress>>,
+        contracts_storage_keys: Option<Vec<ContractStorageKeys>>,
+    ) -> RpcResult<GetStorageProofResponse> {
+        let proofs = self
+            .get_proofs(block_id, class_hashes, contract_addresses, contracts_storage_keys)
+            .await?;
+        Ok(proofs)
     }
 }

@@ -5,8 +5,8 @@ use serde::Deserialize;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{FromRow, Pool, Row, Sqlite, SqliteConnection};
 use starknet_crypto::Felt;
-use torii_core::constants::TOKEN_BALANCE_TABLE;
-use torii_core::sql::utils::felt_to_sql_string;
+use torii_sqlite::constants::TOKEN_BALANCE_TABLE;
+use torii_sqlite::utils::felt_to_sql_string;
 use tracing::warn;
 
 use super::erc_token::{Erc20Token, ErcTokenType};
@@ -103,7 +103,13 @@ async fn fetch_token_balances(
          JOIN tokens t ON b.token_id = t.id
          JOIN contracts c ON t.contract_address = c.contract_address"
     );
-    let mut conditions = vec!["b.account_address = ?".to_string()];
+
+    // Only select balances for the given account address and non-zero balances.
+    let mut conditions = vec![
+        "(b.account_address = ?)".to_string(),
+        "b.balance != '0x0000000000000000000000000000000000000000000000000000000000000000'"
+            .to_string(),
+    ];
 
     let mut cursor_param = &connection.after;
     if let Some(after_cursor) = &connection.after {
@@ -234,21 +240,41 @@ fn token_balances_connection_output<'a>(
                 let token_id = row.token_id.split(':').collect::<Vec<&str>>();
                 assert!(token_id.len() == 2);
 
-                let metadata: serde_json::Value =
-                    serde_json::from_str(&row.metadata).expect("metadata is always json");
-                let metadata_name =
-                    metadata.get("name").map(|v| v.to_string().trim_matches('"').to_string());
-                let metadata_description = metadata
-                    .get("description")
-                    .map(|v| v.to_string().trim_matches('"').to_string());
-                let metadata_attributes =
-                    metadata.get("attributes").map(|v| v.to_string().trim_matches('"').to_string());
+                let metadata_str = row.metadata;
+                let (
+                    metadata_str,
+                    metadata_name,
+                    metadata_description,
+                    metadata_attributes,
+                    image_path,
+                ) = if metadata_str.is_empty() {
+                    (String::new(), None, None, None, String::new())
+                } else {
+                    let metadata: serde_json::Value =
+                        serde_json::from_str(&metadata_str).expect("metadata is always json");
+                    let metadata_name =
+                        metadata.get("name").map(|v| v.to_string().trim_matches('"').to_string());
+                    let metadata_description = metadata
+                        .get("description")
+                        .map(|v| v.to_string().trim_matches('"').to_string());
+                    let metadata_attributes = metadata
+                        .get("attributes")
+                        .map(|v| v.to_string().trim_matches('"').to_string());
 
-                let image_path = format!("{}/{}", token_id.join("/"), "image");
+                    let image_path = format!("{}/{}", token_id.join("/"), "image");
+
+                    (
+                        metadata_str,
+                        metadata_name,
+                        metadata_description,
+                        metadata_attributes,
+                        image_path,
+                    )
+                };
 
                 let token_metadata = Erc721Token {
                     name: row.name,
-                    metadata: row.metadata,
+                    metadata: metadata_str.to_owned(),
                     contract_address: row.contract_address,
                     symbol: row.symbol,
                     token_id: token_id[1].to_string(),

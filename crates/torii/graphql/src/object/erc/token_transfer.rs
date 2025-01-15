@@ -5,9 +5,9 @@ use serde::Deserialize;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{FromRow, Pool, Row, Sqlite, SqliteConnection};
 use starknet_crypto::Felt;
-use torii_core::constants::TOKEN_TRANSFER_TABLE;
-use torii_core::engine::get_transaction_hash_from_event_id;
-use torii_core::sql::utils::felt_to_sql_string;
+use torii_indexer::engine::get_transaction_hash_from_event_id;
+use torii_sqlite::constants::TOKEN_TRANSFER_TABLE;
+use torii_sqlite::utils::felt_to_sql_string;
 use tracing::warn;
 
 use super::erc_token::{Erc20Token, ErcTokenType};
@@ -119,7 +119,10 @@ JOIN
 "#,
     );
 
-    let mut conditions = vec!["et.from_address = ? OR et.to_address = ?".to_string()];
+    let mut conditions = vec![
+        "(et.from_address = ? OR et.to_address = ?)".to_string(),
+        "(t.metadata IS NULL OR length(t.metadata) > 0)".to_string(),
+    ];
 
     let mut cursor_param = &connection.after;
     if let Some(after_cursor) = &connection.after {
@@ -263,8 +266,9 @@ fn token_transfers_connection_output<'a>(
                 let token_id = row.token_id.split(':').collect::<Vec<&str>>();
                 assert!(token_id.len() == 2);
 
+                let metadata_str = row.metadata;
                 let metadata: serde_json::Value =
-                    serde_json::from_str(&row.metadata).expect("metadata is always json");
+                    serde_json::from_str(&metadata_str).expect("metadata is always json");
                 let metadata_name =
                     metadata.get("name").map(|v| v.to_string().trim_matches('"').to_string());
                 let metadata_description = metadata
@@ -277,7 +281,7 @@ fn token_transfers_connection_output<'a>(
 
                 let token_metadata = ErcTokenType::Erc721(Erc721Token {
                     name: row.name,
-                    metadata: row.metadata,
+                    metadata: metadata_str.to_owned(),
                     contract_address: row.contract_address,
                     symbol: row.symbol,
                     token_id: token_id[1].to_string(),

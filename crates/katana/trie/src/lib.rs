@@ -1,19 +1,99 @@
-use anyhow::Result;
-use bitvec::vec::BitVec;
-pub use bonsai_trie as bonsai;
-use bonsai_trie::id::BasicId;
-use bonsai_trie::{BonsaiDatabase, BonsaiPersistentDatabase};
+use bitvec::view::AsBits;
+pub use bonsai::{BitVec, MultiProof, Path, ProofNode};
+use bonsai_trie::BonsaiStorage;
+pub use bonsai_trie::{BonsaiDatabase, BonsaiPersistentDatabase, BonsaiStorageConfig};
 use katana_primitives::class::ClassHash;
 use katana_primitives::Felt;
 use starknet_types_core::hash::{Pedersen, StarkHash};
+pub use {bitvec, bonsai_trie as bonsai};
 
-/// A helper trait to define a database that can be used as a Bonsai Trie.
+mod classes;
+mod contracts;
+mod id;
+mod storages;
+
+pub use classes::*;
+pub use contracts::ContractsTrie;
+pub use id::CommitId;
+pub use storages::StoragesTrie;
+
+/// A lightweight shim for [`BonsaiStorage`].
 ///
-/// Basically a short hand for `BonsaiDatabase + BonsaiPersistentDatabase<BasicId>`.
-pub trait BonsaiTrieDb: BonsaiDatabase + BonsaiPersistentDatabase<BasicId> {}
-impl<T> BonsaiTrieDb for T where T: BonsaiDatabase + BonsaiPersistentDatabase<BasicId> {}
+/// This abstract the Bonsai Trie operations - providing a simplified interface without
+/// having to handle how to transform the keys into the internal keys used by the trie.
+/// This struct is not meant to be used directly, and instead use the specific tries that have
+/// been derived from it, [`ClassesTrie`], [`ContractsTrie`], or [`StoragesTrie`].
+pub struct BonsaiTrie<DB, Hash = Pedersen>
+where
+    DB: BonsaiDatabase,
+    Hash: StarkHash + Send + Sync,
+{
+    storage: BonsaiStorage<CommitId, DB, Hash>,
+}
 
-pub fn compute_merkle_root<H>(values: &[Felt]) -> Result<Felt>
+impl<DB, Hash> BonsaiTrie<DB, Hash>
+where
+    DB: BonsaiDatabase,
+    Hash: StarkHash + Send + Sync,
+{
+    pub fn new(db: DB) -> Self {
+        let config = BonsaiStorageConfig {
+            // we have our own implementation of storing trie changes
+            max_saved_trie_logs: Some(0),
+            // in the bonsai-trie crate, this field seems to be only used in rocksdb impl.
+            // i dont understand why would they add a config thats implementation specific ????
+            //
+            // this config should be used by our implementation of the
+            // BonsaiPersistentDatabase::snapshot()
+            max_saved_snapshots: Some(64usize),
+            snapshot_interval: 1,
+        };
+
+        Self { storage: BonsaiStorage::new(db, config, 251) }
+    }
+}
+
+impl<DB, Hash> BonsaiTrie<DB, Hash>
+where
+    DB: BonsaiDatabase,
+    Hash: StarkHash + Send + Sync,
+{
+    pub fn root(&self, id: &[u8]) -> Felt {
+        self.storage.root_hash(id).expect("failed to get trie root")
+    }
+
+    pub fn multiproof(&mut self, id: &[u8], keys: Vec<Felt>) -> MultiProof {
+        let keys = keys.into_iter().map(|key| key.to_bytes_be().as_bits()[5..].to_owned());
+        self.storage.get_multi_proof(id, keys).expect("failed to get multiproof")
+    }
+}
+
+impl<DB, Hash> BonsaiTrie<DB, Hash>
+where
+    DB: BonsaiDatabase + BonsaiPersistentDatabase<CommitId>,
+    Hash: StarkHash + Send + Sync,
+{
+    pub fn insert(&mut self, id: &[u8], key: Felt, value: Felt) {
+        let key: BitVec = key.to_bytes_be().as_bits()[5..].to_owned();
+        self.storage.insert(id, &key, &value).unwrap();
+    }
+
+    pub fn commit(&mut self, id: CommitId) {
+        self.storage.commit(id).expect("failed to commit trie");
+    }
+}
+
+impl<DB, Hash> std::fmt::Debug for BonsaiTrie<DB, Hash>
+where
+    DB: BonsaiDatabase,
+    Hash: StarkHash + Send + Sync,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("BonsaiTrie").field("storage", &self.storage).finish()
+    }
+}
+
+pub fn compute_merkle_root<H>(values: &[Felt]) -> anyhow::Result<Felt>
 where
     H: StarkHash + Send + Sync,
 {
@@ -25,7 +105,7 @@ where
 
     let config = BonsaiStorageConfig::default();
     let bonsai_db = databases::HashMapDb::<BasicId>::default();
-    let mut bs = BonsaiStorage::<_, _, H>::new(bonsai_db, config).unwrap();
+    let mut bs = BonsaiStorage::<_, _, H>::new(bonsai_db, config, 64);
 
     for (id, value) in values.iter().enumerate() {
         let key = BitVec::from_iter(id.to_be_bytes());
@@ -48,6 +128,15 @@ pub fn compute_contract_state_hash(
     let hash = Pedersen::hash(class_hash, storage_root);
     let hash = Pedersen::hash(&hash, nonce);
     Pedersen::hash(&hash, &CONTRACT_STATE_HASH_VERSION)
+}
+
+pub fn verify_proof<Hash: StarkHash>(
+    proofs: &MultiProof,
+    root: Felt,
+    keys: Vec<Felt>,
+) -> Vec<Felt> {
+    let keys = keys.into_iter().map(|f| f.to_bytes_be().as_bits()[5..].to_owned());
+    proofs.verify_proof::<Hash>(root, keys, 251).collect::<Result<Vec<Felt>, _>>().unwrap()
 }
 
 #[cfg(test)]

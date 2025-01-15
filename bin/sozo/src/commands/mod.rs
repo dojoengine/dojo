@@ -5,6 +5,7 @@ use auth::AuthArgs;
 use clap::Subcommand;
 use events::EventsArgs;
 use scarb::core::{Config, Package, Workspace};
+use semver::{Version, VersionReq};
 use tracing::info_span;
 
 pub(crate) mod auth;
@@ -32,7 +33,11 @@ use init::InitArgs;
 use inspect::InspectArgs;
 use migrate::MigrateArgs;
 use model::ModelArgs;
+#[cfg(feature = "walnut")]
+use sozo_walnut::walnut::WalnutArgs;
 use test::TestArgs;
+
+pub(crate) const LOG_TARGET: &str = "sozo::cli";
 
 #[derive(Debug, Subcommand)]
 pub enum Commands {
@@ -63,6 +68,9 @@ pub enum Commands {
     Model(Box<ModelArgs>),
     #[command(about = "Inspect events emitted by the world")]
     Events(Box<EventsArgs>),
+    #[cfg(feature = "walnut")]
+    #[command(about = "Interact with walnut.dev - transactions debugger and simulator")]
+    Walnut(Box<WalnutArgs>),
 }
 
 impl fmt::Display for Commands {
@@ -81,6 +89,8 @@ impl fmt::Display for Commands {
             Commands::Init(_) => write!(f, "Init"),
             Commands::Model(_) => write!(f, "Model"),
             Commands::Events(_) => write!(f, "Events"),
+            #[cfg(feature = "walnut")]
+            Commands::Walnut(_) => write!(f, "WalnutVerify"),
         }
     }
 }
@@ -103,10 +113,12 @@ pub fn run(command: Commands, config: &Config) -> Result<()> {
         Commands::Clean(args) => args.run(config),
         Commands::Call(args) => args.run(config),
         Commands::Test(args) => args.run(config),
-        Commands::Hash(args) => args.run().map(|_| ()),
+        Commands::Hash(args) => args.run(config).map(|_| ()),
         Commands::Init(args) => args.run(config),
         Commands::Model(args) => args.run(config),
         Commands::Events(args) => args.run(config),
+        #[cfg(feature = "walnut")]
+        Commands::Walnut(args) => args.run(config),
     }
 }
 
@@ -127,24 +139,43 @@ pub fn check_package_dojo_version(ws: &Workspace<'_>, package: &Package) -> anyh
             && dojo_dep_str.contains("tag=v")
             && !dojo_dep_str.contains(dojo_version)
         {
-            if let Ok(cp) = ws.current_package() {
-                let path =
-                    if cp.id == package.id { package.manifest_path() } else { ws.manifest_path() };
+            // safe to unwrap since we know the string contains "tag=v".
+            // "dojo * (git+https://github.com/dojoengine/dojo?tag=v1.0.10)"
+            let dojo_dep_version = dojo_dep_str.split("tag=v")
+            .nth(1)  // Get the part after "tag=v"
+            .map(|s| s.trim_end_matches(')'))
+            .expect("Unexpected dojo dependency format");
 
-                anyhow::bail!(
-                    "Found dojo-core version mismatch: expected {}. Please verify your dojo \
-                     dependency in {}",
-                    dojo_version,
-                    path
-                )
-            } else {
-                // Virtual workspace.
-                anyhow::bail!(
-                    "Found dojo-core version mismatch: expected {}. Please verify your dojo \
-                     dependency in {}",
-                    dojo_version,
-                    ws.manifest_path()
-                )
+            let dojo_dep_version = Version::parse(dojo_dep_version).unwrap();
+
+            let version_parts: Vec<&str> = dojo_version.split('.').collect();
+            let major_minor = format!("{}.{}", version_parts[0], version_parts[1]);
+            let dojo_req_version = VersionReq::parse(&format!(">={}", major_minor)).unwrap();
+
+            if !dojo_req_version.matches(&dojo_dep_version) {
+                if let Ok(cp) = ws.current_package() {
+                    // Selected package.
+                    let path = if cp.id == package.id {
+                        package.manifest_path()
+                    } else {
+                        ws.manifest_path()
+                    };
+
+                    anyhow::bail!(
+                        "Found dojo-core version mismatch: expected {}. Please verify your dojo \
+                         dependency in {}",
+                        dojo_req_version,
+                        path
+                    )
+                } else {
+                    // Virtual workspace.
+                    anyhow::bail!(
+                        "Found dojo-core version mismatch: expected {}. Please verify your dojo \
+                         dependency in {}",
+                        dojo_req_version,
+                        ws.manifest_path()
+                    )
+                }
             }
         }
     }

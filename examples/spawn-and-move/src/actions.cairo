@@ -5,6 +5,7 @@ pub trait IActions<T> {
     fn spawn(ref self: T);
     fn move(ref self: T, direction: Direction);
     fn set_player_config(ref self: T, name: ByteArray);
+    fn update_player_config_name(ref self: T, name: ByteArray);
     fn get_player_position(self: @T) -> Position;
     fn reset_player_config(ref self: T);
     fn set_player_server_profile(ref self: T, server_id: u32, name: ByteArray);
@@ -22,7 +23,7 @@ pub mod actions {
         Position, Moves, MovesValue, Direction, Vec2, PlayerConfig, PlayerItem, ServerProfile,
     };
     use dojo_examples::utils::next_position;
-    use dojo::model::{ModelStorage, ModelValueStorage};
+    use dojo::model::{ModelStorage, ModelValueStorage, Model};
     use dojo::event::EventStorage;
 
     // Features can be used on modules, structs, trait and `use`. Not inside
@@ -64,7 +65,7 @@ pub mod actions {
                 player: seed.try_into().unwrap(),
                 name: "hello",
                 items: array![],
-                favorite_item: Option::None
+                favorite_item: Option::None,
             };
 
             let mut world = self.world_default();
@@ -127,8 +128,19 @@ pub mod actions {
                 PlayerItem { item_id: 2, quantity: 50, score: -32 }
             ];
 
-            let config = PlayerConfig { player, name, items, favorite_item: Option::Some(1), };
+            let config = PlayerConfig { player, name, items, favorite_item: Option::Some(1) };
             world.write_model(@config);
+        }
+
+        fn update_player_config_name(ref self: ContractState, name: ByteArray) {
+            let mut world = self.world_default();
+            let player = get_caller_address();
+
+            // Don't need to read the model here, we directly overwrite the member "name".
+            world
+                .write_member(
+                    Model::<PlayerConfig>::ptr_from_keys(player), selector!("name"), name
+                );
         }
 
         fn reset_player_config(ref self: ContractState) {
@@ -204,6 +216,7 @@ pub mod actions {
             self.world(@"ns")
         }
 
+        /// A gas optimized version of `world_default`, where hash are computed at compile time.
         fn world_default_from_hash(self: @ContractState) -> dojo::world::WorldStorage {
             self.world_from_hash(poseidon_hash_string!("ns"))
         }

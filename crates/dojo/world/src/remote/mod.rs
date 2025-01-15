@@ -23,6 +23,8 @@ use crate::{ContractAddress, DojoSelector};
 pub struct WorldRemote {
     /// The world's address used to build the remote world.
     pub address: Felt,
+    /// The hash of the metadata associated to the world.
+    pub metadata_hash: Felt,
     /// The class hashes of the world.
     pub class_hashes: Vec<Felt>,
     /// The resources of the world, by dojo selector.

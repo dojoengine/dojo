@@ -74,6 +74,9 @@ message Query {
     uint32 limit = 2;
     uint32 offset = 3;
     bool dont_include_hashed_keys = 4;
+    repeated OrderBy order_by = 5;
+    repeated string entity_models = 6;
+	uint64 entity_updated_after = 7;
 }
 
 message EventQuery {
@@ -117,7 +120,12 @@ message MemberValue {
     oneof value_type {
         Primitive primitive = 1;
         string string = 2;
+        MemberValueList list = 3;
     }
+}
+
+message MemberValueList {
+    repeated MemberValue values = 1;
 }
 
 message MemberClause {
@@ -149,6 +157,8 @@ enum ComparisonOperator {
     GTE = 3;
     LT = 4;
     LTE = 5;
+    IN = 6;
+    NOT_IN = 7;
 }
 
 message Token {
@@ -164,4 +174,15 @@ message TokenBalance {
     string account_address = 2;
     string contract_address = 3;
     string token_id = 4;
+}
+
+message OrderBy {
+    string model = 1;
+    string member = 2;
+    OrderDirection direction = 3;
+}
+
+enum OrderDirection {
+    ASC = 0;
+    DESC = 1;
 }

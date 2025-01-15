@@ -5,6 +5,7 @@ use dojo_world::config::calldata_decoder;
 use scarb::core::Config;
 use sozo_ops::resource_descriptor::ResourceDescriptor;
 use sozo_scarbext::WorkspaceExt;
+#[cfg(feature = "walnut")]
 use sozo_walnut::WalnutDebugger;
 use starknet::core::types::Call;
 use starknet::core::utils as snutils;
@@ -67,7 +68,7 @@ impl ExecuteArgs {
         let descriptor = self.tag_or_address.ensure_namespace(&profile_config.namespace.default);
 
         #[cfg(feature = "walnut")]
-        let _walnut_debugger = WalnutDebugger::new_from_flag(
+        let walnut_debugger = WalnutDebugger::new_from_flag(
             self.transaction.walnut,
             self.starknet.url(profile_config.env.as_ref())?,
         );
@@ -132,8 +133,12 @@ impl ExecuteArgs {
                 .await?;
 
             let invoker = Invoker::new(&account, txn_config);
-            // TODO: add walnut back, perhaps at the invoker level.
             let tx_result = invoker.invoke(call).await?;
+
+            #[cfg(feature = "walnut")]
+            if let Some(walnut_debugger) = walnut_debugger {
+                walnut_debugger.debug_transaction(&config.ui(), &tx_result)?;
+            }
 
             println!("{}", tx_result);
             Ok(())

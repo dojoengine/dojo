@@ -3,7 +3,11 @@ version = 1
 
 [[package]]
 name = "dojo"
+<<<<<<< HEAD
 version = "1.0.0"
+=======
+version = "1.0.10"
+>>>>>>> dojo/main
 dependencies = [
  "dojo_plugin",
 ]

@@ -2,18 +2,39 @@ use katana_primitives::block::BlockHashOrNumber;
 use katana_primitives::class::ClassHash;
 use katana_primitives::contract::{ContractAddress, Nonce, StorageKey, StorageValue};
 use katana_primitives::Felt;
+use katana_trie::MultiProof;
+use starknet::macros::short_string;
+use starknet_types_core::hash::StarkHash;
 
 use super::contract::ContractClassProvider;
 use crate::ProviderResult;
 
 #[auto_impl::auto_impl(&, Box, Arc)]
 pub trait StateRootProvider: Send + Sync {
-    /// Retrieves the state root of a block.
-    fn state_root(&self, block_id: BlockHashOrNumber) -> ProviderResult<Option<Felt>>;
+    /// Retrieves the root of the global state trie.
+    fn state_root(&self) -> ProviderResult<Felt> {
+        // https://docs.starknet.io/architecture-and-concepts/network-architecture/starknet-state/#state_commitment
+        Ok(starknet_types_core::hash::Poseidon::hash_array(&[
+            short_string!("STARKNET_STATE_V0"),
+            self.contracts_root()?,
+            self.classes_root()?,
+        ]))
+    }
+
+    /// Retrieves the root of the classes trie.
+    fn classes_root(&self) -> ProviderResult<Felt>;
+
+    /// Retrieves the root of the contracts trie.
+    fn contracts_root(&self) -> ProviderResult<Felt>;
+
+    /// Retrieves the root of a contract's storage trie.
+    fn storage_root(&self, contract: ContractAddress) -> ProviderResult<Option<Felt>>;
 }
 
 #[auto_impl::auto_impl(&, Box, Arc)]
-pub trait StateProvider: ContractClassProvider + Send + Sync + std::fmt::Debug {
+pub trait StateProvider:
+    ContractClassProvider + StateProofProvider + StateRootProvider + Send + Sync + std::fmt::Debug
+{
     /// Returns the nonce of a contract.
     fn nonce(&self, address: ContractAddress) -> ProviderResult<Option<Nonce>>;
 
@@ -62,4 +83,17 @@ pub trait StateWriter: Send + Sync {
         address: ContractAddress,
         class_hash: ClassHash,
     ) -> ProviderResult<()>;
+}
+
+#[auto_impl::auto_impl(&, Box, Arc)]
+pub trait StateProofProvider: Send + Sync {
+    fn storage_multiproof(
+        &self,
+        address: ContractAddress,
+        key: Vec<StorageKey>,
+    ) -> ProviderResult<MultiProof>;
+
+    fn contract_multiproof(&self, addresses: Vec<ContractAddress>) -> ProviderResult<MultiProof>;
+
+    fn class_multiproof(&self, classes: Vec<ClassHash>) -> ProviderResult<MultiProof>;
 }

@@ -25,20 +25,21 @@ use starknet::core::types::{BlockId, BlockTag, Felt, FunctionCall};
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
 use starknet_crypto::poseidon_hash_many;
-use torii_core::executor::QueryMessage;
-use torii_core::sql::utils::felts_to_sql_string;
-use torii_core::sql::Sql;
+use torii_sqlite::executor::QueryMessage;
+use torii_sqlite::utils::felts_to_sql_string;
+use torii_sqlite::Sql;
 use tracing::{info, warn};
 use webrtc::tokio::Certificate;
 
 use crate::constants;
-use crate::errors::Error;
+use crate::error::Error;
 
 mod events;
 
+use torii_typed_data::typed_data::{parse_value_to_ty, PrimitiveType, TypedData};
+
 use crate::server::events::ServerEvent;
-use crate::typed_data::{encode_type, parse_value_to_ty, PrimitiveType, TypedData};
-use crate::types::{Message, Signature};
+use crate::types::Message;
 
 pub(crate) const LOG_TARGET: &str = "torii::relay::server";
 
@@ -128,7 +129,7 @@ impl<P: Provider + Sync> Relay<P> {
                     relay: relay::Behaviour::new(key.public().to_peer_id(), Default::default()),
                     ping: ping::Behaviour::new(ping::Config::new()),
                     identify: identify::Behaviour::new(identify::Config::new(
-                        format!("/torii-relay/{}", env!("CARGO_PKG_VERSION")),
+                        format!("/{}/{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION")),
                         key.public(),
                     )),
                     gossipsub: gossipsub::Behaviour::new(
@@ -253,7 +254,7 @@ impl<P: Provider + Sync> Relay<P> {
 
                             // select only identity field, if doesn't exist, empty string
                             let query = format!(
-                                "SELECT external_identity FROM [{}] WHERE id = ?",
+                                "SELECT identity FROM [{}] WHERE internal_id = ?",
                                 ty.name()
                             );
                             let entity_identity: Option<String> = match sqlx::query_scalar(&query)
@@ -414,51 +415,24 @@ async fn validate_signature<P: Provider + Sync>(
     provider: &P,
     entity_identity: Felt,
     message: &TypedData,
-    signature: &Signature,
+    signature: &[Felt],
 ) -> Result<bool, Error> {
     let message_hash = message.encode(entity_identity)?;
 
-    match signature {
-        Signature::Account(signature) => {
-            let mut calldata = vec![message_hash, Felt::from(signature.len())];
-            calldata.extend(signature);
-            provider
-                .call(
-                    FunctionCall {
-                        contract_address: entity_identity,
-                        entry_point_selector: get_selector_from_name("is_valid_signature").unwrap(),
-                        calldata,
-                    },
-                    BlockId::Tag(BlockTag::Pending),
-                )
-                .await
-                .map_err(Error::ProviderError)
-                .map(|res| res[0] != Felt::ZERO)
-        }
-        Signature::Session(signature) => {
-            let mut calldata = vec![
-                Felt::ONE,
-                get_selector_from_name(&encode_type(&message.primary_type, &message.types)?)
-                    .map_err(|e| Error::InvalidMessageError(e.to_string()))?,
-                message_hash,
-                signature.len().into(),
-            ];
-            calldata.extend(signature);
-            provider
-                .call(
-                    FunctionCall {
-                        contract_address: entity_identity,
-                        entry_point_selector: get_selector_from_name("is_session_sigature_valid")
-                            .unwrap(),
-                        calldata,
-                    },
-                    BlockId::Tag(BlockTag::Pending),
-                )
-                .await
-                .map_err(Error::ProviderError)
-                .map(|res| res[0] != Felt::ZERO)
-        }
-    }
+    let mut calldata = vec![message_hash, Felt::from(signature.len())];
+    calldata.extend(signature);
+    provider
+        .call(
+            FunctionCall {
+                contract_address: entity_identity,
+                entry_point_selector: get_selector_from_name("is_valid_signature").unwrap(),
+                calldata,
+            },
+            BlockId::Tag(BlockTag::Pending),
+        )
+        .await
+        .map_err(Error::ProviderError)
+        .map(|res| res[0] != Felt::ZERO)
 }
 
 fn ty_keys(ty: &Ty) -> Result<Vec<Felt>, Error> {

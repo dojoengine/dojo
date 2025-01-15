@@ -113,6 +113,15 @@ impl ResourceDiff {
         }
     }
 
+    /// Returns the current metadata hash of the resource.
+    pub fn metadata_hash(&self) -> Felt {
+        match self {
+            ResourceDiff::Created(_) => Felt::ZERO,
+            ResourceDiff::Updated(_, remote) => remote.metadata_hash(),
+            ResourceDiff::Synced(_, remote) => remote.metadata_hash(),
+        }
+    }
+
     pub fn abi(&self) -> Vec<AbiEntry> {
         match self {
             ResourceDiff::Created(local) => local.abi(),

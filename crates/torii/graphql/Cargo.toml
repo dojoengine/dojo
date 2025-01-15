@@ -28,7 +28,8 @@ strum_macros.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
 tokio-stream = "0.1.11"
-torii-core.workspace = true
+torii-sqlite.workspace = true
+torii-indexer.workspace = true
 tracing.workspace = true
 url.workspace = true
 warp.workspace = true
@@ -37,7 +38,7 @@ warp.workspace = true
 camino.workspace = true
 dojo-test-utils = { workspace = true, features = [ "build-examples" ] }
 dojo-utils.workspace = true
-dojo-world = { workspace = true, features = [ "metadata" ] }
+dojo-world = { workspace = true, features = [ "ipfs" ] }
 katana-runner.workspace = true
 scarb.workspace = true
 serial_test = "2.0.0"

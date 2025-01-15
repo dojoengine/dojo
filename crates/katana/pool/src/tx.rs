@@ -116,11 +116,13 @@ impl PoolTransaction for ExecutableTxWithHash {
     fn nonce(&self) -> Nonce {
         match &self.transaction {
             ExecutableTx::Invoke(tx) => match tx {
+                InvokeTx::V0(..) => unimplemented!("v0 transaction not supported"),
                 InvokeTx::V1(v1) => v1.nonce,
                 InvokeTx::V3(v3) => v3.nonce,
             },
             ExecutableTx::L1Handler(tx) => tx.nonce,
             ExecutableTx::Declare(tx) => match &tx.transaction {
+                DeclareTx::V0(..) => unimplemented!("v0 transaction not supported"),
                 DeclareTx::V1(v1) => v1.nonce,
                 DeclareTx::V2(v2) => v2.nonce,
                 DeclareTx::V3(v3) => v3.nonce,
@@ -135,11 +137,13 @@ impl PoolTransaction for ExecutableTxWithHash {
     fn sender(&self) -> ContractAddress {
         match &self.transaction {
             ExecutableTx::Invoke(tx) => match tx {
+                InvokeTx::V0(v0) => v0.contract_address,
                 InvokeTx::V1(v1) => v1.sender_address,
                 InvokeTx::V3(v3) => v3.sender_address,
             },
             ExecutableTx::L1Handler(tx) => tx.contract_address,
             ExecutableTx::Declare(tx) => match &tx.transaction {
+                DeclareTx::V0(v0) => v0.sender_address,
                 DeclareTx::V1(v1) => v1.sender_address,
                 DeclareTx::V2(v2) => v2.sender_address,
                 DeclareTx::V3(v3) => v3.sender_address,
@@ -151,11 +155,13 @@ impl PoolTransaction for ExecutableTxWithHash {
     fn max_fee(&self) -> u128 {
         match &self.transaction {
             ExecutableTx::Invoke(tx) => match tx {
+                InvokeTx::V0(v0) => v0.max_fee,
                 InvokeTx::V1(v1) => v1.max_fee,
                 InvokeTx::V3(_) => 0, // V3 doesn't have max_fee
             },
             ExecutableTx::L1Handler(tx) => tx.paid_fee_on_l1,
             ExecutableTx::Declare(tx) => match &tx.transaction {
+                DeclareTx::V0(v0) => v0.max_fee,
                 DeclareTx::V1(v1) => v1.max_fee,
                 DeclareTx::V2(v2) => v2.max_fee,
                 DeclareTx::V3(_) => 0, // V3 doesn't have max_fee
@@ -170,17 +176,17 @@ impl PoolTransaction for ExecutableTxWithHash {
     fn tip(&self) -> u64 {
         match &self.transaction {
             ExecutableTx::Invoke(tx) => match tx {
-                InvokeTx::V1(_) => 0, // V1 doesn't have tip
                 InvokeTx::V3(v3) => v3.tip,
+                _ => 0,
             },
-            ExecutableTx::L1Handler(_) => 0, // L1Handler doesn't have tip
+            ExecutableTx::L1Handler(_) => 0,
             ExecutableTx::Declare(tx) => match &tx.transaction {
-                DeclareTx::V1(_) | DeclareTx::V2(_) => 0, // V1 and V2 don't have tip
                 DeclareTx::V3(v3) => v3.tip,
+                _ => 0,
             },
             ExecutableTx::DeployAccount(tx) => match tx {
-                DeployAccountTx::V1(_) => 0, // V1 doesn't have tip
                 DeployAccountTx::V3(v3) => v3.tip,
+                _ => 0,
             },
         }
     }

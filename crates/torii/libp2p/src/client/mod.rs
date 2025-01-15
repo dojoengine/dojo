@@ -17,7 +17,7 @@ use tracing::info;
 pub mod events;
 use crate::client::events::ClientEvent;
 use crate::constants;
-use crate::errors::Error;
+use crate::error::Error;
 use crate::types::Message;
 
 pub(crate) const LOG_TARGET: &str = "torii::relay::client";

@@ -337,7 +337,7 @@ fn fetch_tx_events(
     if buffer.len() >= chunk_size {
         // the next time we have to fetch the events, we will start from this index.
         let new_last_event = if total_can_take == 0 {
-            // start from the the same event pointed by the
+            // start from the same event pointed by the
             // current cursor..
             last_event_idx
         } else {

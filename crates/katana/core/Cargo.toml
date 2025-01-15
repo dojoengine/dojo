@@ -36,10 +36,11 @@ url.workspace = true
 
 alloy-primitives = { workspace = true, features = [ "serde" ] }
 alloy-sol-types = { workspace = true, default-features = false, features = [ "json" ] }
+starknet-crypto = { workspace = true, optional = true }
 
 alloy-contract = { workspace = true, default-features = false }
 alloy-network = { workspace = true, default-features = false }
-alloy-provider = { workspace = true, default-features = false, features = [ "reqwest" ] }
+alloy-provider = { workspace = true, default-features = false, features = [ "reqwest", "reqwest-rustls-tls" ] }
 alloy-rpc-types-eth = { workspace = true, default-features = false }
 alloy-transport = { workspace = true, default-features = false }
 
@@ -49,4 +50,4 @@ hex.workspace = true
 tempfile.workspace = true
 
 [features]
-starknet-messaging = [  ]
+starknet-messaging = [ "dep:starknet-crypto" ]

@@ -10,11 +10,11 @@ use katana_primitives::block::{
     Block, BlockHash, BlockHashOrNumber, BlockNumber, BlockWithTxHashes, FinalityStatus, Header,
     SealedBlockWithStatus,
 };
-use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass};
+use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, ContractClass};
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::env::BlockEnv;
 use katana_primitives::receipt::Receipt;
-use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
+use katana_primitives::state::{StateUpdates, StateUpdatesWithClasses};
 use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::{Tx, TxHash, TxNumber, TxWithHash};
 use katana_primitives::Felt;
@@ -30,15 +30,16 @@ use crate::traits::block::{
     BlockHashProvider, BlockNumberProvider, BlockProvider, BlockStatusProvider, BlockWriter,
     HeaderProvider,
 };
-use crate::traits::contract::ContractClassWriter;
+use crate::traits::contract::{ContractClassWriter, ContractClassWriterExt};
 use crate::traits::env::BlockEnvProvider;
-use crate::traits::state::{StateFactoryProvider, StateProvider, StateRootProvider, StateWriter};
+use crate::traits::stage::StageCheckpointProvider;
+use crate::traits::state::{StateFactoryProvider, StateProvider, StateWriter};
 use crate::traits::state_update::StateUpdateProvider;
 use crate::traits::transaction::{
     ReceiptProvider, TransactionProvider, TransactionStatusProvider, TransactionTraceProvider,
     TransactionsProviderExt,
 };
-use crate::traits::trie::{ClassTrieWriter, ContractTrieWriter};
+use crate::traits::trie::TrieWriter;
 use crate::ProviderResult;
 
 #[derive(Debug)]
@@ -409,17 +410,17 @@ impl ReceiptProvider for ForkedProvider {
     }
 }
 
-impl StateRootProvider for ForkedProvider {
-    fn state_root(
-        &self,
-        block_id: BlockHashOrNumber,
-    ) -> ProviderResult<Option<katana_primitives::Felt>> {
-        let state_root = self.block_number_by_id(block_id)?.and_then(|num| {
-            self.storage.read().block_headers.get(&num).map(|header| header.state_root)
-        });
-        Ok(state_root)
-    }
-}
+// impl StateRootProvider for ForkedProvider {
+//     fn state_root(
+//         &self,
+//         block_id: BlockHashOrNumber,
+//     ) -> ProviderResult<Option<katana_primitives::Felt>> {
+//         let state_root = self.block_number_by_id(block_id)?.and_then(|num| {
+//             self.storage.read().block_headers.get(&num).map(|header| header.state_root)
+//         });
+//         Ok(state_root)
+//     }
+// }
 
 impl StateUpdateProvider for ForkedProvider {
     fn state_update(&self, block_id: BlockHashOrNumber) -> ProviderResult<Option<StateUpdates>> {
@@ -431,6 +432,20 @@ impl StateUpdateProvider for ForkedProvider {
         let state_update =
             block_num.and_then(|num| self.storage.read().state_update.get(&num).cloned());
         Ok(state_update)
+    }
+
+    fn declared_classes(
+        &self,
+        block_id: BlockHashOrNumber,
+    ) -> ProviderResult<Option<BTreeMap<ClassHash, CompiledClassHash>>> {
+        Ok(self.state_update(block_id)?.map(|su| su.declared_classes))
+    }
+
+    fn deployed_contracts(
+        &self,
+        block_id: BlockHashOrNumber,
+    ) -> ProviderResult<Option<BTreeMap<ContractAddress, ClassHash>>> {
+        Ok(self.state_update(block_id)?.map(|su| su.deployed_contracts))
     }
 }
 
@@ -466,7 +481,7 @@ impl BlockWriter for ForkedProvider {
     fn insert_block_with_states_and_receipts(
         &self,
         block: SealedBlockWithStatus,
-        states: StateUpdatesWithDeclaredClasses,
+        states: StateUpdatesWithClasses,
         receipts: Vec<Receipt>,
         executions: Vec<TxExecInfo>,
     ) -> ProviderResult<()> {
@@ -520,17 +535,8 @@ impl BlockWriter for ForkedProvider {
 }
 
 impl ContractClassWriter for ForkedProvider {
-    fn set_class(&self, hash: ClassHash, class: CompiledClass) -> ProviderResult<()> {
-        self.state.shared_contract_classes.compiled_classes.write().insert(hash, class);
-        Ok(())
-    }
-
-    fn set_sierra_class(
-        &self,
-        hash: ClassHash,
-        sierra: FlattenedSierraClass,
-    ) -> ProviderResult<()> {
-        self.state.shared_contract_classes.sierra_classes.write().insert(hash, sierra);
+    fn set_class(&self, hash: ClassHash, class: ContractClass) -> ProviderResult<()> {
+        self.state.shared_contract_classes.classes.write().insert(hash, class);
         Ok(())
     }
 
@@ -540,6 +546,13 @@ impl ContractClassWriter for ForkedProvider {
         compiled_hash: CompiledClassHash,
     ) -> ProviderResult<()> {
         self.state.compiled_class_hashes.write().insert(hash, compiled_hash);
+        Ok(())
+    }
+}
+
+impl ContractClassWriterExt for ForkedProvider {
+    fn set_compiled_class(&self, hash: ClassHash, class: CompiledClass) -> ProviderResult<()> {
+        self.state.shared_contract_classes.compiled_classes.write().insert(hash, class);
         Ok(())
     }
 }
@@ -586,8 +599,8 @@ impl BlockEnvProvider for ForkedProvider {
     }
 }
 
-impl ClassTrieWriter for ForkedProvider {
-    fn insert_updates(
+impl TrieWriter for ForkedProvider {
+    fn trie_insert_declared_classes(
         &self,
         block_number: BlockNumber,
         updates: &BTreeMap<ClassHash, CompiledClassHash>,
@@ -596,10 +609,8 @@ impl ClassTrieWriter for ForkedProvider {
         let _ = updates;
         Ok(Felt::ZERO)
     }
-}
 
-impl ContractTrieWriter for ForkedProvider {
-    fn insert_updates(
+    fn trie_insert_contract_updates(
         &self,
         block_number: BlockNumber,
         state_updates: &StateUpdates,
@@ -607,5 +618,18 @@ impl ContractTrieWriter for ForkedProvider {
         let _ = block_number;
         let _ = state_updates;
         Ok(Felt::ZERO)
+    }
+}
+
+impl StageCheckpointProvider for ForkedProvider {
+    fn checkpoint(&self, id: &str) -> ProviderResult<Option<BlockNumber>> {
+        let _ = id;
+        unimplemented!("syncing is not supported for forked provider")
+    }
+
+    fn set_checkpoint(&self, id: &str, block_number: BlockNumber) -> ProviderResult<()> {
+        let _ = id;
+        let _ = block_number;
+        unimplemented!("syncing is not supported for forked provider")
     }
 }

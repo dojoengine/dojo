@@ -43,8 +43,8 @@ mod latest {
     #[rstest::rstest]
     #[case(
         vec![
-            (ContractAddress::from(felt!("1")), Some(felt!("22")), Some(felt!("3"))),
-            (ContractAddress::from(felt!("2")), Some(felt!("33")), Some(felt!("2"))),
+            (ContractAddress::from(felt!("1337")), Some(felt!("22")), Some(felt!("3"))),
+            (ContractAddress::from(felt!("80085")), Some(felt!("33")), Some(felt!("2"))),
         ]
     )]
     fn test_latest_contract_info_read<Db>(
@@ -95,31 +95,31 @@ mod historical {
     #[case::storage_at_block_0(
         0,
         vec![
-            (ContractAddress::from(felt!("1")), None, None),
-            (ContractAddress::from(felt!("2")), None, None)
-        ])
-    ]
+        (ContractAddress::from(felt!("1337")), None, None),
+        (ContractAddress::from(felt!("80085")), None, None)
+    ])
+]
     #[case::storage_at_block_1(
-        1,
-        vec![
-            (ContractAddress::from(felt!("1")), Some(felt!("11")), Some(felt!("1"))),
-            (ContractAddress::from(felt!("2")), Some(felt!("11")), Some(felt!("1"))),
-        ])
-    ]
+    1,
+    vec![
+        (ContractAddress::from(felt!("1337")), Some(felt!("11")), Some(felt!("1"))),
+        (ContractAddress::from(felt!("80085")), Some(felt!("11")), Some(felt!("1"))),
+    ])
+]
     #[case::storage_at_block_4(
-        4,
-        vec![
-            (ContractAddress::from(felt!("1")), Some(felt!("11")), Some(felt!("2"))),
-            (ContractAddress::from(felt!("2")), Some(felt!("22")), Some(felt!("1"))),
-        ])
-    ]
+    4,
+    vec![
+        (ContractAddress::from(felt!("1337")), Some(felt!("11")), Some(felt!("2"))),
+        (ContractAddress::from(felt!("80085")), Some(felt!("22")), Some(felt!("1"))),
+    ])
+]
     #[case::storage_at_block_5(
-        5,
-        vec![
-            (ContractAddress::from(felt!("1")), Some(felt!("22")), Some(felt!("3"))),
-            (ContractAddress::from(felt!("2")), Some(felt!("33")), Some(felt!("2"))),
-        ])
-    ]
+    5,
+    vec![
+        (ContractAddress::from(felt!("1337")), Some(felt!("22")), Some(felt!("3"))),
+        (ContractAddress::from(felt!("80085")), Some(felt!("33")), Some(felt!("2"))),
+    ])
+]
     fn test_historical_storage_read(
         #[from(provider_with_states)] provider: BlockchainProvider<InMemoryProvider>,
         #[case] block_num: BlockNumber,

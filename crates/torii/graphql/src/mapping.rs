@@ -100,8 +100,8 @@ lazy_static! {
         ),
     ]);
     pub static ref PAGE_INFO_TYPE_MAPPING: TypeMapping = TypeMapping::from([
-        (Name::new("hasPreviousPage"), TypeData::Simple(TypeRef::named(TypeRef::BOOLEAN))),
-        (Name::new("hasNextPage"), TypeData::Simple(TypeRef::named(TypeRef::BOOLEAN))),
+        (Name::new("hasPreviousPage"), TypeData::Simple(TypeRef::named_nn(TypeRef::BOOLEAN))),
+        (Name::new("hasNextPage"), TypeData::Simple(TypeRef::named_nn(TypeRef::BOOLEAN))),
         (
             Name::new("startCursor"),
             TypeData::Simple(TypeRef::named(GraphqlType::Cursor.to_string())),
@@ -160,7 +160,7 @@ lazy_static! {
     pub static ref ERC20_TOKEN_TYPE_MAPPING: TypeMapping = IndexMap::from([
         (Name::new("name"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
         (Name::new("symbol"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
-        (Name::new("decimals"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
+        (Name::new("decimals"), TypeData::Simple(TypeRef::named_nn(TypeRef::INT))),
         (Name::new("contractAddress"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
         (Name::new("amount"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
     ]);
@@ -171,9 +171,9 @@ lazy_static! {
         (Name::new("tokenId"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
         (Name::new("contractAddress"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
         (Name::new("metadata"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
-        (Name::new("metadataName"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
-        (Name::new("metadataDescription"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
-        (Name::new("metadataAttributes"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
+        (Name::new("metadataName"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+        (Name::new("metadataDescription"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+        (Name::new("metadataAttributes"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
         (Name::new("imagePath"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
     ]);
 

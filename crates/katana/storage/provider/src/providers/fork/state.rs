@@ -1,13 +1,13 @@
 use std::sync::Arc;
 
-use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, FlattenedSierraClass};
+use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, ContractClass};
 use katana_primitives::contract::{ContractAddress, Nonce, StorageKey, StorageValue};
 
 use super::backend::SharedStateProvider;
 use crate::providers::in_memory::cache::CacheStateDb;
 use crate::providers::in_memory::state::StateSnapshot;
 use crate::traits::contract::ContractClassProvider;
-use crate::traits::state::StateProvider;
+use crate::traits::state::{StateProofProvider, StateProvider, StateRootProvider};
 use crate::ProviderResult;
 
 pub type ForkedStateDb = CacheStateDb<SharedStateProvider>;
@@ -76,12 +76,19 @@ impl StateProvider for ForkedStateDb {
     }
 }
 
-impl ContractClassProvider for CacheStateDb<SharedStateProvider> {
-    fn sierra_class(&self, hash: ClassHash) -> ProviderResult<Option<FlattenedSierraClass>> {
-        if let class @ Some(_) = self.shared_contract_classes.sierra_classes.read().get(&hash) {
+impl ContractClassProvider for ForkedStateDb {
+    fn class(&self, hash: ClassHash) -> ProviderResult<Option<ContractClass>> {
+        if let class @ Some(_) = self.shared_contract_classes.classes.read().get(&hash) {
             return Ok(class.cloned());
         }
-        ContractClassProvider::sierra_class(&self.db, hash)
+        ContractClassProvider::class(&self.db, hash)
+    }
+
+    fn compiled_class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledClass>> {
+        if let class @ Some(_) = self.shared_contract_classes.compiled_classes.read().get(&hash) {
+            return Ok(class.cloned());
+        }
+        ContractClassProvider::compiled_class(&self.db, hash)
     }
 
     fn compiled_class_hash_of_class_hash(
@@ -93,12 +100,40 @@ impl ContractClassProvider for CacheStateDb<SharedStateProvider> {
         }
         ContractClassProvider::compiled_class_hash_of_class_hash(&self.db, hash)
     }
+}
 
-    fn class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledClass>> {
-        if let class @ Some(_) = self.shared_contract_classes.compiled_classes.read().get(&hash) {
-            return Ok(class.cloned());
-        }
-        ContractClassProvider::class(&self.db, hash)
+impl StateProofProvider for ForkedStateDb {
+    fn class_multiproof(&self, _: Vec<ClassHash>) -> ProviderResult<katana_trie::MultiProof> {
+        Ok(katana_trie::MultiProof(Default::default()))
+    }
+
+    fn contract_multiproof(
+        &self,
+        _: Vec<ContractAddress>,
+    ) -> ProviderResult<katana_trie::MultiProof> {
+        Ok(katana_trie::MultiProof(Default::default()))
+    }
+
+    fn storage_multiproof(
+        &self,
+        _: ContractAddress,
+        _: Vec<StorageKey>,
+    ) -> ProviderResult<katana_trie::MultiProof> {
+        Ok(katana_trie::MultiProof(Default::default()))
+    }
+}
+
+impl StateRootProvider for ForkedStateDb {
+    fn classes_root(&self) -> ProviderResult<katana_primitives::Felt> {
+        Ok(katana_primitives::Felt::ZERO)
+    }
+
+    fn contracts_root(&self) -> ProviderResult<katana_primitives::Felt> {
+        Ok(katana_primitives::Felt::ZERO)
+    }
+
+    fn storage_root(&self, _: ContractAddress) -> ProviderResult<Option<katana_primitives::Felt>> {
+        Ok(Some(katana_primitives::Felt::ZERO))
     }
 }
 
@@ -127,12 +162,12 @@ impl StateProvider for LatestStateProvider {
 }
 
 impl ContractClassProvider for LatestStateProvider {
-    fn sierra_class(&self, hash: ClassHash) -> ProviderResult<Option<FlattenedSierraClass>> {
-        ContractClassProvider::sierra_class(&self.0, hash)
+    fn class(&self, hash: ClassHash) -> ProviderResult<Option<ContractClass>> {
+        ContractClassProvider::class(&self.0, hash)
     }
 
-    fn class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledClass>> {
-        ContractClassProvider::class(&self.0, hash)
+    fn compiled_class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledClass>> {
+        ContractClassProvider::compiled_class(&self.0, hash)
     }
 
     fn compiled_class_hash_of_class_hash(
@@ -140,6 +175,41 @@ impl ContractClassProvider for LatestStateProvider {
         hash: ClassHash,
     ) -> ProviderResult<Option<CompiledClassHash>> {
         ContractClassProvider::compiled_class_hash_of_class_hash(&self.0, hash)
+    }
+}
+
+impl StateProofProvider for LatestStateProvider {
+    fn class_multiproof(&self, _: Vec<ClassHash>) -> ProviderResult<katana_trie::MultiProof> {
+        Ok(katana_trie::MultiProof(Default::default()))
+    }
+
+    fn contract_multiproof(
+        &self,
+        _: Vec<ContractAddress>,
+    ) -> ProviderResult<katana_trie::MultiProof> {
+        Ok(katana_trie::MultiProof(Default::default()))
+    }
+
+    fn storage_multiproof(
+        &self,
+        _: ContractAddress,
+        _: Vec<StorageKey>,
+    ) -> ProviderResult<katana_trie::MultiProof> {
+        Ok(katana_trie::MultiProof(Default::default()))
+    }
+}
+
+impl StateRootProvider for LatestStateProvider {
+    fn classes_root(&self) -> ProviderResult<katana_primitives::Felt> {
+        Ok(katana_primitives::Felt::ZERO)
+    }
+
+    fn contracts_root(&self) -> ProviderResult<katana_primitives::Felt> {
+        Ok(katana_primitives::Felt::ZERO)
+    }
+
+    fn storage_root(&self, _: ContractAddress) -> ProviderResult<Option<katana_primitives::Felt>> {
+        Ok(Some(katana_primitives::Felt::ZERO))
     }
 }
 
@@ -188,11 +258,19 @@ impl StateProvider for ForkedSnapshot {
 }
 
 impl ContractClassProvider for ForkedSnapshot {
-    fn sierra_class(&self, hash: ClassHash) -> ProviderResult<Option<FlattenedSierraClass>> {
+    fn class(&self, hash: ClassHash) -> ProviderResult<Option<ContractClass>> {
         if self.inner.compiled_class_hashes.contains_key(&hash) {
-            Ok(self.classes.sierra_classes.read().get(&hash).cloned())
+            Ok(self.classes.classes.read().get(&hash).cloned())
         } else {
-            ContractClassProvider::sierra_class(&self.inner.db, hash)
+            ContractClassProvider::class(&self.inner.db, hash)
+        }
+    }
+
+    fn compiled_class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledClass>> {
+        if self.inner.compiled_class_hashes.contains_key(&hash) {
+            Ok(self.classes.compiled_classes.read().get(&hash).cloned())
+        } else {
+            ContractClassProvider::compiled_class(&self.inner.db, hash)
         }
     }
 
@@ -205,13 +283,40 @@ impl ContractClassProvider for ForkedSnapshot {
         }
         ContractClassProvider::compiled_class_hash_of_class_hash(&self.inner.db, hash)
     }
+}
 
-    fn class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledClass>> {
-        if self.inner.compiled_class_hashes.contains_key(&hash) {
-            Ok(self.classes.compiled_classes.read().get(&hash).cloned())
-        } else {
-            ContractClassProvider::class(&self.inner.db, hash)
-        }
+impl StateProofProvider for ForkedSnapshot {
+    fn class_multiproof(&self, _: Vec<ClassHash>) -> ProviderResult<katana_trie::MultiProof> {
+        Ok(katana_trie::MultiProof(Default::default()))
+    }
+
+    fn contract_multiproof(
+        &self,
+        _: Vec<ContractAddress>,
+    ) -> ProviderResult<katana_trie::MultiProof> {
+        Ok(katana_trie::MultiProof(Default::default()))
+    }
+
+    fn storage_multiproof(
+        &self,
+        _: ContractAddress,
+        _: Vec<StorageKey>,
+    ) -> ProviderResult<katana_trie::MultiProof> {
+        Ok(katana_trie::MultiProof(Default::default()))
+    }
+}
+
+impl StateRootProvider for ForkedSnapshot {
+    fn classes_root(&self) -> ProviderResult<katana_primitives::Felt> {
+        Ok(katana_primitives::Felt::ZERO)
+    }
+
+    fn contracts_root(&self) -> ProviderResult<katana_primitives::Felt> {
+        Ok(katana_primitives::Felt::ZERO)
+    }
+
+    fn storage_root(&self, _: ContractAddress) -> ProviderResult<Option<katana_primitives::Felt>> {
+        Ok(Some(katana_primitives::Felt::ZERO))
     }
 }
 
@@ -220,7 +325,7 @@ mod tests {
     use std::collections::BTreeMap;
 
     use katana_primitives::address;
-    use katana_primitives::state::{StateUpdates, StateUpdatesWithDeclaredClasses};
+    use katana_primitives::state::{StateUpdates, StateUpdatesWithClasses};
     use starknet::macros::felt;
 
     use super::*;
@@ -255,7 +360,7 @@ mod tests {
             let local = ForkedStateDb::new(remote.clone());
 
             let nonce_updates = BTreeMap::from([(address, remote_nonce)]);
-            let updates = StateUpdatesWithDeclaredClasses {
+            let updates = StateUpdatesWithClasses {
                 state_updates: StateUpdates { nonce_updates, ..Default::default() },
                 ..Default::default()
             };
@@ -276,7 +381,7 @@ mod tests {
 
             let nonce_updates = BTreeMap::from([(address, remote_nonce)]);
             let deployed_contracts = BTreeMap::from([(address, class_hash)]);
-            let updates = StateUpdatesWithDeclaredClasses {
+            let updates = StateUpdatesWithClasses {
                 state_updates: StateUpdates {
                     nonce_updates,
                     deployed_contracts,
@@ -287,7 +392,7 @@ mod tests {
             remote.0.insert_updates(updates);
 
             let nonce_updates = BTreeMap::from([(address, local_nonce)]);
-            let updates = StateUpdatesWithDeclaredClasses {
+            let updates = StateUpdatesWithClasses {
                 state_updates: StateUpdates { nonce_updates, ..Default::default() },
                 ..Default::default()
             };
@@ -308,7 +413,7 @@ mod tests {
 
             let deployed_contracts = BTreeMap::from([(address, class_hash)]);
             let nonce_updates = BTreeMap::from([(address, local_nonce)]);
-            let updates = StateUpdatesWithDeclaredClasses {
+            let updates = StateUpdatesWithClasses {
                 state_updates: StateUpdates {
                     nonce_updates,
                     deployed_contracts,
@@ -332,7 +437,7 @@ mod tests {
             let local = ForkedStateDb::new(remote.clone());
 
             let deployed_contracts = BTreeMap::from([(address, class_hash)]);
-            let updates = StateUpdatesWithDeclaredClasses {
+            let updates = StateUpdatesWithClasses {
                 state_updates: StateUpdates { deployed_contracts, ..Default::default() },
                 ..Default::default()
             };

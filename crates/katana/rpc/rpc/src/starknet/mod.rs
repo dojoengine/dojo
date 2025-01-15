@@ -1,34 +1,27 @@
 //! Server implementation for the Starknet JSON-RPC API.
 
-pub mod forking;
-mod read;
-mod trace;
-mod write;
-
 use std::sync::Arc;
 
-use forking::ForkedClient;
 use katana_core::backend::Backend;
 use katana_core::service::block_producer::{BlockProducer, BlockProducerMode, PendingExecutor};
 use katana_executor::{ExecutionResult, ExecutorFactory};
-use katana_pool::validation::stateful::TxValidator;
 use katana_pool::{TransactionPool, TxPool};
 use katana_primitives::block::{
     BlockHash, BlockHashOrNumber, BlockIdOrTag, BlockNumber, BlockTag, FinalityStatus,
     PartialHeader,
 };
-use katana_primitives::class::{ClassHash, CompiledClass};
+use katana_primitives::class::ClassHash;
 use katana_primitives::contract::{ContractAddress, Nonce, StorageKey, StorageValue};
-use katana_primitives::conversion::rpc::legacy_inner_to_rpc_class;
 use katana_primitives::da::L1DataAvailabilityMode;
 use katana_primitives::env::BlockEnv;
 use katana_primitives::event::MaybeForkedContinuationToken;
 use katana_primitives::transaction::{ExecutableTxWithHash, TxHash, TxWithHash};
 use katana_primitives::Felt;
+use katana_provider::error::ProviderError;
 use katana_provider::traits::block::{BlockHashProvider, BlockIdReader, BlockNumberProvider};
 use katana_provider::traits::contract::ContractClassProvider;
 use katana_provider::traits::env::BlockEnvProvider;
-use katana_provider::traits::state::{StateFactoryProvider, StateProvider};
+use katana_provider::traits::state::{StateFactoryProvider, StateProvider, StateRootProvider};
 use katana_provider::traits::transaction::{
     ReceiptProvider, TransactionProvider, TransactionStatusProvider,
 };
@@ -36,90 +29,105 @@ use katana_rpc_types::block::{
     MaybePendingBlockWithReceipts, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs,
     PendingBlockWithReceipts, PendingBlockWithTxHashes, PendingBlockWithTxs,
 };
+use katana_rpc_types::class::RpcContractClass;
 use katana_rpc_types::error::starknet::StarknetApiError;
 use katana_rpc_types::event::{EventFilterWithPage, EventsPage};
 use katana_rpc_types::receipt::{ReceiptBlock, TxReceiptWithBlockInfo};
 use katana_rpc_types::state_update::MaybePendingStateUpdate;
 use katana_rpc_types::transaction::Tx;
+use katana_rpc_types::trie::{
+    ClassesProof, ContractLeafData, ContractStorageKeys, ContractStorageProofs, ContractsProof,
+    GetStorageProofResponse, GlobalRoots, Nodes,
+};
 use katana_rpc_types::FeeEstimate;
 use katana_rpc_types_builder::ReceiptBuilder;
 use katana_tasks::{BlockingTaskPool, TokioTaskSpawner};
 use starknet::core::types::{
-    ContractClass, PriceUnit, ResultPageRequest, TransactionExecutionStatus, TransactionStatus,
+    PriceUnit, ResultPageRequest, TransactionExecutionStatus, TransactionStatus,
 };
 
 use crate::utils;
 use crate::utils::events::{Cursor, EventBlockId};
 
-pub type StarknetApiResult<T> = Result<T, StarknetApiError>;
+mod config;
+pub mod forking;
+mod read;
+mod trace;
+mod write;
 
+pub use config::StarknetApiConfig;
+use forking::ForkedClient;
+
+type StarknetApiResult<T> = Result<T, StarknetApiError>;
+
+/// Handler for the Starknet JSON-RPC server.
+///
+/// This struct implements all the JSON-RPC traits required to serve the Starknet API (ie,
+/// [read](katana_rpc_api::starknet::StarknetApi),
+/// [write](katana_rpc_api::starknet::StarknetWriteApi), and
+/// [trace](katana_rpc_api::starknet::StarknetTraceApi) APIs.
 #[allow(missing_debug_implementations)]
-pub struct StarknetApi<EF: ExecutorFactory> {
-    inner: Arc<Inner<EF>>,
+pub struct StarknetApi<EF>
+where
+    EF: ExecutorFactory,
+{
+    inner: Arc<StarknetApiInner<EF>>,
 }
 
-#[derive(Debug, Clone)]
-pub struct StarknetApiConfig {
-    pub max_event_page_size: Option<u64>,
-}
-
-impl<EF: ExecutorFactory> Clone for StarknetApi<EF> {
-    fn clone(&self) -> Self {
-        Self { inner: Arc::clone(&self.inner) }
-    }
-}
-
-struct Inner<EF: ExecutorFactory> {
-    validator: TxValidator,
+struct StarknetApiInner<EF>
+where
+    EF: ExecutorFactory,
+{
     pool: TxPool,
     backend: Arc<Backend<EF>>,
-    block_producer: BlockProducer<EF>,
-    blocking_task_pool: BlockingTaskPool,
     forked_client: Option<ForkedClient>,
+    blocking_task_pool: BlockingTaskPool,
+    block_producer: Option<BlockProducer<EF>>,
     config: StarknetApiConfig,
 }
 
-impl<EF: ExecutorFactory> StarknetApi<EF> {
+impl<EF> StarknetApi<EF>
+where
+    EF: ExecutorFactory,
+{
     pub fn new(
         backend: Arc<Backend<EF>>,
         pool: TxPool,
-        block_producer: BlockProducer<EF>,
-        validator: TxValidator,
+        block_producer: Option<BlockProducer<EF>>,
         config: StarknetApiConfig,
     ) -> Self {
-        Self::new_inner(backend, pool, block_producer, validator, None, config)
+        Self::new_inner(backend, pool, block_producer, None, config)
     }
 
     pub fn new_forked(
         backend: Arc<Backend<EF>>,
         pool: TxPool,
         block_producer: BlockProducer<EF>,
-        validator: TxValidator,
         forked_client: ForkedClient,
         config: StarknetApiConfig,
     ) -> Self {
-        Self::new_inner(backend, pool, block_producer, validator, Some(forked_client), config)
+        Self::new_inner(backend, pool, Some(block_producer), Some(forked_client), config)
     }
 
     fn new_inner(
         backend: Arc<Backend<EF>>,
         pool: TxPool,
-        block_producer: BlockProducer<EF>,
-        validator: TxValidator,
+        block_producer: Option<BlockProducer<EF>>,
         forked_client: Option<ForkedClient>,
         config: StarknetApiConfig,
     ) -> Self {
         let blocking_task_pool =
             BlockingTaskPool::new().expect("failed to create blocking task pool");
-        let inner = Inner {
+
+        let inner = StarknetApiInner {
             pool,
             backend,
             block_producer,
             blocking_task_pool,
-            validator,
             forked_client,
             config,
         };
+
         Self { inner: Arc::new(inner) }
     }
 
@@ -184,10 +192,10 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
 
     /// Returns the pending state if the sequencer is running in _interval_ mode. Otherwise `None`.
     fn pending_executor(&self) -> Option<PendingExecutor> {
-        match &*self.inner.block_producer.producer.read() {
+        self.inner.block_producer.as_ref().and_then(|bp| match &*bp.producer.read() {
             BlockProducerMode::Instant(_) => None,
             BlockProducerMode::Interval(producer) => Some(producer.executor()),
-        }
+        })
     }
 
     fn state(&self, block_id: &BlockIdOrTag) -> StarknetApiResult<Box<dyn StateProvider>> {
@@ -253,7 +261,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         &self,
         block_id: BlockIdOrTag,
         class_hash: ClassHash,
-    ) -> StarknetApiResult<ContractClass> {
+    ) -> StarknetApiResult<RpcContractClass> {
         self.on_io_blocking_task(move |this| {
             let state = this.state(&block_id)?;
 
@@ -261,18 +269,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
                 return Err(StarknetApiError::ClassHashNotFound);
             };
 
-            match class {
-                CompiledClass::Deprecated(class) => Ok(legacy_inner_to_rpc_class(class)?),
-                CompiledClass::Class(_) => {
-                    let Some(sierra) = state.sierra_class(class_hash)? else {
-                        return Err(StarknetApiError::UnexpectedError {
-                            reason: "Class hash exist, but its Sierra class is missing".to_string(),
-                        });
-                    };
-
-                    Ok(ContractClass::Sierra(sierra))
-                }
-            }
+            Ok(RpcContractClass::try_from(class).unwrap())
         })
         .await
     }
@@ -283,6 +280,12 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         contract_address: ContractAddress,
     ) -> StarknetApiResult<ClassHash> {
         self.on_io_blocking_task(move |this| {
+            // Contract address 0x1 is special system contract and does not
+            // have a class. See https://docs.starknet.io/architecture-and-concepts/network-architecture/starknet-state/#address_0x1.
+            if contract_address.0 == Felt::ONE {
+                return Ok(ClassHash::ZERO);
+            }
+
             let state = this.state(&block_id)?;
             let class_hash = state.class_hash_of_contract(contract_address)?;
             class_hash.ok_or(StarknetApiError::ContractNotFound)
@@ -294,7 +297,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         &self,
         block_id: BlockIdOrTag,
         contract_address: ContractAddress,
-    ) -> StarknetApiResult<ContractClass> {
+    ) -> StarknetApiResult<RpcContractClass> {
         let hash = self.class_hash_at_address(block_id, contract_address).await?;
         let class = self.class_at_hash(block_id, hash).await?;
         Ok(class)
@@ -308,10 +311,14 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
     ) -> StarknetApiResult<StorageValue> {
         let state = self.state(&block_id)?;
 
-        // check that contract exist by checking the class hash of the contract
-        let Some(_) = state.class_hash_of_contract(contract_address)? else {
+        // Check that contract exist by checking the class hash of the contract,
+        // unless its address 0x1 which is special system contract and does not
+        // have a class. See https://docs.starknet.io/architecture-and-concepts/network-architecture/starknet-state/#address_0x1.
+        if contract_address.0 != Felt::ONE
+            && state.class_hash_of_contract(contract_address)?.is_none()
+        {
             return Err(StarknetApiError::ContractNotFound);
-        };
+        }
 
         let value = state.storage(contract_address, storage_key)?;
         Ok(value.unwrap_or_default())
@@ -368,7 +375,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
             // TODO: this is a temporary solution, we should have a better way to handle this.
             // perhaps a pending/pool state provider that implements all the state provider traits.
             let result = if let BlockIdOrTag::Tag(BlockTag::Pending) = block_id {
-                this.inner.validator.pool_nonce(contract_address)?
+                this.inner.pool.validator().pool_nonce(contract_address)?
             } else {
                 let state = this.state(&block_id)?;
                 state.nonce(contract_address)?
@@ -1131,5 +1138,102 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         };
 
         Ok(id)
+    }
+
+    async fn get_proofs(
+        &self,
+        block_id: BlockIdOrTag,
+        class_hashes: Option<Vec<ClassHash>>,
+        contract_addresses: Option<Vec<ContractAddress>>,
+        contracts_storage_keys: Option<Vec<ContractStorageKeys>>,
+    ) -> StarknetApiResult<GetStorageProofResponse> {
+        self.on_io_blocking_task(move |this| {
+            let provider = this.inner.backend.blockchain.provider();
+
+            let Some(block_num) = provider.convert_block_id(block_id)? else {
+                return Err(StarknetApiError::BlockNotFound);
+            };
+
+            // Check if the total number of keys requested exceeds the RPC limit.
+            if let Some(limit) = this.inner.config.max_proof_keys {
+                let total_keys = class_hashes.as_ref().map(|v| v.len()).unwrap_or(0)
+                    + contract_addresses.as_ref().map(|v| v.len()).unwrap_or(0)
+                    + contracts_storage_keys.as_ref().map(|v| v.len()).unwrap_or(0);
+
+                let total_keys = total_keys as u64;
+                if total_keys > limit {
+                    return Err(StarknetApiError::ProofLimitExceeded { limit, total: total_keys });
+                }
+            }
+
+            // TODO: the way we handle the block id is very clanky. change it!
+            let state = this.state(&BlockIdOrTag::Number(block_num))?;
+            let block_hash = provider
+                .block_hash_by_num(block_num)?
+                .ok_or(ProviderError::MissingBlockHeader(block_num))?;
+
+            // --- Get classes proof (if any)
+
+            let classes_proof = if let Some(classes) = class_hashes {
+                let proofs = state.class_multiproof(classes)?;
+                ClassesProof { nodes: proofs.into() }
+            } else {
+                ClassesProof::default()
+            };
+
+            // --- Get contracts proof (if any)
+
+            let contracts_proof = if let Some(addresses) = contract_addresses {
+                let proofs = state.contract_multiproof(addresses.clone())?;
+                let mut contract_leaves_data = Vec::new();
+
+                for address in addresses {
+                    let nonce = state.nonce(address)?.unwrap_or_default();
+                    let class_hash = state.class_hash_of_contract(address)?.unwrap_or_default();
+                    let storage_root = state.storage_root(address)?.unwrap_or_default();
+                    contract_leaves_data.push(ContractLeafData { storage_root, class_hash, nonce });
+                }
+
+                ContractsProof { nodes: proofs.into(), contract_leaves_data }
+            } else {
+                ContractsProof::default()
+            };
+
+            // --- Get contracts storage proof (if any)
+
+            let contracts_storage_proofs = if let Some(contract_storage) = contracts_storage_keys {
+                let mut nodes: Vec<Nodes> = Vec::new();
+
+                for ContractStorageKeys { address, keys } in contract_storage {
+                    let proofs = state.storage_multiproof(address, keys)?;
+                    nodes.push(proofs.into());
+                }
+
+                ContractStorageProofs { nodes }
+            } else {
+                ContractStorageProofs::default()
+            };
+
+            let classes_tree_root = state.classes_root()?;
+            let contracts_tree_root = state.contracts_root()?;
+            let global_roots = GlobalRoots { block_hash, classes_tree_root, contracts_tree_root };
+
+            Ok(GetStorageProofResponse {
+                global_roots,
+                classes_proof,
+                contracts_proof,
+                contracts_storage_proofs,
+            })
+        })
+        .await
+    }
+}
+
+impl<EF> Clone for StarknetApi<EF>
+where
+    EF: ExecutorFactory,
+{
+    fn clone(&self) -> Self {
+        Self { inner: Arc::clone(&self.inner) }
     }
 }

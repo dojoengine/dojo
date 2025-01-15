@@ -1,9 +1,11 @@
 //! Katana node CLI options and configuration.
 
-use std::collections::HashSet;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use alloy_primitives::U256;
+#[cfg(feature = "server")]
+use anyhow::bail;
 use anyhow::{Context, Result};
 use clap::Parser;
 use katana_core::constants::DEFAULT_SEQUENCER_ADDRESS;
@@ -13,7 +15,9 @@ use katana_node::config::dev::{DevConfig, FixedL1GasPriceConfig};
 use katana_node::config::execution::ExecutionConfig;
 use katana_node::config::fork::ForkingConfig;
 use katana_node::config::metrics::MetricsConfig;
-use katana_node::config::rpc::{ApiKind, RpcConfig};
+use katana_node::config::rpc::RpcConfig;
+#[cfg(feature = "server")]
+use katana_node::config::rpc::{RpcModuleKind, RpcModulesList};
 use katana_node::config::{Config, SequencingConfig};
 use katana_primitives::chain_spec::{self, ChainSpec};
 use katana_primitives::genesis::allocation::DevAllocationsGenerator;
@@ -22,6 +26,7 @@ use serde::{Deserialize, Serialize};
 use tracing::{info, Subscriber};
 use tracing_log::LogTracer;
 use tracing_subscriber::{fmt, EnvFilter};
+use url::Url;
 
 use crate::file::NodeArgsConfig;
 use crate::options::*;
@@ -67,6 +72,11 @@ pub struct NodeArgs {
     #[arg(value_name = "PATH")]
     #[arg(value_parser = katana_core::service::messaging::MessagingConfig::parse)]
     pub messaging: Option<MessagingConfig>,
+
+    #[arg(long = "l1.provider", value_name = "URL", alias = "l1-provider")]
+    #[arg(help = "The Ethereum RPC provider to sample the gas prices from to enable the gas \
+                  price oracle.")]
+    pub l1_provider_url: Option<Url>,
 
     #[command(flatten)]
     pub logging: LoggingOptions,
@@ -134,9 +144,9 @@ impl NodeArgs {
     }
 
     fn init_logging(&self) -> Result<()> {
-        const DEFAULT_LOG_FILTER: &str = "info,tasks=debug,executor=trace,forking::backend=trace,\
-                                          blockifier=off,jsonrpsee_server=off,hyper=off,\
-                                          messaging=debug,node=error";
+        const DEFAULT_LOG_FILTER: &str =
+            "pipeline=debug,stage=debug,info,tasks=debug,executor=trace,forking::backend=trace,\
+             blockifier=off,jsonrpsee_server=off,hyper=off,messaging=debug,node=error";
 
         let filter = if self.development.dev {
             &format!("{DEFAULT_LOG_FILTER},server=debug")
@@ -162,7 +172,7 @@ impl NodeArgs {
 
     pub fn config(&self) -> Result<katana_node::config::Config> {
         let db = self.db_config();
-        let rpc = self.rpc_config();
+        let rpc = self.rpc_config()?;
         let dev = self.dev_config();
         let chain = self.chain_spec()?;
         let metrics = self.metrics_config();
@@ -170,40 +180,70 @@ impl NodeArgs {
         let execution = self.execution_config();
         let sequencing = self.sequencer_config();
         let messaging = self.messaging.clone();
+        let l1_provider_url = self.gpo_config();
 
-        Ok(Config { metrics, db, dev, rpc, chain, execution, sequencing, messaging, forking })
+        Ok(Config {
+            metrics,
+            db,
+            dev,
+            rpc,
+            chain,
+            execution,
+            sequencing,
+            messaging,
+            forking,
+            l1_provider_url,
+        })
     }
 
     fn sequencer_config(&self) -> SequencingConfig {
         SequencingConfig { block_time: self.block_time, no_mining: self.no_mining }
     }
 
-    fn rpc_config(&self) -> RpcConfig {
-        let mut apis = HashSet::from([ApiKind::Starknet, ApiKind::Torii, ApiKind::Saya]);
-        // only enable `katana` API in dev mode
-        if self.development.dev {
-            apis.insert(ApiKind::Dev);
-        }
-
+    fn rpc_config(&self) -> Result<RpcConfig> {
         #[cfg(feature = "server")]
         {
-            RpcConfig {
-                apis,
+            let modules = if let Some(modules) = &self.server.http_modules {
+                // TODO: This check should be handled in the `katana-node` level. Right now if you
+                // instantiate katana programmatically, you can still add the dev module without
+                // enabling dev mode.
+                //
+                // We only allow the `dev` module in dev mode (ie `--dev` flag)
+                if !self.development.dev && modules.contains(&RpcModuleKind::Dev) {
+                    bail!("The `dev` module can only be enabled in dev mode (ie `--dev` flag)")
+                }
+
+                modules.clone()
+            } else {
+                // Expose the default modules if none is specified.
+                let mut modules = RpcModulesList::default();
+
+                // Ensures the `--dev` flag enabled the dev module.
+                if self.development.dev {
+                    modules.add(RpcModuleKind::Dev);
+                }
+
+                modules
+            };
+
+            Ok(RpcConfig {
+                apis: modules,
                 port: self.server.http_port,
                 addr: self.server.http_addr,
                 max_connections: self.server.max_connections,
                 cors_origins: self.server.http_cors_origins.clone(),
                 max_event_page_size: Some(self.server.max_event_page_size),
-            }
+                max_proof_keys: Some(self.server.max_proof_keys),
+            })
         }
 
         #[cfg(not(feature = "server"))]
         {
-            RpcConfig { apis, ..Default::default() }
+            Ok(RpcConfig::default())
         }
     }
 
-    fn chain_spec(&self) -> Result<ChainSpec> {
+    fn chain_spec(&self) -> Result<Arc<ChainSpec>> {
         let mut chain_spec = chain_spec::DEV_UNALLOCATED.clone();
 
         if let Some(id) = self.starknet.environment.chain_id {
@@ -229,7 +269,7 @@ impl NodeArgs {
             katana_slot_controller::add_controller_account(&mut chain_spec.genesis)?;
         }
 
-        Ok(chain_spec)
+        Ok(Arc::new(chain_spec))
     }
 
     fn dev_config(&self) -> DevConfig {
@@ -293,6 +333,10 @@ impl NodeArgs {
 
         #[cfg(not(feature = "server"))]
         None
+    }
+
+    fn gpo_config(&self) -> Option<Url> {
+        self.l1_provider_url.clone()
     }
 
     /// Parse the node config from the command line arguments and the config file,
@@ -374,6 +418,7 @@ mod test {
     };
     use katana_primitives::chain::ChainId;
     use katana_primitives::{address, felt, ContractAddress, Felt};
+    use katana_rpc::cors::HeaderValue;
 
     use super::*;
 
@@ -591,5 +636,56 @@ chain_id.Named = "Mainnet"
         assert_eq!(config.chain.genesis.gas_prices.eth, 9999);
         assert_eq!(config.chain.genesis.gas_prices.strk, 8888);
         assert_eq!(config.chain.id, ChainId::Id(Felt::from_str("0x123").unwrap()));
+    }
+
+    #[test]
+    #[cfg(feature = "server")]
+    fn parse_cors_origins() {
+        let config = NodeArgs::parse_from([
+            "katana",
+            "--http.cors_origins",
+            "*,http://localhost:3000,https://example.com",
+        ])
+        .config()
+        .unwrap();
+
+        let cors_origins = config.rpc.cors_origins;
+
+        assert_eq!(cors_origins.len(), 3);
+        assert!(cors_origins.contains(&HeaderValue::from_static("*")));
+        assert!(cors_origins.contains(&HeaderValue::from_static("http://localhost:3000")));
+        assert!(cors_origins.contains(&HeaderValue::from_static("https://example.com")));
+    }
+
+    #[test]
+    fn http_modules() {
+        // If the `--http.api` isn't specified, only starknet module will be exposed.
+        let config = NodeArgs::parse_from(["katana"]).config().unwrap();
+        let modules = config.rpc.apis;
+        assert_eq!(modules.len(), 1);
+        assert!(modules.contains(&RpcModuleKind::Starknet));
+
+        // If the `--http.api` is specified, only the ones in the list will be exposed.
+        let config = NodeArgs::parse_from(["katana", "--http.api", "saya,torii"]).config().unwrap();
+        let modules = config.rpc.apis;
+        assert_eq!(modules.len(), 2);
+        assert!(modules.contains(&RpcModuleKind::Saya));
+        assert!(modules.contains(&RpcModuleKind::Torii));
+
+        // Specifiying the dev module without enabling dev mode is forbidden.
+        let err =
+            NodeArgs::parse_from(["katana", "--http.api", "starknet,dev"]).config().unwrap_err();
+        assert!(
+            err.to_string()
+                .contains("The `dev` module can only be enabled in dev mode (ie `--dev` flag)")
+        );
+    }
+
+    #[test]
+    fn test_dev_api_enabled() {
+        let args = NodeArgs::parse_from(["katana", "--dev"]);
+        let config = args.config().unwrap();
+
+        assert!(config.rpc.apis.contains(&RpcModuleKind::Dev));
     }
 }

@@ -9,6 +9,7 @@ version.workspace = true
 [dependencies]
 katana-primitives.workspace = true
 katana-provider.workspace = true
+katana-trie.workspace = true
 
 parking_lot = { workspace = true, optional = true }
 starknet = { workspace = true, optional = true }

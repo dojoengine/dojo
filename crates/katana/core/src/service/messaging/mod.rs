@@ -52,7 +52,7 @@ use katana_executor::ExecutorFactory;
 use katana_primitives::chain::ChainId;
 use katana_primitives::receipt::MessageToL1;
 use serde::{Deserialize, Serialize};
-use tracing::{error, info};
+use tracing::{error, info, trace};
 
 pub use self::service::{MessagingOutcome, MessagingService};
 #[cfg(feature = "starknet-messaging")]
@@ -229,11 +229,19 @@ impl<EF: ExecutorFactory> Future for MessagingTask<EF> {
         while let Poll::Ready(Some(outcome)) = this.messaging.poll_next_unpin(cx) {
             match outcome {
                 MessagingOutcome::Gather { msg_count, .. } => {
-                    info!(target: LOG_TARGET, %msg_count, "Collected messages from settlement chain.");
+                    if msg_count > 0 {
+                        info!(target: LOG_TARGET, %msg_count, "Collected messages from settlement chain.");
+                    }
+
+                    trace!(target: LOG_TARGET, %msg_count, "Collected messages from settlement chain.");
                 }
 
                 MessagingOutcome::Send { msg_count, .. } => {
-                    info!(target: LOG_TARGET, %msg_count, "Sent messages to the settlement chain.");
+                    if msg_count > 0 {
+                        info!(target: LOG_TARGET, %msg_count, "Sent messages to the settlement chain.");
+                    }
+
+                    trace!(target: LOG_TARGET, %msg_count, "Sent messages to the settlement chain.");
                 }
             }
         }

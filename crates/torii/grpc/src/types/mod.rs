@@ -80,11 +80,39 @@ impl From<proto::world::SubscribeIndexerResponse> for IndexerUpdate {
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
+pub struct OrderBy {
+    pub model: String,
+    pub member: String,
+    pub direction: OrderDirection,
+}
+
+impl From<OrderBy> for proto::types::OrderBy {
+    fn from(value: OrderBy) -> Self {
+        Self { model: value.model, member: value.member, direction: value.direction as i32 }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
+pub enum OrderDirection {
+    Asc,
+    Desc,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub struct Query {
     pub clause: Option<Clause>,
     pub limit: u32,
     pub offset: u32,
+    /// Whether or not to include the hashed keys (entity id) of the entities.
+    /// This is useful for large queries compressed with GZIP to reduce the size of the response.
     pub dont_include_hashed_keys: bool,
+    pub order_by: Vec<OrderBy>,
+    /// If the array is not empty, only the given models are retrieved.
+    /// All entities that don't have a model in the array are excluded.
+    pub entity_models: Vec<String>,
+    /// The internal updated at timestamp in seconds (unix timestamp) from which entities are
+    /// retrieved (inclusive). Use 0 to retrieve all entities.
+    pub entity_updated_after: u64,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
@@ -123,6 +151,7 @@ pub enum PatternMatching {
 pub enum MemberValue {
     Primitive(Primitive),
     String(String),
+    List(Vec<MemberValue>),
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
@@ -159,6 +188,8 @@ pub enum ComparisonOperator {
     Gte,
     Lt,
     Lte,
+    In,
+    NotIn,
 }
 
 impl fmt::Display for ComparisonOperator {
@@ -170,6 +201,8 @@ impl fmt::Display for ComparisonOperator {
             ComparisonOperator::Lte => write!(f, "<="),
             ComparisonOperator::Neq => write!(f, "!="),
             ComparisonOperator::Eq => write!(f, "="),
+            ComparisonOperator::In => write!(f, "IN"),
+            ComparisonOperator::NotIn => write!(f, "NOT IN"),
         }
     }
 }
@@ -183,6 +216,8 @@ impl From<proto::types::ComparisonOperator> for ComparisonOperator {
             proto::types::ComparisonOperator::Lt => ComparisonOperator::Lt,
             proto::types::ComparisonOperator::Lte => ComparisonOperator::Lte,
             proto::types::ComparisonOperator::Neq => ComparisonOperator::Neq,
+            proto::types::ComparisonOperator::In => ComparisonOperator::In,
+            proto::types::ComparisonOperator::NotIn => ComparisonOperator::NotIn,
         }
     }
 }
@@ -248,6 +283,9 @@ impl From<Query> for proto::types::Query {
             limit: value.limit,
             offset: value.offset,
             dont_include_hashed_keys: value.dont_include_hashed_keys,
+            order_by: value.order_by.into_iter().map(|o| o.into()).collect(),
+            entity_models: value.entity_models,
+            entity_updated_after: value.entity_updated_after,
         }
     }
 }
@@ -381,6 +419,14 @@ impl From<MemberValue> for member_value::ValueType {
                 member_value::ValueType::Primitive(primitive.into())
             }
             MemberValue::String(string) => member_value::ValueType::String(string),
+            MemberValue::List(list) => {
+                member_value::ValueType::List(proto::types::MemberValueList {
+                    values: list
+                        .into_iter()
+                        .map(|v| proto::types::MemberValue { value_type: Some(v.into()) })
+                        .collect(),
+                })
+            }
         }
     }
 }

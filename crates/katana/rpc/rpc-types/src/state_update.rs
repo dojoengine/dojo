@@ -1,3 +1,4 @@
+use katana_primitives::class::ClassHash;
 use serde::{Deserialize, Serialize};
 use starknet::core::types::{
     ContractStorageDiffItem, DeclaredClassItem, DeployedContractItem, NonceUpdate, StorageEntry,
@@ -49,6 +50,9 @@ impl From<katana_primitives::state::StateUpdates> for StateDiff {
             .map(|(addr, nonce)| NonceUpdate { nonce, contract_address: addr.into() })
             .collect();
 
+        let deprecated_declared_classes: Vec<ClassHash> =
+            value.deprecated_declared_classes.into_iter().collect();
+
         let declared_classes: Vec<DeclaredClassItem> = value
             .declared_classes
             .into_iter()
@@ -81,8 +85,8 @@ impl From<katana_primitives::state::StateUpdates> for StateDiff {
             storage_diffs,
             declared_classes,
             deployed_contracts,
+            deprecated_declared_classes,
             replaced_classes: Default::default(),
-            deprecated_declared_classes: Default::default(),
         })
     }
 }
