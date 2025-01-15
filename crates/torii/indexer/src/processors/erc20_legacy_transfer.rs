@@ -1,3 +1,5 @@
+use std::hash::{DefaultHasher, Hash, Hasher};
+
 use anyhow::Error;
 use async_trait::async_trait;
 use cainome::cairo_serde::{CairoSerde, U256 as U256Cainome};
@@ -6,6 +8,8 @@ use starknet::core::types::{Event, U256};
 use starknet::providers::Provider;
 use torii_sqlite::Sql;
 use tracing::debug;
+
+use crate::task_manager::TaskId;
 
 use super::{EventProcessor, EventProcessorConfig};
 
@@ -32,6 +36,24 @@ where
         }
 
         false
+    }
+
+    fn task_priority(&self) -> usize {
+        1
+    }
+
+    fn task_identifier(&self, event: &Event) -> TaskId {
+        let mut hasher = DefaultHasher::new();
+        // Hash the event key (Transfer)
+        event.keys[0].hash(&mut hasher);
+
+        // Take the max of from/to addresses to get a canonical representation
+        // This ensures transfers between the same pair of addresses are grouped together
+        // regardless of direction (A->B or B->A)
+        let canonical_pair = std::cmp::max(event.data[0], event.data[1]);
+        canonical_pair.hash(&mut hasher);
+        
+        hasher.finish()
     }
 
     async fn process(

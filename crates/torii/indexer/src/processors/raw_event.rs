@@ -23,6 +23,15 @@ where
         true
     }
 
+    fn task_priority(&self) -> usize {
+        1
+    }
+
+    fn task_identifier(&self, _event: &Event) -> u64 {
+        // TODO. for now raw events are not parallelized
+        0
+    }
+
     async fn process(
         &self,
         _world: &WorldContractReader<P>,

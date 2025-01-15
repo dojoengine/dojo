@@ -1,3 +1,5 @@
+use std::hash::{DefaultHasher, Hash, Hasher};
+
 use anyhow::{Error, Ok, Result};
 use async_trait::async_trait;
 use dojo_world::contracts::abigen::world::Event as WorldEvent;
@@ -28,6 +30,16 @@ where
     // be handled.
     fn validate(&self, _event: &Event) -> bool {
         true
+    }
+
+    fn task_priority(&self) -> usize {
+        0
+    }
+
+    fn task_identifier(&self, event: &Event) -> u64 {
+        let mut hasher = DefaultHasher::new();
+        event.keys.iter().for_each(|k| k.hash(&mut hasher));
+        hasher.finish()
     }
 
     async fn process(

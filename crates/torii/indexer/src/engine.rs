@@ -200,17 +200,6 @@ pub struct FetchPendingResult {
     pub block_number: u64,
 }
 
-#[derive(Debug)]
-pub struct ParallelizedEvent {
-    pub block_number: u64,
-    pub block_timestamp: u64,
-    pub event_id: String,
-    pub event: Event,
-}
-
-type TaskPriority = usize;
-type TaskId = u64;
-
 #[allow(missing_debug_implementations)]
 pub struct Engine<P: Provider + Send + Sync + std::fmt::Debug + 'static> {
     world: Arc<WorldContractReader<P>>,
@@ -220,7 +209,7 @@ pub struct Engine<P: Provider + Send + Sync + std::fmt::Debug + 'static> {
     config: EngineConfig,
     shutdown_tx: Sender<()>,
     block_tx: Option<BoundedSender<u64>>,
-    tasks: BTreeMap<TaskPriority, HashMap<TaskId, Vec<(ContractType, ParallelizedEvent)>>>,
+    task_manager: TaskManager<P>,
     contracts: Arc<HashMap<Felt, ContractType>>,
 }
 

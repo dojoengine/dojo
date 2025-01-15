@@ -1,3 +1,4 @@
+use std::hash::{DefaultHasher, Hash, Hasher};
 use anyhow::{Context, Error, Result};
 use async_trait::async_trait;
 use dojo_types::schema::{Struct, Ty};
@@ -27,6 +28,17 @@ where
 
     fn validate(&self, _event: &Event) -> bool {
         true
+    }
+
+    fn task_priority(&self) -> usize {
+        1
+    }
+
+    fn task_identifier(&self, event: &Event) -> u64 {
+        let mut hasher = DefaultHasher::new();
+        event.keys[1].hash(&mut hasher);
+        event.keys[2].hash(&mut hasher);
+        hasher.finish()
     }
 
     async fn process(
