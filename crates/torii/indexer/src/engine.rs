@@ -6,6 +6,7 @@ use std::time::Duration;
 
 use anyhow::Result;
 use bitflags::bitflags;
+use cainome::cairo_serde::CairoSerde;
 use dojo_utils::provider as provider_utils;
 use dojo_world::contracts::world::WorldContractReader;
 use futures_util::future::{join_all, try_join_all};
@@ -17,7 +18,7 @@ use starknet::core::types::{
 };
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
-use starknet_crypto::Felt;
+use starknet_crypto::{poseidon_hash_many, Felt};
 use tokio::sync::broadcast::Sender;
 use tokio::sync::mpsc::Sender as BoundedSender;
 use tokio::sync::Semaphore;
@@ -893,6 +894,22 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                 event.keys[2].hash(&mut hasher);
                 let hash = hasher.finish();
                 (2usize, hash) // Priority 2 (lower) for store operations
+            }
+            "EventEmitted" => {
+                let mut hasher = DefaultHasher::new();
+
+                let keys = Vec::<Felt>::cairo_deserialize(&event.keys, 0).unwrap_or_else(|e| {
+                    panic!("Expected EventEmitted keys to be well formed: {:?}", e);
+                });
+
+                // selector
+                event.keys[1].hash(&mut hasher);
+                // entity id
+                let entity_id = poseidon_hash_many(&keys);
+                entity_id.hash(&mut hasher);
+
+                let hash = hasher.finish();
+                (2usize, hash) // Priority 2 for event messages
             }
             _ => (0, 0), // No parallelization for other events
         };
