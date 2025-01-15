@@ -2,5 +2,5 @@
 version = 1
 
 [[package]]
-name = "dojo_plugin"
-version = "2.9.2"
+name = "sozo_test"
+version = "0.3.1-rc7"

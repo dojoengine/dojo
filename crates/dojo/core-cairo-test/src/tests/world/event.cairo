@@ -274,7 +274,7 @@ fn test_register_event_with_unregistered_namespace() {
 // It's CONTRACT_NOT_DEPLOYED for now as in this example the contract is not a dojo contract
 // and it's not the account that is calling the register_event function.
 #[test]
-#[should_panic(expected: ('CONTRACT_NOT_DEPLOYED', 'ENTRYPOINT_FAILED'))]
+#[should_panic(expected: ('CONTRACT_NOT_DEPLOYED', 'ENTRYPOINT_FAILED', 'ENTRYPOINT_FAILED'))]
 fn test_register_event_through_malicious_contract() {
     let bob = starknet::contract_address_const::<0xb0b>();
     let malicious_contract = starknet::contract_address_const::<0xdead>();
