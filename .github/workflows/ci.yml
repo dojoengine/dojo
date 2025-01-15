@@ -32,7 +32,7 @@ jobs:
     needs: ensure-docker
     runs-on: ubuntu-latest-32-cores
     container:
-      image: ghcr.io/dojoengine/dojo-dev:v1.0.9
+      image: ghcr.io/dojoengine/dojo-dev:v1.0.11
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -58,7 +58,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [fmt, cairofmt]
     container:
-      image: ghcr.io/dojoengine/dojo-dev:v1.0.9
+      image: ghcr.io/dojoengine/dojo-dev:v1.0.11
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -125,7 +125,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:v1.0.9
+      image: ghcr.io/dojoengine/dojo-dev:v1.0.11
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -141,7 +141,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:v1.0.9
+      image: ghcr.io/dojoengine/dojo-dev:v1.0.11
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -157,7 +157,7 @@ jobs:
     runs-on: ubuntu-latest-4-cores
     needs: [fmt, cairofmt]
     container:
-      image: ghcr.io/dojoengine/dojo-dev:v1.0.9
+      image: ghcr.io/dojoengine/dojo-dev:v1.0.11
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -166,7 +166,7 @@ jobs:
   fmt:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:v1.0.9
+      image: ghcr.io/dojoengine/dojo-dev:v1.0.11
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -176,7 +176,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [fmt, cairofmt]
     container:
-      image: ghcr.io/dojoengine/dojo-dev:v1.0.9
+      image: ghcr.io/dojoengine/dojo-dev:v1.0.11
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2

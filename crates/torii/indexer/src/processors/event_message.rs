@@ -10,7 +10,7 @@ use tracing::info;
 
 use super::{EventProcessor, EventProcessorConfig};
 
-pub(crate) const LOG_TARGET: &str = "torii_core::processors::event_message";
+pub(crate) const LOG_TARGET: &str = "torii_indexer::processors::event_message";
 
 #[derive(Default, Debug)]
 pub struct EventMessageProcessor;

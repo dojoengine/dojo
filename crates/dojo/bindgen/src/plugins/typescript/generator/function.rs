@@ -3,7 +3,7 @@ use convert_case::{Case, Casing};
 use dojo_world::contracts::naming;
 
 use super::constants::JS_BIGNUMBERISH;
-use super::{token_is_custom_enum, JsPrimitiveInputType};
+use super::{token_is_enum, JsPrimitiveInputType};
 use crate::error::BindgenResult;
 use crate::plugins::{BindgenContractGenerator, Buffer};
 use crate::DojoContract;
@@ -11,8 +11,11 @@ use crate::DojoContract;
 pub(crate) struct TsFunctionGenerator;
 impl TsFunctionGenerator {
     fn check_imports(&self, buffer: &mut Buffer) {
-        if !buffer.has("import { DojoProvider } from ") {
-            buffer.insert(0, "import { DojoProvider } from \"@dojoengine/core\";".to_owned());
+        if !buffer.has("import { DojoProvider, DojoCall } from ") {
+            buffer.insert(
+                0,
+                "import { DojoProvider, DojoCall } from \"@dojoengine/core\";".to_owned(),
+            );
             buffer.insert(
                 1,
                 format!(
@@ -41,7 +44,7 @@ impl TsFunctionGenerator {
     /// * token - &Function - cairo function token
     fn build_function_calldata(&self, contract_name: &str, token: &Function) -> String {
         format!(
-            "\tconst build_{contract_name}_{}_calldata = ({}) => {{
+            "\tconst build_{contract_name}_{}_calldata = ({}): DojoCall => {{
 \t\treturn {{
 \t\t\tcontractName: \"{contract_name}\",
 \t\t\tentrypoint: \"{}\",
@@ -89,7 +92,7 @@ impl TsFunctionGenerator {
             StateMutability::View => format!(
                 "\tconst {function_name} = async ({}) => {{
 \t\ttry {{
-\t\t\treturn await provider.call(\"{namespace}\", build_{function_name}_calldata({});
+\t\t\treturn await provider.call(\"{namespace}\", build_{function_name}_calldata({}));
 \t\t}} catch (error) {{
 \t\t\tconsole.error(error);
 \t\t\tthrow error;
@@ -106,7 +109,7 @@ impl TsFunctionGenerator {
         token.inputs.iter().fold(Vec::new(), |mut acc, input| {
             let prefix = match &input.1 {
                 Token::Composite(t) => {
-                    if !token_is_custom_enum(t)
+                    if !token_is_enum(t)
                         && (t.r#type == CompositeType::Enum
                             || (t.r#type == CompositeType::Struct
                                 && !t.type_path.starts_with("core"))
@@ -256,7 +259,7 @@ impl BindgenContractGenerator for TsFunctionGenerator {
 mod tests {
     use cainome::parser::tokens::{
         Array, Composite, CompositeInner, CompositeInnerKind, CompositeType, CoreBasic, Function,
-        Token,
+        StateMutability, Token,
     };
     use cainome::parser::TokenizedAbi;
     use dojo_world::contracts::naming;
@@ -291,7 +294,8 @@ mod tests {
     fn test_generate_system_function() {
         let generator = TsFunctionGenerator {};
         let function = create_change_theme_function();
-        let expected = "\tconst build_actions_changeTheme_calldata = (value: BigNumberish) => {
+        let expected = "\tconst build_actions_changeTheme_calldata = (value: BigNumberish): \
+                        DojoCall => {
 \t\treturn {
 \t\t\tcontractName: \"actions\",
 \t\t\tentrypoint: \"change_theme\",
@@ -307,6 +311,40 @@ mod tests {
 \t\t\t\tbuild_actions_changeTheme_calldata(value),
 \t\t\t\t\"onchain_dash\",
 \t\t\t);
+\t\t} catch (error) {
+\t\t\tconsole.error(error);
+\t\t\tthrow error;
+\t\t}
+\t};
+";
+
+        let contract = create_dojo_contract();
+        assert_eq!(
+            expected,
+            generator.generate_system_function(
+                naming::get_namespace_from_tag(&contract.tag).as_str(),
+                naming::get_name_from_tag(&contract.tag).as_str(),
+                &function
+            )
+        )
+    }
+
+    #[test]
+    fn test_generate_system_function_view() {
+        let generator = TsFunctionGenerator {};
+        let function = create_change_theme_view_function();
+        let expected = "\tconst build_actions_changeTheme_calldata = (value: BigNumberish): \
+                        DojoCall => {
+\t\treturn {
+\t\t\tcontractName: \"actions\",
+\t\t\tentrypoint: \"change_theme\",
+\t\t\tcalldata: [value],
+\t\t};
+\t};
+
+\tconst actions_changeTheme = async (value: BigNumberish) => {
+\t\ttry {
+\t\t\treturn await provider.call(\"onchain_dash\", build_actions_changeTheme_calldata(value));
 \t\t} catch (error) {
 \t\t\tconsole.error(error);
 \t\t\tthrow error;
@@ -496,6 +534,18 @@ mod tests {
                 "value".to_owned(),
                 Token::CoreBasic(CoreBasic { type_path: "core::integer::u8".to_owned() }),
             )],
+            StateMutability::External,
+        )
+    }
+
+    fn create_change_theme_view_function() -> Function {
+        create_test_function(
+            "change_theme",
+            vec![(
+                "value".to_owned(),
+                Token::CoreBasic(CoreBasic { type_path: "core::integer::u8".to_owned() }),
+            )],
+            StateMutability::View,
         )
     }
 
@@ -516,20 +566,26 @@ mod tests {
                 "value".to_owned(),
                 Token::CoreBasic(CoreBasic { type_path: "core::integer::u8".to_owned() }),
             )],
+            StateMutability::External,
         )
     }
 
     fn create_increate_global_counter_function() -> Function {
-        create_test_function("increase_global_counter", vec![])
-    }
-    fn create_move_function() -> Function {
-        create_test_function("move", vec![])
+        create_test_function("increase_global_counter", vec![], StateMutability::External)
     }
 
-    fn create_test_function(name: &str, inputs: Vec<(String, Token)>) -> Function {
+    fn create_move_function() -> Function {
+        create_test_function("move", vec![], StateMutability::External)
+    }
+
+    fn create_test_function(
+        name: &str,
+        inputs: Vec<(String, Token)>,
+        state_mutability: StateMutability,
+    ) -> Function {
         Function {
             name: name.to_owned(),
-            state_mutability: cainome::parser::tokens::StateMutability::External,
+            state_mutability,
             inputs,
             outputs: vec![],
             named_outputs: vec![],

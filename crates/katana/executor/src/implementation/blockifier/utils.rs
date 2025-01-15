@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
 use blockifier::bouncer::BouncerConfig;
@@ -450,9 +450,21 @@ pub(super) fn state_update_from_cached_state<S: StateDb>(
         katana_primitives::class::ContractClass,
     > = BTreeMap::new();
 
-    for class_hash in state_diff.state_maps.compiled_class_hashes.keys() {
+    let mut declared_classes = BTreeMap::new();
+    let mut deprecated_declared_classes = BTreeSet::new();
+
+    // TODO: Legacy class shouldn't have a compiled class hash. This is a hack we added
+    // in our fork of `blockifier. Check if it's possible to remove it now.
+    for (class_hash, compiled_hash) in state_diff.state_maps.compiled_class_hashes {
         let hash = class_hash.0;
         let class = state.class(hash).unwrap().expect("must exist if declared");
+
+        if class.is_legacy() {
+            deprecated_declared_classes.insert(hash);
+        } else {
+            declared_classes.insert(hash, compiled_hash.0);
+        }
+
         declared_contract_classes.insert(hash, class);
     }
 
@@ -489,25 +501,15 @@ pub(super) fn state_update_from_cached_state<S: StateDb>(
                 katana_primitives::class::ClassHash,
             >>();
 
-    let declared_classes =
-        state_diff
-            .state_maps
-            .compiled_class_hashes
-            .into_iter()
-            .map(|(key, value)| (key.0, value.0))
-            .collect::<BTreeMap<
-                katana_primitives::class::ClassHash,
-                katana_primitives::class::CompiledClassHash,
-            >>();
-
     StateUpdatesWithClasses {
         classes: declared_contract_classes,
         state_updates: StateUpdates {
             nonce_updates,
             storage_updates,
-            deployed_contracts,
             declared_classes,
-            ..Default::default()
+            deployed_contracts,
+            deprecated_declared_classes,
+            replaced_classes: BTreeMap::default(),
         },
     }
 }

@@ -15,7 +15,7 @@ katana-trie.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 
-blockifier = { git = "https://github.com/dojoengine/sequencer", rev = "92da150d", features = [ "testing" ], optional = true }
+blockifier = { git = "https://github.com/dojoengine/sequencer", rev = "802c5dc", features = [ "testing" ], optional = true }
 parking_lot = { workspace = true, optional = true }
 starknet = { workspace = true, optional = true }
 

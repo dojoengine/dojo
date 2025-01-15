@@ -60,7 +60,7 @@ edition = "2021"
 license = "Apache-2.0"
 license-file = "LICENSE"
 repository = "https://github.com/dojoengine/dojo/"
-version = "1.0.9"
+version = "1.0.11"
 
 [profile.performance]
 codegen-units = 1
@@ -125,6 +125,8 @@ torii-graphql = { path = "crates/torii/graphql" }
 torii-grpc = { path = "crates/torii/grpc" }
 torii-relay = { path = "crates/torii/libp2p" }
 torii-server = { path = "crates/torii/server" }
+torii-runner = { path = "crates/torii/runner" }
+torii-typed-data = { path = "crates/torii/typed-data" }
 
 # saya
 saya-core = { path = "crates/saya/core" }
@@ -222,7 +224,7 @@ smol_str = { version = "0.2.0", features = [ "serde" ] }
 spinoff = "0.8.0"
 sqlx = { version = "0.8.2", features = [ "chrono", "macros", "regexp", "runtime-async-std", "runtime-tokio", "sqlite", "uuid" ] }
 #starknet_api = "0.11.0"
-starknet_api = { git = "https://github.com/dojoengine/sequencer", rev = "92da150d" }
+starknet_api = { git = "https://github.com/dojoengine/sequencer", rev = "802c5dc" }
 strum = "0.25"
 strum_macros = "0.25"
 tempfile = "3.9.0"

@@ -222,8 +222,8 @@ fn build_conditions(keys: &Option<Vec<String>>, filters: &Option<Vec<Filter>>) -
 
     if let Some(filters) = filters {
         conditions.extend(filters.iter().map(|filter| match &filter.value {
-            FilterValue::Int(i) => format!("{} {} {}", filter.field, filter.comparator, i),
-            FilterValue::String(s) => format!("{} {} '{}'", filter.field, filter.comparator, s),
+            FilterValue::Int(i) => format!("[{}] {} {}", filter.field, filter.comparator, i),
+            FilterValue::String(s) => format!("[{}] {} '{}'", filter.field, filter.comparator, s),
             FilterValue::List(list) => {
                 let values = list
                     .iter()
@@ -234,7 +234,7 @@ fn build_conditions(keys: &Option<Vec<String>>, filters: &Option<Vec<Filter>>) -
                     })
                     .collect::<Vec<_>>()
                     .join(", ");
-                format!("{} {} ({})", filter.field, filter.comparator, values)
+                format!("[{}] {} ({})", filter.field, filter.comparator, values)
             }
         }));
     }
