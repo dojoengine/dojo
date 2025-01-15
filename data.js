@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1736880841216,
+  "lastUpdate": 1736909748047,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -45079,6 +45079,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8131264,
             "range": "± 145994",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "distinct": true,
+          "id": "47349d131bfad889cf562b798d45d2ac9bd304e4",
+          "message": "fix(sozo): remove dbg",
+          "timestamp": "2025-01-14T20:38:53-06:00",
+          "tree_id": "d60e257bd647b4cb00a98d21555824e2440e0c6e",
+          "url": "https://github.com/dojoengine/dojo/commit/47349d131bfad889cf562b798d45d2ac9bd304e4"
+        },
+        "date": 1736909746139,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10698865893,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
