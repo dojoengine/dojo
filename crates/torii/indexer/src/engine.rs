@@ -832,14 +832,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         contract_type: ContractType,
     ) -> Result<()> {
         if self.config.flags.contains(IndexingFlags::RAW_EVENTS) {
-            match contract_type {
-                ContractType::WORLD => {
-                    self.db.store_event(event_id, event, transaction_hash, block_timestamp)?;
-                }
-                // ERC events needs to be processed inside there respective processor
-                // we store transfer events for ERC contracts regardless of this flag
-                ContractType::ERC20 | ContractType::ERC721 => {}
-            }
+            self.db.store_event(event_id, event, transaction_hash, block_timestamp)?;
         }
 
         let event_key = event.keys[0];
