@@ -69,7 +69,7 @@ where
                     "Failed to retrieve model with selector {:#x}: {}",
                     event.selector,
                     e
-                ))
+                ));
             }
         };
 

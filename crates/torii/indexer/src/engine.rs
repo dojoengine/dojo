@@ -600,11 +600,11 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
 
     async fn process_tasks(&mut self) -> Result<()> {
         let semaphore = Arc::new(Semaphore::new(self.config.max_concurrent_tasks));
-        
+
         // Process each priority level sequentially
         for (priority, task_group) in std::mem::take(&mut self.tasks) {
             let mut handles = Vec::new();
-            
+
             // Process all tasks within this priority level concurrently
             for (task_id, events) in task_group {
                 let db = self.db.clone();
@@ -616,12 +616,13 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                 handles.push(tokio::spawn(async move {
                     let _permit = semaphore.acquire().await?;
                     let mut local_db = db.clone();
-                    
+
                     // Process all events for this task sequentially
                     for (contract_type, event) in events {
                         let contract_processors = processors.get_event_processor(contract_type);
                         if let Some(processors) = contract_processors.get(&event.event.keys[0]) {
-                            let processor = processors.iter()
+                            let processor = processors
+                                .iter()
                                 .find(|p| p.validate(&event.event))
                                 .expect("Must find at least one processor for the event");
 
@@ -893,16 +894,12 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                 let hash = hasher.finish();
                 (2usize, hash) // Priority 2 (lower) for store operations
             }
-            _ => (0, 0) // No parallelization for other events
+            _ => (0, 0), // No parallelization for other events
         };
 
         if task_identifier != 0 {
-            self.tasks
-                .entry(task_priority)
-                .or_default()
-                .entry(task_identifier)
-                .or_default()
-                .push((
+            self.tasks.entry(task_priority).or_default().entry(task_identifier).or_default().push(
+                (
                     contract_type,
                     ParallelizedEvent {
                         event_id: event_id.to_string(),
@@ -910,7 +907,8 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                         block_number,
                         block_timestamp,
                     },
-                ));
+                ),
+            );
         } else {
             // Process non-parallelized events immediately
             // if we dont have a task identifier, we process the event immediately
