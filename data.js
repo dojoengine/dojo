@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1736910622718,
+  "lastUpdate": 1736910737143,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -45187,6 +45187,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10399771861,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tarrencev@users.noreply.github.com",
+            "name": "Tarrence van As",
+            "username": "tarrencev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a8af3d6c01806e9f5cc6855b2a3960f5f3e37453",
+          "message": "chore(devcontainer): update image: v1.0.11 (#2910)\n\nUpdate devcontainer image: v1.0.11\r\n\r\nCo-authored-by: glihm <glihm@users.noreply.github.com>",
+          "timestamp": "2025-01-14T20:53:55-06:00",
+          "tree_id": "5a60a2316c3779fa253d96370183e9f332f230a8",
+          "url": "https://github.com/dojoengine/dojo/commit/a8af3d6c01806e9f5cc6855b2a3960f5f3e37453"
+        },
+        "date": 1736910734903,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2485382,
+            "range": "± 29537",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8390210,
+            "range": "± 216202",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2563506349,
+            "range": "± 258603343",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8164838,
+            "range": "± 619065",
             "unit": "ns/iter"
           }
         ]
