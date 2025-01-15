@@ -890,14 +890,14 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
             "ModelRegistered" | "EventRegistered" => {
                 let mut hasher = DefaultHasher::new();
                 event.keys.iter().for_each(|k| k.hash(&mut hasher));
-                let hash = hasher.finish() & 0x00FFFFFFFFFFFFFF;
+                let hash = hasher.finish();
                 (0usize, hash) // Priority 0 (highest) for model/event registration
             }
             "StoreSetRecord" | "StoreUpdateRecord" | "StoreUpdateMember" | "StoreDelRecord" => {
                 let mut hasher = DefaultHasher::new();
                 event.keys[1].hash(&mut hasher);
                 event.keys[2].hash(&mut hasher);
-                let hash = hasher.finish() & 0x00FFFFFFFFFFFFFF;
+                let hash = hasher.finish();
                 (2usize, hash) // Priority 2 (lower) for store operations
             }
             _ => (0, 0) // No parallelization for other events
