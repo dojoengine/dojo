@@ -898,7 +898,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
             "EventEmitted" => {
                 let mut hasher = DefaultHasher::new();
 
-                let keys = Vec::<Felt>::cairo_deserialize(&event.keys, 0).unwrap_or_else(|e| {
+                let keys = Vec::<Felt>::cairo_deserialize(&event.data, 0).unwrap_or_else(|e| {
                     panic!("Expected EventEmitted keys to be well formed: {:?}", e);
                 });
 
