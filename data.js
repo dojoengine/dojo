@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1736976574582,
+  "lastUpdate": 1736976671750,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -45343,6 +45343,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 11486425340,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "contact@luca-steeb.com",
+            "name": "Luca Steeb",
+            "username": "steebchen"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "792b3c9119add6a49c99b4fa873b66c4dd23e6d4",
+          "message": "ci(docker): add missing ca-certificates and SSL certs copy (#2914)\n\nEnsure ca-certificates are installed and copied to the base image\r\nto support secure HTTPS connections where required.",
+          "timestamp": "2025-01-15T15:12:23-06:00",
+          "tree_id": "7554b904b1188095e4d75305634c886b621669e0",
+          "url": "https://github.com/dojoengine/dojo/commit/792b3c9119add6a49c99b4fa873b66c4dd23e6d4"
+        },
+        "date": 1736976669768,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2491938,
+            "range": "± 40477",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 9151846,
+            "range": "± 594170",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2710534282,
+            "range": "± 260035402",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8824833,
+            "range": "± 347585",
             "unit": "ns/iter"
           }
         ]
