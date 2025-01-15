@@ -34,6 +34,7 @@ cargo +nightly-2024-08-28 fmt --all -- "$@"
 ./target/release/sozo build --manifest-path examples/spawn-and-move/Scarb.toml
 ./target/release/sozo build --manifest-path examples/spawn-and-move/Scarb.toml -P release
 ./target/release/sozo build --manifest-path crates/torii/types-test/Scarb.toml
+./target/release/sozo test --manifest-path crates/dojo/core-cairo-test/Scarb.toml
 
 # Generates the database for testing by migrating the spawn and move example.
 KATANA_RUNNER_BIN=./target/release/katana cargo generate-test-db

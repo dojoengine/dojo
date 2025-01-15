@@ -58,7 +58,7 @@ impl DojoEvent {
             }
         }
 
-        let members = parse_members(db, &struct_ast.members(db).elements(db), &mut diagnostics);
+        let members = parse_members(db, &struct_ast.members(db).elements(db));
 
         let mut serialized_keys: Vec<RewriteNode> = vec![];
         let mut serialized_values: Vec<RewriteNode> = vec![];

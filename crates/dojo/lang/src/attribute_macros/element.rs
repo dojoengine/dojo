@@ -1,10 +1,8 @@
 use cairo_lang_defs::patcher::RewriteNode;
-use cairo_lang_defs::plugin::PluginDiagnostic;
-use cairo_lang_diagnostics::Severity;
 use cairo_lang_syntax::node::ast::Member as MemberAst;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
-use cairo_lang_syntax::node::{Terminal, TypedStablePtr, TypedSyntaxNode};
+use cairo_lang_syntax::node::{Terminal, TypedSyntaxNode};
 use dojo_types::naming::compute_bytearray_hash;
 use starknet_crypto::{poseidon_hash_many, Felt};
 
@@ -36,11 +34,7 @@ pub fn compute_unique_hash(
     poseidon_hash_many(&hashes)
 }
 
-pub fn parse_members(
-    db: &dyn SyntaxGroup,
-    members: &[MemberAst],
-    diagnostics: &mut Vec<PluginDiagnostic>,
-) -> Vec<Member> {
+pub fn parse_members(db: &dyn SyntaxGroup, members: &[MemberAst]) -> Vec<Member> {
     members
         .iter()
         .map(|member_ast| Member {
