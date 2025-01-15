@@ -207,6 +207,9 @@ pub struct ParallelizedEvent {
     pub event: Event,
 }
 
+type TaskPriority = usize;
+type TaskId = u64;
+
 #[allow(missing_debug_implementations)]
 pub struct Engine<P: Provider + Send + Sync + std::fmt::Debug + 'static> {
     world: Arc<WorldContractReader<P>>,
@@ -216,7 +219,7 @@ pub struct Engine<P: Provider + Send + Sync + std::fmt::Debug + 'static> {
     config: EngineConfig,
     shutdown_tx: Sender<()>,
     block_tx: Option<BoundedSender<u64>>,
-    tasks: BTreeMap<u64, Vec<(ContractType, ParallelizedEvent)>>,
+    tasks: BTreeMap<TaskPriority, HashMap<TaskId, Vec<(ContractType, ParallelizedEvent)>>>,
     contracts: Arc<HashMap<Felt, ContractType>>,
 }
 
@@ -597,11 +600,13 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
 
     async fn process_tasks(&mut self) -> Result<()> {
         let semaphore = Arc::new(Semaphore::new(self.config.max_concurrent_tasks));
-        let mut handles = Vec::new();
         
-        // Drain our tasks since we're going to process them all
-        for (task_id, events) in std::mem::take(&mut self.tasks).into_iter() {
-            for (contract_type, event) in events {
+        // Process each priority level sequentially
+        for (priority, task_group) in std::mem::take(&mut self.tasks) {
+            let mut handles = Vec::new();
+            
+            // Process all tasks within this priority level concurrently
+            for (task_id, events) in task_group {
                 let db = self.db.clone();
                 let world = self.world.clone();
                 let semaphore = semaphore.clone();
@@ -612,38 +617,43 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                     let _permit = semaphore.acquire().await?;
                     let mut local_db = db.clone();
                     
-                    let contract_processors = processors.get_event_processor(contract_type);
-                    if let Some(processors) = contract_processors.get(&event.event.keys[0]) {
-                        let processor = processors.iter()
-                            .find(|p| p.validate(&event.event))
-                            .expect("Must find at least one processor for the event");
+                    // Process all events for this task sequentially
+                    for (contract_type, event) in events {
+                        let contract_processors = processors.get_event_processor(contract_type);
+                        if let Some(processors) = contract_processors.get(&event.event.keys[0]) {
+                            let processor = processors.iter()
+                                .find(|p| p.validate(&event.event))
+                                .expect("Must find at least one processor for the event");
 
-                        debug!(
-                            target: LOG_TARGET,
-                            event_name = processor.event_key(),
-                            task_id = %task_id,
-                            "Processing parallelized event."
-                        );
-
-                        if let Err(e) = processor
-                            .process(
-                                &world,
-                                &mut local_db,
-                                event.block_number,
-                                event.block_timestamp,
-                                &event.event_id,
-                                &event.event,
-                                &event_processor_config,
-                            )
-                            .await
-                        {
-                            error!(
+                            debug!(
                                 target: LOG_TARGET,
                                 event_name = processor.event_key(),
-                                error = %e,
                                 task_id = %task_id,
+                                priority = %priority,
                                 "Processing parallelized event."
                             );
+
+                            if let Err(e) = processor
+                                .process(
+                                    &world,
+                                    &mut local_db,
+                                    event.block_number,
+                                    event.block_timestamp,
+                                    &event.event_id,
+                                    &event.event,
+                                    &event_processor_config,
+                                )
+                                .await
+                            {
+                                error!(
+                                    target: LOG_TARGET,
+                                    event_name = processor.event_key(),
+                                    error = %e,
+                                    task_id = %task_id,
+                                    priority = %priority,
+                                    "Processing parallelized event."
+                                );
+                            }
                         }
                     }
 
@@ -651,9 +661,8 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                 }));
             }
 
-            // Wait for all tasks in this priority level to complete before moving to next
+            // Wait for all tasks in this priority level to complete before moving to next priority
             try_join_all(handles).await?;
-            handles = Vec::new();
         }
 
         Ok(())
@@ -877,36 +886,40 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
             .find(|p| p.validate(event))
             .expect("Must find atleast one processor for the event");
 
-        let task_identifier = match processor.event_key().as_str() {
+        let (task_priority, task_identifier) = match processor.event_key().as_str() {
             "ModelRegistered" | "EventRegistered" => {
                 let mut hasher = DefaultHasher::new();
-                event.keys[1].hash(&mut hasher);
-                // Priority 0 (highest) for model/event registration
+                event.keys.iter().for_each(|k| k.hash(&mut hasher));
                 let hash = hasher.finish() & 0x00FFFFFFFFFFFFFF;
-                hash | (0u64 << 56)
+                (0usize, hash) // Priority 0 (highest) for model/event registration
             }
             "StoreSetRecord" | "StoreUpdateRecord" | "StoreUpdateMember" | "StoreDelRecord" => {
                 let mut hasher = DefaultHasher::new();
                 event.keys[1].hash(&mut hasher);
                 event.keys[2].hash(&mut hasher);
-                // Priority 2 (lower) for store operations
                 let hash = hasher.finish() & 0x00FFFFFFFFFFFFFF;
-                hash | (2u64 << 56)
+                (2usize, hash) // Priority 2 (lower) for store operations
             }
-            _ => 0
+            _ => (0, 0) // No parallelization for other events
         };
 
         if task_identifier != 0 {
-            self.tasks.entry(task_identifier).or_default().push((
-                contract_type,
-                ParallelizedEvent {
-                    event_id: event_id.to_string(),
-                    event: event.clone(),
-                    block_number,
-                    block_timestamp,
-                },
-            ));
+            self.tasks
+                .entry(task_priority)
+                .or_default()
+                .entry(task_identifier)
+                .or_default()
+                .push((
+                    contract_type,
+                    ParallelizedEvent {
+                        event_id: event_id.to_string(),
+                        event: event.clone(),
+                        block_number,
+                        block_timestamp,
+                    },
+                ));
         } else {
+            // Process non-parallelized events immediately
             // if we dont have a task identifier, we process the event immediately
             if processor.validate(event) {
                 if let Err(e) = processor
