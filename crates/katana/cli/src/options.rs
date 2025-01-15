@@ -7,11 +7,14 @@
 //!
 //! Currently, the merge is made at the top level of the commands.
 
+#[cfg(feature = "server")]
 use std::net::IpAddr;
 
 use clap::Args;
 use katana_node::config::execution::{DEFAULT_INVOCATION_MAX_STEPS, DEFAULT_VALIDATION_MAX_STEPS};
+#[cfg(feature = "server")]
 use katana_node::config::metrics::{DEFAULT_METRICS_ADDR, DEFAULT_METRICS_PORT};
+#[cfg(feature = "server")]
 use katana_node::config::rpc::{RpcModulesList, DEFAULT_RPC_MAX_PROOF_KEYS};
 #[cfg(feature = "server")]
 use katana_node::config::rpc::{
@@ -21,14 +24,14 @@ use katana_node::config::rpc::{
 use katana_primitives::block::BlockHashOrNumber;
 use katana_primitives::chain::ChainId;
 use katana_primitives::genesis::Genesis;
+#[cfg(feature = "server")]
 use katana_rpc::cors::HeaderValue;
 use serde::{Deserialize, Serialize};
 use url::Url;
 
-use crate::utils::{
-    deserialize_cors_origins, parse_block_hash_or_number, parse_genesis, serialize_cors_origins,
-    LogFormat,
-};
+#[cfg(feature = "server")]
+use crate::utils::{deserialize_cors_origins, serialize_cors_origins};
+use crate::utils::{parse_block_hash_or_number, parse_genesis, LogFormat};
 
 const DEFAULT_DEV_SEED: &str = "0";
 const DEFAULT_DEV_ACCOUNTS: u16 = 10;

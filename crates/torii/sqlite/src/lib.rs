@@ -9,7 +9,6 @@ use dojo_types::schema::{Struct, Ty};
 use dojo_world::config::WorldMetadata;
 use dojo_world::contracts::abigen::model::Layout;
 use dojo_world::contracts::naming::compute_selector_from_names;
-use sqlx::pool::PoolConnection;
 use sqlx::{Pool, Sqlite};
 use starknet::core::types::{Event, Felt, InvokeTransaction, Transaction};
 use starknet_crypto::poseidon_hash_many;
@@ -173,18 +172,17 @@ impl Sql {
     }
 
     pub async fn cursors(&self) -> Result<Cursors> {
-        let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
         let cursors = sqlx::query_as::<_, (String, String)>(
             "SELECT contract_address, last_pending_block_contract_tx FROM contracts WHERE \
              last_pending_block_contract_tx IS NOT NULL",
         )
-        .fetch_all(&mut *conn)
+        .fetch_all(&self.pool)
         .await?;
 
         let (head, last_pending_block_tx) = sqlx::query_as::<_, (Option<i64>, Option<String>)>(
             "SELECT head, last_pending_block_tx FROM contracts WHERE 1=1",
         )
-        .fetch_one(&mut *conn)
+        .fetch_one(&self.pool)
         .await?;
 
         let head = head.map(|h| h.try_into().expect("doesn't fit in u64"));
@@ -512,13 +510,6 @@ impl Sql {
 
     pub async fn model(&self, selector: Felt) -> Result<Model> {
         self.model_cache.model(&selector).await.map_err(|e| e.into())
-    }
-
-    pub async fn entities(&self, model: String) -> Result<Vec<Vec<Felt>>> {
-        let query = sqlx::query_as::<_, (i32, String, String)>("SELECT * FROM ?").bind(model);
-        let mut conn: PoolConnection<Sqlite> = self.pool.acquire().await?;
-        let mut rows = query.fetch_all(&mut *conn).await?;
-        Ok(rows.drain(..).map(|row| serde_json::from_str(&row.2).unwrap()).collect())
     }
 
     pub fn store_transaction(
