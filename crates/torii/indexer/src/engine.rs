@@ -216,7 +216,7 @@ pub struct Engine<P: Provider + Send + Sync + std::fmt::Debug + 'static> {
     config: EngineConfig,
     shutdown_tx: Sender<()>,
     block_tx: Option<BoundedSender<u64>>,
-    tasks: HashMap<u64, Vec<(ContractType, ParallelizedEvent)>>,
+    tasks: BTreeMap<u64, Vec<(ContractType, ParallelizedEvent)>>,
     contracts: Arc<HashMap<Felt, ContractType>>,
 }
 
@@ -250,7 +250,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
             shutdown_tx,
             block_tx,
             contracts,
-            tasks: HashMap::new(),
+            tasks: BTreeMap::new(),
         }
     }
 
@@ -596,44 +596,65 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
     }
 
     async fn process_tasks(&mut self) -> Result<()> {
-        // We use a semaphore to limit the number of concurrent tasks
         let semaphore = Arc::new(Semaphore::new(self.config.max_concurrent_tasks));
-
-        // Run all tasks concurrently
         let mut handles = Vec::new();
-        for (task_id, events) in self.tasks.drain() {
-            let db = self.db.clone();
-            let world = self.world.clone();
-            let semaphore = semaphore.clone();
-            let processors = self.processors.clone();
+        
+        // Drain our tasks since we're going to process them all
+        for (task_id, events) in std::mem::take(&mut self.tasks).into_iter() {
+            for (contract_type, event) in events {
+                let db = self.db.clone();
+                let world = self.world.clone();
+                let semaphore = semaphore.clone();
+                let processors = self.processors.clone();
+                let event_processor_config = self.config.event_processor_config.clone();
 
-            let event_processor_config = self.config.event_processor_config.clone();
-            handles.push(tokio::spawn(async move {
-                let _permit = semaphore.acquire().await?;
-                let mut local_db = db.clone();
-                for (contract_type, ParallelizedEvent { event_id, event, block_number, block_timestamp }) in events {
+                handles.push(tokio::spawn(async move {
+                    let _permit = semaphore.acquire().await?;
+                    let mut local_db = db.clone();
+                    
                     let contract_processors = processors.get_event_processor(contract_type);
-                    if let Some(processors) = contract_processors.get(&event.keys[0]) {
+                    if let Some(processors) = contract_processors.get(&event.event.keys[0]) {
+                        let processor = processors.iter()
+                            .find(|p| p.validate(&event.event))
+                            .expect("Must find at least one processor for the event");
 
-                        let processor = processors.iter().find(|p| p.validate(&event)).expect("Must find atleast one processor for the event");
-
-                        debug!(target: LOG_TARGET, event_name = processor.event_key(), task_id = %task_id, "Processing parallelized event.");
+                        debug!(
+                            target: LOG_TARGET,
+                            event_name = processor.event_key(),
+                            task_id = %task_id,
+                            "Processing parallelized event."
+                        );
 
                         if let Err(e) = processor
-                            .process(&world, &mut local_db, block_number, block_timestamp, &event_id, &event, &event_processor_config)
+                            .process(
+                                &world,
+                                &mut local_db,
+                                event.block_number,
+                                event.block_timestamp,
+                                &event.event_id,
+                                &event.event,
+                                &event_processor_config,
+                            )
                             .await
                         {
-                            error!(target: LOG_TARGET, event_name = processor.event_key(), error = %e, task_id = %task_id, "Processing parallelized event.");
+                            error!(
+                                target: LOG_TARGET,
+                                event_name = processor.event_key(),
+                                error = %e,
+                                task_id = %task_id,
+                                "Processing parallelized event."
+                            );
                         }
                     }
-                }
 
-                Ok::<_, anyhow::Error>(())
-            }));
+                    Ok::<_, anyhow::Error>(())
+                }));
+            }
+
+            // Wait for all tasks in this priority level to complete before moving to next
+            try_join_all(handles).await?;
+            handles = Vec::new();
         }
-
-        // Join all tasks
-        try_join_all(handles).await?;
 
         Ok(())
     }
@@ -857,18 +878,24 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
             .expect("Must find atleast one processor for the event");
 
         let task_identifier = match processor.event_key().as_str() {
+            "ModelRegistered" | "EventRegistered" => {
+                let mut hasher = DefaultHasher::new();
+                event.keys[1].hash(&mut hasher);
+                // Priority 0 (highest) for model/event registration
+                let hash = hasher.finish() & 0x00FFFFFFFFFFFFFF;
+                hash | (0u64 << 56)
+            }
             "StoreSetRecord" | "StoreUpdateRecord" | "StoreUpdateMember" | "StoreDelRecord" => {
                 let mut hasher = DefaultHasher::new();
-                // model selector
                 event.keys[1].hash(&mut hasher);
-                // entity id
                 event.keys[2].hash(&mut hasher);
-                hasher.finish()
+                // Priority 2 (lower) for store operations
+                let hash = hasher.finish() & 0x00FFFFFFFFFFFFFF;
+                hash | (2u64 << 56)
             }
-            _ => 0,
+            _ => 0
         };
 
-        // if we have a task identifier, we queue the event to be parallelized
         if task_identifier != 0 {
             self.tasks.entry(task_identifier).or_default().push((
                 contract_type,
