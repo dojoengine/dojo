@@ -133,9 +133,6 @@ pub fn check_package_dojo_version(ws: &Workspace<'_>, package: &Package) -> anyh
 
         let dojo_dep_str = dojo_dep.to_string();
 
-        dbg!(&dojo_dep_str);
-        dbg!(&dojo_version);
-
         // Only in case of git dependency with an explicit tag, we check if the tag is the same as
         // the current version.
         if dojo_dep_str.contains("git+")
