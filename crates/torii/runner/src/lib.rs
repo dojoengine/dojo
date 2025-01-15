@@ -104,8 +104,11 @@ impl Runner {
         options = options.journal_mode(SqliteJournalMode::Wal);
         options = options.synchronous(SqliteSynchronous::Normal);
 
-        let pool =
-            SqlitePoolOptions::new().min_connections(1).connect_with(options.clone()).await?;
+        let pool = SqlitePoolOptions::new()
+            .min_connections(1)
+            .max_connections(self.args.indexing.max_concurrent_tasks as u32)
+            .connect_with(options.clone())
+            .await?;
 
         let readonly_options = options.read_only(true);
         let readonly_pool = SqlitePoolOptions::new()
