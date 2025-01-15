@@ -14,6 +14,7 @@ dojo = { path = "../../crates/dojo/core" }
 starknet = "2.9.2"
 
 [dev-dependencies]
+cairo_test = "2.9.2"
 dojo_cairo_test = { path = "../../crates/dojo/core-cairo-test" }
 
 [features]
