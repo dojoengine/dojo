@@ -122,15 +122,6 @@ pub struct LocalCache {
     pub token_id_registry: RwLock<HashSet<String>>,
 }
 
-impl Clone for LocalCache {
-    fn clone(&self) -> Self {
-        Self {
-            erc_cache: RwLock::new(HashMap::new()),
-            token_id_registry: RwLock::new(HashSet::new()),
-        }
-    }
-}
-
 impl LocalCache {
     pub async fn new(pool: Pool<Sqlite>) -> Self {
         // read existing token_id's from balances table and cache them
