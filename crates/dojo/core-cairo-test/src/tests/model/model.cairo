@@ -25,6 +25,17 @@ struct Foo2 {
     v2: u32
 }
 
+#[derive(Copy, Drop, Serde, Debug)]
+#[dojo::model]
+struct Foo3 {
+    #[key]
+    k1: u256,
+    #[key]
+    k2: felt252,
+    v1: u128,
+    v2: u32
+}
+
 fn namespace_def() -> NamespaceDef {
     NamespaceDef {
         namespace: "dojo_cairo_test", resources: [

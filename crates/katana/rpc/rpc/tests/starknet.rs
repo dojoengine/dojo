@@ -24,8 +24,9 @@ use starknet::core::types::contract::legacy::LegacyContractClass;
 use starknet::core::types::{
     BlockId, BlockTag, Call, DeclareTransactionReceipt, DeployAccountTransactionReceipt,
     EventFilter, EventsPage, ExecutionResult, Felt, MaybePendingBlockWithReceipts,
-    MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs, StarknetError,
-    TransactionExecutionStatus, TransactionFinalityStatus, TransactionReceipt, TransactionTrace,
+    MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs, MaybePendingStateUpdate,
+    StarknetError, TransactionExecutionStatus, TransactionFinalityStatus, TransactionReceipt,
+    TransactionTrace,
 };
 use starknet::core::utils::get_contract_address;
 use starknet::macros::{felt, selector};
@@ -55,6 +56,18 @@ async fn declare_and_deploy_contract() -> Result<()> {
 
     // check that the class is actually declared
     assert!(provider.get_class(BlockId::Tag(BlockTag::Pending), class_hash).await.is_ok());
+
+    // check state update includes class in declared_classes
+    let state_update = provider.get_state_update(BlockId::Tag(BlockTag::Latest)).await?;
+    match state_update {
+        MaybePendingStateUpdate::Update(update) => {
+            assert!(
+                update.state_diff.declared_classes.iter().any(|item| item.class_hash == class_hash
+                    && item.compiled_class_hash == compiled_class_hash)
+            );
+        }
+        _ => panic!("Expected Update, got PendingUpdate"),
+    }
 
     let ctor_args = vec![Felt::ONE, Felt::TWO];
     let calldata = [
@@ -109,6 +122,15 @@ async fn declare_and_deploy_legacy_contract() -> Result<()> {
 
     // check that the class is actually declared
     assert!(provider.get_class(BlockId::Tag(BlockTag::Pending), class_hash).await.is_ok());
+
+    // check state update includes class in deprecated_declared_classes
+    let state_update = provider.get_state_update(BlockId::Tag(BlockTag::Latest)).await?;
+    match state_update {
+        MaybePendingStateUpdate::Update(update) => {
+            assert!(update.state_diff.deprecated_declared_classes.contains(&class_hash));
+        }
+        _ => panic!("Expected Update, got PendingUpdate"),
+    }
 
     let ctor_args = vec![Felt::ONE];
     let calldata = [

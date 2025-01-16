@@ -57,20 +57,11 @@ impl ContractClass {
         }
     }
 
-    /// Returns the class as a Sierra class, if any.
-    pub fn as_class(&self) -> Option<&SierraContractClass> {
-        match self {
-            Self::Class(class) => Some(class),
-            _ => None,
-        }
-    }
-
-    /// Returns the class as a legacy class, if any.
-    pub fn as_legacy(&self) -> Option<&LegacyContractClass> {
-        match self {
-            Self::Legacy(class) => Some(class),
-            _ => None,
-        }
+    /// Checks if this contract class is a Cairo 0 legacy class.
+    ///
+    /// Returns `true` if the contract class is a legacy class, `false` otherwise.
+    pub fn is_legacy(&self) -> bool {
+        matches!(self, Self::Legacy(_))
     }
 }
 

@@ -4,7 +4,9 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use alloy_primitives::U256;
-use anyhow::{bail, Context, Result};
+#[cfg(feature = "server")]
+use anyhow::bail;
+use anyhow::{Context, Result};
 use clap::Parser;
 use katana_core::constants::DEFAULT_SEQUENCER_ADDRESS;
 use katana_core::service::messaging::MessagingConfig;
@@ -13,7 +15,9 @@ use katana_node::config::dev::{DevConfig, FixedL1GasPriceConfig};
 use katana_node::config::execution::ExecutionConfig;
 use katana_node::config::fork::ForkingConfig;
 use katana_node::config::metrics::MetricsConfig;
-use katana_node::config::rpc::{RpcConfig, RpcModuleKind, RpcModulesList};
+use katana_node::config::rpc::RpcConfig;
+#[cfg(feature = "server")]
+use katana_node::config::rpc::{RpcModuleKind, RpcModulesList};
 use katana_node::config::{Config, SequencingConfig};
 use katana_primitives::chain_spec::{self, ChainSpec};
 use katana_primitives::genesis::allocation::DevAllocationsGenerator;
@@ -197,24 +201,31 @@ impl NodeArgs {
     }
 
     fn rpc_config(&self) -> Result<RpcConfig> {
-        let modules = if let Some(modules) = &self.server.http_modules {
-            // TODO: This check should be handled in the `katana-node` level. Right now if you
-            // instantiate katana programmatically, you can still add the dev module without
-            // enabling dev mode.
-            //
-            // We only allow the `dev` module in dev mode (ie `--dev` flag)
-            if !self.development.dev && modules.contains(&RpcModuleKind::Dev) {
-                bail!("The `dev` module can only be enabled in dev mode (ie `--dev` flag)")
-            }
-
-            modules.clone()
-        } else {
-            // Expose the default modules if none is specified.
-            RpcModulesList::default()
-        };
-
         #[cfg(feature = "server")]
         {
+            let modules = if let Some(modules) = &self.server.http_modules {
+                // TODO: This check should be handled in the `katana-node` level. Right now if you
+                // instantiate katana programmatically, you can still add the dev module without
+                // enabling dev mode.
+                //
+                // We only allow the `dev` module in dev mode (ie `--dev` flag)
+                if !self.development.dev && modules.contains(&RpcModuleKind::Dev) {
+                    bail!("The `dev` module can only be enabled in dev mode (ie `--dev` flag)")
+                }
+
+                modules.clone()
+            } else {
+                // Expose the default modules if none is specified.
+                let mut modules = RpcModulesList::default();
+
+                // Ensures the `--dev` flag enabled the dev module.
+                if self.development.dev {
+                    modules.add(RpcModuleKind::Dev);
+                }
+
+                modules
+            };
+
             Ok(RpcConfig {
                 apis: modules,
                 port: self.server.http_port,
@@ -228,7 +239,7 @@ impl NodeArgs {
 
         #[cfg(not(feature = "server"))]
         {
-            Ok(RpcConfig { apis, ..Default::default() })
+            Ok(RpcConfig::default())
         }
     }
 
@@ -668,5 +679,13 @@ chain_id.Named = "Mainnet"
             err.to_string()
                 .contains("The `dev` module can only be enabled in dev mode (ie `--dev` flag)")
         );
+    }
+
+    #[test]
+    fn test_dev_api_enabled() {
+        let args = NodeArgs::parse_from(["katana", "--dev"]);
+        let config = args.config().unwrap();
+
+        assert!(config.rpc.apis.contains(&RpcModuleKind::Dev));
     }
 }

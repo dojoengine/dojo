@@ -2001,7 +2001,7 @@ dependencies = [
  "bitflags 2.6.0",
  "cexpr",
  "clang-sys",
- "itertools 0.12.1",
+ "itertools 0.11.0",
  "lazy_static",
  "lazycell",
  "log",
@@ -2471,39 +2471,13 @@ dependencies = [
 
 [[package]]
 name = "cainome"
-version = "0.4.6"
-source = "git+https://github.com/cartridge-gg/cainome?rev=5c2616c273faca7700d2ba565503fcefb5b9d720#5c2616c273faca7700d2ba565503fcefb5b9d720"
-dependencies = [
- "anyhow",
- "async-trait",
- "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome?rev=5c2616c273faca7700d2ba565503fcefb5b9d720)",
- "cainome-cairo-serde-derive 0.1.0 (git+https://github.com/cartridge-gg/cainome?rev=5c2616c273faca7700d2ba565503fcefb5b9d720)",
- "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome?rev=5c2616c273faca7700d2ba565503fcefb5b9d720)",
- "cainome-rs 0.1.0 (git+https://github.com/cartridge-gg/cainome?rev=5c2616c273faca7700d2ba565503fcefb5b9d720)",
- "cainome-rs-macro 0.1.0 (git+https://github.com/cartridge-gg/cainome?rev=5c2616c273faca7700d2ba565503fcefb5b9d720)",
- "camino",
- "clap",
- "clap_complete",
- "convert_case 0.6.0",
- "serde",
- "serde_json",
- "starknet 0.12.0",
- "starknet-types-core",
- "thiserror 1.0.63",
- "tracing",
- "tracing-subscriber",
- "url",
-]
-
-[[package]]
-name = "cainome"
 version = "0.4.11"
 source = "git+https://github.com/cartridge-gg/cainome?tag=v0.4.11#355b88b7b808656d729e9dfd16f81d80c5c30fbf"
 dependencies = [
  "anyhow",
  "async-trait",
  "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.4.11)",
- "cainome-cairo-serde-derive 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.4.11)",
+ "cainome-cairo-serde-derive",
  "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.4.11)",
  "cainome-rs 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.4.11)",
  "cainome-rs-macro 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.4.11)",
@@ -2544,30 +2518,9 @@ dependencies = [
 ]
 
 [[package]]
-name = "cainome-cairo-serde"
-version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/cainome?rev=5c2616c273faca7700d2ba565503fcefb5b9d720#5c2616c273faca7700d2ba565503fcefb5b9d720"
-dependencies = [
- "serde",
- "starknet 0.12.0",
- "thiserror 1.0.63",
-]
-
-[[package]]
 name = "cainome-cairo-serde-derive"
 version = "0.1.0"
 source = "git+https://github.com/cartridge-gg/cainome?tag=v0.4.11#355b88b7b808656d729e9dfd16f81d80c5c30fbf"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.90",
- "unzip-n",
-]
-
-[[package]]
-name = "cainome-cairo-serde-derive"
-version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/cainome?rev=5c2616c273faca7700d2ba565503fcefb5b9d720#5c2616c273faca7700d2ba565503fcefb5b9d720"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2592,19 +2545,6 @@ dependencies = [
 name = "cainome-parser"
 version = "0.1.0"
 source = "git+https://github.com/cartridge-gg/cainome?tag=v0.4.2#4e3924fb82b7299d56d3619aa5d7b9863f581e0a"
-dependencies = [
- "convert_case 0.6.0",
- "quote",
- "serde_json",
- "starknet 0.12.0",
- "syn 2.0.90",
- "thiserror 1.0.63",
-]
-
-[[package]]
-name = "cainome-parser"
-version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/cainome?rev=5c2616c273faca7700d2ba565503fcefb5b9d720#5c2616c273faca7700d2ba565503fcefb5b9d720"
 dependencies = [
  "convert_case 0.6.0",
  "quote",
@@ -2640,24 +2580,6 @@ dependencies = [
  "anyhow",
  "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.4.2)",
  "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.4.2)",
- "camino",
- "prettyplease",
- "proc-macro2",
- "quote",
- "serde_json",
- "starknet 0.12.0",
- "syn 2.0.90",
- "thiserror 1.0.63",
-]
-
-[[package]]
-name = "cainome-rs"
-version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/cainome?rev=5c2616c273faca7700d2ba565503fcefb5b9d720#5c2616c273faca7700d2ba565503fcefb5b9d720"
-dependencies = [
- "anyhow",
- "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome?rev=5c2616c273faca7700d2ba565503fcefb5b9d720)",
- "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome?rev=5c2616c273faca7700d2ba565503fcefb5b9d720)",
  "camino",
  "prettyplease",
  "proc-macro2",
@@ -2705,31 +2627,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "cainome-rs-macro"
-version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/cainome?rev=5c2616c273faca7700d2ba565503fcefb5b9d720#5c2616c273faca7700d2ba565503fcefb5b9d720"
-dependencies = [
- "anyhow",
- "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome?rev=5c2616c273faca7700d2ba565503fcefb5b9d720)",
- "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome?rev=5c2616c273faca7700d2ba565503fcefb5b9d720)",
- "cainome-rs 0.1.0 (git+https://github.com/cartridge-gg/cainome?rev=5c2616c273faca7700d2ba565503fcefb5b9d720)",
- "proc-macro-error",
- "proc-macro2",
- "quote",
- "serde_json",
- "starknet 0.12.0",
- "syn 2.0.90",
- "thiserror 1.0.63",
-]
-
-[[package]]
 name = "cairo-lang-casm"
 version = "2.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fd4d6659539ace9649c8e8a7434e51b0c50a7a700111d0a2b967dde220ddff49"
 dependencies = [
  "cairo-lang-utils",
- "indoc 2.0.5",
+ "indoc",
  "num-bigint",
  "num-traits 0.2.19",
  "parity-scale-codec",
@@ -2754,7 +2658,7 @@ dependencies = [
  "cairo-lang-sierra-generator",
  "cairo-lang-syntax",
  "cairo-lang-utils",
- "indoc 2.0.5",
+ "indoc",
  "rayon",
  "rust-analyzer-salsa",
  "semver 1.0.23",
@@ -2883,7 +2787,7 @@ dependencies = [
  "cairo-lang-test-plugin",
  "cairo-lang-utils",
  "indent",
- "indoc 2.0.5",
+ "indoc",
  "itertools 0.12.1",
  "rust-analyzer-salsa",
  "scarb-metadata 1.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2925,7 +2829,7 @@ dependencies = [
 [[package]]
 name = "cairo-lang-macro"
 version = "0.1.0"
-source = "git+https://github.com/dojoengine/scarb?rev=7eac49b3e61236ce466e712225d9c989f9db1ef3#7eac49b3e61236ce466e712225d9c989f9db1ef3"
+source = "git+https://github.com/dojoengine/scarb?rev=e2c01f5351c5c9097f61b2201163611f84f62156#e2c01f5351c5c9097f61b2201163611f84f62156"
 dependencies = [
  "cairo-lang-macro-attributes",
  "cairo-lang-macro-stable",
@@ -2982,7 +2886,7 @@ dependencies = [
  "cairo-lang-syntax",
  "cairo-lang-utils",
  "indent",
- "indoc 2.0.5",
+ "indoc",
  "itertools 0.12.1",
  "rust-analyzer-salsa",
  "smol_str",
@@ -3061,7 +2965,7 @@ dependencies = [
  "cairo-lang-test-utils",
  "cairo-lang-utils",
  "id-arena",
- "indoc 2.0.5",
+ "indoc",
  "itertools 0.12.1",
  "num-bigint",
  "num-traits 0.2.19",
@@ -3166,7 +3070,7 @@ dependencies = [
  "cairo-lang-sierra-gas",
  "cairo-lang-sierra-type-size",
  "cairo-lang-utils",
- "indoc 2.0.5",
+ "indoc",
  "itertools 0.12.1",
  "num-bigint",
  "num-traits 0.2.19",
@@ -3205,7 +3109,7 @@ dependencies = [
  "cairo-lang-utils",
  "const_format",
  "indent",
- "indoc 2.0.5",
+ "indoc",
  "itertools 0.12.1",
  "serde",
  "serde_json",
@@ -3282,7 +3186,7 @@ dependencies = [
  "cairo-lang-starknet-classes",
  "cairo-lang-syntax",
  "cairo-lang-utils",
- "indoc 2.0.5",
+ "indoc",
  "itertools 0.12.1",
  "num-bigint",
  "num-traits 0.2.19",
@@ -3797,7 +3701,6 @@ dependencies = [
  "anstyle",
  "clap_lex",
  "strsim 0.11.1",
- "terminal_size",
 ]
 
 [[package]]
@@ -3807,20 +3710,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8937760c3f4c60871870b8c3ee5f9b30771f792a7045c48bcbba999d7d6b3b8e"
 dependencies = [
  "clap",
-]
-
-[[package]]
-name = "clap_config"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "46efb9cbf691f5505d0b7b2c8055aec0c9a770eaac8a06834b6d84b5be93279a"
-dependencies = [
- "clap",
- "heck 0.5.0",
- "proc-macro2",
- "quote",
- "serde",
- "syn 2.0.90",
 ]
 
 [[package]]
@@ -4203,7 +4092,7 @@ dependencies = [
 [[package]]
 name = "create-output-dir"
 version = "1.0.0"
-source = "git+https://github.com/dojoengine/scarb?rev=7eac49b3e61236ce466e712225d9c989f9db1ef3#7eac49b3e61236ce466e712225d9c989f9db1ef3"
+source = "git+https://github.com/dojoengine/scarb?rev=e2c01f5351c5c9097f61b2201163611f84f62156#e2c01f5351c5c9097f61b2201163611f84f62156"
 dependencies = [
  "anyhow",
  "core-foundation 0.10.0",
@@ -4853,7 +4742,7 @@ checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
 
 [[package]]
 name = "dojo-bindgen"
-version = "1.0.9"
+version = "1.0.12"
 dependencies = [
  "anyhow",
  "assert_matches",
@@ -4876,53 +4765,37 @@ dependencies = [
 
 [[package]]
 name = "dojo-contracts"
-version = "1.0.9"
+version = "1.0.12"
 
 [[package]]
 name = "dojo-examples-spawn-and-move"
-version = "1.0.9"
+version = "1.0.12"
 
 [[package]]
 name = "dojo-lang"
-version = "1.0.0-rc.2"
-source = "git+https://github.com/dojoengine/dojo?rev=6725a8f20af56213fa7382aa1e158817f3ee623c#6725a8f20af56213fa7382aa1e158817f3ee623c"
+version = "1.0.11"
+source = "git+https://github.com/dojoengine/dojo?rev=4a54cdcc6baff0b2511331f245c2d847468a7123#4a54cdcc6baff0b2511331f245c2d847468a7123"
 dependencies = [
  "anyhow",
- "cairo-lang-compiler",
  "cairo-lang-defs",
  "cairo-lang-diagnostics",
  "cairo-lang-filesystem",
  "cairo-lang-plugins",
- "cairo-lang-project",
  "cairo-lang-semantic",
- "cairo-lang-sierra-generator",
- "cairo-lang-starknet",
- "cairo-lang-starknet-classes",
  "cairo-lang-syntax",
- "cairo-lang-test-plugin",
  "cairo-lang-utils",
- "camino",
- "convert_case 0.6.0",
- "dojo-types 1.0.0-rc.2",
- "indoc 1.0.9",
+ "dojo-types 1.0.11",
  "itertools 0.12.1",
- "regex",
- "semver 1.0.23",
  "serde",
- "serde_json",
- "serde_with 3.11.0",
  "smol_str",
  "starknet 0.12.0",
  "starknet-crypto 0.7.2",
- "tempfile",
- "toml 0.8.19",
  "tracing",
- "url",
 ]
 
 [[package]]
 name = "dojo-lang"
-version = "1.0.9"
+version = "1.0.12"
 dependencies = [
  "anyhow",
  "cairo-lang-defs",
@@ -4932,7 +4805,7 @@ dependencies = [
  "cairo-lang-semantic",
  "cairo-lang-syntax",
  "cairo-lang-utils",
- "dojo-types 1.0.9",
+ "dojo-types 1.0.12",
  "itertools 0.12.1",
  "serde",
  "smol_str",
@@ -4943,16 +4816,16 @@ dependencies = [
 
 [[package]]
 name = "dojo-language-server"
-version = "1.0.9"
+version = "1.0.12"
 dependencies = [
  "cairo-lang-language-server",
  "clap",
- "dojo-lang 1.0.9",
+ "dojo-lang 1.0.12",
 ]
 
 [[package]]
 name = "dojo-metrics"
-version = "1.0.9"
+version = "1.0.12"
 dependencies = [
  "hyper 0.14.30",
  "jemalloc-ctl",
@@ -4968,7 +4841,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-test-utils"
-version = "1.0.9"
+version = "1.0.12"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -4991,13 +4864,14 @@ dependencies = [
 
 [[package]]
 name = "dojo-types"
-version = "1.0.0-rc.2"
-source = "git+https://github.com/dojoengine/dojo?rev=6725a8f20af56213fa7382aa1e158817f3ee623c#6725a8f20af56213fa7382aa1e158817f3ee623c"
+version = "1.0.11"
+source = "git+https://github.com/dojoengine/dojo?rev=4a54cdcc6baff0b2511331f245c2d847468a7123#4a54cdcc6baff0b2511331f245c2d847468a7123"
 dependencies = [
  "anyhow",
- "cainome 0.4.6",
+ "cainome 0.4.11",
  "crypto-bigint",
  "hex",
+ "indexmap 2.5.0",
  "itertools 0.12.1",
  "num-traits 0.2.19",
  "regex",
@@ -5012,7 +4886,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-types"
-version = "1.0.9"
+version = "1.0.12"
 dependencies = [
  "anyhow",
  "cainome 0.4.11",
@@ -5033,7 +4907,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-utils"
-version = "1.0.9"
+version = "1.0.12"
 dependencies = [
  "anyhow",
  "assert_matches",
@@ -5051,13 +4925,13 @@ dependencies = [
 
 [[package]]
 name = "dojo-world"
-version = "1.0.9"
+version = "1.0.12"
 dependencies = [
  "anyhow",
  "async-trait",
  "cainome 0.4.11",
  "cairo-lang-starknet-classes",
- "dojo-types 1.0.9",
+ "dojo-types 1.0.12",
  "futures",
  "hex",
  "hex-literal",
@@ -5078,7 +4952,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-world-abigen"
-version = "1.0.9"
+version = "1.0.12"
 dependencies = [
  "anyhow",
  "cainome 0.4.11",
@@ -7758,12 +7632,6 @@ dependencies = [
 
 [[package]]
 name = "indoc"
-version = "1.0.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bfa799dd5ed20a7e349f3b4639aa80d74549c81716d9ec4f994c9b5815598306"
-
-[[package]]
-name = "indoc"
 version = "2.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b248f5224d1d606005e02c97f5aa4e88eeb230488bcc03bc9ca4d7991399f2b5"
@@ -8438,7 +8306,7 @@ dependencies = [
 
 [[package]]
 name = "katana"
-version = "1.0.9"
+version = "1.0.12"
 dependencies = [
  "anyhow",
  "assert_matches",
@@ -8466,7 +8334,7 @@ dependencies = [
 
 [[package]]
 name = "katana-cairo"
-version = "1.0.9"
+version = "1.0.12"
 dependencies = [
  "cairo-lang-casm",
  "cairo-lang-runner",
@@ -8481,7 +8349,7 @@ dependencies = [
 
 [[package]]
 name = "katana-cli"
-version = "1.0.9"
+version = "1.0.12"
 dependencies = [
  "alloy-primitives",
  "anyhow",
@@ -8509,7 +8377,7 @@ dependencies = [
 
 [[package]]
 name = "katana-codecs"
-version = "1.0.9"
+version = "1.0.12"
 dependencies = [
  "bytes",
  "katana-primitives",
@@ -8517,7 +8385,7 @@ dependencies = [
 
 [[package]]
 name = "katana-codecs-derive"
-version = "1.0.9"
+version = "1.0.12"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -8527,7 +8395,7 @@ dependencies = [
 
 [[package]]
 name = "katana-core"
-version = "1.0.9"
+version = "1.0.12"
 dependencies = [
  "alloy-contract 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "alloy-network 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -8558,6 +8426,7 @@ dependencies = [
  "serde",
  "serde_json",
  "starknet 0.12.0",
+ "starknet-crypto 0.7.2",
  "starknet-types-core",
  "tempfile",
  "thiserror 1.0.63",
@@ -8568,7 +8437,7 @@ dependencies = [
 
 [[package]]
 name = "katana-db"
-version = "1.0.9"
+version = "1.0.12"
 dependencies = [
  "anyhow",
  "arbitrary",
@@ -8595,7 +8464,7 @@ dependencies = [
 
 [[package]]
 name = "katana-executor"
-version = "1.0.9"
+version = "1.0.12"
 dependencies = [
  "alloy-primitives",
  "anyhow",
@@ -8623,7 +8492,7 @@ dependencies = [
 
 [[package]]
 name = "katana-feeder-gateway"
-version = "1.0.9"
+version = "1.0.12"
 dependencies = [
  "katana-primitives",
  "katana-rpc-types",
@@ -8638,7 +8507,7 @@ dependencies = [
 
 [[package]]
 name = "katana-grpc"
-version = "1.0.9"
+version = "1.0.12"
 dependencies = [
  "tonic 0.11.0",
  "tonic-build 0.11.0",
@@ -8647,7 +8516,7 @@ dependencies = [
 
 [[package]]
 name = "katana-node"
-version = "1.0.9"
+version = "1.0.12"
 dependencies = [
  "anyhow",
  "clap",
@@ -8688,7 +8557,7 @@ dependencies = [
 
 [[package]]
 name = "katana-node-bindings"
-version = "1.0.9"
+version = "1.0.12"
 dependencies = [
  "regex",
  "serde",
@@ -8703,7 +8572,7 @@ dependencies = [
 
 [[package]]
 name = "katana-pipeline"
-version = "1.0.9"
+version = "1.0.12"
 dependencies = [
  "async-trait",
  "futures",
@@ -8717,7 +8586,7 @@ dependencies = [
 
 [[package]]
 name = "katana-pool"
-version = "1.0.9"
+version = "1.0.12"
 dependencies = [
  "futures",
  "futures-util",
@@ -8733,7 +8602,7 @@ dependencies = [
 
 [[package]]
 name = "katana-primitives"
-version = "1.0.9"
+version = "1.0.12"
 dependencies = [
  "alloy-primitives",
  "anyhow",
@@ -8764,7 +8633,7 @@ dependencies = [
 
 [[package]]
 name = "katana-provider"
-version = "1.0.9"
+version = "1.0.12"
 dependencies = [
  "alloy-primitives",
  "anyhow",
@@ -8792,7 +8661,7 @@ dependencies = [
 
 [[package]]
 name = "katana-rpc"
-version = "1.0.9"
+version = "1.0.12"
 dependencies = [
  "alloy",
  "alloy-primitives",
@@ -8837,7 +8706,7 @@ dependencies = [
 
 [[package]]
 name = "katana-rpc-api"
-version = "1.0.9"
+version = "1.0.12"
 dependencies = [
  "jsonrpsee 0.16.3",
  "katana-core",
@@ -8848,7 +8717,7 @@ dependencies = [
 
 [[package]]
 name = "katana-rpc-types"
-version = "1.0.9"
+version = "1.0.12"
 dependencies = [
  "alloy-primitives",
  "anyhow",
@@ -8876,7 +8745,7 @@ dependencies = [
 
 [[package]]
 name = "katana-rpc-types-builder"
-version = "1.0.9"
+version = "1.0.12"
 dependencies = [
  "anyhow",
  "katana-executor",
@@ -8888,7 +8757,7 @@ dependencies = [
 
 [[package]]
 name = "katana-runner"
-version = "1.0.9"
+version = "1.0.12"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -8901,7 +8770,7 @@ dependencies = [
 
 [[package]]
 name = "katana-runner-macro"
-version = "1.0.9"
+version = "1.0.12"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -8910,7 +8779,7 @@ dependencies = [
 
 [[package]]
 name = "katana-slot-controller"
-version = "1.0.9"
+version = "1.0.12"
 dependencies = [
  "alloy-primitives",
  "anyhow",
@@ -8928,7 +8797,7 @@ dependencies = [
 
 [[package]]
 name = "katana-stage"
-version = "1.0.9"
+version = "1.0.12"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -8951,7 +8820,7 @@ dependencies = [
 
 [[package]]
 name = "katana-tasks"
-version = "1.0.9"
+version = "1.0.12"
 dependencies = [
  "futures",
  "rayon",
@@ -8964,7 +8833,7 @@ dependencies = [
 
 [[package]]
 name = "katana-trie"
-version = "1.0.9"
+version = "1.0.12"
 dependencies = [
  "anyhow",
  "bitvec",
@@ -11609,8 +11478,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "22505a5c94da8e3b7c2996394d1c933236c4d743e81a410bcca4e6989fc066a4"
 dependencies = [
  "bytes",
- "heck 0.5.0",
- "itertools 0.12.1",
+ "heck 0.4.1",
+ "itertools 0.11.0",
  "log",
  "multimap",
  "once_cell",
@@ -11630,7 +11499,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0c1318b19085f08681016926435853bbf7858f9c082d0999b80550ff5d9abe15"
 dependencies = [
  "bytes",
- "heck 0.5.0",
+ "heck 0.4.1",
  "itertools 0.13.0",
  "log",
  "multimap",
@@ -11651,7 +11520,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "81bddcdb20abf9501610992b6759a4c888aef7d1a7247ef75e2404275ac24af1"
 dependencies = [
  "anyhow",
- "itertools 0.12.1",
+ "itertools 0.11.0",
  "proc-macro2",
  "quote",
  "syn 2.0.90",
@@ -12969,7 +12838,7 @@ dependencies = [
 
 [[package]]
 name = "saya"
-version = "1.0.9"
+version = "1.0.12"
 dependencies = [
  "anyhow",
  "clap",
@@ -12987,7 +12856,7 @@ dependencies = [
 
 [[package]]
 name = "saya-core"
-version = "1.0.9"
+version = "1.0.12"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -13020,7 +12889,7 @@ dependencies = [
 
 [[package]]
 name = "saya-provider"
-version = "1.0.9"
+version = "1.0.12"
 dependencies = [
  "alloy-primitives",
  "anyhow",
@@ -13052,7 +12921,7 @@ dependencies = [
 [[package]]
 name = "scarb"
 version = "2.8.4"
-source = "git+https://github.com/dojoengine/scarb?rev=7eac49b3e61236ce466e712225d9c989f9db1ef3#7eac49b3e61236ce466e712225d9c989f9db1ef3"
+source = "git+https://github.com/dojoengine/scarb?rev=e2c01f5351c5c9097f61b2201163611f84f62156#e2c01f5351c5c9097f61b2201163611f84f62156"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -13082,7 +12951,7 @@ dependencies = [
  "derive_builder",
  "dialoguer",
  "directories",
- "dojo-lang 1.0.0-rc.2",
+ "dojo-lang 1.0.11",
  "dunce",
  "fs4",
  "fs_extra",
@@ -13092,7 +12961,7 @@ dependencies = [
  "glob",
  "ignore",
  "include_dir",
- "indoc 2.0.5",
+ "indoc",
  "itertools 0.12.1",
  "libloading",
  "once_cell",
@@ -13102,8 +12971,8 @@ dependencies = [
  "redb",
  "reqwest 0.11.27",
  "scarb-build-metadata",
- "scarb-metadata 1.12.0 (git+https://github.com/dojoengine/scarb?rev=7eac49b3e61236ce466e712225d9c989f9db1ef3)",
- "scarb-stable-hash 1.0.0 (git+https://github.com/dojoengine/scarb?rev=7eac49b3e61236ce466e712225d9c989f9db1ef3)",
+ "scarb-metadata 1.12.0 (git+https://github.com/dojoengine/scarb?rev=e2c01f5351c5c9097f61b2201163611f84f62156)",
+ "scarb-stable-hash 1.0.0 (git+https://github.com/dojoengine/scarb?rev=e2c01f5351c5c9097f61b2201163611f84f62156)",
  "scarb-ui",
  "semver 1.0.23",
  "serde",
@@ -13133,7 +13002,7 @@ dependencies = [
 [[package]]
 name = "scarb-build-metadata"
 version = "2.8.4"
-source = "git+https://github.com/dojoengine/scarb?rev=7eac49b3e61236ce466e712225d9c989f9db1ef3#7eac49b3e61236ce466e712225d9c989f9db1ef3"
+source = "git+https://github.com/dojoengine/scarb?rev=e2c01f5351c5c9097f61b2201163611f84f62156#e2c01f5351c5c9097f61b2201163611f84f62156"
 dependencies = [
  "cargo_metadata",
 ]
@@ -13154,7 +13023,7 @@ dependencies = [
 [[package]]
 name = "scarb-metadata"
 version = "1.12.0"
-source = "git+https://github.com/dojoengine/scarb?rev=7eac49b3e61236ce466e712225d9c989f9db1ef3#7eac49b3e61236ce466e712225d9c989f9db1ef3"
+source = "git+https://github.com/dojoengine/scarb?rev=e2c01f5351c5c9097f61b2201163611f84f62156#e2c01f5351c5c9097f61b2201163611f84f62156"
 dependencies = [
  "camino",
  "derive_builder",
@@ -13177,7 +13046,7 @@ dependencies = [
 [[package]]
 name = "scarb-stable-hash"
 version = "1.0.0"
-source = "git+https://github.com/dojoengine/scarb?rev=7eac49b3e61236ce466e712225d9c989f9db1ef3#7eac49b3e61236ce466e712225d9c989f9db1ef3"
+source = "git+https://github.com/dojoengine/scarb?rev=e2c01f5351c5c9097f61b2201163611f84f62156#e2c01f5351c5c9097f61b2201163611f84f62156"
 dependencies = [
  "data-encoding",
  "xxhash-rust",
@@ -13186,14 +13055,14 @@ dependencies = [
 [[package]]
 name = "scarb-ui"
 version = "0.1.5"
-source = "git+https://github.com/dojoengine/scarb?rev=7eac49b3e61236ce466e712225d9c989f9db1ef3#7eac49b3e61236ce466e712225d9c989f9db1ef3"
+source = "git+https://github.com/dojoengine/scarb?rev=e2c01f5351c5c9097f61b2201163611f84f62156#e2c01f5351c5c9097f61b2201163611f84f62156"
 dependencies = [
  "anyhow",
  "camino",
  "clap",
  "console",
  "indicatif",
- "scarb-metadata 1.12.0 (git+https://github.com/dojoengine/scarb?rev=7eac49b3e61236ce466e712225d9c989f9db1ef3)",
+ "scarb-metadata 1.12.0 (git+https://github.com/dojoengine/scarb?rev=e2c01f5351c5c9097f61b2201163611f84f62156)",
  "serde",
  "serde_json",
  "tracing-core",
@@ -13210,7 +13079,7 @@ dependencies = [
 
 [[package]]
 name = "scheduler"
-version = "1.0.9"
+version = "1.0.12"
 dependencies = [
  "anyhow",
  "clap",
@@ -13959,7 +13828,7 @@ dependencies = [
 
 [[package]]
 name = "sozo"
-version = "1.0.9"
+version = "1.0.12"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -13976,9 +13845,9 @@ dependencies = [
  "clap-verbosity-flag",
  "colored",
  "dojo-bindgen",
- "dojo-lang 1.0.9",
+ "dojo-lang 1.0.12",
  "dojo-test-utils",
- "dojo-types 1.0.9",
+ "dojo-types 1.0.12",
  "dojo-utils",
  "dojo-world",
  "itertools 0.12.1",
@@ -14010,7 +13879,7 @@ dependencies = [
 
 [[package]]
 name = "sozo-ops"
-version = "1.0.9"
+version = "1.0.12"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -14019,7 +13888,7 @@ dependencies = [
  "colored",
  "colored_json",
  "dojo-test-utils",
- "dojo-types 1.0.9",
+ "dojo-types 1.0.12",
  "dojo-utils",
  "dojo-world",
  "futures",
@@ -14042,7 +13911,7 @@ dependencies = [
 
 [[package]]
 name = "sozo-scarbext"
-version = "1.0.9"
+version = "1.0.12"
 dependencies = [
  "anyhow",
  "camino",
@@ -14055,7 +13924,7 @@ dependencies = [
 
 [[package]]
 name = "sozo-signers"
-version = "1.0.9"
+version = "1.0.12"
 dependencies = [
  "anyhow",
  "starknet 0.12.0",
@@ -14063,17 +13932,17 @@ dependencies = [
 
 [[package]]
 name = "sozo-walnut"
-version = "1.0.9"
+version = "1.0.12"
 dependencies = [
  "anyhow",
+ "clap",
  "console",
- "dojo-world",
+ "dojo-utils",
  "reqwest 0.11.27",
  "scarb",
  "scarb-ui",
  "serde",
  "serde_json",
- "sozo-scarbext",
  "starknet 0.12.0",
  "thiserror 1.0.63",
  "url",
@@ -15135,16 +15004,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "terminal_size"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "21bebf2b7c9e0a515f6e0f8c51dc0f8e4696391e6f1ff30379559f8365fb0df7"
-dependencies = [
- "rustix 0.38.37",
- "windows-sys 0.48.0",
-]
-
-[[package]]
 name = "termtree"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -15648,57 +15507,18 @@ dependencies = [
 
 [[package]]
 name = "torii"
-version = "1.0.9"
+version = "1.0.12"
 dependencies = [
  "anyhow",
- "assert_matches",
- "async-trait",
- "base64 0.21.7",
- "camino",
- "chrono",
  "clap",
- "clap_complete",
- "clap_config",
- "ctrlc",
- "dojo-metrics",
- "dojo-types 1.0.9",
- "dojo-utils",
- "dojo-world",
- "either",
- "futures",
- "http 0.2.12",
- "http-body 0.4.6",
- "hyper 0.14.30",
- "hyper-reverse-proxy",
- "indexmap 2.5.0",
- "lazy_static",
- "serde",
- "serde_json",
- "sqlx",
- "starknet 0.12.0",
- "starknet-crypto 0.7.2",
- "tempfile",
  "tokio",
- "tokio-stream",
- "tokio-util",
- "toml 0.8.19",
  "torii-cli",
- "torii-core",
- "torii-graphql",
- "torii-grpc",
- "torii-relay",
- "torii-server",
- "tower 0.4.13",
- "tower-http 0.4.4",
- "tracing",
- "tracing-subscriber",
- "url",
- "webbrowser",
+ "torii-runner",
 ]
 
 [[package]]
 name = "torii-cli"
-version = "1.0.9"
+version = "1.0.12"
 dependencies = [
  "anyhow",
  "assert_matches",
@@ -15708,18 +15528,18 @@ dependencies = [
  "serde",
  "starknet 0.12.0",
  "toml 0.8.19",
- "torii-core",
+ "torii-sqlite",
  "url",
 ]
 
 [[package]]
 name = "torii-client"
-version = "1.0.9"
+version = "1.0.12"
 dependencies = [
  "async-trait",
  "camino",
  "crypto-bigint",
- "dojo-types 1.0.9",
+ "dojo-types 1.0.12",
  "dojo-world",
  "futures",
  "futures-util",
@@ -15741,46 +15561,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "torii-core"
-version = "1.0.9"
-dependencies = [
- "anyhow",
- "async-trait",
- "base64 0.21.7",
- "bitflags 2.6.0",
- "cainome 0.4.11",
- "chrono",
- "crypto-bigint",
- "data-url",
- "dojo-test-utils",
- "dojo-types 1.0.9",
- "dojo-utils",
- "dojo-world",
- "futures-channel",
- "futures-util",
- "hashlink",
- "ipfs-api-backend-hyper",
- "katana-runner",
- "once_cell",
- "reqwest 0.11.27",
- "scarb",
- "serde",
- "serde_json",
- "slab",
- "sozo-scarbext",
- "sqlx",
- "starknet 0.12.0",
- "starknet-crypto 0.7.2",
- "tempfile",
- "thiserror 1.0.63",
- "tokio",
- "tokio-util",
- "tracing",
-]
-
-[[package]]
 name = "torii-graphql"
-version = "1.0.9"
+version = "1.0.12"
 dependencies = [
  "anyhow",
  "async-graphql",
@@ -15791,7 +15573,7 @@ dependencies = [
  "chrono",
  "convert_case 0.6.0",
  "dojo-test-utils",
- "dojo-types 1.0.9",
+ "dojo-types 1.0.12",
  "dojo-utils",
  "dojo-world",
  "katana-runner",
@@ -15812,7 +15594,8 @@ dependencies = [
  "tokio",
  "tokio-stream",
  "toml 0.8.19",
- "torii-core",
+ "torii-indexer",
+ "torii-sqlite",
  "tracing",
  "url",
  "warp",
@@ -15820,13 +15603,13 @@ dependencies = [
 
 [[package]]
 name = "torii-grpc"
-version = "1.0.9"
+version = "1.0.12"
 dependencies = [
  "cainome 0.4.11",
  "camino",
  "crypto-bigint",
  "dojo-test-utils",
- "dojo-types 1.0.9",
+ "dojo-types 1.0.12",
  "dojo-utils",
  "dojo-world",
  "futures",
@@ -15859,21 +15642,60 @@ dependencies = [
  "tonic-reflection",
  "tonic-web",
  "tonic-web-wasm-client",
- "torii-core",
+ "torii-indexer",
+ "torii-sqlite",
  "tower 0.4.13",
  "tower-http 0.4.4",
  "tracing",
 ]
 
 [[package]]
-name = "torii-relay"
-version = "1.0.9"
+name = "torii-indexer"
+version = "1.0.12"
 dependencies = [
  "anyhow",
+ "async-trait",
+ "base64 0.21.7",
+ "bitflags 2.6.0",
  "cainome 0.4.11",
  "chrono",
  "crypto-bigint",
- "dojo-types 1.0.9",
+ "data-url",
+ "dojo-test-utils",
+ "dojo-types 1.0.12",
+ "dojo-utils",
+ "dojo-world",
+ "futures-channel",
+ "futures-util",
+ "hashlink",
+ "ipfs-api-backend-hyper",
+ "katana-runner",
+ "num-traits 0.2.19",
+ "once_cell",
+ "reqwest 0.11.27",
+ "scarb",
+ "serde",
+ "serde_json",
+ "slab",
+ "sozo-scarbext",
+ "sqlx",
+ "starknet 0.12.0",
+ "starknet-crypto 0.7.2",
+ "tempfile",
+ "thiserror 1.0.63",
+ "tokio",
+ "tokio-util",
+ "torii-sqlite",
+ "tracing",
+]
+
+[[package]]
+name = "torii-relay"
+version = "1.0.12"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "dojo-types 1.0.12",
  "dojo-world",
  "futures",
  "indexmap 2.5.0",
@@ -15891,7 +15713,8 @@ dependencies = [
  "tempfile",
  "thiserror 1.0.63",
  "tokio",
- "torii-core",
+ "torii-sqlite",
+ "torii-typed-data",
  "tracing",
  "tracing-subscriber",
  "tracing-wasm",
@@ -15901,8 +15724,56 @@ dependencies = [
 ]
 
 [[package]]
+name = "torii-runner"
+version = "1.0.12"
+dependencies = [
+ "anyhow",
+ "assert_matches",
+ "async-trait",
+ "base64 0.21.7",
+ "camino",
+ "chrono",
+ "ctrlc",
+ "dojo-metrics",
+ "dojo-types 1.0.12",
+ "dojo-utils",
+ "dojo-world",
+ "either",
+ "futures",
+ "http 0.2.12",
+ "http-body 0.4.6",
+ "hyper 0.14.30",
+ "hyper-reverse-proxy",
+ "indexmap 2.5.0",
+ "lazy_static",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "starknet 0.12.0",
+ "starknet-crypto 0.7.2",
+ "tempfile",
+ "tokio",
+ "tokio-stream",
+ "tokio-util",
+ "toml 0.8.19",
+ "torii-cli",
+ "torii-graphql",
+ "torii-grpc",
+ "torii-indexer",
+ "torii-relay",
+ "torii-server",
+ "torii-sqlite",
+ "tower 0.4.13",
+ "tower-http 0.4.4",
+ "tracing",
+ "tracing-subscriber",
+ "url",
+ "webbrowser",
+]
+
+[[package]]
 name = "torii-server"
-version = "1.0.9"
+version = "1.0.12"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -15927,11 +15798,65 @@ dependencies = [
  "tokio",
  "tokio-tungstenite 0.20.1",
  "tokio-util",
- "torii-core",
+ "torii-sqlite",
  "tower 0.4.13",
  "tower-http 0.4.4",
  "tracing",
  "warp",
+]
+
+[[package]]
+name = "torii-sqlite"
+version = "1.0.12"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "base64 0.21.7",
+ "bitflags 2.6.0",
+ "cainome 0.4.11",
+ "chrono",
+ "crypto-bigint",
+ "data-url",
+ "dojo-test-utils",
+ "dojo-types 1.0.12",
+ "dojo-utils",
+ "dojo-world",
+ "futures-channel",
+ "futures-util",
+ "hashlink",
+ "ipfs-api-backend-hyper",
+ "katana-runner",
+ "once_cell",
+ "reqwest 0.11.27",
+ "scarb",
+ "serde",
+ "serde_json",
+ "slab",
+ "sozo-scarbext",
+ "sqlx",
+ "starknet 0.12.0",
+ "starknet-crypto 0.7.2",
+ "tempfile",
+ "thiserror 1.0.63",
+ "tokio",
+ "tokio-util",
+ "torii-indexer",
+ "tracing",
+]
+
+[[package]]
+name = "torii-typed-data"
+version = "1.0.12"
+dependencies = [
+ "cainome 0.4.11",
+ "crypto-bigint",
+ "dojo-types 1.0.12",
+ "indexmap 2.5.0",
+ "serde",
+ "serde_json",
+ "starknet 0.12.0",
+ "starknet-crypto 0.7.2",
+ "thiserror 1.0.63",
 ]
 
 [[package]]
@@ -16305,7 +16230,7 @@ checksum = "42ff0bf0c66b8238c6f3b578df37d0b7848e55df8577b3f74f92a69acceeb825"
 
 [[package]]
 name = "types-test"
-version = "1.0.9"
+version = "1.0.12"
 
 [[package]]
 name = "u256-literal"
@@ -16607,7 +16532,7 @@ dependencies = [
 
 [[package]]
 name = "verify_db_balances"
-version = "1.0.9"
+version = "1.0.12"
 dependencies = [
  "clap",
  "num-traits 0.2.19",
@@ -17683,7 +17608,7 @@ checksum = "9d422e8e38ec76e2f06ee439ccc765e9c6a9638b9e7c9f2e8255e4d41e8bd852"
 
 [[package]]
 name = "xtask-generate-test-db"
-version = "1.0.9"
+version = "1.0.12"
 dependencies = [
  "anyhow",
  "dojo-test-utils",

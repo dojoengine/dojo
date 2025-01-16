@@ -42,7 +42,7 @@ pub enum TransactionWaitingError {
 /// # Examples
 ///
 /// ```ignore
-/// ues url::Url;
+/// use url::Url;
 /// use starknet::providers::jsonrpc::HttpTransport;
 /// use starknet::providers::JsonRpcClient;
 /// use starknet::core::types::TransactionFinalityStatus;
