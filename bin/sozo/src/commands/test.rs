@@ -79,8 +79,21 @@ impl TestArgs {
             std::process::exit(1);
         });
 
-        // If we don't specify the scarb path, it will use the one in the env variable $SCARB.
-        let metadata = MetadataCommand::new().manifest_path(config.manifest_path()).exec()?;
+        // The scarb path is expected to be set in the env variable $SCARB.
+        // However, in some installation, we may not have the correct version, which will
+        // ends up in an error like "Scarb metadata not found".
+        let scarb_cairo_version = scarb::version::get().cairo.version.to_string();
+        let scarb_env_value = std::env::var("SCARB").unwrap_or_default();
+        let metadata = MetadataCommand::new()
+            .manifest_path(config.manifest_path())
+            .exec()
+            .with_context(|| {
+                format!(
+                    "Failed to get scarb metadata. Ensure `$SCARB` is set to the correct path \
+                     with the same version of Cairo ({scarb_cairo_version}). Current value: \
+                     {scarb_env_value}."
+                )
+            })?;
 
         let packages = self.packages.match_many(&ws)?;
         for p in &packages {
