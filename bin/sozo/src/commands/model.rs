@@ -137,6 +137,9 @@ fn model_key_parser(s: &str) -> Result<Felt> {
         anyhow::bail!("Only 'sstr:' prefix is supported for model keys");
     }
     let felts = calldata_decoder::decode_calldata(s)?;
+    if felts.is_empty() {
+        anyhow::bail!("Failed to parse key '{}': no values returned.", s);
+    }
     Ok(felts[0])
 }
 
@@ -255,7 +258,7 @@ mod tests {
     fn test_model_get_argument_parsing() {
         // Test parsing with hex
         let args = TestCommand::parse_from([
-            "model", // Placeholder for the binary name
+            "model",
             "get",
             "Account",
             "0x054cb935d86d80b5a0a6e756edf448ab33876d01dd2b07a2a4e63a41e06d0ef5,0x6d69737479",
