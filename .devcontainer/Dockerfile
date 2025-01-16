@@ -26,7 +26,7 @@ ENV LLVM_SYS_170_PREFIX=/usr/lib/llvm-17
 ENV TABLEGEN_170_PREFIX=/usr/lib/llvm-17
 
 # To allow independent workflow of the container, the rust-toolchain is explicitely given.
-RUN echo "1.80.0" > rust_toolchain_version
+RUN echo "1.81.0" > rust_toolchain_version
 # Make sure to sync the nightly version with the scripts in ./scripts
 RUN echo "nightly-2024-08-28" > nightly_rust_toolchain_version
 
