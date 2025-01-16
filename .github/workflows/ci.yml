@@ -8,7 +8,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  RUST_VERSION: 1.80.0
+  RUST_VERSION: 1.81.0
 
 jobs:
   build:
@@ -32,7 +32,7 @@ jobs:
     needs: ensure-docker
     runs-on: ubuntu-latest-32-cores
     container:
-      image: ghcr.io/dojoengine/dojo-dev:v1.0.12
+      image: ghcr.io/dojoengine/dojo-dev:051e2e8
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -58,7 +58,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [fmt, cairofmt]
     container:
-      image: ghcr.io/dojoengine/dojo-dev:v1.0.12
+      image: ghcr.io/dojoengine/dojo-dev:051e2e8
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -125,7 +125,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:v1.0.12
+      image: ghcr.io/dojoengine/dojo-dev:051e2e8
     steps:
       - uses: software-mansion/setup-scarb@v1
         with:
@@ -144,7 +144,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:v1.0.12
+      image: ghcr.io/dojoengine/dojo-dev:051e2e8
     steps:
       - uses: software-mansion/setup-scarb@v1
         with:
@@ -163,7 +163,7 @@ jobs:
     runs-on: ubuntu-latest-4-cores
     needs: [fmt, cairofmt]
     container:
-      image: ghcr.io/dojoengine/dojo-dev:v1.0.12
+      image: ghcr.io/dojoengine/dojo-dev:051e2e8
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -172,7 +172,7 @@ jobs:
   fmt:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:v1.0.12
+      image: ghcr.io/dojoengine/dojo-dev:051e2e8
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -182,7 +182,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [fmt, cairofmt]
     container:
-      image: ghcr.io/dojoengine/dojo-dev:v1.0.12
+      image: ghcr.io/dojoengine/dojo-dev:051e2e8
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
