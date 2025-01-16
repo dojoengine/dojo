@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1736999996961,
+  "lastUpdate": 1737000086919,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -45499,6 +45499,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10423328772,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "remy.baranx@gmail.com",
+            "name": "Rémy Baranx",
+            "username": "remybar"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4fb18a6464568350e17a78d2fe22d144b5b73564",
+          "message": "feat(sozo): support multicall for execute command (#2897)\n\n* sozo: support multicall for execute command\r\n\r\n* use space instead of comma as separator\r\n\r\n* improve entrypoint error message\r\n\r\n* fix: reword error message for entrypoint\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2025-01-16T03:43:01Z",
+          "tree_id": "774381af8352b6cea95284395681fc19e2ed833d",
+          "url": "https://github.com/dojoengine/dojo/commit/4fb18a6464568350e17a78d2fe22d144b5b73564"
+        },
+        "date": 1737000084376,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2476364,
+            "range": "± 38060",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8631022,
+            "range": "± 682381",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2541962803,
+            "range": "± 213096495",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8110489,
+            "range": "± 198530",
             "unit": "ns/iter"
           }
         ]
