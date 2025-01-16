@@ -5,8 +5,8 @@ use serde::Deserialize;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{FromRow, Pool, Row, Sqlite, SqliteConnection};
 use starknet_crypto::Felt;
-use torii_core::constants::TOKEN_BALANCE_TABLE;
-use torii_core::sql::utils::felt_to_sql_string;
+use torii_sqlite::constants::TOKEN_BALANCE_TABLE;
+use torii_sqlite::utils::felt_to_sql_string;
 use tracing::warn;
 
 use super::erc_token::{Erc20Token, ErcTokenType};

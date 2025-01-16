@@ -37,7 +37,7 @@ cargo run --bin saya -- \
     export DOJO_ACCOUNT_ADDRESS="<YOUR_ACCOUNT_ADDRESS>"
     export DOJO_PRIVATE_KEY="<YOUR_PRIVATE_KEY>"
     ```
-    * Setup variables in or use enviroment variables ```bin/saya/scripts/0_account_setup.sh```, and run script   
+    * Setup variables in or use environment variables ```bin/saya/scripts/0_account_setup.sh```, and run script   
     * `sncast` doesn't support environment variables, for now, so you may have to set the options manually.  
 
     **During this tutorial, we will export environment variables, so you must remain in the same shell session**.
@@ -166,7 +166,7 @@ cargo run --bin saya -- \
     If not (this includes Apple Silicon), some emulation will take place to run the prover on your machine, and this is very very slow.
 
     It's important that the `--start-block` of Saya is the first block produced by Katana as for now Katana is not fetching events from the forked network. To get this value, you can add one to the `SAYA_FORK_BLOCK_NUMBER` value.
-    **Currently saya supports only persistant mode, ephermal will be implemented in future
+    **Currently saya supports only persistent mode, ephermal will be implemented in future
 
     ```bash
     cargo run -r --bin saya -- \

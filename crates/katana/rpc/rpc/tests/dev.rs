@@ -99,6 +99,16 @@ async fn test_increase_next_block_timestamp() {
     );
 }
 
+#[tokio::test]
+async fn test_dev_api_enabled() {
+    let sequencer = create_test_sequencer().await;
+
+    let client = HttpClientBuilder::default().build(sequencer.url()).unwrap();
+
+    let accounts = client.predeployed_accounts().await.unwrap();
+    assert!(!accounts.is_empty(), "predeployed accounts should not be empty");
+}
+
 // #[tokio::test]
 // async fn test_set_storage_at_on_instant_mode() {
 //     let sequencer = create_test_sequencer().await;

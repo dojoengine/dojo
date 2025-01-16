@@ -1,10 +1,14 @@
 #![warn(unused_crate_dependencies)]
 
-pub mod client;
 mod constants;
-pub mod errors;
-#[cfg(not(target_arch = "wasm32"))]
+pub mod error;
+
+#[cfg(feature = "client")]
+pub mod client;
+#[cfg(feature = "server")]
 pub mod server;
-mod tests;
-pub mod typed_data;
+
+#[cfg(test)]
+mod test;
+
 pub mod types;

@@ -77,6 +77,7 @@ pub struct GetStorageProofResponse {
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]
+#[serde(transparent)]
 pub struct ClassesProof {
     pub nodes: Nodes,
 }
@@ -101,9 +102,11 @@ pub struct ContractLeafData {
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]
+#[serde(transparent)]
 pub struct ContractStorageProofs {
     pub nodes: Vec<Nodes>,
 }
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct NodeWithHash {
     pub node_hash: Felt,
