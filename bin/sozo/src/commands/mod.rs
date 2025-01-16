@@ -50,7 +50,7 @@ pub enum Commands {
     #[command(about = "Run a migration, declaring and deploying contracts as necessary to update \
                        the world")]
     Migrate(Box<MigrateArgs>),
-    #[command(about = "Execute a system with the given calldata.")]
+    #[command(about = "Execute one or several systems with the given calldata.")]
     Execute(Box<ExecuteArgs>),
     #[command(about = "Inspect the world")]
     Inspect(Box<InspectArgs>),
