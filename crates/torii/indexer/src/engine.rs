@@ -809,7 +809,8 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
             .find(|p| p.validate(event))
             .expect("Must find atleast one processor for the event");
 
-        let (task_priority, task_identifier) = (processor.task_priority(), processor.task_identifier(event));
+        let (task_priority, task_identifier) =
+            (processor.task_priority(), processor.task_identifier(event));
 
         // if our event can be parallelized, we add it to the task manager
         if task_identifier != 0 {

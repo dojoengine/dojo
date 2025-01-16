@@ -9,9 +9,8 @@ use starknet::providers::Provider;
 use torii_sqlite::Sql;
 use tracing::debug;
 
-use crate::task_manager::TaskId;
-
 use super::{EventProcessor, EventProcessorConfig};
+use crate::task_manager::TaskId;
 
 pub(crate) const LOG_TARGET: &str = "torii_indexer::processors::erc20_legacy_transfer";
 
@@ -52,7 +51,7 @@ where
         // regardless of direction (A->B or B->A)
         let canonical_pair = std::cmp::max(event.data[0], event.data[1]);
         canonical_pair.hash(&mut hasher);
-        
+
         hasher.finish()
     }
 

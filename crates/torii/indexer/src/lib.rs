@@ -4,8 +4,8 @@ mod constants;
 #[path = "test.rs"]
 mod test;
 
-mod task_manager;
 pub mod engine;
 pub mod processors;
+mod task_manager;
 
 pub use engine::Engine;

@@ -124,7 +124,10 @@ pub struct LocalCache {
 
 impl Clone for LocalCache {
     fn clone(&self) -> Self {
-        Self { erc_cache: RwLock::new(HashMap::new()), token_id_registry: RwLock::new(HashSet::new()) }
+        Self {
+            erc_cache: RwLock::new(HashMap::new()),
+            token_id_registry: RwLock::new(HashSet::new()),
+        }
     }
 }
 
@@ -139,7 +142,10 @@ impl LocalCache {
 
         let token_id_registry = token_id_registry.into_iter().map(|token_id| token_id.0).collect();
 
-        Self { erc_cache: RwLock::new(HashMap::new()), token_id_registry: RwLock::new(token_id_registry) }
+        Self {
+            erc_cache: RwLock::new(HashMap::new()),
+            token_id_registry: RwLock::new(token_id_registry),
+        }
     }
 
     pub async fn contains_token_id(&self, token_id: &str) -> bool {

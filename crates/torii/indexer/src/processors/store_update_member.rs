@@ -1,4 +1,5 @@
 use std::hash::{DefaultHasher, Hash, Hasher};
+
 use anyhow::{Context, Error, Result};
 use async_trait::async_trait;
 use dojo_types::schema::{Struct, Ty};

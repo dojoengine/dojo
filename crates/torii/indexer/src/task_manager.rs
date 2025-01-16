@@ -1,16 +1,18 @@
-use std::{
-    collections::{BTreeMap, HashMap},
-    sync::Arc,
-};
+use std::collections::{BTreeMap, HashMap};
+use std::sync::Arc;
+
 use anyhow::Result;
 use dojo_world::contracts::WorldContractReader;
 use futures_util::future::try_join_all;
-use starknet::{core::types::Event, providers::Provider};
+use starknet::core::types::Event;
+use starknet::providers::Provider;
 use tokio::sync::Semaphore;
-use torii_sqlite::{types::ContractType, Sql};
+use torii_sqlite::types::ContractType;
+use torii_sqlite::Sql;
 use tracing::{debug, error};
 
-use crate::{engine::Processors, processors::EventProcessorConfig};
+use crate::engine::Processors;
+use crate::processors::EventProcessorConfig;
 
 const LOG_TARGET: &str = "torii::indexer::task_manager";
 
@@ -67,9 +69,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> TaskManager<P> {
             .push(parallelized_event);
     }
 
-    pub async fn process_tasks(
-        &mut self
-    ) -> Result<()> {
+    pub async fn process_tasks(&mut self) -> Result<()> {
         let semaphore = Arc::new(Semaphore::new(self.max_concurrent_tasks));
 
         // Process each priority level sequentially
@@ -89,7 +89,14 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> TaskManager<P> {
                     let mut local_db = db.clone();
 
                     // Process all events for this task sequentially
-                    for ParallelizedEvent { contract_type, event, block_number, block_timestamp, event_id } in events {
+                    for ParallelizedEvent {
+                        contract_type,
+                        event,
+                        block_number,
+                        block_timestamp,
+                        event_id,
+                    } in events
+                    {
                         let contract_processors = processors.get_event_processor(contract_type);
                         if let Some(processors) = contract_processors.get(&event.keys[0]) {
                             let processor = processors

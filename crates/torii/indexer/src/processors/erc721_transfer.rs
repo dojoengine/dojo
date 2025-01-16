@@ -1,4 +1,5 @@
 use std::hash::{DefaultHasher, Hash, Hasher};
+
 use anyhow::Error;
 use async_trait::async_trait;
 use cainome::cairo_serde::{CairoSerde, U256 as U256Cainome};
@@ -8,9 +9,8 @@ use starknet::providers::Provider;
 use torii_sqlite::Sql;
 use tracing::debug;
 
-use crate::task_manager::TaskId;
-
 use super::{EventProcessor, EventProcessorConfig};
+use crate::task_manager::TaskId;
 
 pub(crate) const LOG_TARGET: &str = "torii_indexer::processors::erc721_transfer";
 
@@ -49,7 +49,7 @@ where
         // Take the max of from/to addresses to get a canonical representation
         // This ensures transfers between the same pair of addresses are grouped together
         // regardless of direction (A->B or B->A)
-        let canonical_pair = std::cmp::max(event.keys[1], event.keys[2]); 
+        let canonical_pair = std::cmp::max(event.keys[1], event.keys[2]);
         canonical_pair.hash(&mut hasher);
 
         // For ERC721, we can safely parallelize by token ID since each token is unique
@@ -59,7 +59,7 @@ where
         // 3. The canonical address pair ensures related transfers stay together
         event.keys[3].hash(&mut hasher);
         event.keys[4].hash(&mut hasher);
-        
+
         hasher.finish()
     }
 

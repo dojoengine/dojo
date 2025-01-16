@@ -9,9 +9,8 @@ use starknet::providers::Provider;
 use torii_sqlite::Sql;
 use tracing::{debug, info};
 
-use crate::task_manager::TaskId;
-
 use super::{EventProcessor, EventProcessorConfig};
+use crate::task_manager::TaskId;
 
 pub(crate) const LOG_TARGET: &str = "torii_indexer::processors::store_del_record";
 
