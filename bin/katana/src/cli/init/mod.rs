@@ -25,27 +25,6 @@ use tokio::runtime::Runtime;
 
 const CARTRIDGE_SN_SEPOLIA_PROVIDER: &str = "https://api.cartridge.gg/x/starknet/sepolia";
 
-#[derive(Debug)]
-struct InitInput {
-    /// the account address that is used to send the transactions for contract
-    /// deployment/initialization.
-    account: ContractAddress,
-
-    // the id of the new chain to be initialized.
-    id: String,
-
-    // the chain id of the settlement layer.
-    settlement_id: String,
-
-    // the rpc url for the settlement layer.
-    rpc_url: Url,
-
-    settlement_contract: ContractAddress,
-
-    // path at which the config file will be written at.
-    output_path: PathBuf,
-}
-
 #[derive(Debug, Args)]
 pub struct InitArgs {
     /// The path to where the config file will be written at.
@@ -76,7 +55,7 @@ impl InitArgs {
         chain_spec.store(input.output_path)
     }
 
-    fn prompt(&self, rt: &Runtime) -> Result<InitInput> {
+    fn prompt(&self, rt: &Runtime) -> Result<PromptOutcome> {
         let chain_id = CustomType::<String>::new("Id")
         .with_help_message("This will be the id of your rollup chain.")
         // checks that the input is a valid ascii string.
@@ -185,7 +164,7 @@ impl InitArgs {
                 .0
         };
 
-        Ok(InitInput {
+        Ok(PromptOutcome {
             account: account_address,
             settlement_contract,
             settlement_id: parse_cairo_short_string(&l1_chain_id)?,
@@ -194,6 +173,27 @@ impl InitArgs {
             output_path,
         })
     }
+}
+
+#[derive(Debug)]
+struct PromptOutcome {
+    /// the account address that is used to send the transactions for contract
+    /// deployment/initialization.
+    account: ContractAddress,
+
+    // the id of the new chain to be initialized.
+    id: String,
+
+    // the chain id of the settlement layer.
+    settlement_id: String,
+
+    // the rpc url for the settlement layer.
+    rpc_url: Url,
+
+    settlement_contract: ContractAddress,
+
+    // path at which the config file will be written at.
+    output_path: PathBuf,
 }
 
 // > CONFIG_DIR/$chain_id/config.json
