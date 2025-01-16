@@ -118,13 +118,13 @@ impl ModelCache {
 
 #[derive(Debug)]
 pub struct LocalCache {
-    pub erc_cache: HashMap<(ContractType, String), I256>,
-    pub token_id_registry: HashSet<String>,
+    pub erc_cache: RwLock<HashMap<(ContractType, String), I256>>,
+    pub token_id_registry: RwLock<HashSet<String>>,
 }
 
 impl Clone for LocalCache {
     fn clone(&self) -> Self {
-        Self { erc_cache: HashMap::new(), token_id_registry: self.token_id_registry.clone() }
+        Self { erc_cache: RwLock::new(HashMap::new()), token_id_registry: RwLock::new(HashSet::new()) }
     }
 }
 
@@ -139,14 +139,14 @@ impl LocalCache {
 
         let token_id_registry = token_id_registry.into_iter().map(|token_id| token_id.0).collect();
 
-        Self { erc_cache: HashMap::new(), token_id_registry }
+        Self { erc_cache: RwLock::new(HashMap::new()), token_id_registry: RwLock::new(token_id_registry) }
     }
 
-    pub fn contains_token_id(&self, token_id: &str) -> bool {
-        self.token_id_registry.contains(token_id)
+    pub async fn contains_token_id(&self, token_id: &str) -> bool {
+        self.token_id_registry.read().await.contains(token_id)
     }
 
-    pub fn register_token_id(&mut self, token_id: String) {
-        self.token_id_registry.insert(token_id);
+    pub async fn register_token_id(&self, token_id: String) {
+        self.token_id_registry.write().await.insert(token_id);
     }
 }
