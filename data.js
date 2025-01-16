@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1736996653285,
+  "lastUpdate": 1736996751316,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -45421,6 +45421,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10722939902,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "158306087+bengineer42@users.noreply.github.com",
+            "name": "Benjamin",
+            "username": "bengineer42"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e57d8203caaa90552e6f503a7087142ec928146d",
+          "message": "fix(dojo-lang): remove restriction for u256 as keys in models (#2890)\n\n* Added dojo support for u256 as keys in models\r\n\r\n* fix: lint and update versions for test crates\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2025-01-15T20:47:37-06:00",
+          "tree_id": "cf7972e71fa4dec281c1cccbfe1330427bb17bb1",
+          "url": "https://github.com/dojoengine/dojo/commit/e57d8203caaa90552e6f503a7087142ec928146d"
+        },
+        "date": 1736996749216,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2492993,
+            "range": "± 12302",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8383515,
+            "range": "± 111323",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2602566276,
+            "range": "± 223717685",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8063027,
+            "range": "± 81852",
             "unit": "ns/iter"
           }
         ]
