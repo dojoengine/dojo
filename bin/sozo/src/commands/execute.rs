@@ -131,8 +131,8 @@ impl ExecuteArgs {
 
                 let entrypoint = arg_iter.next().ok_or_else(|| {
                     anyhow!(
-                        "You must specify the entry point of {tag_or_address} to call, and \
-                         optionally the calldata."
+                        "You must specify the entry point of the contract `{tag_or_address}` to \
+                         invoke, and optionally the calldata."
                     )
                 })?;
 
