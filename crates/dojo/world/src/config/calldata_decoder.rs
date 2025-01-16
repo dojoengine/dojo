@@ -161,7 +161,14 @@ fn decode_inner(item: &str) -> DecoderResult<Vec<Felt>> {
         match prefix {
             "u256" => U256CalldataDecoder.decode(value)?,
             "str" => StrCalldataDecoder.decode(value)?,
-            "sstr" => ShortStrCalldataDecoder.decode(value)?,
+            "sstr" => {
+                let value = if value.starts_with('"') && value.ends_with('"') {
+                    value.trim_matches('"')
+                } else {
+                    value
+                };
+                ShortStrCalldataDecoder.decode(value)?
+            },
             "int" => SignedIntegerCalldataDecoder.decode(value)?,
             _ => DefaultCalldataDecoder.decode(item)?,
         }
