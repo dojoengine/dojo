@@ -42,6 +42,7 @@ pub fn parse_members(
     diagnostics: &mut Vec<PluginDiagnostic>,
 ) -> Vec<Member> {
     let mut parsing_keys = true;
+
     members
         .iter()
         .filter_map(|member_ast| {
@@ -66,23 +67,13 @@ pub fn parse_members(
                     stable_ptr: member_ast.name(db).stable_ptr().untyped(),
                     severity: Severity::Error,
                 });
-                return None;
+                // Don't return here, since we don't want to stop processing the members after the first error to avoid
+                // diagnostics just because the field is missing.
             }
+
             parsing_keys &= is_key;
 
-            // validate key member
-            if member.key && member.ty == "u256" {
-                diagnostics.push(PluginDiagnostic {
-                    message: "Key is only supported for core types that are 1 felt long once \
-                              serialized. `u256` is a struct of 2 u128, hence not supported."
-                        .into(),
-                    stable_ptr: member_ast.name(db).stable_ptr().untyped(),
-                    severity: Severity::Error,
-                });
-                None
-            } else {
-                Some(member)
-            }
+            Some(member)
         })
         .collect::<Vec<_>>()
 }
