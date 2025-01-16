@@ -45,7 +45,7 @@ pub fn parse_members(
 
     members
         .iter()
-        .filter_map(|member_ast| {
+        .map(|member_ast| {
             let is_key = member_ast.has_attr(db, "key");
 
             let member = Member {
@@ -67,13 +67,14 @@ pub fn parse_members(
                     stable_ptr: member_ast.name(db).stable_ptr().untyped(),
                     severity: Severity::Error,
                 });
-                // Don't return here, since we don't want to stop processing the members after the first error to avoid
-                // diagnostics just because the field is missing.
+                // Don't return here, since we don't want to stop processing the members after the
+                // first error to avoid diagnostics just because the field is
+                // missing.
             }
 
             parsing_keys &= is_key;
 
-            Some(member)
+            member
         })
         .collect::<Vec<_>>()
 }
