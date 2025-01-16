@@ -170,10 +170,15 @@ pub fn to_executor_tx(tx: ExecutableTxWithHash, mut flags: ExecutionFlags) -> Tr
 
     let hash = tx.hash;
 
-    // Disable fee charge if max fee is 0. This is to support genesis transactions where the fee
-    // token is not yet deployed.
-    let charge_fee = enforce_fee(&tx);
-    flags = flags.with_fee(charge_fee);
+    // We only do this if we're running in fee enabled mode. If fee is already disabled, then
+    // there's no need to do anything.
+    if flags.fee() {
+        // Disable fee charge if max fee is 0.
+        //
+        // This is to support genesis transactions where the fee token is not yet deployed.
+        let skip_fee = skip_fee_if_max_fee_is_zero(&tx);
+        flags = flags.with_fee(!skip_fee);
+    }
 
     match tx.transaction {
         ExecutableTx::Invoke(tx) => match tx {
@@ -735,43 +740,48 @@ impl From<ExecutionFlags> for BlockifierExecutionFlags {
     }
 }
 
-/// Check if the tx max fee is 0, this is tu support the old behaviour of blockifier where tx with 0
-/// max fee can still be executed.
+/// Check if the tx max fee is 0, if yes, this function returns `true` - signalling that the
+/// transaction should be executed without fee checks.
 ///
-/// This flow is not integrated in the transaction execution flow anymore in the new blockifer rev.
-/// So, we handle it here manually to mimic that behaviour. Reference: https://github.com/dojoengine/sequencer/blob/07f473f9385f1bce4cbd7d0d64b5396f6784bbf1/crates/blockifier/src/transaction/objects.rs#L103-L113
+/// This is to support the old behaviour of blockifier where tx with 0 max fee can still be
+/// executed. This flow is not integrated in the transaction execution flow anymore in the new
+/// blockifer rev. So, we handle it here manually to mimic that behaviour.
+/// Reference: https://github.com/dojoengine/sequencer/blob/07f473f9385f1bce4cbd7d0d64b5396f6784bbf1/crates/blockifier/src/transaction/objects.rs#L103-L113
 ///
 /// Transaction with 0 max fee is mainly used for genesis block.
-fn enforce_fee(tx: &ExecutableTxWithHash) -> bool {
+fn skip_fee_if_max_fee_is_zero(tx: &ExecutableTxWithHash) -> bool {
     match &tx.transaction {
         ExecutableTx::Invoke(tx_inner) => match tx_inner {
-            InvokeTx::V0(tx) => tx.max_fee != 0,
-            InvokeTx::V1(tx) => tx.max_fee != 0,
+            InvokeTx::V0(tx) => tx.max_fee == 0,
+            InvokeTx::V1(tx) => tx.max_fee == 0,
             InvokeTx::V3(tx) => {
                 let l1_bounds = &tx.resource_bounds.l1_gas;
                 let max_amount: u128 = l1_bounds.max_amount.into();
-                (max_amount * l1_bounds.max_price_per_unit) > 0
+                (max_amount * l1_bounds.max_price_per_unit) == 0
             }
         },
+
         ExecutableTx::DeployAccount(tx_inner) => match tx_inner {
-            DeployAccountTx::V1(tx) => tx.max_fee != 0,
+            DeployAccountTx::V1(tx) => tx.max_fee == 0,
             DeployAccountTx::V3(tx) => {
                 let l1_bounds = &tx.resource_bounds.l1_gas;
                 let max_amount: u128 = l1_bounds.max_amount.into();
-                (max_amount * l1_bounds.max_price_per_unit) > 0
+                (max_amount * l1_bounds.max_price_per_unit) == 0
             }
         },
+
         ExecutableTx::Declare(tx_inner) => match &tx_inner.transaction {
-            DeclareTx::V0(tx) => tx.max_fee != 0,
-            DeclareTx::V1(tx) => tx.max_fee != 0,
-            DeclareTx::V2(tx) => tx.max_fee != 0,
+            DeclareTx::V0(tx) => tx.max_fee == 0,
+            DeclareTx::V1(tx) => tx.max_fee == 0,
+            DeclareTx::V2(tx) => tx.max_fee == 0,
             DeclareTx::V3(tx) => {
                 let l1_bounds = &tx.resource_bounds.l1_gas;
                 let max_amount: u128 = l1_bounds.max_amount.into();
-                (max_amount * l1_bounds.max_price_per_unit) > 0
+                (max_amount * l1_bounds.max_price_per_unit) == 0
             }
         },
-        ExecutableTx::L1Handler(..) => false,
+
+        ExecutableTx::L1Handler(..) => true,
     }
 }
 
