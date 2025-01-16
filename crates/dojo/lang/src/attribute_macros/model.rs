@@ -72,7 +72,7 @@ impl DojoModel {
         let mut model_member_store_impls_processed: HashSet<String> = HashSet::new();
         let mut model_member_store_impls: Vec<String> = vec![];
 
-        let members = parse_members(db, &struct_ast.members(db).elements(db));
+        let members = parse_members(db, &struct_ast.members(db).elements(db), &mut diagnostics);
 
         members.iter().for_each(|member| {
             if member.key {

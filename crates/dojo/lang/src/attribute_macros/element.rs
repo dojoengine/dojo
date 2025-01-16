@@ -1,8 +1,10 @@
 use cairo_lang_defs::patcher::RewriteNode;
+use cairo_lang_defs::plugin::PluginDiagnostic;
+use cairo_lang_diagnostics::Severity;
 use cairo_lang_syntax::node::ast::Member as MemberAst;
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
-use cairo_lang_syntax::node::{Terminal, TypedSyntaxNode};
+use cairo_lang_syntax::node::{Terminal, TypedStablePtr, TypedSyntaxNode};
 use dojo_types::naming::compute_bytearray_hash;
 use starknet_crypto::{poseidon_hash_many, Felt};
 
@@ -34,13 +36,45 @@ pub fn compute_unique_hash(
     poseidon_hash_many(&hashes)
 }
 
-pub fn parse_members(db: &dyn SyntaxGroup, members: &[MemberAst]) -> Vec<Member> {
+pub fn parse_members(
+    db: &dyn SyntaxGroup,
+    members: &[MemberAst],
+    diagnostics: &mut Vec<PluginDiagnostic>,
+) -> Vec<Member> {
+    let mut parsing_keys = true;
+
     members
         .iter()
-        .map(|member_ast| Member {
-            name: member_ast.name(db).text(db).to_string(),
-            ty: member_ast.type_clause(db).ty(db).as_syntax_node().get_text(db).trim().to_string(),
-            key: member_ast.has_attr(db, "key"),
+        .map(|member_ast| {
+            let is_key = member_ast.has_attr(db, "key");
+
+            let member = Member {
+                name: member_ast.name(db).text(db).to_string(),
+                ty: member_ast
+                    .type_clause(db)
+                    .ty(db)
+                    .as_syntax_node()
+                    .get_text(db)
+                    .trim()
+                    .to_string(),
+                key: is_key,
+            };
+
+            // Make sure all keys are before values in the model.
+            if is_key && !parsing_keys {
+                diagnostics.push(PluginDiagnostic {
+                    message: "Key members must be defined before non-key members.".into(),
+                    stable_ptr: member_ast.name(db).stable_ptr().untyped(),
+                    severity: Severity::Error,
+                });
+                // Don't return here, since we don't want to stop processing the members after the
+                // first error to avoid diagnostics just because the field is
+                // missing.
+            }
+
+            parsing_keys &= is_key;
+
+            member
         })
         .collect::<Vec<_>>()
 }

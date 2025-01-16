@@ -2471,39 +2471,13 @@ dependencies = [
 
 [[package]]
 name = "cainome"
-version = "0.4.6"
-source = "git+https://github.com/cartridge-gg/cainome?rev=5c2616c273faca7700d2ba565503fcefb5b9d720#5c2616c273faca7700d2ba565503fcefb5b9d720"
-dependencies = [
- "anyhow",
- "async-trait",
- "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome?rev=5c2616c273faca7700d2ba565503fcefb5b9d720)",
- "cainome-cairo-serde-derive 0.1.0 (git+https://github.com/cartridge-gg/cainome?rev=5c2616c273faca7700d2ba565503fcefb5b9d720)",
- "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome?rev=5c2616c273faca7700d2ba565503fcefb5b9d720)",
- "cainome-rs 0.1.0 (git+https://github.com/cartridge-gg/cainome?rev=5c2616c273faca7700d2ba565503fcefb5b9d720)",
- "cainome-rs-macro 0.1.0 (git+https://github.com/cartridge-gg/cainome?rev=5c2616c273faca7700d2ba565503fcefb5b9d720)",
- "camino",
- "clap",
- "clap_complete",
- "convert_case 0.6.0",
- "serde",
- "serde_json",
- "starknet 0.12.0",
- "starknet-types-core",
- "thiserror 1.0.63",
- "tracing",
- "tracing-subscriber",
- "url",
-]
-
-[[package]]
-name = "cainome"
 version = "0.4.11"
 source = "git+https://github.com/cartridge-gg/cainome?tag=v0.4.11#355b88b7b808656d729e9dfd16f81d80c5c30fbf"
 dependencies = [
  "anyhow",
  "async-trait",
  "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.4.11)",
- "cainome-cairo-serde-derive 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.4.11)",
+ "cainome-cairo-serde-derive",
  "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.4.11)",
  "cainome-rs 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.4.11)",
  "cainome-rs-macro 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.4.11)",
@@ -2544,30 +2518,9 @@ dependencies = [
 ]
 
 [[package]]
-name = "cainome-cairo-serde"
-version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/cainome?rev=5c2616c273faca7700d2ba565503fcefb5b9d720#5c2616c273faca7700d2ba565503fcefb5b9d720"
-dependencies = [
- "serde",
- "starknet 0.12.0",
- "thiserror 1.0.63",
-]
-
-[[package]]
 name = "cainome-cairo-serde-derive"
 version = "0.1.0"
 source = "git+https://github.com/cartridge-gg/cainome?tag=v0.4.11#355b88b7b808656d729e9dfd16f81d80c5c30fbf"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.90",
- "unzip-n",
-]
-
-[[package]]
-name = "cainome-cairo-serde-derive"
-version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/cainome?rev=5c2616c273faca7700d2ba565503fcefb5b9d720#5c2616c273faca7700d2ba565503fcefb5b9d720"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2592,19 +2545,6 @@ dependencies = [
 name = "cainome-parser"
 version = "0.1.0"
 source = "git+https://github.com/cartridge-gg/cainome?tag=v0.4.2#4e3924fb82b7299d56d3619aa5d7b9863f581e0a"
-dependencies = [
- "convert_case 0.6.0",
- "quote",
- "serde_json",
- "starknet 0.12.0",
- "syn 2.0.90",
- "thiserror 1.0.63",
-]
-
-[[package]]
-name = "cainome-parser"
-version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/cainome?rev=5c2616c273faca7700d2ba565503fcefb5b9d720#5c2616c273faca7700d2ba565503fcefb5b9d720"
 dependencies = [
  "convert_case 0.6.0",
  "quote",
@@ -2640,24 +2580,6 @@ dependencies = [
  "anyhow",
  "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.4.2)",
  "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.4.2)",
- "camino",
- "prettyplease",
- "proc-macro2",
- "quote",
- "serde_json",
- "starknet 0.12.0",
- "syn 2.0.90",
- "thiserror 1.0.63",
-]
-
-[[package]]
-name = "cainome-rs"
-version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/cainome?rev=5c2616c273faca7700d2ba565503fcefb5b9d720#5c2616c273faca7700d2ba565503fcefb5b9d720"
-dependencies = [
- "anyhow",
- "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome?rev=5c2616c273faca7700d2ba565503fcefb5b9d720)",
- "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome?rev=5c2616c273faca7700d2ba565503fcefb5b9d720)",
  "camino",
  "prettyplease",
  "proc-macro2",
@@ -2705,31 +2627,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "cainome-rs-macro"
-version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/cainome?rev=5c2616c273faca7700d2ba565503fcefb5b9d720#5c2616c273faca7700d2ba565503fcefb5b9d720"
-dependencies = [
- "anyhow",
- "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome?rev=5c2616c273faca7700d2ba565503fcefb5b9d720)",
- "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome?rev=5c2616c273faca7700d2ba565503fcefb5b9d720)",
- "cainome-rs 0.1.0 (git+https://github.com/cartridge-gg/cainome?rev=5c2616c273faca7700d2ba565503fcefb5b9d720)",
- "proc-macro-error",
- "proc-macro2",
- "quote",
- "serde_json",
- "starknet 0.12.0",
- "syn 2.0.90",
- "thiserror 1.0.63",
-]
-
-[[package]]
 name = "cairo-lang-casm"
 version = "2.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fd4d6659539ace9649c8e8a7434e51b0c50a7a700111d0a2b967dde220ddff49"
 dependencies = [
  "cairo-lang-utils",
- "indoc 2.0.5",
+ "indoc",
  "num-bigint",
  "num-traits 0.2.19",
  "parity-scale-codec",
@@ -2754,7 +2658,7 @@ dependencies = [
  "cairo-lang-sierra-generator",
  "cairo-lang-syntax",
  "cairo-lang-utils",
- "indoc 2.0.5",
+ "indoc",
  "rayon",
  "rust-analyzer-salsa",
  "semver 1.0.23",
@@ -2883,7 +2787,7 @@ dependencies = [
  "cairo-lang-test-plugin",
  "cairo-lang-utils",
  "indent",
- "indoc 2.0.5",
+ "indoc",
  "itertools 0.12.1",
  "rust-analyzer-salsa",
  "scarb-metadata 1.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2925,7 +2829,7 @@ dependencies = [
 [[package]]
 name = "cairo-lang-macro"
 version = "0.1.0"
-source = "git+https://github.com/dojoengine/scarb?rev=7eac49b3e61236ce466e712225d9c989f9db1ef3#7eac49b3e61236ce466e712225d9c989f9db1ef3"
+source = "git+https://github.com/dojoengine/scarb?rev=c811c5bcb073afa21cb9b1307adafe733c203eb9#c811c5bcb073afa21cb9b1307adafe733c203eb9"
 dependencies = [
  "cairo-lang-macro-attributes",
  "cairo-lang-macro-stable",
@@ -2982,7 +2886,7 @@ dependencies = [
  "cairo-lang-syntax",
  "cairo-lang-utils",
  "indent",
- "indoc 2.0.5",
+ "indoc",
  "itertools 0.12.1",
  "rust-analyzer-salsa",
  "smol_str",
@@ -3061,7 +2965,7 @@ dependencies = [
  "cairo-lang-test-utils",
  "cairo-lang-utils",
  "id-arena",
- "indoc 2.0.5",
+ "indoc",
  "itertools 0.12.1",
  "num-bigint",
  "num-traits 0.2.19",
@@ -3166,7 +3070,7 @@ dependencies = [
  "cairo-lang-sierra-gas",
  "cairo-lang-sierra-type-size",
  "cairo-lang-utils",
- "indoc 2.0.5",
+ "indoc",
  "itertools 0.12.1",
  "num-bigint",
  "num-traits 0.2.19",
@@ -3205,7 +3109,7 @@ dependencies = [
  "cairo-lang-utils",
  "const_format",
  "indent",
- "indoc 2.0.5",
+ "indoc",
  "itertools 0.12.1",
  "serde",
  "serde_json",
@@ -3282,7 +3186,7 @@ dependencies = [
  "cairo-lang-starknet-classes",
  "cairo-lang-syntax",
  "cairo-lang-utils",
- "indoc 2.0.5",
+ "indoc",
  "itertools 0.12.1",
  "num-bigint",
  "num-traits 0.2.19",
@@ -4188,7 +4092,7 @@ dependencies = [
 [[package]]
 name = "create-output-dir"
 version = "1.0.0"
-source = "git+https://github.com/dojoengine/scarb?rev=7eac49b3e61236ce466e712225d9c989f9db1ef3#7eac49b3e61236ce466e712225d9c989f9db1ef3"
+source = "git+https://github.com/dojoengine/scarb?rev=c811c5bcb073afa21cb9b1307adafe733c203eb9#c811c5bcb073afa21cb9b1307adafe733c203eb9"
 dependencies = [
  "anyhow",
  "core-foundation 0.10.0",
@@ -4869,44 +4773,6 @@ version = "1.0.11"
 
 [[package]]
 name = "dojo-lang"
-version = "1.0.0-rc.2"
-source = "git+https://github.com/dojoengine/dojo?rev=6725a8f20af56213fa7382aa1e158817f3ee623c#6725a8f20af56213fa7382aa1e158817f3ee623c"
-dependencies = [
- "anyhow",
- "cairo-lang-compiler",
- "cairo-lang-defs",
- "cairo-lang-diagnostics",
- "cairo-lang-filesystem",
- "cairo-lang-plugins",
- "cairo-lang-project",
- "cairo-lang-semantic",
- "cairo-lang-sierra-generator",
- "cairo-lang-starknet",
- "cairo-lang-starknet-classes",
- "cairo-lang-syntax",
- "cairo-lang-test-plugin",
- "cairo-lang-utils",
- "camino",
- "convert_case 0.6.0",
- "dojo-types 1.0.0-rc.2",
- "indoc 1.0.9",
- "itertools 0.12.1",
- "regex",
- "semver 1.0.23",
- "serde",
- "serde_json",
- "serde_with 3.11.0",
- "smol_str",
- "starknet 0.12.0",
- "starknet-crypto 0.7.2",
- "tempfile",
- "toml 0.8.19",
- "tracing",
- "url",
-]
-
-[[package]]
-name = "dojo-lang"
 version = "1.0.11"
 dependencies = [
  "anyhow",
@@ -4918,6 +4784,28 @@ dependencies = [
  "cairo-lang-syntax",
  "cairo-lang-utils",
  "dojo-types 1.0.11",
+ "itertools 0.12.1",
+ "serde",
+ "smol_str",
+ "starknet 0.12.0",
+ "starknet-crypto 0.7.2",
+ "tracing",
+]
+
+[[package]]
+name = "dojo-lang"
+version = "1.0.11"
+source = "git+https://github.com/dojoengine/dojo?rev=e524f28dbb7242d4409a894991dccc00a2a3274f#e524f28dbb7242d4409a894991dccc00a2a3274f"
+dependencies = [
+ "anyhow",
+ "cairo-lang-defs",
+ "cairo-lang-diagnostics",
+ "cairo-lang-filesystem",
+ "cairo-lang-plugins",
+ "cairo-lang-semantic",
+ "cairo-lang-syntax",
+ "cairo-lang-utils",
+ "dojo-types 1.0.11 (git+https://github.com/dojoengine/dojo?rev=e524f28dbb7242d4409a894991dccc00a2a3274f)",
  "itertools 0.12.1",
  "serde",
  "smol_str",
@@ -4976,13 +4864,13 @@ dependencies = [
 
 [[package]]
 name = "dojo-types"
-version = "1.0.0-rc.2"
-source = "git+https://github.com/dojoengine/dojo?rev=6725a8f20af56213fa7382aa1e158817f3ee623c#6725a8f20af56213fa7382aa1e158817f3ee623c"
+version = "1.0.11"
 dependencies = [
  "anyhow",
- "cainome 0.4.6",
+ "cainome 0.4.11",
  "crypto-bigint",
  "hex",
+ "indexmap 2.5.0",
  "itertools 0.12.1",
  "num-traits 0.2.19",
  "regex",
@@ -4998,6 +4886,7 @@ dependencies = [
 [[package]]
 name = "dojo-types"
 version = "1.0.11"
+source = "git+https://github.com/dojoengine/dojo?rev=e524f28dbb7242d4409a894991dccc00a2a3274f#e524f28dbb7242d4409a894991dccc00a2a3274f"
 dependencies = [
  "anyhow",
  "cainome 0.4.11",
@@ -7740,12 +7629,6 @@ dependencies = [
  "portable-atomic",
  "unicode-width",
 ]
-
-[[package]]
-name = "indoc"
-version = "1.0.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bfa799dd5ed20a7e349f3b4639aa80d74549c81716d9ec4f994c9b5815598306"
 
 [[package]]
 name = "indoc"
@@ -13038,7 +12921,7 @@ dependencies = [
 [[package]]
 name = "scarb"
 version = "2.8.4"
-source = "git+https://github.com/dojoengine/scarb?rev=7eac49b3e61236ce466e712225d9c989f9db1ef3#7eac49b3e61236ce466e712225d9c989f9db1ef3"
+source = "git+https://github.com/dojoengine/scarb?rev=c811c5bcb073afa21cb9b1307adafe733c203eb9#c811c5bcb073afa21cb9b1307adafe733c203eb9"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -13068,7 +12951,7 @@ dependencies = [
  "derive_builder",
  "dialoguer",
  "directories",
- "dojo-lang 1.0.0-rc.2",
+ "dojo-lang 1.0.11 (git+https://github.com/dojoengine/dojo?rev=e524f28dbb7242d4409a894991dccc00a2a3274f)",
  "dunce",
  "fs4",
  "fs_extra",
@@ -13078,7 +12961,7 @@ dependencies = [
  "glob",
  "ignore",
  "include_dir",
- "indoc 2.0.5",
+ "indoc",
  "itertools 0.12.1",
  "libloading",
  "once_cell",
@@ -13088,8 +12971,8 @@ dependencies = [
  "redb",
  "reqwest 0.11.27",
  "scarb-build-metadata",
- "scarb-metadata 1.12.0 (git+https://github.com/dojoengine/scarb?rev=7eac49b3e61236ce466e712225d9c989f9db1ef3)",
- "scarb-stable-hash 1.0.0 (git+https://github.com/dojoengine/scarb?rev=7eac49b3e61236ce466e712225d9c989f9db1ef3)",
+ "scarb-metadata 1.12.0 (git+https://github.com/dojoengine/scarb?rev=c811c5bcb073afa21cb9b1307adafe733c203eb9)",
+ "scarb-stable-hash 1.0.0 (git+https://github.com/dojoengine/scarb?rev=c811c5bcb073afa21cb9b1307adafe733c203eb9)",
  "scarb-ui",
  "semver 1.0.23",
  "serde",
@@ -13119,7 +13002,7 @@ dependencies = [
 [[package]]
 name = "scarb-build-metadata"
 version = "2.8.4"
-source = "git+https://github.com/dojoengine/scarb?rev=7eac49b3e61236ce466e712225d9c989f9db1ef3#7eac49b3e61236ce466e712225d9c989f9db1ef3"
+source = "git+https://github.com/dojoengine/scarb?rev=c811c5bcb073afa21cb9b1307adafe733c203eb9#c811c5bcb073afa21cb9b1307adafe733c203eb9"
 dependencies = [
  "cargo_metadata",
 ]
@@ -13140,7 +13023,7 @@ dependencies = [
 [[package]]
 name = "scarb-metadata"
 version = "1.12.0"
-source = "git+https://github.com/dojoengine/scarb?rev=7eac49b3e61236ce466e712225d9c989f9db1ef3#7eac49b3e61236ce466e712225d9c989f9db1ef3"
+source = "git+https://github.com/dojoengine/scarb?rev=c811c5bcb073afa21cb9b1307adafe733c203eb9#c811c5bcb073afa21cb9b1307adafe733c203eb9"
 dependencies = [
  "camino",
  "derive_builder",
@@ -13163,7 +13046,7 @@ dependencies = [
 [[package]]
 name = "scarb-stable-hash"
 version = "1.0.0"
-source = "git+https://github.com/dojoengine/scarb?rev=7eac49b3e61236ce466e712225d9c989f9db1ef3#7eac49b3e61236ce466e712225d9c989f9db1ef3"
+source = "git+https://github.com/dojoengine/scarb?rev=c811c5bcb073afa21cb9b1307adafe733c203eb9#c811c5bcb073afa21cb9b1307adafe733c203eb9"
 dependencies = [
  "data-encoding",
  "xxhash-rust",
@@ -13172,14 +13055,14 @@ dependencies = [
 [[package]]
 name = "scarb-ui"
 version = "0.1.5"
-source = "git+https://github.com/dojoengine/scarb?rev=7eac49b3e61236ce466e712225d9c989f9db1ef3#7eac49b3e61236ce466e712225d9c989f9db1ef3"
+source = "git+https://github.com/dojoengine/scarb?rev=c811c5bcb073afa21cb9b1307adafe733c203eb9#c811c5bcb073afa21cb9b1307adafe733c203eb9"
 dependencies = [
  "anyhow",
  "camino",
  "clap",
  "console",
  "indicatif",
- "scarb-metadata 1.12.0 (git+https://github.com/dojoengine/scarb?rev=7eac49b3e61236ce466e712225d9c989f9db1ef3)",
+ "scarb-metadata 1.12.0 (git+https://github.com/dojoengine/scarb?rev=c811c5bcb073afa21cb9b1307adafe733c203eb9)",
  "serde",
  "serde_json",
  "tracing-core",
