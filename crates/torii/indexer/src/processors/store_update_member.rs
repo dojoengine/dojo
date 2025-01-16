@@ -7,7 +7,7 @@ use starknet::core::types::Event;
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
 use torii_sqlite::Sql;
-use tracing::info;
+use tracing::{debug, info};
 
 use super::{EventProcessor, EventProcessorConfig};
 
@@ -37,7 +37,7 @@ where
         block_timestamp: u64,
         event_id: &str,
         event: &Event,
-        _config: &EventProcessorConfig,
+        config: &EventProcessorConfig,
     ) -> Result<(), Error> {
         // Torii version is coupled to the world version, so we can expect the event to be well
         // formed.
@@ -61,11 +61,20 @@ where
         // This can happen if only specific namespaces are indexed.
         let model = match db.model(model_selector).await {
             Ok(m) => m,
+            Err(e) if e.to_string().contains("no rows") && !config.namespaces.is_empty() => {
+                debug!(
+                    target: LOG_TARGET,
+                    selector = %model_selector,
+                    "Model does not exist, skipping."
+                );
+                return Ok(());
+            }
             Err(e) => {
-                if e.to_string().contains("no rows") {
-                    return Ok(());
-                }
-                return Err(e);
+                return Err(anyhow::anyhow!(
+                    "Failed to retrieve model with selector {:#x}: {}",
+                    event.selector,
+                    e
+                ));
             }
         };
 

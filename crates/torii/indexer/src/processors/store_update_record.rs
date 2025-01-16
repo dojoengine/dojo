@@ -36,7 +36,7 @@ where
         block_timestamp: u64,
         event_id: &str,
         event: &Event,
-        _config: &EventProcessorConfig,
+        config: &EventProcessorConfig,
     ) -> Result<(), Error> {
         // Torii version is coupled to the world version, so we can expect the event to be well
         // formed.
@@ -59,7 +59,7 @@ where
         // This can happen if only specific namespaces are indexed.
         let model = match db.model(event.selector).await {
             Ok(m) => m,
-            Err(e) if e.to_string().contains("no rows") => {
+            Err(e) if e.to_string().contains("no rows") && !config.namespaces.is_empty() => {
                 debug!(
                     target: LOG_TARGET,
                     selector = %event.selector,
@@ -67,7 +67,13 @@ where
                 );
                 return Ok(());
             }
-            Err(e) => return Err(e),
+            Err(e) => {
+                return Err(anyhow::anyhow!(
+                    "Failed to retrieve model with selector {:#x}: {}",
+                    event.selector,
+                    e
+                ));
+            }
         };
 
         info!(

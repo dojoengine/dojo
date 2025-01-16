@@ -140,7 +140,7 @@ pub fn decode_calldata(input: &str) -> DecoderResult<Vec<Felt>> {
     let mut calldata = vec![];
 
     for item in items {
-        calldata.extend(decode_inner(item)?);
+        calldata.extend(decode_single_calldata(item)?);
     }
 
     Ok(calldata)
@@ -154,7 +154,7 @@ pub fn decode_calldata(input: &str) -> DecoderResult<Vec<Felt>> {
 ///
 /// # Returns
 /// A vector of [`Felt`]s.
-fn decode_inner(item: &str) -> DecoderResult<Vec<Felt>> {
+pub fn decode_single_calldata(item: &str) -> DecoderResult<Vec<Felt>> {
     let item = item.trim();
 
     let felts = if let Some((prefix, value)) = item.split_once(ITEM_PREFIX_DELIMITER) {

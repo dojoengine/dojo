@@ -60,7 +60,7 @@ edition = "2021"
 license = "Apache-2.0"
 license-file = "LICENSE"
 repository = "https://github.com/dojoengine/dojo/"
-version = "1.0.11"
+version = "1.0.12"
 
 [profile.performance]
 codegen-units = 1
@@ -119,13 +119,13 @@ katana-trie = { path = "crates/katana/trie" }
 # torii
 torii-cli = { path = "crates/torii/cli" }
 torii-client = { path = "crates/torii/client" }
-torii-indexer = { path = "crates/torii/indexer" }
-torii-sqlite = { path = "crates/torii/sqlite" }
 torii-graphql = { path = "crates/torii/graphql" }
 torii-grpc = { path = "crates/torii/grpc" }
+torii-indexer = { path = "crates/torii/indexer" }
 torii-relay = { path = "crates/torii/libp2p" }
-torii-server = { path = "crates/torii/server" }
 torii-runner = { path = "crates/torii/runner" }
+torii-server = { path = "crates/torii/server" }
+torii-sqlite = { path = "crates/torii/sqlite" }
 torii-typed-data = { path = "crates/torii/typed-data" }
 
 # saya
@@ -212,10 +212,8 @@ rpassword = "7.2.0"
 rstest = "0.18.2"
 rstest_reuse = "0.6.0"
 salsa = "0.16.1"
-scarb = { path = "/Users/glihm/swm/scarb/scarb" }
-scarb-ui = { path = "/Users/glihm/swm/scarb/utils/scarb-ui" }
-#scarb = { git = "https://github.com/dojoengine/scarb", rev = "7eac49b3e61236ce466e712225d9c989f9db1ef3" }
-#scarb-ui = { git = "https://github.com/dojoengine/scarb", rev = "7eac49b3e61236ce466e712225d9c989f9db1ef3" }
+scarb = { git = "https://github.com/dojoengine/scarb", rev = "e2c01f5351c5c9097f61b2201163611f84f62156" }
+scarb-ui = { git = "https://github.com/dojoengine/scarb", rev = "e2c01f5351c5c9097f61b2201163611f84f62156" }
 semver = "1.0.5"
 serde = { version = "1.0", features = [ "derive" ] }
 serde_json = { version = "1.0", features = [ "arbitrary_precision" ] }

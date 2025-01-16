@@ -7,7 +7,7 @@ use anyhow::Result;
 use dojo_world::contracts::naming;
 use starknet::core::types::Felt;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ResourceDescriptor {
     Address(Felt),
     Name(String),
