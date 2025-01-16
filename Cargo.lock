@@ -4838,7 +4838,7 @@ checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
 
 [[package]]
 name = "dojo-bindgen"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "anyhow",
  "assert_matches",
@@ -4861,11 +4861,11 @@ dependencies = [
 
 [[package]]
 name = "dojo-contracts"
-version = "1.0.10"
+version = "1.0.11"
 
 [[package]]
 name = "dojo-examples-spawn-and-move"
-version = "1.0.10"
+version = "1.0.11"
 
 [[package]]
 name = "dojo-lang"
@@ -4907,7 +4907,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-lang"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "anyhow",
  "cairo-lang-defs",
@@ -4917,7 +4917,7 @@ dependencies = [
  "cairo-lang-semantic",
  "cairo-lang-syntax",
  "cairo-lang-utils",
- "dojo-types 1.0.10",
+ "dojo-types 1.0.11",
  "itertools 0.12.1",
  "serde",
  "smol_str",
@@ -4928,16 +4928,16 @@ dependencies = [
 
 [[package]]
 name = "dojo-language-server"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "cairo-lang-language-server",
  "clap",
- "dojo-lang 1.0.10",
+ "dojo-lang 1.0.11",
 ]
 
 [[package]]
 name = "dojo-metrics"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "hyper 0.14.30",
  "jemalloc-ctl",
@@ -4953,7 +4953,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-test-utils"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -4997,7 +4997,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-types"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "anyhow",
  "cainome 0.4.11",
@@ -5018,7 +5018,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-utils"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "anyhow",
  "assert_matches",
@@ -5036,13 +5036,13 @@ dependencies = [
 
 [[package]]
 name = "dojo-world"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "anyhow",
  "async-trait",
  "cainome 0.4.11",
  "cairo-lang-starknet-classes",
- "dojo-types 1.0.10",
+ "dojo-types 1.0.11",
  "futures",
  "hex",
  "hex-literal",
@@ -5063,7 +5063,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-world-abigen"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "anyhow",
  "cainome 0.4.11",
@@ -8423,7 +8423,7 @@ dependencies = [
 
 [[package]]
 name = "katana"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "anyhow",
  "assert_matches",
@@ -8451,7 +8451,7 @@ dependencies = [
 
 [[package]]
 name = "katana-cairo"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "cairo-lang-casm",
  "cairo-lang-runner",
@@ -8466,7 +8466,7 @@ dependencies = [
 
 [[package]]
 name = "katana-cli"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "alloy-primitives",
  "anyhow",
@@ -8494,7 +8494,7 @@ dependencies = [
 
 [[package]]
 name = "katana-codecs"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "bytes",
  "katana-primitives",
@@ -8502,7 +8502,7 @@ dependencies = [
 
 [[package]]
 name = "katana-codecs-derive"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -8512,7 +8512,7 @@ dependencies = [
 
 [[package]]
 name = "katana-core"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "alloy-contract 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "alloy-network 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -8554,7 +8554,7 @@ dependencies = [
 
 [[package]]
 name = "katana-db"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "anyhow",
  "arbitrary",
@@ -8581,7 +8581,7 @@ dependencies = [
 
 [[package]]
 name = "katana-executor"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "alloy-primitives",
  "anyhow",
@@ -8609,7 +8609,7 @@ dependencies = [
 
 [[package]]
 name = "katana-feeder-gateway"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "katana-primitives",
  "katana-rpc-types",
@@ -8624,7 +8624,7 @@ dependencies = [
 
 [[package]]
 name = "katana-grpc"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "tonic 0.11.0",
  "tonic-build 0.11.0",
@@ -8633,7 +8633,7 @@ dependencies = [
 
 [[package]]
 name = "katana-node"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "anyhow",
  "clap",
@@ -8674,7 +8674,7 @@ dependencies = [
 
 [[package]]
 name = "katana-node-bindings"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "regex",
  "serde",
@@ -8689,7 +8689,7 @@ dependencies = [
 
 [[package]]
 name = "katana-pipeline"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "async-trait",
  "futures",
@@ -8703,7 +8703,7 @@ dependencies = [
 
 [[package]]
 name = "katana-pool"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "futures",
  "futures-util",
@@ -8719,7 +8719,7 @@ dependencies = [
 
 [[package]]
 name = "katana-primitives"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "alloy-primitives",
  "anyhow",
@@ -8750,7 +8750,7 @@ dependencies = [
 
 [[package]]
 name = "katana-provider"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "alloy-primitives",
  "anyhow",
@@ -8778,7 +8778,7 @@ dependencies = [
 
 [[package]]
 name = "katana-rpc"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "alloy",
  "alloy-primitives",
@@ -8823,7 +8823,7 @@ dependencies = [
 
 [[package]]
 name = "katana-rpc-api"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "jsonrpsee 0.16.3",
  "katana-core",
@@ -8834,7 +8834,7 @@ dependencies = [
 
 [[package]]
 name = "katana-rpc-types"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "alloy-primitives",
  "anyhow",
@@ -8862,7 +8862,7 @@ dependencies = [
 
 [[package]]
 name = "katana-rpc-types-builder"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "anyhow",
  "katana-executor",
@@ -8874,7 +8874,7 @@ dependencies = [
 
 [[package]]
 name = "katana-runner"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -8887,7 +8887,7 @@ dependencies = [
 
 [[package]]
 name = "katana-runner-macro"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -8896,7 +8896,7 @@ dependencies = [
 
 [[package]]
 name = "katana-slot-controller"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "alloy-primitives",
  "anyhow",
@@ -8914,7 +8914,7 @@ dependencies = [
 
 [[package]]
 name = "katana-stage"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -8937,7 +8937,7 @@ dependencies = [
 
 [[package]]
 name = "katana-tasks"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "futures",
  "rayon",
@@ -8950,7 +8950,7 @@ dependencies = [
 
 [[package]]
 name = "katana-trie"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "anyhow",
  "bitvec",
@@ -12955,7 +12955,7 @@ dependencies = [
 
 [[package]]
 name = "saya"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "anyhow",
  "clap",
@@ -12973,7 +12973,7 @@ dependencies = [
 
 [[package]]
 name = "saya-core"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -13006,7 +13006,7 @@ dependencies = [
 
 [[package]]
 name = "saya-provider"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "alloy-primitives",
  "anyhow",
@@ -13196,7 +13196,7 @@ dependencies = [
 
 [[package]]
 name = "scheduler"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "anyhow",
  "clap",
@@ -13945,7 +13945,7 @@ dependencies = [
 
 [[package]]
 name = "sozo"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -13962,9 +13962,9 @@ dependencies = [
  "clap-verbosity-flag",
  "colored",
  "dojo-bindgen",
- "dojo-lang 1.0.10",
+ "dojo-lang 1.0.11",
  "dojo-test-utils",
- "dojo-types 1.0.10",
+ "dojo-types 1.0.11",
  "dojo-utils",
  "dojo-world",
  "itertools 0.12.1",
@@ -13996,7 +13996,7 @@ dependencies = [
 
 [[package]]
 name = "sozo-ops"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -14005,7 +14005,7 @@ dependencies = [
  "colored",
  "colored_json",
  "dojo-test-utils",
- "dojo-types 1.0.10",
+ "dojo-types 1.0.11",
  "dojo-utils",
  "dojo-world",
  "futures",
@@ -14028,7 +14028,7 @@ dependencies = [
 
 [[package]]
 name = "sozo-scarbext"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "anyhow",
  "camino",
@@ -14041,7 +14041,7 @@ dependencies = [
 
 [[package]]
 name = "sozo-signers"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "anyhow",
  "starknet 0.12.0",
@@ -14049,7 +14049,7 @@ dependencies = [
 
 [[package]]
 name = "sozo-walnut"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "anyhow",
  "clap",
@@ -15624,7 +15624,7 @@ dependencies = [
 
 [[package]]
 name = "torii"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "anyhow",
  "clap",
@@ -15635,7 +15635,7 @@ dependencies = [
 
 [[package]]
 name = "torii-cli"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "anyhow",
  "assert_matches",
@@ -15651,12 +15651,12 @@ dependencies = [
 
 [[package]]
 name = "torii-client"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "async-trait",
  "camino",
  "crypto-bigint",
- "dojo-types 1.0.10",
+ "dojo-types 1.0.11",
  "dojo-world",
  "futures",
  "futures-util",
@@ -15679,7 +15679,7 @@ dependencies = [
 
 [[package]]
 name = "torii-graphql"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "anyhow",
  "async-graphql",
@@ -15690,7 +15690,7 @@ dependencies = [
  "chrono",
  "convert_case 0.6.0",
  "dojo-test-utils",
- "dojo-types 1.0.10",
+ "dojo-types 1.0.11",
  "dojo-utils",
  "dojo-world",
  "katana-runner",
@@ -15720,13 +15720,13 @@ dependencies = [
 
 [[package]]
 name = "torii-grpc"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "cainome 0.4.11",
  "camino",
  "crypto-bigint",
  "dojo-test-utils",
- "dojo-types 1.0.10",
+ "dojo-types 1.0.11",
  "dojo-utils",
  "dojo-world",
  "futures",
@@ -15768,7 +15768,7 @@ dependencies = [
 
 [[package]]
 name = "torii-indexer"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -15779,7 +15779,7 @@ dependencies = [
  "crypto-bigint",
  "data-url",
  "dojo-test-utils",
- "dojo-types 1.0.10",
+ "dojo-types 1.0.11",
  "dojo-utils",
  "dojo-world",
  "futures-channel",
@@ -15808,11 +15808,11 @@ dependencies = [
 
 [[package]]
 name = "torii-relay"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "anyhow",
  "chrono",
- "dojo-types 1.0.10",
+ "dojo-types 1.0.11",
  "dojo-world",
  "futures",
  "indexmap 2.5.0",
@@ -15842,7 +15842,7 @@ dependencies = [
 
 [[package]]
 name = "torii-runner"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "anyhow",
  "assert_matches",
@@ -15852,7 +15852,7 @@ dependencies = [
  "chrono",
  "ctrlc",
  "dojo-metrics",
- "dojo-types 1.0.10",
+ "dojo-types 1.0.11",
  "dojo-utils",
  "dojo-world",
  "either",
@@ -15890,7 +15890,7 @@ dependencies = [
 
 [[package]]
 name = "torii-server"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -15924,7 +15924,7 @@ dependencies = [
 
 [[package]]
 name = "torii-sqlite"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -15935,7 +15935,7 @@ dependencies = [
  "crypto-bigint",
  "data-url",
  "dojo-test-utils",
- "dojo-types 1.0.10",
+ "dojo-types 1.0.11",
  "dojo-utils",
  "dojo-world",
  "futures-channel",
@@ -15963,11 +15963,11 @@ dependencies = [
 
 [[package]]
 name = "torii-typed-data"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "cainome 0.4.11",
  "crypto-bigint",
- "dojo-types 1.0.10",
+ "dojo-types 1.0.11",
  "indexmap 2.5.0",
  "serde",
  "serde_json",
@@ -16347,7 +16347,7 @@ checksum = "42ff0bf0c66b8238c6f3b578df37d0b7848e55df8577b3f74f92a69acceeb825"
 
 [[package]]
 name = "types-test"
-version = "1.0.10"
+version = "1.0.11"
 
 [[package]]
 name = "u256-literal"
@@ -16649,7 +16649,7 @@ dependencies = [
 
 [[package]]
 name = "verify_db_balances"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "clap",
  "num-traits 0.2.19",
@@ -17725,7 +17725,7 @@ checksum = "9d422e8e38ec76e2f06ee439ccc765e9c6a9638b9e7c9f2e8255e4d41e8bd852"
 
 [[package]]
 name = "xtask-generate-test-db"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "anyhow",
  "dojo-test-utils",
