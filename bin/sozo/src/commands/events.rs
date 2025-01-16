@@ -65,10 +65,12 @@ impl EventsArgs {
 
             let provider = Arc::new(provider);
 
-            let from_block = self.from_block.map(BlockId::Number);
+            let from_block = self.from_block
+                .or_else(|| profile_config.env.as_ref().and_then(|e| e.world_block))
+                .map(BlockId::Number)
+                .unwrap_or(BlockId::Number(0));
 
-
-            let to_block = self.to_block.map(BlockId::Number);
+            let to_block = self.to_block.map(BlockId::Number).unwrap_or(BlockId::Latest);
             let keys = self.events.map(|e|
                 vec![
                     e
@@ -79,8 +81,8 @@ impl EventsArgs {
             );
 
             let event_filter = EventFilter {
-                from_block,
-                to_block,
+                from_block : Some(from_block),
+                to_block : Some(to_block),
                 address: Some(world_diff.world_info.address),
                 keys,
             };
