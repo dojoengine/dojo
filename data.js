@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1737000187433,
+  "lastUpdate": 1737000270195,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -45577,6 +45577,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10629024421,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "158306087+bengineer42@users.noreply.github.com",
+            "name": "Benjamin",
+            "username": "bengineer42"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "992855851b4c233c36f700cb9274a4fecae18e6c",
+          "message": "fix(dojo-lang): raise an error on value before key in model (#2891)\n\n* fix: Raise an error on value before key in model\r\n\r\n* fix: Raise an error on value before key in model\r\n\r\n* fix: Improve key member validation logic in parse_members function and clarity\r\n\r\n* fix: reorder fields in Message struct\r\n\r\n* fix: run linters\r\n\r\n* chore: bump scarb to add key before member diagnostic\r\n\r\n* tests: regenerate test db\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2025-01-16T03:46:27Z",
+          "tree_id": "3f76198588b09d6086d37876d72b51ee1bfff9ba",
+          "url": "https://github.com/dojoengine/dojo/commit/992855851b4c233c36f700cb9274a4fecae18e6c"
+        },
+        "date": 1737000268157,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2482007,
+            "range": "± 38914",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8374152,
+            "range": "± 208631",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2512090556,
+            "range": "± 223802604",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8034754,
+            "range": "± 75671",
             "unit": "ns/iter"
           }
         ]
