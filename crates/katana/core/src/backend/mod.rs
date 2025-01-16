@@ -10,10 +10,10 @@ use katana_primitives::block::{
 use katana_primitives::da::L1DataAvailabilityMode;
 use katana_primitives::env::BlockEnv;
 use katana_primitives::receipt::{Event, ReceiptWithTxHash};
-use katana_primitives::state::{StateUpdates, compute_state_diff_hash};
+use katana_primitives::state::{compute_state_diff_hash, StateUpdates};
 use katana_primitives::transaction::{TxHash, TxWithHash};
 use katana_primitives::version::CURRENT_STARKNET_VERSION;
-use katana_primitives::{ContractAddress, Felt, address};
+use katana_primitives::{address, ContractAddress, Felt};
 use katana_provider::traits::block::{BlockHashProvider, BlockWriter};
 use katana_provider::traits::trie::TrieWriter;
 use katana_trie::compute_merkle_root;
