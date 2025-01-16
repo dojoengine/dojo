@@ -31,7 +31,7 @@ where
     }
 
     fn task_priority(&self) -> usize {
-        1
+        2
     }
 
     fn task_identifier(&self, event: &Event) -> u64 {

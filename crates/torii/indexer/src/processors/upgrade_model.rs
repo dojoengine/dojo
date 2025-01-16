@@ -33,13 +33,12 @@ where
     }
 
     fn task_priority(&self) -> usize {
-        0
+        1
     }
 
     fn task_identifier(&self, event: &Event) -> u64 {
         let mut hasher = DefaultHasher::new();
-        // model selector
-        event.keys[1].hash(&mut hasher);
+        event.keys.iter().for_each(|k| k.hash(&mut hasher));
         hasher.finish()
     }
 
