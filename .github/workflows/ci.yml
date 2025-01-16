@@ -31,8 +31,6 @@ jobs:
   test:
     needs: ensure-docker
     runs-on: ubuntu-latest-32-cores
-    container:
-      image: ghcr.io/dojoengine/dojo-dev:051e2e8
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -124,8 +122,6 @@ jobs:
   dojo-core-test:
     needs: build
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/dojoengine/dojo-dev:051e2e8
     steps:
       - uses: software-mansion/setup-scarb@v1
         with:
@@ -143,8 +139,6 @@ jobs:
   dojo-spawn-and-move-example-test:
     needs: build
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/dojoengine/dojo-dev:051e2e8
     steps:
       - uses: software-mansion/setup-scarb@v1
         with:
