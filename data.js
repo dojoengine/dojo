@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1737000474687,
+  "lastUpdate": 1737000609227,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -45655,6 +45655,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 10693002826,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4a54cdcc6baff0b2511331f245c2d847468a7123",
+          "message": "feat(torii-indexer): parallelize models & event messages   (#2912)\n\n* feat(torii-indexer): natural priority in parallelized tasks for model processing\n\n* btreemap of priorities\n\n* more verbose error handling & get rid of bit masking task id\n\n* store all raw events regardless of erc or world\n\n* fmt\n\n* parallelize event emitted\n\n* need to use event data",
+          "timestamp": "2025-01-15T21:51:35-06:00",
+          "tree_id": "cfa419a11206c04c4a5a24e458b2e1b466cb1d77",
+          "url": "https://github.com/dojoengine/dojo/commit/4a54cdcc6baff0b2511331f245c2d847468a7123"
+        },
+        "date": 1737000606938,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2476188,
+            "range": "± 47227",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8486538,
+            "range": "± 374282",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2519332860,
+            "range": "± 191784804",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8063273,
+            "range": "± 58413",
             "unit": "ns/iter"
           }
         ]
