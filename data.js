@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1736996751316,
+  "lastUpdate": 1736999996961,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -45469,6 +45469,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8063027,
             "range": "± 81852",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "remy.baranx@gmail.com",
+            "name": "Rémy Baranx",
+            "username": "remybar"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4fb18a6464568350e17a78d2fe22d144b5b73564",
+          "message": "feat(sozo): support multicall for execute command (#2897)\n\n* sozo: support multicall for execute command\r\n\r\n* use space instead of comma as separator\r\n\r\n* improve entrypoint error message\r\n\r\n* fix: reword error message for entrypoint\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2025-01-16T03:43:01Z",
+          "tree_id": "774381af8352b6cea95284395681fc19e2ed833d",
+          "url": "https://github.com/dojoengine/dojo/commit/4fb18a6464568350e17a78d2fe22d144b5b73564"
+        },
+        "date": 1736999994484,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 10423328772,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
