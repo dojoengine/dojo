@@ -28,9 +28,9 @@ pub struct Message {
     pub identity: ContractAddress,
     #[key]
     pub channel: felt252,
-    pub message: ByteArray,
     #[key]
     pub salt: felt252,
+    pub message: ByteArray,
 }
 
 #[derive(Copy, Drop, Serde, Debug)]
