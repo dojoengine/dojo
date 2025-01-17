@@ -1,4 +1,4 @@
-FROM ubuntu:noble as builder
+FROM debian:bookworm-slim as builder
 
 RUN apt-get update && apt install -y git libtool automake autoconf make tini ca-certificates
 
@@ -14,7 +14,7 @@ RUN git clone https://github.com/Comcast/Infinite-File-Curtailer.git curtailer \
     && make install \
     && curtail --version
 
-FROM ubuntu:noble as base
+FROM debian:bookworm-slim as base
 
 COPY --from=builder /etc/ssl/certs /etc/ssl/certs
 
