@@ -53,13 +53,13 @@ pub mod actions {
             let byte: u8 = (uint % 255).try_into().unwrap();
 
             let moves = Moves {
-                player: seed.try_into().unwrap(), remaining: byte, last_direction: Direction::None
+                player: seed.try_into().unwrap(), remaining: byte, last_direction: Direction::None,
             };
             let position = Position {
-                player: seed.try_into().unwrap(), vec: Vec2 { x: prng, y: prng }
+                player: seed.try_into().unwrap(), vec: Vec2 { x: prng, y: prng },
             };
             let server_profile = ServerProfile {
-                player: seed.try_into().unwrap(), server_id: prng, name: "hello"
+                player: seed.try_into().unwrap(), server_id: prng, name: "hello",
             };
             let player_config = PlayerConfig {
                 player: seed.try_into().unwrap(),
@@ -125,7 +125,7 @@ pub mod actions {
 
             let items = array![
                 PlayerItem { item_id: 1, quantity: 100, score: 150 },
-                PlayerItem { item_id: 2, quantity: 50, score: -32 }
+                PlayerItem { item_id: 2, quantity: 50, score: -32 },
             ];
 
             let config = PlayerConfig { player, name, items, favorite_item: Option::Some(1) };
@@ -139,7 +139,7 @@ pub mod actions {
             // Don't need to read the model here, we directly overwrite the member "name".
             world
                 .write_member(
-                    Model::<PlayerConfig>::ptr_from_keys(player), selector!("name"), name
+                    Model::<PlayerConfig>::ptr_from_keys(player), selector!("name"), name,
                 );
         }
 
@@ -207,7 +207,7 @@ pub mod actions {
             let mut world = self.world_default();
 
             world.write_model(@Moves { player, remaining: 99, last_direction: Direction::None });
-            world.write_model(@Position { player, vec: Vec2 { x: 10, y: 10 } },);
+            world.write_model(@Position { player, vec: Vec2 { x: 10, y: 10 } });
         }
 
         /// Use the default namespace "ns". A function is handy since the ByteArray
@@ -224,20 +224,22 @@ mod tests {
     use dojo::world::WorldStorageTrait;
     use dojo_cairo_test::{
         spawn_test_world, NamespaceDef, TestResource, ContractDefTrait, ContractDef,
-        WorldStorageTestTrait
+        WorldStorageTestTrait,
     };
 
     use super::{actions, IActionsDispatcher, IActionsDispatcherTrait};
-    use dojo_examples::models::{Position, PositionValue, m_Position, Moves, m_Moves, Direction,};
+    use dojo_examples::models::{Position, PositionValue, m_Position, Moves, m_Moves, Direction};
 
     fn namespace_def() -> NamespaceDef {
         let ndef = NamespaceDef {
-            namespace: "ns", resources: [
+            namespace: "ns",
+            resources: [
                 TestResource::Model(m_Position::TEST_CLASS_HASH),
                 TestResource::Model(m_Moves::TEST_CLASS_HASH),
                 TestResource::Event(actions::e_Moved::TEST_CLASS_HASH),
                 TestResource::Contract(actions::TEST_CLASS_HASH),
-            ].span()
+            ]
+                .span(),
         };
 
         ndef
@@ -247,7 +249,8 @@ mod tests {
         [
             ContractDefTrait::new(@"ns", @"actions")
                 .with_writer_of([dojo::utils::bytearray_hash(@"ns")].span())
-        ].span()
+        ]
+            .span()
     }
 
     #[test]
@@ -303,7 +306,7 @@ mod tests {
         let initial_position: Position = world.read_model(caller);
 
         assert(
-            initial_position.vec.x == 10 && initial_position.vec.y == 10, 'wrong initial position'
+            initial_position.vec.x == 10 && initial_position.vec.y == 10, 'wrong initial position',
         );
 
         actions_system.move(Direction::Right(()));

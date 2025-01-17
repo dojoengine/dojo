@@ -57,15 +57,17 @@ struct FooModelMemberAdded {
 
 pub fn deploy_world_for_model_upgrades() -> IWorldDispatcher {
     let namespace_def = NamespaceDef {
-        namespace: "dojo", resources: [
+        namespace: "dojo",
+        resources: [
             TestResource::Model(m_FooModelBadLayoutType::TEST_CLASS_HASH.try_into().unwrap()),
             TestResource::Model(m_FooModelMemberRemoved::TEST_CLASS_HASH.try_into().unwrap()),
             TestResource::Model(
-                m_FooModelMemberAddedButRemoved::TEST_CLASS_HASH.try_into().unwrap()
+                m_FooModelMemberAddedButRemoved::TEST_CLASS_HASH.try_into().unwrap(),
             ),
             TestResource::Model(m_FooModelMemberAddedButMoved::TEST_CLASS_HASH.try_into().unwrap()),
             TestResource::Model(m_FooModelMemberAdded::TEST_CLASS_HASH.try_into().unwrap()),
-        ].span()
+        ]
+            .span(),
     };
     spawn_test_world([namespace_def].span()).dispatcher
 }

@@ -11,7 +11,7 @@ pub enum ModelIndex {
     Keys: Span<felt252>,
     Id: felt252,
     // (entity_id, member_id)
-    MemberId: (felt252, felt252)
+    MemberId: (felt252, felt252),
 }
 
 /// The `ModelDefinition` trait.

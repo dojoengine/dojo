@@ -31,7 +31,7 @@ fn test_register_namespace() {
 }
 
 #[test]
-#[should_panic(expected: ("Namespace `namespace` is already registered", 'ENTRYPOINT_FAILED',))]
+#[should_panic(expected: ("Namespace `namespace` is already registered", 'ENTRYPOINT_FAILED'))]
 fn test_register_namespace_already_registered_same_caller() {
     let world = deploy_world();
     let world = world.dispatcher;
@@ -45,7 +45,7 @@ fn test_register_namespace_already_registered_same_caller() {
 }
 
 #[test]
-#[should_panic(expected: ("Namespace `namespace` is already registered", 'ENTRYPOINT_FAILED',))]
+#[should_panic(expected: ("Namespace `namespace` is already registered", 'ENTRYPOINT_FAILED'))]
 fn test_register_namespace_already_registered_other_caller() {
     let world = deploy_world();
     let world = world.dispatcher;
@@ -70,7 +70,7 @@ fn test_register_namespace_already_registered_other_caller() {
     expected: (
         "Namespace `` is invalid according to Dojo naming rules: ^[a-zA-Z0-9_]+$",
         'ENTRYPOINT_FAILED',
-    )
+    ),
 )]
 fn test_register_namespace_empty_name() {
     let world = deploy_world();

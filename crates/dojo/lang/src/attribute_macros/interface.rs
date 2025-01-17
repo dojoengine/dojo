@@ -86,6 +86,7 @@ impl DojoInterface {
                 content: code,
                 aux_data: None,
                 code_mappings,
+                diagnostics_note: None,
             }),
             diagnostics: interface.diagnostics,
             remove_original_item: true,
