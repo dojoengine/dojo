@@ -35,8 +35,73 @@ pub struct Member {
     pub ty: Ty,
 }
 
-#[generate_trait]
-pub impl StructCompareImpl of StructCompareTrait {
+pub trait TyCompareTrait<T> {
+    fn is_an_upgrade_of(self: @T, old: @T) -> bool;
+}
+
+impl TyCompareImpl of TyCompareTrait<Ty> {
+    fn is_an_upgrade_of(self: @Ty, old: @Ty) -> bool {
+        match (self, old) {
+            (Ty::Primitive(n), Ty::Primitive(o)) => n == o,
+            (Ty::Struct(n), Ty::Struct(o)) => n.is_an_upgrade_of(o),
+            (Ty::Array(n), Ty::Array(o)) => { (*n).at(0).is_an_upgrade_of((*o).at(0)) },
+            (
+                Ty::Tuple(n), Ty::Tuple(o)
+            ) => {
+                let n = *n;
+                let o = *o;
+                if n.len() == o.len() {
+                    let mut i = 0;
+                    loop {
+                        if i >= n.len() {
+                            break true;
+                        }
+                        if !n.at(i).is_an_upgrade_of(o.at(i)) {
+                            break false;
+                        }
+                        i += 1;
+                    }
+                } else {
+                    false
+                }
+            },
+            (Ty::ByteArray, Ty::ByteArray) => true,
+            (Ty::Enum(n), Ty::Enum(o)) => n.is_an_upgrade_of(o),
+            _ => false
+        }
+    }
+}
+
+impl EnumCompareImpl of TyCompareTrait<Enum> {
+    fn is_an_upgrade_of(self: @Enum, old: @Enum) -> bool {
+        if self.name != old.name
+            || self.attrs != old.attrs
+            || (*self.children).len() < (*old.children).len() {
+            return false;
+        }
+
+        let mut i = 0;
+
+        loop {
+            if i >= (*old.children).len() {
+                break true;
+            }
+
+            let (_, old_ty) = *old.children[i];
+            let (_, new_ty) = *self.children[i];
+
+            // changing name is acceptable as it has no impact on storage
+
+            if !new_ty.is_an_upgrade_of(@old_ty) {
+                break false;
+            }
+
+            i += 1;
+        }
+    }
+}
+
+impl StructCompareImpl of TyCompareTrait<Struct> {
     fn is_an_upgrade_of(self: @Struct, old: @Struct) -> bool {
         if self.name != old.name
             || self.attrs != old.attrs
@@ -51,12 +116,18 @@ pub impl StructCompareImpl of StructCompareTrait {
                 break true;
             }
 
-            if *old.children[i] != *self.children[i] {
+            if !self.children[i].is_an_upgrade_of(old.children[i]) {
                 break false;
             }
 
             i += 1;
         }
+    }
+}
+
+impl MemberCompareImpl of TyCompareTrait<Member> {
+    fn is_an_upgrade_of(self: @Member, old: @Member) -> bool {
+        self.name == old.name && self.attrs == old.attrs && self.ty.is_an_upgrade_of(old.ty)
     }
 }
 

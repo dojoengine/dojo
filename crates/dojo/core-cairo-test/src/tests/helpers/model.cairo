@@ -54,6 +54,33 @@ struct FooModelMemberAdded {
     pub b: u128,
 }
 
+#[derive(Introspect, Copy, Drop, Serde)]
+enum MyEnum {
+    X: u8,
+}
+
+#[derive(Introspect, Copy, Drop, Serde)]
+#[dojo::model]
+struct FooModelMemberChanged {
+    #[key]
+    pub caller: ContractAddress,
+    pub a: MyEnum,
+    pub b: u128,
+}
+
+#[derive(Introspect, Copy, Drop, Serde)]
+enum AnotherEnum {
+    X: u8,
+}
+
+#[derive(Introspect, Copy, Drop, Serde)]
+#[dojo::model]
+struct FooModelMemberIllegalChange {
+    #[key]
+    pub caller: ContractAddress,
+    pub a: AnotherEnum,
+    pub b: u128,
+}
 
 pub fn deploy_world_for_model_upgrades() -> IWorldDispatcher {
     let namespace_def = NamespaceDef {
@@ -66,6 +93,8 @@ pub fn deploy_world_for_model_upgrades() -> IWorldDispatcher {
             ),
             TestResource::Model(m_FooModelMemberAddedButMoved::TEST_CLASS_HASH.try_into().unwrap()),
             TestResource::Model(m_FooModelMemberAdded::TEST_CLASS_HASH.try_into().unwrap()),
+            TestResource::Model(m_FooModelMemberChanged::TEST_CLASS_HASH.try_into().unwrap()),
+            TestResource::Model(m_FooModelMemberIllegalChange::TEST_CLASS_HASH.try_into().unwrap()),
         ]
             .span(),
     };

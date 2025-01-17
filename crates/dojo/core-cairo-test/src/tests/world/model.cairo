@@ -55,6 +55,35 @@ pub struct FooModelMemberAdded {
     pub c: u256,
 }
 
+#[derive(Introspect, Copy, Drop, Serde)]
+enum MyEnum {
+    X: u8,
+    Y: u16,
+}
+
+#[derive(Introspect, Copy, Drop, Serde)]
+#[dojo::model]
+struct FooModelMemberChanged {
+    #[key]
+    pub caller: ContractAddress,
+    pub a: MyEnum,
+    pub b: u128,
+}
+
+#[derive(Introspect, Copy, Drop, Serde)]
+enum AnotherEnum {
+    X: bool,
+}
+
+#[derive(Introspect, Copy, Drop, Serde)]
+#[dojo::model]
+struct FooModelMemberIllegalChange {
+    #[key]
+    pub caller: ContractAddress,
+    pub a: MyEnum,
+    pub b: u128,
+}
+
 #[test]
 fn test_register_model_for_namespace_owner() {
     let bob = starknet::contract_address_const::<0xb0b>();
@@ -193,6 +222,34 @@ fn test_upgrade_model() {
     }
 }
 
+fn test_upgrade_model_with_member_changed() {
+    let world = deploy_world_for_model_upgrades();
+
+    drop_all_events(world.contract_address);
+
+    world.upgrade_model("dojo", m_FooModelMemberChanged::TEST_CLASS_HASH.try_into().unwrap());
+
+    let event = starknet::testing::pop_log::<world::Event>(world.contract_address);
+    assert(event.is_some(), 'no event)');
+
+    if let world::Event::ModelUpgraded(event) = event.unwrap() {
+        assert(
+            event.selector == Model::<FooModelMemberChanged>::selector(DOJO_NSH),
+            'bad model selector',
+        );
+        assert(
+            event.class_hash == m_FooModelMemberChanged::TEST_CLASS_HASH.try_into().unwrap(),
+            'bad model class_hash',
+        );
+        assert(
+            event.address != core::num::traits::Zero::<ContractAddress>::zero(),
+            'bad model address',
+        );
+    } else {
+        core::panic_with_felt252('no ModelUpgraded event');
+    }
+}
+
 #[test]
 #[should_panic(
     expected: (
@@ -242,6 +299,18 @@ fn test_upgrade_model_with_member_added_but_removed() {
 fn test_upgrade_model_with_member_moved() {
     let world = deploy_world_for_model_upgrades();
     world.upgrade_model("dojo", m_FooModelMemberAddedButMoved::TEST_CLASS_HASH.try_into().unwrap());
+}
+
+#[test]
+#[should_panic(
+    expected: (
+        "Invalid new schema to upgrade the resource `dojo-FooModelMemberIllegalChange`",
+        'ENTRYPOINT_FAILED',
+    ),
+)]
+fn test_upgrade_model_with_member_illegal_change() {
+    let world = deploy_world_for_model_upgrades();
+    world.upgrade_model("dojo", m_FooModelMemberIllegalChange::TEST_CLASS_HASH.try_into().unwrap());
 }
 
 #[test]
