@@ -21,7 +21,7 @@ use starknet::core::types::Felt;
 use starknet::core::utils as snutils;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
-use tracing::{error, trace};
+use tracing::{trace, warn};
 
 use crate::commands::options::account::{AccountOptions, SozoAccount};
 use crate::commands::options::starknet::StarknetOptions;
@@ -117,10 +117,15 @@ pub async fn get_world_diff_and_provider(
 
     let (provider, rpc_url) = starknet.provider(env)?;
     let provider = Arc::new(provider);
-    if let Err(e) = provider_utils::health_check_provider(provider.clone()).await {
-        error!(target: LOG_TARGET,"Provider health check failed during sozo inspect.");
-        return Err(e);
+    if (provider_utils::health_check_provider(provider.clone()).await).is_err() {
+        warn!(target: LOG_TARGET, "Provider health check failed during sozo inspect, inspecting locally and all resources will appeared as `Created`. Remote resources will not be fetched.");
+        return Ok((
+            WorldDiff::from_local(world_local)?,
+            Arc::try_unwrap(provider).map_err(|_| anyhow!("Failed to unwrap Arc"))?,
+            rpc_url,
+        ));
     }
+
     let provider = Arc::try_unwrap(provider).map_err(|_| anyhow!("Failed to unwrap Arc"))?;
     trace!(?provider, "Provider initialized.");
 
