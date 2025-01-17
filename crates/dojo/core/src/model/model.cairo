@@ -1,6 +1,6 @@
 use dojo::{
     meta::{Layout, introspect::Struct, layout::compute_packed_size},
-    utils::{entity_id_from_serialized_keys, find_model_field_layout, entity_id_from_keys}
+    utils::{entity_id_from_serialized_keys, find_model_field_layout, entity_id_from_keys},
 };
 
 use super::{ModelDefinition, ModelDef};
@@ -131,7 +131,7 @@ pub impl ModelImpl<M, +ModelParser<M>, +ModelDefinition<M>, +Serde<M>> of Model<
             layout: Self::layout(),
             schema: Self::schema(),
             packed_size: Self::packed_size(),
-            unpacked_size: Self::unpacked_size()
+            unpacked_size: Self::unpacked_size(),
         }
     }
 
