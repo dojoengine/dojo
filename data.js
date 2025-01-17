@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1737138574426,
+  "lastUpdate": 1737150097550,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -46171,6 +46171,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 7672508,
             "range": "± 128503",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tarrencev@users.noreply.github.com",
+            "name": "Tarrence van As",
+            "username": "tarrencev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8d735a2cff723fdbcfd585cdbbd2f3bb48527f21",
+          "message": "chore(devcontainer): update image: b37b325 (#2924)\n\nUpdate devcontainer image: b37b325\r\n\r\nCo-authored-by: glihm <glihm@users.noreply.github.com>",
+          "timestamp": "2025-01-17T15:25:31-06:00",
+          "tree_id": "36c8437f2ae72d56c8c97e62e4aae227cfe94b2c",
+          "url": "https://github.com/dojoengine/dojo/commit/8d735a2cff723fdbcfd585cdbbd2f3bb48527f21"
+        },
+        "date": 1737150095581,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 11618617067,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
