@@ -57,7 +57,7 @@ pub async fn fetch_content_from_ipfs(cid: &str) -> Result<Bytes> {
     let mut retries = IPFS_CLIENT_MAX_RETRY;
     let client = IpfsClient::from_str(IPFS_CLIENT_URL)?
         .with_credentials(IPFS_CLIENT_USERNAME, IPFS_CLIENT_PASSWORD);
-    
+
     while retries > 0 {
         let response = client.cat(cid).map_ok(|chunk| chunk.to_vec()).try_concat().await;
         match response {
