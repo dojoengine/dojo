@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1737138463623,
+  "lastUpdate": 1737138574426,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -46123,6 +46123,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 11689264312,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b37b325b269a545644f2cfa2cdab65a0f8f18622",
+          "message": "feat: bump to cairo 2.9.2 (#2879)\n\n* wip: deps versionning\r\n\r\n* fix: add missing scarb field\r\n\r\n* chore: bump scarb\r\n\r\n* fix blockifier changes\r\n\r\n* fix: update scarb related code for testing\r\n\r\n* fix blockifier resource bounds mapping\r\n\r\n* bump scarb version\r\n\r\n* cairo fmt\r\n\r\n* tests: regenerate test databases\r\n\r\n* fix: bump cainome to fix event parsing\r\n\r\n* fix: clippy\r\n\r\n* fix contract call\r\n\r\n* add test for calling non legacy contract\r\n\r\n* wip: fixing cairo compilation\r\n\r\n* chore: bump to cairo 2.9.2\r\n\r\n* chore: update scarb\r\n\r\n* fix: fmt and scarb update\r\n\r\n* tests: regenerates test dbs\r\n\r\n* fix: migrate to new scarb test functions\r\n\r\n* tests: regenerate test db\r\n\r\n* tests: regenerate test db\r\n\r\n* ci: add scarb for test commands since it depends on scarb metadata\r\n\r\n* fix(core-cairo-test): build external world class and adjust panick messages\r\n\r\n* feat: don't enforce fee if tx max fee is zero\r\n\r\n* chore: bump scarb\r\n\r\n* fix: add better error message if env var SCARB is not correctly set\r\n\r\n* tests: regenerate test db and update addresses in cairo config\r\n\r\n* only modify if we're in fee enabled mode\r\n\r\n* tests: fix test policies\r\n\r\n* ci: use rust 181 devcontainer\r\n\r\n* tests: regenerate test db\r\n\r\n* ci: wip\r\n\r\n* ci+docker: move to ubuntu:noble\r\n\r\n* ci: add back dojo-dev image for test\r\n\r\n* ci: add the container to build for the same version\r\n\r\n* docker: add make to devcontainer\r\n\r\n* ci: use latest dojo-dev\r\n\r\n* docker: revert to bookworm for dojo image\r\n\r\n* fix(devcontainer): add missing dependencies for testing\r\n\r\n* ci: bump devcontainer\r\n\r\n* tests: regenerate test db\r\n\r\n---------\r\n\r\nCo-authored-by: Ammar Arif <evergreenkary@gmail.com>",
+          "timestamp": "2025-01-17T12:10:29-06:00",
+          "tree_id": "cc2d9e4026d94afad34e8579682883327730f2db",
+          "url": "https://github.com/dojoengine/dojo/commit/b37b325b269a545644f2cfa2cdab65a0f8f18622"
+        },
+        "date": 1737138572036,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2566681,
+            "range": "± 44725",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8478380,
+            "range": "± 677313",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2647764245,
+            "range": "± 251382317",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 7672508,
+            "range": "± 128503",
             "unit": "ns/iter"
           }
         ]
