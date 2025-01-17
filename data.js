@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1737066307187,
+  "lastUpdate": 1737089702427,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -46015,6 +46015,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8791119,
             "range": "± 222733",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "distinct": true,
+          "id": "4b6d4737c273660280861ab0fd1357261ea3ccff",
+          "message": "Revert \"chore(devcontainer): bump rust toolchain to 1.81\"\n\nThis reverts commit 051e2e8d9415177bf84ce4ae669884210a10b892.",
+          "timestamp": "2025-01-16T22:35:52-06:00",
+          "tree_id": "1f0386a85c5c923659bd4e74c17bd869cceeb454",
+          "url": "https://github.com/dojoengine/dojo/commit/4b6d4737c273660280861ab0fd1357261ea3ccff"
+        },
+        "date": 1737089700581,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 9958099847,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
