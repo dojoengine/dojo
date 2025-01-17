@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1737089702427,
+  "lastUpdate": 1737089832432,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -46045,6 +46045,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 9958099847,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "distinct": true,
+          "id": "4b6d4737c273660280861ab0fd1357261ea3ccff",
+          "message": "Revert \"chore(devcontainer): bump rust toolchain to 1.81\"\n\nThis reverts commit 051e2e8d9415177bf84ce4ae669884210a10b892.",
+          "timestamp": "2025-01-16T22:35:52-06:00",
+          "tree_id": "1f0386a85c5c923659bd4e74c17bd869cceeb454",
+          "url": "https://github.com/dojoengine/dojo/commit/4b6d4737c273660280861ab0fd1357261ea3ccff"
+        },
+        "date": 1737089830161,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2472394,
+            "range": "± 29024",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8352236,
+            "range": "± 380492",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2519744627,
+            "range": "± 240908931",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8330923,
+            "range": "± 329515",
             "unit": "ns/iter"
           }
         ]
