@@ -38,7 +38,7 @@ Install the [Cairo 1.0](https://marketplace.visualstudio.com/items?itemName=star
 
 Before you submit your pull request, you should run the test suite locally to make sure your changes haven't broken anything.
 
-To run the test, you can execute the same command that will be exected on the CI by checking the [`.github/workflows/ci.yml`](.github/workflows/ci.yml) file.
+To run the test, you can execute the same command that will be executed on the CI by checking the [`.github/workflows/ci.yml`](.github/workflows/ci.yml) file.
 
 ```bash
 # Run all the tests excluding Katana (due to SiR dependency, they may be run independently)

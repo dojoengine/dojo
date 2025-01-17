@@ -39,7 +39,7 @@ pub struct WorldLocal {
     /// The profile configuration of the local world.
     pub profile_config: ProfileConfig,
     /// All the entrypoints that are exposed by the world
-    /// and can be targetted by a transaction.
+    /// and can be targeted by a transaction.
     pub entrypoints: Vec<String>,
 }
 
