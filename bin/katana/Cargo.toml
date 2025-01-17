@@ -1,3 +1,4 @@
+
 [package]
 description = "A fast and lightweight local Starknet development sequencer."
 edition.workspace = true

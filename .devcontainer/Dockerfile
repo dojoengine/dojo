@@ -1,32 +1,20 @@
-# See here for image contents: https://github.com/microsoft/vscode-dev-containers/tree/v0.245.2/containers/rust/.devcontainer/base.Dockerfile
+# See here for image contents: https://hub.docker.com/layers/library/rust/1.81.0-slim/images/sha256-ba4ee661bb466ab49f6ceb8c6d9e9f9784bba7c6e45225187cd3c7fb1fbc12ce
 
-# [Choice] Debian OS version (use bookworm on local arm64/Apple Silicon): buster, bullseye, bookworm
-
-ARG VARIANT
-FROM mcr.microsoft.com/vscode/devcontainers/rust:${VARIANT}
-ARG VARIANT
+ARG RUST_VERSION
+FROM rust:${RUST_VERSION}-slim
+ARG RUST_VERSION
 
 # Install additional packages
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     && apt-get -y install --no-install-recommends protobuf-compiler libprotobuf-dev libclang-dev libzstd-dev
 
-RUN apt install -y gh libgmp3-dev software-properties-common
-
-# Install Cairo Native dependencies
-RUN curl -s https://apt.llvm.org/llvm-snapshot.gpg.key | tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc > /dev/null
-RUN echo "deb http://apt.llvm.org/${VARIANT}/ llvm-toolchain-${VARIANT}-17 main" | tee /etc/apt/sources.list.d/llvm.list && apt-get update
-RUN apt-get -y install -t llvm-toolchain-${VARIANT}-17 llvm-17 llvm-17-dev llvm-17-runtime clang-17 clang-tools-17 lld-17 libpolly-17-dev libmlir-17-dev mlir-17-tools
+RUN apt-get install -y gh libgmp3-dev software-properties-common curl git
 
 RUN curl -L https://foundry.paradigm.xyz/ | bash && . /root/.bashrc && foundryup
 ENV PATH="${PATH}:/root/.foundry/bin"
 
-# To build Katana with 'native' feature, we need to set the following environment variables
-ENV MLIR_SYS_170_PREFIX=/usr/lib/llvm-17
-ENV LLVM_SYS_170_PREFIX=/usr/lib/llvm-17
-ENV TABLEGEN_170_PREFIX=/usr/lib/llvm-17
-
 # To allow independent workflow of the container, the rust-toolchain is explicitely given.
-RUN echo "1.80.0" > rust_toolchain_version
+RUN echo ${RUST_VERSION} > rust_toolchain_version
 # Make sure to sync the nightly version with the scripts in ./scripts
 RUN echo "nightly-2024-08-28" > nightly_rust_toolchain_version
 
