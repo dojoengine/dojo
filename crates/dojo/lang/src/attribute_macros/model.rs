@@ -201,6 +201,7 @@ impl DojoModel {
                 content: code,
                 aux_data: Some(DynGeneratedFileAuxData::new(aux_data)),
                 code_mappings,
+                diagnostics_note: None,
             }),
             diagnostics,
             remove_original_item: false,
