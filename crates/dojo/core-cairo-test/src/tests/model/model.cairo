@@ -10,7 +10,7 @@ struct Foo {
     #[key]
     k2: felt252,
     v1: u128,
-    v2: u32
+    v2: u32,
 }
 
 
@@ -22,15 +22,28 @@ struct Foo2 {
     #[key]
     k2: felt252,
     v1: u128,
-    v2: u32
+    v2: u32,
+}
+
+#[derive(Copy, Drop, Serde, Debug)]
+#[dojo::model]
+struct Foo3 {
+    #[key]
+    k1: u256,
+    #[key]
+    k2: felt252,
+    v1: u128,
+    v2: u32,
 }
 
 fn namespace_def() -> NamespaceDef {
     NamespaceDef {
-        namespace: "dojo_cairo_test", resources: [
+        namespace: "dojo_cairo_test",
+        resources: [
             TestResource::Model(m_Foo::TEST_CLASS_HASH.try_into().unwrap()),
             TestResource::Model(m_Foo2::TEST_CLASS_HASH.try_into().unwrap()),
-        ].span()
+        ]
+            .span(),
     }
 }
 

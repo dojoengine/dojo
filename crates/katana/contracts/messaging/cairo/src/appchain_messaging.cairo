@@ -6,17 +6,6 @@
 //! listen for those events. When an event with a message is gathered
 //! by katana, a L1 handler transaction is then created and added to the pool.
 //!
-//! For the appchain to send a message to starknet, the process can be done in two
-//! fashions:
-//!
-//!   1. The appchain register messages hashes exactly as starknet does. And then
-//!      a transaction on starknet must be issued to consume the message.
-//!
-//!   2. The sequencer (katana in that case) has also the capability of directly send
-//!      send a transaction to "execute" the content of the message. In the appchain
-//!      context this is a very effective manner to have a more dynamic and real-time
-//!      messaging than manual consuming of a message.
-//!
 
 /// Trait for Appchain messaging. For now, the messaging only whitelist one
 /// appchain.
@@ -46,17 +35,6 @@ trait IAppchainMessaging<T> {
     fn consume_message_from_appchain(
         ref self: T, from_address: starknet::ContractAddress, payload: Span<felt252>,
     ) -> felt252;
-
-    /// Executes a message sent from the appchain. A message to execute
-    /// does not need to be registered as consumable. It is automatically
-    /// consumed while executed.
-    fn execute_message_from_appchain(
-        ref self: T,
-        from_address: starknet::ContractAddress,
-        to_address: starknet::ContractAddress,
-        selector: felt252,
-        payload: Span<felt252>,
-    );
 }
 
 #[starknet::interface]
@@ -76,7 +54,7 @@ mod appchain_messaging {
         // Owner of this contract.
         owner: ContractAddress,
         // The account on Starknet (or the chain where this contract is deployed)
-        // used by the appchain sequencer to register messages hashes / execute messages.
+        // used by the appchain sequencer to register messages hashes.
         appchain_account: ContractAddress,
         // The nonce for messages sent from Starknet.
         sn_to_appc_nonce: felt252,
@@ -93,7 +71,6 @@ mod appchain_messaging {
         MessageSentToAppchain: MessageSentToAppchain,
         MessagesRegisteredFromAppchain: MessagesRegisteredFromAppchain,
         MessageConsumed: MessageConsumed,
-        MessageExecuted: MessageExecuted,
         Upgraded: Upgraded,
     }
 
@@ -123,17 +100,6 @@ mod appchain_messaging {
         from: ContractAddress,
         #[key]
         to: ContractAddress,
-        payload: Span<felt252>,
-    }
-
-    #[derive(Drop, starknet::Event)]
-    struct MessageExecuted {
-        #[key]
-        from_address: ContractAddress,
-        #[key]
-        to_address: ContractAddress,
-        #[key]
-        selector: felt252,
         payload: Span<felt252>,
     }
 
@@ -171,8 +137,19 @@ mod appchain_messaging {
         hash.try_into().expect('starknet keccak overflow')
     }
 
-    /// Computes message hash to consume messages from appchain.
-    /// starknet_keccak(from_address, to_address, payload_len, payload).
+    /// Computes the hash of a message that is sent from the Appchain to Starknet.
+    ///
+    /// <https://github.com/starkware-libs/cairo-lang/blob/caba294d82eeeccc3d86a158adb8ba209bf2d8fc/src/starkware/starknet/solidity/StarknetMessaging.sol#L137>
+    ///
+    /// # Arguments
+    ///
+    /// * `from_address` - Contract address of the message sender on the Appchain.
+    /// * `to_address` - Contract address to send the message to on the Appchain.
+    /// * `payload` - The message payload.
+    ///
+    /// # Returns
+    ///
+    /// The hash of the message from the Appchain to Starknet.
     fn compute_hash_appc_to_sn(
         from_address: ContractAddress, to_address: ContractAddress, payload: Span<felt252>
     ) -> felt252 {
@@ -192,12 +169,32 @@ mod appchain_messaging {
         starknet_keccak(hash_data.span())
     }
 
-    /// Computes message hash to send messages to appchain.
-    /// starknet_keccak(nonce, to_address, selector, payload).
+    /// Computes the hash of a message that is sent from Starknet to the Appchain.
+    ///
+    /// <https://github.com/starkware-libs/cairo-lang/blob/caba294d82eeeccc3d86a158adb8ba209bf2d8fc/src/starkware/starknet/solidity/StarknetMessaging.sol#L88>
+    ///
+    /// # Arguments
+    ///
+    /// * `from_address` - Contract address of the message sender on the Appchain.
+    /// * `to_address` - Contract address to send the message to on the Appchain.
+    /// * `selector` - The `l1_handler` function selector of the contract on the Appchain
+    ///                to execute.
+    /// * `payload` - The message payload.
+    /// * `nonce` - Nonce of the message.
+    ///
+    /// # Returns
+    ///
+    /// The hash of the message from Starknet to the Appchain.
     fn compute_hash_sn_to_appc(
-        nonce: felt252, to_address: ContractAddress, selector: felt252, payload: Span<felt252>
+        from_address: ContractAddress,
+        to_address: ContractAddress,
+        selector: felt252,
+        payload: Span<felt252>,
+        nonce: felt252
     ) -> felt252 {
-        let mut hash_data = array![nonce, to_address.into(), selector,];
+        let mut hash_data = array![
+            from_address.into(), to_address.into(), nonce, selector, payload.len().into(),
+        ];
 
         let mut i = 0_usize;
         loop {
@@ -208,7 +205,7 @@ mod appchain_messaging {
             i += 1;
         };
 
-        starknet_keccak(hash_data.span())
+        core::poseidon::poseidon_hash_span(hash_data.span())
     }
 
     #[abi(embed_v0)]
@@ -307,27 +304,6 @@ mod appchain_messaging {
             self.appc_to_sn_messages.write(msg_hash, count - 1);
 
             msg_hash
-        }
-
-        fn execute_message_from_appchain(
-            ref self: ContractState,
-            from_address: ContractAddress,
-            to_address: ContractAddress,
-            selector: felt252,
-            payload: Span<felt252>,
-        ) {
-            assert(
-                self.appchain_account.read() == starknet::get_caller_address(),
-                'Unauthorized executor',
-            );
-
-            match starknet::call_contract_syscall(to_address, selector, payload) {
-                Result::Ok(_) => self
-                    .emit(MessageExecuted { from_address, to_address, selector, payload, }),
-                Result::Err(e) => {
-                    panic(e)
-                }
-            }
         }
     }
 }

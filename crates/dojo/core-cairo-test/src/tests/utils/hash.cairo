@@ -8,7 +8,7 @@ use crate::tests::helpers::DOJO_NSH;
 struct MyModel {
     #[key]
     x: u8,
-    y: u8
+    y: u8,
 }
 
 #[test]

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# This scripts spams transactions to the spawn-and-move example by targetting
+# This scripts spams transactions to the spawn-and-move example by targeting
 # the set_models function.
 #
 # Usage:

@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use assert_matches::assert_matches;
-use cainome::rs::abigen_legacy;
+use cainome::rs::{abigen, abigen_legacy};
 use common::split_felt;
 use dojo_test_utils::sequencer::{get_default_test_config, TestSequencer};
 use indexmap::IndexSet;
@@ -24,8 +24,9 @@ use starknet::core::types::contract::legacy::LegacyContractClass;
 use starknet::core::types::{
     BlockId, BlockTag, Call, DeclareTransactionReceipt, DeployAccountTransactionReceipt,
     EventFilter, EventsPage, ExecutionResult, Felt, MaybePendingBlockWithReceipts,
-    MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs, StarknetError,
-    TransactionExecutionStatus, TransactionFinalityStatus, TransactionReceipt, TransactionTrace,
+    MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs, MaybePendingStateUpdate,
+    StarknetError, TransactionExecutionStatus, TransactionFinalityStatus, TransactionReceipt,
+    TransactionTrace,
 };
 use starknet::core::utils::get_contract_address;
 use starknet::macros::{felt, selector};
@@ -55,6 +56,18 @@ async fn declare_and_deploy_contract() -> Result<()> {
 
     // check that the class is actually declared
     assert!(provider.get_class(BlockId::Tag(BlockTag::Pending), class_hash).await.is_ok());
+
+    // check state update includes class in declared_classes
+    let state_update = provider.get_state_update(BlockId::Tag(BlockTag::Latest)).await?;
+    match state_update {
+        MaybePendingStateUpdate::Update(update) => {
+            assert!(
+                update.state_diff.declared_classes.iter().any(|item| item.class_hash == class_hash
+                    && item.compiled_class_hash == compiled_class_hash)
+            );
+        }
+        _ => panic!("Expected Update, got PendingUpdate"),
+    }
 
     let ctor_args = vec![Felt::ONE, Felt::TWO];
     let calldata = [
@@ -109,6 +122,15 @@ async fn declare_and_deploy_legacy_contract() -> Result<()> {
 
     // check that the class is actually declared
     assert!(provider.get_class(BlockId::Tag(BlockTag::Pending), class_hash).await.is_ok());
+
+    // check state update includes class in deprecated_declared_classes
+    let state_update = provider.get_state_update(BlockId::Tag(BlockTag::Latest)).await?;
+    match state_update {
+        MaybePendingStateUpdate::Update(update) => {
+            assert!(update.state_diff.deprecated_declared_classes.contains(&class_hash));
+        }
+        _ => panic!("Expected Update, got PendingUpdate"),
+    }
 
     let ctor_args = vec![Felt::ONE];
     let calldata = [
@@ -926,7 +948,7 @@ async fn block_traces() -> Result<()> {
 // will be using STRK fee token as its gas fee. So, the STRK fee token must exist in the chain in
 // order for this to pass.
 #[tokio::test]
-async fn v3_transactions() -> Result<()> {
+async fn v3_transactions() {
     let config =
         get_default_test_config(SequencingConfig { no_mining: true, ..Default::default() });
     let sequencer = TestSequencer::start(config).await;
@@ -944,13 +966,11 @@ async fn v3_transactions() -> Result<()> {
         .gas(100000000000)
         .send()
         .await
-        .inspect_err(|e| println!("transaction failed: {e:?}"))?;
+        .unwrap();
 
-    let receipt = dojo_utils::TransactionWaiter::new(res.transaction_hash, &provider).await?;
-    let status = receipt.receipt.execution_result().status();
+    let rec = dojo_utils::TransactionWaiter::new(res.transaction_hash, &provider).await.unwrap();
+    let status = rec.receipt.execution_result().status();
     assert_eq!(status, TransactionExecutionStatus::Succeeded);
-
-    Ok(())
 }
 
 #[tokio::test]
@@ -1145,4 +1165,33 @@ async fn fetch_pending_blocks_in_instant_mode() {
     } else {
         panic!("expected block with transaction receipts")
     }
+}
+
+#[tokio::test]
+async fn call_contract() {
+    let config = get_default_test_config(SequencingConfig::default());
+    let sequencer = TestSequencer::start(config).await;
+
+    let provider = sequencer.provider();
+    let account = sequencer.account().address();
+
+    // -----------------------------------------------------------------------
+    // Call legacy contract
+
+    let contract = Erc20ContractReader::new(DEFAULT_ETH_FEE_TOKEN_ADDRESS.into(), &provider);
+    let _ = contract.name().call().await.unwrap();
+    let _ = contract.balanceOf(&account).call().await.unwrap();
+
+    // -----------------------------------------------------------------------
+    // Call contract
+
+    abigen!(
+        AccountContract,
+        "[{\"type\":\"function\",\"name\":\"get_public_key\",\"inputs\":[],\"outputs\":[{\"type\":\
+         \"core::felt252\"}],\"state_mutability\":\"view\"}]"
+    );
+
+    // setup contract to interact with (can be any existing contract that can be interacted with)
+    let contract = AccountContractReader::new(account, &provider);
+    let _ = contract.get_public_key().call().await.unwrap();
 }

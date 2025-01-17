@@ -280,6 +280,12 @@ where
         contract_address: ContractAddress,
     ) -> StarknetApiResult<ClassHash> {
         self.on_io_blocking_task(move |this| {
+            // Contract address 0x1 is special system contract and does not
+            // have a class. See https://docs.starknet.io/architecture-and-concepts/network-architecture/starknet-state/#address_0x1.
+            if contract_address.0 == Felt::ONE {
+                return Ok(ClassHash::ZERO);
+            }
+
             let state = this.state(&block_id)?;
             let class_hash = state.class_hash_of_contract(contract_address)?;
             class_hash.ok_or(StarknetApiError::ContractNotFound)
@@ -305,10 +311,14 @@ where
     ) -> StarknetApiResult<StorageValue> {
         let state = self.state(&block_id)?;
 
-        // check that contract exist by checking the class hash of the contract
-        let Some(_) = state.class_hash_of_contract(contract_address)? else {
+        // Check that contract exist by checking the class hash of the contract,
+        // unless its address 0x1 which is special system contract and does not
+        // have a class. See https://docs.starknet.io/architecture-and-concepts/network-architecture/starknet-state/#address_0x1.
+        if contract_address.0 != Felt::ONE
+            && state.class_hash_of_contract(contract_address)?.is_none()
+        {
             return Err(StarknetApiError::ContractNotFound);
-        };
+        }
 
         let value = state.storage(contract_address, storage_key)?;
         Ok(value.unwrap_or_default())

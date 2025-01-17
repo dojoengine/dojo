@@ -1,6 +1,6 @@
 FROM debian:bookworm-slim as builder
 
-RUN apt-get update && apt install -y git libtool automake autoconf make tini
+RUN apt-get update && apt install -y git libtool automake autoconf make tini ca-certificates
 
 RUN git clone https://github.com/Comcast/Infinite-File-Curtailer.git curtailer \
     && cd curtailer \
@@ -15,6 +15,8 @@ RUN git clone https://github.com/Comcast/Infinite-File-Curtailer.git curtailer \
     && curtail --version
 
 FROM debian:bookworm-slim as base
+
+COPY --from=builder /etc/ssl/certs /etc/ssl/certs
 
 COPY --from=builder /usr/bin/tini /tini
 ENTRYPOINT ["/tini", "--"]

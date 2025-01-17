@@ -3,9 +3,9 @@ use async_graphql::dynamic::{
 };
 use async_graphql::{Name, Result, Value};
 use tokio_stream::{Stream, StreamExt};
-use torii_core::constants::SQL_FELT_DELIMITER;
-use torii_core::simple_broker::SimpleBroker;
-use torii_core::types::Event;
+use torii_sqlite::constants::SQL_FELT_DELIMITER;
+use torii_sqlite::simple_broker::SimpleBroker;
+use torii_sqlite::types::Event;
 
 use super::inputs::keys_input::{keys_argument, parse_keys_argument};
 use super::{resolve_many, BasicObject, ResolvableObject, TypeMapping};
