@@ -1,6 +1,6 @@
 # See here for image contents: https://hub.docker.com/layers/library/rust/1.81.0-slim/images/sha256-ba4ee661bb466ab49f6ceb8c6d9e9f9784bba7c6e45225187cd3c7fb1fbc12ce
 
-ARG RUST_VERSION
+ARG RUST_VERSION=1.81.0
 FROM rust:${RUST_VERSION}-slim
 ARG RUST_VERSION
 
