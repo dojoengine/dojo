@@ -1,5 +1,5 @@
 use anyhow::Result;
-use clap::{value_parser, Args, Subcommand};
+use clap::{Args, Subcommand};
 use dojo_world::config::calldata_decoder;
 use scarb::core::Config;
 use sozo_ops::model;
@@ -110,10 +110,8 @@ hashes, called 'hash' in the following documentation.
 
         #[arg(value_name = "KEYS")]
         #[arg(value_delimiter = ',')]
-        #[arg(help = "Comma separated values e.g., \
-                     0x12345,0x69420,sstr:\"hello\". Supported prefixes:\n  \
-                     - sstr: A cairo short string\n  \
-                     - no prefix: A cairo felt")]
+        #[arg(help = "Comma separated values e.g., 0x12345,0x69420,sstr:\"hello\". Supported \
+                      prefixes:\n  - sstr: A cairo short string\n  - no prefix: A cairo felt")]
         #[arg(value_parser = model_key_parser)]
         keys: Vec<Felt>,
 
@@ -124,9 +122,7 @@ hashes, called 'hash' in the following documentation.
         starknet: StarknetOptions,
 
         #[arg(short, long)]
-        #[arg(
-            help = "Block number at which to retrieve the model data (pending block by default)"
-        )]
+        #[arg(help = "Block number at which to retrieve the model data (pending block by default)")]
         block: Option<u64>,
     },
 }
@@ -244,9 +240,10 @@ impl ModelArgs {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use clap::Parser;
     use starknet::core::utils::cairo_short_string_to_felt;
+
+    use super::*;
 
     #[derive(Parser, Debug)]
     struct TestCommand {

@@ -168,7 +168,7 @@ pub fn decode_single_calldata(item: &str) -> DecoderResult<Vec<Felt>> {
                     value
                 };
                 ShortStrCalldataDecoder.decode(value)?
-            },
+            }
             "int" => SignedIntegerCalldataDecoder.decode(value)?,
             _ => DefaultCalldataDecoder.decode(item)?,
         }
