@@ -228,6 +228,7 @@ mod tests {
     };
 
     use super::{actions, IActionsDispatcher, IActionsDispatcherTrait};
+    use crate::dungeon::dungeon;
     use dojo_examples::models::{Position, PositionValue, m_Position, Moves, m_Moves, Direction};
 
     fn namespace_def() -> NamespaceDef {
@@ -320,5 +321,42 @@ mod tests {
         let new_position: Position = world.read_model(caller);
         assert(new_position.vec.x == initial_position.vec.x + 1, 'position x is wrong');
         assert(new_position.vec.y == initial_position.vec.y, 'position y is wrong');
+    }
+
+    #[test]
+    #[available_gas(30000000)]
+    #[cfg(feature: 'dungeon')]
+    fn test_feature_dungeon() {
+        let ndef = NamespaceDef {
+            namespace: "ns",
+            resources: [
+                TestResource::Model(armory::m_Flatbow::TEST_CLASS_HASH),
+                TestResource::Model(bestiary::m_RiverSkale::TEST_CLASS_HASH),
+                TestResource::Contract(actions::TEST_CLASS_HASH),
+                TestResource::Contract(dungeon::TEST_CLASS_HASH),
+            ]
+                .span(),
+        };
+
+        let contract_defs = [
+            ContractDefTrait::new(@"ns", @"actions")
+                .with_writer_of([dojo::utils::bytearray_hash(@"ns")].span()),
+            ContractDefTrait::new(@"ns", @"dungeon")
+                .with_writer_of([dojo::utils::bytearray_hash(@"ns")].span()),
+        ]
+            .span();
+
+        let mut world = spawn_test_world([ndef].span());
+        world.sync_perms_and_inits(contract_defs);
+
+        let other = starknet::contract_address_const::<0x1234>();
+        starknet::testing::set_contract_address(other);
+
+        let (dungeon_addr, _) = world.dns(@"dungeon").unwrap();
+
+        let (actions_system_addr, _) = world.dns(@"actions").unwrap();
+        let actions_system = IActionsDispatcher { contract_address: actions_system_addr };
+
+        actions_system.enter_dungeon(dungeon_addr);
     }
 }
