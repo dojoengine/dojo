@@ -8453,6 +8453,7 @@ dependencies = [
  "shellexpand",
  "spinoff",
  "starknet 0.12.0",
+ "strum_macros 0.25.3",
  "thiserror 1.0.63",
  "tokio",
  "toml 0.8.19",
