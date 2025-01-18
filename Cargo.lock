@@ -8318,18 +8318,21 @@ dependencies = [
  "dirs 5.0.1",
  "dojo-utils",
  "inquire",
- "katana-cairo",
  "katana-cli",
  "katana-db",
  "katana-node",
  "katana-primitives",
+ "katana-rpc-types",
+ "rand 0.8.5",
+ "rstest 0.18.2",
  "serde",
- "serde_json",
  "shellexpand",
  "spinoff",
  "starknet 0.12.0",
+ "thiserror 1.0.63",
  "tokio",
  "toml 0.8.19",
+ "tracing",
 ]
 
 [[package]]

@@ -1,25 +1,21 @@
+mod deployment;
+
 use std::fmt::Display;
 use std::fs;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use anyhow::{anyhow, Context, Result};
-use cainome::rs::abigen;
+use anyhow::{Context, Result};
 use clap::Args;
-use dojo_utils::TransactionWaiter;
 use inquire::{Confirm, CustomType, Text};
-use katana_cairo::lang::starknet_classes::casm_contract_class::CasmContractClass;
-use katana_cairo::lang::starknet_classes::contract_class::ContractClass;
-use katana_primitives::{felt, ContractAddress, Felt};
+use katana_primitives::{ContractAddress, Felt};
 use serde::{Deserialize, Serialize};
-use starknet::accounts::{Account, ConnectedAccount, ExecutionEncoding, SingleOwnerAccount};
-use starknet::contract::ContractFactory;
-use starknet::core::types::contract::{CompiledClass, SierraClass};
-use starknet::core::types::{BlockId, BlockTag, FlattenedSierraClass, StarknetError};
+use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
+use starknet::core::types::{BlockId, BlockTag};
 use starknet::core::utils::{cairo_short_string_to_felt, parse_cairo_short_string};
 use starknet::providers::jsonrpc::HttpTransport;
-use starknet::providers::{JsonRpcClient, Provider, ProviderError, Url};
+use starknet::providers::{JsonRpcClient, Provider, Url};
 use starknet::signers::{LocalWallet, SigningKey};
 use tokio::runtime::Runtime;
 
@@ -163,16 +159,19 @@ impl InitArgs {
             .with_error_message("Please enter a valid fee token (the token must exist on L1)")
             .prompt()?;
 
-        // The core settlement contract on L1
+        // The core settlement contract on L1c.
+        // Prompt the user whether to deploy the settlement contract or not.
         let settlement_contract =
-    		// Prompt the user whether to deploy the settlement contract or not.
             if Confirm::new("Deploy settlement contract?").with_default(true).prompt()? {
-                let result = rt.block_on(init_core_contract(&account));
-                result.context("Failed to deploy settlement contract")?
+                let chain_id = cairo_short_string_to_felt(&chain_id)?;
+                let initialize = deployment::deploy_settlement_contract(account, chain_id);
+                let result = rt.block_on(initialize);
+                result?
             }
             // If denied, prompt the user for an already deployed contract.
             else {
-	            // TODO: add a check to make sure the contract is indeed a valid settlement contract.
+                // TODO: add a check to make sure the contract is indeed a valid settlement
+                // contract.
                 CustomType::<ContractAddress>::new("Settlement contract")
                     .with_parser(contract_exist_parser)
                     .prompt()?
@@ -197,107 +196,6 @@ impl InitArgs {
             output_path,
         })
     }
-}
-
-async fn init_core_contract<P>(
-    account: &SingleOwnerAccount<P, LocalWallet>,
-) -> Result<ContractAddress>
-where
-    P: Provider + Send + Sync,
-{
-    use spinoff::{spinners, Color, Spinner};
-
-    let mut sp = Spinner::new(spinners::Dots, "", Color::Blue);
-
-    let result = async {
-        let class = include_str!(
-            "../../../../../crates/katana/contracts/build/appchain_core_contract.json"
-        );
-
-        abigen!(
-            AppchainContract,
-            "[{\"type\":\"function\",\"name\":\"set_program_info\",\"inputs\":[{\"name\":\"\
-             program_hash\",\"type\":\"core::felt252\"},{\"name\":\"config_hash\",\"type\":\"\
-             core::felt252\"}],\"outputs\":[],\"state_mutability\":\"external\"}]"
-        );
-
-        let (contract, compiled_class_hash) = prepare_contract_declaration_params(class)?;
-        let class_hash = contract.class_hash();
-
-        // Check if the class has already been declared,
-        match account.provider().get_class(BlockId::Tag(BlockTag::Pending), class_hash).await {
-            Ok(..) => {
-                // Class has already been declared, no need to do anything...
-            }
-
-            Err(ProviderError::StarknetError(StarknetError::ClassHashNotFound)) => {
-                sp.update_text("Declaring contract...");
-                let res = account.declare_v2(contract.into(), compiled_class_hash).send().await?;
-                let _ = TransactionWaiter::new(res.transaction_hash, account.provider()).await?;
-            }
-
-            Err(err) => return Err(anyhow!(err)),
-        }
-
-        sp.update_text("Deploying contract...");
-
-        let factory = ContractFactory::new(class_hash, &account);
-        // appchain::constructor() https://github.com/cartridge-gg/piltover/blob/d373a844c3428383a48518adf468bf83249dec3a/src/appchain.cairo#L119-L125
-        let request = factory.deploy_v1(
-            vec![
-                account.address(), // owner
-                Felt::ZERO,        // state_root
-                Felt::ZERO,        // block_number
-                Felt::ZERO,        // block_hash
-            ],
-            Felt::ZERO,
-            true,
-        );
-
-        let res = request.send().await?;
-        let _ = TransactionWaiter::new(res.transaction_hash, account.provider()).await?;
-
-        sp.update_text("Initializing...");
-
-        let deployed_contract_address = request.deployed_address();
-        let appchain = AppchainContract::new(deployed_contract_address, account);
-
-        const PROGRAM_HASH: Felt =
-            felt!("0x5ab580b04e3532b6b18f81cfa654a05e29dd8e2352d88df1e765a84072db07");
-        const CONFIG_HASH: Felt =
-            felt!("0x504fa6e5eb930c0d8329d4a77d98391f2730dab8516600aeaf733a6123432");
-
-        appchain.set_program_info(&PROGRAM_HASH, &CONFIG_HASH).send().await?;
-
-        Ok(deployed_contract_address.into())
-    }
-    .await;
-
-    match result {
-        Ok(addr) => sp.success(&format!("Deployment successful ({addr})")),
-        Err(..) => sp.fail("Deployment failed"),
-    }
-    result
-}
-
-fn prepare_contract_declaration_params(artifact: &str) -> Result<(FlattenedSierraClass, Felt)> {
-    let class = get_flattened_class(artifact)?;
-    let compiled_class_hash = get_compiled_class_hash(artifact)?;
-    Ok((class, compiled_class_hash))
-}
-
-fn get_flattened_class(artifact: &str) -> Result<FlattenedSierraClass> {
-    let contract_artifact: SierraClass = serde_json::from_str(artifact)?;
-    Ok(contract_artifact.flatten()?)
-}
-
-fn get_compiled_class_hash(artifact: &str) -> Result<Felt> {
-    let casm_contract_class: ContractClass = serde_json::from_str(artifact)?;
-    let casm_contract =
-        CasmContractClass::from_contract_class(casm_contract_class, true, usize::MAX)?;
-    let res = serde_json::to_string(&casm_contract)?;
-    let compiled_class: CompiledClass = serde_json::from_str(&res)?;
-    Ok(compiled_class.class_hash()?)
 }
 
 // > CONFIG_DIR/$chain_id/config.toml

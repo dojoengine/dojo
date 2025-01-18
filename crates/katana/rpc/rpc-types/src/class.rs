@@ -184,6 +184,16 @@ impl TryFrom<FlattenedSierraClass> for RpcSierraContractClass {
     }
 }
 
+impl TryFrom<RpcSierraContractClass> for FlattenedSierraClass {
+    type Error = ConversionError;
+
+    fn try_from(value: RpcSierraContractClass) -> Result<Self, Self::Error> {
+        let value = serde_json::to_value(value)?;
+        let class = serde_json::from_value::<Self>(value)?;
+        Ok(class)
+    }
+}
+
 impl TryFrom<CompressedLegacyContractClass> for RpcLegacyContractClass {
     type Error = ConversionError;
 
@@ -194,6 +204,15 @@ impl TryFrom<CompressedLegacyContractClass> for RpcLegacyContractClass {
     }
 }
 
+impl TryFrom<RpcLegacyContractClass> for CompressedLegacyContractClass {
+    type Error = ConversionError;
+
+    fn try_from(value: RpcLegacyContractClass) -> Result<Self, Self::Error> {
+        let value = serde_json::to_value(value)?;
+        let class = serde_json::from_value::<Self>(value)?;
+        Ok(class)
+    }
+}
 #[cfg(test)]
 mod tests {
     use katana_primitives::class::{ContractClass, LegacyContractClass, SierraContractClass};
