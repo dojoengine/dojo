@@ -16,6 +16,7 @@ members = [
 	"crates/dojo/utils",
 	"crates/dojo/world",
 	"crates/dojo/world/abigen",
+	"crates/katana/chain-spec",
 	"crates/katana/cli",
 	"crates/katana/controller",
 	"crates/katana/core",
@@ -93,6 +94,7 @@ topological-sort = "0.2"
 
 # katana
 katana-cairo = { path = "crates/katana/cairo" }
+katana-chain-spec = { path = "crates/katana/chain-spec" }
 katana-cli = { path = "crates/katana/cli" }
 katana-codecs = { path = "crates/katana/storage/codecs" }
 katana-codecs-derive = { path = "crates/katana/storage/codecs/derive" }

@@ -24,7 +24,7 @@ use starknet::core::types::contract::{ComputeClassHashError, JsonError};
 use super::allocation::{
     DevGenesisAccount, GenesisAccount, GenesisAccountAlloc, GenesisContractAlloc,
 };
-#[cfg(feature = "slot")]
+#[cfg(feature = "controller")]
 use super::constant::{CONTROLLER_ACCOUNT_CLASS, CONTROLLER_CLASS_HASH};
 use super::constant::{
     DEFAULT_ACCOUNT_CLASS, DEFAULT_ACCOUNT_CLASS_HASH, DEFAULT_ACCOUNT_COMPILED_CLASS_HASH,
@@ -285,7 +285,7 @@ impl TryFrom<GenesisJson> for Genesis {
         let mut class_names: HashMap<String, Felt> = HashMap::new();
         let mut classes: BTreeMap<ClassHash, GenesisClass> = BTreeMap::new();
 
-        #[cfg(feature = "slot")]
+        #[cfg(feature = "controller")]
         // Merely a band aid fix for now.
         // Adding this by default so that we can support mounting the genesis file from k8s
         // ConfigMap when we embed the Controller class, and its capacity is only limited to 1MiB.
@@ -725,7 +725,7 @@ mod tests {
                     class: DEFAULT_ACCOUNT_CLASS.clone().into(),
                 },
             ),
-            #[cfg(feature = "slot")]
+            #[cfg(feature = "controller")]
             (
                 CONTROLLER_CLASS_HASH,
                 GenesisClass {
@@ -899,7 +899,7 @@ mod tests {
                     class: DEFAULT_ACCOUNT_CLASS.clone().into(),
                 },
             ),
-            #[cfg(feature = "slot")]
+            #[cfg(feature = "controller")]
             (
                 CONTROLLER_CLASS_HASH,
                 GenesisClass {

@@ -17,6 +17,7 @@ use dojo_metrics::exporters::prometheus::PrometheusRecorder;
 use dojo_metrics::{Report, Server as MetricsServer};
 use hyper::Method;
 use jsonrpsee::RpcModule;
+use katana_chain_spec::SettlementLayer;
 use katana_core::backend::gas_oracle::L1GasOracle;
 use katana_core::backend::storage::Blockchain;
 use katana_core::backend::Backend;
@@ -140,11 +141,8 @@ impl Node {
         let rpc_handle = self.rpc_server.start(self.config.rpc.socket_addr()).await?;
 
         // --- start the gas oracle worker task
-
-        if let Some(ref url) = self.config.l1_provider_url {
-            self.backend.gas_oracle.run_worker(self.task_manager.task_spawner());
-            info!(%url, "Gas Price Oracle started.");
-        };
+        self.backend.gas_oracle.run_worker(self.task_manager.task_spawner());
+        info!(target: "node", "Gas price oracle worker started.");
 
         Ok(LaunchedNode { node: self, rpc: rpc_handle })
     }
@@ -205,9 +203,16 @@ pub async fn build(mut config: Config) -> Result<Node> {
     let gas_oracle = if let Some(fixed_prices) = &config.dev.fixed_gas_prices {
         // Use fixed gas prices if provided in the configuration
         L1GasOracle::fixed(fixed_prices.gas_price.clone(), fixed_prices.data_gas_price.clone())
-    } else if let Some(url) = &config.l1_provider_url {
-        // Default to a sampled gas oracle using the given provider
-        L1GasOracle::sampled(url.clone())
+    } else if let Some(settlement) = &config.chain.settlement {
+        match settlement {
+            SettlementLayer::Ethereum { rpc_url, .. } => {
+                // Default to a sampled gas oracle using the given provider
+                L1GasOracle::sampled(rpc_url.clone())
+            }
+            SettlementLayer::Starknet { .. } => {
+                todo!("starknet gas oracle")
+            }
+        }
     } else {
         // Use default fixed gas prices if no url and if no fixed prices are provided
         L1GasOracle::fixed(

@@ -8,9 +8,13 @@ use std::sync::Arc;
 
 use anyhow::{Context, Result};
 use clap::Args;
-use inquire::{Confirm, CustomType, Select, Text};
+use inquire::{Confirm, CustomType, Select};
+use katana_chain_spec::{DEV_UNALLOCATED, SettlementLayer};
+use katana_primitives::chain::ChainId;
+use katana_primitives::genesis::Genesis;
+use katana_primitives::genesis::allocation::DevAllocationsGenerator;
 use katana_primitives::{ContractAddress, Felt};
-use serde::{Deserialize, Serialize};
+use lazy_static::lazy_static;
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::types::{BlockId, BlockTag};
 use starknet::core::utils::{cairo_short_string_to_felt, parse_cairo_short_string};
@@ -36,55 +40,15 @@ struct InitInput {
     // the rpc url for the settlement layer.
     rpc_url: Url,
 
-    fee_token: ContractAddress,
-
     settlement_contract: ContractAddress,
 
     // path at which the config file will be written at.
     output_path: PathBuf,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-pub struct SettlementLayer {
-    // the account address that was used to initialized the l1 deployments
-    pub account: ContractAddress,
-
-    // The id of the settlement chain.
-    pub id: String,
-
-    pub rpc_url: Url,
-
-    // - The token that will be used to pay for tx fee in the appchain.
-    // - For now, this must be the native token that is used to pay for tx fee in the settlement
-    //   chain.
-    pub fee_token: ContractAddress,
-
-    // - The bridge contract for bridging the fee token from L1 to the appchain
-    // - This will be part of the initialization process.
-    pub bridge_contract: ContractAddress,
-
-    // - The core appchain contract used to settlement
-    // - This is deployed on the L1
-    pub settlement_contract: ContractAddress,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-pub struct InitConfiguration {
-    // the initialized chain id
-    pub id: String,
-
-    // the fee token contract
-    //
-    // this corresponds to the l1 token contract
-    pub fee_token: ContractAddress,
-
-    pub settlement: SettlementLayer,
-}
-
 #[derive(Debug, Args)]
 pub struct InitArgs {
+    /// The path to where the config file will be written at.
     #[arg(value_name = "PATH")]
     pub output_path: Option<PathBuf>,
 }
@@ -97,27 +61,34 @@ impl InitArgs {
         let rt = tokio::runtime::Builder::new_multi_thread().enable_all().build()?;
         let input = self.prompt(&rt)?;
 
-        let output = InitConfiguration {
-            id: input.id,
-            fee_token: ContractAddress::default(),
-            settlement: SettlementLayer {
-                account: input.account,
-                id: input.settlement_id,
-                rpc_url: input.rpc_url,
-                fee_token: input.fee_token,
-                bridge_contract: ContractAddress::default(),
-                settlement_contract: input.settlement_contract,
-            },
+        let settlement = SettlementLayer::Starknet {
+            account: input.account,
+            rpc_url: input.rpc_url,
+            id: ChainId::parse(&input.settlement_id)?,
+            core_contract: input.settlement_contract,
         };
 
-        let content = toml::to_string_pretty(&output)?;
-        fs::write(input.output_path, content)?;
+        let mut chain_spec = DEV_UNALLOCATED.clone();
+        chain_spec.genesis = GENESIS.clone();
+        chain_spec.id = ChainId::parse(&input.id)?;
+        chain_spec.settlement = Some(settlement);
 
-        Ok(())
+        chain_spec.store(input.output_path)
     }
 
     fn prompt(&self, rt: &Runtime) -> Result<InitInput> {
-        let chain_id = Text::new("Id").prompt()?;
+        let chain_id = CustomType::<String>::new("Id")
+        .with_help_message("This will be the id of your rollup chain.")
+        // checks that the input is a valid ascii string.
+        .with_parser(&|input| {
+            if input.is_ascii() {
+                Ok(input.to_string())
+            } else {
+                Err(())
+            }
+        })
+        .with_error_message("Must be valid ASCII characters")
+        .prompt()?;
 
         #[derive(Debug, strum_macros::Display)]
         enum SettlementChainOpt {
@@ -180,11 +151,12 @@ impl InitArgs {
             ExecutionEncoding::New,
         );
 
-        // The L1 fee token. Must be an existing token.
-        let fee_token = CustomType::<ContractAddress>::new("Fee token")
-            .with_parser(contract_exist_parser)
-            .with_error_message("Please enter a valid fee token (the token must exist on L1)")
-            .prompt()?;
+        // TODO: uncomment once we actually using the fee token.
+        // // The L1 fee token. Must be an existing token.
+        // let fee_token = CustomType::<ContractAddress>::new("Fee token")
+        //     .with_parser(contract_exist_parser)
+        //     .with_error_message("Please enter a valid fee token (the token must exist on L1)")
+        //     .prompt()?;
 
         // The core settlement contract on L1c.
         // Prompt the user whether to deploy the settlement contract or not.
@@ -218,16 +190,15 @@ impl InitArgs {
             settlement_contract,
             settlement_id: parse_cairo_short_string(&l1_chain_id)?,
             id: chain_id,
-            fee_token,
             rpc_url: settlement_url,
             output_path,
         })
     }
 }
 
-// > CONFIG_DIR/$chain_id/config.toml
+// > CONFIG_DIR/$chain_id/config.json
 fn config_path(id: &str) -> Result<PathBuf> {
-    Ok(config_dir(id)?.join("config").with_extension("toml"))
+    Ok(config_dir(id)?.join("config").with_extension("json"))
 }
 
 fn config_dir(id: &str) -> Result<PathBuf> {
@@ -257,4 +228,14 @@ impl Display for Path {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0.display())
     }
+}
+
+lazy_static! {
+    static ref GENESIS: Genesis = {
+        // master account
+        let accounts = DevAllocationsGenerator::new(1).generate();
+        let mut genesis = Genesis::default();
+        genesis.extend_allocations(accounts.into_iter().map(|(k, v)| (k, v.into())));
+        genesis
+    };
 }
