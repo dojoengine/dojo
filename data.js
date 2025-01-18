@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1737175578368,
+  "lastUpdate": 1737175696031,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -46357,6 +46357,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 11463041395,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "74ccf1331a329393b6a79dcdb36b72eab11f41be",
+          "message": "fix(sozo): return error if inspect doesn't find resource (#2920)",
+          "timestamp": "2025-01-17T22:30:06-06:00",
+          "tree_id": "7c42bb69646a6f58b50e34297358e6a30fb03944",
+          "url": "https://github.com/dojoengine/dojo/commit/74ccf1331a329393b6a79dcdb36b72eab11f41be"
+        },
+        "date": 1737175693100,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2593573,
+            "range": "± 45302",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8030544,
+            "range": "± 357054",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2565807155,
+            "range": "± 212859740",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 7646938,
+            "range": "± 139396",
             "unit": "ns/iter"
           }
         ]
