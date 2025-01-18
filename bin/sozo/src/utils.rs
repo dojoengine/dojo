@@ -28,6 +28,22 @@ use crate::commands::options::starknet::StarknetOptions;
 use crate::commands::options::world::WorldOptions;
 use crate::commands::LOG_TARGET;
 
+pub const CALLDATA_DOC: &str = "
+Space separated values e.g., 0x12345 128 u256:9999999999 str:'hello world'.
+Sozo supports some prefixes that you can use to automatically parse some types. The supported \
+                                prefixes are:
+    - u256: A 256-bit unsigned integer.
+    - sstr: A cairo short string. 
+            If the string contains spaces it must be between quotes (ex: sstr:'hello world')
+    - str: A cairo string (ByteArray).
+            If the string contains spaces it must be between quotes (ex: sstr:'hello world')
+    - int: A signed integer.
+    - arr: A dynamic array where each item fits on a single felt252.
+    - u256arr: A dynamic array of u256.
+    - farr: A fixed-size array where each item fits on a single felt252.
+    - u256farr: A fixed-size array of u256.
+    - no prefix: A cairo felt or any type that fit into one felt.";
+
 /// Computes the world address based on the provided options.
 pub fn get_world_address(
     profile_config: &ProfileConfig,

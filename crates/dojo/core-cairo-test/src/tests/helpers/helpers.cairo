@@ -4,7 +4,7 @@ use dojo::world::{IWorldDispatcher, WorldStorage, WorldStorageTrait};
 use dojo::model::Model;
 
 use crate::world::{
-    spawn_test_world, NamespaceDef, TestResource, ContractDefTrait, WorldStorageTestTrait
+    spawn_test_world, NamespaceDef, TestResource, ContractDefTrait, WorldStorageTestTrait,
 };
 
 pub const DOJO_NSH: felt252 = 0x309e09669bc1fdc1dd6563a7ef862aa6227c97d099d08cc7b81bad58a7443fa;
@@ -164,7 +164,7 @@ pub struct Stats {
 #[derive(IntrospectPacked, Copy, Drop, Serde)]
 pub enum Weapon {
     DualWield: (Sword, Sword),
-    Fists: (Sword, Sword), // Introspect requires same arms
+    Fists: (Sword, Sword),
 }
 
 #[starknet::interface]
@@ -196,7 +196,7 @@ pub mod bar {
         fn delete_foo(self: @ContractState) {
             let mut world = self.world(@"dojo");
             let ptr = ModelPtr::<
-                Foo
+                Foo,
             > { id: core::poseidon::poseidon_hash_span([get_caller_address().into()].span()) };
             world.erase_model_ptr(ptr);
         }
@@ -205,7 +205,7 @@ pub mod bar {
 
 /// Deploys an empty world with the `dojo` namespace.
 pub fn deploy_world() -> WorldStorage {
-    let namespace_def = NamespaceDef { namespace: "dojo", resources: [].span(), };
+    let namespace_def = NamespaceDef { namespace: "dojo", resources: [].span() };
 
     spawn_test_world([namespace_def].span())
 }
@@ -214,10 +214,12 @@ pub fn deploy_world() -> WorldStorage {
 /// No permissions are granted.
 pub fn deploy_world_and_foo() -> (WorldStorage, felt252) {
     let namespace_def = NamespaceDef {
-        namespace: "dojo", resources: [
+        namespace: "dojo",
+        resources: [
             TestResource::Model(m_Foo::TEST_CLASS_HASH),
             TestResource::Model(m_NotCopiable::TEST_CLASS_HASH),
-        ].span(),
+        ]
+            .span(),
     };
 
     (spawn_test_world([namespace_def].span()), Model::<Foo>::selector(DOJO_NSH))
@@ -227,10 +229,12 @@ pub fn deploy_world_and_foo() -> (WorldStorage, felt252) {
 /// Grants the `bar` contract writer permissions to the `foo` model.
 pub fn deploy_world_and_bar() -> (WorldStorage, IbarDispatcher) {
     let namespace_def = NamespaceDef {
-        namespace: "dojo", resources: [
+        namespace: "dojo",
+        resources: [
             TestResource::Model(m_Foo::TEST_CLASS_HASH),
             TestResource::Contract(bar::TEST_CLASS_HASH),
-        ].span(),
+        ]
+            .span(),
     };
 
     let bar_def = ContractDefTrait::new(@"dojo", @"bar")
