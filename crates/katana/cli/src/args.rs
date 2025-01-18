@@ -8,6 +8,7 @@ use alloy_primitives::U256;
 use anyhow::bail;
 use anyhow::{Context, Result};
 use clap::Parser;
+use katana_chain_spec::ChainSpec;
 use katana_core::constants::DEFAULT_SEQUENCER_ADDRESS;
 use katana_core::service::messaging::MessagingConfig;
 use katana_node::config::db::DbConfig;
@@ -19,7 +20,6 @@ use katana_node::config::rpc::RpcConfig;
 #[cfg(feature = "server")]
 use katana_node::config::rpc::{RpcModuleKind, RpcModulesList};
 use katana_node::config::{Config, SequencingConfig};
-use katana_primitives::chain_spec::{self, ChainSpec};
 use katana_primitives::genesis::allocation::DevAllocationsGenerator;
 use katana_primitives::genesis::constant::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;
 use serde::{Deserialize, Serialize};
@@ -41,6 +41,10 @@ pub struct NodeArgs {
     /// Don't print anything on startup.
     #[arg(long)]
     pub silent: bool,
+
+    /// Path to the chain configuration file.
+    #[arg(long, hide = true)]
+    pub chain: Option<PathBuf>,
 
     /// Disable auto and interval mining, and mine on demand instead via an endpoint.
     #[arg(long)]
@@ -180,20 +184,8 @@ impl NodeArgs {
         let execution = self.execution_config();
         let sequencing = self.sequencer_config();
         let messaging = self.messaging.clone();
-        let l1_provider_url = self.gpo_config();
 
-        Ok(Config {
-            metrics,
-            db,
-            dev,
-            rpc,
-            chain,
-            execution,
-            sequencing,
-            messaging,
-            forking,
-            l1_provider_url,
-        })
+        Ok(Config { metrics, db, dev, rpc, chain, execution, sequencing, messaging, forking })
     }
 
     fn sequencer_config(&self) -> SequencingConfig {
@@ -244,32 +236,40 @@ impl NodeArgs {
     }
 
     fn chain_spec(&self) -> Result<Arc<ChainSpec>> {
-        let mut chain_spec = chain_spec::DEV_UNALLOCATED.clone();
-
-        if let Some(id) = self.starknet.environment.chain_id {
-            chain_spec.id = id;
-        }
-
-        if let Some(genesis) = self.starknet.genesis.clone() {
-            chain_spec.genesis = genesis;
-        } else {
+        if let Some(path) = &self.chain {
+            let mut chain_spec = ChainSpec::load(path).context("failed to load chain spec")?;
             chain_spec.genesis.sequencer_address = *DEFAULT_SEQUENCER_ADDRESS;
+            Ok(Arc::new(chain_spec))
         }
+        // exclusively for development mode
+        else {
+            let mut chain_spec = katana_chain_spec::DEV_UNALLOCATED.clone();
 
-        // generate dev accounts
-        let accounts = DevAllocationsGenerator::new(self.development.total_accounts)
-            .with_seed(parse_seed(&self.development.seed))
-            .with_balance(U256::from(DEFAULT_PREFUNDED_ACCOUNT_BALANCE))
-            .generate();
+            if let Some(id) = self.starknet.environment.chain_id {
+                chain_spec.id = id;
+            }
 
-        chain_spec.genesis.extend_allocations(accounts.into_iter().map(|(k, v)| (k, v.into())));
+            if let Some(genesis) = &self.starknet.genesis {
+                chain_spec.genesis = genesis.clone();
+            } else {
+                chain_spec.genesis.sequencer_address = *DEFAULT_SEQUENCER_ADDRESS;
+            }
 
-        #[cfg(feature = "slot")]
-        if self.slot.controller {
-            katana_slot_controller::add_controller_account(&mut chain_spec.genesis)?;
+            // generate dev accounts
+            let accounts = DevAllocationsGenerator::new(self.development.total_accounts)
+                .with_seed(parse_seed(&self.development.seed))
+                .with_balance(U256::from(DEFAULT_PREFUNDED_ACCOUNT_BALANCE))
+                .generate();
+
+            chain_spec.genesis.extend_allocations(accounts.into_iter().map(|(k, v)| (k, v.into())));
+
+            #[cfg(feature = "slot")]
+            if self.slot.controller {
+                katana_slot_controller::add_controller_account(&mut chain_spec.genesis)?;
+            }
+
+            Ok(Arc::new(chain_spec))
         }
-
-        Ok(Arc::new(chain_spec))
     }
 
     fn dev_config(&self) -> DevConfig {
@@ -333,10 +333,6 @@ impl NodeArgs {
 
         #[cfg(not(feature = "server"))]
         None
-    }
-
-    fn gpo_config(&self) -> Option<Url> {
-        self.l1_provider_url.clone()
     }
 
     /// Parse the node config from the command line arguments and the config file,
