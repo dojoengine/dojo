@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use katana_cairo::lang::starknet_classes::abi;
 use katana_cairo::lang::starknet_classes::casm_contract_class::StarknetSierraCompilationError;
 use katana_cairo::lang::starknet_classes::contract_class::ContractEntryPoint;
@@ -62,6 +64,33 @@ impl ContractClass {
     /// Returns `true` if the contract class is a legacy class, `false` otherwise.
     pub fn is_legacy(&self) -> bool {
         matches!(self, Self::Legacy(_))
+    }
+}
+
+#[derive(Debug, thiserror::Error)]
+#[error(transparent)]
+pub struct ContractClassFromStrError(serde_json::Error);
+
+#[cfg(feature = "serde")]
+impl FromStr for ContractClass {
+    type Err = ContractClassFromStrError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        #[derive(::serde::Serialize, ::serde::Deserialize)]
+        #[allow(clippy::large_enum_variant)]
+        #[serde(untagged)]
+        enum ContractClassJson {
+            Class(SierraContractClass),
+            Legacy(LegacyContractClass),
+        }
+
+        let class: ContractClassJson =
+            serde_json::from_str(s).map_err(ContractClassFromStrError)?;
+
+        match class {
+            ContractClassJson::Class(class) => Ok(Self::Class(class)),
+            ContractClassJson::Legacy(class) => Ok(Self::Legacy(class)),
+        }
     }
 }
 
