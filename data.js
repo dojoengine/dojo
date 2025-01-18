@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1737175696031,
+  "lastUpdate": 1737236768520,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -46405,6 +46405,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 7646938,
             "range": "± 139396",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "57cfe1ed1e7de0564a880996b7fee4466dcb0a3e",
+          "message": "feat(katana): settlement layer initialization flow improvement (#2926)",
+          "timestamp": "2025-01-19T05:29:56+08:00",
+          "tree_id": "429d2785a5164f654b25583da5a250bd7e0d3b53",
+          "url": "https://github.com/dojoengine/dojo/commit/57cfe1ed1e7de0564a880996b7fee4466dcb0a3e"
+        },
+        "date": 1737236766399,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 11574885790,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
