@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1737150240977,
+  "lastUpdate": 1737167622394,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -46249,6 +46249,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 7758079,
             "range": "± 100518",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "remy.baranx@gmail.com",
+            "name": "Rémy Baranx",
+            "username": "remybar"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "30e574cbd41c5b6ed72034462f62ca53bb00f00b",
+          "message": "feat(sozo): support arrays in calldata arguments (#2917)\n\n* sozo: support arrays in calldata arguments\r\n\r\n* fix: return error if the prefix is unknown\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2025-01-17T20:16:55-06:00",
+          "tree_id": "63eced51099fa387d78617239bdd6160329d96a6",
+          "url": "https://github.com/dojoengine/dojo/commit/30e574cbd41c5b6ed72034462f62ca53bb00f00b"
+        },
+        "date": 1737167619660,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 12011668004,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
