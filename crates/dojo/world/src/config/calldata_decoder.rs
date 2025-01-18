@@ -19,6 +19,8 @@ pub enum CalldataDecoderError {
     FromStrInt(#[from] std::num::ParseIntError),
     #[error(transparent)]
     CairoShortStringToFelt(#[from] starknet::core::utils::CairoShortStringToFeltError),
+    #[error("Unknown prefix while decoding calldata: {0}")]
+    UnknownPrefix(String),
 }
 
 pub type DecoderResult<T, E = CalldataDecoderError> = Result<T, E>;
@@ -228,7 +230,7 @@ pub fn decode_single_calldata(item: &str) -> DecoderResult<Vec<Felt>> {
             "u256arr" => U256DynamicArrayCalldataDecoder.decode(value)?,
             "farr" => FixedSizeArrayCalldataDecoder.decode(value)?,
             "u256farr" => U256FixedSizeArrayCalldataDecoder.decode(value)?,
-            _ => DefaultCalldataDecoder.decode(item)?,
+            _ => return Err(CalldataDecoderError::UnknownPrefix(prefix.to_string())),
         }
     } else {
         DefaultCalldataDecoder.decode(item)?
