@@ -39,35 +39,81 @@ pub trait TyCompareTrait<T> {
     fn is_an_upgrade_of(self: @T, old: @T) -> bool;
 }
 
+impl PrimitiveCompareImpl of TyCompareTrait<felt252> {
+    fn is_an_upgrade_of(self: @felt252, old: @felt252) -> bool {
+        if self == old {
+            return true;
+        }
+
+        let mut allowed_upgrades: Span<(felt252, Span<felt252>)> = [
+            ('bool', [].span()), ('u8', ['u16', 'u32', 'usize', 'u64', 'u128', 'felt252'].span()),
+            ('u16', ['u32', 'usize', 'u64', 'u128', 'felt252'].span()),
+            ('u32', ['usize', 'u64', 'u128', 'felt252'].span()),
+            ('usize', ['u32', 'u64', 'u128', 'felt252'].span()),
+            ('u64', ['u128', 'felt252'].span()), ('u128', ['felt252'].span()), ('u256', [].span()),
+            ('i8', ['i16', 'i32', 'i64', 'i128', 'felt252'].span()),
+            ('i16', ['i32', 'i64', 'i128', 'felt252'].span()),
+            ('i32', ['i64', 'i128', 'felt252'].span()), ('i64', ['i128', 'felt252'].span()),
+            ('i128', ['felt252'].span()), ('felt252', ['ClassHash', 'ContractAddress'].span()),
+            ('ClassHash', ['felt252', 'ContractAddress'].span()),
+            ('ContractAddress', ['felt252', 'ClassHash'].span()),
+        ]
+            .span();
+
+        loop {
+            match allowed_upgrades.pop_front() {
+                Option::Some((
+                    src, allowed,
+                )) => {
+                    if src == old {
+                        let mut i = 0;
+                        break loop {
+                            if i >= (*allowed).len() {
+                                break false;
+                            }
+                            if (*allowed).at(i) == self {
+                                break true;
+                            }
+                            i += 1;
+                        };
+                    }
+                },
+                Option::None => { break false; },
+            }
+        }
+    }
+}
+
 impl TyCompareImpl of TyCompareTrait<Ty> {
     fn is_an_upgrade_of(self: @Ty, old: @Ty) -> bool {
         match (self, old) {
-            (Ty::Primitive(n), Ty::Primitive(o)) => n == o,
+            (Ty::Primitive(n), Ty::Primitive(o)) => n.is_an_upgrade_of(o),
             (Ty::Struct(n), Ty::Struct(o)) => n.is_an_upgrade_of(o),
             (Ty::Array(n), Ty::Array(o)) => { (*n).at(0).is_an_upgrade_of((*o).at(0)) },
             (
-                Ty::Tuple(n), Ty::Tuple(o)
+                Ty::Tuple(n), Ty::Tuple(o),
             ) => {
                 let n = *n;
                 let o = *o;
-                if n.len() == o.len() {
-                    let mut i = 0;
-                    loop {
-                        if i >= n.len() {
-                            break true;
-                        }
-                        if !n.at(i).is_an_upgrade_of(o.at(i)) {
-                            break false;
-                        }
-                        i += 1;
+
+                if n.len() != o.len() {
+                    return false;
+                }
+
+                let mut i = 0;
+                loop {
+                    if i >= n.len() {
+                        break true;
                     }
-                } else {
-                    false
+                    if !n.at(i).is_an_upgrade_of(o.at(i)) {
+                        break false;
+                    }
+                    i += 1;
                 }
             },
             (Ty::ByteArray, Ty::ByteArray) => true,
             (Ty::Enum(n), Ty::Enum(o)) => n.is_an_upgrade_of(o),
-            _ => false
+            _ => false,
         }
     }
 }
