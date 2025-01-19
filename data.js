@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1737236898581,
+  "lastUpdate": 1737245837499,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -46483,6 +46483,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 7692446,
             "range": "± 123695",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2dd3eada036c68ad6740c0ea6473107d816bbeed",
+          "message": "feat(katana): remove support for initializing custom settlement chain  (#2927)\n\nWe can't support custom chain for now as we're relying heavily on the Atlantic service for setting the proofs and currently it is limited to only Starknet Sepolia.",
+          "timestamp": "2025-01-18T19:00:58-05:00",
+          "tree_id": "3e6c9297f361e9a293c7e5fbb21b90d1e71cded6",
+          "url": "https://github.com/dojoengine/dojo/commit/2dd3eada036c68ad6740c0ea6473107d816bbeed"
+        },
+        "date": 1737245835590,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 11785148661,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
