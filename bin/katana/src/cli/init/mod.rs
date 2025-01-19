@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 use anyhow::{Context, Result};
 use clap::Args;
-use inquire::{Confirm, CustomType, Text};
+use inquire::{Confirm, CustomType, Select, Text};
 use katana_primitives::{ContractAddress, Felt};
 use serde::{Deserialize, Serialize};
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
@@ -18,6 +18,8 @@ use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider, Url};
 use starknet::signers::{LocalWallet, SigningKey};
 use tokio::runtime::Runtime;
+
+const CARTRIDGE_SN_SEPOLIA_PROVIDER: &str = "https://api.cartridge.gg/x/starknet/sepolia";
 
 #[derive(Debug)]
 struct InitInput {
@@ -117,12 +119,37 @@ impl InitArgs {
     fn prompt(&self, rt: &Runtime) -> Result<InitInput> {
         let chain_id = Text::new("Id").prompt()?;
 
-        let url = CustomType::<Url>::new("Settlement RPC URL")
-            .with_default(Url::parse("http://localhost:5050")?)
-            .with_error_message("Please enter a valid URL")
-            .prompt()?;
+        #[derive(Debug, strum_macros::Display)]
+        enum SettlementChainOpt {
+            Sepolia,
+            #[cfg(feature = "init-custom-settlement-chain")]
+            Custom,
+        }
 
-        let l1_provider = Arc::new(JsonRpcClient::new(HttpTransport::new(url.clone())));
+        // Right now we only support settling on Starknet Sepolia because we're limited to what
+        // network the Atlantic service could settle the proofs to. Supporting a custom
+        // network here (eg local devnet) would require that the proving service we're using
+        // be able to settle the proofs there.
+        let network_opts = vec![
+            SettlementChainOpt::Sepolia,
+            #[cfg(feature = "init-custom-settlement-chain")]
+            SettlementChainOpt::Custom,
+        ];
+
+        let network_type = Select::new("Select settlement chain", network_opts).prompt()?;
+
+        let settlement_url = match network_type {
+            SettlementChainOpt::Sepolia => Url::parse(CARTRIDGE_SN_SEPOLIA_PROVIDER)?,
+
+            // Useful for testing the program flow without having to run it against actual network.
+            #[cfg(feature = "init-custom-settlement-chain")]
+            SettlementChainOpt::Custom => CustomType::<Url>::new("Settlement RPC URL")
+                .with_default(Url::parse("http://localhost:5050")?)
+                .with_error_message("Please enter a valid URL")
+                .prompt()?,
+        };
+
+        let l1_provider = Arc::new(JsonRpcClient::new(HttpTransport::new(settlement_url.clone())));
 
         let contract_exist_parser = &|input: &str| {
             let block_id = BlockId::Tag(BlockTag::Pending);
@@ -192,7 +219,7 @@ impl InitArgs {
             settlement_id: parse_cairo_short_string(&l1_chain_id)?,
             id: chain_id,
             fee_token,
-            rpc_url: url,
+            rpc_url: settlement_url,
             output_path,
         })
     }

@@ -28,6 +28,7 @@ serde.workspace = true
 shellexpand = "3.1.0"
 spinoff.workspace = true
 starknet.workspace = true
+strum_macros.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
 toml.workspace = true
@@ -41,5 +42,6 @@ starknet.workspace = true
 [features]
 default = [ "jemalloc", "katana-cli/slot" ]
 
+init-custom-settlement-chain = [  ]
 jemalloc = [  ]
 starknet-messaging = [ "katana-cli/starknet-messaging" ]
