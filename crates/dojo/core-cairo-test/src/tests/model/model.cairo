@@ -68,7 +68,7 @@ fn namespace_def() -> NamespaceDef {
             TestResource::Model(m_Foo2::TEST_CLASS_HASH.try_into().unwrap()),
             TestResource::Model(m_Foo3::TEST_CLASS_HASH.try_into().unwrap()),
             TestResource::Model(m_Foo4::TEST_CLASS_HASH.try_into().unwrap()),
-        ].span()
+        ].span(),
     }
 }
 
@@ -233,7 +233,7 @@ fn test_read_schema() {
             && schema.v3.a == foo.v3.a
             && schema.v3.b == foo.v3.b
             && schema.v3.c == foo.v3.c
-            && schema.v3.d == foo.v3.d
+            && schema.v3.d == foo.v3.d,
     );
 }
 
@@ -256,13 +256,13 @@ fn test_read_schemas() {
             && schema_1.v3.a == foo.v3.a
             && schema_1.v3.b == foo.v3.b
             && schema_1.v3.c == foo.v3.c
-            && schema_1.v3.d == foo.v3.d
+            && schema_1.v3.d == foo.v3.d,
     );
     assert!(
         schema_2.v0 == foo_2.v0
             && schema_2.v3.a == foo_2.v3.a
             && schema_2.v3.b == foo_2.v3.b
             && schema_2.v3.c == foo_2.v3.c
-            && schema_2.v3.d == foo_2.v3.d
+            && schema_2.v3.d == foo_2.v3.d,
     );
 }

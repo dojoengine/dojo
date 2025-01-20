@@ -43,7 +43,7 @@ pub trait ModelStorage<S, M> {
 
     /// Retrieves part of multiple models, matching a schema.
     fn read_schemas<T, +Drop<T>, +Serde<T>, +Introspect<T>>(
-        self: @S, ptrs: Span<ModelPtr<M>>
+        self: @S, ptrs: Span<ModelPtr<M>>,
     ) -> Array<T>;
 
     /// Updates a member of a model.

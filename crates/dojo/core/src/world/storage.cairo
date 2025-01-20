@@ -3,7 +3,7 @@
 use core::panic_with_felt252;
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait, Resource};
 use dojo::model::{
-    Model, ModelIndex, ModelValueKey, ModelValue, ModelStorage, ModelPtr, ModelPtrsTrait
+    Model, ModelIndex, ModelValueKey, ModelValue, ModelStorage, ModelPtr, ModelPtrsTrait,
 };
 use dojo::event::{Event, EventStorage};
 use dojo::meta::{Layout, FieldLayout, Introspect};
@@ -31,7 +31,7 @@ fn make_partial_struct_layout<M, +Model<M>>(field_selectors: Span<felt252>) -> L
     for selector in field_selectors {
         layouts
             .append(
-                FieldLayout { selector: *selector, layout: field_layout_unwrap::<M>(*selector) }
+                FieldLayout { selector: *selector, layout: field_layout_unwrap::<M>(*selector) },
             );
     };
     Layout::Struct(layouts.span())
@@ -208,13 +208,13 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
                 *self.dispatcher,
                 Model::<M>::selector(*self.namespace_hash),
                 ModelIndex::Id(ptr.id),
-                Introspect::<T>::layout()
-            )
+                Introspect::<T>::layout(),
+            ),
         )
     }
 
     fn read_schemas<T, +Drop<T>, +Serde<T>, +Introspect<T>>(
-        self: @WorldStorage, ptrs: Span<ModelPtr<M>>
+        self: @WorldStorage, ptrs: Span<ModelPtr<M>>,
     ) -> Array<T> {
         let mut values = ArrayTrait::<T>::new();
 
@@ -222,7 +222,7 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
             *self.dispatcher,
             Model::<M>::selector(*self.namespace_hash),
             ptrs.to_indexes(),
-            Introspect::<T>::layout()
+            Introspect::<T>::layout(),
         ) {
             values.append(deserialize_unwrap(*entity));
         };
