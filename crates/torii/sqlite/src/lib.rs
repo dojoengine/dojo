@@ -910,7 +910,8 @@ fn add_columns_recursive(
                         "ALTER TABLE [{table_id}] DROP CONSTRAINT IF EXISTS [{column_name}_check]"
                     ));
                     alter_table_queries.push(format!(
-                        "ALTER TABLE [{table_id}] ADD CONSTRAINT [{column_name}_check] CHECK([{column_name}] IN ({all_options}))"
+                        "ALTER TABLE [{table_id}] ADD CONSTRAINT [{column_name}_check] \
+                         CHECK([{column_name}] IN ({all_options}))"
                     ));
 
                     // Only process new variants that aren't in the original enum
