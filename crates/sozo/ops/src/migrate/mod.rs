@@ -271,8 +271,7 @@ where
                     // The injection of class hash and addresses is no longer supported since the
                     // world contains an internal DNS.
                     let args = if let Some(args) = init_call_args {
-                        decode_calldata(&args.join(","))
-                            .map_err(|_| MigrationError::InitCallArgs)?
+                        decode_calldata(args).map_err(|_| MigrationError::InitCallArgs)?
                     } else {
                         vec![]
                     };

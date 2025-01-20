@@ -39,7 +39,7 @@ pub struct Moves {
     #[key]
     pub player: ContractAddress,
     pub remaining: u8,
-    pub last_direction: Direction
+    pub last_direction: Direction,
 }
 
 #[derive(Copy, Drop, Serde, Debug)]
@@ -53,7 +53,7 @@ pub struct MockToken {
 #[derive(Copy, Drop, Serde, IntrospectPacked, Debug)]
 pub struct Vec2 {
     pub x: u32,
-    pub y: u32
+    pub y: u32,
 }
 
 // If `Vec2` wasn't packed, the `Position` would be invalid,

@@ -6,8 +6,9 @@ use std::io::{self, Write};
 
 use katana_cairo::lang::starknet_classes::contract_class::ContractEntryPoints;
 use katana_cairo::lang::utils::bigint::BigUintAsHex;
+use katana_cairo::starknet_api::contract_class::EntryPointType;
 use katana_cairo::starknet_api::deprecated_contract_class::{
-    ContractClassAbiEntry, EntryPoint, EntryPointType, Program as LegacyProgram,
+    ContractClassAbiEntry, EntryPointV0, Program as LegacyProgram,
 };
 use katana_cairo::starknet_api::serde_utils::deserialize_optional_contract_class_abi_entry_vector;
 use katana_primitives::class::{ContractClass, LegacyContractClass, SierraContractClass};
@@ -126,7 +127,7 @@ pub struct RpcLegacyContractClass {
     #[serde(with = "base64")]
     pub program: Vec<u8>,
     /// The selector of each entry point is a unique identifier in the program.
-    pub entry_points_by_type: HashMap<EntryPointType, Vec<EntryPoint>>,
+    pub entry_points_by_type: HashMap<EntryPointType, Vec<EntryPointV0>>,
     // Starknet does not verify the abi. If we can't parse it, we set it to None.
     #[serde(default, deserialize_with = "deserialize_optional_contract_class_abi_entry_vector")]
     pub abi: Option<Vec<ContractClassAbiEntry>>,
@@ -184,6 +185,16 @@ impl TryFrom<FlattenedSierraClass> for RpcSierraContractClass {
     }
 }
 
+impl TryFrom<RpcSierraContractClass> for FlattenedSierraClass {
+    type Error = ConversionError;
+
+    fn try_from(value: RpcSierraContractClass) -> Result<Self, Self::Error> {
+        let value = serde_json::to_value(value)?;
+        let class = serde_json::from_value::<Self>(value)?;
+        Ok(class)
+    }
+}
+
 impl TryFrom<CompressedLegacyContractClass> for RpcLegacyContractClass {
     type Error = ConversionError;
 
@@ -194,6 +205,15 @@ impl TryFrom<CompressedLegacyContractClass> for RpcLegacyContractClass {
     }
 }
 
+impl TryFrom<RpcLegacyContractClass> for CompressedLegacyContractClass {
+    type Error = ConversionError;
+
+    fn try_from(value: RpcLegacyContractClass) -> Result<Self, Self::Error> {
+        let value = serde_json::to_value(value)?;
+        let class = serde_json::from_value::<Self>(value)?;
+        Ok(class)
+    }
+}
 #[cfg(test)]
 mod tests {
     use katana_primitives::class::{ContractClass, LegacyContractClass, SierraContractClass};
