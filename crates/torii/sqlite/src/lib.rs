@@ -897,35 +897,72 @@ fn add_columns_recursive(
             add_column(&column_name, "TEXT");
         }
         Ty::Enum(e) => {
-            // The variant of the enum
             let column_name =
                 if column_prefix.is_empty() { "option".to_string() } else { column_prefix };
 
             let all_options =
                 e.options.iter().map(|c| format!("'{}'", c.name)).collect::<Vec<_>>().join(", ");
 
-            let sql_type = format!("TEXT CHECK([{column_name}] IN ({all_options}))");
-            add_column(&column_name, &sql_type);
+            if let Some(upgrade_diff) = upgrade_diff {
+                if let Ty::Enum(diff_enum) = upgrade_diff {
+                    // For upgrades, modify the existing CHECK constraint to include new options
+                    alter_table_queries.push(format!(
+                        "ALTER TABLE [{table_id}] DROP CONSTRAINT IF EXISTS [{column_name}_check]"
+                    ));
+                    alter_table_queries.push(format!(
+                        "ALTER TABLE [{table_id}] ADD CONSTRAINT [{column_name}_check] CHECK([{column_name}] IN ({all_options}))"
+                    ));
 
-            for child in &e.options {
-                if let Ty::Tuple(tuple) = &child.ty {
-                    if tuple.is_empty() {
-                        continue;
+                    // Only process new variants that aren't in the original enum
+                    for child in &e.options {
+                        if !diff_enum.options.iter().any(|o| o.name == child.name) {
+                            if let Ty::Tuple(tuple) = &child.ty {
+                                if tuple.is_empty() {
+                                    continue;
+                                }
+                            }
+
+                            let mut new_path = path.to_vec();
+                            new_path.push(child.name.clone());
+
+                            add_columns_recursive(
+                                &new_path,
+                                &child.ty,
+                                columns,
+                                alter_table_queries,
+                                indices,
+                                table_id,
+                                None,
+                            )?;
+                        }
                     }
                 }
+            } else {
+                // For new tables, create the column with CHECK constraint
+                let sql_type = format!("TEXT CHECK([{column_name}] IN ({all_options}))");
+                add_column(&column_name, &sql_type);
 
-                let mut new_path = path.to_vec();
-                new_path.push(child.name.clone());
+                // Process all variants for new tables
+                for child in &e.options {
+                    if let Ty::Tuple(tuple) = &child.ty {
+                        if tuple.is_empty() {
+                            continue;
+                        }
+                    }
 
-                add_columns_recursive(
-                    &new_path,
-                    &child.ty,
-                    columns,
-                    alter_table_queries,
-                    indices,
-                    table_id,
-                    None,
-                )?;
+                    let mut new_path = path.to_vec();
+                    new_path.push(child.name.clone());
+
+                    add_columns_recursive(
+                        &new_path,
+                        &child.ty,
+                        columns,
+                        alter_table_queries,
+                        indices,
+                        table_id,
+                        None,
+                    )?;
+                }
             }
         }
         Ty::ByteArray(_) => {
