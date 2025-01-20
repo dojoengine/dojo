@@ -14,6 +14,7 @@ use starknet::core::types::{
     BlockId, BlockTag, DeclareTransactionResult, Felt, FlattenedSierraClass, StarknetError,
 };
 use starknet::providers::{Provider, ProviderError};
+use tracing::trace;
 
 use crate::{
     FeeConfig, TransactionError, TransactionExt, TransactionResult, TransactionWaiter, TxnConfig,
@@ -92,7 +93,7 @@ where
         match account.provider().get_class(BlockId::Tag(BlockTag::Pending), class_hash).await {
             Err(ProviderError::StarknetError(StarknetError::ClassHashNotFound)) => {}
             Ok(_) => {
-                tracing::trace!(
+                trace!(
                     label = labeled_class.label,
                     class_hash = format!("{:#066x}", class_hash),
                     "Class already declared."
@@ -104,7 +105,7 @@ where
 
         let casm_class_hash = labeled_class.casm_class_hash;
 
-        tracing::trace!(
+        trace!(
             label = labeled_class.label,
             class_hash = format!("{:#066x}", class_hash),
             casm_class_hash = format!("{:#066x}", casm_class_hash),
@@ -127,7 +128,7 @@ where
             }
         };
 
-        tracing::trace!(
+        trace!(
             label = labeled_class.label,
             transaction_hash = format!("{:#066x}", transaction_hash),
             class_hash = format!("{:#066x}", class_hash),

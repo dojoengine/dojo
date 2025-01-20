@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use katana_cairo::lang::starknet_classes::abi;
 use katana_cairo::lang::starknet_classes::casm_contract_class::StarknetSierraCompilationError;
 use katana_cairo::lang::starknet_classes::contract_class::ContractEntryPoint;
@@ -57,19 +59,37 @@ impl ContractClass {
         }
     }
 
-    /// Returns the class as a Sierra class, if any.
-    pub fn as_class(&self) -> Option<&SierraContractClass> {
-        match self {
-            Self::Class(class) => Some(class),
-            _ => None,
-        }
+    /// Checks if this contract class is a Cairo 0 legacy class.
+    ///
+    /// Returns `true` if the contract class is a legacy class, `false` otherwise.
+    pub fn is_legacy(&self) -> bool {
+        matches!(self, Self::Legacy(_))
     }
+}
 
-    /// Returns the class as a legacy class, if any.
-    pub fn as_legacy(&self) -> Option<&LegacyContractClass> {
-        match self {
-            Self::Legacy(class) => Some(class),
-            _ => None,
+#[derive(Debug, thiserror::Error)]
+#[error(transparent)]
+pub struct ContractClassFromStrError(serde_json::Error);
+
+#[cfg(feature = "serde")]
+impl FromStr for ContractClass {
+    type Err = ContractClassFromStrError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        #[derive(::serde::Serialize, ::serde::Deserialize)]
+        #[allow(clippy::large_enum_variant)]
+        #[serde(untagged)]
+        enum ContractClassJson {
+            Class(SierraContractClass),
+            Legacy(LegacyContractClass),
+        }
+
+        let class: ContractClassJson =
+            serde_json::from_str(s).map_err(ContractClassFromStrError)?;
+
+        match class {
+            ContractClassJson::Class(class) => Ok(Self::Class(class)),
+            ContractClassJson::Legacy(class) => Ok(Self::Legacy(class)),
         }
     }
 }

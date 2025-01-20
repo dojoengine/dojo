@@ -25,7 +25,7 @@ pub mod meta {
     pub mod interface;
     pub use interface::{
         IDeployedResource, IDeployedResourceDispatcher, IDeployedResourceDispatcherTrait,
-        IStoredResource, IStoredResourceDispatcher, IStoredResourceDispatcherTrait
+        IStoredResource, IStoredResourceDispatcher, IStoredResourceDispatcherTrait,
     };
 
     pub mod introspect;
@@ -54,7 +54,7 @@ pub mod model {
     pub use metadata::ResourceMetadata;
 
     pub mod storage;
-    pub use storage::{ModelStorage, ModelStorageTest, ModelValueStorage, ModelValueStorageTest,};
+    pub use storage::{ModelStorage, ModelStorageTest, ModelValueStorage, ModelValueStorageTest};
 }
 
 pub mod storage {
@@ -94,7 +94,7 @@ pub mod world {
     mod iworld;
     pub use iworld::{
         IWorld, IWorldDispatcher, IWorldDispatcherTrait, IUpgradeableWorld,
-        IUpgradeableWorldDispatcher, IUpgradeableWorldDispatcherTrait
+        IUpgradeableWorldDispatcher, IUpgradeableWorldDispatcherTrait,
     };
 
     #[cfg(target: "test")]

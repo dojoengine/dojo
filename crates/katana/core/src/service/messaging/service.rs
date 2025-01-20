@@ -265,32 +265,10 @@ fn interval_from_seconds(secs: u64) -> Interval {
 fn trace_msg_to_l1_sent(messages: &[MessageToL1], hashes: &[String]) {
     assert_eq!(messages.len(), hashes.len());
 
-    #[cfg(feature = "starknet-messaging")]
-    let hash_exec_str = format!("{:#064x}", super::starknet::HASH_EXEC);
-
     for (i, m) in messages.iter().enumerate() {
         let payload_str: Vec<String> = m.payload.iter().map(|f| format!("{:#x}", *f)).collect();
 
         let hash = &hashes[i];
-
-        #[cfg(feature = "starknet-messaging")]
-        if hash == &hash_exec_str {
-            let to_address = &payload_str[0];
-            let selector = &payload_str[1];
-            let payload_str = &payload_str[2..];
-
-            #[rustfmt::skip]
-            info!(
-                target: LOG_TARGET,
-                from_address = %m.from_address,
-                to_address = %to_address,
-                selector = %selector,
-                payload = %payload_str.join(", "),
-                "Message executed on settlement layer.",
-            );
-
-            continue;
-        }
 
         // We check for magic value 'MSG' used only when we are doing L3-L2 messaging.
         let (to_address, payload_str) = if format!("{}", m.to_address) == "0x4d5347" {

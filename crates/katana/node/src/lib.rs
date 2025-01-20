@@ -11,7 +11,7 @@ use std::future::IntoFuture;
 use std::sync::Arc;
 
 use anyhow::Result;
-use config::rpc::ApiKind;
+use config::rpc::RpcModuleKind;
 use config::Config;
 use dojo_metrics::exporters::prometheus::PrometheusRecorder;
 use dojo_metrics::{Report, Server as MetricsServer};
@@ -252,8 +252,11 @@ pub async fn build(mut config: Config) -> Result<Node> {
         .allow_methods([Method::POST, Method::GET])
         .allow_headers([hyper::header::CONTENT_TYPE, "argent-client".parse().unwrap(), "argent-version".parse().unwrap()]);
 
-    if config.rpc.apis.contains(&ApiKind::Starknet) {
-        let cfg = StarknetApiConfig { max_event_page_size: config.rpc.max_event_page_size };
+    if config.rpc.apis.contains(&RpcModuleKind::Starknet) {
+        let cfg = StarknetApiConfig {
+            max_event_page_size: config.rpc.max_event_page_size,
+            max_proof_keys: config.rpc.max_proof_keys,
+        };
 
         let api = if let Some(client) = forked_client {
             StarknetApi::new_forked(
@@ -272,17 +275,17 @@ pub async fn build(mut config: Config) -> Result<Node> {
         rpc_modules.merge(StarknetTraceApiServer::into_rpc(api))?;
     }
 
-    if config.rpc.apis.contains(&ApiKind::Dev) {
+    if config.rpc.apis.contains(&RpcModuleKind::Dev) {
         let api = DevApi::new(backend.clone(), block_producer.clone());
         rpc_modules.merge(api.into_rpc())?;
     }
 
-    if config.rpc.apis.contains(&ApiKind::Torii) {
+    if config.rpc.apis.contains(&RpcModuleKind::Torii) {
         let api = ToriiApi::new(backend.clone(), pool.clone(), block_producer.clone());
         rpc_modules.merge(api.into_rpc())?;
     }
 
-    if config.rpc.apis.contains(&ApiKind::Saya) {
+    if config.rpc.apis.contains(&RpcModuleKind::Saya) {
         let api = SayaApi::new(backend.clone(), block_producer.clone());
         rpc_modules.merge(api.into_rpc())?;
     }

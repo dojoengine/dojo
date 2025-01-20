@@ -7,11 +7,15 @@
 //!
 //! Currently, the merge is made at the top level of the commands.
 
+#[cfg(feature = "server")]
 use std::net::IpAddr;
 
 use clap::Args;
 use katana_node::config::execution::{DEFAULT_INVOCATION_MAX_STEPS, DEFAULT_VALIDATION_MAX_STEPS};
+#[cfg(feature = "server")]
 use katana_node::config::metrics::{DEFAULT_METRICS_ADDR, DEFAULT_METRICS_PORT};
+#[cfg(feature = "server")]
+use katana_node::config::rpc::{RpcModulesList, DEFAULT_RPC_MAX_PROOF_KEYS};
 #[cfg(feature = "server")]
 use katana_node::config::rpc::{
     DEFAULT_RPC_ADDR, DEFAULT_RPC_MAX_CONNECTIONS, DEFAULT_RPC_MAX_EVENT_PAGE_SIZE,
@@ -20,14 +24,14 @@ use katana_node::config::rpc::{
 use katana_primitives::block::BlockHashOrNumber;
 use katana_primitives::chain::ChainId;
 use katana_primitives::genesis::Genesis;
+#[cfg(feature = "server")]
 use katana_rpc::cors::HeaderValue;
 use serde::{Deserialize, Serialize};
 use url::Url;
 
-use crate::utils::{
-    deserialize_cors_origins, parse_block_hash_or_number, parse_genesis, serialize_cors_origins,
-    LogFormat,
-};
+#[cfg(feature = "server")]
+use crate::utils::{deserialize_cors_origins, serialize_cors_origins};
+use crate::utils::{parse_block_hash_or_number, parse_genesis, LogFormat};
 
 const DEFAULT_DEV_SEED: &str = "0";
 const DEFAULT_DEV_ACCOUNTS: u16 = 10;
@@ -96,6 +100,12 @@ pub struct ServerOptions {
     )]
     pub http_cors_origins: Vec<HeaderValue>,
 
+    /// API's offered over the HTTP-RPC interface.
+    #[arg(long = "http.api", value_name = "MODULES")]
+    #[arg(value_parser = RpcModulesList::parse)]
+    #[serde(default)]
+    pub http_modules: Option<RpcModulesList>,
+
     /// Maximum number of concurrent connections allowed.
     #[arg(long = "rpc.max-connections", value_name = "COUNT")]
     #[arg(default_value_t = DEFAULT_RPC_MAX_CONNECTIONS)]
@@ -107,6 +117,12 @@ pub struct ServerOptions {
     #[arg(default_value_t = DEFAULT_RPC_MAX_EVENT_PAGE_SIZE)]
     #[serde(default = "default_page_size")]
     pub max_event_page_size: u64,
+
+    /// Maximum keys for requesting storage proofs.
+    #[arg(long = "rpc.max-proof-keys", value_name = "SIZE")]
+    #[arg(default_value_t = DEFAULT_RPC_MAX_PROOF_KEYS)]
+    #[serde(default = "default_proof_keys")]
+    pub max_proof_keys: u64,
 }
 
 #[cfg(feature = "server")]
@@ -115,9 +131,11 @@ impl Default for ServerOptions {
         ServerOptions {
             http_addr: DEFAULT_RPC_ADDR,
             http_port: DEFAULT_RPC_PORT,
-            max_connections: DEFAULT_RPC_MAX_CONNECTIONS,
             http_cors_origins: Vec::new(),
+            http_modules: Some(RpcModulesList::default()),
+            max_connections: DEFAULT_RPC_MAX_CONNECTIONS,
             max_event_page_size: DEFAULT_RPC_MAX_EVENT_PAGE_SIZE,
+            max_proof_keys: DEFAULT_RPC_MAX_PROOF_KEYS,
         }
     }
 }
@@ -378,6 +396,11 @@ fn default_max_connections() -> u32 {
 #[cfg(feature = "server")]
 fn default_page_size() -> u64 {
     DEFAULT_RPC_MAX_EVENT_PAGE_SIZE
+}
+
+#[cfg(feature = "server")]
+fn default_proof_keys() -> u64 {
+    katana_node::config::rpc::DEFAULT_RPC_MAX_PROOF_KEYS
 }
 
 #[cfg(feature = "server")]

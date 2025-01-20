@@ -34,6 +34,12 @@ service World {
     // Update entity subscription
     rpc UpdateEventMessagesSubscription (UpdateEventMessagesSubscriptionRequest) returns (google.protobuf.Empty);
 
+    // Subscribe to token balance updates.
+    rpc SubscribeTokenBalances (RetrieveTokenBalancesRequest) returns (stream SubscribeTokenBalancesResponse);
+
+    // Update token balance subscription
+    rpc UpdateTokenBalancesSubscription (UpdateTokenBalancesSubscriptionRequest) returns (google.protobuf.Empty);
+
     // Retrieve entities
     rpc RetrieveEventMessages (RetrieveEventMessagesRequest) returns (RetrieveEntitiesResponse);
 
@@ -48,6 +54,24 @@ service World {
 
     // Retrieve token balances
     rpc RetrieveTokenBalances (RetrieveTokenBalancesRequest) returns (RetrieveTokenBalancesResponse);
+}
+
+// A request to update a token balance subscription
+message UpdateTokenBalancesSubscriptionRequest {
+    // The subscription ID
+    uint64 subscription_id = 1;
+    // The list of contract addresses to subscribe to
+    repeated bytes contract_addresses = 2;
+    // The list of account addresses to subscribe to
+    repeated bytes account_addresses = 3;
+}
+
+// A response containing token balances
+message SubscribeTokenBalancesResponse {
+    // The subscription ID
+    uint64 subscription_id = 1;
+    // The token balance
+    types.TokenBalance balance = 2;
 }
 
 // A request to retrieve tokens

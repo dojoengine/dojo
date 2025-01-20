@@ -9,7 +9,7 @@ use dojo::event::{Event, EventStorage};
 use dojo::meta::{Layout, FieldLayout, Introspect};
 use dojo::utils::{
     entity_id_from_keys, entity_id_from_serialized_keys, serialize_inline, find_model_field_layout,
-    deserialize_unwrap
+    deserialize_unwrap,
 };
 use starknet::{ContractAddress, ClassHash};
 
@@ -22,7 +22,7 @@ pub struct WorldStorage {
 fn field_layout_unwrap<M, +Model<M>>(field_selector: felt252) -> Layout {
     match Model::<M>::field_layout(field_selector) {
         Option::Some(layout) => layout,
-        Option::None => panic_with_felt252('bad member id')
+        Option::None => panic_with_felt252('bad member id'),
     }
 }
 
@@ -52,12 +52,12 @@ pub impl WorldStorageInternalImpl of WorldStorageTrait {
     fn dns(self: @WorldStorage, contract_name: @ByteArray) -> Option<(ContractAddress, ClassHash)> {
         match (*self.dispatcher)
             .resource(
-                dojo::utils::selector_from_namespace_and_name(*self.namespace_hash, contract_name)
+                dojo::utils::selector_from_namespace_and_name(*self.namespace_hash, contract_name),
             ) {
             Resource::Contract((
-                contract_address, class_hash
+                contract_address, class_hash,
             )) => Option::Some((contract_address, class_hash.try_into().unwrap())),
-            _ => Option::None
+            _ => Option::None,
         }
     }
 
@@ -84,15 +84,15 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
             *self.dispatcher,
             Model::<M>::selector(*self.namespace_hash),
             ModelIndex::Id(entity_id_from_serialized_keys(keys)),
-            Model::<M>::layout()
+            Model::<M>::layout(),
         );
         match Model::<M>::from_serialized(keys, values) {
             Option::Some(model) => model,
             Option::None => {
                 panic!(
-                    "Model: deserialization failed. Ensure the length of the keys tuple is matching the number of #[key] fields in the model struct."
+                    "Model: deserialization failed. Ensure the length of the keys tuple is matching the number of #[key] fields in the model struct.",
                 )
-            }
+            },
         }
     }
 
@@ -109,7 +109,7 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
             *self.dispatcher,
             Model::<M>::selector(*self.namespace_hash),
             indexes.span(),
-            Model::<M>::layout()
+            Model::<M>::layout(),
         );
 
         let mut models: Array<M> = array![];
@@ -120,9 +120,9 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
                 Option::Some(model) => models.append(model),
                 Option::None => {
                     panic!(
-                        "Model: deserialization failed. Ensure the length of the keys tuple is matching the number of #[key] fields in the model struct."
+                        "Model: deserialization failed. Ensure the length of the keys tuple is matching the number of #[key] fields in the model struct.",
                     )
-                }
+                },
             };
 
             i += 1;
@@ -136,7 +136,7 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
             Model::<M>::selector(self.namespace_hash),
             ModelIndex::Keys(Model::<M>::serialized_keys(model)),
             Model::<M>::serialized_values(model),
-            Model::<M>::layout()
+            Model::<M>::layout(),
         );
     }
 
@@ -153,7 +153,7 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
             Model::<M>::selector(self.namespace_hash),
             keys.span(),
             values.span(),
-            Model::<M>::layout()
+            Model::<M>::layout(),
         );
     }
 
@@ -162,7 +162,7 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
             self.dispatcher,
             Model::<M>::selector(self.namespace_hash),
             ModelIndex::Id(Model::<M>::entity_id(model)),
-            Model::<M>::layout()
+            Model::<M>::layout(),
         );
     }
 
@@ -176,7 +176,7 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
             self.dispatcher,
             Model::<M>::selector(self.namespace_hash),
             ids.span(),
-            Model::<M>::layout()
+            Model::<M>::layout(),
         );
     }
 
@@ -185,20 +185,20 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
             self.dispatcher,
             Model::<M>::selector(self.namespace_hash),
             ModelIndex::Id(ptr.id),
-            Model::<M>::layout()
+            Model::<M>::layout(),
         );
     }
 
     fn read_member<T, +Serde<T>>(
-        self: @WorldStorage, ptr: ModelPtr<M>, field_selector: felt252
+        self: @WorldStorage, ptr: ModelPtr<M>, field_selector: felt252,
     ) -> T {
         deserialize_unwrap(
             IWorldDispatcherTrait::entity(
                 *self.dispatcher,
                 Model::<M>::selector(*self.namespace_hash),
                 ModelIndex::MemberId((ptr.id, field_selector)),
-                field_layout_unwrap::<M>(field_selector)
-            )
+                field_layout_unwrap::<M>(field_selector),
+            ),
         )
     }
 
@@ -273,14 +273,14 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
 
 
     fn write_member<T, +Serde<T>, +Drop<T>>(
-        ref self: WorldStorage, ptr: ModelPtr<M>, field_selector: felt252, value: T
+        ref self: WorldStorage, ptr: ModelPtr<M>, field_selector: felt252, value: T,
     ) {
         IWorldDispatcherTrait::set_entity(
             self.dispatcher,
             Model::<M>::selector(self.namespace_hash),
             ModelIndex::MemberId((ptr.id, field_selector)),
             serialize_inline(@value),
-            field_layout_unwrap::<M>(field_selector)
+            field_layout_unwrap::<M>(field_selector),
         );
     }
 
@@ -369,7 +369,7 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
             self.dispatcher,
             Model::<M>::selector(self.namespace_hash),
             indexes.span(),
-            Model::<M>::layout()
+            Model::<M>::layout(),
         );
     }
 
@@ -379,7 +379,7 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
 }
 
 impl ModelValueStorageWorldStorageImpl<
-    V, +ModelValue<V>, +Drop<V>
+    V, +ModelValue<V>, +Drop<V>,
 > of dojo::model::ModelValueStorage<WorldStorage, V> {
     fn read_value<K, +Drop<K>, +Serde<K>, +ModelValueKey<V, K>>(self: @WorldStorage, keys: K) -> V {
         Self::read_value_from_id(self, entity_id_from_keys(@keys))
@@ -390,20 +390,20 @@ impl ModelValueStorageWorldStorageImpl<
             *self.dispatcher,
             ModelValue::<V>::selector(*self.namespace_hash),
             ModelIndex::Id(entity_id),
-            ModelValue::<V>::layout()
+            ModelValue::<V>::layout(),
         );
         match ModelValue::<V>::from_serialized(values) {
             Option::Some(entity) => entity,
             Option::None => {
                 panic!(
-                    "Value: deserialization failed. Ensure the length of the keys tuple is matching the number of #[key] fields in the model struct."
+                    "Value: deserialization failed. Ensure the length of the keys tuple is matching the number of #[key] fields in the model struct.",
                 )
-            }
+            },
         }
     }
 
     fn read_values<K, +Drop<K>, +Serde<K>, +ModelValueKey<V, K>>(
-        self: @WorldStorage, keys: Span<K>
+        self: @WorldStorage, keys: Span<K>,
     ) -> Array<V> {
         let mut entity_ids: Array<felt252> = array![];
         for k in keys {
@@ -423,23 +423,23 @@ impl ModelValueStorageWorldStorageImpl<
             *self.dispatcher,
             ModelValue::<V>::selector(*self.namespace_hash),
             indexes.span(),
-            ModelValue::<V>::layout()
+            ModelValue::<V>::layout(),
         ) {
             let mut v = *v;
             match ModelValue::<V>::from_serialized(v) {
                 Option::Some(value) => values.append(value),
                 Option::None => {
                     panic!(
-                        "Value: deserialization failed. Ensure the length of the keys tuple is matching the number of #[key] fields in the model struct."
+                        "Value: deserialization failed. Ensure the length of the keys tuple is matching the number of #[key] fields in the model struct.",
                     )
-                }
+                },
             }
         };
         values
     }
 
     fn write_value<K, +Drop<K>, +Serde<K>, +ModelValueKey<V, K>>(
-        ref self: WorldStorage, keys: K, value: @V
+        ref self: WorldStorage, keys: K, value: @V,
     ) {
         IWorldDispatcherTrait::set_entity(
             self.dispatcher,
@@ -447,12 +447,12 @@ impl ModelValueStorageWorldStorageImpl<
             // We need Id here to trigger the store update event.
             ModelIndex::Id(entity_id_from_serialized_keys(serialize_inline::<K>(@keys))),
             ModelValue::<V>::serialized_values(value),
-            ModelValue::<V>::layout()
+            ModelValue::<V>::layout(),
         );
     }
 
     fn write_values<K, +Drop<K>, +Serde<K>, +ModelValueKey<V, K>>(
-        ref self: WorldStorage, keys: Span<K>, values: Span<@V>
+        ref self: WorldStorage, keys: Span<K>, values: Span<@V>,
     ) {
         let mut ids: Array<felt252> = array![];
         for k in keys {
@@ -468,7 +468,7 @@ impl ModelValueStorageWorldStorageImpl<
             ModelValue::<V>::selector(self.namespace_hash),
             ModelIndex::Id(entity_id),
             ModelValue::<V>::serialized_values(value),
-            ModelValue::<V>::layout()
+            ModelValue::<V>::layout(),
         );
     }
 
@@ -493,18 +493,18 @@ impl ModelValueStorageWorldStorageImpl<
             ModelValue::<V>::selector(self.namespace_hash),
             indexes.span(),
             all_values.span(),
-            ModelValue::<V>::layout()
+            ModelValue::<V>::layout(),
         );
     }
 }
 
 #[cfg(target: "test")]
 pub impl EventStorageTestWorldStorageImpl<
-    E, +Event<E>
+    E, +Event<E>,
 > of dojo::event::EventStorageTest<WorldStorage, E> {
     fn emit_event_test(ref self: WorldStorage, event: @E) {
         let world_test = dojo::world::IWorldTestDispatcher {
-            contract_address: self.dispatcher.contract_address
+            contract_address: self.dispatcher.contract_address,
         };
         dojo::world::IWorldTestDispatcherTrait::emit_event_test(
             world_test,
@@ -519,18 +519,18 @@ pub impl EventStorageTestWorldStorageImpl<
 /// checks.
 #[cfg(target: "test")]
 pub impl ModelStorageTestWorldStorageImpl<
-    M, +Model<M>, +Drop<M>
+    M, +Model<M>, +Drop<M>,
 > of dojo::model::ModelStorageTest<WorldStorage, M> {
     fn write_model_test(ref self: WorldStorage, model: @M) {
         let world_test = dojo::world::IWorldTestDispatcher {
-            contract_address: self.dispatcher.contract_address
+            contract_address: self.dispatcher.contract_address,
         };
         dojo::world::IWorldTestDispatcherTrait::set_entity_test(
             world_test,
             Model::<M>::selector(self.namespace_hash),
             ModelIndex::Keys(Model::serialized_keys(model)),
             Model::<M>::serialized_values(model),
-            Model::<M>::layout()
+            Model::<M>::layout(),
         );
     }
 
@@ -542,14 +542,14 @@ pub impl ModelStorageTestWorldStorageImpl<
 
     fn erase_model_test(ref self: WorldStorage, model: @M) {
         let world_test = dojo::world::IWorldTestDispatcher {
-            contract_address: self.dispatcher.contract_address
+            contract_address: self.dispatcher.contract_address,
         };
 
         dojo::world::IWorldTestDispatcherTrait::delete_entity_test(
             world_test,
             Model::<M>::selector(self.namespace_hash),
             ModelIndex::Keys(Model::serialized_keys(model)),
-            Model::<M>::layout()
+            Model::<M>::layout(),
         );
     }
 
@@ -561,20 +561,20 @@ pub impl ModelStorageTestWorldStorageImpl<
 
     fn erase_model_ptr_test(ref self: WorldStorage, ptr: ModelPtr<M>) {
         let world_test = dojo::world::IWorldTestDispatcher {
-            contract_address: self.dispatcher.contract_address
+            contract_address: self.dispatcher.contract_address,
         };
 
         dojo::world::IWorldTestDispatcherTrait::delete_entity_test(
             world_test,
             Model::<M>::selector(self.namespace_hash),
             ModelIndex::Id(ptr.id),
-            Model::<M>::layout()
+            Model::<M>::layout(),
         );
     }
 
     fn erase_models_ptrs_test(ref self: WorldStorage, ptrs: Span<ModelPtr<M>>) {
         let world_test = dojo::world::IWorldTestDispatcher {
-            contract_address: self.dispatcher.contract_address
+            contract_address: self.dispatcher.contract_address,
         };
 
         for ptr in ptrs {
@@ -582,7 +582,7 @@ pub impl ModelStorageTestWorldStorageImpl<
                 world_test,
                 Model::<M>::selector(self.namespace_hash),
                 ModelIndex::Id(*ptr.id),
-                Model::<M>::layout()
+                Model::<M>::layout(),
             );
         }
     }
@@ -592,16 +592,16 @@ pub impl ModelStorageTestWorldStorageImpl<
 /// checks.
 #[cfg(target: "test")]
 pub impl ModelValueStorageTestWorldStorageImpl<
-    V, +ModelValue<V>
+    V, +ModelValue<V>,
 > of dojo::model::ModelValueStorageTest<WorldStorage, V> {
     fn write_value_test<K, +Drop<K>, +Serde<K>, +ModelValueKey<V, K>>(
-        ref self: WorldStorage, keys: K, value: @V
+        ref self: WorldStorage, keys: K, value: @V,
     ) {
         Self::write_value_from_id_test(ref self, dojo::utils::entity_id_from_keys(@keys), value);
     }
 
     fn write_values_test<K, +Drop<K>, +Serde<K>, +ModelValueKey<V, K>>(
-        ref self: WorldStorage, keys: Span<K>, values: Span<@V>
+        ref self: WorldStorage, keys: Span<K>, values: Span<@V>,
     ) {
         let mut ids: Array<felt252> = array![];
         for k in keys {
@@ -613,7 +613,7 @@ pub impl ModelValueStorageTestWorldStorageImpl<
 
     fn write_value_from_id_test(ref self: WorldStorage, entity_id: felt252, value: @V) {
         let world_test = dojo::world::IWorldTestDispatcher {
-            contract_address: self.dispatcher.contract_address
+            contract_address: self.dispatcher.contract_address,
         };
 
         dojo::world::IWorldTestDispatcherTrait::set_entity_test(
@@ -621,12 +621,12 @@ pub impl ModelValueStorageTestWorldStorageImpl<
             ModelValue::<V>::selector(self.namespace_hash),
             ModelIndex::Id(entity_id),
             ModelValue::<V>::serialized_values(value),
-            ModelValue::<V>::layout()
+            ModelValue::<V>::layout(),
         );
     }
 
     fn write_values_from_ids_test(
-        ref self: WorldStorage, entity_ids: Span<felt252>, values: Span<@V>
+        ref self: WorldStorage, entity_ids: Span<felt252>, values: Span<@V>,
     ) {
         let mut i = 0;
         loop {
@@ -656,7 +656,7 @@ fn update_serialized_member(
                 world, model_id, ModelIndex::MemberId((entity_id, member_id)), values, field_layout,
             )
         },
-        Option::None => panic_with_felt252('bad member id')
+        Option::None => panic_with_felt252('bad member id'),
     }
 }
 
@@ -671,10 +671,10 @@ fn get_serialized_member(
     match find_model_field_layout(layout, member_id) {
         Option::Some(field_layout) => {
             IWorldDispatcherTrait::entity(
-                world, model_id, ModelIndex::MemberId((entity_id, member_id)), field_layout
+                world, model_id, ModelIndex::MemberId((entity_id, member_id)), field_layout,
             )
         },
-        Option::None => panic_with_felt252('bad member id')
+        Option::None => panic_with_felt252('bad member id'),
     }
 }
 

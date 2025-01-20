@@ -17,10 +17,11 @@ use katana_primitives::env::BlockEnv;
 use katana_primitives::event::MaybeForkedContinuationToken;
 use katana_primitives::transaction::{ExecutableTxWithHash, TxHash, TxWithHash};
 use katana_primitives::Felt;
+use katana_provider::error::ProviderError;
 use katana_provider::traits::block::{BlockHashProvider, BlockIdReader, BlockNumberProvider};
 use katana_provider::traits::contract::ContractClassProvider;
 use katana_provider::traits::env::BlockEnvProvider;
-use katana_provider::traits::state::{StateFactoryProvider, StateProvider};
+use katana_provider::traits::state::{StateFactoryProvider, StateProvider, StateRootProvider};
 use katana_provider::traits::transaction::{
     ReceiptProvider, TransactionProvider, TransactionStatusProvider,
 };
@@ -34,6 +35,10 @@ use katana_rpc_types::event::{EventFilterWithPage, EventsPage};
 use katana_rpc_types::receipt::{ReceiptBlock, TxReceiptWithBlockInfo};
 use katana_rpc_types::state_update::MaybePendingStateUpdate;
 use katana_rpc_types::transaction::Tx;
+use katana_rpc_types::trie::{
+    ClassesProof, ContractLeafData, ContractStorageKeys, ContractStorageProofs, ContractsProof,
+    GetStorageProofResponse, GlobalRoots, Nodes,
+};
 use katana_rpc_types::FeeEstimate;
 use katana_rpc_types_builder::ReceiptBuilder;
 use katana_tasks::{BlockingTaskPool, TokioTaskSpawner};
@@ -275,6 +280,12 @@ where
         contract_address: ContractAddress,
     ) -> StarknetApiResult<ClassHash> {
         self.on_io_blocking_task(move |this| {
+            // Contract address 0x1 is special system contract and does not
+            // have a class. See https://docs.starknet.io/architecture-and-concepts/network-architecture/starknet-state/#address_0x1.
+            if contract_address.0 == Felt::ONE {
+                return Ok(ClassHash::ZERO);
+            }
+
             let state = this.state(&block_id)?;
             let class_hash = state.class_hash_of_contract(contract_address)?;
             class_hash.ok_or(StarknetApiError::ContractNotFound)
@@ -300,10 +311,14 @@ where
     ) -> StarknetApiResult<StorageValue> {
         let state = self.state(&block_id)?;
 
-        // check that contract exist by checking the class hash of the contract
-        let Some(_) = state.class_hash_of_contract(contract_address)? else {
+        // Check that contract exist by checking the class hash of the contract,
+        // unless its address 0x1 which is special system contract and does not
+        // have a class. See https://docs.starknet.io/architecture-and-concepts/network-architecture/starknet-state/#address_0x1.
+        if contract_address.0 != Felt::ONE
+            && state.class_hash_of_contract(contract_address)?.is_none()
+        {
             return Err(StarknetApiError::ContractNotFound);
-        };
+        }
 
         let value = state.storage(contract_address, storage_key)?;
         Ok(value.unwrap_or_default())
@@ -1123,6 +1138,94 @@ where
         };
 
         Ok(id)
+    }
+
+    async fn get_proofs(
+        &self,
+        block_id: BlockIdOrTag,
+        class_hashes: Option<Vec<ClassHash>>,
+        contract_addresses: Option<Vec<ContractAddress>>,
+        contracts_storage_keys: Option<Vec<ContractStorageKeys>>,
+    ) -> StarknetApiResult<GetStorageProofResponse> {
+        self.on_io_blocking_task(move |this| {
+            let provider = this.inner.backend.blockchain.provider();
+
+            let Some(block_num) = provider.convert_block_id(block_id)? else {
+                return Err(StarknetApiError::BlockNotFound);
+            };
+
+            // Check if the total number of keys requested exceeds the RPC limit.
+            if let Some(limit) = this.inner.config.max_proof_keys {
+                let total_keys = class_hashes.as_ref().map(|v| v.len()).unwrap_or(0)
+                    + contract_addresses.as_ref().map(|v| v.len()).unwrap_or(0)
+                    + contracts_storage_keys.as_ref().map(|v| v.len()).unwrap_or(0);
+
+                let total_keys = total_keys as u64;
+                if total_keys > limit {
+                    return Err(StarknetApiError::ProofLimitExceeded { limit, total: total_keys });
+                }
+            }
+
+            // TODO: the way we handle the block id is very clanky. change it!
+            let state = this.state(&BlockIdOrTag::Number(block_num))?;
+            let block_hash = provider
+                .block_hash_by_num(block_num)?
+                .ok_or(ProviderError::MissingBlockHeader(block_num))?;
+
+            // --- Get classes proof (if any)
+
+            let classes_proof = if let Some(classes) = class_hashes {
+                let proofs = state.class_multiproof(classes)?;
+                ClassesProof { nodes: proofs.into() }
+            } else {
+                ClassesProof::default()
+            };
+
+            // --- Get contracts proof (if any)
+
+            let contracts_proof = if let Some(addresses) = contract_addresses {
+                let proofs = state.contract_multiproof(addresses.clone())?;
+                let mut contract_leaves_data = Vec::new();
+
+                for address in addresses {
+                    let nonce = state.nonce(address)?.unwrap_or_default();
+                    let class_hash = state.class_hash_of_contract(address)?.unwrap_or_default();
+                    let storage_root = state.storage_root(address)?.unwrap_or_default();
+                    contract_leaves_data.push(ContractLeafData { storage_root, class_hash, nonce });
+                }
+
+                ContractsProof { nodes: proofs.into(), contract_leaves_data }
+            } else {
+                ContractsProof::default()
+            };
+
+            // --- Get contracts storage proof (if any)
+
+            let contracts_storage_proofs = if let Some(contract_storage) = contracts_storage_keys {
+                let mut nodes: Vec<Nodes> = Vec::new();
+
+                for ContractStorageKeys { address, keys } in contract_storage {
+                    let proofs = state.storage_multiproof(address, keys)?;
+                    nodes.push(proofs.into());
+                }
+
+                ContractStorageProofs { nodes }
+            } else {
+                ContractStorageProofs::default()
+            };
+
+            let classes_tree_root = state.classes_root()?;
+            let contracts_tree_root = state.contracts_root()?;
+            let global_roots = GlobalRoots { block_hash, classes_tree_root, contracts_tree_root };
+
+            Ok(GetStorageProofResponse {
+                global_roots,
+                classes_proof,
+                contracts_proof,
+                contracts_storage_proofs,
+            })
+        })
+        .await
     }
 }
 

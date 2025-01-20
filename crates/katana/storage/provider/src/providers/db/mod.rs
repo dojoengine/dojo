@@ -1,7 +1,7 @@
 pub mod state;
 pub mod trie;
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Debug;
 use std::ops::{Range, RangeInclusive};
 
@@ -31,7 +31,6 @@ use katana_primitives::receipt::Receipt;
 use katana_primitives::state::{StateUpdates, StateUpdatesWithClasses};
 use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::{TxHash, TxNumber, TxWithHash};
-use katana_primitives::Felt;
 
 use crate::error::ProviderError;
 use crate::traits::block::{
@@ -40,7 +39,7 @@ use crate::traits::block::{
 };
 use crate::traits::env::BlockEnvProvider;
 use crate::traits::stage::StageCheckpointProvider;
-use crate::traits::state::{StateFactoryProvider, StateProvider, StateRootProvider};
+use crate::traits::state::{StateFactoryProvider, StateProvider};
 use crate::traits::state_update::StateUpdateProvider;
 use crate::traits::transaction::{
     ReceiptProvider, TransactionProvider, TransactionStatusProvider, TransactionTraceProvider,
@@ -256,25 +255,6 @@ impl<Db: Database> BlockStatusProvider for DbProvider<Db> {
     }
 }
 
-impl<Db: Database> StateRootProvider for DbProvider<Db> {
-    fn state_root(&self, block_id: BlockHashOrNumber) -> ProviderResult<Option<Felt>> {
-        let db_tx = self.0.tx()?;
-
-        let block_num = match block_id {
-            BlockHashOrNumber::Num(num) => Some(num),
-            BlockHashOrNumber::Hash(hash) => db_tx.get::<tables::BlockNumbers>(hash)?,
-        };
-
-        if let Some(block_num) = block_num {
-            let header = db_tx.get::<tables::Headers>(block_num)?;
-            db_tx.commit()?;
-            Ok(header.map(|h| h.state_root))
-        } else {
-            Ok(None)
-        }
-    }
-}
-
 // A helper function that iterates over all entries in a dupsort table and collects the
 // results into `V`. If `key` is not found, `V::default()` is returned.
 fn dup_entries<Db, Tb, V, T>(
@@ -321,20 +301,24 @@ impl<Db: Database> StateUpdateProvider for DbProvider<Db> {
                 Ok((contract_address, class_hash))
             })?;
 
-            let declared_classes = dup_entries::<
-                Db,
-                tables::ClassDeclarations,
-                BTreeMap<ClassHash, CompiledClassHash>,
-                _,
-            >(&db_tx, block_num, |entry| {
-                let (_, class_hash) = entry?;
+            let mut declared_classes = BTreeMap::new();
+            let mut deprecated_declared_classes = BTreeSet::new();
 
-                let compiled_hash = db_tx
-                    .get::<tables::CompiledClassHashes>(class_hash)?
-                    .ok_or(ProviderError::MissingCompiledClassHash(class_hash))?;
-
-                Ok((class_hash, compiled_hash))
-            })?;
+            if let Some(block_entries) =
+                db_tx.cursor_dup::<tables::ClassDeclarations>()?.walk_dup(Some(block_num), None)?
+            {
+                for entry in block_entries {
+                    let (_, class_hash) = entry?;
+                    match db_tx.get::<tables::CompiledClassHashes>(class_hash)? {
+                        Some(compiled_hash) => {
+                            declared_classes.insert(class_hash, compiled_hash);
+                        }
+                        None => {
+                            deprecated_declared_classes.insert(class_hash);
+                        }
+                    }
+                }
+            }
 
             let storage_updates = {
                 let entries = dup_entries::<
@@ -357,12 +341,14 @@ impl<Db: Database> StateUpdateProvider for DbProvider<Db> {
             };
 
             db_tx.commit()?;
+
             Ok(Some(StateUpdates {
                 nonce_updates,
                 storage_updates,
                 deployed_contracts,
                 declared_classes,
-                ..Default::default()
+                deprecated_declared_classes,
+                replaced_classes: BTreeMap::default(),
             }))
         } else {
             Ok(None)
@@ -718,6 +704,11 @@ impl<Db: Database> BlockWriter for DbProvider<Db> {
             for (class_hash, compiled_hash) in states.state_updates.declared_classes {
                 db_tx.put::<tables::CompiledClassHashes>(class_hash, compiled_hash)?;
 
+                db_tx.put::<tables::ClassDeclarationBlock>(class_hash, block_number)?;
+                db_tx.put::<tables::ClassDeclarations>(block_number, class_hash)?
+            }
+
+            for class_hash in states.state_updates.deprecated_declared_classes {
                 db_tx.put::<tables::ClassDeclarationBlock>(class_hash, block_number)?;
                 db_tx.put::<tables::ClassDeclarations>(block_number, class_hash)?
             }

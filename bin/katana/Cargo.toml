@@ -1,3 +1,4 @@
+
 [package]
 description = "A fast and lightweight local Starknet development sequencer."
 edition.workspace = true
@@ -10,20 +11,37 @@ version.workspace = true
 katana-cli.workspace = true
 katana-db.workspace = true
 katana-node.workspace = true
+katana-primitives.workspace = true
+katana-rpc-types.workspace = true
 
 anyhow.workspace = true
 byte-unit = "5.1.4"
+cainome.workspace = true
 clap.workspace = true
 clap_complete.workspace = true
 comfy-table = "7.1.1"
+dirs = "5.0.1"
+dojo-utils.workspace = true
+inquire = "0.7.5"
+rand.workspace = true
+serde.workspace = true
 shellexpand = "3.1.0"
+spinoff.workspace = true
+starknet.workspace = true
+strum_macros.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+toml.workspace = true
+tracing.workspace = true
 
 [dev-dependencies]
 assert_matches.workspace = true
+rstest.workspace = true
 starknet.workspace = true
 
 [features]
 default = [ "jemalloc", "katana-cli/slot" ]
 
+init-custom-settlement-chain = [  ]
 jemalloc = [  ]
 starknet-messaging = [ "katana-cli/starknet-messaging" ]

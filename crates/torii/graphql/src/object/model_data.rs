@@ -74,7 +74,10 @@ impl BasicObject for ModelDataObject {
 
 impl ResolvableObject for ModelDataObject {
     fn input_objects(&self) -> Option<Vec<InputObject>> {
-        Some(vec![self.where_input.input_object(), self.order_input.input_object()])
+        let mut objects = vec![];
+        objects.extend(self.where_input.input_objects());
+        objects.push(self.order_input.input_object());
+        Some(objects)
     }
 
     fn enum_objects(&self) -> Option<Vec<Enum>> {

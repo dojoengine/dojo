@@ -1,5 +1,5 @@
 use starknet::providers::ProviderError;
-use torii_core::error::ParseError;
+use torii_sqlite::error::ParseError;
 
 #[derive(Debug, thiserror::Error)]
 pub enum SubscriptionError {

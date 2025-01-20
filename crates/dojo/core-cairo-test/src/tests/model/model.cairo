@@ -10,7 +10,7 @@ struct Foo {
     #[key]
     k2: felt252,
     v1: u128,
-    v2: u32
+    v2: u32,
 }
 
 
@@ -22,7 +22,18 @@ struct Foo2 {
     #[key]
     k2: felt252,
     v1: u128,
-    v2: u32
+    v2: u32,
+}
+
+#[derive(Copy, Drop, Serde, Debug)]
+#[dojo::model]
+struct Foo3 {
+    #[key]
+    k1: u256,
+    #[key]
+    k2: felt252,
+    v1: u128,
+    v2: u32,
 }
 
 #[derive(Copy, Drop, Serde, Debug, Introspect)]

@@ -1,9 +1,9 @@
 use cainome::parser::tokens::{Composite, CompositeType, Token};
 
 use super::constants::{
-    BIGNUMNERISH_IMPORT, CAIRO_OPTION_IMPORT, REMOVE_FIELD_ORDER_TYPE_DEF, SN_IMPORT_SEARCH,
+    BIGNUMNERISH_IMPORT, CAIRO_OPTION_IMPORT, SN_IMPORT_SEARCH, WITH_FIELD_ORDER_TYPE_DEF,
 };
-use super::{token_is_option, JsType};
+use super::{token_is_option, JsPrimitiveType};
 use crate::error::BindgenResult;
 use crate::plugins::typescript::generator::constants::CAIRO_OPTION_TOKEN;
 use crate::plugins::{BindgenModelGenerator, Buffer};
@@ -29,8 +29,8 @@ impl TsInterfaceGenerator {
     }
 
     fn add_input_type(&self, buffer: &mut Buffer) {
-        if !buffer.has(REMOVE_FIELD_ORDER_TYPE_DEF) {
-            buffer.push(REMOVE_FIELD_ORDER_TYPE_DEF.to_owned());
+        if !buffer.has(WITH_FIELD_ORDER_TYPE_DEF) {
+            buffer.push(WITH_FIELD_ORDER_TYPE_DEF.to_owned());
         }
     }
 }
@@ -52,10 +52,8 @@ impl BindgenModelGenerator for TsInterfaceGenerator {
         Ok(format!(
             "// Type definition for `{path}` struct
 export interface {name} {{
-\tfieldOrder: string[];
 {fields}
 }}
-export type Input{name} = RemoveFieldOrder<{name}>;
 ",
             path = token.type_path,
             name = token.type_name(),
@@ -69,7 +67,7 @@ export type Input{name} = RemoveFieldOrder<{name}>;
                         }
                     }
 
-                    format!("\t{}: {};", inner.name, JsType::from(&inner.token))
+                    format!("\t{}: {};", inner.name, JsPrimitiveType::from(&inner.token))
                 })
                 .collect::<Vec<String>>()
                 .join("\n")
@@ -128,9 +126,7 @@ mod tests {
         assert_eq!(
             result,
             "// Type definition for `core::test::TestStruct` struct\nexport interface TestStruct \
-             {\n\tfieldOrder: string[];\n\tfield1: BigNumberish;\n\tfield2: \
-             BigNumberish;\n\tfield3: BigNumberish;\n}\nexport type InputTestStruct = \
-             RemoveFieldOrder<TestStruct>;\n"
+             {\n\tfield1: BigNumberish;\n\tfield2: BigNumberish;\n\tfield3: BigNumberish;\n}\n"
         );
     }
 

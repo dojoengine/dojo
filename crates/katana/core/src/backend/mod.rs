@@ -3,7 +3,8 @@ use std::sync::Arc;
 use gas_oracle::L1GasOracle;
 use katana_executor::{ExecutionOutput, ExecutionResult, ExecutorFactory};
 use katana_primitives::block::{
-    FinalityStatus, Header, PartialHeader, SealedBlock, SealedBlockWithStatus,
+    BlockHash, BlockNumber, FinalityStatus, Header, PartialHeader, SealedBlock,
+    SealedBlockWithStatus,
 };
 use katana_primitives::chain_spec::ChainSpec;
 use katana_primitives::da::L1DataAvailabilityMode;
@@ -11,9 +12,9 @@ use katana_primitives::env::BlockEnv;
 use katana_primitives::receipt::{Event, ReceiptWithTxHash};
 use katana_primitives::state::{compute_state_diff_hash, StateUpdates};
 use katana_primitives::transaction::{TxHash, TxWithHash};
-use katana_primitives::Felt;
+use katana_primitives::{address, ContractAddress, Felt};
 use katana_provider::traits::block::{BlockHashProvider, BlockWriter};
-use katana_provider::traits::trie::{ClassTrieWriter, ContractTrieWriter};
+use katana_provider::traits::trie::TrieWriter;
 use katana_trie::compute_merkle_root;
 use parking_lot::RwLock;
 use starknet::macros::short_string;
@@ -49,7 +50,7 @@ impl<EF: ExecutorFactory> Backend<EF> {
     pub fn do_mine_block(
         &self,
         block_env: &BlockEnv,
-        execution_output: ExecutionOutput,
+        mut execution_output: ExecutionOutput,
     ) -> Result<MinedBlockOutcome, BlockProductionError> {
         // we optimistically allocate the maximum amount possible
         let mut txs = Vec::with_capacity(execution_output.transactions.len());
@@ -67,6 +68,12 @@ impl<EF: ExecutorFactory> Backend<EF> {
 
         let tx_count = txs.len() as u32;
         let tx_hashes = txs.iter().map(|tx| tx.hash).collect::<Vec<TxHash>>();
+
+        // Update special contract address 0x1
+        self.update_block_hash_registry_contract(
+            &mut execution_output.states.state_updates,
+            block_env.number,
+        )?;
 
         // create a new block and compute its commitment
         let block = self.commit_block(
@@ -91,6 +98,35 @@ impl<EF: ExecutorFactory> Backend<EF> {
 
         info!(target: LOG_TARGET, %block_number, %tx_count, "Block mined.");
         Ok(MinedBlockOutcome { block_number, txs: tx_hashes, stats: execution_output.stats })
+    }
+
+    // TODO: create a dedicated struct for this contract.
+    // https://docs.starknet.io/architecture-and-concepts/network-architecture/starknet-state/#address_0x1
+    fn update_block_hash_registry_contract(
+        &self,
+        state_updates: &mut StateUpdates,
+        block_number: BlockNumber,
+    ) -> Result<(), BlockProductionError> {
+        const STORED_BLOCK_HASH_BUFFER: u64 = 10;
+
+        if block_number >= STORED_BLOCK_HASH_BUFFER {
+            let block_number = block_number - STORED_BLOCK_HASH_BUFFER;
+            let block_hash = self.blockchain.provider().block_hash_by_num(block_number)?;
+
+            // When in forked mode, we might not have the older block hash in the database. This
+            // could be the case where the `block_number - STORED_BLOCK_HASH_BUFFER` is
+            // earlier than the forked block, which right now, Katana doesn't
+            // yet have the ability to fetch older blocks on the database level. So, we default to
+            // `BlockHash::ZERO` in this case.
+            //
+            // TODO: Fix quick!
+            let block_hash = block_hash.unwrap_or(BlockHash::ZERO);
+
+            let storages = state_updates.storage_updates.entry(address!("0x1")).or_default();
+            storages.insert(block_number.into(), block_hash);
+        }
+
+        Ok(())
     }
 
     pub fn update_block_env(&self, block_env: &mut BlockEnv) {
@@ -158,21 +194,15 @@ impl<EF: ExecutorFactory> Backend<EF> {
 }
 
 #[derive(Debug, Clone)]
-pub struct UncommittedBlock<'a, P>
-where
-    P: ClassTrieWriter + ContractTrieWriter,
-{
+pub struct UncommittedBlock<'a, P: TrieWriter> {
     header: PartialHeader,
     transactions: Vec<TxWithHash>,
     receipts: &'a [ReceiptWithTxHash],
     state_updates: &'a StateUpdates,
-    trie_provider: P,
+    provider: P,
 }
 
-impl<'a, P> UncommittedBlock<'a, P>
-where
-    P: ClassTrieWriter + ContractTrieWriter,
-{
+impl<'a, P: TrieWriter> UncommittedBlock<'a, P> {
     pub fn new(
         header: PartialHeader,
         transactions: Vec<TxWithHash>,
@@ -180,7 +210,7 @@ where
         state_updates: &'a StateUpdates,
         trie_provider: P,
     ) -> Self {
-        Self { header, transactions, receipts, state_updates, trie_provider }
+        Self { header, transactions, receipts, state_updates, provider: trie_provider }
     }
 
     pub fn commit(self) -> SealedBlock {
@@ -258,19 +288,15 @@ where
 
     // state_commitment = hPos("STARKNET_STATE_V0", contract_trie_root, class_trie_root)
     fn compute_new_state_root(&self) -> Felt {
-        let class_trie_root = ClassTrieWriter::insert_updates(
-            &self.trie_provider,
-            self.header.number,
-            &self.state_updates.declared_classes,
-        )
-        .unwrap();
+        let class_trie_root = self
+            .provider
+            .trie_insert_declared_classes(self.header.number, &self.state_updates.declared_classes)
+            .expect("failed to update class trie");
 
-        let contract_trie_root = ContractTrieWriter::insert_updates(
-            &self.trie_provider,
-            self.header.number,
-            self.state_updates,
-        )
-        .unwrap();
+        let contract_trie_root = self
+            .provider
+            .trie_insert_contract_updates(self.header.number, self.state_updates)
+            .expect("failed to update contract trie");
 
         hash::Poseidon::hash_array(&[
             short_string!("STARKNET_STATE_V0"),
