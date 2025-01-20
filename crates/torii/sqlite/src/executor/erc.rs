@@ -287,7 +287,6 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 Ok(json)
             }
             uri if uri.starts_with("ipfs") => {
-                println!("ipfs uri: {}", uri);
                 let cid = uri.strip_prefix("ipfs://").unwrap();
                 debug!(cid = %cid, "Fetching metadata from IPFS");
                 let response = fetch_content_from_ipfs(cid)
