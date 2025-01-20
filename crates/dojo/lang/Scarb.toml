@@ -1,6 +1,6 @@
 [package]
 name = "dojo_plugin"
-version = "2.8.4"
+version = "2.9.2"
 
 [cairo-plugin]
 builtin = true

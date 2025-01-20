@@ -2,6 +2,7 @@
 name = "bestiary"
 version = "0.1.0"
 description = "Some scary foes to fight."
+edition.workspace = true
 
 [dependencies]
 dojo.workspace = true

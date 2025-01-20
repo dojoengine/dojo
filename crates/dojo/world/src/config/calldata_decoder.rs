@@ -19,11 +19,13 @@ pub enum CalldataDecoderError {
     FromStrInt(#[from] std::num::ParseIntError),
     #[error(transparent)]
     CairoShortStringToFelt(#[from] starknet::core::utils::CairoShortStringToFeltError),
+    #[error("Unknown prefix while decoding calldata: {0}")]
+    UnknownPrefix(String),
 }
 
 pub type DecoderResult<T, E = CalldataDecoderError> = Result<T, E>;
 
-const ITEM_DELIMITER: char = ',';
+const ARRAY_ITEM_DELIMITER: char = ',';
 const ITEM_PREFIX_DELIMITER: char = ':';
 
 /// A trait for decoding calldata into a vector of Felts.
@@ -105,6 +107,68 @@ impl CalldataDecoder for SignedIntegerCalldataDecoder {
     }
 }
 
+/// Decodes a dynamic array into an array of [`Felt`].
+/// Array items must fit on one felt.
+struct DynamicArrayCalldataDecoder;
+impl CalldataDecoder for DynamicArrayCalldataDecoder {
+    fn decode(&self, input: &str) -> DecoderResult<Vec<Felt>> {
+        let items = input.split(ARRAY_ITEM_DELIMITER).collect::<Vec<_>>();
+        let mut decoded_items: Vec<Felt> = vec![items.len().into()];
+
+        for item in items {
+            decoded_items.extend(DefaultCalldataDecoder.decode(item)?);
+        }
+
+        Ok(decoded_items)
+    }
+}
+
+/// Decodes a dynamic u256 array into an array of [`Felt`].
+struct U256DynamicArrayCalldataDecoder;
+impl CalldataDecoder for U256DynamicArrayCalldataDecoder {
+    fn decode(&self, input: &str) -> DecoderResult<Vec<Felt>> {
+        let items = input.split(ARRAY_ITEM_DELIMITER).collect::<Vec<_>>();
+        let mut decoded_items: Vec<Felt> = vec![items.len().into()];
+
+        for item in items {
+            decoded_items.extend(U256CalldataDecoder.decode(item)?);
+        }
+
+        Ok(decoded_items)
+    }
+}
+
+/// Decodes a fixed-size array into an array of [`Felt`].
+/// Array items must fit on one felt.
+struct FixedSizeArrayCalldataDecoder;
+impl CalldataDecoder for FixedSizeArrayCalldataDecoder {
+    fn decode(&self, input: &str) -> DecoderResult<Vec<Felt>> {
+        let items = input.split(ARRAY_ITEM_DELIMITER).collect::<Vec<_>>();
+        let mut decoded_items: Vec<Felt> = vec![];
+
+        for item in items {
+            decoded_items.extend(DefaultCalldataDecoder.decode(item)?);
+        }
+
+        Ok(decoded_items)
+    }
+}
+
+/// Decodes a u256 fixed-size array into an array of [`Felt`].
+struct U256FixedSizeArrayCalldataDecoder;
+impl CalldataDecoder for U256FixedSizeArrayCalldataDecoder {
+    fn decode(&self, input: &str) -> DecoderResult<Vec<Felt>> {
+        let items = input.split(ARRAY_ITEM_DELIMITER).collect::<Vec<_>>();
+        let mut decoded_items: Vec<Felt> = vec![];
+
+        for item in items {
+            decoded_items.extend(U256CalldataDecoder.decode(item)?);
+        }
+
+        Ok(decoded_items)
+    }
+}
+
 /// Decodes a string into a [`Felt`], either from hexadecimal or decimal string.
 struct DefaultCalldataDecoder;
 impl CalldataDecoder for DefaultCalldataDecoder {
@@ -119,12 +183,12 @@ impl CalldataDecoder for DefaultCalldataDecoder {
     }
 }
 
-/// Decodes a string of calldata items into a vector of Felts.
+/// Decodes a vector of calldata items into a vector of Felts.
 ///
 /// # Arguments:
 ///
-/// * `input` - The input string to decode, with each item separated by a comma. Inputs can have
-///   prefixes to indicate the type of the item.
+/// * `input` - The input vector to decode. Inputs can have prefixes to indicate the type of the
+///   item.
 ///
 /// # Returns
 /// A vector of [`Felt`]s.
@@ -132,14 +196,13 @@ impl CalldataDecoder for DefaultCalldataDecoder {
 /// # Example
 ///
 /// ```
-/// let input = "u256:0x1,str:hello,64";
+/// let input = ["u256:0x1", "str:hello world", "64"];
 /// let result = decode_calldata(input).unwrap();
 /// ```
-pub fn decode_calldata(input: &str) -> DecoderResult<Vec<Felt>> {
-    let items = input.split(ITEM_DELIMITER);
+pub fn decode_calldata(input: &Vec<String>) -> DecoderResult<Vec<Felt>> {
     let mut calldata = vec![];
 
-    for item in items {
+    for item in input {
         calldata.extend(decode_single_calldata(item)?);
     }
 
@@ -163,7 +226,11 @@ pub fn decode_single_calldata(item: &str) -> DecoderResult<Vec<Felt>> {
             "str" => StrCalldataDecoder.decode(value)?,
             "sstr" => ShortStrCalldataDecoder.decode(value)?,
             "int" => SignedIntegerCalldataDecoder.decode(value)?,
-            _ => DefaultCalldataDecoder.decode(item)?,
+            "arr" => DynamicArrayCalldataDecoder.decode(value)?,
+            "u256arr" => U256DynamicArrayCalldataDecoder.decode(value)?,
+            "farr" => FixedSizeArrayCalldataDecoder.decode(value)?,
+            "u256farr" => U256FixedSizeArrayCalldataDecoder.decode(value)?,
+            _ => return Err(CalldataDecoderError::UnknownPrefix(prefix.to_string())),
         }
     } else {
         DefaultCalldataDecoder.decode(item)?
@@ -178,45 +245,49 @@ mod tests {
 
     use super::*;
 
+    macro_rules! vec_of_strings {
+        ($($x:expr),*) => (vec![$($x.to_string()),*]);
+    }
+
     #[test]
     fn test_u256_decoder_hex() {
-        let input = "u256:0x1";
+        let input = vec_of_strings!["u256:0x1"];
         let expected = vec![Felt::ONE, Felt::ZERO];
-        let result = decode_calldata(input).unwrap();
+        let result = decode_calldata(&input).unwrap();
         assert_eq!(result, expected);
     }
 
     #[test]
     fn test_u256_decoder_decimal() {
-        let input = "u256:12";
+        let input = vec_of_strings!["u256:12"];
         let expected = vec![12_u128.into(), 0_u128.into()];
 
-        let result = decode_calldata(input).unwrap();
+        let result = decode_calldata(&input).unwrap();
         assert_eq!(result, expected);
     }
 
     #[test]
     fn test_short_str_decoder() {
-        let input = "sstr:hello";
+        let input = vec_of_strings!["sstr:hello"];
         let expected = vec![cairo_short_string_to_felt("hello").unwrap()];
 
-        let result = decode_calldata(input).unwrap();
+        let result = decode_calldata(&input).unwrap();
         assert_eq!(result, expected);
     }
 
     #[test]
     fn test_str_decoder() {
-        let input = "str:hello";
+        let input = vec_of_strings!["str:hello"];
         let expected =
             vec![0_u128.into(), cairo_short_string_to_felt("hello").unwrap(), 5_u128.into()];
 
-        let result = decode_calldata(input).unwrap();
+        let result = decode_calldata(&input).unwrap();
         assert_eq!(result, expected);
     }
 
     #[test]
     fn test_str_decoder_long() {
-        let input = "str:hello with spaces and a long string longer than 31 chars";
+        let input = vec_of_strings!["str:hello with spaces and a long string longer than 31 chars"];
 
         let expected = vec![
             // Length of the data.
@@ -229,74 +300,137 @@ mod tests {
             25_u128.into(),
         ];
 
-        let result = decode_calldata(input).unwrap();
+        let result = decode_calldata(&input).unwrap();
         assert_eq!(result, expected);
     }
 
     #[test]
     fn test_default_decoder_hex() {
-        let input = "0x64";
+        let input = vec_of_strings!["0x64"];
         let expected = vec![100_u128.into()];
-        let result = decode_calldata(input).unwrap();
+        let result = decode_calldata(&input).unwrap();
         assert_eq!(result, expected);
     }
 
     #[test]
     fn test_default_decoder_decimal() {
-        let input = "64";
+        let input = vec_of_strings!["64"];
         let expected = vec![64_u128.into()];
-        let result = decode_calldata(input).unwrap();
+        let result = decode_calldata(&input).unwrap();
         assert_eq!(result, expected);
     }
 
     #[test]
     fn test_signed_integer_decoder_i8() {
-        let input = "-64";
+        let input = vec_of_strings!["-64"];
         let signed_i8: i8 = -64;
         let expected = vec![signed_i8.into()];
-        let result = decode_calldata(input).unwrap();
+        let result = decode_calldata(&input).unwrap();
         assert_eq!(result, expected);
     }
 
     #[test]
     fn test_signed_integer_decoder_i16() {
-        let input = "-12345";
+        let input = vec_of_strings!["-12345"];
         let signed_i16: i16 = -12345;
         let expected = vec![signed_i16.into()];
-        let result = decode_calldata(input).unwrap();
+        let result = decode_calldata(&input).unwrap();
         assert_eq!(result, expected);
     }
 
     #[test]
     fn test_signed_integer_decoder_i32() {
-        let input = "-987654321";
+        let input = vec_of_strings!["-987654321"];
         let signed_i32: i32 = -987654321;
         let expected = vec![signed_i32.into()];
-        let result = decode_calldata(input).unwrap();
+        let result = decode_calldata(&input).unwrap();
         assert_eq!(result, expected);
     }
 
     #[test]
     fn test_signed_integer_decoder_i64() {
-        let input = "-1234567890123456789";
+        let input = vec_of_strings!["-1234567890123456789"];
         let signed_i64: i64 = -1234567890123456789;
         let expected = vec![signed_i64.into()];
-        let result = decode_calldata(input).unwrap();
+        let result = decode_calldata(&input).unwrap();
         assert_eq!(result, expected);
     }
 
     #[test]
     fn test_signed_integer_decoder_i128() {
-        let input = "-123456789012345678901234567890123456";
+        let input = vec_of_strings!["-123456789012345678901234567890123456"];
         let signed_i128: i128 = -123456789012345678901234567890123456;
         let expected = vec![signed_i128.into()];
-        let result = decode_calldata(input).unwrap();
+        let result = decode_calldata(&input).unwrap();
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_u8_dynamic_array() {
+        let input = vec_of_strings!["arr:1,2,3,1"];
+
+        let expected = vec![
+            // Length of the array.
+            4.into(),
+            Felt::ONE,
+            Felt::TWO,
+            Felt::THREE,
+            Felt::ONE,
+        ];
+
+        let result = decode_calldata(&input).unwrap();
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_u8_fixed_size_array() {
+        let input = vec_of_strings!["farr:1,2,3,1"];
+
+        let expected = vec![Felt::ONE, Felt::TWO, Felt::THREE, Felt::ONE];
+
+        let result = decode_calldata(&input).unwrap();
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_u256_dynamic_array() {
+        let input = vec_of_strings!["u256arr:1,2,3"];
+
+        let expected = vec![
+            // Length of the array.
+            3.into(),
+            Felt::ONE,
+            Felt::ZERO,
+            Felt::TWO,
+            Felt::ZERO,
+            Felt::THREE,
+            Felt::ZERO,
+        ];
+
+        let result = decode_calldata(&input).unwrap();
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_u256_fixed_size_array() {
+        let input = vec_of_strings!["u256farr:0x01,0x02,0x03"];
+
+        let expected = vec![Felt::ONE, Felt::ZERO, Felt::TWO, Felt::ZERO, Felt::THREE, Felt::ZERO];
+
+        let result = decode_calldata(&input).unwrap();
         assert_eq!(result, expected);
     }
 
     #[test]
     fn test_combined_decoders() {
-        let input = "u256:0x64,str:world,987654,0x123";
+        let input = vec_of_strings![
+            "u256:0x64",
+            "str:world",
+            "987654",
+            "0x123",
+            "sstr:short string",
+            "str:very very very long string"
+        ];
         let expected = vec![
             // U256 low.
             100_u128.into(),
@@ -312,9 +446,17 @@ mod tests {
             987654_u128.into(),
             // Hex value.
             291_u128.into(),
+            // Short string
+            cairo_short_string_to_felt("short string").unwrap(),
+            // Long string data len.
+            0_u128.into(),
+            // Long string pending word.
+            cairo_short_string_to_felt("very very very long string").unwrap(),
+            // Long string pending word len.
+            26_u128.into(),
         ];
 
-        let result = decode_calldata(input).unwrap();
+        let result = decode_calldata(&input).unwrap();
         assert_eq!(result, expected);
     }
 

@@ -171,6 +171,7 @@ pub fn copy_build_project_temp(
                 include_target_kinds: vec![],
                 exclude_target_kinds: vec![TargetKind::TEST],
                 features: features_opts,
+                ignore_cairo_version: true,
             },
             &ws,
         )
@@ -319,7 +320,8 @@ pub fn corelib() -> PathBuf {
     let features_opts =
         FeaturesOpts { features: FeaturesSelector::AllFeatures, no_default_features: false };
 
-    let compilation_units = ops::generate_compilation_units(&resolve, &features_opts, &ws).unwrap();
+    let compilation_units =
+        ops::generate_compilation_units(&resolve, &features_opts, true, &ws).unwrap();
 
     if let CompilationUnit::Cairo(unit) = &compilation_units[0] {
         unit.core_package_component().expect("should have component").targets[0]

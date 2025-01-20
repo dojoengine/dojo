@@ -34,7 +34,7 @@ pub fn sum<T, +Drop<T>, +Copy<T>, +AddAssign<T, T>, +Zero<T>>(arr: Array<Option<
 
         match *arr.at(i) {
             Option::Some(x) => res += x,
-            Option::None => {}
+            Option::None => {},
         }
 
         i += 1;

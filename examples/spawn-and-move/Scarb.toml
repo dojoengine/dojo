@@ -1,5 +1,5 @@
 [package]
-cairo-version = "=2.8.4"
+cairo-version = "=2.9.2"
 name = "dojo_examples"
 version = "1.0.12"
 # Use the prelude with the less imports as possible
@@ -10,15 +10,16 @@ edition = "2024_07"
 sierra-replace-ids = true
 
 [[target.starknet-contract]]
-build-external-contracts = [ "dojo::world::world_contract::world" ]
+build-external-contracts = [ "dojo::world::world_contract::world", "armory::m_Flatbow", "bestiary::m_RiverSkale" ]
 
 [dependencies]
 armory = { path = "../game-lib/armory" }
 bestiary = { path = "../game-lib/bestiary" }
 dojo = { path = "../../crates/dojo/core" }
-starknet = "2.8.4"
+starknet = "2.9.2"
 
 [dev-dependencies]
+cairo_test = "2.9.2"
 dojo_cairo_test = { path = "../../crates/dojo/core-cairo-test" }
 
 [features]
