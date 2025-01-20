@@ -202,48 +202,6 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
         )
     }
 
-    fn read_members<T, +Serde<T>>(
-        self: @WorldStorage, ptr: ModelPtr<M>, field_selectors: Span<felt252>
-    ) -> T {
-        deserialize_unwrap(
-            IWorldDispatcherTrait::entity(
-                *self.dispatcher,
-                Model::<M>::selector(*self.namespace_hash),
-                ModelIndex::Id(ptr.id),
-                make_partial_struct_layout::<M>(field_selectors)
-            )
-        )
-    }
-    fn read_models_member<T, +Serde<T>, +Drop<T>>(
-        self: @WorldStorage, ptrs: Span<ModelPtr<M>>, field_selector: felt252
-    ) -> Array<T> {
-        let mut values: Array<T> = array![];
-        for entity in IWorldDispatcherTrait::entities(
-            *self.dispatcher,
-            Model::<M>::selector(*self.namespace_hash),
-            ptrs.to_indexes(),
-            field_layout_unwrap::<M>(field_selector)
-        ) {
-            values.append(deserialize_unwrap(*entity));
-        };
-        values
-    }
-
-    fn read_models_members<T, +Serde<T>, +Drop<T>>(
-        self: @WorldStorage, ptrs: Span<ModelPtr<M>>, field_selectors: Span<felt252>
-    ) -> Array<T> {
-        let mut values: Array<T> = array![];
-        for entity in IWorldDispatcherTrait::entities(
-            *self.dispatcher,
-            Model::<M>::selector(*self.namespace_hash),
-            ptrs.to_indexes(),
-            make_partial_struct_layout::<M>(field_selectors)
-        ) {
-            values.append(deserialize_unwrap(*entity));
-        };
-        values
-    }
-
     fn read_schema<T, +Serde<T>, +Introspect<T>>(self: @WorldStorage, ptr: ModelPtr<M>) -> T {
         deserialize_unwrap(
             IWorldDispatcherTrait::entity(
@@ -281,81 +239,6 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
             ModelIndex::MemberId((ptr.id, field_selector)),
             serialize_inline(@value),
             field_layout_unwrap::<M>(field_selector),
-        );
-    }
-
-    fn write_members<T, +Serde<T>, +Drop<T>>(
-        ref self: WorldStorage, ptr: ModelPtr<M>, field_selectors: Span<felt252>, value: T
-    ) {
-        IWorldDispatcherTrait::set_entity(
-            self.dispatcher,
-            Model::<M>::selector(self.namespace_hash),
-            ModelIndex::Id(ptr.id),
-            serialize_inline(@value),
-            make_partial_struct_layout::<M>(field_selectors)
-        );
-    }
-
-    fn write_models_member<T, +Serde<T>, +Drop<T>>(
-        ref self: WorldStorage, ptrs: Span<ModelPtr<M>>, field_selector: felt252, values: Span<T>
-    ) {
-        let mut serialized_values = ArrayTrait::<Span<felt252>>::new();
-        for value in values {
-            serialized_values.append(serialize_inline(value));
-        };
-        IWorldDispatcherTrait::set_entities(
-            self.dispatcher,
-            Model::<M>::selector(self.namespace_hash),
-            ptrs.to_indexes(),
-            serialized_values.span(),
-            field_layout_unwrap::<M>(field_selector)
-        );
-    }
-
-    fn write_models_members<T, +Serde<T>, +Drop<T>>(
-        ref self: WorldStorage,
-        ptrs: Span<ModelPtr<M>>,
-        field_selectors: Span<felt252>,
-        values: Span<T>
-    ) {
-        let mut serialized_values = ArrayTrait::<Span<felt252>>::new();
-        for value in values {
-            serialized_values.append(serialize_inline(value));
-        };
-        IWorldDispatcherTrait::set_entities(
-            self.dispatcher,
-            Model::<M>::selector(self.namespace_hash),
-            ptrs.to_indexes(),
-            serialized_values.span(),
-            make_partial_struct_layout::<M>(field_selectors)
-        );
-    }
-
-    fn write_schema<T, +Serde<T>, +Drop<T>, +Introspect<T>>(
-        ref self: WorldStorage, ptr: ModelPtr<M>, value: T
-    ) {
-        IWorldDispatcherTrait::set_entity(
-            self.dispatcher,
-            Model::<M>::selector(self.namespace_hash),
-            ModelIndex::Id(ptr.id),
-            serialize_inline(@value),
-            Introspect::<T>::layout()
-        );
-    }
-
-    fn write_schemas<T, +Serde<T>, +Drop<T>, +Introspect<T>>(
-        ref self: WorldStorage, ptrs: Span<ModelPtr<M>>, values: Span<T>
-    ) {
-        let mut serialized_values = ArrayTrait::<Span<felt252>>::new();
-        for value in values {
-            serialized_values.append(serialize_inline(value));
-        };
-        IWorldDispatcherTrait::set_entities(
-            self.dispatcher,
-            Model::<M>::selector(self.namespace_hash),
-            ptrs.to_indexes(),
-            serialized_values.span(),
-            Introspect::<T>::layout()
         );
     }
 
