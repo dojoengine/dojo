@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1737245953944,
+  "lastUpdate": 1737391903564,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -46561,6 +46561,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 7990573,
             "range": "± 307527",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "valentin@pupucecorp.com",
+            "name": "Brother MartianGreed",
+            "username": "MartianGreed"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "af46cb08875bd5884d9bef95b6026d6e94ac6fd8",
+          "message": "feat(sozo-bindgen): add i8,i16,i32,i64 support (#2934)\n\nfeat: add i8,i16,i32,i64 support",
+          "timestamp": "2025-01-20T10:35:42-06:00",
+          "tree_id": "20ee6ad83446ada5bc01696f83785fc05d967985",
+          "url": "https://github.com/dojoengine/dojo/commit/af46cb08875bd5884d9bef95b6026d6e94ac6fd8"
+        },
+        "date": 1737391901402,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 11421035305,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
