@@ -63,12 +63,14 @@ struct Oo {
 
 fn namespace_def() -> NamespaceDef {
     NamespaceDef {
-        namespace: "dojo_cairo_test", resources: [
+        namespace: "dojo_cairo_test",
+        resources: [
             TestResource::Model(m_Foo::TEST_CLASS_HASH.try_into().unwrap()),
             TestResource::Model(m_Foo2::TEST_CLASS_HASH.try_into().unwrap()),
             TestResource::Model(m_Foo3::TEST_CLASS_HASH.try_into().unwrap()),
             TestResource::Model(m_Foo4::TEST_CLASS_HASH.try_into().unwrap()),
-        ].span(),
+        ]
+            .span(),
     }
 }
 
