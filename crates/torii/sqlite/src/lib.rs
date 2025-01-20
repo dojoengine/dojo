@@ -847,19 +847,20 @@ fn add_columns_recursive(
         ));
     };
 
-    let mut modify_column = |name: &str, sql_type: &str, sql_value: &str| {
-        // SQLite doesn't support ALTER COLUMN directly, so we need to:
-        // 1. Create a new temporary column
-        // 2. Copy the data
-        // 3. Drop the old column
-        // 4. Rename the temporary column
-        alter_table_queries
-            .push(format!("ALTER TABLE [{table_id}] ADD COLUMN [tmp_{name}] {sql_type}"));
-        alter_table_queries.push(format!("UPDATE [{table_id}] SET [tmp_{name}] = {sql_value}"));
-        alter_table_queries.push(format!("ALTER TABLE [{table_id}] DROP COLUMN [{name}]"));
-        alter_table_queries
-            .push(format!("ALTER TABLE [{table_id}] RENAME COLUMN [tmp_{name}] TO [{name}]"));
-    };
+    let modify_column =
+        |alter_table_queries: &mut Vec<String>, name: &str, sql_type: &str, sql_value: &str| {
+            // SQLite doesn't support ALTER COLUMN directly, so we need to:
+            // 1. Create a new temporary column
+            // 2. Copy the data
+            // 3. Drop the old column
+            // 4. Rename the temporary column
+            alter_table_queries
+                .push(format!("ALTER TABLE [{table_id}] ADD COLUMN [tmp_{name}] {sql_type}"));
+            alter_table_queries.push(format!("UPDATE [{table_id}] SET [tmp_{name}] = {sql_value}"));
+            alter_table_queries.push(format!("ALTER TABLE [{table_id}] DROP COLUMN [{name}]"));
+            alter_table_queries
+                .push(format!("ALTER TABLE [{table_id}] RENAME COLUMN [tmp_{name}] TO [{name}]"));
+        };
 
     match ty {
         Ty::Struct(s) => {
@@ -959,6 +960,7 @@ fn add_columns_recursive(
                     if old_primitive.can_upgrade_to(p) {
                         // Modify existing column to new type
                         modify_column(
+                            alter_table_queries,
                             &column_name,
                             p.to_sql_type().as_ref(),
                             p.to_sql_value().as_ref(),
@@ -979,42 +981,4 @@ fn add_columns_recursive(
     }
 
     Ok(())
-}
-
-impl Primitive {
-    fn can_upgrade_to(&self, other: &Primitive) -> bool {
-        use Primitive::*;
-        match (self, other) {
-            // Boolean (no upgrades)
-            (Bool(_), Bool(_)) => true,
-
-            // Unsigned integer upgrades
-            (U8(_), U16(_) | U32(_) | USize(_) | U64(_) | U128(_) | Felt252(_)) => true,
-            (U16(_), U32(_) | USize(_) | U64(_) | U128(_) | Felt252(_)) => true,
-            (U32(_), USize(_) | U64(_) | U128(_) | Felt252(_)) => true,
-            (USize(_), U32(_) | U64(_) | U128(_) | Felt252(_)) => true,
-            (U64(_), U128(_) | Felt252(_)) => true,
-            (U128(_), Felt252(_)) => true,
-
-            // U256 can only upgrade to itself
-            (U256(_), U256(_)) => true,
-
-            // Signed integer upgrades
-            (I8(_), I16(_) | I32(_) | I64(_) | I128(_) | Felt252(_)) => true,
-            (I16(_), I32(_) | I64(_) | I128(_) | Felt252(_)) => true,
-            (I32(_), I64(_) | I128(_) | Felt252(_)) => true,
-            (I64(_), I128(_) | Felt252(_)) => true,
-            (I128(_), Felt252(_)) => true,
-
-            // Felt252 and address types
-            (Felt252(_), ClassHash(_) | ContractAddress(_)) => true,
-            (ClassHash(_), Felt252(_) | ContractAddress(_)) => true,
-            (ContractAddress(_), Felt252(_) | ClassHash(_)) => true,
-
-            // Same type is considered an upgrade (no-op)
-            (a, b) if std::mem::discriminant(a) == std::mem::discriminant(b) => true,
-
-            _ => false,
-        }
-    }
 }
