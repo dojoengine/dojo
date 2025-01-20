@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1737392073491,
+  "lastUpdate": 1737392079154,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -46639,6 +46639,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8339810,
             "range": "± 529601",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jiayanbing@yeah.net",
+            "name": "linchizhen",
+            "username": "linchizhen"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0e6e2076b3eab8765c4a6923f87065a04c00935b",
+          "message": "chore: fix some typos in comment (#2922)\n\nSigned-off-by: linchizhen <jiayanbing@yeah.net>\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2025-01-20T10:37:58-06:00",
+          "tree_id": "7add8a01b240c92adc6b37ccbf7b21e1df66d81b",
+          "url": "https://github.com/dojoengine/dojo/commit/0e6e2076b3eab8765c4a6923f87065a04c00935b"
+        },
+        "date": 1737392077266,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 12040597478,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
