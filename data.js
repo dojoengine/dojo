@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1737392182051,
+  "lastUpdate": 1737415217847,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -46717,6 +46717,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 7596859,
             "range": "± 176511",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "fbb972bb4d65b17a35a25533487145bea297e01a",
+          "message": "fix(dojo-lang): ensure the dns returns the actual `ClassHash`. (#2935)\n\n* fix: ensure the DNS returns the actual class hash\r\n\r\n* tests: regenerate test db",
+          "timestamp": "2025-01-20T17:03:47-06:00",
+          "tree_id": "c5b83ee57de4a66d14f85bcbd547326ee7741f4f",
+          "url": "https://github.com/dojoengine/dojo/commit/fbb972bb4d65b17a35a25533487145bea297e01a"
+        },
+        "date": 1737415215901,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 12364298829,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
