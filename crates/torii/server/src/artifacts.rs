@@ -15,7 +15,7 @@ use tokio::fs;
 use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::broadcast::Receiver;
-use torii_sqlite::constants::{IPFS_CLIENT_MAX_RETRY, TOKENS_TABLE};
+use torii_sqlite::constants::TOKENS_TABLE;
 use torii_sqlite::utils::fetch_content_from_ipfs;
 use tracing::{debug, error, trace};
 use warp::http::Response;
@@ -204,7 +204,7 @@ async fn fetch_and_process_image(
         uri if uri.starts_with("ipfs") => {
             debug!(image_uri = %uri, "Fetching image from IPFS");
             let cid = uri.strip_prefix("ipfs://").unwrap();
-            let response = fetch_content_from_ipfs(cid, IPFS_CLIENT_MAX_RETRY)
+            let response = fetch_content_from_ipfs(cid)
                 .await
                 .context("Failed to read image bytes from IPFS response")?;
 
