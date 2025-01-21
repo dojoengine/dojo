@@ -3,13 +3,27 @@ use dojo::{
     utils::{entity_id_from_serialized_keys, find_model_field_layout, entity_id_from_keys},
 };
 
-use super::{ModelDefinition, ModelDef};
+use super::{ModelDefinition, ModelDef, ModelIndex};
 /// Trait `KeyParser` defines a trait for parsing keys from a given model.
 ///
 /// A pointer to a model, which can be expressed by an entity id.
 #[derive(Copy, Drop, Serde, Debug, PartialEq)]
 pub struct ModelPtr<M> {
     pub id: felt252,
+}
+
+pub trait ModelPtrsTrait<M> {
+    fn to_indexes(self: Span<ModelPtr<M>>) -> Span<ModelIndex>;
+}
+
+pub impl ModelPtrsImpl<M> of ModelPtrsTrait<M> {
+    fn to_indexes(self: Span<ModelPtr<M>>) -> Span<ModelIndex> {
+        let mut ids = ArrayTrait::<ModelIndex>::new();
+        for ptr in self {
+            ids.append(ModelIndex::Id(*ptr.id));
+        };
+        ids.span()
+    }
 }
 
 pub trait KeyParser<M, K> {
