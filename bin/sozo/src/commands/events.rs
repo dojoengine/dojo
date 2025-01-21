@@ -50,7 +50,7 @@ pub struct EventsArgs {
     #[command(flatten)]
     pub starknet: StarknetOptions,
 }
-
+const BLOCK_LIMIT: u64 = 50_000; // Maximum block range to process in one iteration
 impl EventsArgs {
     pub fn run(self, config: &Config) -> Result<()> {
         config.tokio_handle().block_on(async {
@@ -65,13 +65,20 @@ impl EventsArgs {
 
             let provider = Arc::new(provider);
 
-            let from_block = self.from_block
-                .or_else(|| profile_config.env.as_ref().and_then(|e| e.world_block))
-                .map(BlockId::Number)
-                .unwrap_or(BlockId::Number(0));
+            let from_block = self.from_block.unwrap_or(0);
+            let to_block = self.to_block.unwrap_or(u64::MAX);
 
-            let to_block = self.to_block.map(BlockId::Number).unwrap_or(BlockId::Latest);
-            let keys = self.events.map(|e|
+            if from_block >= to_block {
+                anyhow::bail!("Invalid block range: from_block >= to_block");
+            }
+
+            
+            let mut current_start = from_block;
+            let  continuation_token = None;
+
+            while current_start < to_block {
+                let current_end = (current_start + BLOCK_LIMIT).min(to_block);
+            let keys = self.events.clone().map(|e|
                 vec![
                     e
                         .iter()
@@ -81,15 +88,15 @@ impl EventsArgs {
             );
 
             let event_filter = EventFilter {
-                from_block : Some(from_block),
-                to_block : Some(to_block),
+                from_block: Some(BlockId::Number(current_start)),
+                to_block: Some(BlockId::Number(current_end)),
                 address: Some(world_diff.world_info.address),
                 keys,
             };
 
             let res = provider.get_events(
                 event_filter,
-                self.continuation_token,
+                continuation_token.clone(),
                 self.chunk_size
             ).await?;
 
@@ -114,11 +121,21 @@ impl EventsArgs {
                     }
                 }
             }
+        
+    
+            // Update continuation token or block range
+            let continuation_token = res.continuation_token.clone();
+            if continuation_token.is_none() {
+                current_start = current_end + 1;
+            }
 
-            if let Some(continuation_token) = res.continuation_token {
-                println!("Continuation token: {:?}", continuation_token);
+            // Log continuation token if present
+            if let Some(token) = &continuation_token {
+                println!("Continuation token: {:?}", token);
                 println!("----------------------------------------------");
             }
+        }
+    
 
             Ok(())
         })
