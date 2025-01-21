@@ -46,7 +46,7 @@ use crate::processors::upgrade_model::UpgradeModelProcessor;
 use crate::processors::{
     BlockProcessor, EventProcessor, EventProcessorConfig, TransactionProcessor,
 };
-use crate::task_manager::{ParallelizedEvent, TaskManager};
+use crate::task_manager::{self, ParallelizedEvent, TaskManager};
 
 type EventProcessorMap<P> = HashMap<Felt, Vec<Box<dyn EventProcessor<P>>>>;
 
@@ -813,7 +813,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
             (processor.task_priority(), processor.task_identifier(event));
 
         // if our event can be parallelized, we add it to the task manager
-        if task_identifier != 0 {
+        if task_identifier != task_manager::TASK_ID_SEQUENTIAL {
             self.task_manager.add_parallelized_event(
                 task_priority,
                 task_identifier,

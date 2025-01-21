@@ -7,7 +7,7 @@ use starknet::core::types::{Event, Felt, Transaction};
 use starknet::providers::Provider;
 use torii_sqlite::Sql;
 
-use crate::task_manager::TaskId;
+use crate::task_manager::{TaskId, TaskPriority};
 
 pub mod erc20_legacy_transfer;
 pub mod erc20_transfer;
@@ -55,7 +55,7 @@ where
 
     fn validate(&self, event: &Event) -> bool;
 
-    fn task_priority(&self) -> usize;
+    fn task_priority(&self) -> TaskPriority;
     fn task_identifier(&self, event: &Event) -> TaskId;
 
     #[allow(clippy::too_many_arguments)]

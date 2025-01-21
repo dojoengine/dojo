@@ -10,6 +10,8 @@ use starknet::providers::Provider;
 use torii_sqlite::Sql;
 use tracing::{debug, info};
 
+use crate::task_manager::{TaskId, TaskPriority};
+
 use super::{EventProcessor, EventProcessorConfig};
 
 pub(crate) const LOG_TARGET: &str = "torii_indexer::processors::store_update_record";
@@ -30,13 +32,15 @@ where
         true
     }
 
-    fn task_priority(&self) -> usize {
+    fn task_priority(&self) -> TaskPriority {
         2
     }
 
-    fn task_identifier(&self, event: &Event) -> u64 {
+    fn task_identifier(&self, event: &Event) -> TaskId {
         let mut hasher = DefaultHasher::new();
+        // model selector
         event.keys[1].hash(&mut hasher);
+        // entity id
         event.keys[2].hash(&mut hasher);
         hasher.finish()
     }

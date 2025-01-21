@@ -14,10 +14,12 @@ use tracing::{debug, error};
 use crate::engine::Processors;
 use crate::processors::EventProcessorConfig;
 
+pub const TASK_ID_SEQUENTIAL: TaskId = 0;
+
 const LOG_TARGET: &str = "torii::indexer::task_manager";
 
 pub type TaskId = u64;
-type TaskPriority = usize;
+pub type TaskPriority = usize;
 
 #[derive(Debug)]
 pub struct ParallelizedEvent {

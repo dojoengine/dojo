@@ -10,6 +10,8 @@ use torii_sqlite::utils::felts_to_sql_string;
 use torii_sqlite::Sql;
 use tracing::{debug, info};
 
+use crate::task_manager::{TaskId, TaskPriority};
+
 use super::{EventProcessor, EventProcessorConfig};
 
 pub(crate) const LOG_TARGET: &str = "torii_indexer::processors::store_set_record";
@@ -30,11 +32,11 @@ where
         true
     }
 
-    fn task_priority(&self) -> usize {
+    fn task_priority(&self) -> TaskPriority {
         2
     }
 
-    fn task_identifier(&self, event: &Event) -> u64 {
+    fn task_identifier(&self, event: &Event) -> TaskId {
         let mut hasher = DefaultHasher::new();
         event.keys[1].hash(&mut hasher);
         event.keys[2].hash(&mut hasher);

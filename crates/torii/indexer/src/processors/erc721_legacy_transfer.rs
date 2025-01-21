@@ -10,7 +10,7 @@ use torii_sqlite::Sql;
 use tracing::debug;
 
 use super::{EventProcessor, EventProcessorConfig};
-use crate::task_manager::TaskId;
+use crate::task_manager::{TaskId, TaskPriority};
 
 pub(crate) const LOG_TARGET: &str = "torii_indexer::processors::erc721_legacy_transfer";
 
@@ -37,7 +37,7 @@ where
         false
     }
 
-    fn task_priority(&self) -> usize {
+    fn task_priority(&self) -> TaskPriority {
         1
     }
 

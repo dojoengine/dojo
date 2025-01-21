@@ -12,6 +12,8 @@ use starknet_crypto::poseidon_hash_many;
 use torii_sqlite::Sql;
 use tracing::info;
 
+use crate::task_manager::{TaskId, TaskPriority};
+
 use super::{EventProcessor, EventProcessorConfig};
 
 pub(crate) const LOG_TARGET: &str = "torii_indexer::processors::event_message";
@@ -32,11 +34,11 @@ where
         true
     }
 
-    fn task_priority(&self) -> usize {
+    fn task_priority(&self) -> TaskPriority {
         1
     }
 
-    fn task_identifier(&self, event: &Event) -> u64 {
+    fn task_identifier(&self, event: &Event) -> TaskId {
         let mut hasher = DefaultHasher::new();
         let keys = Vec::<Felt>::cairo_deserialize(&event.data, 0).unwrap_or_else(|e| {
             panic!("Expected EventEmitted keys to be well formed: {:?}", e);
