@@ -8,8 +8,11 @@ use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
 
+use crate::attribute_macros::DojoLibrary;
+
 use super::attribute_macros::{
-    DojoContract, DojoEvent, DojoModel, DOJO_CONTRACT_ATTR, DOJO_EVENT_ATTR, DOJO_MODEL_ATTR,
+    DojoContract, DojoEvent, DojoModel, DOJO_CONTRACT_ATTR, DOJO_EVENT_ATTR, DOJO_LIBRARY_ATTR,
+    DOJO_MODEL_ATTR,
 };
 use super::derive_macros::{dojo_derive_all, DOJO_INTROSPECT_DERIVE, DOJO_PACKED_DERIVE};
 use super::inline_macros::SelectorFromTagMacro;
@@ -57,6 +60,8 @@ impl MacroPlugin for BuiltinDojoPlugin {
             ast::ModuleItem::Module(module_ast) => {
                 if module_ast.has_attr(db, DOJO_CONTRACT_ATTR) {
                     DojoContract::from_module(db, module_ast, metadata)
+                } else if module_ast.has_attr(db, DOJO_LIBRARY_ATTR) {
+                    DojoLibrary::from_module(db, module_ast, metadata)
                 } else {
                     PluginResult::default()
                 }
@@ -95,6 +100,7 @@ impl MacroPlugin for BuiltinDojoPlugin {
     fn declared_attributes(&self) -> Vec<String> {
         vec![
             DOJO_CONTRACT_ATTR.to_string(),
+            DOJO_LIBRARY_ATTR.to_string(),
             DOJO_EVENT_ATTR.to_string(),
             DOJO_MODEL_ATTR.to_string(),
             "key".to_string(),
