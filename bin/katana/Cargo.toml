@@ -35,7 +35,7 @@ assert_matches.workspace = true
 starknet.workspace = true
 
 [features]
-default = [ "jemalloc", "katana-cli/slot" ]
+default = [ "jemalloc", "katana-cli/slot", "starknet-messaging" ]
 
 jemalloc = [  ]
 starknet-messaging = [ "katana-cli/starknet-messaging" ]
