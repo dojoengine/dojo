@@ -1,8 +1,9 @@
 use cainome::parser::tokens::{Composite, CompositeInner, CompositeType, Token};
 use constants::{
-    CAIRO_BOOL, CAIRO_BYTE_ARRAY, CAIRO_CONTRACT_ADDRESS, CAIRO_FELT252, CAIRO_I128, CAIRO_OPTION,
-    CAIRO_OPTION_DEFAULT_VALUE, CAIRO_U128, CAIRO_U16, CAIRO_U256, CAIRO_U256_STRUCT, CAIRO_U32,
-    CAIRO_U64, CAIRO_U8, CAIRO_UNIT_TYPE, JS_BIGNUMBERISH, JS_BOOLEAN, JS_STRING,
+    CAIRO_BOOL, CAIRO_BYTE_ARRAY, CAIRO_CONTRACT_ADDRESS, CAIRO_FELT252, CAIRO_I128, CAIRO_I16,
+    CAIRO_I32, CAIRO_I64, CAIRO_I8, CAIRO_OPTION, CAIRO_OPTION_DEFAULT_VALUE, CAIRO_U128,
+    CAIRO_U16, CAIRO_U256, CAIRO_U256_STRUCT, CAIRO_U32, CAIRO_U64, CAIRO_U8, CAIRO_UNIT_TYPE,
+    JS_BIGNUMBERISH, JS_BOOLEAN, JS_STRING,
 };
 use convert_case::{Case, Casing};
 
@@ -72,6 +73,10 @@ impl From<&str> for JsPrimitiveType {
             CAIRO_U128 => JsPrimitiveType(JS_BIGNUMBERISH.to_owned()),
             CAIRO_U256 => JsPrimitiveType(JS_BIGNUMBERISH.to_owned()),
             CAIRO_U256_STRUCT => JsPrimitiveType(JS_BIGNUMBERISH.to_owned()),
+            CAIRO_I8 => JsPrimitiveType(JS_BIGNUMBERISH.to_owned()),
+            CAIRO_I16 => JsPrimitiveType(JS_BIGNUMBERISH.to_owned()),
+            CAIRO_I32 => JsPrimitiveType(JS_BIGNUMBERISH.to_owned()),
+            CAIRO_I64 => JsPrimitiveType(JS_BIGNUMBERISH.to_owned()),
             CAIRO_I128 => JsPrimitiveType(JS_BIGNUMBERISH.to_owned()),
             CAIRO_BOOL => JsPrimitiveType(JS_BOOLEAN.to_owned()),
             CAIRO_UNIT_TYPE => JsPrimitiveType(JS_STRING.to_owned()),
@@ -150,6 +155,10 @@ impl From<&str> for JsPrimitiveInputType {
             CAIRO_U128 => JsPrimitiveInputType(JS_BIGNUMBERISH.to_owned()),
             CAIRO_U256 => JsPrimitiveInputType(JS_BIGNUMBERISH.to_owned()),
             CAIRO_U256_STRUCT => JsPrimitiveInputType(JS_BIGNUMBERISH.to_owned()),
+            CAIRO_I8 => JsPrimitiveInputType(JS_BIGNUMBERISH.to_owned()),
+            CAIRO_I16 => JsPrimitiveInputType(JS_BIGNUMBERISH.to_owned()),
+            CAIRO_I32 => JsPrimitiveInputType(JS_BIGNUMBERISH.to_owned()),
+            CAIRO_I64 => JsPrimitiveInputType(JS_BIGNUMBERISH.to_owned()),
             CAIRO_I128 => JsPrimitiveInputType(JS_BIGNUMBERISH.to_owned()),
             CAIRO_BOOL => JsPrimitiveInputType(JS_BOOLEAN.to_owned()),
             _ => JsPrimitiveInputType(value.to_owned()),
@@ -216,6 +225,10 @@ impl From<&str> for JsPrimitiveDefaultValue {
             CAIRO_U128 => JsPrimitiveDefaultValue("0".to_string()),
             CAIRO_U256 => JsPrimitiveDefaultValue("0".to_string()),
             CAIRO_U256_STRUCT => JsPrimitiveDefaultValue("0".to_string()),
+            CAIRO_I8 => JsPrimitiveDefaultValue("0".to_string()),
+            CAIRO_I16 => JsPrimitiveDefaultValue("0".to_string()),
+            CAIRO_I32 => JsPrimitiveDefaultValue("0".to_string()),
+            CAIRO_I64 => JsPrimitiveDefaultValue("0".to_string()),
             CAIRO_I128 => JsPrimitiveDefaultValue("0".to_string()),
             CAIRO_BOOL => JsPrimitiveDefaultValue("false".to_string()),
             CAIRO_OPTION => JsPrimitiveDefaultValue(CAIRO_OPTION_DEFAULT_VALUE.to_string()),

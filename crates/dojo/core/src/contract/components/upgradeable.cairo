@@ -25,7 +25,7 @@ pub mod upgradeable_cpt {
 
     #[derive(Drop, starknet::Event)]
     pub struct Upgraded {
-        pub class_hash: ClassHash
+        pub class_hash: ClassHash,
     }
 
     pub mod Errors {
@@ -37,16 +37,16 @@ pub mod upgradeable_cpt {
 
     #[embeddable_as(UpgradeableImpl)]
     impl Upgradeable<
-        TContractState, +HasComponent<TContractState>, +IWorldProvider<TContractState>
+        TContractState, +HasComponent<TContractState>, +IWorldProvider<TContractState>,
     > of super::IUpgradeable<ComponentState<TContractState>> {
         fn upgrade(ref self: ComponentState<TContractState>, new_class_hash: ClassHash) {
             assert(
                 self.get_contract().world_dispatcher().contract_address.is_non_zero(),
-                Errors::INVALID_WORLD_ADDRESS
+                Errors::INVALID_WORLD_ADDRESS,
             );
             assert(
                 get_caller_address() == self.get_contract().world_dispatcher().contract_address,
-                Errors::INVALID_CALLER
+                Errors::INVALID_CALLER,
             );
             assert(new_class_hash.is_non_zero(), Errors::INVALID_CLASS);
 

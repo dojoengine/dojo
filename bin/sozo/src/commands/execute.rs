@@ -15,14 +15,14 @@ use super::options::account::AccountOptions;
 use super::options::starknet::StarknetOptions;
 use super::options::transaction::TransactionOptions;
 use super::options::world::WorldOptions;
-use crate::utils;
+use crate::utils::{self, CALLDATA_DOC};
 
 #[derive(Debug, Args)]
 #[command(about = "Execute one or several systems with the given calldata.")]
 pub struct ExecuteArgs {
     #[arg(num_args = 1..)]
     #[arg(required = true)]
-    #[arg(help = "A list of calls to execute, separated by a /.
+    #[arg(help = format!("A list of calls to execute, separated by a /.
 
 A call is made up of a <TAG_OR_ADDRESS>, an <ENTRYPOINT> and an optional <CALLDATA>:
 
@@ -31,23 +31,15 @@ A call is made up of a <TAG_OR_ADDRESS>, an <ENTRYPOINT> and an optional <CALLDA
 
 - <ENTRYPOINT>: the name of the entry point to be called,
 
-- <CALLDATA>: the calldata to be passed to the system. 
-    
-    Space separated values e.g., 0x12345 128 u256:9999999999.
-    Sozo supports some prefixes that you can use to automatically parse some types. The supported \
-                  prefixes are:
-        - u256: A 256-bit unsigned integer.
-        - sstr: A cairo short string.
-        - str: A cairo string (ByteArray).
-        - int: A signed integer.
-        - no prefix: A cairo felt or any type that fit into one felt.
+- <CALLDATA>: the calldata to be passed to the system.
+{CALLDATA_DOC}
 
 EXAMPLE
 
    sozo execute 0x1234 run / ns-Actions move 1 2
 
 Executes the run function of the contract at the address 0x1234 without calldata,
-and the move function of the ns-Actions contract, with the calldata [1,2].")]
+and the move function of the ns-Actions contract, with the calldata [1,2]."))]
     pub calls: Vec<String>,
 
     #[arg(long)]

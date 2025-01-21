@@ -55,6 +55,7 @@ pub fn dojo_derive_all(
             content: code,
             aux_data: None,
             code_mappings,
+            diagnostics_note: None,
         }),
         diagnostics,
         remove_original_item: false,

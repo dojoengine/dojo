@@ -2,6 +2,7 @@
 name = "armory"
 version = "0.1.0"
 description = "An armory of epic weapons."
+edition.workspace = true
 
 [dependencies]
 dojo.workspace = true

@@ -1,4 +1,4 @@
-use dojo::{meta::{Layout}, model::{ModelDefinition},};
+use dojo::{meta::{Layout}, model::{ModelDefinition}};
 
 pub trait ModelValueKey<V, K> {}
 
