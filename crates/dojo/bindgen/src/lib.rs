@@ -262,7 +262,7 @@ mod tests {
             gather_dojo_data(&config.manifest_path().to_path_buf(), "ns", "dev", skip_migrations)
                 .expect("Failed to gather dojo data");
 
-        assert_eq!(data.models.len(), 6);
+        assert_eq!(data.models.len(), 8);
 
         assert_eq!(data.world.name, "ns");
 

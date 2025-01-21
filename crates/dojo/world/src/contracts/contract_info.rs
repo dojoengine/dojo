@@ -29,7 +29,7 @@ pub struct ContractInfo {
     pub tag: String,
     /// The address of the contract.
     pub address: Felt,
-    /// The entrypoints that can be targetted with a transaction.
+    /// The entrypoints that can be targeted with a transaction.
     /// This only includes `external` functions.
     pub entrypoints: Vec<String>,
 }

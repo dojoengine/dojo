@@ -80,7 +80,7 @@ pub trait IWorld<T> {
     /// * `namespace` - The namespace of the contract to be registered.
     /// * `class_hash` - The class hash of the contract.
     fn register_contract(
-        ref self: T, salt: felt252, namespace: ByteArray, class_hash: ClassHash
+        ref self: T, salt: felt252, namespace: ByteArray, class_hash: ClassHash,
     ) -> ContractAddress;
 
     /// Initializes a contract associated registered in the world.
@@ -126,9 +126,7 @@ pub trait IWorld<T> {
     /// * `event_selector` - The selector of the event.
     /// * `keys` - The keys of the event.
     /// * `values` - The data to be logged by the event.
-    fn emit_event(
-        ref self: T, event_selector: felt252, keys: Span<felt252>, values: Span<felt252>,
-    );
+    fn emit_event(ref self: T, event_selector: felt252, keys: Span<felt252>, values: Span<felt252>);
 
     /// Emits multiple events.
     /// Permissions are only checked once, then the events are batched.
@@ -158,7 +156,7 @@ pub trait IWorld<T> {
     ///
     /// * `Span<felt252>` - The serialized value of the model, zero initialized if not set.
     fn entity(
-        self: @T, model_selector: felt252, index: ModelIndex, layout: Layout
+        self: @T, model_selector: felt252, index: ModelIndex, layout: Layout,
     ) -> Span<felt252>;
 
     /// Gets the model values for the given entities.
@@ -169,7 +167,7 @@ pub trait IWorld<T> {
     /// * `indices` - The indexes of the entities/members to read.
     /// * `layout` - The memory layout of the model.
     fn entities(
-        self: @T, model_selector: felt252, indexes: Span<ModelIndex>, layout: Layout
+        self: @T, model_selector: felt252, indexes: Span<ModelIndex>, layout: Layout,
     ) -> Span<Span<felt252>>;
 
     /// Sets the model value for the given entity/member.
@@ -185,7 +183,7 @@ pub trait IWorld<T> {
         model_selector: felt252,
         index: ModelIndex,
         values: Span<felt252>,
-        layout: Layout
+        layout: Layout,
     );
 
     /// Sets the model values for the given entities.
@@ -202,7 +200,7 @@ pub trait IWorld<T> {
         model_selector: felt252,
         indexes: Span<ModelIndex>,
         values: Span<Span<felt252>>,
-        layout: Layout
+        layout: Layout,
     );
 
     /// Deletes a model value for the given entity/member.
@@ -224,7 +222,7 @@ pub trait IWorld<T> {
     /// * `indexes` - The indexes of the entities/members to delete.
     /// * `layout` - The memory layout of the model.
     fn delete_entities(
-        ref self: T, model_selector: felt252, indexes: Span<ModelIndex>, layout: Layout
+        ref self: T, model_selector: felt252, indexes: Span<ModelIndex>, layout: Layout,
     );
 
     /// Returns true if the provided account has owner permission for the resource, false otherwise.
@@ -299,7 +297,7 @@ pub trait IWorldTest<T> {
         model_selector: felt252,
         index: ModelIndex,
         values: Span<felt252>,
-        layout: Layout
+        layout: Layout,
     );
 
     /// Deletes a model value for the given entity/member without checking for resource permissions.

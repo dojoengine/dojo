@@ -1,34 +1,21 @@
-//! Compiles and runs tests for a Dojo project.
-//!
-//! We can't use scarb to run tests since our injection will not work.
-//! Scarb uses other binaries to run tests. Dojo plugin injection is done in scarb itself.
-//! When proc macro will be fully supported, we can switch back to scarb.
-use anyhow::{bail, Result};
-use cairo_lang_compiler::db::RootDatabase;
-use cairo_lang_compiler::diagnostics::DiagnosticsReporter;
-use cairo_lang_compiler::project::{ProjectConfig, ProjectConfigContent};
-use cairo_lang_filesystem::cfg::{Cfg, CfgSet};
-use cairo_lang_filesystem::db::{CrateSettings, ExperimentalFeaturesConfig, FilesGroup};
-use cairo_lang_filesystem::ids::{CrateId, CrateLongId, Directory};
-use cairo_lang_project::AllCratesConfig;
-use cairo_lang_starknet::starknet_plugin_suite;
-use cairo_lang_test_plugin::{test_plugin_suite, TestsCompilationConfig};
-use cairo_lang_test_runner::{CompiledTestRunner, RunProfilerConfig, TestCompiler, TestRunConfig};
-use cairo_lang_utils::ordered_hash_map::OrderedHashMap;
+//! Compiles and runs tests for a Dojo project using Scarb.
+use std::collections::HashSet;
+use std::fs;
+
+use anyhow::{Context, Result};
+use cairo_lang_sierra::program::VersionedProgram;
+use cairo_lang_test_plugin::{TestCompilation, TestCompilationMetadata};
+use cairo_lang_test_runner::{CompiledTestRunner, RunProfilerConfig, TestRunConfig};
+use camino::Utf8PathBuf;
 use clap::Args;
-use dojo_lang::dojo_plugin_suite;
-use itertools::Itertools;
-use scarb::compiler::{
-    CairoCompilationUnit, CompilationUnit, CompilationUnitAttributes, ContractSelector,
-};
-use scarb::core::{Config, Package, TargetKind};
+use scarb::compiler::ContractSelector;
+use scarb::core::{Config, TargetKind};
 use scarb::ops::{self, CompileOpts};
+use scarb_metadata::{Metadata, MetadataCommand, PackageId, PackageMetadata, TargetMetadata};
 use scarb_ui::args::{FeaturesSpec, PackagesFilter};
 use serde::{Deserialize, Serialize};
-use smol_str::SmolStr;
+use sozo_scarbext::WorkspaceExt;
 use tracing::trace;
-
-pub const WORLD_QUALIFIED_PATH: &str = "dojo::world::world_contract::world";
 
 use super::check_package_dojo_version;
 
@@ -81,7 +68,7 @@ pub struct TestArgs {
     features: FeaturesSpec,
     /// Specify packages to test.
     #[command(flatten)]
-    pub packages: Option<PackagesFilter>,
+    pub packages: PackagesFilter,
 }
 
 impl TestArgs {
@@ -92,211 +79,136 @@ impl TestArgs {
             std::process::exit(1);
         });
 
-        let packages: Vec<Package> = if let Some(filter) = self.packages {
-            filter.match_many(&ws)?.into_iter().collect()
-        } else {
-            ws.members().collect()
-        };
+        // The scarb path is expected to be set in the env variable $SCARB.
+        // However, in some installation, we may not have the correct version, which will
+        // ends up in an error like "Scarb metadata not found".
+        let scarb_cairo_version = scarb::version::get().cairo.version.to_string();
+        let scarb_env_value = std::env::var("SCARB").unwrap_or_default();
+        let metadata = MetadataCommand::new()
+            .manifest_path(config.manifest_path())
+            .exec()
+            .with_context(|| {
+                format!(
+                    "Failed to get scarb metadata. Ensure `$SCARB` is set to the correct path \
+                     with the same version of Cairo ({scarb_cairo_version}). Current value: \
+                     {scarb_env_value}."
+                )
+            })?;
 
+        let packages = self.packages.match_many(&ws)?;
         for p in &packages {
             check_package_dojo_version(&ws, p)?;
         }
 
-        let resolve = ops::resolve_workspace(&ws)?;
+        let matched = self.packages.match_many(&metadata)?;
 
-        let opts = CompileOpts {
-            include_target_kinds: vec![TargetKind::TEST],
-            exclude_target_kinds: vec![],
-            include_target_names: vec![],
-            features: self.features.try_into()?,
-        };
-
-        let compilation_units = ops::generate_compilation_units(&resolve, &opts.features, &ws)?
-            .into_iter()
-            .filter(|cu| {
-                let is_excluded =
-                    opts.exclude_target_kinds.contains(&cu.main_component().target_kind());
-                let is_included = opts.include_target_kinds.is_empty()
-                    || opts.include_target_kinds.contains(&cu.main_component().target_kind());
-                let is_included = is_included
-                    && (opts.include_target_names.is_empty()
-                        || cu
-                            .main_component()
-                            .targets
-                            .iter()
-                            .any(|t| opts.include_target_names.contains(&t.name)));
-
-                let is_selected = packages.iter().any(|p| p.id == cu.main_package_id());
-
-                let is_cairo_plugin = matches!(cu, CompilationUnit::ProcMacro(_));
-                is_cairo_plugin || (is_included && is_selected && !is_excluded)
+        let target_names = matched
+            .iter()
+            .flat_map(|package| {
+                find_testable_targets(package).iter().map(|t| t.name.clone()).collect::<Vec<_>>()
             })
             .collect::<Vec<_>>();
 
-        for unit in compilation_units {
-            let unit = if let CompilationUnit::Cairo(unit) = unit {
-                unit
-            } else {
-                continue;
-            };
+        trace!(?target_names, "Extracting testable targets.");
 
-            config.ui().print(format!("testing {}", unit.name()));
+        scarb::ops::compile(
+            packages.iter().map(|p| p.id).collect(),
+            CompileOpts {
+                include_target_kinds: vec![TargetKind::TEST],
+                exclude_target_kinds: vec![],
+                include_target_names: vec![],
+                features: self.features.try_into()?,
+                ignore_cairo_version: false,
+            },
+            &ws,
+        )?;
 
-            let props: Props = unit.main_component().target_props()?;
-            let db = build_root_database(&unit)?;
+        let target_dir = Utf8PathBuf::from(ws.target_dir_profile().to_string());
 
-            if DiagnosticsReporter::stderr().allow_warnings().check(&db) {
-                bail!("failed to compile");
+        let mut deduplicator = TargetGroupDeduplicator::default();
+        for package in matched {
+            println!("testing {} ...", package.name);
+            for target in find_testable_targets(&package) {
+                if !target_names.contains(&target.name) {
+                    continue;
+                }
+                let name = target
+                    .params
+                    .get("group-id")
+                    .and_then(|v| v.as_str())
+                    .map(ToString::to_string)
+                    .unwrap_or(target.name.clone());
+                let already_seen = deduplicator.visit(package.name.clone(), name.clone());
+                if already_seen {
+                    continue;
+                }
+                let test_compilation = deserialize_test_compilation(&target_dir, name.clone())?;
+                let config = TestRunConfig {
+                    filter: self.filter.clone(),
+                    include_ignored: self.include_ignored,
+                    ignored: self.ignored,
+                    run_profiler: RunProfilerConfig::None,
+                    gas_enabled: is_gas_enabled(&metadata, &package.id, target),
+                    print_resource_usage: self.print_resource_usage,
+                };
+                let runner = CompiledTestRunner::new(test_compilation, config);
+                runner.run(None)?;
+                println!();
             }
-
-            let test_crate_ids = collect_main_crate_ids(&unit, &db, false);
-
-            let mut main_crate_ids = collect_all_crate_ids(&unit, &db);
-
-            if let Some(external_contracts) = props.build_external_contracts {
-                main_crate_ids.extend(collect_crates_ids_from_selectors(&db, &external_contracts));
-            }
-
-            let config = TestRunConfig {
-                filter: self.filter.clone(),
-                ignored: self.ignored,
-                include_ignored: self.include_ignored,
-                run_profiler: self.profiler_mode.clone().into(),
-                gas_enabled: self.gas_enabled,
-                print_resource_usage: self.print_resource_usage,
-            };
-
-            let compiler = TestCompiler {
-                db: db.snapshot(),
-                main_crate_ids,
-                test_crate_ids,
-                allow_warnings: true,
-                config: TestsCompilationConfig {
-                    starknet: true,
-                    add_statements_functions: false,
-                    add_statements_code_locations: false,
-                },
-            };
-
-            let compiled = compiler.build()?;
-            let runner = CompiledTestRunner { compiled, config };
-
-            // Database is required here for the profiler to work.
-            runner.run(Some(&db))?;
-
-            println!();
         }
 
         Ok(())
     }
 }
 
-pub(crate) fn build_root_database(unit: &CairoCompilationUnit) -> Result<RootDatabase> {
-    let mut b = RootDatabase::builder();
-    b.with_project_config(build_project_config(unit)?);
-    b.with_cfg(CfgSet::from_iter([Cfg::name("test"), Cfg::kv("target", "test")]));
+fn deserialize_test_compilation(target_dir: &Utf8PathBuf, name: String) -> Result<TestCompilation> {
+    let file_path = target_dir.join(format!("{}.test.json", name));
+    let test_comp_metadata = serde_json::from_str::<TestCompilationMetadata>(
+        &fs::read_to_string(file_path.clone())
+            .with_context(|| format!("failed to read file: {file_path}"))?,
+    )
+    .with_context(|| format!("failed to deserialize compiled tests metadata file: {file_path}"))?;
 
-    b.with_plugin_suite(test_plugin_suite());
-    b.with_plugin_suite(dojo_plugin_suite());
-    b.with_plugin_suite(starknet_plugin_suite());
+    let file_path = target_dir.join(format!("{}.test.sierra.json", name));
+    let sierra_program = serde_json::from_str::<VersionedProgram>(
+        &fs::read_to_string(file_path.clone())
+            .with_context(|| format!("failed to read file: {file_path}"))?,
+    )
+    .with_context(|| format!("failed to deserialize compiled tests sierra file: {file_path}"))?;
 
-    b.build()
+    Ok(TestCompilation { sierra_program: sierra_program.into_v1()?, metadata: test_comp_metadata })
 }
 
-fn build_project_config(unit: &CairoCompilationUnit) -> Result<ProjectConfig> {
-    let crate_roots = unit
-        .components
-        .iter()
-        .filter(|c| !c.package.id.is_core())
-        // NOTE: We're taking the first target of each compilation unit, which should always be the
-        //       main package source root due to the order maintained by scarb.
-        .map(|c| {
-            (
-                c.cairo_package_name(),
-                c.first_target().source_root().into(),
-            )
-        })
-        .collect();
-
-    let corelib =
-        unit.core_package_component().map(|c| Directory::Real(c.targets[0].source_root().into()));
-
-    let crates_config = crates_config_for_compilation_unit(unit);
-
-    let content = ProjectConfigContent { crate_roots, crates_config };
-
-    let project_config =
-        ProjectConfig { base_path: unit.main_component().package.root().into(), corelib, content };
-
-    trace!(?project_config, "Project config built.");
-
-    Ok(project_config)
+#[derive(Default)]
+struct TargetGroupDeduplicator {
+    seen: HashSet<(String, String)>,
 }
 
-/// Collects the main crate ids for Dojo including the core crates.
-pub fn collect_main_crate_ids(
-    unit: &CairoCompilationUnit,
-    db: &RootDatabase,
-    with_dojo_core: bool,
-) -> Vec<CrateId> {
-    let mut main_crate_ids = scarb::compiler::helpers::collect_main_crate_ids(unit, db);
-
-    if unit.main_package_id.name.to_string() != "dojo" && with_dojo_core {
-        let core_crate_ids: Vec<CrateId> = collect_crates_ids_from_selectors(
-            db,
-            &[ContractSelector(WORLD_QUALIFIED_PATH.to_string())],
-        );
-
-        main_crate_ids.extend(core_crate_ids);
+impl TargetGroupDeduplicator {
+    /// Returns true if already visited.
+    pub fn visit(&mut self, package_name: String, group_name: String) -> bool {
+        !self.seen.insert((package_name, group_name))
     }
-
-    main_crate_ids
 }
 
-/// Collects the crate ids containing the given contract selectors.
-pub fn collect_crates_ids_from_selectors(
-    db: &RootDatabase,
-    contract_selectors: &[ContractSelector],
-) -> Vec<CrateId> {
-    contract_selectors
-        .iter()
-        .map(|selector| selector.package().into())
-        .unique()
-        .map(|package_name: SmolStr| db.intern_crate(CrateLongId::Real(package_name)))
-        .collect::<Vec<_>>()
+/// Defines if gas is enabled for a given test target.
+fn is_gas_enabled(metadata: &Metadata, package_id: &PackageId, target: &TargetMetadata) -> bool {
+    metadata
+            .compilation_units
+            .iter()
+            .find(|cu| {
+                cu.package == *package_id && cu.target.kind == "test" && cu.target.name == target.name
+            })
+            .map(|cu| cu.compiler_config.clone())
+            .and_then(|c| {
+                c.as_object()
+                    .and_then(|c| c.get("enable_gas").and_then(|x| x.as_bool()))
+            })
+            // Defaults to true, meaning gas enabled - relies on cli config then.
+            .unwrap_or(true)
 }
 
-pub fn collect_all_crate_ids(unit: &CairoCompilationUnit, db: &RootDatabase) -> Vec<CrateId> {
-    unit.components
-        .iter()
-        .map(|component| db.intern_crate(CrateLongId::Real(component.cairo_package_name())))
-        .collect()
-}
-
-pub fn crates_config_for_compilation_unit(unit: &CairoCompilationUnit) -> AllCratesConfig {
-    let crates_config: OrderedHashMap<SmolStr, CrateSettings> = unit
-        .components()
-        .iter()
-        .map(|component| {
-            // Ensure experimental features are only enable if required.
-            let experimental_features = component.package.manifest.experimental_features.clone();
-            let experimental_features = experimental_features.unwrap_or_default();
-
-            (
-                component.cairo_package_name(),
-                CrateSettings {
-                    version: Some(component.package.id.version.clone()),
-                    edition: component.package.manifest.edition,
-                    experimental_features: ExperimentalFeaturesConfig {
-                        negative_impls: experimental_features
-                            .contains(&SmolStr::new_inline("negative_impls")),
-                        coupons: experimental_features.contains(&SmolStr::new_inline("coupons")),
-                    },
-                    cfg_set: component.cfg_set.clone(),
-                },
-            )
-        })
-        .collect();
-
-    AllCratesConfig { override_map: crates_config, ..Default::default() }
+/// Finds all testable targets in a package.
+fn find_testable_targets(package: &PackageMetadata) -> Vec<&TargetMetadata> {
+    package.targets.iter().filter(|target| target.kind == "test").collect()
 }

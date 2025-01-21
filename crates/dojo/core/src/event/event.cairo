@@ -6,7 +6,7 @@ use dojo::model::model::ModelParser;
 pub struct EventDef {
     pub name: ByteArray,
     pub layout: Layout,
-    pub schema: Struct
+    pub schema: Struct,
 }
 
 pub trait EventDefinition<E> {
@@ -37,7 +37,7 @@ pub impl EventImpl<E, +ModelParser<E>, +EventDefinition<E>, +Serde<E>, +Introspe
     fn schema() -> Struct {
         match Introspect::<E>::ty() {
             Ty::Struct(s) => s,
-            _ => panic!("Event: invalid schema.")
+            _ => panic!("Event: invalid schema."),
         }
     }
     fn serialized_keys(self: @E) -> Span<felt252> {
