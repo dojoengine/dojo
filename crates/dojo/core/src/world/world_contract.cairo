@@ -861,7 +861,7 @@ pub mod world {
             // can upgrade it.
             match self.resources.read(contract_selector) {
                 Resource::Library((
-                    class_hash, _,
+                    _, _,
                 )) => {
                     self.assert_caller_permissions(contract_selector, Permission::Owner);
 

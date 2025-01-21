@@ -77,6 +77,7 @@ enum ResourceInspect {
     Contract(ContractInspect),
     Model(ModelInspect),
     Event(EventInspect),
+    Library(LibraryInspect),
 }
 
 #[derive(Debug, Tabled, Serialize)]
@@ -112,6 +113,18 @@ struct ContractInspect {
     #[tabled(rename = "Contract Address")]
     address: String,
     #[tabled(skip)]
+    current_class_hash: String,
+}
+
+#[derive(Debug, Tabled, Serialize)]
+struct LibraryInspect {
+    #[tabled(rename = "Libraries")]
+    tag: String,
+    #[tabled(rename = "Status")]
+    status: ResourceStatus,
+    #[tabled(rename = "Dojo Selector")]
+    selector: String,
+    #[tabled(rename = "Class Hash")]
     current_class_hash: String,
 }
 
@@ -267,6 +280,7 @@ fn inspect_world(world_diff: &WorldDiff) {
     let mut contracts_disp = vec![];
     let mut models_disp = vec![];
     let mut events_disp = vec![];
+    let mut libraries_disp = vec![];
 
     for resource in world_diff.resources.values() {
         match resource.resource_type() {
@@ -286,6 +300,10 @@ fn inspect_world(world_diff: &WorldDiff) {
                 ResourceInspect::Event(e) => events_disp.push(e),
                 _ => unreachable!(),
             },
+            ResourceType::Library => match resource_diff_display(world_diff, resource) {
+                ResourceInspect::Library(l) => libraries_disp.push(l),
+                _ => unreachable!(),
+            },
             _ => {}
         }
     }
@@ -294,9 +312,11 @@ fn inspect_world(world_diff: &WorldDiff) {
     contracts_disp.sort_by_key(|m| m.tag.to_string());
     models_disp.sort_by_key(|m| m.tag.to_string());
     events_disp.sort_by_key(|m| m.tag.to_string());
+    libraries_disp.sort_by_key(|m| m.tag.to_string());
 
     print_table(&namespaces_disp, Some(Color::FG_BRIGHT_BLACK), None);
     print_table(&contracts_disp, Some(Color::FG_BRIGHT_BLACK), None);
+    print_table(&libraries_disp, Some(Color::FG_BRIGHT_BLACK), None);
     print_table(&models_disp, Some(Color::FG_BRIGHT_BLACK), None);
     print_table(&events_disp, Some(Color::FG_BRIGHT_BLACK), None);
 }
@@ -368,6 +388,37 @@ fn resource_diff_display(world_diff: &WorldDiff, resource: &ResourceDiff) -> Res
                 status,
                 is_initialized,
                 address: format!("{:#066x}", contract_address),
+                current_class_hash: format!("{:#066x}", resource.current_class_hash()),
+                selector: format!("{:#066x}", resource.dojo_selector()),
+            })
+        }
+        ResourceType::Library => {
+            let (_current_class_hash, status) = match resource {
+                ResourceDiff::Created(_) => {
+                    (resource.current_class_hash(), ResourceStatus::Created)
+                }
+                ResourceDiff::Updated(_, _remote) => {
+                    (resource.current_class_hash(), ResourceStatus::Updated)
+                }
+                ResourceDiff::Synced(_, remote) => (
+                    remote.current_class_hash(),
+                    if has_dirty_perms {
+                        ResourceStatus::DirtyLocalPerms
+                    } else {
+                        ResourceStatus::Synced
+                    },
+                ),
+            };
+
+            let status = if world_diff.profile_config.is_skipped(&resource.tag()) {
+                ResourceStatus::MigrationSkipped
+            } else {
+                status
+            };
+
+            ResourceInspect::Library(LibraryInspect {
+                tag: resource.tag(),
+                status,
                 current_class_hash: format!("{:#066x}", resource.current_class_hash()),
                 selector: format!("{:#066x}", resource.dojo_selector()),
             })

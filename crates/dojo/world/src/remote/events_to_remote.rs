@@ -18,7 +18,9 @@ use super::permissions::PermissionsUpdateable;
 use super::{ResourceRemote, WorldRemote};
 use crate::constants::WORLD;
 use crate::contracts::abigen::world::{self, Event as WorldEvent};
-use crate::remote::{CommonRemoteInfo, ContractRemote, EventRemote, ModelRemote, NamespaceRemote};
+use crate::remote::{
+    CommonRemoteInfo, ContractRemote, EventRemote, LibraryRemote, ModelRemote, NamespaceRemote,
+};
 
 impl WorldRemote {
     /// Fetch the events from the world and convert them to remote resources.
@@ -64,6 +66,8 @@ impl WorldRemote {
             world::WriterUpdated::event_selector(),
             world::OwnerUpdated::event_selector(),
             world::MetadataUpdate::event_selector(),
+            world::LibraryRegistered::event_selector(),
+            world::LibraryUpgraded::event_selector(),
         ]];
 
         let filter = EventFilter {
@@ -240,6 +244,31 @@ impl WorldRemote {
 
                 self.add_resource(r);
             }
+            WorldEvent::LibraryRegistered(e) => {
+                let namespace = e.namespace.to_string()?;
+
+                if !is_whitelisted(whitelisted_namespaces, &namespace) {
+                    debug!(
+                        namespace,
+                        contract = e.name.to_string()?,
+                        "Library's namespace not whitelisted."
+                    );
+
+                    return Ok(());
+                }
+
+                let r = ResourceRemote::Library(LibraryRemote {
+                    common: CommonRemoteInfo::new(
+                        e.class_hash.into(),
+                        &namespace,
+                        &e.name.to_string()?,
+                        Felt::ZERO,
+                    ),
+                });
+                trace!(?r, "Library registered.");
+
+                self.add_resource(r);
+            }
             WorldEvent::ModelUpgraded(e) => {
                 let resource = if let Some(resource) = self.resources.get_mut(&e.selector) {
                     resource
@@ -282,6 +311,21 @@ impl WorldRemote {
                     return Ok(());
                 };
                 trace!(?resource, "Contract upgraded.");
+
+                resource.push_class_hash(e.class_hash.into());
+            }
+            WorldEvent::LibraryUpgraded(e) => {
+                let resource = if let Some(resource) = self.resources.get_mut(&e.selector) {
+                    resource
+                } else {
+                    debug!(
+                        selector = format!("{:#066x}", e.selector),
+                        "Library not found (may be excluded by whitelist of namespaces)."
+                    );
+
+                    return Ok(());
+                };
+                trace!(?resource, "Library upgraded.");
 
                 resource.push_class_hash(e.class_hash.into());
             }

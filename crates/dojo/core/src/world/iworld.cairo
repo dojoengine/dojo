@@ -90,9 +90,7 @@ pub trait IWorld<T> {
     ///
     /// * `namespace` - The namespace of the contract to be registered.
     /// * `class_hash` - The class hash of the contract.
-    fn register_library(
-        ref self: T, namespace: ByteArray, class_hash: ClassHash,
-    ) -> ClassHash;
+    fn register_library(ref self: T, namespace: ByteArray, class_hash: ClassHash) -> ClassHash;
 
     /// Initializes a contract associated registered in the world.
     ///

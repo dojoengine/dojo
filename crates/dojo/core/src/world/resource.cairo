@@ -30,9 +30,9 @@ use starknet::{ContractAddress, ClassHash};
 ///
 /// - Unregistered: The unregistered state, required to ensure the security of the world
 /// to not have operations done on non-existent resources.
-/// 
+///
 /// WARNING: enum order must be preserved to ensure backward compatibility
-/// 
+///
 #[derive(Drop, starknet::Store, Serde, Default, Debug)]
 pub enum Resource {
     Model: (ContractAddress, felt252),

@@ -430,6 +430,17 @@ where
                     invoker.extend_calls(contract_calls);
                     classes.extend(contract_classes);
                 }
+                ResourceType::Library => {
+                    let (contract_calls, contract_classes) =
+                        self.libraries_calls_classes(resource).await?;
+
+                    if !contract_calls.is_empty() {
+                        n_resources += 1;
+                    }
+
+                    invoker.extend_calls(contract_calls);
+                    classes.extend(contract_classes);
+                }
                 ResourceType::Model => {
                     let (model_calls, model_classes) = self.models_calls_classes(resource).await?;
 
@@ -611,6 +622,71 @@ where
             calls.push(self.world.upgrade_contract_getcall(
                 &ns_bytearray,
                 &ClassHash(contract_local.common.class_hash),
+            ));
+        }
+
+        Ok((calls, classes))
+    }
+
+    /// Gathers the calls required to sync the libraries' classes to be declared.
+    ///
+    /// Returns a tuple of calls and (casm_class_hash, class) to be declared.
+    async fn libraries_calls_classes(
+        &self,
+        resource: &ResourceDiff,
+    ) -> Result<(Vec<Call>, HashMap<Felt, LabeledClass>), MigrationError<A::SignError>> {
+        let mut calls = vec![];
+        let mut classes = HashMap::new();
+
+        let namespace = resource.namespace();
+        let ns_bytearray = ByteArray::from_string(&namespace)?;
+        let tag = resource.tag();
+
+        if let ResourceDiff::Created(ResourceLocal::Library(library)) = resource {
+            trace!(
+                namespace,
+                name = library.common.name,
+                class_hash = format!("{:#066x}", library.common.class_hash),
+                "Registering library."
+            );
+
+            let casm_class_hash = library.common.casm_class_hash;
+            let class = library.common.class.clone().flatten()?;
+
+            classes.insert(
+                casm_class_hash,
+                LabeledClass { label: tag.clone(), casm_class_hash, class },
+            );
+
+            calls.push(
+                self.world
+                    .register_library_getcall(&ns_bytearray, &ClassHash(library.common.class_hash)),
+            );
+        }
+
+        if let ResourceDiff::Updated(
+            ResourceLocal::Library(library_local),
+            ResourceRemote::Library(_library_remote),
+        ) = resource
+        {
+            trace!(
+                namespace,
+                name = library_local.common.name,
+                class_hash = format!("{:#066x}", library_local.common.class_hash),
+                "Upgrading library."
+            );
+
+            let casm_class_hash = library_local.common.casm_class_hash;
+            let class = library_local.common.class.clone().flatten()?;
+
+            classes.insert(
+                casm_class_hash,
+                LabeledClass { label: tag.clone(), casm_class_hash, class },
+            );
+
+            calls.push(self.world.upgrade_library_getcall(
+                &ns_bytearray,
+                &ClassHash(library_local.common.class_hash),
             ));
         }
 

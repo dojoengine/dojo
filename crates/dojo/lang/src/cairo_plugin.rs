@@ -8,14 +8,13 @@ use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
 
-use crate::attribute_macros::DojoLibrary;
-
 use super::attribute_macros::{
     DojoContract, DojoEvent, DojoModel, DOJO_CONTRACT_ATTR, DOJO_EVENT_ATTR, DOJO_LIBRARY_ATTR,
     DOJO_MODEL_ATTR,
 };
 use super::derive_macros::{dojo_derive_all, DOJO_INTROSPECT_DERIVE, DOJO_PACKED_DERIVE};
 use super::inline_macros::SelectorFromTagMacro;
+use crate::attribute_macros::DojoLibrary;
 
 // #[cfg(test)]
 // #[path = "plugin_test.rs"]
