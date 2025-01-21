@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1737415297844,
+  "lastUpdate": 1737436874960,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -46795,6 +46795,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 7628992,
             "range": "± 55389",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ad3e8fa74d74f3b68dcc74cce1d1a0b6c09a668a",
+          "message": "fix(torii-sqlite): executor broker messages & ipfs logging (#2923)\n\n* refactor(torii) ipfs fetch\n\n* fmt\n\n* improve logging for ipfs fetch\n\n* remove print\n\n* fix broker messages broadcast timing",
+          "timestamp": "2025-01-21T05:04:55Z",
+          "tree_id": "82c2ee0b4c97ffc6819ba0057674849eea699b15",
+          "url": "https://github.com/dojoengine/dojo/commit/ad3e8fa74d74f3b68dcc74cce1d1a0b6c09a668a"
+        },
+        "date": 1737436872997,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 12115567727,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
