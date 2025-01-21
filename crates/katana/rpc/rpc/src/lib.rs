@@ -14,6 +14,7 @@ use tracing::info;
 pub mod cors;
 pub mod dev;
 pub mod health;
+pub mod katana;
 pub mod metrics;
 pub mod saya;
 pub mod starknet;

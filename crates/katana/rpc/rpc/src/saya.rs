@@ -8,7 +8,7 @@ use katana_primitives::block::{BlockIdOrTag, BlockTag};
 use katana_provider::error::ProviderError;
 use katana_provider::traits::block::{BlockIdReader, BlockProvider};
 use katana_provider::traits::transaction::{TransactionTraceProvider, TransactionsProviderExt};
-use katana_rpc_api::saya::SayaApiServer;
+pub use katana_rpc_api::saya::SayaApiServer;
 use katana_rpc_types::error::saya::SayaApiError;
 use katana_rpc_types::trace::TxExecutionInfo;
 use katana_tasks::TokioTaskSpawner;

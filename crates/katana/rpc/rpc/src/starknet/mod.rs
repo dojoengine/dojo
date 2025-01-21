@@ -58,6 +58,9 @@ mod write;
 
 pub use config::StarknetApiConfig;
 use forking::ForkedClient;
+pub use katana_rpc_api::starknet::{
+    StarknetApiServer, StarknetTraceApiServer, StarknetWriteApiServer,
+};
 
 type StarknetApiResult<T> = Result<T, StarknetApiError>;
 

@@ -8707,7 +8707,6 @@ dependencies = [
  "katana-primitives",
  "katana-provider",
  "katana-rpc",
- "katana-rpc-api",
  "katana-stage",
  "katana-tasks",
  "serde",

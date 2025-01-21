@@ -9,7 +9,7 @@ use katana_pool::TxPool;
 use katana_primitives::block::{BlockHashOrNumber, FinalityStatus};
 use katana_provider::traits::block::BlockNumberProvider;
 use katana_provider::traits::transaction::TransactionProvider;
-use katana_rpc_api::torii::ToriiApiServer;
+pub use katana_rpc_api::torii::ToriiApiServer;
 use katana_rpc_types::error::torii::ToriiApiError;
 use katana_rpc_types::receipt::{ReceiptBlock, TxReceiptWithBlockInfo};
 use katana_rpc_types::transaction::{TransactionsPage, TransactionsPageCursor};

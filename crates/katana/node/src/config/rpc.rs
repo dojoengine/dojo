@@ -30,6 +30,7 @@ pub const DEFAULT_RPC_MAX_PROOF_KEYS: u64 = 100;
 #[strum(ascii_case_insensitive)]
 pub enum RpcModuleKind {
     Starknet,
+    Katana,
     Torii,
     Saya,
     Dev,
@@ -86,6 +87,7 @@ impl RpcModulesList {
     pub fn all() -> Self {
         Self(HashSet::from([
             RpcModuleKind::Starknet,
+            RpcModuleKind::Katana,
             RpcModuleKind::Torii,
             RpcModuleKind::Saya,
             RpcModuleKind::Dev,

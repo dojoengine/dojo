@@ -8,6 +8,7 @@ pub mod block;
 pub mod class;
 pub mod error;
 pub mod event;
+pub mod fee;
 pub mod message;
 pub mod receipt;
 pub mod state_update;
