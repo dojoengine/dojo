@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1737437516202,
+  "lastUpdate": 1737498780247,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -46951,6 +46951,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 7668729,
             "range": "± 40202",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "broody@gmail.com",
+            "name": "Yun",
+            "username": "broody"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c05b0cbfde10a2fc1a8be28f1ae58ec4b2efd1d7",
+          "message": "fix(katana-cli): use messaging in config file (#2941)\n\nCo-authored-by: Ammar Arif <evergreenkary@gmail.com>",
+          "timestamp": "2025-01-21T22:16:29Z",
+          "tree_id": "0eb66c8bfb449591116be3409d50f1b5dd88b03f",
+          "url": "https://github.com/dojoengine/dojo/commit/c05b0cbfde10a2fc1a8be28f1ae58ec4b2efd1d7"
+        },
+        "date": 1737498777528,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 11612934247,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
