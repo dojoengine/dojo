@@ -16,6 +16,8 @@ pub struct WorldOptions {
     pub world_address: Option<Felt>,
 
     #[arg(long, default_value = "false")]
+    #[arg(help = "Whether the migration is a guest migration, which means the migration is \
+                  performed on a world you are not the owner of.")]
     pub guest: bool,
 
     #[arg(long, default_value = "", help = "Whitelisted namespaces.")]
