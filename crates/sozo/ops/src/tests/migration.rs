@@ -34,7 +34,16 @@ async fn setup_migration(
     let world_local = ws.load_world_local().unwrap();
     let world_address = world_local.deterministic_world_address().unwrap();
 
-    let world_diff = WorldDiff::new_from_chain(world_address, world_local, &provider, None).await?;
+    let whitelisted_namespaces = vec![];
+
+    let world_diff = WorldDiff::new_from_chain(
+        world_address,
+        world_local,
+        &provider,
+        None,
+        &whitelisted_namespaces,
+    )
+    .await?;
 
     Ok(world_diff)
 }
@@ -51,12 +60,15 @@ async fn migrate_spawn_and_move(sequencer: &RunnerCtx, with_metadata: bool) -> M
     let world_address = world_diff.world_info.address;
     let profile_config = world_diff.profile_config.clone();
 
+    let is_guest = false;
+
     let migration = Migration::new(
         world_diff,
         WorldContract::new(world_address, &account),
         TxnConfig::init_wait(),
         profile_config,
         sequencer.url().to_string(),
+        is_guest,
     );
 
     let mut ui = MigrationUi::new(None).with_silent();
