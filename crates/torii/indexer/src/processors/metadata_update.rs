@@ -16,9 +16,8 @@ use torii_sqlite::utils::fetch_content_from_ipfs;
 use torii_sqlite::Sql;
 use tracing::{error, info};
 
-use crate::task_manager::{TaskId, TaskPriority};
-
 use super::{EventProcessor, EventProcessorConfig};
+use crate::task_manager::{TaskId, TaskPriority};
 
 pub(crate) const LOG_TARGET: &str = "torii_indexer::processors::metadata_update";
 
