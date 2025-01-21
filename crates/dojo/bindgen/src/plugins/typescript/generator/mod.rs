@@ -1,8 +1,9 @@
 use cainome::parser::tokens::{Composite, CompositeInner, CompositeType, Token};
 use constants::{
-    CAIRO_BOOL, CAIRO_BYTE_ARRAY, CAIRO_CONTRACT_ADDRESS, CAIRO_FELT252, CAIRO_I128, CAIRO_OPTION,
-    CAIRO_OPTION_DEFAULT_VALUE, CAIRO_U128, CAIRO_U16, CAIRO_U256, CAIRO_U256_STRUCT, CAIRO_U32,
-    CAIRO_U64, CAIRO_U8, JS_BIGNUMBERISH, JS_BOOLEAN, JS_STRING,
+    CAIRO_BOOL, CAIRO_BYTE_ARRAY, CAIRO_CONTRACT_ADDRESS, CAIRO_FELT252, CAIRO_I128, CAIRO_I16,
+    CAIRO_I32, CAIRO_I64, CAIRO_I8, CAIRO_OPTION, CAIRO_OPTION_DEFAULT_VALUE, CAIRO_U128,
+    CAIRO_U16, CAIRO_U256, CAIRO_U256_STRUCT, CAIRO_U32, CAIRO_U64, CAIRO_U8, CAIRO_UNIT_TYPE,
+    JS_BIGNUMBERISH, JS_BOOLEAN, JS_STRING,
 };
 use convert_case::{Case, Casing};
 
@@ -49,21 +50,10 @@ pub(crate) fn token_is_option(token: &Composite) -> bool {
     token.type_path.starts_with(CAIRO_OPTION_TYPE_PATH)
 }
 
-/// Checks if token has inner composite
-/// * token - The token to check
-fn token_has_inner_composite(token: &Composite) -> bool {
-    token.inners.iter().any(|inner| match &inner.token {
-        Token::Array(array) => array.inner.to_composite().is_ok(),
-        Token::Tuple(tuple) => tuple.inners.iter().any(|t| matches!(t, Token::Composite(_))),
-        Token::Composite(_) => true,
-        _ => false,
-    })
-}
-
 /// Checks if Token::Composite is an custom enum (enum with nested Composite types)
 /// * token - The token to check
-pub(crate) fn token_is_custom_enum(token: &Composite) -> bool {
-    token.r#type == CompositeType::Enum && token_has_inner_composite(token)
+pub(crate) fn token_is_enum(token: &Composite) -> bool {
+    token.r#type == CompositeType::Enum
 }
 
 /// Type used to map cainome `Token` into javascript types in interface definition
@@ -83,8 +73,13 @@ impl From<&str> for JsPrimitiveType {
             CAIRO_U128 => JsPrimitiveType(JS_BIGNUMBERISH.to_owned()),
             CAIRO_U256 => JsPrimitiveType(JS_BIGNUMBERISH.to_owned()),
             CAIRO_U256_STRUCT => JsPrimitiveType(JS_BIGNUMBERISH.to_owned()),
+            CAIRO_I8 => JsPrimitiveType(JS_BIGNUMBERISH.to_owned()),
+            CAIRO_I16 => JsPrimitiveType(JS_BIGNUMBERISH.to_owned()),
+            CAIRO_I32 => JsPrimitiveType(JS_BIGNUMBERISH.to_owned()),
+            CAIRO_I64 => JsPrimitiveType(JS_BIGNUMBERISH.to_owned()),
             CAIRO_I128 => JsPrimitiveType(JS_BIGNUMBERISH.to_owned()),
             CAIRO_BOOL => JsPrimitiveType(JS_BOOLEAN.to_owned()),
+            CAIRO_UNIT_TYPE => JsPrimitiveType(JS_STRING.to_owned()),
             _ => JsPrimitiveType(value.to_owned()),
         }
     }
@@ -122,7 +117,7 @@ impl From<&Token> for JsPrimitiveType {
                         .as_str(),
                     );
                 }
-                if token_is_custom_enum(c) {
+                if token_is_enum(c) {
                     // we defined a type wrapper with Enum suffix let's use it there
                     return JsPrimitiveType::from(format!("{}Enum", c.type_name()).as_str());
                 }
@@ -158,8 +153,12 @@ impl From<&str> for JsPrimitiveInputType {
             CAIRO_U32 => JsPrimitiveInputType(JS_BIGNUMBERISH.to_owned()),
             CAIRO_U64 => JsPrimitiveInputType(JS_BIGNUMBERISH.to_owned()),
             CAIRO_U128 => JsPrimitiveInputType(JS_BIGNUMBERISH.to_owned()),
-            CAIRO_U256 => JsPrimitiveInputType(CAIRO_U256_STRUCT.to_owned()),
-            CAIRO_U256_STRUCT => JsPrimitiveInputType(CAIRO_U256_STRUCT.to_owned()),
+            CAIRO_U256 => JsPrimitiveInputType(JS_BIGNUMBERISH.to_owned()),
+            CAIRO_U256_STRUCT => JsPrimitiveInputType(JS_BIGNUMBERISH.to_owned()),
+            CAIRO_I8 => JsPrimitiveInputType(JS_BIGNUMBERISH.to_owned()),
+            CAIRO_I16 => JsPrimitiveInputType(JS_BIGNUMBERISH.to_owned()),
+            CAIRO_I32 => JsPrimitiveInputType(JS_BIGNUMBERISH.to_owned()),
+            CAIRO_I64 => JsPrimitiveInputType(JS_BIGNUMBERISH.to_owned()),
             CAIRO_I128 => JsPrimitiveInputType(JS_BIGNUMBERISH.to_owned()),
             CAIRO_BOOL => JsPrimitiveInputType(JS_BOOLEAN.to_owned()),
             _ => JsPrimitiveInputType(value.to_owned()),
@@ -199,7 +198,7 @@ impl From<&Token> for JsPrimitiveInputType {
                         .as_str(),
                     );
                 }
-                if token_is_custom_enum(c) {
+                if token_is_enum(c) {
                     // Use CairoCustomEnum type from starknetjs
                     return JsPrimitiveInputType::from("CairoCustomEnum");
                 }
@@ -218,6 +217,7 @@ impl From<&str> for JsPrimitiveDefaultValue {
             CAIRO_FELT252 => JsPrimitiveDefaultValue("0".to_string()),
             CAIRO_CONTRACT_ADDRESS => JsPrimitiveDefaultValue("\"\"".to_string()),
             CAIRO_BYTE_ARRAY => JsPrimitiveDefaultValue("\"\"".to_string()),
+            CAIRO_UNIT_TYPE => JsPrimitiveDefaultValue("\"\"".to_string()),
             CAIRO_U8 => JsPrimitiveDefaultValue("0".to_string()),
             CAIRO_U16 => JsPrimitiveDefaultValue("0".to_string()),
             CAIRO_U32 => JsPrimitiveDefaultValue("0".to_string()),
@@ -225,6 +225,10 @@ impl From<&str> for JsPrimitiveDefaultValue {
             CAIRO_U128 => JsPrimitiveDefaultValue("0".to_string()),
             CAIRO_U256 => JsPrimitiveDefaultValue("0".to_string()),
             CAIRO_U256_STRUCT => JsPrimitiveDefaultValue("0".to_string()),
+            CAIRO_I8 => JsPrimitiveDefaultValue("0".to_string()),
+            CAIRO_I16 => JsPrimitiveDefaultValue("0".to_string()),
+            CAIRO_I32 => JsPrimitiveDefaultValue("0".to_string()),
+            CAIRO_I64 => JsPrimitiveDefaultValue("0".to_string()),
             CAIRO_I128 => JsPrimitiveDefaultValue("0".to_string()),
             CAIRO_BOOL => JsPrimitiveDefaultValue("false".to_string()),
             CAIRO_OPTION => JsPrimitiveDefaultValue(CAIRO_OPTION_DEFAULT_VALUE.to_string()),
@@ -236,7 +240,7 @@ impl From<&Composite> for JsPrimitiveDefaultValue {
     fn from(value: &Composite) -> Self {
         match value.r#type {
             cainome::parser::tokens::CompositeType::Enum => {
-                if token_is_custom_enum(value) {
+                if token_is_enum(value) {
                     return JsPrimitiveDefaultValue(build_custom_enum_default_value(value));
                 }
                 match value.inners[0].token.to_composite() {
@@ -262,9 +266,11 @@ fn build_default_enum_variant(token: &Composite) -> String {
     let default_value = token.inners.iter().take(1).fold(String::new(), |_acc, i| {
         format!("\n\t\t{}", build_composite_inner_primitive_default_value(i))
     });
-    let undefined = token.inners.iter().skip(1).fold(String::new(), |acc, i| {
-        format!("{acc}\n\t\t\t\t{}: undefined,", i.name.to_case(Case::Camel))
-    });
+    let undefined = token
+        .inners
+        .iter()
+        .skip(1)
+        .fold(String::new(), |acc, i| format!("{acc}\n\t\t\t\t{}: undefined,", i.name));
 
     default_value + &undefined
 }
@@ -297,8 +303,7 @@ fn build_custom_enum_default_value(token: &Composite) -> String {
 /// * token - The enum token to build the default value for
 fn build_struct_default_value(token: &Composite) -> String {
     format!(
-        "{{ fieldOrder: [{}], {} }}",
-        token.inners.iter().map(|i| format!("'{}'", i.name)).collect::<Vec<_>>().join(", "),
+        "{{ {} }}",
         token
             .inners
             .iter()
@@ -548,7 +553,8 @@ mod tests {
     #[test]
     fn test_enum_default_value() {
         assert_eq!(
-            "Direction.Up",
+            "new CairoCustomEnum({ \n\t\t\t\t\tUp: \"\",\n\t\t\t\tDown: undefined,\n\t\t\t\tLeft: \
+             undefined,\n\t\t\t\tRight: undefined, })",
             JsPrimitiveDefaultValue::from(&Token::Composite(Composite {
                 type_path: "dojo_starter::Direction".to_owned(),
                 inners: vec![
@@ -588,8 +594,8 @@ mod tests {
     #[test]
     fn test_cairo_custom_enum_default_value() {
         assert_eq!(
-            "new CairoCustomEnum({ \n\t\t\t\titem: { fieldOrder: ['id', 'xp'], id: 0, xp: 0, \
-             },\n\t\t\t\taddress: undefined, })",
+            "new CairoCustomEnum({ \n\t\t\t\titem: { id: 0, xp: 0, },\n\t\t\t\taddress: \
+             undefined, })",
             JsPrimitiveDefaultValue::from(&Token::Composite(Composite {
                 type_path: "dojo_starter::Direction".to_owned(),
                 inners: vec![
@@ -641,7 +647,7 @@ mod tests {
     #[test]
     fn test_composite_default_value() {
         assert_eq!(
-            "{ fieldOrder: ['id', 'xp'], id: 0, xp: 0, }",
+            "{ id: 0, xp: 0, }",
             JsPrimitiveDefaultValue::from(&Token::Composite(Composite {
                 type_path: "dojo_starter::Item".to_owned(),
                 inners: vec![
@@ -673,8 +679,7 @@ mod tests {
     #[test]
     fn test_nested_composite_default_value() {
         assert_eq!(
-            "{ fieldOrder: ['id', 'xp', 'item'], id: 0, xp: 0, item: { fieldOrder: ['id', 'xp', \
-             'item'], id: 0, xp: 0, item: { fieldOrder: ['id', 'xp'], id: 0, xp: 0, }, }, }",
+            "{ id: 0, xp: 0, item: { id: 0, xp: 0, item: { id: 0, xp: 0, }, }, }",
             JsPrimitiveDefaultValue::from(&Token::Composite(Composite {
                 type_path: "dojo_starter::Item".to_owned(),
                 inners: vec![
@@ -815,7 +820,7 @@ mod tests {
     #[test]
     fn test_option_custom_enum_type() {
         let token = create_option_custom_enum_token();
-        assert_eq!("{ fieldOrder: [],  }", JsPrimitiveDefaultValue::from(&Token::Composite(token)))
+        assert_eq!("{  }", JsPrimitiveDefaultValue::from(&Token::Composite(token)))
     }
 
     fn create_test_struct_token(name: &str) -> Composite {

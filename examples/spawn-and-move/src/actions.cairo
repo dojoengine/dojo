@@ -5,6 +5,7 @@ pub trait IActions<T> {
     fn spawn(ref self: T);
     fn move(ref self: T, direction: Direction);
     fn set_player_config(ref self: T, name: ByteArray);
+    fn update_player_config_name(ref self: T, name: ByteArray);
     fn get_player_position(self: @T) -> Position;
     fn reset_player_config(ref self: T);
     fn set_player_server_profile(ref self: T, server_id: u32, name: ByteArray);
@@ -22,7 +23,7 @@ pub mod actions {
         Position, Moves, MovesValue, Direction, Vec2, PlayerConfig, PlayerItem, ServerProfile,
     };
     use dojo_examples::utils::next_position;
-    use dojo::model::{ModelStorage, ModelValueStorage};
+    use dojo::model::{ModelStorage, ModelValueStorage, Model};
     use dojo::event::EventStorage;
 
     // Features can be used on modules, structs, trait and `use`. Not inside
@@ -52,13 +53,13 @@ pub mod actions {
             let byte: u8 = (uint % 255).try_into().unwrap();
 
             let moves = Moves {
-                player: seed.try_into().unwrap(), remaining: byte, last_direction: Direction::None
+                player: seed.try_into().unwrap(), remaining: byte, last_direction: Direction::None,
             };
             let position = Position {
-                player: seed.try_into().unwrap(), vec: Vec2 { x: prng, y: prng }
+                player: seed.try_into().unwrap(), vec: Vec2 { x: prng, y: prng },
             };
             let server_profile = ServerProfile {
-                player: seed.try_into().unwrap(), server_id: prng, name: "hello"
+                player: seed.try_into().unwrap(), server_id: prng, name: "hello",
             };
             let player_config = PlayerConfig {
                 player: seed.try_into().unwrap(),
@@ -124,11 +125,22 @@ pub mod actions {
 
             let items = array![
                 PlayerItem { item_id: 1, quantity: 100, score: 150 },
-                PlayerItem { item_id: 2, quantity: 50, score: -32 }
+                PlayerItem { item_id: 2, quantity: 50, score: -32 },
             ];
 
             let config = PlayerConfig { player, name, items, favorite_item: Option::Some(1) };
             world.write_model(@config);
+        }
+
+        fn update_player_config_name(ref self: ContractState, name: ByteArray) {
+            let mut world = self.world_default();
+            let player = get_caller_address();
+
+            // Don't need to read the model here, we directly overwrite the member "name".
+            world
+                .write_member(
+                    Model::<PlayerConfig>::ptr_from_keys(player), selector!("name"), name,
+                );
         }
 
         fn reset_player_config(ref self: ContractState) {
@@ -195,7 +207,7 @@ pub mod actions {
             let mut world = self.world_default();
 
             world.write_model(@Moves { player, remaining: 99, last_direction: Direction::None });
-            world.write_model(@Position { player, vec: Vec2 { x: 10, y: 10 } },);
+            world.write_model(@Position { player, vec: Vec2 { x: 10, y: 10 } });
         }
 
         /// Use the default namespace "ns". A function is handy since the ByteArray
@@ -212,20 +224,23 @@ mod tests {
     use dojo::world::WorldStorageTrait;
     use dojo_cairo_test::{
         spawn_test_world, NamespaceDef, TestResource, ContractDefTrait, ContractDef,
-        WorldStorageTestTrait
+        WorldStorageTestTrait,
     };
 
     use super::{actions, IActionsDispatcher, IActionsDispatcherTrait};
-    use dojo_examples::models::{Position, PositionValue, m_Position, Moves, m_Moves, Direction,};
+    use crate::dungeon::dungeon;
+    use dojo_examples::models::{Position, PositionValue, m_Position, Moves, m_Moves, Direction};
 
     fn namespace_def() -> NamespaceDef {
         let ndef = NamespaceDef {
-            namespace: "ns", resources: [
+            namespace: "ns",
+            resources: [
                 TestResource::Model(m_Position::TEST_CLASS_HASH),
                 TestResource::Model(m_Moves::TEST_CLASS_HASH),
                 TestResource::Event(actions::e_Moved::TEST_CLASS_HASH),
                 TestResource::Contract(actions::TEST_CLASS_HASH),
-            ].span()
+            ]
+                .span(),
         };
 
         ndef
@@ -235,7 +250,8 @@ mod tests {
         [
             ContractDefTrait::new(@"ns", @"actions")
                 .with_writer_of([dojo::utils::bytearray_hash(@"ns")].span())
-        ].span()
+        ]
+            .span()
     }
 
     #[test]
@@ -291,7 +307,7 @@ mod tests {
         let initial_position: Position = world.read_model(caller);
 
         assert(
-            initial_position.vec.x == 10 && initial_position.vec.y == 10, 'wrong initial position'
+            initial_position.vec.x == 10 && initial_position.vec.y == 10, 'wrong initial position',
         );
 
         actions_system.move(Direction::Right(()));
@@ -305,5 +321,42 @@ mod tests {
         let new_position: Position = world.read_model(caller);
         assert(new_position.vec.x == initial_position.vec.x + 1, 'position x is wrong');
         assert(new_position.vec.y == initial_position.vec.y, 'position y is wrong');
+    }
+
+    #[test]
+    #[available_gas(30000000)]
+    #[cfg(feature: 'dungeon')]
+    fn test_feature_dungeon() {
+        let ndef = NamespaceDef {
+            namespace: "ns",
+            resources: [
+                TestResource::Model(armory::m_Flatbow::TEST_CLASS_HASH),
+                TestResource::Model(bestiary::m_RiverSkale::TEST_CLASS_HASH),
+                TestResource::Contract(actions::TEST_CLASS_HASH),
+                TestResource::Contract(dungeon::TEST_CLASS_HASH),
+            ]
+                .span(),
+        };
+
+        let contract_defs = [
+            ContractDefTrait::new(@"ns", @"actions")
+                .with_writer_of([dojo::utils::bytearray_hash(@"ns")].span()),
+            ContractDefTrait::new(@"ns", @"dungeon")
+                .with_writer_of([dojo::utils::bytearray_hash(@"ns")].span()),
+        ]
+            .span();
+
+        let mut world = spawn_test_world([ndef].span());
+        world.sync_perms_and_inits(contract_defs);
+
+        let other = starknet::contract_address_const::<0x1234>();
+        starknet::testing::set_contract_address(other);
+
+        let (dungeon_addr, _) = world.dns(@"dungeon").unwrap();
+
+        let (actions_system_addr, _) = world.dns(@"actions").unwrap();
+        let actions_system = IActionsDispatcher { contract_address: actions_system_addr };
+
+        actions_system.enter_dungeon(dungeon_addr);
     }
 }

@@ -225,6 +225,13 @@ impl<Tx: DbTx + fmt::Debug> HistoricalStateProvider<Tx> {
     pub fn new(tx: Tx, block_number: u64) -> Self {
         Self { tx, block_number }
     }
+
+    /// Check if the class was declared before the pinned block number.
+    fn is_class_declared_before_block(&self, hash: ClassHash) -> ProviderResult<bool> {
+        let decl_block_num = self.tx.get::<tables::ClassDeclarationBlock>(hash)?;
+        let is_declared = decl_block_num.is_some_and(|num| num <= self.block_number);
+        Ok(is_declared)
+    }
 }
 
 impl<Tx> ContractClassProvider for HistoricalStateProvider<Tx>
@@ -232,7 +239,7 @@ where
     Tx: DbTx + fmt::Debug + Send + Sync,
 {
     fn class(&self, hash: ClassHash) -> ProviderResult<Option<ContractClass>> {
-        if self.compiled_class_hash_of_class_hash(hash)?.is_some() {
+        if self.is_class_declared_before_block(hash)? {
             Ok(self.tx.get::<tables::Classes>(hash)?)
         } else {
             Ok(None)
@@ -240,7 +247,7 @@ where
     }
 
     fn compiled_class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledClass>> {
-        if self.compiled_class_hash_of_class_hash(hash)?.is_some() {
+        if self.is_class_declared_before_block(hash)? {
             Ok(self.tx.get::<tables::CompiledClasses>(hash)?)
         } else {
             Ok(None)
@@ -251,12 +258,7 @@ where
         &self,
         hash: ClassHash,
     ) -> ProviderResult<Option<CompiledClassHash>> {
-        // check that the requested class hash was declared before the pinned block number
-        if self
-            .tx
-            .get::<tables::ClassDeclarationBlock>(hash)?
-            .is_some_and(|num| num <= self.block_number)
-        {
+        if self.is_class_declared_before_block(hash)? {
             Ok(self.tx.get::<tables::CompiledClassHashes>(hash)?)
         } else {
             Ok(None)

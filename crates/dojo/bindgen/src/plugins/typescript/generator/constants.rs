@@ -8,9 +8,14 @@ pub const CAIRO_U64: &str = "u64";
 pub const CAIRO_U128: &str = "u128";
 pub const CAIRO_U256: &str = "u256";
 pub const CAIRO_U256_STRUCT: &str = "U256";
+pub const CAIRO_I8: &str = "i8";
+pub const CAIRO_I16: &str = "i16";
+pub const CAIRO_I32: &str = "i32";
+pub const CAIRO_I64: &str = "i64";
 pub const CAIRO_I128: &str = "i128";
 pub const CAIRO_BOOL: &str = "bool";
 pub const CAIRO_OPTION: &str = "Option";
+pub const CAIRO_UNIT_TYPE: &str = "()";
 
 pub(crate) const CAIRO_OPTION_DEFAULT_VALUE: &str = "new CairoOption(CairoOptionVariant.None)";
 

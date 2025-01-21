@@ -2,7 +2,7 @@ use dojo::utils::bytearray_hash;
 use dojo::world::IWorldDispatcherTrait;
 
 use crate::tests::helpers::{
-    deploy_world, foo_setter, IFooSetterDispatcher, IFooSetterDispatcherTrait, deploy_world_and_foo
+    deploy_world, foo_setter, IFooSetterDispatcher, IFooSetterDispatcherTrait, deploy_world_and_foo,
 };
 use crate::tests::expanded::selector_attack::{attacker_model, attacker_contract};
 
@@ -43,7 +43,7 @@ fn test_grant_owner_not_registered_resource() {
 }
 
 #[test]
-#[should_panic(expected: ('CONTRACT_NOT_DEPLOYED', 'ENTRYPOINT_FAILED'))]
+#[should_panic(expected: ('CONTRACT_NOT_DEPLOYED', 'ENTRYPOINT_FAILED', 'ENTRYPOINT_FAILED'))]
 fn test_grant_owner_through_malicious_contract() {
     let (world, foo_selector) = deploy_world_and_foo();
     let world = world.dispatcher;
@@ -64,8 +64,8 @@ fn test_grant_owner_through_malicious_contract() {
 #[should_panic(
     expected: (
         "Account `659918` does NOT have OWNER role on model (or its namespace) `Foo`",
-        'ENTRYPOINT_FAILED'
-    )
+        'ENTRYPOINT_FAILED',
+    ),
 )]
 fn test_grant_owner_fails_for_non_owner() {
     let (world, foo_selector) = deploy_world_and_foo();
@@ -81,7 +81,7 @@ fn test_grant_owner_fails_for_non_owner() {
 }
 
 #[test]
-#[should_panic(expected: ('CONTRACT_NOT_DEPLOYED', 'ENTRYPOINT_FAILED'))]
+#[should_panic(expected: ('CONTRACT_NOT_DEPLOYED', 'ENTRYPOINT_FAILED', 'ENTRYPOINT_FAILED'))]
 fn test_revoke_owner_through_malicious_contract() {
     let (world, foo_selector) = deploy_world_and_foo();
     let world = world.dispatcher;
@@ -103,8 +103,8 @@ fn test_revoke_owner_through_malicious_contract() {
 #[should_panic(
     expected: (
         "Account `659918` does NOT have OWNER role on model (or its namespace) `Foo`",
-        'ENTRYPOINT_FAILED'
-    )
+        'ENTRYPOINT_FAILED',
+    ),
 )]
 fn test_revoke_owner_fails_for_non_owner() {
     let (world, foo_selector) = deploy_world_and_foo();
@@ -146,7 +146,7 @@ fn test_writer_not_registered_resource() {
 }
 
 #[test]
-#[should_panic(expected: ('CONTRACT_NOT_DEPLOYED', 'ENTRYPOINT_FAILED'))]
+#[should_panic(expected: ('CONTRACT_NOT_DEPLOYED', 'ENTRYPOINT_FAILED', 'ENTRYPOINT_FAILED'))]
 fn test_grant_writer_through_malicious_contract() {
     let (world, foo_selector) = deploy_world_and_foo();
     let world = world.dispatcher;
@@ -167,8 +167,8 @@ fn test_grant_writer_through_malicious_contract() {
 #[should_panic(
     expected: (
         "Account `659918` does NOT have OWNER role on model (or its namespace) `Foo`",
-        'ENTRYPOINT_FAILED'
-    )
+        'ENTRYPOINT_FAILED',
+    ),
 )]
 fn test_grant_writer_fails_for_non_owner() {
     let (world, foo_selector) = deploy_world_and_foo();
@@ -184,7 +184,7 @@ fn test_grant_writer_fails_for_non_owner() {
 }
 
 #[test]
-#[should_panic(expected: ('CONTRACT_NOT_DEPLOYED', 'ENTRYPOINT_FAILED'))]
+#[should_panic(expected: ('CONTRACT_NOT_DEPLOYED', 'ENTRYPOINT_FAILED', 'ENTRYPOINT_FAILED'))]
 fn test_revoke_writer_through_malicious_contract() {
     let (world, foo_selector) = deploy_world_and_foo();
     let world = world.dispatcher;
@@ -206,8 +206,8 @@ fn test_revoke_writer_through_malicious_contract() {
 #[should_panic(
     expected: (
         "Account `659918` does NOT have OWNER role on model (or its namespace) `Foo`",
-        'ENTRYPOINT_FAILED'
-    )
+        'ENTRYPOINT_FAILED',
+    ),
 )]
 fn test_revoke_writer_fails_for_non_owner() {
     let (world, foo_selector) = deploy_world_and_foo();
@@ -229,8 +229,8 @@ fn test_revoke_writer_fails_for_non_owner() {
     expected: (
         "Contract `foo_setter` does NOT have WRITER role on model (or its namespace) `Foo`",
         'ENTRYPOINT_FAILED',
-        'ENTRYPOINT_FAILED'
-    )
+        'ENTRYPOINT_FAILED',
+    ),
 )]
 fn test_not_writer_with_known_contract() {
     let (world, _) = deploy_world_and_foo();
@@ -251,7 +251,7 @@ fn test_not_writer_with_known_contract() {
     d.set_foo(1, 2);
 
     core::panics::panic_with_byte_array(
-        @"Contract `dojo-foo_setter` does NOT have WRITER role on model (or its namespace) `Foo`"
+        @"Contract `dojo-foo_setter` does NOT have WRITER role on model (or its namespace) `Foo`",
     );
 }
 
@@ -262,7 +262,7 @@ fn test_not_writer_with_known_contract() {
     expected: (
         "Account `7022365680606078322` does NOT have OWNER role on namespace `dojo`",
         'ENTRYPOINT_FAILED',
-    )
+    ),
 )]
 fn test_register_model_namespace_not_owner() {
     let owner = starknet::contract_address_const::<'owner'>();
@@ -294,7 +294,7 @@ fn test_register_model_namespace_not_owner() {
     expected: (
         "Account `7022365680606078322` does NOT have OWNER role on namespace `dojo`",
         'ENTRYPOINT_FAILED',
-    )
+    ),
 )]
 fn test_register_contract_namespace_not_owner() {
     let owner = starknet::contract_address_const::<'owner'>();

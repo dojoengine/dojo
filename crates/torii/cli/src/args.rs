@@ -183,7 +183,7 @@ mod test {
     use std::net::{IpAddr, Ipv4Addr};
     use std::str::FromStr;
 
-    use torii_core::types::{Contract, ContractType};
+    use torii_sqlite::types::{Contract, ContractType};
 
     use super::*;
 

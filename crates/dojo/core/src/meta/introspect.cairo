@@ -18,21 +18,21 @@ pub enum Ty {
 pub struct Struct {
     pub name: felt252,
     pub attrs: Span<felt252>,
-    pub children: Span<Member>
+    pub children: Span<Member>,
 }
 
 #[derive(Copy, Drop, Serde, Debug, PartialEq)]
 pub struct Enum {
     pub name: felt252,
     pub attrs: Span<felt252>,
-    pub children: Span<(felt252, Ty)>
+    pub children: Span<(felt252, Ty)>,
 }
 
 #[derive(Copy, Drop, Serde, Debug, PartialEq)]
 pub struct Member {
     pub name: felt252,
     pub attrs: Span<felt252>,
-    pub ty: Ty
+    pub ty: Ty,
 }
 
 #[generate_trait]
@@ -267,20 +267,22 @@ pub impl Introspect_option<T, +Introspect<T>> of Introspect<Option<T>> {
         Layout::Enum(
             [
                 dojo::meta::FieldLayout { // Some
-                 selector: 0, layout: Introspect::<T>::layout() },
+                selector: 0, layout: Introspect::<T>::layout() },
                 dojo::meta::FieldLayout { // None
-                 selector: 1, layout: Layout::Fixed([].span()) },
-            ].span()
+                selector: 1, layout: Layout::Fixed([].span()) },
+            ]
+                .span(),
         )
     }
 
     fn ty() -> Ty {
         Ty::Enum(
             Enum {
-                name: 'Option<T>', attrs: [].span(), children: [
-                    ('Some(T)', Introspect::<T>::ty()), ('None', Ty::Tuple([].span()))
-                ].span()
-            }
+                name: 'Option<T>',
+                attrs: [].span(),
+                children: [('Some(T)', Introspect::<T>::ty()), ('None', Ty::Tuple([].span()))]
+                    .span(),
+            },
         )
     }
 }

@@ -1,7 +1,7 @@
 use cainome::parser::tokens::{Composite, CompositeType};
 
 use super::constants::{CAIRO_ENUM_IMPORT, CAIRO_ENUM_TOKEN, SN_IMPORT_SEARCH};
-use super::token_is_custom_enum;
+use super::token_is_enum;
 use crate::error::BindgenResult;
 use crate::plugins::typescript::generator::JsPrimitiveType;
 use crate::plugins::{BindgenModelGenerator, Buffer};
@@ -12,7 +12,7 @@ impl TsEnumGenerator {
     fn check_import(&self, token: &Composite, buffer: &mut Buffer) {
         // type is Enum with type variants, need to import CairoEnum
         // if enum has at least one inner that is a composite type
-        if token_is_custom_enum(token) {
+        if token_is_enum(token) {
             if !buffer.has(SN_IMPORT_SEARCH) {
                 buffer.push(CAIRO_ENUM_IMPORT.to_owned());
             } else if !buffer.has(CAIRO_ENUM_TOKEN) {
@@ -29,43 +29,25 @@ impl BindgenModelGenerator for TsEnumGenerator {
             return Ok(String::new());
         }
 
-        let gen = if token_is_custom_enum(token) {
-            self.check_import(token, buffer);
-            format!(
-                "// Type definition for `{path}` enum
+        self.check_import(token, buffer);
+        let gen = format!(
+            "// Type definition for `{path}` enum
 export type {name} = {{
 {variants}
 }}
 export type {name}Enum = CairoCustomEnum;
 ",
-                path = token.type_path,
-                name = token.type_name(),
-                variants = token
-                    .inners
-                    .iter()
-                    .map(|inner| {
-                        format!("\t{}: {};", inner.name, JsPrimitiveType::from(&inner.token))
-                    })
-                    .collect::<Vec<String>>()
-                    .join("\n")
-            )
-        } else {
-            format!(
-                "// Type definition for `{path}` enum
-export enum {name} {{
-{variants}
-}}
-",
-                path = token.type_path,
-                name = token.type_name(),
-                variants = token
-                    .inners
-                    .iter()
-                    .map(|inner| format!("\t{},", inner.name))
-                    .collect::<Vec<String>>()
-                    .join("\n")
-            )
-        };
+            path = token.type_path,
+            name = token.type_name(),
+            variants = token
+                .inners
+                .iter()
+                .map(|inner| {
+                    format!("\t{}: {};", inner.name, JsPrimitiveType::from(&inner.token))
+                })
+                .collect::<Vec<String>>()
+                .join("\n")
+        );
 
         if buffer.has(&gen) {
             return Ok(String::new());
@@ -125,8 +107,9 @@ mod tests {
 
         assert_eq!(
             result,
-            "// Type definition for `core::test::AvailableTheme` enum\nexport enum AvailableTheme \
-             {\n\tLight,\n\tDark,\n\tDojo,\n}\n"
+            "// Type definition for `core::test::AvailableTheme` enum\nexport type AvailableTheme \
+             = {\n\tLight: string;\n\tDark: string;\n\tDojo: string;\n}\nexport type \
+             AvailableThemeEnum = CairoCustomEnum;\n"
         );
     }
 
@@ -135,14 +118,16 @@ mod tests {
         let mut buff = Buffer::new();
         let writer = TsEnumGenerator;
         buff.push(
-            "// Type definition for `core::test::AvailableTheme` enum\nexport enum AvailableTheme \
-             {\n\tLight,\n\tDark,\n\tDojo,\n}\n"
+            "// Type definition for `core::test::AvailableTheme` enum\nexport type AvailableTheme \
+             = {\n\tLight: string;\n\tDark: string;\n\tDojo: string;\n}\nexport type \
+             AvailableThemeEnum = CairoCustomEnum;\n"
                 .to_owned(),
         );
 
         let token_dup = create_available_theme_enum_token();
         let result = writer.generate(&token_dup, &mut buff).unwrap();
-        assert_eq!(buff.len(), 1);
+        // Length is 2 because we add import of CairoCustomEnum
+        assert_eq!(buff.len(), 2);
         assert!(result.is_empty())
     }
 

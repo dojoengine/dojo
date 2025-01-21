@@ -171,6 +171,7 @@ pub fn copy_build_project_temp(
                 include_target_kinds: vec![],
                 exclude_target_kinds: vec![TargetKind::TEST],
                 features: features_opts,
+                ignore_cairo_version: true,
             },
             &ws,
         )
@@ -296,7 +297,7 @@ pub fn copy_project_temp(
 /// * `path` - The path to the Scarb.toml file to build the config for.
 /// * `profile` - The profile to use for the config.
 pub fn build_test_config(path: &str, profile: Profile) -> anyhow::Result<Config> {
-    // If the cache_dir is not overriden, we can't run tests in parallel.
+    // If the cache_dir is not overridden, we can't run tests in parallel.
     let cache_dir = TempDir::new().unwrap();
 
     let path = Utf8PathBuf::from_path_buf(path.into()).unwrap();
@@ -319,7 +320,8 @@ pub fn corelib() -> PathBuf {
     let features_opts =
         FeaturesOpts { features: FeaturesSelector::AllFeatures, no_default_features: false };
 
-    let compilation_units = ops::generate_compilation_units(&resolve, &features_opts, &ws).unwrap();
+    let compilation_units =
+        ops::generate_compilation_units(&resolve, &features_opts, true, &ws).unwrap();
 
     if let CompilationUnit::Cairo(unit) = &compilation_units[0] {
         unit.core_package_component().expect("should have component").targets[0]

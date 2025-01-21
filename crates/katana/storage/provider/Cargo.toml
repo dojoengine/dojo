@@ -26,13 +26,13 @@ starknet = { workspace = true, optional = true }
 tokio = { workspace = true, optional = true }
 
 alloy-primitives = { workspace = true, optional = true }
-serde_json = { version = "1.0.133" }
+serde_json.workspace = true
 
 [features]
 default = [ "fork", "in-memory" ]
 fork = [ "dep:futures", "dep:starknet", "dep:tokio", "in-memory" ]
 in-memory = [  ]
-test-utils = [ "dep:alloy-primitives"]
+test-utils = [ "dep:alloy-primitives" ]
 
 [dev-dependencies]
 alloy-primitives.workspace = true
