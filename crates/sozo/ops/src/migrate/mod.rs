@@ -58,6 +58,7 @@ where
     // This is only to retrieve the declarers or make custom calls.
     // Ideally, we want this rpc url to be exposed from the world.account.provider().
     rpc_url: String,
+    guest: bool,
 }
 
 #[derive(Debug)]
@@ -77,8 +78,9 @@ where
         txn_config: TxnConfig,
         profile_config: ProfileConfig,
         rpc_url: String,
+        guest: bool,
     ) -> Self {
-        Self { diff, world, txn_config, profile_config, rpc_url }
+        Self { diff, world, txn_config, profile_config, rpc_url, guest }
     }
 
     /// Migrates the world by syncing the namespaces, resources, permissions and initializing the
@@ -90,7 +92,7 @@ where
         &self,
         ui: &mut MigrationUi,
     ) -> Result<MigrationResult, MigrationError<A::SignError>> {
-        let world_has_changed = self.ensure_world(ui).await?;
+        let world_has_changed = if !self.guest { self.ensure_world(ui).await? } else { false };
 
         let resources_have_changed =
             if !self.diff.is_synced() { self.sync_resources(ui).await? } else { false };

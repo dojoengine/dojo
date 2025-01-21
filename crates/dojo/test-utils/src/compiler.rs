@@ -297,7 +297,7 @@ pub fn copy_project_temp(
 /// * `path` - The path to the Scarb.toml file to build the config for.
 /// * `profile` - The profile to use for the config.
 pub fn build_test_config(path: &str, profile: Profile) -> anyhow::Result<Config> {
-    // If the cache_dir is not overriden, we can't run tests in parallel.
+    // If the cache_dir is not overridden, we can't run tests in parallel.
     let cache_dir = TempDir::new().unwrap();
 
     let path = Utf8PathBuf::from_path_buf(path.into()).unwrap();
