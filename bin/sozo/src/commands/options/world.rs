@@ -14,6 +14,12 @@ pub struct WorldOptions {
     #[arg(long = "world", env = DOJO_WORLD_ADDRESS_ENV_VAR)]
     #[arg(global = true)]
     pub world_address: Option<Felt>,
+
+    #[arg(long, default_value = "false")]
+    pub guest: bool,
+
+    #[arg(long, default_value = "", help = "Whitelisted namespaces.")]
+    pub namespaces: Vec<String>,
 }
 
 impl WorldOptions {
