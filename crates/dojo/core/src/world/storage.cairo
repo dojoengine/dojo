@@ -202,7 +202,7 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
         for entity in IWorldDispatcherTrait::entities(
             *self.dispatcher,
             Model::<M>::selector(*self.namespace_hash),
-            ptrs.to_indexes(),
+            ptrs.to_member_indexes(field_selector),
             field_layout_unwrap::<M>(field_selector),
         ) {
             values.append(deserialize_unwrap(*entity));
@@ -232,7 +232,7 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
         IWorldDispatcherTrait::set_entities(
             self.dispatcher,
             Model::<M>::selector(self.namespace_hash),
-            ptrs.to_indexes(),
+            ptrs.to_member_indexes(field_selector),
             serialized_values.span(),
             field_layout_unwrap::<M>(field_selector),
         );

@@ -14,6 +14,7 @@ pub struct ModelPtr<M> {
 
 pub trait ModelPtrsTrait<M> {
     fn to_indexes(self: Span<ModelPtr<M>>) -> Span<ModelIndex>;
+    fn to_member_indexes(self: Span<ModelPtr<M>>, field_selector: felt252) -> Span<ModelIndex>;
 }
 
 pub impl ModelPtrsImpl<M> of ModelPtrsTrait<M> {
@@ -21,6 +22,14 @@ pub impl ModelPtrsImpl<M> of ModelPtrsTrait<M> {
         let mut ids = ArrayTrait::<ModelIndex>::new();
         for ptr in self {
             ids.append(ModelIndex::Id(*ptr.id));
+        };
+        ids.span()
+    }
+
+    fn to_member_indexes(self: Span<ModelPtr<M>>, field_selector: felt252) -> Span<ModelIndex> {
+        let mut ids = ArrayTrait::<ModelIndex>::new();
+        for ptr in self {
+            ids.append(ModelIndex::MemberId((*ptr.id, field_selector)));
         };
         ids.span()
     }
