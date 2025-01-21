@@ -26,17 +26,6 @@ fn field_layout_unwrap<M, +Model<M>>(field_selector: felt252) -> Layout {
     }
 }
 
-fn make_partial_struct_layout<M, +Model<M>>(field_selectors: Span<felt252>) -> Layout {
-    let mut layouts: Array<FieldLayout> = array![];
-    for selector in field_selectors {
-        layouts
-            .append(
-                FieldLayout { selector: *selector, layout: field_layout_unwrap::<M>(*selector) },
-            );
-    };
-    Layout::Struct(layouts.span())
-}
-
 #[generate_trait]
 pub impl WorldStorageInternalImpl of WorldStorageTrait {
     fn new(world: IWorldDispatcher, namespace: @ByteArray) -> WorldStorage {
