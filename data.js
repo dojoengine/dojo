@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1737436994244,
+  "lastUpdate": 1737437424891,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -46873,6 +46873,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 7675033,
             "range": "± 165342",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ac354929bdfe1a9e59e7e0ea8f03122daed65b0c",
+          "message": "fix(sozo): ensure correct event fetching + namespace whitelisting + guest mode (#2937)\n\n* fix: ensure sozo fetches all events even on public networks + add namespaces whitelisting\r\n\r\n* fix: run linters\r\n\r\n* fix: use correct default values and delimiter for namespaces",
+          "timestamp": "2025-01-20T23:14:01-06:00",
+          "tree_id": "3856aac603c4a93e323080a2e514c33af141dd69",
+          "url": "https://github.com/dojoengine/dojo/commit/ac354929bdfe1a9e59e7e0ea8f03122daed65b0c"
+        },
+        "date": 1737437422933,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 11911550903,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
