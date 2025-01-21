@@ -3,7 +3,7 @@ name: "katana"
 services:
   katana:
     restart: unless-stopped
-    image: ghcr.io/dojoengine/dojo
+    image: ghcr.io/dojoengine/dojo:v1.0.12
     ports:
       - "5050:5050" # rpc
       - "9001:9001" # metrics
@@ -15,7 +15,7 @@ services:
 
   prometheus:
     restart: unless-stopped
-    image: prom/prometheus
+    image: prom/prometheus:v3.1.0
     depends_on:
       - katana
     ports:
@@ -29,7 +29,7 @@ services:
 
   grafana:
     restart: unless-stopped
-    image: grafana/grafana
+    image: grafana/grafana:11.4.0
     depends_on:
       - prometheus
     ports:
@@ -38,6 +38,11 @@ services:
       - ./grafana/dashboards:/etc/grafana/provisioning/dashboards
       - ./grafana/datasources:/etc/grafana/provisioning/datasources
       - grafanadata:/var/lib/grafana
+    environment:
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/etc/grafana/provisioning/dashboards/overview.json
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_AUTH_ANONYMOUS_ENABLED=true
 
 volumes:
   prometheusdata:
