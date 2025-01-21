@@ -83,6 +83,17 @@ pub trait IWorld<T> {
         ref self: T, salt: felt252, namespace: ByteArray, class_hash: ClassHash,
     ) -> ContractAddress;
 
+    /// Registers and declare a contract associated with the world and returns the class_hash of
+    /// newly declared contract.
+    ///
+    /// # Arguments
+    ///
+    /// * `namespace` - The namespace of the contract to be registered.
+    /// * `class_hash` - The class hash of the contract.
+    fn register_library(
+        ref self: T, namespace: ByteArray, class_hash: ClassHash,
+    ) -> ClassHash;
+
     /// Initializes a contract associated registered in the world.
     ///
     /// As a constructor call, the initialization function can be called only once, and only
@@ -116,6 +127,15 @@ pub trait IWorld<T> {
     /// * `namespace` - The namespace of the contract to be upgraded.
     /// * `class_hash` - The class hash of the contract.
     fn upgrade_contract(ref self: T, namespace: ByteArray, class_hash: ClassHash) -> ClassHash;
+
+    /// Upgrades an already deployed library associated with the world and returns the new class
+    /// hash.
+    ///
+    /// # Arguments
+    ///
+    /// * `namespace` - The namespace of the contract to be upgraded.
+    /// * `class_hash` - The class hash of the contract.
+    fn upgrade_library(ref self: T, namespace: ByteArray, class_hash: ClassHash) -> ClassHash;
 
     /// Emits a custom event that was previously registered in the world.
     /// The dojo event emission is permissioned, since data are collected by

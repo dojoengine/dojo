@@ -1,6 +1,6 @@
 //! World's resources.
 
-use starknet::ContractAddress;
+use starknet::{ContractAddress, ClassHash};
 
 /// Resource is the type of the resource that can be registered in the world.
 ///
@@ -30,6 +30,9 @@ use starknet::ContractAddress;
 ///
 /// - Unregistered: The unregistered state, required to ensure the security of the world
 /// to not have operations done on non-existent resources.
+/// 
+/// WARNING: enum order must be preserved to ensure backward compatibility
+/// 
 #[derive(Drop, starknet::Store, Serde, Default, Debug)]
 pub enum Resource {
     Model: (ContractAddress, felt252),
@@ -39,6 +42,7 @@ pub enum Resource {
     World,
     #[default]
     Unregistered,
+    Library: (ClassHash, felt252),
 }
 
 #[generate_trait]

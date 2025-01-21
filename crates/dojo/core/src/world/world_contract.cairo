@@ -42,7 +42,7 @@ pub mod world {
     use dojo::meta::{
         Layout, IStoredResourceDispatcher, IStoredResourceDispatcherTrait,
         IDeployedResourceDispatcher, IDeployedResourceDispatcherTrait, LayoutCompareTrait,
-        StructCompareTrait,
+        IDeployedResourceLibraryDispatcher, StructCompareTrait,
     };
     use dojo::model::{Model, ResourceMetadata, metadata, ModelIndex};
     use dojo::storage;
@@ -68,6 +68,8 @@ pub mod world {
         EventUpgraded: EventUpgraded,
         ContractUpgraded: ContractUpgraded,
         ContractInitialized: ContractInitialized,
+        LibraryRegistered: LibraryRegistered,
+        LibraryUpgraded: LibraryUpgraded,
         EventEmitted: EventEmitted,
         MetadataUpdate: MetadataUpdate,
         StoreSetRecord: StoreSetRecord,
@@ -102,6 +104,22 @@ pub mod world {
 
     #[derive(Drop, starknet::Event)]
     pub struct ContractUpgraded {
+        #[key]
+        pub selector: felt252,
+        pub class_hash: ClassHash,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    pub struct LibraryRegistered {
+        #[key]
+        pub name: ByteArray,
+        #[key]
+        pub namespace: ByteArray,
+        pub class_hash: ClassHash,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    pub struct LibraryUpgraded {
         #[key]
         pub selector: felt252,
         pub class_hash: ClassHash,
@@ -755,6 +773,7 @@ pub mod world {
                     ),
                 ),
             }
+            // class_hash is retrieved with get_class_hash_at_syscall, so no need to update resource
         }
 
         fn init_contract(ref self: ContractState, selector: felt252, init_calldata: Span<felt252>) {
@@ -785,6 +804,84 @@ pub mod world {
                 panic_with_byte_array(
                     @errors::resource_conflict(@format!("{selector}"), @"contract"),
                 );
+            }
+        }
+
+        fn register_library(
+            ref self: ContractState, namespace: ByteArray, class_hash: ClassHash,
+        ) -> ClassHash {
+            let caller = get_caller_address();
+
+            let namespace_hash = bytearray_hash(@namespace);
+
+            let contract = IDeployedResourceLibraryDispatcher { class_hash };
+            let contract_name = contract.dojo_name();
+            let contract_selector = selector_from_namespace_and_name(
+                namespace_hash, @contract_name,
+            );
+
+            self.assert_name(@contract_name);
+
+            let maybe_existing_library = self.resources.read(contract_selector);
+            if !maybe_existing_library.is_unregistered() {
+                panic_with_byte_array(
+                    @errors::contract_already_registered(@namespace, @contract_name),
+                );
+            }
+
+            if !self.is_namespace_registered(namespace_hash) {
+                panic_with_byte_array(@errors::namespace_not_registered(@namespace));
+            }
+
+            self.assert_caller_permissions(namespace_hash, Permission::Owner);
+
+            self.owners.write((contract_selector, caller), true);
+            self
+                .resources
+                .write(contract_selector, Resource::Library((class_hash, namespace_hash)));
+
+            self.emit(LibraryRegistered { class_hash, namespace, name: contract_name });
+
+            class_hash
+        }
+
+
+        fn upgrade_library(
+            ref self: ContractState, namespace: ByteArray, class_hash: ClassHash,
+        ) -> ClassHash {
+            let namespace_hash = bytearray_hash(@namespace);
+
+            let contract = IDeployedResourceLibraryDispatcher { class_hash };
+            let contract_name = contract.dojo_name();
+            let contract_selector = selector_from_namespace_and_name(
+                namespace_hash, @contract_name,
+            );
+
+            // If namespace and name are the same, the contract is already registered and we
+            // can upgrade it.
+            match self.resources.read(contract_selector) {
+                Resource::Library((
+                    class_hash, _,
+                )) => {
+                    self.assert_caller_permissions(contract_selector, Permission::Owner);
+
+                    self
+                        .resources
+                        .write(contract_selector, Resource::Library((class_hash, namespace_hash)));
+                    self.emit(LibraryUpgraded { class_hash, selector: contract_selector });
+
+                    class_hash
+                },
+                Resource::Unregistered => {
+                    panic_with_byte_array(
+                        @errors::resource_not_registered_details(@namespace, @contract_name),
+                    )
+                },
+                _ => panic_with_byte_array(
+                    @errors::resource_conflict(
+                        @format!("{}-{}", @namespace, @contract_name), @"library",
+                    ),
+                ),
             }
         }
 
@@ -1139,6 +1236,12 @@ pub mod world {
                 Resource::Namespace(ns) => { format!("namespace `{}`", ns) },
                 Resource::World => { format!("world") },
                 Resource::Unregistered => { panic!("Unreachable") },
+                Resource::Library((
+                    class_hash, _,
+                )) => {
+                    let d = IDeployedResourceLibraryDispatcher { class_hash };
+                    format!("library (or its namespace) `{}`", d.dojo_name())
+                },
             };
 
             let caller_name = if caller == get_tx_info().account_contract_address {
