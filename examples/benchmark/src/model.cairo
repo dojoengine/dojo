@@ -80,6 +80,16 @@ fn read_model_simple() {
 }
 
 #[test]
+fn read_value_simple() {
+    let mut world = spawn_foo_world();
+    world.write_model(@SINGLE);
+
+    let value: SingleValue = world.read_value(SINGLE.k0);
+    assert!(value.v0 == SINGLE.v0);
+}
+
+
+#[test]
 fn read_schema_simple() {
     let mut world = spawn_foo_world();
     world.write_model(@SINGLE);
@@ -108,6 +118,15 @@ fn read_single_model_large() {
 }
 
 #[test]
+fn read_single_value_large() {
+    let mut world = spawn_foo_world();
+    world.write_model(@LARGE);
+
+    let value: LargeValue = world.read_value((LARGE.k0, LARGE.k1));
+    assert!(value.v5 == LARGE.v5);
+}
+
+#[test]
 fn read_single_schema_large() {
     let mut world = spawn_foo_world();
     world.write_model(@LARGE);
@@ -133,6 +152,15 @@ fn read_double_model_large() {
 
     let model: Large = world.read_model((LARGE.k0, LARGE.k1));
     assert!(model.v0 == LARGE.v0 && model.v5 == LARGE.v5);
+}
+
+#[test]
+fn read_double_value_large() {
+    let mut world = spawn_foo_world();
+    world.write_model(@LARGE);
+
+    let value: LargeValue = world.read_value((LARGE.k0, LARGE.k1));
+    assert!(value.v0 == LARGE.v0 && value.v5 == LARGE.v5);
 }
 
 #[test]
@@ -167,6 +195,22 @@ fn read_sextuple_model_large() {
             && model.v3 == LARGE.v3
             && model.v4 == LARGE.v4
             && model.v5 == LARGE.v5,
+    );
+}
+
+#[test]
+fn read_sextuple_value_large() {
+    let mut world = spawn_foo_world();
+    world.write_model(@LARGE);
+
+    let value: LargeValue = world.read_value((LARGE.k0, LARGE.k1));
+    assert!(
+        value.v0 == LARGE.v0
+            && value.v1 == LARGE.v1
+            && value.v2 == LARGE.v2
+            && value.v3 == LARGE.v3
+            && value.v4 == LARGE.v4
+            && value.v5 == LARGE.v5,
     );
 }
 
