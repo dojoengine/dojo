@@ -20,7 +20,12 @@ pub struct WorldOptions {
                   performed on a world you are not the owner of.")]
     pub guest: bool,
 
-    #[arg(long, default_value = "", help = "Whitelisted namespaces.")]
+    #[arg(
+        long,
+        help = "Whitelisted namespaces, separated by commas. If not provided, all namespaces will \
+                be fetched."
+    )]
+    #[arg(value_delimiter = ',', num_args = 0..)]
     pub namespaces: Vec<String>,
 }
 
