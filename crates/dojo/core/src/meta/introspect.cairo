@@ -1,6 +1,151 @@
 use dojo::meta::Layout;
 use dojo::storage::packing;
 
+// Each index matches with a primitive types in both arrays (main and nested):
+// 'bool': 0
+// 'u8': 1
+// 'u16': 2
+// 'u32' / 'usize': 3
+// 'u64': 4
+// 'u128': 5
+// 'u256': 6
+// 'i8': 7
+// 'i16': 8
+// 'i32': 9
+// 'i64': 10
+// 'i128': 11
+// 'felt252': 12
+// 'ClassHash': 13
+// 'ContractAddress': 14
+const ALLOWED_PRIMITIVE_UPGRADES: [[bool; 15]; 15] = [
+    // bool
+    [
+        false, false, false, false, false, false, false, false, false, false, false, false, false,
+        false, false,
+    ],
+    // u8
+    [
+        false, true, true, true, true, true, false, false, false, false, false, false, true, false,
+        false,
+    ],
+    // u16
+    [
+        false, false, true, true, true, true, false, false, false, false, false, false, true, false,
+        false,
+    ],
+    // u32
+    [
+        false, false, false, true, true, true, false, false, false, false, false, false, true,
+        false, false,
+    ],
+    // u64
+    [
+        false, false, false, false, true, true, false, false, false, false, false, false, true,
+        false, false,
+    ],
+    // u128
+    [
+        false, false, false, false, false, true, false, false, false, false, false, false, true,
+        false, false,
+    ],
+    // u256
+    [
+        false, false, false, false, false, false, true, false, false, false, false, false, false,
+        false, false,
+    ],
+    // i8
+    [
+        false, false, false, false, false, false, false, true, true, true, true, true, true, false,
+        false,
+    ],
+    // i16
+    [
+        false, false, false, false, false, false, false, false, true, true, true, true, true, false,
+        false,
+    ],
+    // i32
+    [
+        false, false, false, false, false, false, false, false, false, true, true, true, true,
+        false, false,
+    ],
+    // i64
+    [
+        false, false, false, false, false, false, false, false, false, false, true, true, true,
+        false, false,
+    ],
+    // i128
+    [
+        false, false, false, false, false, false, false, false, false, false, false, true, true,
+        false, false,
+    ],
+    // felt252
+    [
+        false, false, false, false, false, false, false, false, false, false, false, false, true,
+        true, true,
+    ],
+    // ClassHash
+    [
+        false, false, false, false, false, false, false, false, false, false, false, false, true,
+        true, true,
+    ],
+    // ContractAddress
+    [
+        false, false, false, false, false, false, false, false, false, false, false, false, true,
+        true, true,
+    ],
+];
+
+#[inline(always)]
+fn primitive_to_index(primitive: felt252) -> u32 {
+    if primitive == 'bool' {
+        return 0;
+    }
+    if primitive == 'u8' {
+        return 1;
+    }
+    if primitive == 'u16' {
+        return 2;
+    }
+    if primitive == 'u32' || primitive == 'usize' {
+        return 3;
+    }
+    if primitive == 'u64' {
+        return 4;
+    }
+    if primitive == 'u128' {
+        return 5;
+    }
+    if primitive == 'u256' {
+        return 6;
+    }
+    if primitive == 'i8' {
+        return 7;
+    }
+    if primitive == 'i16' {
+        return 8;
+    }
+    if primitive == 'i32' {
+        return 9;
+    }
+    if primitive == 'i64' {
+        return 10;
+    }
+    if primitive == 'i128' {
+        return 11;
+    }
+    if primitive == 'felt252' {
+        return 12;
+    }
+    if primitive == 'ClassHash' {
+        return 13;
+    }
+    if primitive == 'ContractAddress' {
+        return 14;
+    }
+
+    return 0xFFFFFFFF;
+}
+
 #[derive(Copy, Drop, Serde, Debug, PartialEq)]
 pub enum Ty {
     Primitive: felt252,
@@ -45,42 +190,12 @@ impl PrimitiveCompareImpl of TyCompareTrait<felt252> {
             return true;
         }
 
-        let mut allowed_upgrades: Span<(felt252, Span<felt252>)> = [
-            ('bool', [].span()), ('u8', ['u16', 'u32', 'usize', 'u64', 'u128', 'felt252'].span()),
-            ('u16', ['u32', 'usize', 'u64', 'u128', 'felt252'].span()),
-            ('u32', ['usize', 'u64', 'u128', 'felt252'].span()),
-            ('usize', ['u32', 'u64', 'u128', 'felt252'].span()),
-            ('u64', ['u128', 'felt252'].span()), ('u128', ['felt252'].span()), ('u256', [].span()),
-            ('i8', ['i16', 'i32', 'i64', 'i128', 'felt252'].span()),
-            ('i16', ['i32', 'i64', 'i128', 'felt252'].span()),
-            ('i32', ['i64', 'i128', 'felt252'].span()), ('i64', ['i128', 'felt252'].span()),
-            ('i128', ['felt252'].span()), ('felt252', ['ClassHash', 'ContractAddress'].span()),
-            ('ClassHash', ['felt252', 'ContractAddress'].span()),
-            ('ContractAddress', ['felt252', 'ClassHash'].span()),
-        ]
-            .span();
+        let new_index = primitive_to_index(*self);
+        let old_index = primitive_to_index(*old);
 
-        loop {
-            match allowed_upgrades.pop_front() {
-                Option::Some((
-                    src, allowed,
-                )) => {
-                    if src == old {
-                        let mut i = 0;
-                        break loop {
-                            if i >= (*allowed).len() {
-                                break false;
-                            }
-                            if (*allowed).at(i) == self {
-                                break true;
-                            }
-                            i += 1;
-                        };
-                    }
-                },
-                Option::None => { break false; },
-            }
-        }
+        let allowed_upgrades = ALLOWED_PRIMITIVE_UPGRADES.span();
+        let allowed_upgrades = allowed_upgrades[old_index].span();
+        *allowed_upgrades[new_index]
     }
 }
 

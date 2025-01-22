@@ -411,7 +411,11 @@ fn test_primitive_upgrade() {
                     };
 
                     assert_eq!(
-                        Ty::Primitive(*dest).is_an_upgrade_of(@Ty::Primitive(*src)), expected,
+                        Ty::Primitive(*dest).is_an_upgrade_of(@Ty::Primitive(*src)),
+                        expected,
+                        "src: {} dest: {}",
+                        *src,
+                        *dest,
                     );
                 }
             },
@@ -586,15 +590,9 @@ fn test_array_upgrade() {
 }
 
 #[test]
-#[available_gas(330000)]
+#[available_gas(259000)]
 fn test_primitive_upgrade_performance() {
-    // the worst case should be an upgrade from ContractAddress to ClassHash,
-    // as ContractAddress is the last source type and ClassHash the last dest type for
-    // ContractAddress, in the table used by `is_an_upgrade_of`.
-    let x = Ty::Primitive('ContractAddress');
-    let upgraded = Ty::Primitive('ClassHash');
-
     let gas = GasCounterTrait::start();
-    let _ = upgraded.is_an_upgrade_of(@x);
-    gas.end("ContractAddress to ClassHash");
+    let _ = Ty::Primitive('ClassHash').is_an_upgrade_of(@Ty::Primitive('ContractAddress'));
+    gas.end("Upgrade from ContractAddress to ClassHash");
 }
