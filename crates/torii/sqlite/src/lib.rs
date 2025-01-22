@@ -928,11 +928,14 @@ fn add_columns_recursive(
                 ));
                 alter_table_queries.push(format!(
                     "ALTER TABLE [{table_id}] ADD CONSTRAINT [{column_name}_check] \
-                         CHECK([{column_name}] IN ({all_options}))"
+                     CHECK([{column_name}] IN ({all_options}))"
                 ));
             } else {
                 // For new tables, create the column with explicitly named CHECK constraint
-                let sql_type = format!("TEXT CONSTRAINT [{column_name}_check] CHECK([{column_name}] IN ({all_options}))");
+                let sql_type = format!(
+                    "TEXT CONSTRAINT [{column_name}_check] CHECK([{column_name}] IN \
+                     ({all_options}))"
+                );
                 add_column(&column_name, &sql_type);
             }
 
