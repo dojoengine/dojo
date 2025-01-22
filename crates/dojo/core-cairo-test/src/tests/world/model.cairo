@@ -1,3 +1,4 @@
+use dojo::model::ModelStorage;
 use core::starknet::ContractAddress;
 
 use crate::tests::helpers::{
@@ -55,7 +56,7 @@ pub struct FooModelMemberAdded {
     pub c: u256,
 }
 
-#[derive(Introspect, Copy, Drop, Serde)]
+#[derive(Introspect, Copy, Drop, Serde, PartialEq)]
 enum MyEnum {
     X: u8,
     Y: u16,
@@ -195,7 +196,10 @@ fn test_upgrade_model_from_model_owner() {
 
 #[test]
 fn test_upgrade_model() {
+    let caller = starknet::contract_address_const::<0xb0b>();
+
     let world = deploy_world_for_model_upgrades();
+    let mut world_storage = dojo::world::WorldStorageTrait::new(world, @"dojo");
 
     drop_all_events(world.contract_address);
 
@@ -220,10 +224,18 @@ fn test_upgrade_model() {
     } else {
         core::panic_with_felt252('no ModelUpgraded event');
     }
+
+    // values previously set in deploy_world_for_model_upgrades
+    let read: FooModelMemberAdded = world_storage.read_model(caller);
+    assert!(read.a == 123);
+    assert!(read.b == 456);
+    assert!(read.c == 0);
 }
 
 fn test_upgrade_model_with_member_changed() {
+    let caller = starknet::contract_address_const::<0xb0b>();
     let world = deploy_world_for_model_upgrades();
+    let mut world_storage = dojo::world::WorldStorageTrait::new(world, @"dojo");
 
     drop_all_events(world.contract_address);
 
@@ -248,6 +260,11 @@ fn test_upgrade_model_with_member_changed() {
     } else {
         core::panic_with_felt252('no ModelUpgraded event');
     }
+
+    // values previously set in deploy_world_for_model_upgrades
+    let read: FooModelMemberChanged = world_storage.read_model(caller);
+    assert!(read.a == MyEnum::X(42));
+    assert!(read.b == 456);
 }
 
 #[test]

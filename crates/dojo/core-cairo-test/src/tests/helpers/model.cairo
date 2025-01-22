@@ -1,3 +1,4 @@
+use dojo::model::ModelStorage;
 use core::starknet::ContractAddress;
 
 use dojo::world::IWorldDispatcher;
@@ -98,5 +99,15 @@ pub fn deploy_world_for_model_upgrades() -> IWorldDispatcher {
         ]
             .span(),
     };
-    spawn_test_world([namespace_def].span()).dispatcher
+    let world = spawn_test_world([namespace_def].span()).dispatcher;
+
+    // write some model values to be able to check if after a successfully upgrade, these values
+    // remain the same
+    let mut world_storage = dojo::world::WorldStorageTrait::new(world, @"dojo");
+    let caller = starknet::contract_address_const::<0xb0b>();
+
+    world_storage.write_model(@FooModelMemberAdded { caller, a: 123, b: 456 });
+    world_storage.write_model(@FooModelMemberChanged { caller, a: MyEnum::X(42), b: 456 });
+
+    world
 }
