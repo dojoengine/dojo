@@ -23,14 +23,14 @@ use katana_node::config::{Config, SequencingConfig};
 use katana_primitives::genesis::allocation::DevAllocationsGenerator;
 use katana_primitives::genesis::constant::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;
 use serde::{Deserialize, Serialize};
-use tracing::{Subscriber, info};
+use tracing::{info, Subscriber};
 use tracing_log::LogTracer;
-use tracing_subscriber::{EnvFilter, fmt};
+use tracing_subscriber::{fmt, EnvFilter};
 use url::Url;
 
 use crate::file::NodeArgsConfig;
 use crate::options::*;
-use crate::utils::{LogFormat, parse_seed};
+use crate::utils::{parse_seed, LogFormat};
 
 pub(crate) const LOG_TARGET: &str = "katana::cli";
 
@@ -416,7 +416,7 @@ mod test {
         DEFAULT_INVOCATION_MAX_STEPS, DEFAULT_VALIDATION_MAX_STEPS,
     };
     use katana_primitives::chain::ChainId;
-    use katana_primitives::{ContractAddress, Felt, address, felt};
+    use katana_primitives::{address, felt, ContractAddress, Felt};
     use katana_rpc::cors::HeaderValue;
 
     use super::*;

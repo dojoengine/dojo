@@ -1,7 +1,7 @@
 //! JSON representation of the genesis configuration. Used to deserialize the genesis configuration
 //! from a JSON file.
 
-use std::collections::{BTreeMap, HashMap, btree_map, hash_map};
+use std::collections::{btree_map, hash_map, BTreeMap, HashMap};
 use std::fs::File;
 use std::io::{
     BufReader, {self},
@@ -13,8 +13,8 @@ use std::sync::Arc;
 use alloy_primitives::U256;
 use base64::prelude::*;
 use katana_cairo::cairo_vm::types::errors::program_errors::ProgramError;
-use serde::de::Visitor;
 use serde::de::value::MapAccessDeserializer;
+use serde::de::Visitor;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use starknet::core::types::contract::{ComputeClassHashError, JsonError};
@@ -26,11 +26,11 @@ use super::allocation::{
 use super::constant::{CONTROLLER_ACCOUNT_CLASS, CONTROLLER_CLASS_HASH};
 use super::constant::{DEFAULT_ACCOUNT_CLASS, DEFAULT_ACCOUNT_CLASS_HASH};
 use super::{Genesis, GenesisAllocation};
-use crate::Felt;
 use crate::block::{BlockHash, BlockNumber, GasPrices};
 use crate::class::{ClassHash, ContractClass, ContractClassCompilationError, SierraContractClass};
 use crate::contract::{ContractAddress, StorageKey, StorageValue};
 use crate::utils::class::parse_deprecated_compiled_class;
+use crate::Felt;
 
 type Object = Map<String, Value>;
 
@@ -472,33 +472,42 @@ impl TryFrom<Genesis> for GenesisJson {
             match allocation {
                 GenesisAllocation::Account(account) => match account {
                     GenesisAccountAlloc::Account(acc) => {
-                        accounts.insert(address, GenesisAccountJson {
-                            nonce: acc.nonce,
-                            private_key: None,
-                            storage: acc.storage,
-                            balance: acc.balance,
-                            public_key: acc.public_key,
-                            class: Some(ClassNameOrHash::Hash(acc.class_hash)),
-                        });
+                        accounts.insert(
+                            address,
+                            GenesisAccountJson {
+                                nonce: acc.nonce,
+                                private_key: None,
+                                storage: acc.storage,
+                                balance: acc.balance,
+                                public_key: acc.public_key,
+                                class: Some(ClassNameOrHash::Hash(acc.class_hash)),
+                            },
+                        );
                     }
                     GenesisAccountAlloc::DevAccount(dev_acc) => {
-                        accounts.insert(address, GenesisAccountJson {
-                            nonce: dev_acc.inner.nonce,
-                            balance: dev_acc.inner.balance,
-                            storage: dev_acc.inner.storage,
-                            public_key: dev_acc.inner.public_key,
-                            private_key: Some(dev_acc.private_key),
-                            class: Some(ClassNameOrHash::Hash(dev_acc.inner.class_hash)),
-                        });
+                        accounts.insert(
+                            address,
+                            GenesisAccountJson {
+                                nonce: dev_acc.inner.nonce,
+                                balance: dev_acc.inner.balance,
+                                storage: dev_acc.inner.storage,
+                                public_key: dev_acc.inner.public_key,
+                                private_key: Some(dev_acc.private_key),
+                                class: Some(ClassNameOrHash::Hash(dev_acc.inner.class_hash)),
+                            },
+                        );
                     }
                 },
                 GenesisAllocation::Contract(contract) => {
-                    contracts.insert(address, GenesisContractJson {
-                        nonce: contract.nonce,
-                        balance: contract.balance,
-                        storage: contract.storage,
-                        class: contract.class_hash.map(ClassNameOrHash::Hash),
-                    });
+                    contracts.insert(
+                        address,
+                        GenesisContractJson {
+                            nonce: contract.nonce,
+                            balance: contract.balance,
+                            storage: contract.storage,
+                            class: contract.class_hash.map(ClassNameOrHash::Hash),
+                        },
+                    );
                 }
             }
         }
@@ -680,20 +689,23 @@ mod tests {
             Some(BTreeMap::from([(felt!("0x1"), felt!("0x1"))]))
         );
 
-        similar_asserts::assert_eq!(json.classes, vec![
-            GenesisClassJson {
-                class: PathBuf::from("../../../contracts/build/erc20.json").into(),
-                name: Some("MyErc20".to_string()),
-            },
-            GenesisClassJson {
-                class: PathBuf::from("../../../contracts/build/universal_deployer.json").into(),
-                name: None,
-            },
-            GenesisClassJson {
-                class: PathBuf::from("../../../contracts/build/default_account.json").into(),
-                name: Some("MyClass".to_string()),
-            },
-        ]);
+        similar_asserts::assert_eq!(
+            json.classes,
+            vec![
+                GenesisClassJson {
+                    class: PathBuf::from("../../../contracts/build/erc20.json").into(),
+                    name: Some("MyErc20".to_string()),
+                },
+                GenesisClassJson {
+                    class: PathBuf::from("../../../contracts/build/universal_deployer.json").into(),
+                    name: None,
+                },
+                GenesisClassJson {
+                    class: PathBuf::from("../../../contracts/build/default_account.json").into(),
+                    name: Some("MyClass".to_string()),
+                },
+            ]
+        );
     }
 
     #[test]
@@ -702,21 +714,28 @@ mod tests {
         let genesis_result: Result<GenesisJson, _> = serde_json::from_reader(BufReader::new(file));
         match genesis_result {
             Ok(genesis) => {
-                assert_eq!(genesis.classes, vec![
-                    GenesisClassJson {
-                        class: PathBuf::from("../../../contracts/build/erc20.json").into(),
-                        name: Some("MyErc20".to_string()),
-                    },
-                    GenesisClassJson {
-                        class: PathBuf::from("../../../contracts/build/universal_deployer.json")
+                assert_eq!(
+                    genesis.classes,
+                    vec![
+                        GenesisClassJson {
+                            class: PathBuf::from("../../../contracts/build/erc20.json").into(),
+                            name: Some("MyErc20".to_string()),
+                        },
+                        GenesisClassJson {
+                            class: PathBuf::from(
+                                "../../../contracts/build/universal_deployer.json"
+                            )
                             .into(),
-                        name: None,
-                    },
-                    GenesisClassJson {
-                        class: serde_json::to_value(DEFAULT_ACCOUNT_CLASS.clone()).unwrap().into(),
-                        name: None,
-                    },
-                ]);
+                            name: None,
+                        },
+                        GenesisClassJson {
+                            class: serde_json::to_value(DEFAULT_ACCOUNT_CLASS.clone())
+                                .unwrap()
+                                .into(),
+                            name: None,
+                        },
+                    ]
+                );
             }
             Err(e) => {
                 println!("Error parsing JSON: {:?}", e);

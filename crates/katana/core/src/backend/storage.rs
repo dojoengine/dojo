@@ -1,10 +1,9 @@
 use std::sync::Arc;
 
-use anyhow::{Context, Result, bail};
+use anyhow::{bail, Context, Result};
 use katana_chain_spec::ChainSpec;
 use katana_db::mdbx::DbEnv;
 use katana_primitives::block::{BlockHashOrNumber, BlockIdOrTag, BlockNumber};
-use katana_provider::BlockchainProvider;
 use katana_provider::providers::db::DbProvider;
 use katana_provider::providers::fork::ForkedProvider;
 use katana_provider::traits::block::{BlockProvider, BlockWriter};
@@ -18,6 +17,7 @@ use katana_provider::traits::transaction::{
     TransactionsProviderExt,
 };
 use katana_provider::traits::trie::TrieWriter;
+use katana_provider::BlockchainProvider;
 use num_traits::ToPrimitive;
 use starknet::core::types::MaybePendingBlockWithTxHashes;
 use starknet::core::utils::parse_cairo_short_string;

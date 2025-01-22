@@ -7,21 +7,21 @@ use katana_db::mdbx::test_utils;
 use katana_primitives::block::{Block, BlockHash, FinalityStatus};
 use katana_primitives::class::ClassHash;
 use katana_primitives::contract::ContractAddress;
-use katana_primitives::genesis::Genesis;
 use katana_primitives::genesis::allocation::{
     DevGenesisAccount, GenesisAccountAlloc, GenesisAllocation,
 };
 use katana_primitives::genesis::constant::{
-    DEFAULT_ACCOUNT_CLASS_PUBKEY_STORAGE_SLOT, DEFAULT_ETH_FEE_TOKEN_ADDRESS,
-    DEFAULT_LEGACY_ERC20_CLASS, DEFAULT_LEGACY_ERC20_CLASS_HASH, DEFAULT_LEGACY_UDC_CLASS,
-    DEFAULT_LEGACY_UDC_CLASS_HASH, DEFAULT_STRK_FEE_TOKEN_ADDRESS, DEFAULT_UDC_ADDRESS,
-    ERC20_DECIMAL_STORAGE_SLOT, ERC20_NAME_STORAGE_SLOT, ERC20_SYMBOL_STORAGE_SLOT,
-    ERC20_TOTAL_SUPPLY_STORAGE_SLOT, get_fee_token_balance_base_storage_address,
+    get_fee_token_balance_base_storage_address, DEFAULT_ACCOUNT_CLASS_PUBKEY_STORAGE_SLOT,
+    DEFAULT_ETH_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CLASS, DEFAULT_LEGACY_ERC20_CLASS_HASH,
+    DEFAULT_LEGACY_UDC_CLASS, DEFAULT_LEGACY_UDC_CLASS_HASH, DEFAULT_STRK_FEE_TOKEN_ADDRESS,
+    DEFAULT_UDC_ADDRESS, ERC20_DECIMAL_STORAGE_SLOT, ERC20_NAME_STORAGE_SLOT,
+    ERC20_SYMBOL_STORAGE_SLOT, ERC20_TOTAL_SUPPLY_STORAGE_SLOT,
 };
+use katana_primitives::genesis::Genesis;
 use katana_primitives::state::StateUpdatesWithClasses;
 use katana_primitives::utils::class::parse_sierra_class;
 use katana_primitives::utils::split_u256;
-use katana_primitives::{Felt, address};
+use katana_primitives::{address, Felt};
 use starknet::core::utils::cairo_short_string_to_felt;
 use starknet::macros::felt;
 

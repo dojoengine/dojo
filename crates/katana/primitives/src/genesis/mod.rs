@@ -16,10 +16,10 @@ use self::constant::{
     DEFAULT_ACCOUNT_CLASS_HASH, DEFAULT_LEGACY_ERC20_CLASS, DEFAULT_LEGACY_ERC20_CLASS_HASH,
     DEFAULT_LEGACY_UDC_CLASS, DEFAULT_LEGACY_UDC_CLASS_HASH,
 };
-use crate::Felt;
 use crate::block::{BlockHash, BlockNumber, GasPrices};
 use crate::class::{ClassHash, ContractClass};
 use crate::contract::ContractAddress;
+use crate::Felt;
 
 /// Genesis block configuration.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

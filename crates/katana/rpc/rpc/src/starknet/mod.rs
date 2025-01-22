@@ -6,7 +6,6 @@ use katana_core::backend::Backend;
 use katana_core::service::block_producer::{BlockProducer, BlockProducerMode, PendingExecutor};
 use katana_executor::{ExecutionResult, ExecutorFactory};
 use katana_pool::{TransactionPool, TxPool};
-use katana_primitives::Felt;
 use katana_primitives::block::{
     BlockHash, BlockHashOrNumber, BlockIdOrTag, BlockNumber, BlockTag, FinalityStatus,
     PartialHeader,
@@ -18,6 +17,7 @@ use katana_primitives::env::BlockEnv;
 use katana_primitives::event::MaybeForkedContinuationToken;
 use katana_primitives::transaction::{ExecutableTxWithHash, TxHash, TxWithHash};
 use katana_primitives::version::CURRENT_STARKNET_VERSION;
+use katana_primitives::Felt;
 use katana_provider::error::ProviderError;
 use katana_provider::traits::block::{BlockHashProvider, BlockIdReader, BlockNumberProvider};
 use katana_provider::traits::contract::ContractClassProvider;
@@ -26,7 +26,6 @@ use katana_provider::traits::state::{StateFactoryProvider, StateProvider, StateR
 use katana_provider::traits::transaction::{
     ReceiptProvider, TransactionProvider, TransactionStatusProvider,
 };
-use katana_rpc_types::FeeEstimate;
 use katana_rpc_types::block::{
     MaybePendingBlockWithReceipts, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs,
     PendingBlockWithReceipts, PendingBlockWithTxHashes, PendingBlockWithTxs,
@@ -41,6 +40,7 @@ use katana_rpc_types::trie::{
     ClassesProof, ContractLeafData, ContractStorageKeys, ContractStorageProofs, ContractsProof,
     GetStorageProofResponse, GlobalRoots, Nodes,
 };
+use katana_rpc_types::FeeEstimate;
 use katana_rpc_types_builder::ReceiptBuilder;
 use katana_tasks::{BlockingTaskPool, TokioTaskSpawner};
 use starknet::core::types::{

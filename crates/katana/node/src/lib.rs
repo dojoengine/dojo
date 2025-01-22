@@ -11,14 +11,13 @@ use std::future::IntoFuture;
 use std::sync::Arc;
 
 use anyhow::Result;
-use config::Config;
 use config::rpc::RpcModuleKind;
+use config::Config;
 use dojo_metrics::exporters::prometheus::PrometheusRecorder;
 use dojo_metrics::{Report, Server as MetricsServer};
 use hyper::Method;
 use jsonrpsee::RpcModule;
 use katana_chain_spec::SettlementLayer;
-use katana_core::backend::Backend;
 use katana_core::backend::gas_oracle::GasOracle;
 use katana_core::backend::storage::Blockchain;
 use katana_core::backend::Backend;
@@ -26,13 +25,12 @@ use katana_core::constants::{
     DEFAULT_ETH_L1_DATA_GAS_PRICE, DEFAULT_ETH_L1_GAS_PRICE, DEFAULT_STRK_L1_DATA_GAS_PRICE,
     DEFAULT_STRK_L1_GAS_PRICE,
 };
-use katana_core::env::BlockContextGenerator;
 use katana_core::service::block_producer::BlockProducer;
 use katana_db::mdbx::DbEnv;
-use katana_executor::ExecutionFlags;
 use katana_executor::implementation::blockifier::BlockifierFactory;
-use katana_pool::TxPool;
+use katana_executor::ExecutionFlags;
 use katana_pool::ordering::FiFo;
+use katana_pool::TxPool;
 use katana_primitives::block::GasPrices;
 use katana_primitives::env::{CfgEnv, FeeTokenAddressses};
 use katana_rpc::cors::Cors;

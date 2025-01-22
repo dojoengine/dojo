@@ -5,9 +5,9 @@ use std::sync::Arc;
 use std::task::{Context, Poll};
 use std::time::Duration;
 
-use futures::FutureExt;
-use futures::channel::mpsc::{Receiver, Sender, channel};
+use futures::channel::mpsc::{channel, Receiver, Sender};
 use futures::stream::{Stream, StreamExt};
+use futures::FutureExt;
 use katana_executor::{BlockExecutor, ExecutionResult, ExecutionStats, ExecutorFactory};
 use katana_pool::validation::stateful::TxValidator;
 use katana_primitives::block::{BlockHashOrNumber, ExecutableBlock, PartialHeader};
@@ -23,7 +23,7 @@ use katana_provider::traits::state::StateFactoryProvider;
 use katana_tasks::{BlockingTaskPool, BlockingTaskResult};
 use parking_lot::lock_api::RawMutex;
 use parking_lot::{Mutex, RwLock};
-use tokio::time::{Instant, Interval, interval_at};
+use tokio::time::{interval_at, Instant, Interval};
 use tracing::{error, info, trace, warn};
 
 use crate::backend::Backend;
