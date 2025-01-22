@@ -20,3 +20,9 @@ impl MetricsConfig {
         SocketAddr::new(self.addr, self.port)
     }
 }
+
+impl Default for MetricsConfig {
+    fn default() -> Self {
+        MetricsConfig { addr: DEFAULT_METRICS_ADDR, port: DEFAULT_METRICS_PORT }
+    }
+}

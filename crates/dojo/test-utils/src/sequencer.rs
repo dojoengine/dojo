@@ -114,19 +114,15 @@ impl TestSequencer {
 }
 
 pub fn get_default_test_config(sequencing: SequencingConfig) -> Config {
-    let dev = DevConfig { fee: false, account_validation: true, fixed_gas_prices: None };
-    let mut chain = ChainSpec { id: ChainId::SEPOLIA, ..Default::default() };
-    chain.genesis.sequencer_address = *DEFAULT_SEQUENCER_ADDRESS;
-
-    let rpc = RpcConfig {
-        cors_origins: Vec::new(),
-        port: 0,
-        addr: DEFAULT_RPC_ADDR,
-        apis: RpcModulesList::all(),
-        max_connections: DEFAULT_RPC_MAX_CONNECTIONS,
-        max_event_page_size: Some(100),
-        max_proof_keys: Some(100),
-    };
-
-    Config { sequencing, rpc, dev, chain: chain.into(), ..Default::default() }
+    let mut chain_spec = ChainSpec { id: ChainId::SEPOLIA, ..Default::default() };
+    chain_spec.genesis.sequencer_address =
+        katana_primitives::ContractAddress(*DEFAULT_SEQUENCER_ADDRESS);
+    ConfigBuilder::new()
+        .dev_fee(false)
+        .chain(chain_spec)
+        .rpc_apis(RpcModulesList::all())
+        .rpc_max_event_page_size(Some(100))
+        .rpc_max_proof_keys(Some(100))
+        .sequencing(sequencing)
+        .build()
 }
