@@ -97,6 +97,10 @@ impl PermissionsUpdateable for ResourceRemote {
             ResourceRemote::Namespace(namespace) => {
                 namespace.update_writer(contract_address, is_writer)
             }
+            ResourceRemote::Library(_) => {
+                // ?
+                unreachable!()
+            }
         }
     }
 
@@ -107,6 +111,10 @@ impl PermissionsUpdateable for ResourceRemote {
             ResourceRemote::Event(event) => event.update_owner(contract_address, is_owner),
             ResourceRemote::Namespace(namespace) => {
                 namespace.update_owner(contract_address, is_owner)
+            }
+            ResourceRemote::Library(_) => {
+                // ?
+                unreachable!()
             }
         }
     }

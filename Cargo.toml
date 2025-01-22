@@ -119,13 +119,13 @@ katana-trie = { path = "crates/katana/trie" }
 # torii
 torii-cli = { path = "crates/torii/cli" }
 torii-client = { path = "crates/torii/client" }
-torii-indexer = { path = "crates/torii/indexer" }
-torii-sqlite = { path = "crates/torii/sqlite" }
 torii-graphql = { path = "crates/torii/graphql" }
 torii-grpc = { path = "crates/torii/grpc" }
+torii-indexer = { path = "crates/torii/indexer" }
 torii-relay = { path = "crates/torii/libp2p" }
-torii-server = { path = "crates/torii/server" }
 torii-runner = { path = "crates/torii/runner" }
+torii-server = { path = "crates/torii/server" }
+torii-sqlite = { path = "crates/torii/sqlite" }
 torii-typed-data = { path = "crates/torii/typed-data" }
 
 # saya
@@ -212,9 +212,12 @@ rpassword = "7.2.0"
 rstest = "0.18.2"
 rstest_reuse = "0.6.0"
 salsa = "0.16.1"
-scarb = { git = "https://github.com/dojoengine/scarb", rev = "f67331d99bca24c13ad56af6752b93f23e5ac373" }
-scarb-metadata = { git = "https://github.com/dojoengine/scarb", rev = "f67331d99bca24c13ad56af6752b93f23e5ac373" }
-scarb-ui = { git = "https://github.com/dojoengine/scarb", rev = "f67331d99bca24c13ad56af6752b93f23e5ac373" }
+scarb = { path = "../scarb/scarb" }
+scarb-metadata = { path = "../scarb/scarb-metadata" }
+scarb-ui = { path = "../scarb/utils/scarb-ui" }
+# scarb = { git = "https://github.com/dojoengine/scarb", rev = "f67331d99bca24c13ad56af6752b93f23e5ac373" }
+# scarb-metadata = { git = "https://github.com/dojoengine/scarb", rev = "f67331d99bca24c13ad56af6752b93f23e5ac373" }
+# scarb-ui = { git = "https://github.com/dojoengine/scarb", rev = "f67331d99bca24c13ad56af6752b93f23e5ac373" }
 semver = "1.0.5"
 serde = { version = "1.0", features = [ "derive" ] }
 serde_json = { version = "1.0", features = [ "arbitrary_precision" ] }

@@ -1,6 +1,9 @@
 pub mod contract {
     pub mod interface;
-    pub use interface::{IContract, IContractDispatcher, IContractDispatcherTrait};
+    pub use interface::{
+        IContract, IContractDispatcher, IContractDispatcherTrait, ILibrary, ILibraryDispatcher,
+        ILibraryDispatcherTrait,
+    };
 
     pub mod components {
         pub mod upgradeable;
@@ -25,7 +28,8 @@ pub mod meta {
     pub mod interface;
     pub use interface::{
         IDeployedResource, IDeployedResourceDispatcher, IDeployedResourceDispatcherTrait,
-        IStoredResource, IStoredResourceDispatcher, IStoredResourceDispatcherTrait,
+        IDeployedResourceLibraryDispatcher, IStoredResource, IStoredResourceDispatcher,
+        IStoredResourceDispatcherTrait,
     };
 
     pub mod introspect;

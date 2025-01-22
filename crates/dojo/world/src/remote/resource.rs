@@ -13,6 +13,7 @@ pub enum ResourceRemote {
     Contract(ContractRemote),
     Model(ModelRemote),
     Event(EventRemote),
+    Library(LibraryRemote),
     // TODO: add starknet contract remote. Sozo needs a way to keep track of the address of this
     // contract once deployed.
 }
@@ -44,6 +45,12 @@ pub struct ContractRemote {
     pub common: CommonRemoteInfo,
     /// Whether the contract has been initialized.
     pub is_initialized: bool,
+}
+
+#[derive(Debug, Clone)]
+pub struct LibraryRemote {
+    /// Common information about the resource.
+    pub common: CommonRemoteInfo,
 }
 
 #[derive(Debug, Clone)]
@@ -116,6 +123,13 @@ impl ContractRemote {
     }
 }
 
+impl LibraryRemote {
+    /// The dojo selector of the resource.
+    pub fn dojo_selector(&self) -> DojoSelector {
+        self.common.dojo_selector()
+    }
+}
+
 impl ModelRemote {
     /// The dojo selector of the resource.
     pub fn dojo_selector(&self) -> DojoSelector {
@@ -139,6 +153,7 @@ impl ResourceRemote {
             ResourceRemote::Contract(contract) => contract.dojo_selector(),
             ResourceRemote::Model(model) => model.dojo_selector(),
             ResourceRemote::Event(event) => event.dojo_selector(),
+            ResourceRemote::Library(library) => library.dojo_selector(),
         }
     }
     /// The name of the resource.
@@ -148,6 +163,7 @@ impl ResourceRemote {
             ResourceRemote::Model(m) => m.common.name.clone(),
             ResourceRemote::Event(e) => e.common.name.clone(),
             ResourceRemote::Namespace(ns) => ns.name.clone(),
+            ResourceRemote::Library(l) => l.common.name.clone(),
         }
     }
 
@@ -158,6 +174,7 @@ impl ResourceRemote {
             ResourceRemote::Model(m) => m.common.namespace.clone(),
             ResourceRemote::Event(e) => e.common.namespace.clone(),
             ResourceRemote::Namespace(ns) => ns.name.clone(),
+            ResourceRemote::Library(l) => l.common.namespace.clone(),
         }
     }
 
@@ -173,6 +190,7 @@ impl ResourceRemote {
             ResourceRemote::Model(m) => m.common.address,
             ResourceRemote::Event(e) => e.common.address,
             ResourceRemote::Namespace(_) => Felt::ZERO,
+            ResourceRemote::Library(_) => Felt::ZERO,
         }
     }
 
@@ -183,6 +201,7 @@ impl ResourceRemote {
             ResourceRemote::Model(m) => m.common.metadata_hash = hash,
             ResourceRemote::Event(e) => e.common.metadata_hash = hash,
             ResourceRemote::Namespace(_) => {}
+            ResourceRemote::Library(l) => l.common.metadata_hash = hash,
         }
     }
 
@@ -193,6 +212,7 @@ impl ResourceRemote {
             ResourceRemote::Model(m) => m.common.metadata_hash,
             ResourceRemote::Event(e) => e.common.metadata_hash,
             ResourceRemote::Namespace(_) => Felt::ZERO,
+            ResourceRemote::Library(l) => l.common.metadata_hash,
         }
     }
 
@@ -203,6 +223,7 @@ impl ResourceRemote {
             ResourceRemote::Contract(contract) => contract.common.push_class_hash(class_hash),
             ResourceRemote::Model(model) => model.common.push_class_hash(class_hash),
             ResourceRemote::Event(event) => event.common.push_class_hash(class_hash),
+            ResourceRemote::Library(library) => library.common.push_class_hash(class_hash),
         }
     }
 
@@ -213,6 +234,7 @@ impl ResourceRemote {
             ResourceRemote::Model(model) => model.common.current_class_hash(),
             ResourceRemote::Event(event) => event.common.current_class_hash(),
             ResourceRemote::Namespace(_) => Felt::ZERO,
+            ResourceRemote::Library(library) => library.common.current_class_hash(),
         }
     }
 
@@ -225,6 +247,9 @@ impl ResourceRemote {
             ResourceRemote::Model(model) => (self.dojo_selector(), model.common.writers.clone()),
             ResourceRemote::Event(event) => (self.dojo_selector(), event.common.writers.clone()),
             ResourceRemote::Namespace(ns) => (self.dojo_selector(), ns.writers.clone()),
+            ResourceRemote::Library(library) => {
+                (self.dojo_selector(), library.common.writers.clone())
+            }
         }
     }
 
@@ -237,6 +262,9 @@ impl ResourceRemote {
             ResourceRemote::Model(model) => (self.dojo_selector(), model.common.owners.clone()),
             ResourceRemote::Event(event) => (self.dojo_selector(), event.common.owners.clone()),
             ResourceRemote::Namespace(ns) => (self.dojo_selector(), ns.owners.clone()),
+            ResourceRemote::Library(library) => {
+                (self.dojo_selector(), library.common.owners.clone())
+            }
         }
     }
 
@@ -247,6 +275,7 @@ impl ResourceRemote {
             ResourceRemote::Model(_) => ResourceType::Model,
             ResourceRemote::Event(_) => ResourceType::Event,
             ResourceRemote::Namespace(_) => ResourceType::Namespace,
+            ResourceRemote::Library(_) => ResourceType::Library,
         }
     }
 
@@ -262,6 +291,14 @@ impl ResourceRemote {
     pub fn as_contract_or_panic(&self) -> &ContractRemote {
         match self {
             ResourceRemote::Contract(contract) => contract,
+            _ => panic!("Resource is expected to be a contract: {:?}.", self),
+        }
+    }
+
+    /// Get the library remote if the resource is a library, otherwise panic.
+    pub fn as_library_or_panic(&self) -> &LibraryRemote {
+        match self {
+            ResourceRemote::Library(library) => library,
             _ => panic!("Resource is expected to be a contract: {:?}.", self),
         }
     }

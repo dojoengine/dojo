@@ -3,7 +3,9 @@
 //! The point of view is the local one.
 
 use super::ResourceDiff;
-use crate::local::{ContractLocal, EventLocal, ModelLocal, NamespaceLocal, ResourceLocal};
+use crate::local::{
+    ContractLocal, EventLocal, LibraryLocal, ModelLocal, NamespaceLocal, ResourceLocal,
+};
 use crate::remote::ResourceRemote;
 
 /// A trait to compare a local resource with a remote one.
@@ -22,6 +24,18 @@ impl ComparableResource for ContractLocal {
             ResourceDiff::Synced(ResourceLocal::Contract(self), remote)
         } else {
             ResourceDiff::Updated(ResourceLocal::Contract(self), remote)
+        }
+    }
+}
+
+impl ComparableResource for LibraryLocal {
+    fn compare(self, remote: ResourceRemote) -> ResourceDiff {
+        let remote_contract = remote.as_library_or_panic();
+
+        if self.common.class_hash == remote_contract.common.current_class_hash() {
+            ResourceDiff::Synced(ResourceLocal::Library(self), remote)
+        } else {
+            ResourceDiff::Updated(ResourceLocal::Library(self), remote)
         }
     }
 }
@@ -69,6 +83,7 @@ impl ComparableResource for ResourceLocal {
             ResourceLocal::Model(model) => model.compare(remote),
             ResourceLocal::Event(event) => event.compare(remote),
             ResourceLocal::Namespace(ns) => ns.compare(remote),
+            ResourceLocal::Library(library) => library.compare(remote),
         }
     }
 }

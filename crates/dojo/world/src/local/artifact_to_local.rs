@@ -18,6 +18,7 @@ use crate::config::ProfileConfig;
 
 const WORLD_INTF: &str = "dojo::world::iworld::IWorld";
 const CONTRACT_INTF: &str = "dojo::contract::interface::IContract";
+const LIBRARY_INTF: &str = "dojo::contract::interface::ILibrary";
 const MODEL_INTF: &str = "dojo::model::interface::IModel";
 const EVENT_INTF: &str = "dojo::event::interface::IEvent";
 
@@ -92,6 +93,34 @@ impl WorldLocal {
                                     );
 
                                     let resource = ResourceLocal::Contract(ContractLocal {
+                                        common: CommonLocalInfo {
+                                            namespace: ns,
+                                            name: name.clone(),
+                                            class: sierra.clone(),
+                                            casm_class: casm_class.clone(),
+                                            class_hash,
+                                            casm_class_hash,
+                                        },
+                                        systems: systems.clone(),
+                                    });
+
+                                    resources.push(resource);
+                                }
+                                break;
+                            }
+                            ResourceType::Library(name) => {
+                                let namespaces = profile_config.namespace.get_namespaces(&name);
+
+                                let systems = systems_from_abi(&abi);
+
+                                for ns in namespaces {
+                                    trace!(
+                                        name,
+                                        namespace = ns,
+                                        "Adding local library from artifact."
+                                    );
+
+                                    let resource = ResourceLocal::Library(LibraryLocal {
                                         common: CommonLocalInfo {
                                             namespace: ns,
                                             name: name.clone(),
@@ -227,6 +256,7 @@ fn casm_class_hash_from_sierra_file<P: AsRef<Path>>(path: P) -> Result<Felt> {
 enum ResourceType {
     World,
     Contract(String),
+    Library(String),
     Model(String),
     Event(String),
     Other,
@@ -238,6 +268,8 @@ fn identify_resource_type(implem: &AbiImpl) -> ResourceType {
         ResourceType::World
     } else if implem.interface_name == CONTRACT_INTF {
         ResourceType::Contract(name_from_impl(&implem.name))
+    } else if implem.interface_name == LIBRARY_INTF {
+        ResourceType::Library(name_from_impl(&implem.name))
     } else if implem.interface_name == MODEL_INTF {
         ResourceType::Model(name_from_impl(&implem.name))
     } else if implem.interface_name == EVENT_INTF {

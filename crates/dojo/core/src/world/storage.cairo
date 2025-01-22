@@ -48,6 +48,9 @@ pub impl WorldStorageInternalImpl of WorldStorageTrait {
                     .expect('Failed to get class hash');
                 Option::Some((contract_address, class_hash))
             },
+            Resource::Library((
+                class_hash, _,
+            )) => { Option::Some((0.try_into().unwrap(), class_hash)) },
             _ => Option::None,
         }
     }

@@ -16,6 +16,7 @@ use crate::ResourceType;
 pub struct Manifest {
     pub world: WorldContract,
     pub contracts: Vec<DojoContract>,
+    pub libraries: Vec<DojoLibrary>,
     pub models: Vec<DojoModel>,
     pub events: Vec<DojoEvent>,
 }
@@ -53,6 +54,23 @@ pub struct DojoContract {
     /// Initialization call data.
     #[serde(default)]
     pub init_calldata: Vec<String>,
+    /// Tag of the contract.
+    pub tag: String,
+    /// Selector of the contract.
+    #[serde_as(as = "UfeHex")]
+    pub selector: Felt,
+    /// Systems of the contract.
+    pub systems: Vec<String>,
+}
+
+#[serde_as]
+#[derive(Clone, Default, Debug, Serialize, Deserialize)]
+pub struct DojoLibrary {
+    /// Class hash of the contract.
+    #[serde_as(as = "UfeHex")]
+    pub class_hash: Felt,
+    /// ABI of the contract.
+    pub abi: Vec<AbiEntry>,
     /// Tag of the contract.
     pub tag: String,
     /// Selector of the contract.
@@ -120,6 +138,7 @@ impl Manifest {
         let mut contracts = Vec::new();
         let mut models = Vec::new();
         let mut events = Vec::new();
+        let mut libraries = Vec::new();
 
         for resource in diff.resources.values() {
             if diff.profile_config.is_skipped(&resource.tag()) {
@@ -130,6 +149,9 @@ impl Manifest {
                 ResourceType::Contract => {
                     contracts.push(resource_diff_to_dojo_contract(diff, resource))
                 }
+                ResourceType::Library => {
+                    libraries.push(resource_diff_to_dojo_library(diff, resource))
+                }
                 ResourceType::Model => models.push(resource_diff_to_dojo_model(resource)),
                 ResourceType::Event => events.push(resource_diff_to_dojo_event(resource)),
                 ResourceType::Namespace => {}
@@ -139,10 +161,11 @@ impl Manifest {
 
         // Keep order to ensure deterministic output.
         contracts.sort_by_key(|c| c.tag.clone());
+        libraries.sort_by_key(|c| c.tag.clone());
         models.sort_by_key(|m| m.tag.clone());
         events.sort_by_key(|e| e.tag.clone());
 
-        Self { world, contracts, models, events }
+        Self { world, contracts, models, events, libraries }
     }
 
     pub fn get_contract_address(&self, tag: &str) -> Option<Felt> {
@@ -176,6 +199,30 @@ fn resource_diff_to_dojo_contract(diff: &WorldDiff, resource: &ResourceDiff) -> 
                 class_hash: l.common.class_hash,
                 abi: l.common.class.abi.clone(),
                 init_calldata,
+                tag,
+                systems: l.systems.clone(),
+                selector: resource.dojo_selector(),
+            }
+        }
+        _ => unreachable!(),
+    }
+}
+fn resource_diff_to_dojo_library(_diff: &WorldDiff, resource: &ResourceDiff) -> DojoLibrary {
+    let tag = resource.tag();
+
+    match &resource {
+        ResourceDiff::Created(ResourceLocal::Library(l)) => DojoLibrary {
+            class_hash: l.common.class_hash,
+            abi: l.common.class.abi.clone(),
+            tag,
+            systems: l.systems.clone(),
+            selector: resource.dojo_selector(),
+        },
+        ResourceDiff::Updated(ResourceLocal::Library(l), ResourceRemote::Library(_r))
+        | ResourceDiff::Synced(ResourceLocal::Library(l), ResourceRemote::Library(_r)) => {
+            DojoLibrary {
+                class_hash: l.common.class_hash,
+                abi: l.common.class.abi.clone(),
                 tag,
                 systems: l.systems.clone(),
                 selector: resource.dojo_selector(),
