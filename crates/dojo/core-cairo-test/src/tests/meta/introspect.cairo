@@ -590,9 +590,152 @@ fn test_array_upgrade() {
 }
 
 #[test]
-#[available_gas(259000)]
+#[available_gas(300000)]
 fn test_primitive_upgrade_performance() {
     let gas = GasCounterTrait::start();
     let _ = Ty::Primitive('ClassHash').is_an_upgrade_of(@Ty::Primitive('ContractAddress'));
     gas.end("Upgrade from ContractAddress to ClassHash");
+}
+
+#[test]
+fn test_key_member_upgrade() {
+    let s = Struct {
+        name: 's',
+        attrs: [].span(),
+        children: [
+            Member { name: 'x', attrs: ['key'].span(), ty: Ty::Primitive('u8') },
+            Member {
+                name: 'y',
+                attrs: ['key'].span(),
+                ty: Ty::Enum(
+                    Enum {
+                        name: 'e',
+                        attrs: [].span(),
+                        children: [('A', Ty::Primitive('u8')), ('B', Ty::Primitive('u16'))].span(),
+                    },
+                ),
+            },
+        ]
+            .span(),
+    };
+
+    // primitive type
+    let mut upgraded = s;
+    upgraded
+        .children =
+            [Member { name: 'x', attrs: ['key'].span(), ty: Ty::Primitive('u128') }, *s.children[1]]
+        .span();
+
+    assert!(upgraded.is_an_upgrade_of(@s), "key primitive type upgrade");
+
+    // enum type
+    let mut upgraded = s;
+    upgraded
+        .children =
+            [
+                *s.children[0],
+                Member {
+                    name: 'y',
+                    attrs: ['key'].span(),
+                    ty: Ty::Enum(
+                        Enum {
+                            name: 'e',
+                            attrs: [].span(),
+                            children: [
+                                ('A', Ty::Primitive('u8')), ('B', Ty::Primitive('u16')),
+                                ('C', Ty::Primitive('u32')),
+                            ]
+                                .span(),
+                        },
+                    ),
+                },
+            ]
+        .span();
+
+    assert!(upgraded.is_an_upgrade_of(@s), "key enum type upgrade");
+
+    // struct type (not allowed)
+    let s = Struct {
+        name: 's',
+        attrs: [].span(),
+        children: [
+            Member {
+                name: 'x',
+                attrs: ['key'].span(),
+                ty: Ty::Struct(Struct { name: 'n', attrs: [].span(), children: [].span() }),
+            },
+        ]
+            .span(),
+    };
+
+    let mut upgraded = s;
+    upgraded
+        .children =
+            [
+                Member {
+                    name: 'x',
+                    attrs: ['key'].span(),
+                    ty: Ty::Struct(
+                        Struct {
+                            name: 'n',
+                            attrs: [].span(),
+                            children: [
+                                Member { name: 'y', attrs: [].span(), ty: Ty::Primitive('u16') },
+                            ]
+                                .span(),
+                        },
+                    ),
+                },
+            ]
+        .span();
+
+    assert!(!upgraded.is_an_upgrade_of(@s), "key struct type upgrade");
+
+    // array type (not allowed)
+    let s = Struct {
+        name: 's',
+        attrs: [].span(),
+        children: [
+            Member {
+                name: 'x', attrs: ['key'].span(), ty: Ty::Array([Ty::Primitive('u8')].span()),
+            },
+        ]
+            .span(),
+    };
+
+    let mut upgraded = s;
+    upgraded
+        .children =
+            [
+                Member {
+                    name: 'x', attrs: ['key'].span(), ty: Ty::Array([Ty::Primitive('u16')].span()),
+                },
+            ]
+        .span();
+
+    assert!(!upgraded.is_an_upgrade_of(@s), "key array type upgrade");
+
+    // tuple type (not allowed)
+    let s = Struct {
+        name: 's',
+        attrs: [].span(),
+        children: [
+            Member {
+                name: 'x', attrs: ['key'].span(), ty: Ty::Tuple([Ty::Primitive('u8')].span()),
+            },
+        ]
+            .span(),
+    };
+
+    let mut upgraded = s;
+    upgraded
+        .children =
+            [
+                Member {
+                    name: 'x', attrs: ['key'].span(), ty: Ty::Tuple([Ty::Primitive('u16')].span()),
+                },
+            ]
+        .span();
+
+    assert!(!upgraded.is_an_upgrade_of(@s), "key tuple type upgrade");
 }

@@ -292,7 +292,36 @@ impl StructCompareImpl of TyCompareTrait<Struct> {
 
 impl MemberCompareImpl of TyCompareTrait<Member> {
     fn is_an_upgrade_of(self: @Member, old: @Member) -> bool {
-        self.name == old.name && self.attrs == old.attrs && self.ty.is_an_upgrade_of(old.ty)
+        if self.name != old.name || self.attrs != old.attrs {
+            return false;
+        }
+
+        let mut i = 0;
+        let is_key = loop {
+            if i >= (*self).attrs.len() {
+                break false;
+            }
+
+            if *self.attrs[i] == 'key' {
+                break true;
+            }
+
+            i += 1;
+        };
+
+        if is_key {
+            match (self.ty, old.ty) {
+                (Ty::Primitive(n), Ty::Primitive(o)) => n.is_an_upgrade_of(o),
+                (Ty::Enum(n), Ty::Enum(o)) => n.is_an_upgrade_of(o),
+                (Ty::Struct(n), Ty::Struct(o)) => n == o,
+                (Ty::Array(n), Ty::Array(o)) => n == o,
+                (Ty::Tuple(n), Ty::Tuple(o)) => n == o,
+                (Ty::ByteArray, Ty::ByteArray) => true,
+                _ => false,
+            }
+        } else {
+            self.ty.is_an_upgrade_of(old.ty)
+        }
     }
 }
 
