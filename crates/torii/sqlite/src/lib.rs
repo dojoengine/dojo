@@ -845,6 +845,28 @@ fn add_columns_recursive(
         ));
     };
 
+    let modify_column =
+        |alter_table_queries: &mut Vec<String>, name: &str, sql_type: &str, sql_value: &str| {
+            // SQLite doesn't support ALTER COLUMN directly, so we need to:
+            // 1. Create a temporary table to store the current values
+            // 2. Drop the old column & index
+            // 3. Create new column with new type/constraint
+            // 4. Copy values back & create new index
+            alter_table_queries.push(format!(
+                "CREATE TEMPORARY TABLE tmp_values_{name} AS SELECT internal_id, [{name}] FROM \
+                 [{table_id}]"
+            ));
+            alter_table_queries.push(format!("DROP INDEX IF EXISTS [idx_{table_id}_{name}]"));
+            alter_table_queries.push(format!("ALTER TABLE [{table_id}] DROP COLUMN [{name}]"));
+            alter_table_queries
+                .push(format!("ALTER TABLE [{table_id}] ADD COLUMN [{name}] {sql_type}"));
+            alter_table_queries.push(format!("UPDATE [{table_id}] SET [{name}] = {sql_value}"));
+            alter_table_queries.push(format!("DROP TABLE tmp_values_{name}"));
+            alter_table_queries.push(format!(
+                "CREATE INDEX IF NOT EXISTS [idx_{table_id}_{name}] ON [{table_id}] ([{name}]);"
+            ));
+        };
+
     match ty {
         Ty::Struct(s) => {
             let struct_diff =
@@ -921,21 +943,24 @@ fn add_columns_recursive(
             let all_options =
                 e.options.iter().map(|c| format!("'{}'", c.name)).collect::<Vec<_>>().join(", ");
 
+            let sql_type = format!(
+                "TEXT CONSTRAINT [{column_name}_check] CHECK([{column_name}] IN ({all_options}))"
+            );
             if enum_diff.is_some() {
-                // For upgrades, modify the existing CHECK constraint to include new options
-                alter_table_queries.push(format!(
-                    "ALTER TABLE [{table_id}] DROP CONSTRAINT IF EXISTS [{column_name}_check]"
-                ));
-                alter_table_queries.push(format!(
-                    "ALTER TABLE [{table_id}] ADD CONSTRAINT [{column_name}_check] \
-                     CHECK([{column_name}] IN ({all_options}))"
-                ));
-            } else {
-                // For new tables, create the column with explicitly named CHECK constraint
-                let sql_type = format!(
-                    "TEXT CONSTRAINT [{column_name}_check] CHECK([{column_name}] IN \
-                     ({all_options}))"
+                // For upgrades, modify the existing option column to add the new options to the
+                // CHECK constraint We need to drop the old column and create a new
+                // one with the new CHECK constraint
+                modify_column(
+                    alter_table_queries,
+                    &column_name,
+                    &sql_type,
+                    &format!(
+                        "(SELECT [{column_name}] FROM [{table_id}] AS source WHERE \
+                         source.internal_id = [{table_id}].internal_id)"
+                    ),
                 );
+            } else {
+                // For new tables, create the column directly
                 add_column(&column_name, &sql_type);
             }
 
