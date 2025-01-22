@@ -111,6 +111,7 @@ where
         let expected_block_env = BlockEnv {
             number: expected_block_num,
             timestamp: expected_block.header.timestamp,
+            parent_hash: expected_block.header.parent_hash,
             l1_gas_prices: expected_block.header.l1_gas_prices.clone(),
             l1_data_gas_prices: expected_block.header.l1_data_gas_prices.clone(),
             sequencer_address: expected_block.header.sequencer_address,
@@ -218,6 +219,7 @@ where
         let expected_block_env = BlockEnv {
             number: expected_block_num,
             timestamp: expected_block.header.timestamp,
+            parent_hash: expected_block.header.parent_hash,
             l1_gas_prices: expected_block.header.l1_gas_prices.clone(),
             l1_data_gas_prices: expected_block.header.l1_data_gas_prices.clone(),
             sequencer_address: expected_block.header.sequencer_address,

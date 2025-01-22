@@ -55,7 +55,7 @@ impl<EF: ExecutorFactory> SayaApiServer for SayaApi<EF> {
         block_id: BlockIdOrTag,
     ) -> RpcResult<Vec<TxExecutionInfo>> {
         self.on_io_blocking_task(move |this| {
-            let provider = this.backend.blockchain.provider();
+            let provider = this.backend.blockchain();
 
             match block_id {
                 BlockIdOrTag::Tag(BlockTag::Pending) => {

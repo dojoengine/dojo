@@ -25,6 +25,7 @@ use katana_primitives::utils::class::{parse_compiled_class, parse_sierra_class};
 use katana_primitives::version::CURRENT_STARKNET_VERSION;
 use katana_primitives::{address, Felt};
 use katana_provider::providers::db::DbProvider;
+use katana_provider::test_utils::get_state_updates;
 use katana_provider::traits::block::BlockWriter;
 use katana_provider::traits::state::{StateFactoryProvider, StateProvider};
 use starknet::macros::felt;
@@ -69,7 +70,7 @@ pub fn chain() -> ChainSpec {
 /// Returns a state provider with some prefilled states.
 #[rstest::fixture]
 pub fn state_provider(chain: &ChainSpec) -> Box<dyn StateProvider> {
-    let states = chain.state_updates();
+    let states = get_state_updates(&chain.genesis);
     let provider = DbProvider::new_ephemeral();
 
     let block = SealedBlockWithStatus {

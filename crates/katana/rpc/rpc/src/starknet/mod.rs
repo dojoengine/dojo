@@ -6,6 +6,7 @@ use katana_core::backend::Backend;
 use katana_core::service::block_producer::{BlockProducer, BlockProducerMode, PendingExecutor};
 use katana_executor::{ExecutionResult, ExecutorFactory};
 use katana_pool::{TransactionPool, TxPool};
+use katana_primitives::Felt;
 use katana_primitives::block::{
     BlockHash, BlockHashOrNumber, BlockIdOrTag, BlockNumber, BlockTag, FinalityStatus,
     PartialHeader,
@@ -17,7 +18,6 @@ use katana_primitives::env::BlockEnv;
 use katana_primitives::event::MaybeForkedContinuationToken;
 use katana_primitives::transaction::{ExecutableTxWithHash, TxHash, TxWithHash};
 use katana_primitives::version::CURRENT_STARKNET_VERSION;
-use katana_primitives::Felt;
 use katana_provider::error::ProviderError;
 use katana_provider::traits::block::{BlockHashProvider, BlockIdReader, BlockNumberProvider};
 use katana_provider::traits::contract::ContractClassProvider;
@@ -26,6 +26,7 @@ use katana_provider::traits::state::{StateFactoryProvider, StateProvider, StateR
 use katana_provider::traits::transaction::{
     ReceiptProvider, TransactionProvider, TransactionStatusProvider,
 };
+use katana_rpc_types::FeeEstimate;
 use katana_rpc_types::block::{
     MaybePendingBlockWithReceipts, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs,
     PendingBlockWithReceipts, PendingBlockWithTxHashes, PendingBlockWithTxs,
@@ -40,7 +41,6 @@ use katana_rpc_types::trie::{
     ClassesProof, ContractLeafData, ContractStorageKeys, ContractStorageProofs, ContractsProof,
     GetStorageProofResponse, GlobalRoots, Nodes,
 };
-use katana_rpc_types::FeeEstimate;
 use katana_rpc_types_builder::ReceiptBuilder;
 use katana_tasks::{BlockingTaskPool, TokioTaskSpawner};
 use starknet::core::types::{
@@ -161,7 +161,7 @@ where
         let env = self.block_env_at(&block_id)?;
 
         // create the executor
-        let executor = self.inner.backend.executor_factory.with_state_and_block_env(state, env);
+        let executor = self.inner.backend.executor_factory().with_state_and_block_env(state, env);
         let results = executor.estimate_fee(transactions, flags);
 
         let mut estimates = Vec::with_capacity(results.len());
@@ -200,7 +200,7 @@ where
     }
 
     fn state(&self, block_id: &BlockIdOrTag) -> StarknetApiResult<Box<dyn StateProvider>> {
-        let provider = self.inner.backend.blockchain.provider();
+        let provider = self.inner.backend.blockchain();
 
         let state = match block_id {
             BlockIdOrTag::Tag(BlockTag::Latest) => Some(provider.latest()?),
@@ -221,7 +221,7 @@ where
     }
 
     fn block_env_at(&self, block_id: &BlockIdOrTag) -> StarknetApiResult<BlockEnv> {
-        let provider = self.inner.backend.blockchain.provider();
+        let provider = self.inner.backend.blockchain();
 
         let env = match block_id {
             BlockIdOrTag::Tag(BlockTag::Pending) => {
@@ -252,7 +252,7 @@ where
     }
 
     fn block_hash_and_number(&self) -> StarknetApiResult<(BlockHash, BlockNumber)> {
-        let provider = self.inner.backend.blockchain.provider();
+        let provider = self.inner.backend.blockchain();
         let hash = provider.latest_hash()?;
         let number = provider.latest_number()?;
         Ok((hash, number))
@@ -328,7 +328,7 @@ where
     async fn block_tx_count(&self, block_id: BlockIdOrTag) -> StarknetApiResult<u64> {
         let count = self
             .on_io_blocking_task(move |this| {
-                let provider = this.inner.backend.blockchain.provider();
+                let provider = this.inner.backend.blockchain();
 
                 let block_id: BlockHashOrNumber = match block_id {
                     BlockIdOrTag::Tag(BlockTag::Pending) => match this.pending_executor() {
@@ -359,10 +359,8 @@ where
     }
 
     async fn latest_block_number(&self) -> StarknetApiResult<BlockNumber> {
-        self.on_io_blocking_task(move |this| {
-            Ok(this.inner.backend.blockchain.provider().latest_number()?)
-        })
-        .await
+        self.on_io_blocking_task(move |this| Ok(this.inner.backend.blockchain().latest_number()?))
+            .await
     }
 
     async fn nonce_at(
@@ -405,7 +403,7 @@ where
                     let pending_txs = executor.transactions();
                     pending_txs.get(index as usize).map(|(tx, _)| tx.clone())
                 } else {
-                    let provider = &this.inner.backend.blockchain.provider();
+                    let provider = &this.inner.backend.blockchain();
 
                     let block_num = BlockIdReader::convert_block_id(provider, block_id)?
                         .map(BlockHashOrNumber::Num)
@@ -430,13 +428,7 @@ where
     async fn transaction(&self, hash: TxHash) -> StarknetApiResult<Tx> {
         let tx = self
             .on_io_blocking_task(move |this| {
-                let tx = this
-                    .inner
-                    .backend
-                    .blockchain
-                    .provider()
-                    .transaction_by_hash(hash)?
-                    .map(Tx::from);
+                let tx = this.inner.backend.blockchain().transaction_by_hash(hash)?.map(Tx::from);
 
                 let result = match tx {
                     tx @ Some(_) => tx,
@@ -470,7 +462,7 @@ where
     async fn receipt(&self, hash: Felt) -> StarknetApiResult<TxReceiptWithBlockInfo> {
         let receipt = self
             .on_io_blocking_task(move |this| {
-                let provider = this.inner.backend.blockchain.provider();
+                let provider = this.inner.backend.blockchain();
                 let receipt = ReceiptBuilder::new(hash, provider).build()?;
 
                 // If receipt is not found, check the pending block.
@@ -526,7 +518,7 @@ where
     async fn transaction_status(&self, hash: TxHash) -> StarknetApiResult<TransactionStatus> {
         let status = self
             .on_io_blocking_task(move |this| {
-                let provider = this.inner.backend.blockchain.provider();
+                let provider = this.inner.backend.blockchain();
                 let status = provider.transaction_status(hash)?;
 
                 if let Some(status) = status {
@@ -606,7 +598,7 @@ where
     ) -> StarknetApiResult<MaybePendingBlockWithTxs> {
         let block = self
             .on_io_blocking_task(move |this| {
-                let provider = this.inner.backend.blockchain.provider();
+                let provider = this.inner.backend.blockchain();
 
                 if BlockIdOrTag::Tag(BlockTag::Pending) == block_id {
                     if let Some(executor) = this.pending_executor() {
@@ -672,7 +664,7 @@ where
     ) -> StarknetApiResult<MaybePendingBlockWithReceipts> {
         let block = self
             .on_io_blocking_task(move |this| {
-                let provider = this.inner.backend.blockchain.provider();
+                let provider = this.inner.backend.blockchain();
 
                 if BlockIdOrTag::Tag(BlockTag::Pending) == block_id {
                     if let Some(executor) = this.pending_executor() {
@@ -737,7 +729,7 @@ where
     ) -> StarknetApiResult<MaybePendingBlockWithTxHashes> {
         let block = self
             .on_io_blocking_task(move |this| {
-                let provider = this.inner.backend.blockchain.provider();
+                let provider = this.inner.backend.blockchain();
 
                 if BlockIdOrTag::Tag(BlockTag::Pending) == block_id {
                     if let Some(executor) = this.pending_executor() {
@@ -803,7 +795,7 @@ where
     ) -> StarknetApiResult<MaybePendingStateUpdate> {
         let state_update = self
             .on_io_blocking_task(move |this| {
-                let provider = this.inner.backend.blockchain.provider();
+                let provider = this.inner.backend.blockchain();
 
                 let block_id = match block_id {
                     BlockIdOrTag::Number(num) => BlockHashOrNumber::Num(num),
@@ -895,7 +887,7 @@ where
         continuation_token: Option<MaybeForkedContinuationToken>,
         chunk_size: u64,
     ) -> StarknetApiResult<EventsPage> {
-        let provider = self.inner.backend.blockchain.provider();
+        let provider = self.inner.backend.blockchain();
 
         let from = self.resolve_event_block_id_if_forked(from_block)?;
         let to = self.resolve_event_block_id_if_forked(to_block)?;
@@ -1110,7 +1102,7 @@ where
         &self,
         id: BlockIdOrTag,
     ) -> StarknetApiResult<EventBlockId> {
-        let provider = self.inner.backend.blockchain.provider();
+        let provider = self.inner.backend.blockchain();
 
         let id = match id {
             BlockIdOrTag::Tag(BlockTag::Pending) => EventBlockId::Pending,
@@ -1149,7 +1141,7 @@ where
         contracts_storage_keys: Option<Vec<ContractStorageKeys>>,
     ) -> StarknetApiResult<GetStorageProofResponse> {
         self.on_io_blocking_task(move |this| {
-            let provider = this.inner.backend.blockchain.provider();
+            let provider = this.inner.backend.blockchain();
 
             let Some(block_num) = provider.convert_block_id(block_id)? else {
                 return Err(StarknetApiError::BlockNotFound);

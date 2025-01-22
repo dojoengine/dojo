@@ -27,7 +27,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         transactions: Vec<BroadcastedTx>,
         simulation_flags: Vec<SimulationFlag>,
     ) -> Result<Vec<SimulatedTransaction>, StarknetApiError> {
-        let chain_id = self.inner.backend.chain_spec.id;
+        let chain_id = self.inner.backend.chain_spec().id;
 
         let executables = transactions
             .into_iter()
@@ -65,12 +65,12 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         // If the node is run with transaction validation disabled, then we should not validate
         // even if the `SKIP_VALIDATE` flag is not set.
         let should_validate = !simulation_flags.contains(&SimulationFlag::SkipValidate)
-            && self.inner.backend.executor_factory.execution_flags().account_validation();
+            && self.inner.backend.executor_factory().execution_flags().account_validation();
 
         // If the node is run with fee charge disabled, then we should disable charing fees even
         // if the `SKIP_FEE_CHARGE` flag is not set.
         let should_skip_fee = !simulation_flags.contains(&SimulationFlag::SkipFeeCharge)
-            && self.inner.backend.executor_factory.execution_flags().fee();
+            && self.inner.backend.executor_factory().execution_flags().fee();
 
         let flags = katana_executor::ExecutionFlags::new()
             .with_account_validation(should_validate)
@@ -81,7 +81,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         let env = self.block_env_at(&block_id)?;
 
         // create the executor
-        let executor = self.inner.backend.executor_factory.with_state_and_block_env(state, env);
+        let executor = self.inner.backend.executor_factory().with_state_and_block_env(state, env);
         let results = executor.simulate(executables, flags);
 
         let mut simulated = Vec::with_capacity(results.len());
@@ -113,7 +113,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
     ) -> Result<Vec<TransactionTraceWithHash>, StarknetApiError> {
         use StarknetApiError::BlockNotFound;
 
-        let provider = self.inner.backend.blockchain.provider();
+        let provider = self.inner.backend.blockchain();
 
         let block_id: BlockHashOrNumber = match block_id {
             BlockIdOrTag::Tag(BlockTag::Pending) => match self.pending_executor() {
@@ -172,7 +172,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         }
 
         // If not found in pending block, fallback to the provider
-        let provider = self.inner.backend.blockchain.provider();
+        let provider = self.inner.backend.blockchain();
         let trace = provider.transaction_execution(tx_hash)?.ok_or(TxnHashNotFound)?;
 
         Ok(to_rpc_trace(trace))

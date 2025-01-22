@@ -90,6 +90,12 @@ lazy_static! {
     // Default account contract
     pub static ref DEFAULT_ACCOUNT_CLASS: ContractClass = parse_sierra_class(include_str!("../../../contracts/build/default_account.json")).unwrap();
     pub static ref DEFAULT_ACCOUNT_CLASS_CASM: CompiledClass = read_compiled_class_artifact(include_str!("../../../contracts/build/default_account.json"));
+
+    // Genesis account class
+    pub static ref GENESIS_ACCOUNT_CLASS: ContractClass = read_legacy_class_artifact(include_str!("../../../contracts/build/account.json"));
+
+    // Starknet UDC deployer account class
+    pub static ref UDC_DEPLOYER_ACCOUNT_CLASS: ContractClass = read_legacy_class_artifact(include_str!("../../../contracts/build/sn_udc_deployer.json"));
 }
 
 #[cfg(feature = "controller")]

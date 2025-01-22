@@ -3,6 +3,7 @@ pub use bonsai::{BitVec, MultiProof, Path, ProofNode};
 use bonsai_trie::BonsaiStorage;
 pub use bonsai_trie::{BonsaiDatabase, BonsaiPersistentDatabase, BonsaiStorageConfig};
 use katana_primitives::class::ClassHash;
+use katana_primitives::contract::{Nonce, StorageValue};
 use katana_primitives::Felt;
 use starknet_types_core::hash::{Pedersen, StarkHash};
 pub use {bitvec, bonsai_trie as bonsai};
@@ -119,11 +120,19 @@ where
 }
 
 // H(H(H(class_hash, storage_root), nonce), 0), where H is the pedersen hash
+// Reference: https://github.com/starkware-libs/cairo-lang/blob/a86e92bfde9c171c0856d7b46580c66e004922f3/src/starkware/starknet/core/os/state/commitment.cairo#L55
 pub fn compute_contract_state_hash(
     class_hash: &ClassHash,
     storage_root: &Felt,
     nonce: &Felt,
 ) -> Felt {
+    if *nonce == Nonce::ZERO
+        && *class_hash == ClassHash::ZERO
+        && *storage_root == StorageValue::ZERO
+    {
+        return Felt::ZERO;
+    }
+
     const CONTRACT_STATE_HASH_VERSION: Felt = Felt::ZERO;
     let hash = Pedersen::hash(class_hash, storage_root);
     let hash = Pedersen::hash(&hash, nonce);
@@ -147,6 +156,15 @@ mod tests {
     use starknet_types_core::hash;
 
     use super::*;
+
+    #[test]
+    fn test_compute_contract_state_hash_c1() {
+        dbg!(compute_contract_state_hash(
+            &Felt::ZERO,
+            &felt!("0x5e527d04e6ed3b3ae9a88a5411302788b8f6f6be62fce14d27a4ff7463ef3a5"),
+            &Felt::ZERO
+        ));
+    }
 
     // Taken from Pathfinder: https://github.com/eqlabs/pathfinder/blob/29f93d0d6ad8758fdcf5ae3a8bd2faad2a3bc92b/crates/merkle-tree/src/transaction.rs#L70-L88
     #[test]

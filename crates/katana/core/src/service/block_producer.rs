@@ -5,9 +5,9 @@ use std::sync::Arc;
 use std::task::{Context, Poll};
 use std::time::Duration;
 
-use futures::channel::mpsc::{channel, Receiver, Sender};
-use futures::stream::{Stream, StreamExt};
 use futures::FutureExt;
+use futures::channel::mpsc::{Receiver, Sender, channel};
+use futures::stream::{Stream, StreamExt};
 use katana_executor::{BlockExecutor, ExecutionResult, ExecutionStats, ExecutorFactory};
 use katana_pool::validation::stateful::TxValidator;
 use katana_primitives::block::{BlockHashOrNumber, ExecutableBlock, PartialHeader};
@@ -23,7 +23,7 @@ use katana_provider::traits::state::StateFactoryProvider;
 use katana_tasks::{BlockingTaskPool, BlockingTaskResult};
 use parking_lot::lock_api::RawMutex;
 use parking_lot::{Mutex, RwLock};
-use tokio::time::{interval_at, Instant, Interval};
+use tokio::time::{Instant, Interval, interval_at};
 use tracing::{error, info, trace, warn};
 
 use crate::backend::Backend;
@@ -211,21 +211,22 @@ impl<EF: ExecutorFactory> IntervalBlockProducer<EF> {
             interval
         });
 
-        let provider = backend.blockchain.provider();
+        let provider = backend.blockchain();
 
         let latest_num = provider.latest_number().unwrap();
         let mut block_env = provider.block_env_at(latest_num.into()).unwrap().unwrap();
         backend.update_block_env(&mut block_env);
 
         let state = provider.latest().unwrap();
-        let executor = backend.executor_factory.with_state_and_block_env(state, block_env.clone());
+        let executor =
+            backend.executor_factory().with_state_and_block_env(state, block_env.clone());
 
         let permit = Arc::new(Mutex::new(()));
 
         // -- build the validator using the same state and envs as the executor
         let state = executor.state();
-        let cfg = backend.executor_factory.cfg();
-        let flags = backend.executor_factory.execution_flags();
+        let cfg = backend.executor_factory().cfg();
+        let flags = backend.executor_factory().execution_flags();
         let validator =
             TxValidator::new(state, flags.clone(), cfg.clone(), block_env, permit.clone());
 
@@ -264,7 +265,7 @@ impl<EF: ExecutorFactory> IntervalBlockProducer<EF> {
 
                 // update pool validator state here ---------
 
-                let provider = self.backend.blockchain.provider();
+                let provider = self.backend.blockchain();
                 let state = self.executor.0.read().state();
                 let num = provider.latest_number().unwrap();
                 let block_env = provider.block_env_at(num.into()).unwrap().unwrap();
@@ -331,7 +332,7 @@ impl<EF: ExecutorFactory> IntervalBlockProducer<EF> {
 
     fn create_new_executor_for_next_block(&self) -> Result<PendingExecutor, BlockProductionError> {
         let backend = &self.backend;
-        let provider = backend.blockchain.provider();
+        let provider = backend.blockchain();
 
         let latest_num = provider.latest_number()?;
         let updated_state = provider.latest()?;
@@ -339,7 +340,8 @@ impl<EF: ExecutorFactory> IntervalBlockProducer<EF> {
         let mut block_env = provider.block_env_at(latest_num.into())?.unwrap();
         backend.update_block_env(&mut block_env);
 
-        let executor = backend.executor_factory.with_state_and_block_env(updated_state, block_env);
+        let executor =
+            backend.executor_factory().with_state_and_block_env(updated_state, block_env);
         Ok(PendingExecutor::new(executor))
     }
 
@@ -450,7 +452,7 @@ impl<EF: ExecutorFactory> Stream for IntervalBlockProducer<EF> {
                             Ok(executor) => {
                                 // update pool validator state here ---------
 
-                                let provider = pin.backend.blockchain.provider();
+                                let provider = pin.backend.blockchain();
                                 let state = executor.0.read().state();
                                 let num = provider.latest_number()?;
                                 let block_env = provider.block_env_at(num.into()).unwrap().unwrap();
@@ -507,7 +509,7 @@ pub struct InstantBlockProducer<EF: ExecutorFactory> {
 
 impl<EF: ExecutorFactory> InstantBlockProducer<EF> {
     pub fn new(backend: Arc<Backend<EF>>) -> Self {
-        let provider = backend.blockchain.provider();
+        let provider = backend.blockchain();
 
         let permit = Arc::new(Mutex::new(()));
 
@@ -518,8 +520,8 @@ impl<EF: ExecutorFactory> InstantBlockProducer<EF> {
             .expect("latest block env");
 
         let state = provider.latest().expect("latest state");
-        let cfg = backend.executor_factory.cfg();
-        let flags = backend.executor_factory.execution_flags();
+        let cfg = backend.executor_factory().cfg();
+        let flags = backend.executor_factory().execution_flags();
         let validator =
             TxValidator::new(state, flags.clone(), cfg.clone(), block_env, permit.clone());
 
@@ -560,7 +562,7 @@ impl<EF: ExecutorFactory> InstantBlockProducer<EF> {
 
         let transactions = transactions.into_iter().flatten().collect::<Vec<_>>();
 
-        let provider = backend.blockchain.provider();
+        let provider = backend.blockchain();
 
         // TODO: don't use the previous block env, we should create on based on the current state of
         // the l1 (to determine the proper gas prices)
@@ -571,7 +573,7 @@ impl<EF: ExecutorFactory> InstantBlockProducer<EF> {
         let parent_hash = provider.latest_hash()?;
         let latest_state = provider.latest()?;
 
-        let mut executor = backend.executor_factory.with_state(latest_state);
+        let mut executor = backend.executor_factory().with_state(latest_state);
 
         let block = ExecutableBlock {
             body: transactions,
@@ -606,7 +608,7 @@ impl<EF: ExecutorFactory> InstantBlockProducer<EF> {
 
         // update pool validator state here ---------
 
-        let provider = backend.blockchain.provider();
+        let provider = backend.blockchain();
         let state = provider.latest()?;
         let latest_num = provider.latest_number()?;
         let block_env = provider.block_env_at(latest_num.into())?.expect("latest");

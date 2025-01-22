@@ -11,13 +11,14 @@ use std::future::IntoFuture;
 use std::sync::Arc;
 
 use anyhow::Result;
-use config::rpc::RpcModuleKind;
 use config::Config;
+use config::rpc::RpcModuleKind;
 use dojo_metrics::exporters::prometheus::PrometheusRecorder;
 use dojo_metrics::{Report, Server as MetricsServer};
 use hyper::Method;
 use jsonrpsee::RpcModule;
 use katana_chain_spec::SettlementLayer;
+use katana_core::backend::Backend;
 use katana_core::backend::gas_oracle::GasOracle;
 use katana_core::backend::storage::Blockchain;
 use katana_core::backend::Backend;
@@ -28,10 +29,10 @@ use katana_core::constants::{
 use katana_core::env::BlockContextGenerator;
 use katana_core::service::block_producer::BlockProducer;
 use katana_db::mdbx::DbEnv;
-use katana_executor::implementation::blockifier::BlockifierFactory;
 use katana_executor::ExecutionFlags;
-use katana_pool::ordering::FiFo;
+use katana_executor::implementation::blockifier::BlockifierFactory;
 use katana_pool::TxPool;
+use katana_pool::ordering::FiFo;
 use katana_primitives::block::GasPrices;
 use katana_primitives::env::{CfgEnv, FeeTokenAddressses};
 use katana_rpc::cors::Cors;
@@ -96,7 +97,7 @@ impl Node {
     ///
     /// This method will start all the node process, running them until the node is stopped.
     pub async fn launch(self) -> Result<LaunchedNode> {
-        let chain = self.backend.chain_spec.id;
+        let chain = self.backend.chain_spec().id;
         info!(%chain, "Starting node.");
 
         // TODO: maybe move this to the build stage
@@ -141,7 +142,7 @@ impl Node {
         let rpc_handle = self.rpc_server.start(self.config.rpc.socket_addr()).await?;
 
         // --- start the gas oracle worker task
-        self.backend.gas_oracle.run_worker(self.task_manager.task_spawner());
+        self.backend.gas_oracle().run_worker(self.task_manager.task_spawner());
         info!(target: "node", "Gas price oracle worker started.");
 
         Ok(LaunchedNode { node: self, rpc: rpc_handle })
@@ -158,6 +159,8 @@ pub async fn build(mut config: Config) -> Result<Node> {
         // for it to be registered.
         let _ = PrometheusRecorder::install("katana")?;
     }
+
+    let genesis_block = Arc::get_mut(&mut config.chain).unwrap().block();
 
     // --- build executor factory
 
@@ -176,7 +179,7 @@ pub async fn build(mut config: Config) -> Result<Node> {
         .with_account_validation(config.dev.account_validation)
         .with_fee(config.dev.fee);
 
-    let executor_factory = Arc::new(BlockifierFactory::new(cfg_env, execution_flags));
+    let executor_factory = BlockifierFactory::new(cfg_env, execution_flags);
 
     // --- build backend
 
@@ -191,10 +194,10 @@ pub async fn build(mut config: Config) -> Result<Node> {
         (bc, None, Some(forked_client))
     } else if let Some(db_path) = &config.db.dir {
         let db = katana_db::init_db(db_path)?;
-        (Blockchain::new_with_db(db.clone(), &config.chain)?, Some(db), None)
+        (Blockchain::new_with_db(db.clone()), Some(db), None)
     } else {
         let db = katana_db::init_ephemeral_db()?;
-        (Blockchain::new_with_db(db.clone(), &config.chain)?, Some(db), None)
+        (Blockchain::new_with_db(db.clone()), Some(db), None)
     };
 
     // --- build l1 gas oracle
@@ -218,14 +221,12 @@ pub async fn build(mut config: Config) -> Result<Node> {
         )
     };
 
-    let block_context_generator = BlockContextGenerator::default().into();
-    let backend = Arc::new(Backend {
-        gas_oracle,
-        blockchain,
-        executor_factory,
-        block_context_generator,
-        chain_spec: config.chain.clone(),
-    });
+    let backend =
+        Arc::new(Backend::new(config.chain.clone(), blockchain, executor_factory, gas_oracle));
+
+    // init genesis
+
+    backend.init_genesis(genesis_block)?;
 
     // --- build block producer
 

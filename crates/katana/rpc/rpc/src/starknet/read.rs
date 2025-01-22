@@ -25,7 +25,7 @@ use super::StarknetApi;
 #[async_trait]
 impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
     async fn chain_id(&self) -> RpcResult<FeltAsHex> {
-        Ok(self.inner.backend.chain_spec.id.id().into())
+        Ok(self.inner.backend.chain_spec().id.id().into())
     }
 
     async fn get_nonce(
@@ -139,7 +139,8 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
             // get the state and block env at the specified block for function call execution
             let state = this.state(&block_id)?;
             let env = this.block_env_at(&block_id)?;
-            let executor = this.inner.backend.executor_factory.with_state_and_block_env(state, env);
+            let executor =
+                this.inner.backend.executor_factory().with_state_and_block_env(state, env);
 
             match executor.call(request) {
                 Ok(retdata) => Ok(retdata.into_iter().map(|v| v.into()).collect()),
@@ -171,7 +172,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
         block_id: BlockIdOrTag,
     ) -> RpcResult<Vec<FeeEstimate>> {
         self.on_cpu_blocking_task(move |this| {
-            let chain_id = this.inner.backend.chain_spec.id;
+            let chain_id = this.inner.backend.chain_spec().id;
 
             let transactions = request
                 .into_iter()
@@ -211,7 +212,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
             // If the node is run with transaction validation disabled, then we should not validate
             // transactions when estimating the fee even if the `SKIP_VALIDATE` flag is not set.
             let should_validate = !skip_validate
-                && this.inner.backend.executor_factory.execution_flags().account_validation();
+                && this.inner.backend.executor_factory().execution_flags().account_validation();
 
             // We don't care about the nonce when estimating the fee as the nonce value
             // doesn't affect transaction execution.
@@ -234,7 +235,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
         block_id: BlockIdOrTag,
     ) -> RpcResult<FeeEstimate> {
         self.on_cpu_blocking_task(move |this| {
-            let chain_id = this.inner.backend.chain_spec.id;
+            let chain_id = this.inner.backend.chain_spec().id;
 
             let tx = message.into_tx_with_chain_id(chain_id);
             let hash = tx.calculate_hash();

@@ -321,4 +321,13 @@ mod tests {
         // The debug info is stripped when converting to RPC format.
         assert_eq!(serde_json::to_value::<Option<()>>(None).unwrap(), class.program.debug_info);
     }
+
+    #[test]
+    fn decompress_legacy_class() {
+        let json = include_str!("../../../contracts/build/universal_deployer.json");
+        let rpc = serde_json::from_str::<RpcLegacyContractClass>(json).unwrap();
+        let class: LegacyContractClass = rpc.try_into().unwrap();
+        std::fs::write("universal_deployer.json", serde_json::to_string_pretty(&class).unwrap())
+            .unwrap();
+    }
 }

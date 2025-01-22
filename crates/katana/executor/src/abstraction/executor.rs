@@ -11,6 +11,7 @@ use crate::{
 };
 
 /// A type that can create [BlockExecutor] instance.
+#[auto_impl::auto_impl(&, Box, Arc)]
 pub trait ExecutorFactory: Send + Sync + 'static + core::fmt::Debug {
     /// Construct a new [BlockExecutor] with the given state.
     fn with_state<'a, P>(&self, state: P) -> Box<dyn BlockExecutor<'a> + 'a>

@@ -85,7 +85,7 @@ impl<EF: ExecutorFactory> MessagingService<EF> {
         match messenger.as_ref() {
             MessengerMode::Ethereum(inner) => {
                 let (block_num, txs) =
-                    inner.gather_messages(from_block, max_block, backend.chain_spec.id).await?;
+                    inner.gather_messages(from_block, max_block, backend.chain_spec().id).await?;
                 let txs_count = txs.len();
 
                 txs.into_iter().for_each(|tx| {
@@ -103,7 +103,7 @@ impl<EF: ExecutorFactory> MessagingService<EF> {
             #[cfg(feature = "starknet-messaging")]
             MessengerMode::Starknet(inner) => {
                 let (block_num, txs) =
-                    inner.gather_messages(from_block, max_block, backend.chain_spec.id).await?;
+                    inner.gather_messages(from_block, max_block, backend.chain_spec().id).await?;
                 let txs_count = txs.len();
 
                 txs.into_iter().for_each(|tx| {
@@ -126,7 +126,7 @@ impl<EF: ExecutorFactory> MessagingService<EF> {
         messenger: Arc<MessengerMode>,
     ) -> MessengerResult<Option<(u64, usize)>> {
         let Some(messages) = ReceiptProvider::receipts_by_block(
-            backend.blockchain.provider(),
+            backend.blockchain(),
             BlockHashOrNumber::Num(block_num),
         )
         .unwrap()
@@ -193,7 +193,7 @@ impl<EF: ExecutorFactory> Stream for MessagingService<EF> {
 
             if pin.msg_send_fut.is_none() {
                 let local_latest_block_num =
-                    BlockNumberProvider::latest_number(pin.backend.blockchain.provider()).unwrap();
+                    BlockNumberProvider::latest_number(pin.backend.blockchain()).unwrap();
                 if pin.send_from_block <= local_latest_block_num {
                     pin.msg_send_fut = Some(Box::pin(Self::send_messages(
                         pin.send_from_block,

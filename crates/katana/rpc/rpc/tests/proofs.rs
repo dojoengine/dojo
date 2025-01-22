@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::path::PathBuf;
 
 use assert_matches::assert_matches;
@@ -15,9 +16,9 @@ use katana_trie::{
     compute_classes_trie_value, compute_contract_state_hash, ClassesMultiProof, MultiProof,
 };
 use starknet::accounts::{Account, ConnectedAccount, SingleOwnerAccount};
-use starknet::core::types::BlockTag;
+use starknet::core::types::{BlockTag, MaybePendingStateUpdate};
 use starknet::providers::jsonrpc::HttpTransport;
-use starknet::providers::JsonRpcClient;
+use starknet::providers::{JsonRpcClient, Provider};
 use starknet::signers::LocalWallet;
 
 mod common;
@@ -75,35 +76,42 @@ async fn proofs_limit() {
 }
 
 #[tokio::test]
-async fn genesis_states() {
+async fn genesis_state_updates() {
     let cfg = get_default_test_config(SequencingConfig::default());
 
     let sequencer = TestSequencer::start(cfg).await;
-    let genesis_states = sequencer.backend().chain_spec.state_updates();
+    let rpc = sequencer.provider();
+
+    let state_updates = rpc.get_state_update(BlockIdOrTag::Number(0)).await.unwrap();
+    let genesis_state_updates = match state_updates {
+        MaybePendingStateUpdate::Update(updates) => updates.state_diff,
+        _ => panic!("must not be pending"),
+    };
 
     // We need to use the jsonrpsee client because `starknet-rs` doesn't yet support RPC 0.8.0
     let client = HttpClientBuilder::default().build(sequencer.url()).unwrap();
 
     // Check class declarations
-    let genesis_classes =
-        genesis_states.state_updates.declared_classes.keys().cloned().collect::<Vec<ClassHash>>();
+    let genesis_classes = genesis_state_updates
+        .declared_classes
+        .iter()
+        .map(|e| e.class_hash)
+        .collect::<Vec<ClassHash>>();
 
     // Check contract deployments
-    let genesis_contracts = genesis_states
-        .state_updates
+    let genesis_contracts = genesis_state_updates
         .deployed_contracts
-        .keys()
-        .cloned()
+        .iter()
+        .map(|e| e.address.into())
         .collect::<Vec<ContractAddress>>();
 
     // Check contract storage
-    let genesis_contract_storages = genesis_states
-        .state_updates
-        .storage_updates
+    let genesis_contract_storages = genesis_state_updates
+        .storage_diffs
         .iter()
-        .map(|(address, keys)| ContractStorageKeys {
-            address: *address,
-            keys: keys.keys().cloned().collect(),
+        .map(|e| ContractStorageKeys {
+            address: e.address.into(),
+            keys: e.storage_entries.iter().map(|e| e.key).collect(),
         })
         .collect::<Vec<ContractStorageKeys>>();
 
@@ -129,11 +137,10 @@ async fn genesis_states() {
     );
 
     // Compute the classes trie values
-    let class_trie_entries = genesis_states
-        .state_updates
+    let class_trie_entries = genesis_state_updates
         .declared_classes
-        .values()
-        .map(|compiled_hash| compute_classes_trie_value(*compiled_hash))
+        .iter()
+        .map(|e| compute_classes_trie_value(e.compiled_class_hash))
         .collect::<Vec<Felt>>();
 
     assert_eq!(class_trie_entries, classes_verification_result);
@@ -162,7 +169,17 @@ async fn genesis_states() {
     // -----------------------------------------------------------------------
     // Verify contracts proofs
 
-    let storages_updates = &genesis_states.state_updates.storage_updates.values();
+    let storage_updates: HashMap<ContractAddress, HashMap<StorageKey, StorageValue>> =
+        HashMap::new();
+
+    let storages_updates =
+        &genesis_state_updates.storage_diffs.iter().fold(storage_updates, |mut acc, e| {
+            let storages = e.storage_entries.iter().map(|e| (e.key, e.value)).collect();
+            acc.insert(e.address.into(), storages);
+            acc
+        });
+
+    let storages_updates = storages_updates.values();
     let storages_proofs = proofs.contracts_storage_proofs.nodes;
 
     // The order of which the proofs are returned is of the same order of the proofs requests.

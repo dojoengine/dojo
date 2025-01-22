@@ -23,15 +23,14 @@ use katana_node::config::{Config, SequencingConfig};
 use katana_primitives::genesis::allocation::DevAllocationsGenerator;
 use katana_primitives::genesis::constant::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;
 use serde::{Deserialize, Serialize};
-use tracing::{info, Subscriber};
+use tracing::{Subscriber, info};
 use tracing_log::LogTracer;
-use tracing_subscriber::{fmt, EnvFilter};
+use tracing_subscriber::{EnvFilter, fmt};
 use url::Url;
 
 use crate::file::NodeArgsConfig;
 use crate::options::*;
-use crate::utils;
-use crate::utils::{parse_seed, LogFormat};
+use crate::utils::{LogFormat, parse_seed};
 
 pub(crate) const LOG_TARGET: &str = "katana::cli";
 
@@ -126,7 +125,7 @@ impl NodeArgs {
         let node = katana_node::build(config).await.context("failed to build node")?;
 
         if !self.silent {
-            utils::print_intro(self, &node.backend.chain_spec);
+            crate::utils::print_intro(self, node.backend.chain_spec());
         }
 
         // Launch the node
@@ -417,7 +416,7 @@ mod test {
         DEFAULT_INVOCATION_MAX_STEPS, DEFAULT_VALIDATION_MAX_STEPS,
     };
     use katana_primitives::chain::ChainId;
-    use katana_primitives::{address, felt, ContractAddress, Felt};
+    use katana_primitives::{ContractAddress, Felt, address, felt};
     use katana_rpc::cors::HeaderValue;
 
     use super::*;

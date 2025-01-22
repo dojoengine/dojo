@@ -69,7 +69,7 @@ impl<EF: ExecutorFactory> ToriiApiServer for ToriiApi<EF> {
                 let mut transactions = Vec::new();
                 let mut next_cursor = cursor;
 
-                let provider = this.backend.blockchain.provider();
+                let provider = this.backend.blockchain();
                 let latest_block_number = provider.latest_number().map_err(ToriiApiError::from)?;
 
                 if cursor.block_number > latest_block_number + 1 {

@@ -115,11 +115,8 @@ pub mod json {
         // parse the controller class json file
         let json = serde_json::from_str::<Value>(CONTROLLER_SIERRA_ARTIFACT)?;
 
-        let class = GenesisClassJson {
-            class_hash: None,
-            class: json.into(),
-            name: Some(CONTROLLER_CLASS_NAME.to_string()),
-        };
+        let class =
+            GenesisClassJson { class: json.into(), name: Some(CONTROLLER_CLASS_NAME.to_string()) };
 
         genesis.classes.push(class);
 

@@ -14,7 +14,7 @@ use jsonrpsee::http_client::HttpClientBuilder;
 async fn test_next_block_timestamp_in_past() {
     let sequencer = create_test_sequencer().await;
     let backend = sequencer.backend();
-    let provider = backend.blockchain.provider();
+    let provider = backend.blockchain();
 
     // Create a jsonrpsee client for the DevApi
     let client = HttpClientBuilder::default().build(sequencer.url()).unwrap();
@@ -41,7 +41,7 @@ async fn test_next_block_timestamp_in_past() {
 async fn test_set_next_block_timestamp_in_future() {
     let sequencer = create_test_sequencer().await;
     let backend = sequencer.backend();
-    let provider = backend.blockchain.provider();
+    let provider = backend.blockchain();
 
     // Create a jsonrpsee client for the DevApi
     let client = HttpClientBuilder::default().build(sequencer.url()).unwrap();
@@ -68,7 +68,7 @@ async fn test_set_next_block_timestamp_in_future() {
 async fn test_increase_next_block_timestamp() {
     let sequencer = create_test_sequencer().await;
     let backend = sequencer.backend();
-    let provider = backend.blockchain.provider();
+    let provider = backend.blockchain();
 
     // Create a jsonrpsee client for the DevApi
     let client = HttpClientBuilder::default().build(sequencer.url()).unwrap();

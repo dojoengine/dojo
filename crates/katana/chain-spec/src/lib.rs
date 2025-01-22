@@ -1,32 +1,40 @@
-use std::collections::BTreeMap;
+use std::cell::{OnceCell, RefCell};
 use std::fs::File;
 use std::io::BufReader;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use alloy_primitives::U256;
 use anyhow::{Context, Result};
-use katana_primitives::block::{Block, Header};
+use katana_primitives::block::{ExecutableBlock, PartialHeader};
 use katana_primitives::chain::ChainId;
-use katana_primitives::class::ClassHash;
-use katana_primitives::contract::ContractAddress;
+use katana_primitives::class::{ClassHash, ContractClass};
+use katana_primitives::contract::{ContractAddress, Nonce};
 use katana_primitives::da::L1DataAvailabilityMode;
-use katana_primitives::genesis::allocation::{DevAllocationsGenerator, GenesisAllocation};
+use katana_primitives::genesis::allocation::{
+    DevAllocationsGenerator, DevGenesisAccount, GenesisAccountAlloc,
+};
 use katana_primitives::genesis::constant::{
-    get_fee_token_balance_base_storage_address, DEFAULT_ACCOUNT_CLASS_PUBKEY_STORAGE_SLOT,
-    DEFAULT_ETH_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CLASS, DEFAULT_LEGACY_ERC20_CLASS_HASH,
-    DEFAULT_LEGACY_UDC_CLASS, DEFAULT_LEGACY_UDC_CLASS_HASH, DEFAULT_PREFUNDED_ACCOUNT_BALANCE,
-    DEFAULT_STRK_FEE_TOKEN_ADDRESS, DEFAULT_UDC_ADDRESS, ERC20_DECIMAL_STORAGE_SLOT,
-    ERC20_NAME_STORAGE_SLOT, ERC20_SYMBOL_STORAGE_SLOT, ERC20_TOTAL_SUPPLY_STORAGE_SLOT,
+    DEFAULT_ACCOUNT_CLASS, DEFAULT_ETH_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CLASS,
+    DEFAULT_LEGACY_UDC_CLASS, DEFAULT_PREFUNDED_ACCOUNT_BALANCE, DEFAULT_STRK_FEE_TOKEN_ADDRESS,
+    GENESIS_ACCOUNT_CLASS,
 };
 use katana_primitives::genesis::json::GenesisJson;
 use katana_primitives::genesis::Genesis;
-use katana_primitives::state::StateUpdatesWithClasses;
+use katana_primitives::transaction::{
+    DeclareTx, DeclareTxV0, DeclareTxV2, DeclareTxWithClass, DeployAccountTx, DeployAccountTxV1,
+    ExecutableTx, ExecutableTxWithHash, InvokeTx, InvokeTxV1,
+};
 use katana_primitives::utils::split_u256;
+use katana_primitives::utils::transaction::compute_deploy_account_v1_tx_hash;
 use katana_primitives::version::CURRENT_STARKNET_VERSION;
-use katana_primitives::{eth, Felt};
+use katana_primitives::{eth, felt, Felt};
 use lazy_static::lazy_static;
+use num_traits::FromPrimitive;
 use serde::{Deserialize, Serialize};
-use starknet::core::utils::cairo_short_string_to_felt;
+use starknet::core::utils::{get_contract_address, get_selector_from_name};
+use starknet::macros::short_string;
+use starknet::signers::SigningKey;
 use url::Url;
 
 /// The rollup chain specification.
@@ -132,69 +140,21 @@ impl ChainSpec {
         Ok(())
     }
 
-    pub fn block(&self) -> Block {
-        let header = Header {
-            state_diff_length: 0,
+    pub fn block(&mut self) -> ExecutableBlock {
+        let header = PartialHeader {
             protocol_version: CURRENT_STARKNET_VERSION,
             number: self.genesis.number,
             timestamp: self.genesis.timestamp,
-            events_count: 0,
-            transaction_count: 0,
-            events_commitment: Felt::ZERO,
-            receipts_commitment: Felt::ZERO,
-            state_diff_commitment: Felt::ZERO,
-            transactions_commitment: Felt::ZERO,
-            state_root: self.genesis.state_root,
             parent_hash: self.genesis.parent_hash,
             l1_da_mode: L1DataAvailabilityMode::Calldata,
             l1_gas_prices: self.genesis.gas_prices.clone(),
             l1_data_gas_prices: self.genesis.gas_prices.clone(),
             sequencer_address: self.genesis.sequencer_address,
         };
-        Block { header, body: Vec::new() }
-    }
 
-    // this method will include the ETH and STRK fee tokens, and the UDC
-    pub fn state_updates(&self) -> StateUpdatesWithClasses {
-        let mut states = StateUpdatesWithClasses::default();
+        let transactions = GenesisTransactionsBuilder::new(self).build();
 
-        for (class_hash, class) in &self.genesis.classes {
-            let class_hash = *class_hash;
-
-            if class.class.is_legacy() {
-                states.state_updates.deprecated_declared_classes.insert(class_hash);
-            } else {
-                states.state_updates.declared_classes.insert(class_hash, class.compiled_class_hash);
-            }
-
-            states.classes.insert(class_hash, class.class.as_ref().clone());
-        }
-
-        for (address, alloc) in &self.genesis.allocations {
-            let address = *address;
-
-            if let Some(hash) = alloc.class_hash() {
-                states.state_updates.deployed_contracts.insert(address, hash);
-            }
-
-            if let Some(nonce) = alloc.nonce() {
-                states.state_updates.nonce_updates.insert(address, nonce);
-            }
-
-            let mut storage = alloc.storage().cloned().unwrap_or_default();
-            if let Some(pub_key) = alloc.public_key() {
-                storage.insert(DEFAULT_ACCOUNT_CLASS_PUBKEY_STORAGE_SLOT, pub_key);
-            }
-
-            states.state_updates.storage_updates.insert(address, storage);
-        }
-
-        //-- Fee tokens
-        add_default_fee_tokens(&mut states, &self.genesis);
-        // -- UDC
-        add_default_udc(&mut states);
-
-        states
+        ExecutableBlock { header, body: transactions }
     }
 }
 
@@ -233,537 +193,299 @@ lazy_static! {
         let id = ChainId::parse("KATANA").unwrap();
         let genesis = Genesis::default();
         let fee_contracts = FeeContracts { eth: DEFAULT_ETH_FEE_TOKEN_ADDRESS, strk: DEFAULT_STRK_FEE_TOKEN_ADDRESS };
-
-        ChainSpec {
-            id,
-            genesis,
-            fee_contracts,
-            settlement: None,
-        }
+        ChainSpec { id, genesis, fee_contracts, settlement: None }
     };
 }
 
-fn add_default_fee_tokens(states: &mut StateUpdatesWithClasses, genesis: &Genesis) {
-    // declare erc20 token contract
-    states
-        .classes
-        .entry(DEFAULT_LEGACY_ERC20_CLASS_HASH)
-        .or_insert_with(|| DEFAULT_LEGACY_ERC20_CLASS.clone());
-
-    // -- ETH
-    add_fee_token(
-        states,
-        "Ether",
-        "ETH",
-        18,
-        DEFAULT_ETH_FEE_TOKEN_ADDRESS,
-        DEFAULT_LEGACY_ERC20_CLASS_HASH,
-        &genesis.allocations,
-    );
-
-    // -- STRK
-    add_fee_token(
-        states,
-        "Starknet Token",
-        "STRK",
-        18,
-        DEFAULT_STRK_FEE_TOKEN_ADDRESS,
-        DEFAULT_LEGACY_ERC20_CLASS_HASH,
-        &genesis.allocations,
-    );
+struct GenesisTransactionsBuilder<'a> {
+    chain_spec: &'a mut ChainSpec,
+    master_address: OnceCell<ContractAddress>,
+    master_signer: SigningKey,
+    fee_token: OnceCell<ContractAddress>,
+    transactions: RefCell<Vec<ExecutableTxWithHash>>,
+    master_nonce: RefCell<Nonce>,
 }
 
-fn add_fee_token(
-    states: &mut StateUpdatesWithClasses,
-    name: &str,
-    symbol: &str,
-    decimals: u8,
-    address: ContractAddress,
-    class_hash: ClassHash,
-    allocations: &BTreeMap<ContractAddress, GenesisAllocation>,
-) {
-    let mut storage = BTreeMap::new();
-    let mut total_supply = U256::ZERO;
-
-    // --- set the ERC20 balances for each allocations that have a balance
-
-    for (address, alloc) in allocations {
-        if let Some(balance) = alloc.balance() {
-            total_supply += balance;
-            let (low, high) = split_u256(balance);
-
-            // the base storage address for a standard ERC20 contract balance
-            let bal_base_storage_var = get_fee_token_balance_base_storage_address(*address);
-
-            // the storage address of low u128 of the balance
-            let low_bal_storage_var = bal_base_storage_var;
-            // the storage address of high u128 of the balance
-            let high_bal_storage_var = bal_base_storage_var + Felt::ONE;
-
-            storage.insert(low_bal_storage_var, low);
-            storage.insert(high_bal_storage_var, high);
+impl<'a> GenesisTransactionsBuilder<'a> {
+    fn new(chain_spec: &'a mut ChainSpec) -> Self {
+        Self {
+            chain_spec,
+            fee_token: OnceCell::new(),
+            master_address: OnceCell::new(),
+            transactions: RefCell::new(Vec::new()),
+            master_nonce: RefCell::new(Nonce::ZERO),
+            master_signer: SigningKey::from_secret_scalar(felt!("0xa55")),
         }
     }
 
-    // --- ERC20 metadata
-
-    let name = cairo_short_string_to_felt(name).unwrap();
-    let symbol = cairo_short_string_to_felt(symbol).unwrap();
-    let decimals = decimals.into();
-    let (total_supply_low, total_supply_high) = split_u256(total_supply);
-
-    storage.insert(ERC20_NAME_STORAGE_SLOT, name);
-    storage.insert(ERC20_SYMBOL_STORAGE_SLOT, symbol);
-    storage.insert(ERC20_DECIMAL_STORAGE_SLOT, decimals);
-    storage.insert(ERC20_TOTAL_SUPPLY_STORAGE_SLOT, total_supply_low);
-    storage.insert(ERC20_TOTAL_SUPPLY_STORAGE_SLOT + Felt::ONE, total_supply_high);
-
-    states.state_updates.deployed_contracts.insert(address, class_hash);
-    states.state_updates.storage_updates.insert(address, storage);
-}
-
-fn add_default_udc(states: &mut StateUpdatesWithClasses) {
-    // declare UDC class
-    states
-        .classes
-        .entry(DEFAULT_LEGACY_UDC_CLASS_HASH)
-        .or_insert_with(|| DEFAULT_LEGACY_UDC_CLASS.clone());
-
-    states.state_updates.deprecated_declared_classes.insert(DEFAULT_LEGACY_UDC_CLASS_HASH);
-
-    // deploy UDC contract
-    states
-        .state_updates
-        .deployed_contracts
-        .entry(DEFAULT_UDC_ADDRESS)
-        .or_insert(DEFAULT_LEGACY_UDC_CLASS_HASH);
-}
-
-#[cfg(test)]
-mod tests {
-
-    use std::str::FromStr;
-
-    use alloy_primitives::U256;
-    use katana_primitives::address;
-    use katana_primitives::block::{Block, GasPrices, Header};
-    use katana_primitives::da::L1DataAvailabilityMode;
-    use katana_primitives::genesis::allocation::{
-        GenesisAccount, GenesisAccountAlloc, GenesisContractAlloc,
-    };
-    #[cfg(feature = "controller")]
-    use katana_primitives::genesis::constant::{CONTROLLER_ACCOUNT_CLASS, CONTROLLER_CLASS_HASH};
-    use katana_primitives::genesis::constant::{
-        DEFAULT_ACCOUNT_CLASS, DEFAULT_ACCOUNT_CLASS_HASH,
-        DEFAULT_ACCOUNT_CLASS_PUBKEY_STORAGE_SLOT, DEFAULT_ACCOUNT_COMPILED_CLASS_HASH,
-        DEFAULT_LEGACY_ERC20_CLASS, DEFAULT_LEGACY_ERC20_COMPILED_CLASS_HASH,
-        DEFAULT_LEGACY_UDC_CLASS, DEFAULT_LEGACY_UDC_COMPILED_CLASS_HASH,
-    };
-    use katana_primitives::genesis::GenesisClass;
-    use katana_primitives::version::CURRENT_STARKNET_VERSION;
-    use starknet::macros::felt;
-
-    use super::*;
-
-    #[test]
-    fn chainspec_load_store_rt() {
-        let chainspec = ChainSpec::default();
-
-        // Create a temporary file and store the ChainSpec
-        let temp = tempfile::NamedTempFile::new().unwrap();
-        chainspec.clone().store(temp.path()).unwrap();
-
-        // Load the ChainSpec back from the file
-        let loaded_chainspec = ChainSpec::load(temp.path()).unwrap();
-
-        similar_asserts::assert_eq!(chainspec, loaded_chainspec);
-    }
-
-    #[test]
-    fn genesis_block_and_state_updates() {
-        // setup initial states to test
-
-        let classes = BTreeMap::from([
-            (
-                DEFAULT_LEGACY_UDC_CLASS_HASH,
-                GenesisClass {
-                    class: DEFAULT_LEGACY_UDC_CLASS.clone().into(),
-                    compiled_class_hash: DEFAULT_LEGACY_UDC_COMPILED_CLASS_HASH,
-                },
-            ),
-            (
-                DEFAULT_LEGACY_ERC20_CLASS_HASH,
-                GenesisClass {
-                    class: DEFAULT_LEGACY_ERC20_CLASS.clone().into(),
-                    compiled_class_hash: DEFAULT_LEGACY_ERC20_COMPILED_CLASS_HASH,
-                },
-            ),
-            (
-                DEFAULT_ACCOUNT_CLASS_HASH,
-                GenesisClass {
-                    compiled_class_hash: DEFAULT_ACCOUNT_COMPILED_CLASS_HASH,
-                    class: DEFAULT_ACCOUNT_CLASS.clone().into(),
-                },
-            ),
-            #[cfg(feature = "controller")]
-            (
-                CONTROLLER_CLASS_HASH,
-                GenesisClass {
-                    compiled_class_hash: CONTROLLER_CLASS_HASH,
-                    class: CONTROLLER_ACCOUNT_CLASS.clone().into(),
-                },
-            ),
-        ]);
-
-        let allocations = [
-            (
-                address!("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"),
-                GenesisAllocation::Account(GenesisAccountAlloc::Account(GenesisAccount {
-                    public_key: felt!(
-                        "0x01ef15c18599971b7beced415a40f0c7deacfd9b0d1819e03d723d8bc943cfca"
-                    ),
-                    balance: Some(U256::from_str("0xD3C21BCECCEDA1000000").unwrap()),
-                    class_hash: DEFAULT_ACCOUNT_CLASS_HASH,
-                    nonce: Some(felt!("0x99")),
-                    storage: Some(BTreeMap::from([
-                        (felt!("0x1"), felt!("0x1")),
-                        (felt!("0x2"), felt!("0x2")),
-                    ])),
-                })),
-            ),
-            (
-                address!("0xdeadbeef"),
-                GenesisAllocation::Contract(GenesisContractAlloc {
-                    balance: Some(U256::from_str("0xD3C21BCECCEDA1000000").unwrap()),
-                    class_hash: Some(DEFAULT_ACCOUNT_CLASS_HASH),
-                    nonce: Some(felt!("0x100")),
-                    storage: Some(BTreeMap::from([
-                        (felt!("0x100"), felt!("0x111")),
-                        (felt!("0x200"), felt!("0x222")),
-                    ])),
-                }),
-            ),
-            (
-                address!("0x2"),
-                GenesisAllocation::Account(GenesisAccountAlloc::Account(GenesisAccount {
-                    public_key: felt!("0x2"),
-                    balance: Some(U256::ZERO),
-                    class_hash: DEFAULT_ACCOUNT_CLASS_HASH,
-                    nonce: None,
-                    storage: None,
-                })),
-            ),
-        ];
-        let chain_spec = ChainSpec {
-            id: ChainId::SEPOLIA,
-            genesis: Genesis {
-                classes,
-                allocations: BTreeMap::from(allocations.clone()),
-                number: 0,
-                timestamp: 5123512314u64,
-                state_root: felt!("0x99"),
-                parent_hash: felt!("0x999"),
-                sequencer_address: address!("0x100"),
-                gas_prices: GasPrices { eth: 1111, strk: 2222 },
-            },
-            fee_contracts: FeeContracts {
-                eth: DEFAULT_ETH_FEE_TOKEN_ADDRESS,
-                strk: DEFAULT_STRK_FEE_TOKEN_ADDRESS,
-            },
-            settlement: None,
-        };
-
-        // setup expected storage values
-        let expected_block = Block {
-            header: Header {
-                state_diff_length: 0,
-                events_commitment: Felt::ZERO,
-                receipts_commitment: Felt::ZERO,
-                state_diff_commitment: Felt::ZERO,
-                transactions_commitment: Felt::ZERO,
-                number: chain_spec.genesis.number,
-                timestamp: chain_spec.genesis.timestamp,
-                state_root: chain_spec.genesis.state_root,
-                parent_hash: chain_spec.genesis.parent_hash,
-                sequencer_address: chain_spec.genesis.sequencer_address,
-                l1_gas_prices: chain_spec.genesis.gas_prices.clone(),
-                l1_data_gas_prices: chain_spec.genesis.gas_prices.clone(),
-                l1_da_mode: L1DataAvailabilityMode::Calldata,
-                protocol_version: CURRENT_STARKNET_VERSION,
-                transaction_count: 0,
-                events_count: 0,
-            },
-            body: Vec::new(),
-        };
-
-        let actual_block = chain_spec.block();
-        let actual_state_updates = chain_spec.state_updates();
-
-        similar_asserts::assert_eq!(actual_block, expected_block);
-
-        if cfg!(feature = "controller") {
-            assert!(actual_state_updates.classes.len() == 4);
-        } else {
-            assert!(actual_state_updates.classes.len() == 3);
+    fn legacy_declare(&self, class: ContractClass) -> ClassHash {
+        if matches!(class, ContractClass::Class(..)) {
+            panic!("genesis declare can only support legacy classes")
         }
 
-        assert_eq!(
-            actual_state_updates
-                .state_updates
-                .deprecated_declared_classes
-                .get(&DEFAULT_LEGACY_ERC20_CLASS_HASH),
-            Some(&DEFAULT_LEGACY_ERC20_COMPILED_CLASS_HASH),
-        );
-        assert_eq!(
-            actual_state_updates.classes.get(&DEFAULT_LEGACY_ERC20_CLASS_HASH),
-            Some(&DEFAULT_LEGACY_ERC20_CLASS.clone())
+        let class = Arc::new(class);
+        let class_hash = class.class_hash().unwrap();
+
+        let transaction = ExecutableTx::Declare(DeclareTxWithClass {
+            transaction: DeclareTx::V0(DeclareTxV0 {
+                sender_address: Felt::ONE.into(),
+                chain_id: self.chain_spec.id,
+                signature: Vec::new(),
+                class_hash,
+                max_fee: 0,
+            }),
+            class,
+        });
+
+        let tx_hash = transaction.compute_hash(false);
+        self.transactions.borrow_mut().push(ExecutableTxWithHash { hash: tx_hash, transaction });
+
+        class_hash
+    }
+
+    fn declare(&self, class: ContractClass) -> ClassHash {
+        let nonce = self.master_nonce.replace_with(|&mut n| n + Felt::ONE);
+        let sender_address = *self.master_address.get().expect("must be initialized");
+
+        let class_hash = class.class_hash().unwrap();
+        let compiled_class_hash = class.clone().compile().unwrap().class_hash().unwrap();
+
+        let mut transaction = DeclareTxV2 {
+            chain_id: self.chain_spec.id,
+            signature: Vec::new(),
+            compiled_class_hash,
+            sender_address,
+            class_hash,
+            max_fee: 0,
+            nonce,
+        };
+
+        let hash = DeclareTx::V2(transaction.clone()).calculate_hash(false);
+        let signature = self.master_signer.sign(&hash).unwrap();
+        transaction.signature = vec![signature.r, signature.s];
+
+        self.transactions.borrow_mut().push(ExecutableTxWithHash {
+            transaction: ExecutableTx::Declare(DeclareTxWithClass {
+                transaction: DeclareTx::V2(transaction),
+                class: class.into(),
+            }),
+            hash,
+        });
+
+        class_hash
+    }
+
+    fn deploy(&self, class: ClassHash, ctor_args: Vec<Felt>) -> ContractAddress {
+        use std::iter;
+
+        const DEPLOY_CONTRACT_SELECTOR: &str = "deploy_contract";
+        let master_address = *self.master_address.get().expect("must be initialized");
+
+        let salt = Felt::ZERO;
+        let contract_address = get_contract_address(salt, class, &ctor_args, Felt::ZERO);
+
+        let ctor_args_len = Felt::from_usize(ctor_args.len()).unwrap();
+        let args: Vec<Felt> = iter::once(class) // class_hash
+            .chain(iter::once(salt)) // contract_address_salt
+            .chain(iter::once(ctor_args_len)) // constructor_calldata_len
+            .chain(ctor_args) // constructor_calldata
+            .chain(iter::once(Felt::ONE)) // deploy_from_zero
+            .collect();
+
+        self.invoke(master_address, DEPLOY_CONTRACT_SELECTOR, args);
+
+        contract_address.into()
+    }
+
+    fn invoke(&self, contract: ContractAddress, function: &str, args: Vec<Felt>) {
+        use std::iter;
+
+        let nonce = self.master_nonce.replace_with(|&mut n| n + Felt::ONE);
+        let sender_address = *self.master_address.get().expect("must be initialized");
+        let selector = get_selector_from_name(function).expect("valid function selector");
+
+        let args_len = Felt::from_usize(args.len()).unwrap();
+        let calldata: Vec<Felt> = iter::once(Felt::ONE)
+	        // --- call array arguments
+            .chain(iter::once(contract.into()))
+            .chain(iter::once(selector))
+            .chain(iter::once(Felt::ZERO))
+            .chain(iter::once(args_len))
+            .chain(iter::once(args_len))
+            .chain(args)
+            .collect();
+
+        let mut transaction = InvokeTxV1 {
+            chain_id: self.chain_spec.id,
+            signature: Vec::new(),
+            sender_address,
+            max_fee: 0,
+            calldata,
+            nonce,
+        };
+
+        let tx_hash = InvokeTx::V1(transaction.clone()).calculate_hash(false);
+        let signature = self.master_signer.sign(&tx_hash).unwrap();
+        transaction.signature = vec![signature.r, signature.s];
+
+        self.transactions.borrow_mut().push(ExecutableTxWithHash {
+            transaction: ExecutableTx::Invoke(InvokeTx::V1(transaction)),
+            hash: tx_hash,
+        });
+    }
+
+    fn deploy_predeployed_account(&self, account: &DevGenesisAccount) -> ContractAddress {
+        // The salt used in `GenesisAccount::new()` to compute the contract address
+        const SALT: Felt = felt!("666");
+
+        let signer = SigningKey::from_secret_scalar(account.private_key);
+        let pubkey = signer.verifying_key().scalar();
+
+        let class_hash = account.class_hash;
+        let calldata = vec![pubkey];
+        let account_address = get_contract_address(SALT, class_hash, &calldata, Felt::ZERO);
+
+        let tx_hash = compute_deploy_account_v1_tx_hash(
+            account_address,
+            &calldata,
+            class_hash,
+            SALT,
+            0,
+            self.chain_spec.id.into(),
+            Felt::ZERO,
+            false,
         );
 
-        assert_eq!(
-            actual_state_updates.classes.get(&DEFAULT_LEGACY_ERC20_CLASS_HASH),
-            Some(&*DEFAULT_LEGACY_ERC20_CLASS),
+        let signature = signer.sign(&tx_hash).unwrap();
+
+        // deploy account tx
+
+        let transaction = ExecutableTx::DeployAccount(DeployAccountTx::V1(DeployAccountTxV1 {
+            signature: vec![signature.r, signature.s],
+            contract_address: account_address.into(),
+            constructor_calldata: calldata,
+            chain_id: self.chain_spec.id,
+            contract_address_salt: SALT,
+            nonce: Felt::ZERO,
+            max_fee: 0,
+            class_hash,
+        }));
+
+        let tx_hash = transaction.compute_hash(false);
+        self.transactions.borrow_mut().push(ExecutableTxWithHash { hash: tx_hash, transaction });
+
+        account_address.into()
+    }
+
+    fn build_master_account(&self) {
+        // Declare master account class
+        let account_class_hash = self.legacy_declare(GENESIS_ACCOUNT_CLASS.clone());
+
+        // Deploy master account
+        let master_pubkey = self.master_signer.verifying_key().scalar();
+        let calldata = vec![master_pubkey];
+        let salt = Felt::ONE;
+        let master_address = get_contract_address(salt, account_class_hash, &calldata, Felt::ZERO);
+
+        self.master_address.set(master_address.into()).expect("must be empty");
+
+        let deploy_account_tx_hash = compute_deploy_account_v1_tx_hash(
+            master_address,
+            &calldata,
+            account_class_hash,
+            salt,
+            0,
+            self.chain_spec.id.into(),
+            Felt::ZERO,
+            false,
         );
 
-        assert_eq!(
-            actual_state_updates
-                .state_updates
-                .deployed_contracts
-                .get(&DEFAULT_ETH_FEE_TOKEN_ADDRESS),
-            Some(&DEFAULT_LEGACY_ERC20_CLASS_HASH),
-            "The ETH fee token contract should be created"
-        );
-        assert_eq!(
-            actual_state_updates
-                .state_updates
-                .deployed_contracts
-                .get(&DEFAULT_STRK_FEE_TOKEN_ADDRESS),
-            Some(&DEFAULT_LEGACY_ERC20_CLASS_HASH),
-            "The STRK fee token contract should be created"
-        );
+        let signature = self.master_signer.sign(&deploy_account_tx_hash).unwrap();
 
-        assert_eq!(
-            actual_state_updates
-                .state_updates
-                .deprecated_declared_classes
-                .get(&DEFAULT_LEGACY_UDC_CLASS_HASH),
-            Some(&DEFAULT_LEGACY_UDC_COMPILED_CLASS_HASH),
-            "The default universal deployer class should be declared"
-        );
+        let transaction = ExecutableTx::DeployAccount(DeployAccountTx::V1(DeployAccountTxV1 {
+            signature: vec![signature.r, signature.s],
+            nonce: Felt::ZERO,
+            max_fee: 0,
+            contract_address_salt: salt,
+            contract_address: master_address.into(),
+            constructor_calldata: calldata,
+            class_hash: account_class_hash,
+            chain_id: self.chain_spec.id,
+        }));
 
-        assert_eq!(
-            actual_state_updates.classes.get(&DEFAULT_LEGACY_UDC_CLASS_HASH),
-            Some(&*DEFAULT_LEGACY_UDC_CLASS),
-            "The default universal deployer casm class should be declared"
-        );
-        assert_eq!(
-            actual_state_updates.classes.get(&DEFAULT_LEGACY_UDC_CLASS_HASH),
-            Some(&DEFAULT_LEGACY_UDC_CLASS.clone())
-        );
+        let tx_hash = transaction.compute_hash(false);
+        self.transactions.borrow_mut().push(ExecutableTxWithHash { hash: tx_hash, transaction });
+        self.master_nonce.replace(Nonce::ONE);
+    }
 
-        assert_eq!(
-            actual_state_updates.state_updates.deployed_contracts.get(&DEFAULT_UDC_ADDRESS),
-            Some(&DEFAULT_LEGACY_UDC_CLASS_HASH),
-            "The universal deployer contract should be created"
-        );
-
-        assert_eq!(
-            actual_state_updates.state_updates.declared_classes.get(&DEFAULT_ACCOUNT_CLASS_HASH),
-            Some(&DEFAULT_ACCOUNT_COMPILED_CLASS_HASH),
-            "The default oz account class should be declared"
-        );
-
-        assert_eq!(
-            actual_state_updates.classes.get(&DEFAULT_ACCOUNT_CLASS_HASH),
-            Some(&*DEFAULT_ACCOUNT_CLASS),
-            "The default oz account contract sierra class should be declared"
-        );
-
-        #[cfg(feature = "controller")]
+    fn build_core_contracts(&mut self) {
+        // udc class declare
         {
-            assert_eq!(
-                actual_state_updates.state_updates.declared_classes.get(&CONTROLLER_CLASS_HASH),
-                Some(&CONTROLLER_CLASS_HASH),
-                "The controller account class should be declared"
-            );
-
-            assert_eq!(
-                actual_state_updates.classes.get(&CONTROLLER_CLASS_HASH),
-                Some(&*CONTROLLER_ACCOUNT_CLASS),
-                "The controller account contract sierra class should be declared"
-            );
+            let udc_class_hash = self.legacy_declare(DEFAULT_LEGACY_UDC_CLASS.clone());
+            self.deploy(udc_class_hash, Vec::new());
         }
 
-        // check that all contract allocations exist in the state updates
+        // fee token's class declare
+        {
+            let master_address = *self.master_address.get().expect("must be initialized");
 
-        assert_eq!(
-            actual_state_updates.state_updates.deployed_contracts.len(),
-            6,
-            "6 contracts should be created: STRK fee token, ETH fee token, universal deployer, \
-             and 3 allocations"
-        );
+            let ctor_args = vec![
+                short_string!("Starknet Token"),     // ERC20 name
+                short_string!("STRK"),               // ERC20 symbol
+                felt!("0x12"),                       // ERC20 decimals
+                Felt::from_u128(u128::MAX).unwrap(), // ERC20 total supply (low)
+                Felt::from_u128(u128::MAX).unwrap(), // ERC20 total supply (high)
+                master_address.into(),               // recipient
+            ];
 
-        let alloc_1_addr = allocations[0].0;
+            let erc20_class_hash = self.legacy_declare(DEFAULT_LEGACY_ERC20_CLASS.clone());
+            let fee_token_address = self.deploy(erc20_class_hash, ctor_args);
 
-        let mut account_allocation_storage = allocations[0].1.storage().unwrap().clone();
-        account_allocation_storage.insert(
-            DEFAULT_ACCOUNT_CLASS_PUBKEY_STORAGE_SLOT,
-            felt!("0x01ef15c18599971b7beced415a40f0c7deacfd9b0d1819e03d723d8bc943cfca"),
-        );
+            self.fee_token.set(fee_token_address).expect("must be empty");
 
-        assert_eq!(
-            actual_state_updates.state_updates.deployed_contracts.get(&alloc_1_addr),
-            allocations[0].1.class_hash().as_ref(),
-            "allocation should exist"
-        );
-        assert_eq!(
-            actual_state_updates.state_updates.nonce_updates.get(&alloc_1_addr).cloned(),
-            allocations[0].1.nonce(),
-            "allocation nonce should be updated"
-        );
-        assert_eq!(
-            actual_state_updates.state_updates.storage_updates.get(&alloc_1_addr).cloned(),
-            Some(account_allocation_storage),
-            "account allocation storage should be updated"
-        );
+            // update the chain spec so that the execution context is usind the correct fee token
+            // address
+            self.chain_spec.fee_contracts.eth = fee_token_address;
+            self.chain_spec.fee_contracts.strk = fee_token_address;
+        }
+    }
 
-        let alloc_2_addr = allocations[1].0;
+    fn build_allocated_accounts(&mut self) {
+        let default_account_class_hash = self.declare(DEFAULT_ACCOUNT_CLASS.clone());
 
-        assert_eq!(
-            actual_state_updates.state_updates.deployed_contracts.get(&alloc_2_addr),
-            allocations[1].1.class_hash().as_ref(),
-            "allocation should exist"
-        );
-        assert_eq!(
-            actual_state_updates.state_updates.nonce_updates.get(&alloc_2_addr).cloned(),
-            allocations[1].1.nonce(),
-            "allocation nonce should be updated"
-        );
-        assert_eq!(
-            actual_state_updates.state_updates.storage_updates.get(&alloc_2_addr),
-            allocations[1].1.storage(),
-            "allocation storage should be updated"
-        );
+        for (expected_addr, account) in self.chain_spec.genesis.accounts() {
+            if account.class_hash() != default_account_class_hash {
+                panic!("Unexpected account class hash");
+            }
 
-        let alloc_3_addr = allocations[2].0;
-
-        assert_eq!(
-            actual_state_updates.state_updates.deployed_contracts.get(&alloc_3_addr),
-            allocations[2].1.class_hash().as_ref(),
-            "allocation should exist"
-        );
-        assert_eq!(
-            actual_state_updates.state_updates.nonce_updates.get(&alloc_3_addr).cloned(),
-            allocations[2].1.nonce(),
-            "allocation nonce should be updated"
-        );
-        assert_eq!(
-            actual_state_updates.state_updates.storage_updates.get(&alloc_3_addr).cloned(),
-            Some(BTreeMap::from([(DEFAULT_ACCOUNT_CLASS_PUBKEY_STORAGE_SLOT, felt!("0x2"))])),
-            "account allocation storage should be updated"
-        );
-
-        // check ETH fee token contract storage
-
-        // there are only two allocations with a balance so the total token supply is
-        // 0xD3C21BCECCEDA1000000 * 2 = 0x1a784379d99db42000000
-        let (total_supply_low, total_supply_high) =
-            split_u256(U256::from_str("0x1a784379d99db42000000").unwrap());
-
-        let name = cairo_short_string_to_felt("Ether").unwrap();
-        let symbol = cairo_short_string_to_felt("ETH").unwrap();
-        let decimals = Felt::from(18);
-
-        let eth_fee_token_storage = actual_state_updates
-            .state_updates
-            .storage_updates
-            .get(&DEFAULT_ETH_FEE_TOKEN_ADDRESS)
-            .unwrap();
-
-        assert_eq!(eth_fee_token_storage.get(&ERC20_NAME_STORAGE_SLOT), Some(&name));
-        assert_eq!(eth_fee_token_storage.get(&ERC20_SYMBOL_STORAGE_SLOT), Some(&symbol));
-        assert_eq!(eth_fee_token_storage.get(&ERC20_DECIMAL_STORAGE_SLOT), Some(&decimals));
-        assert_eq!(
-            eth_fee_token_storage.get(&ERC20_TOTAL_SUPPLY_STORAGE_SLOT),
-            Some(&total_supply_low)
-        );
-        assert_eq!(
-            eth_fee_token_storage.get(&(ERC20_TOTAL_SUPPLY_STORAGE_SLOT + Felt::ONE)),
-            Some(&total_supply_high)
-        );
-
-        // check STRK fee token contract storage
-
-        let strk_name = cairo_short_string_to_felt("Starknet Token").unwrap();
-        let strk_symbol = cairo_short_string_to_felt("STRK").unwrap();
-        let strk_decimals = Felt::from(18);
-
-        let strk_fee_token_storage = actual_state_updates
-            .state_updates
-            .storage_updates
-            .get(&DEFAULT_STRK_FEE_TOKEN_ADDRESS)
-            .unwrap();
-
-        assert_eq!(strk_fee_token_storage.get(&ERC20_NAME_STORAGE_SLOT), Some(&strk_name));
-        assert_eq!(strk_fee_token_storage.get(&ERC20_SYMBOL_STORAGE_SLOT), Some(&strk_symbol));
-        assert_eq!(strk_fee_token_storage.get(&ERC20_DECIMAL_STORAGE_SLOT), Some(&strk_decimals));
-        assert_eq!(
-            strk_fee_token_storage.get(&ERC20_TOTAL_SUPPLY_STORAGE_SLOT),
-            Some(&total_supply_low)
-        );
-        assert_eq!(
-            strk_fee_token_storage.get(&(ERC20_TOTAL_SUPPLY_STORAGE_SLOT + Felt::ONE)),
-            Some(&total_supply_high)
-        );
-
-        let mut allocs_total_supply = U256::ZERO;
-
-        // check for balance in both ETH and STRK
-        for (address, alloc) in &allocations {
-            if let Some(balance) = alloc.balance() {
-                let (low, high) = split_u256(balance);
-
-                // the base storage address for a standard ERC20 contract balance
-                let bal_base_storage_var = get_fee_token_balance_base_storage_address(*address);
-
-                // the storage address of low u128 of the balance
-                let low_bal_storage_var = bal_base_storage_var;
-                // the storage address of high u128 of the balance
-                let high_bal_storage_var = bal_base_storage_var + Felt::ONE;
-
-                assert_eq!(eth_fee_token_storage.get(&low_bal_storage_var), Some(&low));
-                assert_eq!(eth_fee_token_storage.get(&high_bal_storage_var), Some(&high));
-
-                assert_eq!(strk_fee_token_storage.get(&low_bal_storage_var), Some(&low));
-                assert_eq!(strk_fee_token_storage.get(&high_bal_storage_var), Some(&high));
-
-                allocs_total_supply += balance;
+            if let GenesisAccountAlloc::DevAccount(account) = account {
+                let account_address = self.deploy_predeployed_account(account);
+                debug_assert_eq!(&account_address, expected_addr);
+                // transfer token from master account to the current account
+                if let Some(amount) = account.balance {
+                    self.transfer_balance(account_address, amount);
+                }
             }
         }
-        // Check that the total supply is the sum of all balances in the allocations.
-        // Technically this is not necessary bcs we already checked the total supply in
-        // the fee token storage but it's a good sanity check.
+    }
 
-        let (actual_total_supply_low, actual_total_supply_high) = split_u256(allocs_total_supply);
-        assert_eq!(
-            eth_fee_token_storage.get(&ERC20_TOTAL_SUPPLY_STORAGE_SLOT),
-            Some(&actual_total_supply_low),
-            "ETH total supply must be calculated from allocations balances correctly"
-        );
-        assert_eq!(
-            eth_fee_token_storage.get(&(ERC20_TOTAL_SUPPLY_STORAGE_SLOT + Felt::ONE)),
-            Some(&actual_total_supply_high),
-            "ETH total supply must be calculated from allocations balances correctly"
-        );
+    // This transfer balances from the master account to the given recipient address
+    //
+    // Make sure to deploy the fee token first before calling this function.
+    fn transfer_balance(&self, recipient: ContractAddress, balance: U256) {
+        let fee_token = *self.fee_token.get().expect("must not be empty");
 
-        assert_eq!(
-            strk_fee_token_storage.get(&ERC20_TOTAL_SUPPLY_STORAGE_SLOT),
-            Some(&actual_total_supply_low),
-            "STRK total supply must be calculated from allocations balances correctly"
-        );
-        assert_eq!(
-            strk_fee_token_storage.get(&(ERC20_TOTAL_SUPPLY_STORAGE_SLOT + Felt::ONE)),
-            Some(&actual_total_supply_high),
-            "STRK total supply must be calculated from allocations balances correctly"
-        );
+        let (low_amount, high_amount) = split_u256(balance);
+        let args = vec![recipient.into(), low_amount, high_amount];
+
+        const TRANSFER: &str = "transfer";
+        self.invoke(fee_token, TRANSFER, args);
+    }
+
+    pub fn build(mut self) -> Vec<ExecutableTxWithHash> {
+        self.build_master_account();
+        self.build_core_contracts();
+        self.build_allocated_accounts();
+        self.transactions.into_inner()
     }
 }

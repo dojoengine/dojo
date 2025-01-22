@@ -1,10 +1,11 @@
-use crate::block::{BlockNumber, GasPrices};
+use crate::block::{BlockHash, BlockNumber, GasPrices};
 use crate::chain::ChainId;
 use crate::contract::ContractAddress;
 
 /// Block environment values.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct BlockEnv {
+    pub parent_hash: BlockHash,
     /// The block height.
     pub number: BlockNumber,
     /// The timestamp in seconds since the UNIX epoch.

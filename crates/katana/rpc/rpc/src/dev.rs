@@ -41,7 +41,7 @@ impl<EF: ExecutorFactory> DevApi<EF> {
             return Err(DevApiError::PendingTransactions);
         }
 
-        let mut block_context_generator = self.backend.block_context_generator.write();
+        let mut block_context_generator = self.backend.block_context_generator().write();
         block_context_generator.next_block_start_time = timestamp;
 
         Ok(())
@@ -52,7 +52,7 @@ impl<EF: ExecutorFactory> DevApi<EF> {
             return Err(DevApiError::PendingTransactions);
         }
 
-        let mut block_context_generator = self.backend.block_context_generator.write();
+        let mut block_context_generator = self.backend.block_context_generator().write();
         block_context_generator.block_timestamp_offset += offset as i64;
 
         Ok(())
@@ -93,6 +93,6 @@ impl<EF: ExecutorFactory> DevApiServer for DevApi<EF> {
     }
 
     async fn predeployed_accounts(&self) -> Result<Vec<Account>, Error> {
-        Ok(self.backend.chain_spec.genesis.accounts().map(|e| Account::new(*e.0, e.1)).collect())
+        Ok(self.backend.chain_spec().genesis.accounts().map(|e| Account::new(*e.0, e.1)).collect())
     }
 }

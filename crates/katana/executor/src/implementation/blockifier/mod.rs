@@ -233,6 +233,7 @@ impl<'a> BlockExecutor<'a> for StarknetVMProcessor<'a> {
 
     fn block_env(&self) -> BlockEnv {
         BlockEnv {
+            parent_hash: Default::default(),
             number: self.block_context.block_info().block_number.0,
             timestamp: self.block_context.block_info().block_timestamp.0,
             sequencer_address: utils::to_address(self.block_context.block_info().sequencer_address),

@@ -4,7 +4,7 @@ use gas_oracle::GasOracle;
 use katana_chain_spec::ChainSpec;
 use katana_executor::{ExecutionOutput, ExecutionResult, ExecutorFactory};
 use katana_primitives::block::{
-    BlockHash, BlockNumber, FinalityStatus, Header, PartialHeader, SealedBlock,
+    BlockHash, BlockNumber, ExecutableBlock, FinalityStatus, Header, PartialHeader, SealedBlock,
     SealedBlockWithStatus,
 };
 use katana_primitives::da::L1DataAvailabilityMode;
@@ -14,12 +14,15 @@ use katana_primitives::state::{compute_state_diff_hash, StateUpdates};
 use katana_primitives::transaction::{TxHash, TxWithHash};
 use katana_primitives::version::CURRENT_STARKNET_VERSION;
 use katana_primitives::{address, ContractAddress, Felt};
+use katana_provider::BlockchainProvider;
 use katana_provider::traits::block::{BlockHashProvider, BlockWriter};
+use katana_provider::traits::state::StateFactoryProvider;
 use katana_provider::traits::trie::TrieWriter;
 use katana_trie::compute_merkle_root;
 use parking_lot::RwLock;
 use starknet::macros::short_string;
 use starknet_types_core::hash::{self, StarkHash};
+use storage::Database;
 use tracing::info;
 
 pub mod contract;
@@ -34,19 +37,85 @@ use crate::utils::get_current_timestamp;
 pub(crate) const LOG_TARGET: &str = "katana::core::backend";
 
 #[derive(Debug)]
-pub struct Backend<EF: ExecutorFactory> {
-    pub chain_spec: Arc<ChainSpec>,
+pub struct Backend<EF> {
+    chain_spec: Arc<ChainSpec>,
     /// stores all block related data in memory
-    pub blockchain: Blockchain,
+    blockchain: Blockchain,
     /// The block context generator.
-    pub block_context_generator: RwLock<BlockContextGenerator>,
+    block_context_generator: RwLock<BlockContextGenerator>,
 
-    pub executor_factory: Arc<EF>,
+    executor_factory: Arc<EF>,
 
-    pub gas_oracle: GasOracle,
+    gas_oracle: GasOracle,
 }
 
-impl<EF: ExecutorFactory> Backend<EF> {
+impl<EF> Backend<EF> {
+    pub fn new(
+        chain_spec: Arc<ChainSpec>,
+        blockchain: Blockchain,
+        executor_factory: EF,
+        gas_oracle: GasOracle,
+    ) -> Self {
+        let block_context_generator = RwLock::new(BlockContextGenerator::default());
+        let executor_factory = Arc::new(executor_factory);
+        Self { chain_spec, blockchain, block_context_generator, gas_oracle, executor_factory }
+    }
+
+    pub fn blockchain(&self) -> &BlockchainProvider<Box<dyn Database>> {
+        self.blockchain.provider()
+    }
+
+    pub fn executor_factory(&self) -> &Arc<EF> {
+        &self.executor_factory
+    }
+
+    pub fn chain_spec(&self) -> &Arc<ChainSpec> {
+        &self.chain_spec
+    }
+
+    pub fn gas_oracle(&self) -> &GasOracle {
+        &self.gas_oracle
+    }
+
+    pub fn block_context_generator(&self) -> &RwLock<BlockContextGenerator> {
+        &self.block_context_generator
+    }
+}
+
+impl<EF> Backend<EF>
+where
+    EF: ExecutorFactory,
+{
+    pub fn init_genesis(&self, genesis_block: ExecutableBlock) -> anyhow::Result<()> {
+        let genesis_hash = self.blockchain().block_hash_by_num(genesis_block.header.number)?;
+
+        if genesis_hash.is_some() {
+            info!("Genesis has already been initialized");
+            return Ok(());
+        }
+
+        let state = self.blockchain().latest().unwrap();
+
+        let block_env = BlockEnv {
+            number: genesis_block.header.number,
+            parent_hash: BlockHash::ZERO,
+            timestamp: genesis_block.header.timestamp,
+            sequencer_address: genesis_block.header.sequencer_address,
+            l1_gas_prices: genesis_block.header.l1_gas_prices.clone(),
+            l1_data_gas_prices: genesis_block.header.l1_data_gas_prices.clone(),
+        };
+
+        let mut executor = self.executor_factory().with_state(state);
+        executor.execute_block(genesis_block).expect("failed to execute genesis block");
+
+        let output = executor.take_execution_output().expect("failed to get execution output");
+        self.do_mine_block(&block_env, output).expect("failed to mine genesis block");
+
+        info!("Genesis initialized");
+
+        Ok(())
+    }
+
     // TODO: add test for this function
     pub fn do_mine_block(
         &self,
@@ -170,9 +239,9 @@ impl<EF: ExecutorFactory> Backend<EF> {
         transactions: Vec<TxWithHash>,
         receipts: &[ReceiptWithTxHash],
     ) -> Result<SealedBlock, BlockProductionError> {
-        let parent_hash = self.blockchain.provider().latest_hash()?;
+        // let parent_hash = self.blockchain.provider().latest_hash()?;
         let partial_header = PartialHeader {
-            parent_hash,
+            parent_hash: block_env.parent_hash,
             number: block_env.number,
             timestamp: block_env.timestamp,
             protocol_version: CURRENT_STARKNET_VERSION,

@@ -227,7 +227,11 @@
         "value": "INVALID_SIGNATURE_LENGTH"
       },
       {
-        "accessible_scopes": ["__main__", "__main__", "__main__.__execute__"],
+        "accessible_scopes": [
+          "__main__",
+          "__main__",
+          "__main__.__execute__"
+        ],
         "end_pc": 492,
         "flow_tracking_data": {
           "ap_tracking": {
@@ -241,7 +245,11 @@
         "value": "Invalid caller. This function cannot be called from another contract."
       },
       {
-        "accessible_scopes": ["__main__", "__main__", "__main__.__execute__"],
+        "accessible_scopes": [
+          "__main__",
+          "__main__",
+          "__main__.__execute__"
+        ],
         "end_pc": 497,
         "flow_tracking_data": {
           "ap_tracking": {
@@ -255,7 +263,11 @@
         "value": "Invalid transaction version. This account contract does not support transaction version 0."
       }
     ],
-    "builtins": ["pedersen", "range_check", "ecdsa"],
+    "builtins": [
+      "pedersen",
+      "range_check",
+      "ecdsa"
+    ],
     "compiler_version": null,
     "data": [
       "0x40780017fff7fff",
@@ -1418,7 +1430,10 @@
         "type": "alias"
       },
       "__main__.__execute__": {
-        "decorators": ["external", "raw_output"],
+        "decorators": [
+          "external",
+          "raw_output"
+        ],
         "pc": 479,
         "type": "function"
       },
@@ -1477,7 +1492,9 @@
         "value": 8
       },
       "__main__.__validate__": {
-        "decorators": ["external"],
+        "decorators": [
+          "external"
+        ],
         "pc": 425,
         "type": "function"
       },
@@ -1536,7 +1553,9 @@
         "value": 0
       },
       "__main__.__validate_declare__": {
-        "decorators": ["external"],
+        "decorators": [
+          "external"
+        ],
         "pc": 357,
         "type": "function"
       },
@@ -1583,7 +1602,9 @@
         "value": 0
       },
       "__main__.__validate_deploy__": {
-        "decorators": ["external"],
+        "decorators": [
+          "external"
+        ],
         "pc": 390,
         "type": "function"
       },
@@ -1646,7 +1667,9 @@
         "type": "alias"
       },
       "__main__.assert_only_self": {
-        "decorators": ["view"],
+        "decorators": [
+          "view"
+        ],
         "pc": 200,
         "type": "function"
       },
@@ -1680,7 +1703,9 @@
         "type": "alias"
       },
       "__main__.constructor": {
-        "decorators": ["constructor"],
+        "decorators": [
+          "constructor"
+        ],
         "pc": 282,
         "type": "function"
       },
@@ -1727,7 +1752,9 @@
         "type": "alias"
       },
       "__main__.deploy_contract": {
-        "decorators": ["external"],
+        "decorators": [
+          "external"
+        ],
         "pc": 560,
         "type": "function"
       },
@@ -1880,7 +1907,9 @@
         "type": "alias"
       },
       "__main__.get_public_key": {
-        "decorators": ["view"],
+        "decorators": [
+          "view"
+        ],
         "pc": 223,
         "type": "function"
       },
@@ -1938,7 +1967,9 @@
         "type": "alias"
       },
       "__main__.is_valid_signature": {
-        "decorators": ["view"],
+        "decorators": [
+          "view"
+        ],
         "pc": 308,
         "type": "function"
       },
@@ -2155,7 +2186,9 @@
         "value": 0
       },
       "__main__.set_public_key": {
-        "decorators": ["external"],
+        "decorators": [
+          "external"
+        ],
         "pc": 254,
         "type": "function"
       },
@@ -2202,7 +2235,10 @@
         "type": "alias"
       },
       "__wrappers__.__execute__": {
-        "decorators": ["external", "raw_output"],
+        "decorators": [
+          "external",
+          "raw_output"
+        ],
         "pc": 528,
         "type": "function"
       },
@@ -2235,7 +2271,9 @@
         "type": "alias"
       },
       "__wrappers__.__validate__": {
-        "decorators": ["external"],
+        "decorators": [
+          "external"
+        ],
         "pc": 438,
         "type": "function"
       },
@@ -2268,7 +2306,9 @@
         "type": "alias"
       },
       "__wrappers__.__validate_declare__": {
-        "decorators": ["external"],
+        "decorators": [
+          "external"
+        ],
         "pc": 370,
         "type": "function"
       },
@@ -2301,7 +2341,9 @@
         "type": "alias"
       },
       "__wrappers__.__validate_deploy__": {
-        "decorators": ["external"],
+        "decorators": [
+          "external"
+        ],
         "pc": 403,
         "type": "function"
       },
@@ -2334,7 +2376,9 @@
         "type": "alias"
       },
       "__wrappers__.assert_only_self": {
-        "decorators": ["view"],
+        "decorators": [
+          "view"
+        ],
         "pc": 209,
         "type": "function"
       },
@@ -2367,7 +2411,9 @@
         "type": "alias"
       },
       "__wrappers__.constructor": {
-        "decorators": ["constructor"],
+        "decorators": [
+          "constructor"
+        ],
         "pc": 289,
         "type": "function"
       },
@@ -2400,7 +2446,9 @@
         "type": "alias"
       },
       "__wrappers__.deploy_contract": {
-        "decorators": ["external"],
+        "decorators": [
+          "external"
+        ],
         "pc": 580,
         "type": "function"
       },
@@ -2467,7 +2515,9 @@
         "type": "alias"
       },
       "__wrappers__.get_public_key": {
-        "decorators": ["view"],
+        "decorators": [
+          "view"
+        ],
         "pc": 238,
         "type": "function"
       },
@@ -2534,7 +2584,9 @@
         "type": "alias"
       },
       "__wrappers__.is_valid_signature": {
-        "decorators": ["view"],
+        "decorators": [
+          "view"
+        ],
         "pc": 327,
         "type": "function"
       },
@@ -2567,7 +2619,9 @@
         "type": "alias"
       },
       "__wrappers__.set_public_key": {
-        "decorators": ["external"],
+        "decorators": [
+          "external"
+        ],
         "pc": 263,
         "type": "function"
       },
