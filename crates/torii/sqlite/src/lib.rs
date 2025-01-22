@@ -43,8 +43,7 @@ pub struct Sql {
     pub pool: Pool<Sqlite>,
     pub executor: UnboundedSender<QueryMessage>,
     model_cache: Arc<ModelCache>,
-    // when SQL struct is cloned a empty local_cache is created
-    local_cache: LocalCache,
+    local_cache: Arc<LocalCache>,
 }
 
 #[derive(Debug, Clone)]
@@ -75,7 +74,8 @@ impl Sql {
         }
 
         let local_cache = LocalCache::new(pool.clone()).await;
-        let db = Self { pool: pool.clone(), executor, model_cache, local_cache };
+        let db =
+            Self { pool: pool.clone(), executor, model_cache, local_cache: Arc::new(local_cache) };
 
         db.execute().await?;
 
