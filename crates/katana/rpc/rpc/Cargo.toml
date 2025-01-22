@@ -7,6 +7,9 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
+jsonrpsee-core = { version = "0.16.3", features = [ "server", "soketto", "http-helpers" ] }
+jsonrpsee-types = { version = "0.16.3"}
+hyper.workspace = true
 katana-core.workspace = true
 katana-executor.workspace = true
 katana-pool.workspace = true
@@ -31,6 +34,16 @@ tower.workspace = true
 tower-http.workspace = true
 tracing.workspace = true
 url.workspace = true
+serde.workspace = true
+soketto = { version = "0.7.1", features = ["http"] }
+futures-channel = { version = "0.3.14"}
+futures-util = { version = "0.3.14",  features = [
+    "io",
+    "async-await-macro",
+]}
+tokio-stream = { version = "0.1.7" }
+tokio-util = { version = "0.7", features = ["compat"]}
+starknet-crypto.workspace = true
 
 [dev-dependencies]
 katana-cairo.workspace = true

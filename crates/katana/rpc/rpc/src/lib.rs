@@ -1,13 +1,9 @@
-//! RPC implementations.
-
-#![allow(clippy::blocks_in_conditions)]
-#![cfg_attr(not(test), warn(unused_crate_dependencies))]
-
 use std::net::SocketAddr;
 use std::time::Duration;
 
 use jsonrpsee::server::{AllowHosts, ServerBuilder, ServerHandle};
 use jsonrpsee::RpcModule;
+use proxy_get_request::DevnetProxyLayer;
 use tower::ServiceBuilder;
 use tracing::info;
 
@@ -15,9 +11,12 @@ pub mod cors;
 pub mod dev;
 pub mod health;
 pub mod metrics;
+pub mod proxy_get_request;
 pub mod saya;
 pub mod starknet;
 pub mod torii;
+
+mod transport;
 mod utils;
 
 use cors::Cors;
@@ -116,6 +115,7 @@ impl RpcServer {
         let middleware = ServiceBuilder::new()
             .option_layer(self.cors.clone())
             .option_layer(health_check_proxy)
+            .layer(DevnetProxyLayer::new()?)
             .timeout(Duration::from_secs(20));
 
         let builder = ServerBuilder::new()
