@@ -847,18 +847,20 @@ fn add_columns_recursive(
 
     match ty {
         Ty::Struct(s) => {
+            let struct_diff =
+                if let Some(upgrade_diff) = upgrade_diff { upgrade_diff.as_struct() } else { None };
+
             for member in &s.children {
-                if let Some(upgrade_diff) = upgrade_diff {
-                    if !upgrade_diff
-                        .as_struct()
-                        .unwrap()
-                        .children
-                        .iter()
-                        .any(|m| m.name == member.name)
-                    {
+                let member_diff = if let Some(diff) = struct_diff {
+                    if let Some(m) = diff.children.iter().find(|m| m.name == member.name) {
+                        Some(&m.ty)
+                    } else {
+                        // If the member is not in the diff, skip it
                         continue;
                     }
-                }
+                } else {
+                    None
+                };
 
                 let mut new_path = path.to_vec();
                 new_path.push(member.name.clone());
@@ -870,14 +872,27 @@ fn add_columns_recursive(
                     alter_table_queries,
                     indices,
                     table_id,
-                    None,
+                    member_diff,
                 )?;
             }
         }
         Ty::Tuple(tuple) => {
+            let tuple_diff =
+                if let Some(upgrade_diff) = upgrade_diff { upgrade_diff.as_tuple() } else { None };
+
             for (idx, member) in tuple.iter().enumerate() {
                 let mut new_path = path.to_vec();
                 new_path.push(idx.to_string());
+
+                let member_diff = if let Some(diff) = tuple_diff {
+                    if let Some((_, m)) = diff.iter().enumerate().find(|(i, _)| *i == idx) {
+                        Some(m)
+                    } else {
+                        continue;
+                    }
+                } else {
+                    None
+                };
 
                 add_columns_recursive(
                     &new_path,
@@ -886,7 +901,7 @@ fn add_columns_recursive(
                     alter_table_queries,
                     indices,
                     table_id,
-                    None,
+                    member_diff,
                 )?;
             }
         }
@@ -897,7 +912,7 @@ fn add_columns_recursive(
             add_column(&column_name, "TEXT");
         }
         Ty::Enum(e) => {
-            let diff_enum =
+            let enum_diff =
                 if let Some(upgrade_diff) = upgrade_diff { upgrade_diff.as_enum() } else { None };
 
             let column_name =
@@ -906,7 +921,7 @@ fn add_columns_recursive(
             let all_options =
                 e.options.iter().map(|c| format!("'{}'", c.name)).collect::<Vec<_>>().join(", ");
 
-            if diff_enum.is_some() {
+            if enum_diff.is_some() {
                 // For upgrades, modify the existing CHECK constraint to include new options
                 alter_table_queries.push(format!(
                     "ALTER TABLE [{table_id}] DROP CONSTRAINT IF EXISTS [{column_name}_check]"
@@ -923,11 +938,15 @@ fn add_columns_recursive(
 
             for child in &e.options {
                 // If we have a diff, only process new variants that aren't in the original enum
-                if let Some(e) = diff_enum {
-                    if !e.options.iter().any(|o| o.name == child.name) {
+                let variant_diff = if let Some(diff) = enum_diff {
+                    if let Some(v) = diff.options.iter().find(|v| v.name == child.name) {
+                        Some(&v.ty)
+                    } else {
                         continue;
                     }
-                }
+                } else {
+                    None
+                };
 
                 if let Ty::Tuple(tuple) = &child.ty {
                     if tuple.is_empty() {
@@ -945,7 +964,7 @@ fn add_columns_recursive(
                     alter_table_queries,
                     indices,
                     table_id,
-                    None,
+                    variant_diff,
                 )?;
             }
         }
