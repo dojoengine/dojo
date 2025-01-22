@@ -538,6 +538,18 @@ fn test_enum_upgrade() {
             [('x', Ty::Primitive('u8')), ('y', Ty::Primitive('u16')), ('z', Ty::Primitive('u32'))]
         .span();
     assert!(upgraded.is_an_upgrade_of(@e), "new member");
+
+    let e = Enum {
+        name: 'e',
+        attrs: [].span(),
+        children: [('x', Ty::Tuple([].span())), ('y', Ty::Tuple([].span()))].span(),
+    };
+
+    // A variant without data (empty tuple / unit type) cannot be upgraded with data
+    let mut upgraded = e;
+    upgraded.children = [('x', Ty::Primitive('u8')), ('y', Ty::Tuple([].span()))].span();
+
+    assert!(!upgraded.is_an_upgrade_of(@e), "variant without data");
 }
 
 #[test]
