@@ -628,7 +628,7 @@ fn test_key_member_upgrade() {
 
     assert!(upgraded.is_an_upgrade_of(@s), "key primitive type upgrade");
 
-    // enum type
+    // enum type / new variant
     let mut upgraded = s;
     upgraded
         .children =
@@ -652,7 +652,30 @@ fn test_key_member_upgrade() {
             ]
         .span();
 
-    assert!(upgraded.is_an_upgrade_of(@s), "key enum type upgrade");
+    assert!(upgraded.is_an_upgrade_of(@s), "key enum type upgrade (variant added)");
+
+    // enum type / variant data upgrade (not allowed)
+    let mut upgraded = s;
+    upgraded
+        .children =
+            [
+                *s.children[0],
+                Member {
+                    name: 'y',
+                    attrs: ['key'].span(),
+                    ty: Ty::Enum(
+                        Enum {
+                            name: 'e',
+                            attrs: [].span(),
+                            children: [('A', Ty::Primitive('u8')), ('B', Ty::Primitive('u32'))]
+                                .span(),
+                        },
+                    ),
+                },
+            ]
+        .span();
+
+    assert!(!upgraded.is_an_upgrade_of(@s), "key enum type upgrade (variant data upgraded)");
 
     // struct type (not allowed)
     let s = Struct {

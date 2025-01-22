@@ -312,7 +312,40 @@ impl MemberCompareImpl of TyCompareTrait<Member> {
         if is_key {
             match (self.ty, old.ty) {
                 (Ty::Primitive(n), Ty::Primitive(o)) => n.is_an_upgrade_of(o),
-                (Ty::Enum(n), Ty::Enum(o)) => n.is_an_upgrade_of(o),
+                (
+                    Ty::Enum(n), Ty::Enum(o),
+                ) => {
+                    if n == o {
+                        return true;
+                    }
+
+                    let n = *n;
+                    let o = *o;
+
+                    if n.name != o.name
+                        || n.attrs != o.attrs
+                        || n.children.len() < o.children.len() {
+                        return false;
+                    }
+
+                    // only new variants are allowed so existing variants must remain
+                    // the same.
+                    let mut i = 0;
+                    loop {
+                        if i >= o.children.len() {
+                            break true;
+                        }
+
+                        let (new_name, new_ty) = n.children[i];
+                        let (old_name, old_ty) = o.children[i];
+
+                        if new_name != old_name || new_ty != old_ty {
+                            break false;
+                        }
+
+                        i += 1;
+                    }
+                },
                 (Ty::Struct(n), Ty::Struct(o)) => n == o,
                 (Ty::Array(n), Ty::Array(o)) => n == o,
                 (Ty::Tuple(n), Ty::Tuple(o)) => n == o,
