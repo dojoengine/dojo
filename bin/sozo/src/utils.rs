@@ -55,7 +55,7 @@ pub fn get_world_address(
     let deterministic_world_address = world_local.deterministic_world_address()?;
 
     if let Some(wa) = world.address(env)? {
-        if wa != deterministic_world_address {
+        if wa != deterministic_world_address && !world.guest {
             println!(
                 "{}",
                 format!(
@@ -166,6 +166,7 @@ pub async fn get_world_diff_and_provider(
         world_local,
         &provider,
         env.and_then(|e| e.world_block),
+        &world.namespaces,
     )
     .await?;
 

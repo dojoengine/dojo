@@ -370,6 +370,10 @@ impl NodeArgs {
             }
         }
 
+        if self.messaging.is_none() {
+            self.messaging = config.messaging;
+        }
+
         #[cfg(feature = "server")]
         {
             if self.server == ServerOptions::default() {

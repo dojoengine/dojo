@@ -775,10 +775,10 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
         if new_transaction {
             let transaction = mem::replace(&mut self.transaction, self.pool.begin().await?);
             transaction.commit().await?;
-        }
 
-        for message in self.publish_queue.drain(..) {
-            send_broker_message(message);
+            for message in self.publish_queue.drain(..) {
+                send_broker_message(message);
+            }
         }
 
         while let Some(result) = self.register_tasks.join_next().await {
