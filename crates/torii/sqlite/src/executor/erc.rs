@@ -13,7 +13,7 @@ use starknet_crypto::Felt;
 use tracing::{debug, trace, warn};
 
 use super::{ApplyBalanceDiffQuery, Executor};
-use crate::constants::{IPFS_CLIENT_MAX_RETRY, SQL_FELT_DELIMITER, TOKEN_BALANCE_TABLE};
+use crate::constants::{SQL_FELT_DELIMITER, TOKEN_BALANCE_TABLE};
 use crate::executor::LOG_TARGET;
 use crate::simple_broker::SimpleBroker;
 use crate::types::{ContractType, TokenBalance};
@@ -289,7 +289,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
             uri if uri.starts_with("ipfs") => {
                 let cid = uri.strip_prefix("ipfs://").unwrap();
                 debug!(cid = %cid, "Fetching metadata from IPFS");
-                let response = fetch_content_from_ipfs(cid, IPFS_CLIENT_MAX_RETRY)
+                let response = fetch_content_from_ipfs(cid)
                     .await
                     .context("Failed to fetch metadata from IPFS")?;
 

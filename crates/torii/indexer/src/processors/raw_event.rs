@@ -6,6 +6,7 @@ use starknet::providers::Provider;
 use torii_sqlite::Sql;
 
 use super::{EventProcessor, EventProcessorConfig};
+use crate::task_manager::{self, TaskId, TaskPriority};
 
 #[derive(Default, Debug)]
 pub struct RawEventProcessor;
@@ -21,6 +22,15 @@ where
 
     fn validate(&self, _event: &Event) -> bool {
         true
+    }
+
+    fn task_priority(&self) -> TaskPriority {
+        1
+    }
+
+    fn task_identifier(&self, _event: &Event) -> TaskId {
+        // TODO. for now raw events are not parallelized
+        task_manager::TASK_ID_SEQUENTIAL
     }
 
     async fn process(
