@@ -8,7 +8,6 @@ use dojo_world::contracts::abigen::world::{self, Event as WorldEvent};
 use dojo_world::diff::WorldDiff;
 use scarb::core::Config;
 use sozo_ops::model;
-use sozo_scarbext::WorkspaceExt;
 use starknet::core::types::{BlockId, BlockTag, EventFilter, Felt};
 use starknet::core::utils::starknet_keccak;
 use starknet::providers::Provider;
@@ -17,6 +16,8 @@ use super::options::starknet::StarknetOptions;
 use super::options::world::WorldOptions;
 use crate::utils;
 
+// Maximum blocks per query
+// - initial value pending benchmarking to determine optimal range
 const MAX_BLOCK_RANGE: u64 = 50_000;
 
 #[derive(Debug, Args)]
@@ -61,26 +62,10 @@ impl EventsArgs {
                 utils::get_world_diff_and_provider(self.starknet, self.world, &ws).await?;
             let provider = Arc::new(provider);
 
-            // Get latest block number
             let latest_block = provider.block_number().await?;
+            let from_block = self.from_block.unwrap_or_else(|| latest_block.saturating_sub(1000));
+            let to_block = self.to_block.unwrap_or(latest_block);
 
-            let from_block = match self.from_block {
-                Some(block) => match BlockId::Number(block) {
-                    BlockId::Number(num) => num,
-                    _ => latest_block.saturating_sub(1000),
-                },
-                None => latest_block.saturating_sub(1000),
-            };
-
-            let to_block = match self.to_block {
-                Some(block) => match BlockId::Number(block) {
-                    BlockId::Number(num) => num,
-                    _ => latest_block,
-                },
-                None => latest_block,
-            };
-
-            // Process blocks in chunks
             let mut current_start = from_block;
             while current_start <= to_block {
                 let chunk_end = std::cmp::min(current_start + MAX_BLOCK_RANGE - 1, to_block);
@@ -98,7 +83,6 @@ impl EventsArgs {
                     .get_events(event_filter, self.continuation_token.clone(), self.chunk_size)
                     .await?;
 
-                // Process events
                 for event in &res.events {
                     match world::Event::try_from(event) {
                         Ok(ev) => {
