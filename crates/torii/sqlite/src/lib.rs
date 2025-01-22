@@ -954,10 +954,7 @@ fn add_columns_recursive(
                     alter_table_queries,
                     &column_name,
                     &sql_type,
-                    &format!(
-                        "(SELECT [{column_name}] FROM [{table_id}] AS source WHERE \
-                         source.internal_id = [{table_id}].internal_id)"
-                    ),
+                    &format!("[{column_name}]"),
                 );
             } else {
                 // For new tables, create the column directly
