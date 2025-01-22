@@ -133,10 +133,14 @@ impl EnumCompareImpl of TyCompareTrait<Enum> {
                 break true;
             }
 
-            let (_, old_ty) = *old.children[i];
-            let (_, new_ty) = *self.children[i];
+            let (old_name, old_ty) = *old.children[i];
+            let (new_name, new_ty) = *self.children[i];
 
-            // changing name is acceptable as it has no impact on storage
+            // renaming is not allowed as checking if variants have not been reordered
+            // could be quite challenging
+            if new_name != old_name {
+                break false;
+            }
 
             if !new_ty.is_an_upgrade_of(@old_ty) {
                 break false;

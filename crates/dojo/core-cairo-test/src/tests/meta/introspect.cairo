@@ -519,7 +519,7 @@ fn test_enum_upgrade() {
     // variant name changed
     let mut upgraded = e;
     upgraded.children = [('new', Ty::Primitive('u8')), ('y', Ty::Primitive('u16'))].span();
-    assert!(upgraded.is_an_upgrade_of(@e), "variant name changed");
+    assert!(!upgraded.is_an_upgrade_of(@e), "variant name changed");
 
     // allowed variant change
     let mut upgraded = e;
