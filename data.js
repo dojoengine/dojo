@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1737499904465,
+  "lastUpdate": 1737517184426,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -47107,6 +47107,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 7669383,
             "range": "± 47926",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8f54b66b4c1078da1d886dd63877ba3a3690fe16",
+          "message": "feat(torii-indexer): task manager & parallelize erc transfers (#2913)\n\n* feat(torii-indexer): task manager & task id for every event\r\n\r\n* feat: finish up task manager\r\n\r\n* event message parallel\r\n\r\n* dont empty up cache on sql clone\r\n\r\n* refactor: task priorities & parallelize metadata update\r\n\r\n* cleanup code and sequential task id\r\n\r\n* metadata update parallelized\r\n\r\n* fmt\r\n\r\n* fix: use TaskPriority and TaskId for register_model\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2025-01-21T21:23:37-06:00",
+          "tree_id": "602150eda97f3822220f9497b04eee6f1acd7396",
+          "url": "https://github.com/dojoengine/dojo/commit/8f54b66b4c1078da1d886dd63877ba3a3690fe16"
+        },
+        "date": 1737517182495,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 11584278306,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
