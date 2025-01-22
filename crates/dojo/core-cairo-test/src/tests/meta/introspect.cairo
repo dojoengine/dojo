@@ -1,5 +1,6 @@
 use dojo::meta::introspect::{Introspect, Struct, Enum, Member, Ty, TyCompareTrait};
 use dojo::meta::{Layout, FieldLayout};
+use crate::utils::GasCounterTrait;
 
 #[derive(Drop, Introspect)]
 struct Base {
@@ -584,3 +585,16 @@ fn test_array_upgrade() {
     assert!(!upgraded.is_an_upgrade_of(@a));
 }
 
+#[test]
+#[available_gas(330000)]
+fn test_primitive_upgrade_performance() {
+    // the worst case should be an upgrade from ContractAddress to ClassHash,
+    // as ContractAddress is the last source type and ClassHash the last dest type for
+    // ContractAddress, in the table used by `is_an_upgrade_of`.
+    let x = Ty::Primitive('ContractAddress');
+    let upgraded = Ty::Primitive('ClassHash');
+
+    let gas = GasCounterTrait::start();
+    let _ = upgraded.is_an_upgrade_of(@x);
+    gas.end("ContractAddress to ClassHash");
+}
