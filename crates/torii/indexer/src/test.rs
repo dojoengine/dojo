@@ -25,7 +25,7 @@ use torii_sqlite::cache::ModelCache;
 use torii_sqlite::executor::Executor;
 use torii_sqlite::types::{Contract, ContractType};
 use torii_sqlite::Sql;
-use tracing::info;
+use tracing::{info, error};
 
 use crate::engine::{Engine, EngineConfig, Processors};
 
@@ -673,8 +673,10 @@ async fn test_engine_backoff_and_recovery(sequencer: &RunnerCtx) {
     .unwrap();
 
     // Create and configure engine
-    let mut config = EngineConfig::default();
-    config.polling_interval = Duration::from_millis(100);
+    let config = EngineConfig {
+        polling_interval: Duration::from_millis(100),
+        ..Default::default()
+    };
 
     let world_reader = WorldContractReader::new(world_address, Arc::clone(&provider));
 
@@ -692,7 +694,7 @@ async fn test_engine_backoff_and_recovery(sequencer: &RunnerCtx) {
     // Start engine in background
     let engine_handle = tokio::spawn(async move {
         if let Err(e) = engine.start().await {
-            eprintln!("Engine error: {:?}", e);
+            error!("Engine error: {:?}", e);
         }
     });
 
