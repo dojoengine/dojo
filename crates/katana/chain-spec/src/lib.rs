@@ -1,10 +1,6 @@
 use std::collections::BTreeMap;
-use std::fs::File;
-use std::io::BufReader;
-use std::path::{Path, PathBuf};
 
 use alloy_primitives::U256;
-use anyhow::{Context, Result};
 use katana_primitives::block::{Block, Header};
 use katana_primitives::chain::ChainId;
 use katana_primitives::class::ClassHash;
@@ -18,7 +14,6 @@ use katana_primitives::genesis::constant::{
     DEFAULT_STRK_FEE_TOKEN_ADDRESS, DEFAULT_UDC_ADDRESS, ERC20_DECIMAL_STORAGE_SLOT,
     ERC20_NAME_STORAGE_SLOT, ERC20_SYMBOL_STORAGE_SLOT, ERC20_TOTAL_SUPPLY_STORAGE_SLOT,
 };
-use katana_primitives::genesis::json::GenesisJson;
 use katana_primitives::genesis::Genesis;
 use katana_primitives::state::StateUpdatesWithClasses;
 use katana_primitives::utils::split_u256;
@@ -28,6 +23,8 @@ use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use starknet::core::utils::cairo_short_string_to_felt;
 use url::Url;
+
+pub mod file;
 
 /// The rollup chain specification.
 #[derive(Debug, Clone)]
@@ -62,7 +59,7 @@ pub struct FeeContracts {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(test, derive(PartialEq))]
-#[serde(tag = "type", rename_all = "camelCase")]
+#[serde(rename_all = "kebab-case")]
 pub enum SettlementLayer {
     Ethereum {
         // The id of the settlement chain.
@@ -98,40 +95,6 @@ pub enum SettlementLayer {
 //////////////////////////////////////////////////////////////
 
 impl ChainSpec {
-    pub fn load<P: AsRef<Path>>(path: P) -> Result<Self> {
-        let content = std::fs::read_to_string(&path)?;
-        let cs = serde_json::from_str::<ChainSpecFile>(&content)?;
-
-        let file = File::open(&cs.genesis).context("failed to open genesis file")?;
-
-        // the genesis file is stored as its JSON representation
-        let genesis_json: GenesisJson = serde_json::from_reader(BufReader::new(file))?;
-        let genesis = Genesis::try_from(genesis_json)?;
-
-        Ok(Self { genesis, id: cs.id, settlement: cs.settlement, fee_contracts: cs.fee_contracts })
-    }
-
-    pub fn store<P: AsRef<Path>>(self, path: P) -> anyhow::Result<()> {
-        let cfg_path = path.as_ref();
-        let mut genesis_path = cfg_path.to_path_buf();
-        genesis_path.set_file_name("genesis.json");
-
-        let stored = ChainSpecFile {
-            id: self.id,
-            genesis: genesis_path,
-            settlement: self.settlement,
-            fee_contracts: self.fee_contracts,
-        };
-
-        // convert the genesis to its JSON representation and store it
-        let genesis_json = GenesisJson::try_from(self.genesis)?;
-
-        serde_json::to_writer_pretty(File::create(cfg_path)?, &stored)?;
-        serde_json::to_writer_pretty(File::create(stored.genesis)?, &genesis_json)?;
-
-        Ok(())
-    }
-
     pub fn block(&self) -> Block {
         let header = Header {
             state_diff_length: 0,
@@ -202,15 +165,6 @@ impl Default for ChainSpec {
     fn default() -> Self {
         DEV.clone()
     }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct ChainSpecFile {
-    id: ChainId,
-    fee_contracts: FeeContracts,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    settlement: Option<SettlementLayer>,
-    genesis: PathBuf,
 }
 
 lazy_static! {
@@ -364,20 +318,6 @@ mod tests {
     use starknet::macros::felt;
 
     use super::*;
-
-    #[test]
-    fn chainspec_load_store_rt() {
-        let chainspec = ChainSpec::default();
-
-        // Create a temporary file and store the ChainSpec
-        let temp = tempfile::NamedTempFile::new().unwrap();
-        chainspec.clone().store(temp.path()).unwrap();
-
-        // Load the ChainSpec back from the file
-        let loaded_chainspec = ChainSpec::load(temp.path()).unwrap();
-
-        similar_asserts::assert_eq!(chainspec, loaded_chainspec);
-    }
 
     #[test]
     fn genesis_block_and_state_updates() {

@@ -21,7 +21,6 @@ cainome.workspace = true
 clap.workspace = true
 clap_complete.workspace = true
 comfy-table = "7.1.1"
-dirs = "5.0.1"
 dojo-utils.workspace = true
 inquire = "0.7.5"
 lazy_static.workspace = true
