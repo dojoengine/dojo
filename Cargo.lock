@@ -7961,6 +7961,7 @@ dependencies = [
  "dirs 6.0.0",
  "katana-primitives",
  "lazy_static",
+ "num-traits 0.2.19",
  "serde",
  "serde_json",
  "similar-asserts",

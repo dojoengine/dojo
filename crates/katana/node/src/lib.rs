@@ -191,10 +191,10 @@ pub async fn build(mut config: Config) -> Result<Node> {
         (bc, None, Some(forked_client))
     } else if let Some(db_path) = &config.db.dir {
         let db = katana_db::init_db(db_path)?;
-        (Blockchain::new_with_db(db.clone(), &config.chain)?, Some(db), None)
+        (Blockchain::new_with_db(db.clone())?, Some(db), None)
     } else {
         let db = katana_db::init_ephemeral_db()?;
-        (Blockchain::new_with_db(db.clone(), &config.chain)?, Some(db), None)
+        (Blockchain::new_with_db(db.clone())?, Some(db), None)
     };
 
     // --- build l1 gas oracle

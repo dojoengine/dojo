@@ -114,6 +114,15 @@ pub enum ExecutableTx {
 }
 
 impl ExecutableTx {
+    pub fn calculate_hash(&self, is_query: bool) -> Felt {
+        match self {
+            Self::L1Handler(tx) => tx.calculate_hash(),
+            Self::Invoke(tx) => tx.calculate_hash(is_query),
+            Self::Declare(tx) => tx.calculate_hash(is_query),
+            Self::DeployAccount(tx) => tx.calculate_hash(is_query),
+        }
+    }
+
     pub fn tx_ref(&self) -> TxRef<'_> {
         match self {
             ExecutableTx::Invoke(tx) => TxRef::Invoke(tx),
