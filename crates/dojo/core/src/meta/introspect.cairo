@@ -1,5 +1,6 @@
 use dojo::meta::Layout;
 use dojo::storage::packing;
+use core::panics::panic_with_byte_array;
 
 // Each index matches with a primitive types in both arrays (main and nested):
 // 'bool': 0
@@ -143,7 +144,9 @@ fn primitive_to_index(primitive: felt252) -> u32 {
         return 14;
     }
 
-    return 0xFFFFFFFF;
+    panic_with_byte_array(
+        @format!("The introspection of the primitive type {primitive} is not supported."),
+    )
 }
 
 #[derive(Copy, Drop, Serde, Debug, PartialEq)]
@@ -528,7 +531,7 @@ pub impl Introspect_address of Introspect<starknet::ContractAddress> {
         Layout::Fixed([packing::PACKING_MAX_BITS].span())
     }
     fn ty() -> Ty {
-        Ty::Primitive('starknet::ContractAddress')
+        Ty::Primitive('ContractAddress')
     }
 }
 
@@ -540,7 +543,7 @@ pub impl Introspect_classhash of Introspect<starknet::ClassHash> {
         Layout::Fixed([packing::PACKING_MAX_BITS].span())
     }
     fn ty() -> Ty {
-        Ty::Primitive('starknet::ClassHash')
+        Ty::Primitive('ClassHash')
     }
 }
 
