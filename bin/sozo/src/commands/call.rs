@@ -14,7 +14,7 @@ use tracing::trace;
 
 use super::options::starknet::StarknetOptions;
 use super::options::world::WorldOptions;
-use crate::utils;
+use crate::utils::{self, CALLDATA_DOC};
 
 #[derive(Debug, Args)]
 #[command(about = "Call a system with the given calldata.")]
@@ -25,17 +25,10 @@ pub struct CallArgs {
     #[arg(help = "The name of the entrypoint to call.")]
     pub entrypoint: String,
 
-    #[arg(short, long)]
-    #[arg(value_delimiter = ',')]
-    #[arg(help = "The calldata to be passed to the entrypoint. Comma separated values e.g., \
-                  0x12345,128,u256:9999999999. Sozo supports some prefixes that you can use to \
-                  automatically parse some types. The supported prefixes are:
-                  - u256: A 256-bit unsigned integer.
-                  - sstr: A cairo short string.
-                  - str: A cairo string (ByteArray).
-                  - int: A signed integer.
-                  - no prefix: A cairo felt or any type that fit into one felt.")]
-    pub calldata: Option<String>,
+    #[arg(num_args = 0..)]
+    #[arg(help = format!("The calldata to be passed to the system.
+{CALLDATA_DOC}"))]
+    pub calldata: Vec<String>,
 
     #[arg(short, long)]
     #[arg(help = "The block ID (could be a hash, a number, 'pending' or 'latest')")]
@@ -66,11 +59,7 @@ impl CallArgs {
         config.tokio_handle().block_on(async {
             let local_manifest = ws.read_manifest_profile()?;
 
-            let calldata = if let Some(cd) = self.calldata {
-                calldata_decoder::decode_calldata(&cd)?
-            } else {
-                vec![]
-            };
+            let calldata = calldata_decoder::decode_calldata(&self.calldata)?;
 
             let contract_address = match &descriptor {
                 ResourceDescriptor::Address(address) => Some(*address),

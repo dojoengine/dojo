@@ -58,6 +58,8 @@ impl MigrateArgs {
 
             let mut spinner = MigrationUi::new(Some("Evaluating world diff..."));
 
+            let is_guest = world.guest;
+
             let (world_diff, account, rpc_url) = utils::get_world_diff_and_account(
                 account,
                 starknet,
@@ -79,6 +81,7 @@ impl MigrateArgs {
                 txn_config,
                 ws.load_profile_config()?,
                 rpc_url,
+                is_guest,
             );
 
             let MigrationResult { manifest, has_changes } =

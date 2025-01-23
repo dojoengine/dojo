@@ -55,15 +55,24 @@ async fn migrate_spawn_and_move(db_path: &Path) -> Result<Manifest> {
         panic!(
             "The deterministic world address is different from the config world address. Please \
              review the `dojo_dev.toml` file of spawn-and-move example. \nComputed world address: \
-             {:x}",
+             {:#x}",
             deterministic_world_address
         );
     }
 
     let world_address = deterministic_world_address;
 
-    let world_diff =
-        WorldDiff::new_from_chain(world_address, world_local, &runner.provider(), None).await?;
+    let whitelisted_namespaces = vec![];
+    let world_diff = WorldDiff::new_from_chain(
+        world_address,
+        world_local,
+        &runner.provider(),
+        None,
+        &whitelisted_namespaces,
+    )
+    .await?;
+
+    let is_guest = false;
 
     let result = Migration::new(
         world_diff,
@@ -71,6 +80,7 @@ async fn migrate_spawn_and_move(db_path: &Path) -> Result<Manifest> {
         txn_config,
         profile_config,
         runner.url().to_string(),
+        is_guest,
     )
     .migrate(&mut MigrationUi::new(None).with_silent())
     .await?;
@@ -110,8 +120,17 @@ async fn migrate_types_test(db_path: &Path) -> Result<Manifest> {
     }
     .unwrap();
 
-    let world_diff =
-        WorldDiff::new_from_chain(world_address, world_local, &runner.provider(), None).await?;
+    let whitelisted_namespaces = vec![];
+    let world_diff = WorldDiff::new_from_chain(
+        world_address,
+        world_local,
+        &runner.provider(),
+        None,
+        &whitelisted_namespaces,
+    )
+    .await?;
+
+    let is_guest = false;
 
     let result = Migration::new(
         world_diff,
@@ -119,6 +138,7 @@ async fn migrate_types_test(db_path: &Path) -> Result<Manifest> {
         txn_config,
         profile_config,
         runner.url().to_string(),
+        is_guest,
     )
     .migrate(&mut MigrationUi::new(None).with_silent())
     .await?;

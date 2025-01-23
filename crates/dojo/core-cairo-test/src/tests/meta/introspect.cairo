@@ -9,70 +9,70 @@ struct Base {
 #[derive(Drop, Introspect)]
 struct WithArray {
     value: u32,
-    arr: Array<u8>
+    arr: Array<u8>,
 }
 
 #[derive(Drop, Introspect)]
 struct WithByteArray {
     value: u32,
-    arr: ByteArray
+    arr: ByteArray,
 }
 
 #[derive(Drop, Introspect)]
 struct WithTuple {
     value: u32,
-    arr: (u8, u16, u32)
+    arr: (u8, u16, u32),
 }
 
 #[derive(Drop, Introspect)]
 struct WithNestedTuple {
     value: u32,
-    arr: (u8, (u16, u128, u256), u32)
+    arr: (u8, (u16, u128, u256), u32),
 }
 
 #[derive(Drop, Introspect)]
 struct WithNestedArrayInTuple {
     value: u32,
-    arr: (u8, (u16, Array<u128>, u256), u32)
+    arr: (u8, (u16, Array<u128>, u256), u32),
 }
 
 #[derive(Drop, IntrospectPacked)]
 struct Vec3 {
     x: u32,
     y: u32,
-    z: u32
+    z: u32,
 }
 
 #[derive(IntrospectPacked)]
 struct Translation {
     from: Vec3,
-    to: Vec3
+    to: Vec3,
 }
 
 #[derive(Drop, IntrospectPacked)]
 struct StructInnerNotPacked {
-    x: Base
+    x: Base,
 }
 
 #[derive(Drop, Introspect)]
 enum EnumNoData {
     One,
     Two,
-    Three
+    Three,
 }
 
 #[derive(Drop, Introspect)]
 enum EnumWithSameData {
     One: u256,
     Two: u256,
-    Three: u256
+    Three: u256,
 }
 
 #[derive(Drop, Introspect)]
 enum EnumWithSameTupleData {
     One: (u256, u32),
     Two: (u256, u32),
-    Three: (u256, u32)
+    Three: (u256, u32),
 }
 
 #[derive(Drop, Introspect)]
@@ -103,7 +103,7 @@ enum EnumInnerNotPacked {
 
 #[derive(Drop, Introspect)]
 struct StructWithOption {
-    x: Option<u16>
+    x: Option<u16>,
 }
 
 #[derive(Drop, Introspect)]
@@ -135,7 +135,7 @@ fn _enum(values: Array<Option<Layout>>) -> Layout {
         let v = *values.at(i);
         match v {
             Option::Some(v) => { items.append(field(i.into(), v)); },
-            Option::None => { items.append(field(i.into(), fixed(array![]))) }
+            Option::None => { items.append(field(i.into(), fixed(array![]))) },
         }
 
         i += 1;
@@ -230,8 +230,8 @@ fn test_layout_of_enum_without_variant_data() {
     let layout = Introspect::<EnumNoData>::layout();
     let expected = _enum(array![ // One
     Option::None, // Two
-     Option::None, // Three
-     Option::None,]);
+    Option::None, // Three
+    Option::None]);
 
     assert!(layout == expected);
 }
@@ -247,7 +247,7 @@ fn test_layout_of_enum_with_variant_data() {
             Option::Some(tuple(array![fixed(array![8]), fixed(array![16])])),
             // Three
             Option::Some(arr(fixed(array![128]))),
-        ]
+        ],
     );
 
     assert!(layout == expected);
@@ -258,7 +258,7 @@ fn test_layout_of_struct_with_option() {
     let layout = Introspect::<StructWithOption>::layout();
     let expected = Layout::Struct(
         array![field(selector!("x"), _enum(array![Option::Some(fixed(array![16])), Option::None]))]
-            .span()
+            .span(),
     );
 
     assert!(layout == expected);

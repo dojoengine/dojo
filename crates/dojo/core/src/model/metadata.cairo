@@ -9,7 +9,7 @@ pub struct ResourceMetadata {
     #[key]
     pub resource_id: felt252,
     pub metadata_uri: ByteArray,
-    pub metadata_hash: felt252
+    pub metadata_hash: felt252,
 }
 
 pub fn default_address() -> starknet::ContractAddress {
@@ -22,6 +22,6 @@ pub fn default_class_hash() -> starknet::ClassHash {
 
 pub fn resource_metadata_selector(default_namespace_hash: felt252) -> felt252 {
     utils::selector_from_namespace_and_name(
-        default_namespace_hash, @Model::<ResourceMetadata>::name()
+        default_namespace_hash, @Model::<ResourceMetadata>::name(),
     )
 }

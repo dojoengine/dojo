@@ -48,12 +48,12 @@ mod tests {
             test_contract, test_contract_with_dojo_init_args, Sword, Case, Character, Abilities,
             Stats, Weapon, Ibar, IbarDispatcher, IbarDispatcherTrait, bar, deploy_world,
             deploy_world_and_bar, deploy_world_and_foo, drop_all_events, IFooSetter,
-            IFooSetterDispatcher, IFooSetterDispatcherTrait, NotCopiable
+            IFooSetterDispatcher, IFooSetterDispatcherTrait, NotCopiable,
         };
 
         mod event;
         pub use event::{
-            FooEventBadLayoutType, e_FooEventBadLayoutType, deploy_world_for_event_upgrades
+            FooEventBadLayoutType, e_FooEventBadLayoutType, deploy_world_for_event_upgrades,
         };
 
         mod model;

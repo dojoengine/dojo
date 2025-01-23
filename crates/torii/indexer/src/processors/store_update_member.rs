@@ -1,3 +1,5 @@
+use std::hash::{DefaultHasher, Hash, Hasher};
+
 use anyhow::{Context, Error, Result};
 use async_trait::async_trait;
 use dojo_types::schema::{Struct, Ty};
@@ -10,6 +12,7 @@ use torii_sqlite::Sql;
 use tracing::{debug, info};
 
 use super::{EventProcessor, EventProcessorConfig};
+use crate::task_manager::{TaskId, TaskPriority};
 
 pub(crate) const LOG_TARGET: &str = "torii_indexer::processors::store_update_member";
 
@@ -27,6 +30,19 @@ where
 
     fn validate(&self, _event: &Event) -> bool {
         true
+    }
+
+    fn task_priority(&self) -> TaskPriority {
+        2
+    }
+
+    fn task_identifier(&self, event: &Event) -> TaskId {
+        let mut hasher = DefaultHasher::new();
+        // model selector
+        event.keys[1].hash(&mut hasher);
+        // entity id
+        event.keys[2].hash(&mut hasher);
+        hasher.finish()
     }
 
     async fn process(
