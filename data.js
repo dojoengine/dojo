@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1737517331863,
+  "lastUpdate": 1737658750235,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -47185,6 +47185,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 7645656,
             "range": "± 80531",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f99ac3de620db6eb2b9d8ce22d7f02ba6d3f7bd1",
+          "message": "fix(dojo-lang): verify constructor args to follow dojo rules (#2944)\n\n* fix: ensure constructor is checked to follow dojo rules\r\n\r\n* chore: bump scarb\r\n\r\n* fix: run linters + add tests",
+          "timestamp": "2025-01-23T12:42:58-06:00",
+          "tree_id": "6acc6ac3bbe7302abb79c9fd45c4a58957e0bdf6",
+          "url": "https://github.com/dojoengine/dojo/commit/f99ac3de620db6eb2b9d8ce22d7f02ba6d3f7bd1"
+        },
+        "date": 1737658748226,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 11652282096,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
