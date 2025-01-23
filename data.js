@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1737658850824,
+  "lastUpdate": 1737671565300,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -47263,6 +47263,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 7658396,
             "range": "± 74260",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "distinct": true,
+          "id": "01111f454a5c07f4b32f4d415b90df27042a5430",
+          "message": "feat(katana): chain spec file management tools (#2945)",
+          "timestamp": "2025-01-23T17:16:15-05:00",
+          "tree_id": "404a87bc7008902f7f00551155d3c24e5a3a08d7",
+          "url": "https://github.com/dojoengine/dojo/commit/01111f454a5c07f4b32f4d415b90df27042a5430"
+        },
+        "date": 1737671563258,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 11872631344,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
