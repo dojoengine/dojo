@@ -22,11 +22,11 @@ impl<EF: ExecutorFactory> KatanaApiServer for KatanaApi<EF> {
     async fn fee_tokens(&self) -> RpcResult<Vec<FeeToken>> {
         Ok(vec![
             FeeToken {
-                name: "ETH".to_string(),
+                name: "Ether".to_string(),
                 address: self.backend.chain_spec.fee_contracts.eth,
             },
             FeeToken {
-                name: "STRK".to_string(),
+                name: "Starknet Token".to_string(),
                 address: self.backend.chain_spec.fee_contracts.strk,
             },
         ])

@@ -136,7 +136,7 @@ impl RpcModulesList {
 
 impl Default for RpcModulesList {
     fn default() -> Self {
-        Self(HashSet::from([RpcModuleKind::Starknet]))
+        Self(HashSet::from([RpcModuleKind::Starknet, RpcModuleKind::Katana]))
     }
 }
 
