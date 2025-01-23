@@ -426,6 +426,16 @@ fn test_primitive_upgrade() {
 }
 
 #[test]
+fn test_primitive_upgrade_backward_compatibility() {
+    // Some models may have been deployed with `ContractAddress` and `ClassHash`
+    // primitives, stored with the `starknet::` prefix in the introspection data structure.
+    assert!(
+        Ty::Primitive('starknet::ContractAddress')
+            .is_an_upgrade_of(@Ty::Primitive('starknet::Classhash')),
+    );
+}
+
+#[test]
 fn test_struct_upgrade() {
     let s = Struct {
         name: 's',

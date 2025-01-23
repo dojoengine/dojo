@@ -145,10 +145,10 @@ fn primitive_to_index(primitive: felt252) -> u32 {
     if primitive == 'felt252' {
         return 12;
     }
-    if primitive == 'ClassHash' {
+    if primitive == 'ClassHash' || primitive == 'starknet::Classhash' {
         return 13;
     }
-    if primitive == 'ContractAddress' {
+    if primitive == 'ContractAddress' || primitive == 'starknet::ContractAddress' {
         return 14;
     }
     if primitive == 'EthAddress' {
