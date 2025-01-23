@@ -1,14 +1,19 @@
+use std::hash::{DefaultHasher, Hash, Hasher};
+
 use anyhow::{Error, Result};
 use async_trait::async_trait;
+use cainome::cairo_serde::CairoSerde;
 use dojo_world::contracts::abigen::world::Event as WorldEvent;
 use dojo_world::contracts::naming::get_tag;
 use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::{Event, Felt};
 use starknet::providers::Provider;
+use starknet_crypto::poseidon_hash_many;
 use torii_sqlite::Sql;
 use tracing::info;
 
 use super::{EventProcessor, EventProcessorConfig};
+use crate::task_manager::{TaskId, TaskPriority};
 
 pub(crate) const LOG_TARGET: &str = "torii_indexer::processors::event_message";
 
@@ -26,6 +31,23 @@ where
 
     fn validate(&self, _event: &Event) -> bool {
         true
+    }
+
+    fn task_priority(&self) -> TaskPriority {
+        1
+    }
+
+    fn task_identifier(&self, event: &Event) -> TaskId {
+        let mut hasher = DefaultHasher::new();
+        let keys = Vec::<Felt>::cairo_deserialize(&event.data, 0).unwrap_or_else(|e| {
+            panic!("Expected EventEmitted keys to be well formed: {:?}", e);
+        });
+        // selector
+        event.keys[1].hash(&mut hasher);
+        // entity id
+        let entity_id = poseidon_hash_many(&keys);
+        entity_id.hash(&mut hasher);
+        hasher.finish()
     }
 
     async fn process(

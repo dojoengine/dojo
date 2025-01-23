@@ -2,11 +2,11 @@
 
 pub mod block;
 pub mod chain;
-pub mod chain_spec;
 pub mod class;
 pub mod contract;
 pub mod da;
 pub mod env;
+pub mod eth;
 pub mod event;
 pub mod fee;
 pub mod genesis;
