@@ -175,11 +175,10 @@ impl DojoContract {
         if !is_valid_constructor_params(&params_str) {
             self.diagnostics.push(PluginDiagnostic {
                 stable_ptr: fn_ast.stable_ptr().untyped(),
-                message: format!(
-                    "The constructor must have exactly one parameter, which is `ref self: \
-                     ContractState`. Add a `dojo_init` function instead if you need to initialize \
-                     the contract with parameters."
-                ),
+                message: "The constructor must have exactly one parameter, which is `ref self: \
+                          ContractState`. Add a `dojo_init` function instead if you need to \
+                          initialize the contract with parameters."
+                    .to_string(),
                 severity: Severity::Error,
             });
         }
@@ -394,5 +393,26 @@ fn is_valid_constructor_params(params: &str) -> bool {
         return false;
     }
 
-    frags.first().unwrap().starts_with("ref self: ContractState")
+    frags.first().unwrap().contains("ref self: ContractState")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_is_valid_constructor_params_ok() {
+        assert!(is_valid_constructor_params("ref self: ContractState"));
+        assert!(is_valid_constructor_params("ref self: ContractState "));
+        assert!(is_valid_constructor_params(" ref self: ContractState"));
+    }
+
+    #[test]
+    fn test_is_valid_constructor_params_not_ok() {
+        assert!(!is_valid_constructor_params(""));
+        assert!(!is_valid_constructor_params("self: ContractState"));
+        assert!(!is_valid_constructor_params("ref self: OtherState"));
+        assert!(!is_valid_constructor_params("ref self: ContractState, other: felt252"));
+        assert!(!is_valid_constructor_params("other: felt252"));
+    }
 }
