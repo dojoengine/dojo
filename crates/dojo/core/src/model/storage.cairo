@@ -38,7 +38,7 @@ pub trait ModelStorage<S, M> {
     /// Retrieves a model of type `M` using the provided entity id.
     fn read_member<T, +Serde<T>>(self: @S, ptr: ModelPtr<M>, field_selector: felt252) -> T;
 
-    /// Retrieves part of a model, matching a schema.
+    /// Retrieves a subset of members in a model, matching a defined schema <T>.
     fn read_schema<T, +Serde<T>, +Introspect<T>>(self: @S, ptr: ModelPtr<M>) -> T;
 
     /// Retrieves part of multiple models, matching a schema.

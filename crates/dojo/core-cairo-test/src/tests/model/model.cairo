@@ -56,7 +56,7 @@ struct Foo4 {
 }
 
 #[derive(Copy, Drop, Serde, Debug, Introspect)]
-struct Oo {
+struct FooSchema {
     v0: u256,
     v3: AStruct,
 }
@@ -229,7 +229,7 @@ fn test_read_schema() {
     let foo = Foo4 { id: 1, v0: 2, v1: 3, v2: 4, v3: AStruct { a: 5, b: 6, c: 7, d: 8 } };
     world.write_model(@foo);
 
-    let schema: Oo = world.read_schema(foo.ptr());
+    let schema: FooSchema = world.read_schema(foo.ptr());
     assert!(
         schema.v0 == foo.v0
             && schema.v3.a == foo.v3.a
@@ -250,7 +250,7 @@ fn test_read_schemas() {
 
     world.write_models([@foo, @foo_2].span());
 
-    let mut values: Array<Oo> = world.read_schemas([foo.ptr(), foo_2.ptr()].span());
+    let mut values: Array<FooSchema> = world.read_schemas([foo.ptr(), foo_2.ptr()].span());
     let schema_1 = values.pop_front().unwrap();
     let schema_2 = values.pop_front().unwrap();
     assert!(

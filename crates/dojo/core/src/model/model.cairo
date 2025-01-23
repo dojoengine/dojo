@@ -12,9 +12,19 @@ pub struct ModelPtr<M> {
     pub id: felt252,
 }
 
+
+/// Trait that defines a method for converting a span of model pointers to a span of model indexes.
+///
+/// # Type Parameters
+/// - `M`: The type of the model.
+///
+/// # Methods
+/// - `to_indexes(self: Span<ModelPtr<M>>) -> Span<ModelIndex>`:
+///   Converts the span of model pointers to a span of model indexes.
 pub trait ModelPtrsTrait<M> {
     fn to_indexes(self: Span<ModelPtr<M>>) -> Span<ModelIndex>;
 }
+
 
 pub impl ModelPtrsImpl<M> of ModelPtrsTrait<M> {
     fn to_indexes(self: Span<ModelPtr<M>>) -> Span<ModelIndex> {
