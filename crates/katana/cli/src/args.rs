@@ -20,6 +20,7 @@ use katana_node::config::rpc::RpcConfig;
 #[cfg(feature = "server")]
 use katana_node::config::rpc::{RpcModuleKind, RpcModulesList};
 use katana_node::config::{Config, SequencingConfig};
+use katana_primitives::chain::ChainId;
 use katana_primitives::genesis::allocation::DevAllocationsGenerator;
 use katana_primitives::genesis::constant::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;
 use serde::{Deserialize, Serialize};
@@ -44,7 +45,8 @@ pub struct NodeArgs {
 
     /// Path to the chain configuration file.
     #[arg(long, hide = true)]
-    pub chain: Option<PathBuf>,
+    #[arg(value_parser = ChainId::parse)]
+    pub chain: Option<ChainId>,
 
     /// Disable auto and interval mining, and mine on demand instead via an endpoint.
     #[arg(long)]
@@ -236,9 +238,12 @@ impl NodeArgs {
     }
 
     fn chain_spec(&self) -> Result<Arc<ChainSpec>> {
-        if let Some(path) = &self.chain {
-            let mut chain_spec = ChainSpec::load(path).context("failed to load chain spec")?;
+        if let Some(id) = &self.chain {
+            use katana_chain_spec::file;
+
+            let mut chain_spec = file::read(id).context("failed to load chain spec")?;
             chain_spec.genesis.sequencer_address = *DEFAULT_SEQUENCER_ADDRESS;
+
             Ok(Arc::new(chain_spec))
         }
         // exclusively for development mode

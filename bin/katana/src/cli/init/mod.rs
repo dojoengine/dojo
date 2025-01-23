@@ -1,18 +1,15 @@
 mod deployment;
 
-use std::fmt::Display;
-use std::fs;
-use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::{Context, Result};
 use clap::Args;
 use inquire::{Confirm, CustomType, Select};
-use katana_chain_spec::{DEV_UNALLOCATED, SettlementLayer};
+use katana_chain_spec::{SettlementLayer, DEV_UNALLOCATED};
 use katana_primitives::chain::ChainId;
-use katana_primitives::genesis::Genesis;
 use katana_primitives::genesis::allocation::DevAllocationsGenerator;
+use katana_primitives::genesis::Genesis;
 use katana_primitives::{ContractAddress, Felt};
 use lazy_static::lazy_static;
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
@@ -26,11 +23,7 @@ use tokio::runtime::Runtime;
 const CARTRIDGE_SN_SEPOLIA_PROVIDER: &str = "https://api.cartridge.gg/x/starknet/sepolia";
 
 #[derive(Debug, Args)]
-pub struct InitArgs {
-    /// The path to where the config file will be written at.
-    #[arg(value_name = "PATH")]
-    pub output_path: Option<PathBuf>,
-}
+pub struct InitArgs;
 
 impl InitArgs {
     // TODO:
@@ -52,7 +45,9 @@ impl InitArgs {
         chain_spec.id = ChainId::parse(&input.id)?;
         chain_spec.settlement = Some(settlement);
 
-        chain_spec.store(input.output_path)
+        katana_chain_spec::file::write(&chain_spec).context("failed to write chain spec file")?;
+
+        Ok(())
     }
 
     fn prompt(&self, rt: &Runtime) -> Result<PromptOutcome> {
@@ -86,7 +81,7 @@ impl InitArgs {
             SettlementChainOpt::Custom,
         ];
 
-        let network_type = Select::new("Select settlement chain", network_opts).prompt()?;
+        let network_type = Select::new("Settlement chain", network_opts).prompt()?;
 
         let settlement_url = match network_type {
             SettlementChainOpt::Sepolia => Url::parse(CARTRIDGE_SN_SEPOLIA_PROVIDER)?,
@@ -155,22 +150,12 @@ impl InitArgs {
                     .prompt()?
             };
 
-        let output_path = if let Some(path) = self.output_path.clone() {
-            path
-        } else {
-            CustomType::<Path>::new("Output path")
-                .with_default(config_path(&chain_id).map(Path)?)
-                .prompt()?
-                .0
-        };
-
         Ok(PromptOutcome {
             account: account_address,
             settlement_contract,
             settlement_id: parse_cairo_short_string(&l1_chain_id)?,
             id: chain_id,
             rpc_url: settlement_url,
-            output_path,
         })
     }
 }
@@ -191,43 +176,6 @@ struct PromptOutcome {
     rpc_url: Url,
 
     settlement_contract: ContractAddress,
-
-    // path at which the config file will be written at.
-    output_path: PathBuf,
-}
-
-// > CONFIG_DIR/$chain_id/config.json
-fn config_path(id: &str) -> Result<PathBuf> {
-    Ok(config_dir(id)?.join("config").with_extension("json"))
-}
-
-fn config_dir(id: &str) -> Result<PathBuf> {
-    const KATANA_DIR: &str = "katana";
-
-    let _ = cairo_short_string_to_felt(id).context("Invalid id");
-    let path = dirs::config_local_dir().context("unsupported OS")?.join(KATANA_DIR).join(id);
-
-    if !path.exists() {
-        fs::create_dir_all(&path).expect("failed to create config directory");
-    }
-
-    Ok(path)
-}
-
-#[derive(Debug, Clone)]
-struct Path(PathBuf);
-
-impl FromStr for Path {
-    type Err = <PathBuf as FromStr>::Err;
-    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        PathBuf::from_str(s).map(Self)
-    }
-}
-
-impl Display for Path {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0.display())
-    }
 }
 
 lazy_static! {
