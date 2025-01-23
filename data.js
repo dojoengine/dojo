@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1737671565300,
+  "lastUpdate": 1737671669216,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -47293,6 +47293,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 11872631344,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "distinct": true,
+          "id": "01111f454a5c07f4b32f4d415b90df27042a5430",
+          "message": "feat(katana): chain spec file management tools (#2945)",
+          "timestamp": "2025-01-23T17:16:15-05:00",
+          "tree_id": "404a87bc7008902f7f00551155d3c24e5a3a08d7",
+          "url": "https://github.com/dojoengine/dojo/commit/01111f454a5c07f4b32f4d415b90df27042a5430"
+        },
+        "date": 1737671666859,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2535416,
+            "range": "± 42146",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 7972156,
+            "range": "± 234918",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2636321348,
+            "range": "± 231252115",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 7744263,
+            "range": "± 51720",
             "unit": "ns/iter"
           }
         ]
