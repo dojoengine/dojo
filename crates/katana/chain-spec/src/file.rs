@@ -14,20 +14,20 @@ pub enum Error {
     #[error("OS not supported")]
     UnsupportedOS,
 
-    #[error("Config directory not found for chain `{id}`")]
+    #[error("config directory not found for chain `{id}`")]
     DirectoryNotFound { id: String },
-
-    #[error(transparent)]
-    IO(#[from] std::io::Error),
-
-    #[error(transparent)]
-    GenesisJson(#[from] katana_primitives::genesis::json::GenesisJsonError),
 
     #[error("failed to read config file: {0}")]
     ConfigReadError(#[from] toml::ser::Error),
 
     #[error("failed to write config file: {0}")]
     ConfigWriteError(#[from] toml::de::Error),
+
+    #[error(transparent)]
+    IO(#[from] std::io::Error),
+
+    #[error(transparent)]
+    GenesisJson(#[from] katana_primitives::genesis::json::GenesisJsonError),
 }
 
 pub fn read(id: &ChainId) -> Result<ChainSpec, Error> {
@@ -54,8 +54,6 @@ pub fn read(id: &ChainId) -> Result<ChainSpec, Error> {
 
 pub fn write(chain_spec: &ChainSpec) -> Result<(), Error> {
     let dir = ChainConfigDir::create(&chain_spec.id)?;
-
-    dbg!(&dir);
 
     {
         let cfg = ChainSpecFile {
