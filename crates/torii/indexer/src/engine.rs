@@ -1,15 +1,14 @@
 use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
 use std::fmt::Debug;
-use std::hash::{DefaultHasher, Hash, Hasher};
+use std::hash::Hash;
 use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Result;
 use bitflags::bitflags;
-use cainome::cairo_serde::CairoSerde;
 use dojo_utils::provider as provider_utils;
 use dojo_world::contracts::world::WorldContractReader;
-use futures_util::future::{join_all, try_join_all};
+use futures_util::future::join_all;
 use hashlink::LinkedHashMap;
 use starknet::core::types::{
     BlockHashAndNumber, BlockId, BlockTag, EmittedEvent, Event, EventFilter, EventsPage,
@@ -18,7 +17,7 @@ use starknet::core::types::{
 };
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
-use starknet_crypto::{poseidon_hash_many, Felt};
+use starknet_crypto::Felt;
 use tokio::sync::broadcast::Sender;
 use tokio::sync::mpsc::Sender as BoundedSender;
 use tokio::sync::Semaphore;
@@ -47,6 +46,7 @@ use crate::processors::upgrade_model::UpgradeModelProcessor;
 use crate::processors::{
     BlockProcessor, EventProcessor, EventProcessorConfig, TransactionProcessor,
 };
+use crate::task_manager::{self, ParallelizedEvent, TaskManager};
 
 type EventProcessorMap<P> = HashMap<Felt, Vec<Box<dyn EventProcessor<P>>>>;
 
@@ -200,17 +200,6 @@ pub struct FetchPendingResult {
     pub block_number: u64,
 }
 
-#[derive(Debug)]
-pub struct ParallelizedEvent {
-    pub block_number: u64,
-    pub block_timestamp: u64,
-    pub event_id: String,
-    pub event: Event,
-}
-
-type TaskPriority = usize;
-type TaskId = u64;
-
 #[allow(missing_debug_implementations)]
 pub struct Engine<P: Provider + Send + Sync + std::fmt::Debug + 'static> {
     world: Arc<WorldContractReader<P>>,
@@ -220,7 +209,7 @@ pub struct Engine<P: Provider + Send + Sync + std::fmt::Debug + 'static> {
     config: EngineConfig,
     shutdown_tx: Sender<()>,
     block_tx: Option<BoundedSender<u64>>,
-    tasks: BTreeMap<TaskPriority, HashMap<TaskId, Vec<(ContractType, ParallelizedEvent)>>>,
+    task_manager: TaskManager<P>,
     contracts: Arc<HashMap<Felt, ContractType>>,
 }
 
@@ -244,17 +233,27 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         let contracts = Arc::new(
             contracts.iter().map(|contract| (contract.address, contract.r#type)).collect(),
         );
+        let world = Arc::new(world);
+        let processors = Arc::new(processors);
+        let max_concurrent_tasks = config.max_concurrent_tasks;
+        let event_processor_config = config.event_processor_config.clone();
 
         Self {
-            world: Arc::new(world),
-            db,
+            world: world.clone(),
+            db: db.clone(),
             provider: Arc::new(provider),
-            processors: Arc::new(processors),
+            processors: processors.clone(),
             config,
             shutdown_tx,
             block_tx,
             contracts,
-            tasks: BTreeMap::new(),
+            task_manager: TaskManager::new(
+                db,
+                world,
+                processors,
+                max_concurrent_tasks,
+                event_processor_config,
+            ),
         }
     }
 
@@ -542,7 +541,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         }
 
         // Process parallelized events
-        self.process_tasks().await?;
+        self.task_manager.process_tasks().await?;
 
         self.db.update_cursors(
             data.block_number - 1,
@@ -589,83 +588,12 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         }
 
         // Process parallelized events
-        self.process_tasks().await?;
+        self.task_manager.process_tasks().await?;
 
         let last_block_timestamp =
             get_block_timestamp(&self.provider, data.latest_block_number).await?;
 
         self.db.reset_cursors(data.latest_block_number, cursor_map, last_block_timestamp)?;
-
-        Ok(())
-    }
-
-    async fn process_tasks(&mut self) -> Result<()> {
-        let semaphore = Arc::new(Semaphore::new(self.config.max_concurrent_tasks));
-
-        // Process each priority level sequentially
-        for (priority, task_group) in std::mem::take(&mut self.tasks) {
-            let mut handles = Vec::new();
-
-            // Process all tasks within this priority level concurrently
-            for (task_id, events) in task_group {
-                let db = self.db.clone();
-                let world = self.world.clone();
-                let semaphore = semaphore.clone();
-                let processors = self.processors.clone();
-                let event_processor_config = self.config.event_processor_config.clone();
-
-                handles.push(tokio::spawn(async move {
-                    let _permit = semaphore.acquire().await?;
-                    let mut local_db = db.clone();
-
-                    // Process all events for this task sequentially
-                    for (contract_type, event) in events {
-                        let contract_processors = processors.get_event_processor(contract_type);
-                        if let Some(processors) = contract_processors.get(&event.event.keys[0]) {
-                            let processor = processors
-                                .iter()
-                                .find(|p| p.validate(&event.event))
-                                .expect("Must find at least one processor for the event");
-
-                            debug!(
-                                target: LOG_TARGET,
-                                event_name = processor.event_key(),
-                                task_id = %task_id,
-                                priority = %priority,
-                                "Processing parallelized event."
-                            );
-
-                            if let Err(e) = processor
-                                .process(
-                                    &world,
-                                    &mut local_db,
-                                    event.block_number,
-                                    event.block_timestamp,
-                                    &event.event_id,
-                                    &event.event,
-                                    &event_processor_config,
-                                )
-                                .await
-                            {
-                                error!(
-                                    target: LOG_TARGET,
-                                    event_name = processor.event_key(),
-                                    error = %e,
-                                    task_id = %task_id,
-                                    priority = %priority,
-                                    "Processing parallelized event."
-                                );
-                            }
-                        }
-                    }
-
-                    Ok::<_, anyhow::Error>(())
-                }));
-            }
-
-            // Wait for all tasks in this priority level to complete before moving to next priority
-            try_join_all(handles).await?;
-        }
 
         Ok(())
     }
@@ -881,50 +809,21 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
             .find(|p| p.validate(event))
             .expect("Must find atleast one processor for the event");
 
-        let (task_priority, task_identifier) = match processor.event_key().as_str() {
-            "ModelRegistered" | "EventRegistered" => {
-                let mut hasher = DefaultHasher::new();
-                event.keys.iter().for_each(|k| k.hash(&mut hasher));
-                let hash = hasher.finish();
-                (0usize, hash) // Priority 0 (highest) for model/event registration
-            }
-            "StoreSetRecord" | "StoreUpdateRecord" | "StoreUpdateMember" | "StoreDelRecord" => {
-                let mut hasher = DefaultHasher::new();
-                event.keys[1].hash(&mut hasher);
-                event.keys[2].hash(&mut hasher);
-                let hash = hasher.finish();
-                (2usize, hash) // Priority 2 (lower) for store operations
-            }
-            "EventEmitted" => {
-                let mut hasher = DefaultHasher::new();
+        let (task_priority, task_identifier) =
+            (processor.task_priority(), processor.task_identifier(event));
 
-                let keys = Vec::<Felt>::cairo_deserialize(&event.data, 0).unwrap_or_else(|e| {
-                    panic!("Expected EventEmitted keys to be well formed: {:?}", e);
-                });
-
-                // selector
-                event.keys[1].hash(&mut hasher);
-                // entity id
-                let entity_id = poseidon_hash_many(&keys);
-                entity_id.hash(&mut hasher);
-
-                let hash = hasher.finish();
-                (2usize, hash) // Priority 2 for event messages
-            }
-            _ => (0, 0), // No parallelization for other events
-        };
-
-        if task_identifier != 0 {
-            self.tasks.entry(task_priority).or_default().entry(task_identifier).or_default().push(
-                (
+        // if our event can be parallelized, we add it to the task manager
+        if task_identifier != task_manager::TASK_ID_SEQUENTIAL {
+            self.task_manager.add_parallelized_event(
+                task_priority,
+                task_identifier,
+                ParallelizedEvent {
                     contract_type,
-                    ParallelizedEvent {
-                        event_id: event_id.to_string(),
-                        event: event.clone(),
-                        block_number,
-                        block_timestamp,
-                    },
-                ),
+                    event_id: event_id.to_string(),
+                    event: event.clone(),
+                    block_number,
+                    block_timestamp,
+                },
             );
         } else {
             // Process non-parallelized events immediately
