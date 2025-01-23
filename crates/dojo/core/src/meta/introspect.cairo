@@ -2,7 +2,9 @@ use dojo::meta::Layout;
 use dojo::storage::packing;
 use core::panics::panic_with_byte_array;
 
-// Each index matches with a primitive types in both arrays (main and nested):
+// Each index matches with a primitive types in both arrays (main and nested).
+// The main array represents the source primitive while nested arrays represents
+// destination primitives.
 // 'bool': 0
 // 'u8': 1
 // 'u16': 2
@@ -18,81 +20,87 @@ use core::panics::panic_with_byte_array;
 // 'felt252': 12
 // 'ClassHash': 13
 // 'ContractAddress': 14
-const ALLOWED_PRIMITIVE_UPGRADES: [[bool; 15]; 15] = [
+// 'EthAddress': 15
+const ALLOWED_PRIMITIVE_UPGRADES: [[bool; 16]; 16] = [
     // bool
     [
         false, false, false, false, false, false, false, false, false, false, false, false, false,
-        false, false,
+        false, false, false,
     ],
     // u8
     [
         false, true, true, true, true, true, false, false, false, false, false, false, true, false,
-        false,
+        false, false,
     ],
     // u16
     [
         false, false, true, true, true, true, false, false, false, false, false, false, true, false,
-        false,
+        false, false,
     ],
     // u32
     [
         false, false, false, true, true, true, false, false, false, false, false, false, true,
-        false, false,
+        false, false, false,
     ],
     // u64
     [
         false, false, false, false, true, true, false, false, false, false, false, false, true,
-        false, false,
+        false, false, false,
     ],
     // u128
     [
         false, false, false, false, false, true, false, false, false, false, false, false, true,
-        false, false,
+        false, false, false,
     ],
     // u256
     [
         false, false, false, false, false, false, true, false, false, false, false, false, false,
-        false, false,
+        false, false, false,
     ],
     // i8
     [
         false, false, false, false, false, false, false, true, true, true, true, true, true, false,
-        false,
+        false, false,
     ],
     // i16
     [
         false, false, false, false, false, false, false, false, true, true, true, true, true, false,
-        false,
+        false, false,
     ],
     // i32
     [
         false, false, false, false, false, false, false, false, false, true, true, true, true,
-        false, false,
+        false, false, false,
     ],
     // i64
     [
         false, false, false, false, false, false, false, false, false, false, true, true, true,
-        false, false,
+        false, false, false,
     ],
     // i128
     [
         false, false, false, false, false, false, false, false, false, false, false, true, true,
-        false, false,
+        false, false, false,
     ],
     // felt252
     [
         false, false, false, false, false, false, false, false, false, false, false, false, true,
-        true, true,
+        true, true, false,
     ],
     // ClassHash
     [
         false, false, false, false, false, false, false, false, false, false, false, false, true,
-        true, true,
+        true, true, false,
     ],
     // ContractAddress
     [
         false, false, false, false, false, false, false, false, false, false, false, false, true,
-        true, true,
+        true, true, false,
+    ],
+    // EthAddress
+    [
+        false, false, false, false, false, false, false, false, false, false, false, false, true,
+        true, true, true,
     ],
 ];
 
@@ -142,6 +150,9 @@ fn primitive_to_index(primitive: felt252) -> u32 {
     }
     if primitive == 'ContractAddress' {
         return 14;
+    }
+    if primitive == 'EthAddress' {
+        return 15;
     }
 
     panic_with_byte_array(
@@ -544,6 +555,18 @@ pub impl Introspect_classhash of Introspect<starknet::ClassHash> {
     }
     fn ty() -> Ty {
         Ty::Primitive('ClassHash')
+    }
+}
+
+pub impl Introspect_ethaddress of Introspect<starknet::EthAddress> {
+    fn size() -> Option<usize> {
+        Option::Some(1)
+    }
+    fn layout() -> Layout {
+        Layout::Fixed([packing::PACKING_MAX_BITS].span())
+    }
+    fn ty() -> Ty {
+        Ty::Primitive('EthAddress')
     }
 }
 

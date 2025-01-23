@@ -366,7 +366,7 @@ fn test_introspect_upgrade() {
 fn test_primitive_upgrade() {
     let primitives = [
         'bool', 'u8', 'u16', 'u32', 'usize', 'u64', 'u128', 'u256', 'i8', 'i16', 'i32', 'i64',
-        'i128', 'felt252', 'ClassHash', 'ContractAddress',
+        'i128', 'felt252', 'ClassHash', 'ContractAddress', 'EthAddress',
     ]
         .span();
 
@@ -382,6 +382,7 @@ fn test_primitive_upgrade() {
         ('i128', ['felt252'].span()), ('felt252', ['ClassHash', 'ContractAddress'].span()),
         ('ClassHash', ['felt252', 'ContractAddress'].span()),
         ('ContractAddress', ['felt252', 'ClassHash'].span()),
+        ('EthAddress', ['felt252', 'ClassHash', 'ContractAddress'].span()),
     ]
         .span();
 
@@ -590,7 +591,7 @@ fn test_array_upgrade() {
 }
 
 #[test]
-#[available_gas(300000)]
+#[available_gas(360000)]
 fn test_primitive_upgrade_performance() {
     let gas = GasCounterTrait::start();
     let _ = Ty::Primitive('ClassHash').is_an_upgrade_of(@Ty::Primitive('ContractAddress'));
