@@ -1,47 +1,54 @@
-use starknet::core::utils::{cairo_short_string_to_felt, CairoShortStringToFeltError};
+use std::str::FromStr;
+
 use starknet::macros::short_string;
 
+use crate::cairo::{ShortString, ShortStringFromFeltError, ShortStringTryFromStrError};
 use crate::{Felt, FromStrError};
 
-/// Known chain ids that has been assigned a name.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum NamedChainId {
-    Mainnet,
-    Goerli,
-    Sepolia,
+/// An chain id that is not necessarily a valid ASCII string and thus
+/// cannot be displayed as a formatted string (eg., `SN_MAIN`).
+pub type RawChainId = Felt;
+
+#[derive(Debug, thiserror::Error)]
+pub enum NamedIdError {
+    #[error(transparent)]
+    InvalidShortString(#[from] ShortStringTryFromStrError),
 }
 
+/// Chain id with a canonical human-readable name.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct NamedChainId(Felt);
+
+//////////////////////////////////////////////////////////////
+// 	NamedChainId implementations
+//////////////////////////////////////////////////////////////
+
 impl NamedChainId {
-    /// `SN_MAIN` in ASCII
+    /// The official chain id for Starknet mainnet.
     pub const SN_MAIN: Felt = short_string!("SN_MAIN");
-
-    /// `SN_GOERLI` in ASCII
+    /// The official chain id for (now removed) Starknet goerli.
     pub const SN_GOERLI: Felt = short_string!("SN_GOERLI");
-
-    /// `SN_SEPOLIA` in ASCII
+    /// The official chain id for Starknet sepolia.
     pub const SN_SEPOLIA: Felt = short_string!("SN_SEPOLIA");
+
+    pub fn new(name: &str) -> Result<Self, NamedIdError> {
+        Ok(Self(ShortString::from_str(name)?.into()))
+    }
 
     /// Returns the id of the chain. It is the ASCII representation of a predefined string
     /// constants.
     #[inline]
-    pub const fn id(&self) -> Felt {
-        match self {
-            NamedChainId::Mainnet => Self::SN_MAIN,
-            NamedChainId::Goerli => Self::SN_GOERLI,
-            NamedChainId::Sepolia => Self::SN_SEPOLIA,
-        }
+    pub fn raw(&self) -> RawChainId {
+        self.0
     }
 
     /// Returns the predefined string constant of the chain id.
     #[inline]
-    pub const fn name(&self) -> &'static str {
-        match self {
-            NamedChainId::Mainnet => "SN_MAIN",
-            NamedChainId::Goerli => "SN_GOERLI",
-            NamedChainId::Sepolia => "SN_SEPOLIA",
-        }
+    pub fn name(&self) -> ShortString {
+        // safe to just unwrap here because we already checked its validity upon creation
+        ShortString::try_from(self.0).unwrap()
     }
 }
 
@@ -51,34 +58,53 @@ impl std::fmt::Display for NamedChainId {
     }
 }
 
-/// This `struct` is created by the [`NamedChainId::try_from<u128>`] method.
-#[derive(Debug, thiserror::Error)]
-#[error("Unknown named chain id {0:#x}")]
-pub struct NamedChainTryFromError(Felt);
-
 impl TryFrom<Felt> for NamedChainId {
-    type Error = NamedChainTryFromError;
+    type Error = ShortStringFromFeltError;
+
     fn try_from(value: Felt) -> Result<Self, Self::Error> {
-        if value == Self::SN_MAIN {
-            Ok(Self::Mainnet)
-        } else if value == Self::SN_GOERLI {
-            Ok(Self::Goerli)
-        } else if value == Self::SN_SEPOLIA {
-            Ok(Self::Sepolia)
-        } else {
-            Err(NamedChainTryFromError(value))
-        }
+        Ok(Self(ShortString::try_from(value)?))
+    }
+}
+
+impl From<NamedChainId> for Felt {
+    fn from(value: NamedChainId) -> Self {
+        value.raw()
     }
 }
 
 /// Represents a chain id.
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum ChainId {
-    /// A chain id with a known chain name.
+    Raw(RawChainId),
     Named(NamedChainId),
-    Id(Felt),
+}
+
+//////////////////////////////////////////////////////////////
+// 	ChainId implementations
+//////////////////////////////////////////////////////////////
+
+impl ChainId {
+    /// Parse a [`ChainId`] from a [`str`].
+    ///
+    /// If the `str` starts with `0x` it is parsed as a hex string, otherwise it is parsed as a
+    /// Cairo short string.
+    pub fn parse(s: &str) -> Result<Self, ParseChainIdError> {
+        if s.starts_with("0x") {
+            Ok(ChainId::Raw(Felt::from_hex(s)?))
+        } else {
+            Ok(ChainId::Named(NamedChainId::new(s)?))
+        }
+    }
+
+    /// Returns the raw chain id value.
+    pub fn raw(&self) -> RawChainId {
+        match self {
+            ChainId::Raw(id) => *id,
+            ChainId::Named(name) => name.raw(),
+        }
+    }
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -86,69 +112,33 @@ pub enum ParseChainIdError {
     #[error(transparent)]
     FromStr(#[from] FromStrError),
     #[error(transparent)]
-    CairoShortStringToFelt(#[from] CairoShortStringToFeltError),
-}
-
-impl ChainId {
-    /// Chain id of the Starknet mainnet.
-    pub const MAINNET: Self = Self::Named(NamedChainId::Mainnet);
-    /// Chain id of the Starknet goerli testnet.
-    pub const GOERLI: Self = Self::Named(NamedChainId::Goerli);
-    /// Chain id of the Starknet sepolia testnet.
-    pub const SEPOLIA: Self = Self::Named(NamedChainId::Sepolia);
-
-    /// Parse a [`ChainId`] from a [`str`].
-    ///
-    /// If the `str` starts with `0x` it is parsed as a hex string, otherwise it is parsed as a
-    /// Cairo short string.
-    pub fn parse(s: &str) -> Result<Self, ParseChainIdError> {
-        let id =
-            if s.starts_with("0x") { Felt::from_hex(s)? } else { cairo_short_string_to_felt(s)? };
-        Ok(ChainId::from(id))
-    }
-
-    /// Returns the chain id value.
-    pub const fn id(&self) -> Felt {
-        match self {
-            ChainId::Named(name) => name.id(),
-            ChainId::Id(id) => *id,
-        }
-    }
-}
-
-impl Default for ChainId {
-    fn default() -> Self {
-        ChainId::Id(Felt::ZERO)
-    }
-}
-
-impl std::fmt::Debug for ChainId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ChainId::Named(name) => write!(f, "ChainId {{ name: {name}, id: {:#x} }}", name.id()),
-            ChainId::Id(id) => write!(f, "ChainId {{ id: {id:#x} }}"),
-        }
-    }
+    NamedId(#[from] NamedIdError),
 }
 
 impl std::fmt::Display for ChainId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ChainId::Named(id) => write!(f, "{id}"),
-            ChainId::Id(id) => write!(f, "{id:#x}"),
+            ChainId::Raw(id) => write!(f, "{id:#x}"),
+            ChainId::Named(id) => write!(f, "{}", id.name()),
         }
     }
 }
 
 impl From<Felt> for ChainId {
     fn from(value: Felt) -> Self {
-        NamedChainId::try_from(value).map(ChainId::Named).unwrap_or(ChainId::Id(value))
+        NamedChainId::try_from(value).map(ChainId::Named).unwrap_or(ChainId::Raw(value))
+    }
+}
+
+impl Default for ChainId {
+    fn default() -> Self {
+        Self::Raw(RawChainId::ZERO)
     }
 }
 
 impl From<ChainId> for Felt {
     fn from(value: ChainId) -> Self {
-        value.id()
+        value.raw()
     }
 }
 
@@ -156,56 +146,37 @@ impl From<ChainId> for Felt {
 mod tests {
     use std::convert::TryFrom;
 
-    use starknet::core::utils::cairo_short_string_to_felt;
-    use starknet::macros::felt;
+    use starknet::macros::short_string;
 
     use super::ChainId;
     use crate::chain::NamedChainId;
+    use crate::{felt, Felt};
 
     #[test]
     fn named_chain_id() {
-        let mainnet_id = cairo_short_string_to_felt("SN_MAIN").unwrap();
-        let goerli_id = cairo_short_string_to_felt("SN_GOERLI").unwrap();
-        let sepolia_id = cairo_short_string_to_felt("SN_SEPOLIA").unwrap();
-
-        assert_eq!(NamedChainId::Mainnet.id(), mainnet_id);
-        assert_eq!(NamedChainId::Goerli.id(), goerli_id);
-        assert_eq!(NamedChainId::Sepolia.id(), sepolia_id);
-
-        assert_eq!(NamedChainId::try_from(mainnet_id).unwrap(), NamedChainId::Mainnet);
-        assert_eq!(NamedChainId::try_from(goerli_id).unwrap(), NamedChainId::Goerli);
-        assert_eq!(NamedChainId::try_from(sepolia_id).unwrap(), NamedChainId::Sepolia);
-        assert!(NamedChainId::try_from(felt!("0x1337")).is_err());
+        let id = NamedChainId::new("KATANA").unwrap();
+        let felt: Felt = id.clone().into();
+        let id2 = NamedChainId::try_from(felt).unwrap();
+        assert_eq!(id, id2);
     }
 
-    #[test]
-    fn chain_id() {
-        let mainnet_id = cairo_short_string_to_felt("SN_MAIN").unwrap();
-        let goerli_id = cairo_short_string_to_felt("SN_GOERLI").unwrap();
-        let sepolia_id = cairo_short_string_to_felt("SN_SEPOLIA").unwrap();
-
-        assert_eq!(ChainId::MAINNET.id(), NamedChainId::Mainnet.id());
-        assert_eq!(ChainId::GOERLI.id(), NamedChainId::Goerli.id());
-        assert_eq!(ChainId::SEPOLIA.id(), NamedChainId::Sepolia.id());
-
-        assert_eq!(ChainId::from(mainnet_id), ChainId::MAINNET);
-        assert_eq!(ChainId::from(goerli_id), ChainId::GOERLI);
-        assert_eq!(ChainId::from(sepolia_id), ChainId::SEPOLIA);
-        assert_eq!(ChainId::from(felt!("0x1337")), ChainId::Id(felt!("0x1337")));
-
-        assert_eq!(ChainId::MAINNET.to_string(), "SN_MAIN");
-        assert_eq!(ChainId::GOERLI.to_string(), "SN_GOERLI");
-        assert_eq!(ChainId::SEPOLIA.to_string(), "SN_SEPOLIA");
-        assert_eq!(ChainId::Id(felt!("0x1337")).to_string(), "0x1337");
+    #[rstest::rstest]
+    #[case("😜")]
+    #[case("漢字")]
+    #[case("ˆåß∂ßå∂åß")]
+    fn invalid_named_chain_id(#[case] invalid_string: &str) {
+        assert!(dbg!(NamedChainId::new(invalid_string)).is_err());
     }
 
-    #[test]
-    fn parse_chain_id() {
-        let mainnet_id = cairo_short_string_to_felt("SN_MAIN").unwrap();
-        let custom_id = cairo_short_string_to_felt("KATANA").unwrap();
-
-        assert_eq!(ChainId::parse("SN_MAIN").unwrap(), ChainId::MAINNET);
-        assert_eq!(ChainId::parse("KATANA").unwrap(), ChainId::Id(custom_id));
-        assert_eq!(ChainId::parse(&format!("{mainnet_id:#x}")).unwrap(), ChainId::MAINNET);
+    #[rstest::rstest]
+    #[case("0x1337", felt!("0x1337"))]
+    #[case("KATANA", short_string!("KATANA"))]
+    #[case("0xdeadbeef", felt!("0xdeadbeef"))]
+    #[case("SN_MAIN", short_string!("SN_MAIN"))]
+    #[case("FARTCHAIN", short_string!("FARTCHAIN"))]
+    #[case("SN_SEPOLIA", short_string!("SN_SEPOLIA"))]
+    fn parse_chain_id(#[case] string: &str, #[case] felt: Felt) {
+        let id = ChainId::parse(string).unwrap();
+        assert_eq!(id.raw(), felt);
     }
 }

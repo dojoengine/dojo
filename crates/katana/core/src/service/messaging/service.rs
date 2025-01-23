@@ -84,8 +84,9 @@ impl<EF: ExecutorFactory> MessagingService<EF> {
 
         match messenger.as_ref() {
             MessengerMode::Ethereum(inner) => {
-                let (block_num, txs) =
-                    inner.gather_messages(from_block, max_block, backend.chain_spec.id).await?;
+                let (block_num, txs) = inner
+                    .gather_messages(from_block, max_block, backend.chain_spec.id.raw())
+                    .await?;
                 let txs_count = txs.len();
 
                 txs.into_iter().for_each(|tx| {

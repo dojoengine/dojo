@@ -3,7 +3,7 @@ use std::sync::Arc;
 use alloy_primitives::B256;
 use derive_more::{AsRef, Deref, From};
 
-use crate::chain::ChainId;
+use crate::chain::RawChainId;
 use crate::class::{ClassHash, CompiledClassHash, ContractClass};
 use crate::contract::{ContractAddress, Nonce};
 use crate::da::DataAvailabilityMode;
@@ -215,7 +215,7 @@ pub struct InvokeTxV1 {
     ///
     /// Used as a simple replay attack protection.
     #[serde(default)]
-    pub chain_id: ChainId,
+    pub chain_id: RawChainId,
     /// The account address which the transaction is initiated from.
     pub sender_address: ContractAddress,
     /// The nonce value of the account. Corresponds to the number of transactions initiated by
@@ -237,7 +237,7 @@ pub struct InvokeTxV3 {
     ///
     /// Used as a simple replay attack protection.
     #[serde(default)]
-    pub chain_id: ChainId,
+    pub chain_id: RawChainId,
     /// The account address which the transaction is initiated from.
     pub sender_address: ContractAddress,
     /// The nonce value of the account. Corresponds to the number of transactions initiated by
@@ -278,7 +278,7 @@ impl InvokeTx {
                 Felt::from(tx.sender_address),
                 &tx.calldata,
                 tx.max_fee,
-                tx.chain_id.into(),
+                tx.chain_id,
                 tx.nonce,
                 is_query,
             ),
@@ -290,7 +290,7 @@ impl InvokeTx {
                 &tx.resource_bounds.l1_gas,
                 &tx.resource_bounds.l2_gas,
                 &tx.paymaster_data,
-                tx.chain_id.into(),
+                tx.chain_id,
                 tx.nonce,
                 &tx.nonce_data_availability_mode,
                 &tx.fee_data_availability_mode,
@@ -331,7 +331,7 @@ pub struct DeclareTxV0 {
     ///
     /// Used as a simple replay attack protection.
     #[serde(default)]
-    pub chain_id: ChainId,
+    pub chain_id: RawChainId,
     /// The account address which the transaction is initiated from.
     pub sender_address: ContractAddress,
     /// The transaction signature associated with the sender address.
@@ -351,7 +351,7 @@ pub struct DeclareTxV1 {
     ///
     /// Used as a simple replay attack protection.
     #[serde(default)]
-    pub chain_id: ChainId,
+    pub chain_id: RawChainId,
     /// The account address which the transaction is initiated from.
     pub sender_address: ContractAddress,
     /// The nonce value of the account. Corresponds to the number of transactions initiated by
@@ -374,7 +374,7 @@ pub struct DeclareTxV2 {
     ///
     /// Used as a simple replay attack protection.
     #[serde(default)]
-    pub chain_id: ChainId,
+    pub chain_id: RawChainId,
     /// The account address which the transaction is initiated from.
     pub sender_address: ContractAddress,
     /// The nonce value of the account. Corresponds to the number of transactions initiated by
@@ -399,7 +399,7 @@ pub struct DeclareTxV3 {
     ///
     /// Used as a simple replay attack protection.
     #[serde(default)]
-    pub chain_id: ChainId,
+    pub chain_id: RawChainId,
     /// The account address which the transaction is initiated from.
     pub sender_address: ContractAddress,
     /// The nonce value of the account. Corresponds to the number of transactions initiated by
@@ -435,7 +435,7 @@ impl DeclareTx {
                 Felt::from(tx.sender_address),
                 tx.class_hash,
                 tx.max_fee,
-                tx.chain_id.into(),
+                tx.chain_id,
                 tx.nonce,
                 is_query,
             ),
@@ -444,7 +444,7 @@ impl DeclareTx {
                 Felt::from(tx.sender_address),
                 tx.class_hash,
                 tx.max_fee,
-                tx.chain_id.into(),
+                tx.chain_id,
                 tx.nonce,
                 tx.compiled_class_hash,
                 is_query,
@@ -458,7 +458,7 @@ impl DeclareTx {
                 &tx.resource_bounds.l1_gas,
                 &tx.resource_bounds.l2_gas,
                 &tx.paymaster_data,
-                tx.chain_id.into(),
+                tx.chain_id,
                 tx.nonce,
                 &tx.nonce_data_availability_mode,
                 &tx.fee_data_availability_mode,
@@ -478,7 +478,7 @@ pub struct L1HandlerTx {
     pub nonce: Nonce,
     /// The chain id.
     #[serde(default)]
-    pub chain_id: ChainId,
+    pub chain_id: RawChainId,
     /// Amount of fee paid on L1.
     pub paid_fee_on_l1: u128,
     /// Transaction version.
@@ -501,7 +501,7 @@ impl L1HandlerTx {
             Felt::from(self.contract_address),
             self.entry_point_selector,
             &self.calldata,
-            self.chain_id.into(),
+            self.chain_id,
             self.nonce,
         )
     }
@@ -532,7 +532,7 @@ pub struct DeployAccountTxV1 {
     ///
     /// Used as a simple replay attack protection.
     #[serde(default)]
-    pub chain_id: ChainId,
+    pub chain_id: RawChainId,
     /// The nonce value of the account. Corresponds to the number of transactions initiated by
     /// sender.
     pub nonce: Nonce,
@@ -558,7 +558,7 @@ pub struct DeployAccountTxV3 {
     ///
     /// Used as a simple replay attack protection.
     #[serde(default)]
-    pub chain_id: ChainId,
+    pub chain_id: RawChainId,
     /// The nonce value of the account. Corresponds to the number of transactions initiated by
     /// sender.
     pub nonce: Nonce,
@@ -594,7 +594,7 @@ impl DeployAccountTx {
                 tx.class_hash,
                 tx.contract_address_salt,
                 tx.max_fee,
-                tx.chain_id.into(),
+                tx.chain_id,
                 tx.nonce,
                 is_query,
             ),
@@ -608,7 +608,7 @@ impl DeployAccountTx {
                 &tx.resource_bounds.l1_gas,
                 &tx.resource_bounds.l2_gas,
                 &tx.paymaster_data,
-                tx.chain_id.into(),
+                tx.chain_id,
                 tx.nonce,
                 &tx.nonce_data_availability_mode,
                 &tx.fee_data_availability_mode,

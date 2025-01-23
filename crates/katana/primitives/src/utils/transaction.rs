@@ -326,7 +326,7 @@ mod tests {
     use starknet::macros::{felt, short_string};
 
     use super::*;
-    use crate::chain::ChainId;
+    use crate::chain::NamedChainId;
 
     #[test]
     fn test_query_version_offset() {
@@ -360,7 +360,7 @@ mod tests {
         let class_hash = felt!("0x25ec026985a3bf9d0cc1fe17326b245dfdc3ff89b8fde106542a3ea56c5a918");
         let salt = felt!("0x43a8fbe19d5ace41a2328bb870143241831180eb3c3c48096642d63709c3096");
         let max_fee = felt!("0x38d7ea4c68000");
-        let chain_id = ChainId::MAINNET.id();
+        let chain_id = NamedChainId::sn_mainnet().raw();
         let nonce = Felt::ZERO;
 
         let actual_hash = compute_deploy_account_v1_tx_hash(
@@ -398,7 +398,7 @@ mod tests {
         let l1_gas_bounds = ResourceBounds { max_amount: 0x29, max_price_per_unit: 0x16b812d3fa41 };
         let l2_gas_bounds = ResourceBounds { max_amount: 0x0, max_price_per_unit: 0x0 };
         let paymaster_data = vec![];
-        let chain_id = ChainId::MAINNET.id();
+        let chain_id = NamedChainId::sn_mainnet().raw();
         let nonce = felt!("0x0");
         let nonce_da_mode = &DataAvailabilityMode::L1;
         let fee_da_mode = &DataAvailabilityMode::L1;
@@ -432,7 +432,7 @@ mod tests {
             felt!("0x4d2c7d94a05cd95e08f1c135c53aa798f26ac383198d77bd37822e646cbab44");
         let class_hash = felt!("0xd0879f156c3e060638d5fb8ea1604cada1a29017988b3ee4f5f8b653279f60");
         let max_fee = felt!("0x1cfe57d53f9f");
-        let chain_id = ChainId::MAINNET.id();
+        let chain_id = NamedChainId::sn_mainnet().raw();
         let nonce = felt!("0xb");
 
         let actual_hash = compute_declare_v1_tx_hash(
@@ -458,7 +458,7 @@ mod tests {
         let class_hash =
             felt!("0x0311b6f080fd3385e7154ca3a8568eb7d6aebcb7ff627c1f5e7d2cc99aeb7741");
         let max_fee = felt!("0x108ae97efa9f8");
-        let chain_id = ChainId::MAINNET.id();
+        let chain_id = NamedChainId::sn_mainnet().raw();
         let nonce = felt!("0xb");
         let compiled_class_hash =
             felt!("0x29b2702c06c1e3f3fe79e5b5e89071e9c4a8e82955a633a3879e3fae1dd7c3c");
@@ -490,7 +490,7 @@ mod tests {
         let l1_gas_bounds = ResourceBounds { max_amount: 0x186a0, max_price_per_unit: 0x2540be400 };
         let l2_gas_bounds = ResourceBounds { max_amount: 0x0, max_price_per_unit: 0x0 };
         let paymaster_data = vec![];
-        let chain_id = ChainId::GOERLI.id();
+        let chain_id = NamedChainId::sn_goerli().raw();
         let nonce = felt!("0x1");
         let nonce_da_mode = &DataAvailabilityMode::L1;
         let fee_da_mode = &DataAvailabilityMode::L1;
@@ -548,7 +548,7 @@ mod tests {
             felt!("0x646d2c15"),
         ];
         let max_fee = felt!("0x113b8bbfd40de0");
-        let chain_id = ChainId::MAINNET.id();
+        let chain_id = NamedChainId::sn_mainnet().raw();
         let nonce = felt!("0x1");
 
         let actual_hash = compute_invoke_v1_tx_hash(
@@ -587,7 +587,7 @@ mod tests {
         let l1_gas_bounds = ResourceBounds { max_amount: 0x9b, max_price_per_unit: 0x1d744c7328c8 };
         let l2_gas_bounds = ResourceBounds { max_amount: 0x0, max_price_per_unit: 0x0 };
         let paymaster_data = vec![];
-        let chain_id = ChainId::MAINNET.id();
+        let chain_id = NamedChainId::sn_mainnet().raw();
         let nonce = felt!("0x761");
         let nonce_da_mode = &DataAvailabilityMode::L1;
         let fee_da_mode = &DataAvailabilityMode::L1;
@@ -630,7 +630,7 @@ mod tests {
             felt!("0x61b31ab352c0000"),
             felt!("0x0"),
         ];
-        let chain_id = ChainId::MAINNET.id();
+        let chain_id = NamedChainId::sn_mainnet().raw();
         let nonce = felt!("0x194cb1");
 
         let actual_hash = compute_l1_handler_tx_hash(

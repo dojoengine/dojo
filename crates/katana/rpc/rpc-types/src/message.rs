@@ -1,4 +1,4 @@
-use katana_primitives::chain::ChainId;
+use katana_primitives::chain::RawChainId;
 use katana_primitives::transaction::L1HandlerTx;
 use katana_primitives::utils::transaction::compute_l2_to_l1_message_hash;
 use katana_primitives::Felt;
@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 pub struct MsgFromL1(starknet::core::types::MsgFromL1);
 
 impl MsgFromL1 {
-    pub fn into_tx_with_chain_id(self, chain_id: ChainId) -> L1HandlerTx {
+    pub fn into_tx_with_chain_id(self, chain_id: RawChainId) -> L1HandlerTx {
         // Set the L1 to L2 message nonce to 0, because this is just used
         // for the `estimateMessageFee` RPC.
         let nonce = Felt::ZERO;

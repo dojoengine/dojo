@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use derive_more::Deref;
-use katana_primitives::chain::ChainId;
+use katana_primitives::chain::RawChainId;
 use katana_primitives::class::{ClassHash, ContractClass};
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::conversion::rpc::compiled_class_hash_from_flattened_sierra_class;
@@ -39,7 +39,7 @@ impl BroadcastedInvokeTx {
         }
     }
 
-    pub fn into_tx_with_chain_id(self, chain_id: ChainId) -> InvokeTx {
+    pub fn into_tx_with_chain_id(self, chain_id: RawChainId) -> InvokeTx {
         match self.0 {
             BroadcastedInvokeTransaction::V1(tx) => InvokeTx::V1(InvokeTxV1 {
                 chain_id,
@@ -95,7 +95,7 @@ impl BroadcastedDeclareTx {
     // TODO: change the contract class type for the broadcasted tx to katana-rpc-types instead for
     // easier conversion.
     /// This function assumes that the compiled class hash is valid.
-    pub fn try_into_tx_with_chain_id(self, chain_id: ChainId) -> Result<DeclareTxWithClass> {
+    pub fn try_into_tx_with_chain_id(self, chain_id: RawChainId) -> Result<DeclareTxWithClass> {
         match self.0 {
             BroadcastedDeclareTransaction::V1(tx) => {
                 let rpc_class = Arc::unwrap_or_clone(tx.contract_class);
@@ -184,7 +184,7 @@ impl BroadcastedDeployAccountTx {
         }
     }
 
-    pub fn into_tx_with_chain_id(self, chain_id: ChainId) -> DeployAccountTx {
+    pub fn into_tx_with_chain_id(self, chain_id: RawChainId) -> DeployAccountTx {
         match self.0 {
             BroadcastedDeployAccountTransaction::V1(tx) => {
                 let contract_address = get_contract_address(
@@ -481,7 +481,7 @@ impl From<BroadcastedInvokeTx> for InvokeTx {
                 nonce: tx.nonce,
                 calldata: tx.calldata,
                 signature: tx.signature,
-                chain_id: ChainId::default(),
+                chain_id: RawChainId::default(),
                 sender_address: tx.sender_address.into(),
                 max_fee: tx.max_fee.to_u128().expect("max_fee is too big"),
             }),
@@ -490,7 +490,7 @@ impl From<BroadcastedInvokeTx> for InvokeTx {
                 nonce: tx.nonce,
                 calldata: tx.calldata,
                 signature: tx.signature,
-                chain_id: ChainId::default(),
+                chain_id: RawChainId::default(),
                 sender_address: tx.sender_address.into(),
                 account_deployment_data: tx.account_deployment_data,
                 fee_data_availability_mode: from_rpc_da_mode(tx.fee_data_availability_mode),
@@ -518,7 +518,7 @@ impl From<BroadcastedDeployAccountTx> for DeployAccountTx {
                     nonce: tx.nonce,
                     signature: tx.signature,
                     class_hash: tx.class_hash,
-                    chain_id: ChainId::default(),
+                    chain_id: RawChainId::default(),
                     contract_address: contract_address.into(),
                     constructor_calldata: tx.constructor_calldata,
                     contract_address_salt: tx.contract_address_salt,
@@ -538,7 +538,7 @@ impl From<BroadcastedDeployAccountTx> for DeployAccountTx {
                     nonce: tx.nonce,
                     signature: tx.signature,
                     class_hash: tx.class_hash,
-                    chain_id: ChainId::default(),
+                    chain_id: RawChainId::default(),
                     contract_address: contract_address.into(),
                     constructor_calldata: tx.constructor_calldata,
                     contract_address_salt: tx.contract_address_salt,

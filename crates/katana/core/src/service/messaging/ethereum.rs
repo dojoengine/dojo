@@ -10,7 +10,7 @@ use alloy_rpc_types_eth::{BlockNumberOrTag, Filter, FilterBlockOption, FilterSet
 use alloy_sol_types::{sol, SolEvent};
 use anyhow::Result;
 use async_trait::async_trait;
-use katana_primitives::chain::ChainId;
+use katana_primitives::chain::RawChainId;
 use katana_primitives::receipt::MessageToL1;
 use katana_primitives::transaction::L1HandlerTx;
 use katana_primitives::utils::transaction::{
@@ -119,7 +119,7 @@ impl Messenger for EthereumMessaging {
         &self,
         from_block: u64,
         max_blocks: u64,
-        chain_id: ChainId,
+        chain_id: RawChainId,
     ) -> MessengerResult<(u64, Vec<Self::MessageTransaction>)> {
         let chain_latest_block: u64 = self.provider.get_block_number().await?;
         trace!(target: LOG_TARGET, from_block, max_blocks, ?chain_id, latest_block = chain_latest_block, "Gathering messages ethereum.");
@@ -188,7 +188,7 @@ impl Messenger for EthereumMessaging {
 }
 
 // TODO: refactor this as a method of the message log struct
-fn l1_handler_tx_from_log(log: Log, chain_id: ChainId) -> MessengerResult<L1HandlerTx> {
+fn l1_handler_tx_from_log(log: Log, chain_id: RawChainId) -> MessengerResult<L1HandlerTx> {
     let log = LogMessageToL2::LogMessageToL2Event::decode_log(log.as_ref(), false).unwrap();
 
     let from_address = EthAddress::try_from(log.from_address.as_slice()).expect("valid address");
@@ -283,7 +283,7 @@ mod tests {
         };
 
         // SN_GOERLI.
-        let chain_id = ChainId::Named(NamedChainId::Goerli);
+        let chain_id = ChainId::Named(NamedChainId::sn_goerli());
         let from_address = EthAddress::from_felt(&from_address).unwrap();
 
         let message_hash = compute_l1_to_l2_message_hash(
@@ -300,7 +300,7 @@ mod tests {
 
         let expected_tx = L1HandlerTx {
             calldata,
-            chain_id,
+            chain_id: chain_id.raw(),
             message_hash,
             paid_fee_on_l1: fee,
             version: Felt::ZERO,
@@ -309,7 +309,7 @@ mod tests {
             entry_point_selector: selector,
         };
 
-        let actual_tx = l1_handler_tx_from_log(log, chain_id).expect("bad log format");
+        let actual_tx = l1_handler_tx_from_log(log, chain_id.raw()).expect("bad log format");
 
         assert_eq!(expected_tx, actual_tx);
         assert_eq!(expected_tx_hash, expected_tx.calculate_hash());

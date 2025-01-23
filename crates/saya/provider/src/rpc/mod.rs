@@ -58,11 +58,6 @@ impl JsonRpcProvider {
 
         Ok(Self { starknet_provider, chain_id, rpc_url: rpc_url.to_string() })
     }
-
-    /// Returns the internal [`ChainId`].
-    pub fn chain_id(&self) -> ChainId {
-        self.chain_id
-    }
 }
 
 #[async_trait::async_trait]
@@ -86,7 +81,7 @@ impl Provider for JsonRpcProvider {
         let txs: Vec<TxWithHash> = block
             .transactions
             .iter()
-            .map(|tx_rpc| tx_converter::tx_from_rpc(tx_rpc, self.chain_id))
+            .map(|tx_rpc| tx_converter::tx_from_rpc(tx_rpc, self.chain_id.clone()))
             .collect::<Result<Vec<_>, _>>()?;
 
         Ok(SealedBlock {

@@ -49,7 +49,7 @@ use async_trait::async_trait;
 use ethereum::EthereumMessaging;
 use futures::StreamExt;
 use katana_executor::ExecutorFactory;
-use katana_primitives::chain::ChainId;
+use katana_primitives::chain::RawChainId;
 use katana_primitives::receipt::MessageToL1;
 use serde::{Deserialize, Serialize};
 use tracing::{error, info, trace};
@@ -150,7 +150,7 @@ pub trait Messenger {
         &self,
         from_block: u64,
         max_blocks: u64,
-        chain_id: ChainId,
+        chain_id: RawChainId,
     ) -> MessengerResult<(u64, Vec<Self::MessageTransaction>)>;
 
     /// Computes the hash of the given messages and sends them to the settlement chain.

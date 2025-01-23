@@ -1,6 +1,7 @@
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
 
 pub mod block;
+pub mod cairo;
 pub mod chain;
 pub mod class;
 pub mod contract;

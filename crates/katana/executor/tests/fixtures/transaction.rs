@@ -1,5 +1,5 @@
 use katana_chain_spec::ChainSpec;
-use katana_primitives::chain::ChainId;
+use katana_primitives::chain::RawChainId;
 use katana_primitives::contract::{ContractAddress, Nonce};
 use katana_primitives::env::CfgEnv;
 use katana_primitives::genesis::allocation::GenesisAllocation;
@@ -23,7 +23,7 @@ use super::{cfg, chain};
 pub fn invoke_executable_tx(
     address: ContractAddress,
     private_key: Felt,
-    chain_id: ChainId,
+    chain_id: RawChainId,
     nonce: Nonce,
     max_fee: Felt,
     signed: bool,
@@ -36,7 +36,7 @@ pub fn invoke_executable_tx(
         &provider,
         &signer,
         address.into(),
-        chain_id.into(),
+        chain_id,
         ExecutionEncoding::New,
     );
 
@@ -53,7 +53,7 @@ pub fn invoke_executable_tx(
         account.address(),
         &calldata,
         max_fee.to_u128().unwrap(),
-        chain_id.into(),
+        chain_id,
         nonce,
         false,
     );

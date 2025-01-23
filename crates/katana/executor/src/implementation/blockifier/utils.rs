@@ -46,7 +46,7 @@ use katana_cairo::starknet_api::transaction::{
     InvokeTransaction as ApiInvokeTransaction, InvokeTransactionV3, TransactionHash,
     TransactionVersion,
 };
-use katana_primitives::chain::NamedChainId;
+use katana_primitives::chain::{ChainId as PrimitiveChainId, NamedChainId};
 use katana_primitives::env::{BlockEnv, CfgEnv};
 use katana_primitives::fee::{PriceUnit, TxFeeInfo};
 use katana_primitives::state::{StateUpdates, StateUpdatesWithClasses};
@@ -440,7 +440,8 @@ pub fn block_context_from_envs(block_env: &BlockEnv, cfg_env: &CfgEnv) -> BlockC
         use_kzg_da: false,
     };
 
-    let chain_info = ChainInfo { fee_token_addresses, chain_id: to_blk_chain_id(cfg_env.chain_id) };
+    let chain_info =
+        ChainInfo { fee_token_addresses, chain_id: to_blk_chain_id(&cfg_env.chain_id) };
 
     let mut versioned_constants = VersionedConstants::latest_constants().clone();
     versioned_constants.max_recursion_depth = cfg_env.max_recursion_depth;
@@ -562,12 +563,12 @@ pub fn to_address(address: ContractAddress) -> katana_primitives::contract::Cont
     katana_primitives::contract::ContractAddress(*address.0.key())
 }
 
-pub fn to_blk_chain_id(chain_id: katana_primitives::chain::ChainId) -> ChainId {
+pub fn to_blk_chain_id(chain_id: &PrimitiveChainId) -> ChainId {
     match chain_id {
-        katana_primitives::chain::ChainId::Named(NamedChainId::Mainnet) => ChainId::Mainnet,
-        katana_primitives::chain::ChainId::Named(NamedChainId::Sepolia) => ChainId::Sepolia,
-        katana_primitives::chain::ChainId::Named(named) => ChainId::Other(named.to_string()),
-        katana_primitives::chain::ChainId::Id(id) => {
+        PrimitiveChainId::Named(named) if named == &NamedChainId::sn_mainnet() => ChainId::Mainnet,
+        PrimitiveChainId::Named(named) if named == &NamedChainId::sn_sepolia() => ChainId::Sepolia,
+        PrimitiveChainId::Named(named) => ChainId::Other(named.to_string()),
+        PrimitiveChainId::Raw(id) => {
             let id = parse_cairo_short_string(&id).expect("valid cairo string");
             ChainId::Other(id)
         }
@@ -802,13 +803,13 @@ mod tests {
 
     #[test]
     fn convert_chain_id() {
-        let katana_mainnet = katana_primitives::chain::ChainId::MAINNET;
-        let katana_sepolia = katana_primitives::chain::ChainId::SEPOLIA;
-        let katana_id = katana_primitives::chain::ChainId::Id(felt!("0x1337"));
+        let katana_mainnet = katana_primitives::chain::ChainId::Named(NamedChainId::sn_mainnet());
+        let katana_sepolia = katana_primitives::chain::ChainId::Named(NamedChainId::sn_sepolia());
+        let katana_id = katana_primitives::chain::ChainId::Raw(felt!("0x1337"));
 
-        let blockifier_mainnet = to_blk_chain_id(katana_mainnet);
-        let blockifier_sepolia = to_blk_chain_id(katana_sepolia);
-        let blockifier_id = to_blk_chain_id(katana_id);
+        let blockifier_mainnet = to_blk_chain_id(&katana_mainnet);
+        let blockifier_sepolia = to_blk_chain_id(&katana_sepolia);
+        let blockifier_id = to_blk_chain_id(&katana_id);
 
         assert_eq!(blockifier_mainnet, ChainId::Mainnet);
         assert_eq!(blockifier_sepolia, ChainId::Sepolia);
@@ -823,8 +824,8 @@ mod tests {
     fn blockifier_chain_id_invariant() {
         let id = felt!("0x1337");
 
-        let katana_id = katana_primitives::chain::ChainId::Id(id);
-        let blockifier_id = to_blk_chain_id(katana_id);
+        let katana_id = katana_primitives::chain::ChainId::Raw(id);
+        let blockifier_id = to_blk_chain_id(&katana_id);
 
         // Mimic how blockifier convert from ChainId to FieldElement.
         //

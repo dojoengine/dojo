@@ -26,6 +26,7 @@ thiserror.workspace = true
 
 alloy-primitives = { workspace = true, features = [ "arbitrary" ] }
 flate2.workspace = true
+heapless = { version = "0.8.0", features = [ "serde" ] }
 num-bigint = "0.4.6"
 serde_json_pythonic = "0.1.2"
 strum.workspace = true

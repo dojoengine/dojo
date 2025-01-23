@@ -635,7 +635,7 @@ chain_id.Named = "Mainnet"
         assert_eq!(config.chain.genesis.sequencer_address, address!("0x100"));
         assert_eq!(config.chain.genesis.gas_prices.eth, 9999);
         assert_eq!(config.chain.genesis.gas_prices.strk, 8888);
-        assert_eq!(config.chain.id, ChainId::Id(Felt::from_str("0x123").unwrap()));
+        assert_eq!(config.chain.id, ChainId::Raw(Felt::from_str("0x123").unwrap()));
     }
 
     #[test]
