@@ -59,8 +59,12 @@ pub impl WorldStorageInternalImpl of WorldStorageTrait {
     ) -> Option<(ContractAddress, ClassHash)> {
         match (*self.dispatcher).resource(selector) {
             Resource::Contract((
-                contract_address, class_hash,
-            )) => { Option::Some((contract_address, class_hash.try_into().unwrap())) },
+                contract_address, _,
+            )) => {
+                let class_hash = starknet::syscalls::get_class_hash_at_syscall(contract_address)
+                    .expect('Failed to get class hash');
+                Option::Some((contract_address, class_hash))
+            },
             _ => Option::None,
         }
     }
