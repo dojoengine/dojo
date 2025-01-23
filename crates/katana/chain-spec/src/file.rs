@@ -1,6 +1,6 @@
 use std::fs::File;
 use std::io::{self, BufReader, BufWriter};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use katana_primitives::chain::ChainId;
 use katana_primitives::genesis::json::GenesisJson;
@@ -23,20 +23,23 @@ pub enum Error {
     #[error(transparent)]
     GenesisJson(#[from] katana_primitives::genesis::json::GenesisJsonError),
 
-    #[error("failed to serialize config file: {0}")]
-    ConfigSerializeError(#[from] toml::ser::Error),
+    #[error("failed to read config file: {0}")]
+    ConfigReadError(#[from] toml::ser::Error),
+
+    #[error("failed to write config file: {0}")]
+    ConfigWriteError(#[from] toml::de::Error),
 }
 
-pub fn read<P: AsRef<Path>>(id: &ChainId) -> Result<ChainSpec, Error> {
+pub fn read(id: &ChainId) -> Result<ChainSpec, Error> {
     let dir = ChainConfigDir::open(id)?;
 
     let chain_spec: ChainSpecFile = {
-        let file = BufReader::new(File::open(&dir.config_path())?);
-        serde_json::from_reader(file).map_err(io::Error::from)?
+        let content = std::fs::read_to_string(dir.config_path())?;
+        toml::from_str(&content)?
     };
 
     let genesis: Genesis = {
-        let file = BufReader::new(File::open(&dir.genesis_path())?);
+        let file = BufReader::new(File::open(dir.genesis_path())?);
         let json: GenesisJson = serde_json::from_reader(file).map_err(io::Error::from)?;
         Genesis::try_from(json)?
     };
@@ -49,12 +52,14 @@ pub fn read<P: AsRef<Path>>(id: &ChainId) -> Result<ChainSpec, Error> {
     })
 }
 
-pub fn write<P: AsRef<Path>>(chain_spec: &ChainSpec) -> Result<(), Error> {
+pub fn write(chain_spec: &ChainSpec) -> Result<(), Error> {
     let dir = ChainConfigDir::create(&chain_spec.id)?;
+
+    dbg!(&dir);
 
     {
         let cfg = ChainSpecFile {
-            id: chain_spec.id.clone(),
+            id: chain_spec.id,
             settlement: chain_spec.settlement.clone(),
             fee_contracts: chain_spec.fee_contracts.clone(),
         };
@@ -73,6 +78,7 @@ pub fn write<P: AsRef<Path>>(chain_spec: &ChainSpec) -> Result<(), Error> {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 struct ChainSpecFile {
     id: ChainId,
     fee_contracts: FeeContracts,
@@ -93,7 +99,7 @@ impl ChainConfigDir {
     /// This will create the directory if it does not yet exist.
     pub fn create(id: &ChainId) -> Result<Self, Error> {
         let id = id.to_string();
-        let path = local_dir()?.join(KATANA_LOCAL_DIR).join(id);
+        let path = local_dir()?.join(id);
 
         if !path.exists() {
             std::fs::create_dir_all(&path)?;
@@ -107,7 +113,7 @@ impl ChainConfigDir {
     /// This will return an error if the no config directory exists for the given chain ID.
     pub fn open(id: &ChainId) -> Result<Self, Error> {
         let id = id.to_string();
-        let path = local_dir()?.join(KATANA_LOCAL_DIR).join(&id);
+        let path = local_dir()?.join(&id);
 
         if !path.exists() {
             return Err(Error::DirectoryNotFound { id: id.clone() });
@@ -142,4 +148,79 @@ impl ChainConfigDir {
 /// ```
 pub fn local_dir() -> Result<PathBuf, Error> {
     Ok(dirs::config_local_dir().ok_or(Error::UnsupportedOS)?.join(KATANA_LOCAL_DIR))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // To make sure the path returned by `local_dir` is always the same across
+    // testes and is created inside of a temp dir
+    fn init() {
+        let temp_dir = tempfile::TempDir::new().unwrap();
+        let path = temp_dir.path();
+
+        #[cfg(target_os = "linux")]
+        if std::env::var("XDG_CONFIG_HOME").is_err() {
+            std::env::set_var("XDG_CONFIG_HOME", path);
+        }
+
+        #[cfg(target_os = "macos")]
+        if std::env::var("HOME").is_err() {
+            std::env::set_var("HOME", path);
+        }
+    }
+
+    #[test]
+    fn test_read_write_chainspec() {
+        init();
+
+        let chain_spec = ChainSpec::default();
+        let id = chain_spec.id;
+
+        write(&chain_spec).unwrap();
+        let read_spec = read(&id).unwrap();
+
+        assert_eq!(chain_spec.id, read_spec.id);
+        assert_eq!(chain_spec.fee_contracts, read_spec.fee_contracts);
+        assert_eq!(chain_spec.settlement, read_spec.settlement);
+    }
+
+    #[test]
+    fn test_chain_config_dir() {
+        init();
+
+        let chain_id = ChainId::parse("test").unwrap();
+
+        // Test creation
+        let config_dir = ChainConfigDir::create(&chain_id).unwrap();
+        assert!(config_dir.0.exists());
+
+        // Test opening existing dir
+        let opened_dir = ChainConfigDir::open(&chain_id).unwrap();
+        assert_eq!(config_dir.0, opened_dir.0);
+
+        // Test opening non-existent dir
+        let bad_id = ChainId::parse("nonexistent").unwrap();
+        assert!(matches!(ChainConfigDir::open(&bad_id), Err(Error::DirectoryNotFound { .. })));
+    }
+
+    #[test]
+    fn test_local_dir() {
+        init();
+
+        let dir = local_dir().unwrap();
+        assert!(dir.ends_with(KATANA_LOCAL_DIR));
+    }
+
+    #[test]
+    fn test_config_paths() {
+        init();
+
+        let chain_id = ChainId::parse("test").unwrap();
+        let config_dir = ChainConfigDir::create(&chain_id).unwrap();
+
+        assert!(config_dir.config_path().ends_with("config.toml"));
+        assert!(config_dir.genesis_path().ends_with("genesis.json"));
+    }
 }
