@@ -589,7 +589,9 @@ mod tests {
 
     use super::*;
     use crate::address;
-    use crate::genesis::constant::{DEFAULT_LEGACY_ERC20_CLASS, DEFAULT_LEGACY_UDC_CLASS};
+    use crate::genesis::constant::{
+        DEFAULT_LEGACY_ERC20_CLASS, DEFAULT_LEGACY_UDC_CLASS, DEFAULT_LEGACY_UDC_CLASS_HASH,
+    };
 
     #[test]
     fn deserialize_from_json() {
@@ -616,7 +618,7 @@ mod tests {
             Some(U256::from_str("0xD3C21BCECCEDA1000000").unwrap())
         );
         assert_eq!(json.accounts[&acc_1].nonce, Some(felt!("0x1")));
-        assert_eq!(json.accounts[&acc_1].class, Some(ClassNameOrHash::Hash(felt!("0x80085"))));
+        assert_eq!(json.accounts[&acc_1].class, Some(ClassNameOrHash::Name("Foo".to_string())));
         assert_eq!(
             json.accounts[&acc_1].storage,
             Some(BTreeMap::from([(felt!("0x1"), felt!("0x1")), (felt!("0x2"), felt!("0x2")),]))
@@ -682,7 +684,7 @@ mod tests {
         assert_eq!(json.contracts[&contract_3].nonce, None);
         assert_eq!(
             json.contracts[&contract_3].class,
-            Some(ClassNameOrHash::Hash(felt!("0x80085")))
+            Some(ClassNameOrHash::Name("Foo".to_string()))
         );
         assert_eq!(
             json.contracts[&contract_3].storage,
@@ -698,7 +700,7 @@ mod tests {
                 },
                 GenesisClassJson {
                     class: PathBuf::from("../../../contracts/build/universal_deployer.json").into(),
-                    name: None,
+                    name: Some("Foo".to_string()),
                 },
                 GenesisClassJson {
                     class: PathBuf::from("../../../contracts/build/default_account.json").into(),
@@ -714,7 +716,7 @@ mod tests {
         let genesis_result: Result<GenesisJson, _> = serde_json::from_reader(BufReader::new(file));
         match genesis_result {
             Ok(genesis) => {
-                assert_eq!(
+                similar_asserts::assert_eq!(
                     genesis.classes,
                     vec![
                         GenesisClassJson {
@@ -726,7 +728,7 @@ mod tests {
                                 "../../../contracts/build/universal_deployer.json"
                             )
                             .into(),
-                            name: None,
+                            name: Some("Foo".to_string()),
                         },
                         GenesisClassJson {
                             class: serde_json::to_value(DEFAULT_ACCOUNT_CLASS.clone())
@@ -752,7 +754,7 @@ mod tests {
 
         let expected_classes = BTreeMap::from([
             (felt!("0x8"), DEFAULT_LEGACY_ERC20_CLASS.clone().into()),
-            (felt!("0x80085"), DEFAULT_LEGACY_UDC_CLASS.clone().into()),
+            (DEFAULT_LEGACY_UDC_CLASS_HASH, DEFAULT_LEGACY_UDC_CLASS.clone().into()),
             (DEFAULT_ACCOUNT_CLASS_HASH, DEFAULT_ACCOUNT_CLASS.clone().into()),
             #[cfg(feature = "controller")]
             (CONTROLLER_CLASS_HASH, CONTROLLER_ACCOUNT_CLASS.clone().into()),
@@ -776,7 +778,7 @@ mod tests {
                     public_key: felt!("0x1"),
                     balance: Some(U256::from_str("0xD3C21BCECCEDA1000000").unwrap()),
                     nonce: Some(felt!("0x1")),
-                    class_hash: felt!("0x80085"),
+                    class_hash: DEFAULT_LEGACY_UDC_CLASS_HASH,
                     storage: Some(BTreeMap::from([
                         (felt!("0x1"), felt!("0x1")),
                         (felt!("0x2"), felt!("0x2")),
@@ -842,7 +844,7 @@ mod tests {
                 GenesisAllocation::Contract(GenesisContractAlloc {
                     balance: None,
                     nonce: None,
-                    class_hash: Some(felt!("0x80085")),
+                    class_hash: Some(DEFAULT_LEGACY_UDC_CLASS_HASH),
                     storage: Some(BTreeMap::from([(felt!("0x1"), felt!("0x1"))])),
                 }),
             ),
@@ -977,12 +979,10 @@ mod tests {
     fn genesis_from_json_with_unresolved_paths() {
         let file = File::open("./src/genesis/test-genesis.json").unwrap();
         let json: GenesisJson = serde_json::from_reader(file).unwrap();
-        assert!(
-            Genesis::try_from(json)
-                .unwrap_err()
-                .to_string()
-                .contains("Unresolved class artifact path")
-        );
+        assert!(Genesis::try_from(json)
+            .unwrap_err()
+            .to_string()
+            .contains("Unresolved class artifact path"));
     }
 
     #[test]
@@ -1026,8 +1026,9 @@ mod tests {
             .expect("failed to load genesis file");
 
         let res = Genesis::try_from(json);
-        assert!(
-            res.unwrap_err().to_string().contains(&format!("Class name '{name}' already exists"))
-        )
+        assert!(res
+            .unwrap_err()
+            .to_string()
+            .contains(&format!("Class name '{name}' already exists")))
     }
 }

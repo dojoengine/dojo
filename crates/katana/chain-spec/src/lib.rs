@@ -498,7 +498,7 @@ mod tests {
         {
             assert_eq!(
                 actual_state_updates.state_updates.declared_classes.get(&CONTROLLER_CLASS_HASH),
-                Some(&CONTROLLER_CLASS_HASH),
+                Some(&CONTROLLER_ACCOUNT_CLASS.clone().compile().unwrap().class_hash().unwrap()),
                 "The controller account class should be declared"
             );
 
