@@ -9,7 +9,7 @@ use katana_primitives::contract::ContractAddress;
 use katana_primitives::genesis::allocation::{
     DevGenesisAccount, GenesisAccountAlloc, GenesisAllocation,
 };
-use katana_primitives::genesis::{Genesis, GenesisClass};
+use katana_primitives::genesis::Genesis;
 use katana_primitives::utils::class::parse_sierra_class;
 use starknet::macros::felt;
 
@@ -50,7 +50,7 @@ pub fn create_chain_for_testing() -> ChainSpec {
     let class = {
         let json = include_str!("../test-data/simple_account.sierra.json");
         let class = parse_sierra_class(json).unwrap();
-        GenesisClass { compiled_class_hash: class_hash, class: Arc::new(class) }
+        Arc::new(class)
     };
 
     // setup test account

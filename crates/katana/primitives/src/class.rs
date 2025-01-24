@@ -67,7 +67,21 @@ impl ContractClass {
     ///
     /// Returns `true` if the contract class is a legacy class, `false` otherwise.
     pub fn is_legacy(&self) -> bool {
-        matches!(self, Self::Legacy(_))
+        self.as_legacy().is_some()
+    }
+
+    pub fn as_legacy(&self) -> Option<&LegacyContractClass> {
+        match self {
+            Self::Legacy(class) => Some(class),
+            _ => None,
+        }
+    }
+
+    pub fn as_sierra(&self) -> Option<&SierraContractClass> {
+        match self {
+            Self::Class(class) => Some(class),
+            _ => None,
+        }
     }
 }
 
@@ -125,6 +139,13 @@ impl CompiledClass {
             Self::Class(class) => Ok(class.compiled_class_hash()),
             Self::Legacy(class) => Ok(compute_legacy_class_hash(class)?),
         }
+    }
+
+    /// Checks if the compiled contract class is a legacy (Cairo 0) class.
+    ///
+    /// Returns `true` if the compiled contract class is a legacy class, `false` otherwise.
+    pub fn is_legacy(&self) -> bool {
+        matches!(self, Self::Legacy(_))
     }
 }
 
