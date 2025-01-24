@@ -196,6 +196,54 @@ fn test_model_ptr_from_entity_id() {
 }
 
 #[test]
+fn test_read_member() {
+    let mut world = spawn_foo_world();
+    let foo = Foo { k1: 1, k2: 2, v1: 3, v2: 4 };
+    world.write_model(@foo);
+    let v1: u128 = world.read_member(foo.ptr(), selector!("v1"));
+    let v2: u32 = world.read_member(foo.ptr(), selector!("v2"));
+    assert!(foo.v1 == v1);
+    assert!(foo.v2 == v2);
+}
+
+#[test]
+fn test_read_members() {
+    let mut world = spawn_foo_world();
+    let foo = Foo { k1: 1, k2: 2, v1: 3, v2: 4 };
+    let foo2 = Foo { k1: 5, k2: 6, v1: 7, v2: 8 };
+    world.write_models([@foo, @foo2].span());
+    let ptrs = [foo.ptr(), foo2.ptr()].span();
+    let v1s: Array<u128> = world.read_member_of_models(ptrs, selector!("v1"));
+    let v2s: Array<u32> = world.read_member_of_models(ptrs, selector!("v2"));
+    assert!(v1s == array![foo.v1, foo2.v1]);
+    assert!(v2s == array![foo.v2, foo2.v2]);
+}
+
+#[test]
+fn test_write_member() {
+    let mut world = spawn_foo_world();
+    let foo = Foo { k1: 1, k2: 2, v1: 3, v2: 4 };
+    world.write_model(@foo);
+    world.write_member(foo.ptr(), selector!("v1"), 42);
+    let foo_read: Foo = world.read_model((foo.k1, foo.k2));
+    assert!(foo_read.v1 == 42 && foo_read.v2 == foo.v2);
+}
+#[test]
+fn test_write_members() {
+    let mut world = spawn_foo_world();
+    let foo = Foo { k1: 1, k2: 2, v1: 3, v2: 4 };
+    let foo2 = Foo { k1: 5, k2: 6, v1: 7, v2: 8 };
+    world.write_models([@foo, @foo2].span());
+    let ptrs = [foo.ptr(), foo2.ptr()].span();
+    let v1s = array![42, 43];
+    world.write_member_of_models(ptrs, selector!("v1"), v1s.span());
+    let v1s_read: Array<u128> = world.read_member_of_models(ptrs, selector!("v1"));
+    let v2s_read: Array<u32> = world.read_member_of_models(ptrs, selector!("v2"));
+    assert!(v1s_read == v1s);
+    assert!(v2s_read == array![foo.v2, foo2.v2]);
+}
+
+#[test]
 fn test_ptr_from() {
     let foo = Foo { k1: 1, k2: 2, v1: 3, v2: 4 };
     let ptr_a = ModelPtr::<Foo> { id: foo.entity_id() };
@@ -205,6 +253,7 @@ fn test_ptr_from() {
     assert!(ptr_a == ptr_b && ptr_a == ptr_c && ptr_a == ptr_d);
 }
 
+#[test]
 fn test_ptrs_from() {
     let foo = Foo { k1: 1, k2: 2, v1: 3, v2: 4 };
     let foo2 = Foo { k1: 3, k2: 4, v1: 5, v2: 6 };

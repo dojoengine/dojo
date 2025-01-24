@@ -2,7 +2,9 @@
 
 use core::panic_with_felt252;
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait, Resource};
-use dojo::model::{Model, ModelIndex, ModelValueKey, ModelValue, ModelStorage, ModelPtr};
+use dojo::model::{
+    Model, ModelIndex, ModelValueKey, ModelValue, ModelStorage, ModelPtr, ModelPtrsTrait,
+};
 use dojo::event::{Event, EventStorage};
 use dojo::meta::Layout;
 use dojo::utils::{
@@ -207,6 +209,22 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
             ),
         )
     }
+
+    fn read_member_of_models<T, +Serde<T>, +Drop<T>>(
+        self: @WorldStorage, ptrs: Span<ModelPtr<M>>, field_selector: felt252,
+    ) -> Array<T> {
+        let mut values: Array<T> = array![];
+        for entity in IWorldDispatcherTrait::entities(
+            *self.dispatcher,
+            Model::<M>::selector(*self.namespace_hash),
+            ptrs.to_member_indexes(field_selector),
+            field_layout_unwrap::<M>(field_selector),
+        ) {
+            values.append(deserialize_unwrap(*entity));
+        };
+        values
+    }
+
     fn write_member<T, +Serde<T>, +Drop<T>>(
         ref self: WorldStorage, ptr: ModelPtr<M>, field_selector: felt252, value: T,
     ) {
@@ -215,6 +233,22 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
             Model::<M>::selector(self.namespace_hash),
             ModelIndex::MemberId((ptr.id, field_selector)),
             serialize_inline(@value),
+            field_layout_unwrap::<M>(field_selector),
+        );
+    }
+
+    fn write_member_of_models<T, +Serde<T>, +Drop<T>>(
+        ref self: WorldStorage, ptrs: Span<ModelPtr<M>>, field_selector: felt252, values: Span<T>,
+    ) {
+        let mut serialized_values = ArrayTrait::<Span<felt252>>::new();
+        for value in values {
+            serialized_values.append(serialize_inline(value));
+        };
+        IWorldDispatcherTrait::set_entities(
+            self.dispatcher,
+            Model::<M>::selector(self.namespace_hash),
+            ptrs.to_member_indexes(field_selector),
+            serialized_values.span(),
             field_layout_unwrap::<M>(field_selector),
         );
     }

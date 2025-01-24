@@ -42,7 +42,7 @@ pub mod model {
     pub use definition::{ModelIndex, ModelDefinition, ModelDef};
 
     pub mod model;
-    pub use model::{Model, KeyParser, ModelPtr};
+    pub use model::{Model, KeyParser, ModelPtr, ModelPtrsTrait};
 
     pub mod model_value;
     pub use model_value::{ModelValue, ModelValueKey};
