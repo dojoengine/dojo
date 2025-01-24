@@ -17,24 +17,19 @@ use serde::de::value::MapAccessDeserializer;
 use serde::de::Visitor;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
-use starknet::core::types::contract::JsonError;
+use starknet::core::types::contract::{ComputeClassHashError, JsonError};
 
 use super::allocation::{
     DevGenesisAccount, GenesisAccount, GenesisAccountAlloc, GenesisContractAlloc,
 };
 #[cfg(feature = "controller")]
 use super::constant::{CONTROLLER_ACCOUNT_CLASS, CONTROLLER_CLASS_HASH};
-use super::constant::{
-    DEFAULT_ACCOUNT_CLASS, DEFAULT_ACCOUNT_CLASS_HASH, DEFAULT_ACCOUNT_COMPILED_CLASS_HASH,
-};
+use super::constant::{DEFAULT_ACCOUNT_CLASS, DEFAULT_ACCOUNT_CLASS_HASH};
 use super::{Genesis, GenesisAllocation};
 use crate::block::{BlockHash, BlockNumber, GasPrices};
-use crate::class::{
-    ClassHash, ComputeClassHashError, ContractClass, ContractClassCompilationError,
-    LegacyContractClass, SierraContractClass,
-};
+use crate::class::{ClassHash, ContractClass, ContractClassCompilationError, SierraContractClass};
 use crate::contract::{ContractAddress, StorageKey, StorageValue};
-use crate::genesis::GenesisClass;
+use crate::utils::class::parse_deprecated_compiled_class;
 use crate::Felt;
 
 type Object = Map<String, Value>;
@@ -89,9 +84,6 @@ impl<'de> Deserialize<'de> for PathOrFullArtifact {
 pub struct GenesisClassJson {
     // pub class: PathBuf,
     pub class: PathOrFullArtifact,
-    /// The class hash of the contract. If not provided, the class hash is computed from the
-    /// class at `path`.
-    pub class_hash: Option<ClassHash>,
     // Allows class identification by a unique name rather than by hash when specifying the class.
     pub name: Option<String>,
 }
@@ -283,28 +275,16 @@ impl TryFrom<GenesisJson> for Genesis {
     fn try_from(value: GenesisJson) -> Result<Self, Self::Error> {
         // a lookup table for classes that is assigned a name
         let mut class_names: HashMap<String, Felt> = HashMap::new();
-        let mut classes: BTreeMap<ClassHash, GenesisClass> = BTreeMap::new();
+        let mut classes: BTreeMap<ClassHash, Arc<ContractClass>> = BTreeMap::new();
 
         #[cfg(feature = "controller")]
-        {
-            // Merely a band aid fix for now.
-            // Adding this by default so that we can support mounting the genesis file from k8s
-            // ConfigMap when we embed the Controller class, and its capacity is only limited to
-            // 1MiB.
-            classes.insert(
-                CONTROLLER_CLASS_HASH,
-                GenesisClass {
-                    class: CONTROLLER_ACCOUNT_CLASS.clone().into(),
-                    compiled_class_hash: CONTROLLER_ACCOUNT_CLASS
-                        .clone()
-                        .compile()?
-                        .class_hash()?,
-                },
-            );
-        }
+        // Merely a band aid fix for now.
+        // Adding this by default so that we can support mounting the genesis file from k8s
+        // ConfigMap when we embed the Controller class, and its capacity is only limited to 1MiB.
+        classes.insert(CONTROLLER_CLASS_HASH, CONTROLLER_ACCOUNT_CLASS.clone().into());
 
         for entry in value.classes {
-            let GenesisClassJson { class, class_hash, name } = entry;
+            let GenesisClassJson { class, name } = entry;
 
             // at this point, it is assumed that any class paths should have been resolved to an
             // artifact, otherwise it is an error
@@ -315,28 +295,27 @@ impl TryFrom<GenesisJson> for Genesis {
                 }
             };
 
-            let (class_hash, compiled_class_hash, class) =
-                match serde_json::from_value::<SierraContractClass>(artifact.clone()) {
-                    Ok(class) => {
-                        let class = ContractClass::Class(class);
-                        let class_hash =
-                            if let Some(hash) = class_hash { hash } else { class.class_hash()? };
-                        let compiled_hash = class.clone().compile()?.class_hash()?;
+            let sierra = serde_json::from_value::<SierraContractClass>(artifact.clone());
 
-                        (class_hash, compiled_hash, Arc::new(class))
-                    }
+            let (class_hash, class) = match sierra {
+                Ok(sierra) => {
+                    // check if the class hash is provided, otherwise compute it from the
+                    // artifacts
+                    let class = ContractClass::Class(sierra);
+                    let class_hash = class.class_hash().expect("failed to compute hash");
 
-                    // if the artifact is not a sierra contract, we check if it's a legacy contract
-                    Err(_) => {
-                        let class = serde_json::from_value::<LegacyContractClass>(artifact)?;
+                    (class_hash, Arc::new(class))
+                }
 
-                        let class = ContractClass::Legacy(class);
-                        let class_hash =
-                            if let Some(hash) = class_hash { hash } else { class.class_hash()? };
+                // if the artifact is not a sierra contract, we check if it's a legacy contract
+                Err(_) => {
+                    let casm = parse_deprecated_compiled_class(artifact.clone())?;
+                    let casm = ContractClass::Legacy(casm);
+                    let class_hash = casm.class_hash().expect("failed to compute hash");
 
-                        (class_hash, class_hash, Arc::new(class))
-                    }
-                };
+                    (class_hash, Arc::new(casm))
+                }
+            };
 
             // if the class has a name, we add it to the lookup table to use later when we're
             // parsing the contracts
@@ -353,7 +332,7 @@ impl TryFrom<GenesisJson> for Genesis {
                 }
             }
 
-            classes.insert(class_hash, GenesisClass { compiled_class_hash, class });
+            classes.insert(class_hash, class);
         }
 
         let mut allocations: BTreeMap<ContractAddress, GenesisAllocation> = BTreeMap::new();
@@ -384,10 +363,7 @@ impl TryFrom<GenesisJson> for Genesis {
                     // inserting it
                     if let btree_map::Entry::Vacant(e) = classes.entry(DEFAULT_ACCOUNT_CLASS_HASH) {
                         // insert default account class to the classes map
-                        e.insert(GenesisClass {
-                            class: DEFAULT_ACCOUNT_CLASS.clone().into(),
-                            compiled_class_hash: DEFAULT_ACCOUNT_COMPILED_CLASS_HASH,
-                        });
+                        e.insert(DEFAULT_ACCOUNT_CLASS.clone().into());
                     }
 
                     DEFAULT_ACCOUNT_CLASS_HASH
@@ -479,16 +455,15 @@ impl TryFrom<Genesis> for GenesisJson {
         let mut accounts = BTreeMap::new();
         let mut classes = Vec::with_capacity(value.classes.len());
 
-        for (hash, class) in value.classes {
+        for (.., class) in value.classes {
             // Convert the class to an artifact Value
-            let artifact = match &*class.class {
+            let artifact = match class.as_ref() {
                 ContractClass::Legacy(casm) => serde_json::to_value(casm)?,
                 ContractClass::Class(sierra) => serde_json::to_value(sierra)?,
             };
 
             classes.push(GenesisClassJson {
                 class: PathOrFullArtifact::Artifact(artifact),
-                class_hash: Some(hash),
                 name: None,
             });
         }
@@ -718,17 +693,14 @@ mod tests {
             json.classes,
             vec![
                 GenesisClassJson {
-                    class_hash: Some(felt!("0x8")),
                     class: PathBuf::from("../../../contracts/build/erc20.json").into(),
                     name: Some("MyErc20".to_string()),
                 },
                 GenesisClassJson {
-                    class_hash: Some(felt!("0x80085")),
                     class: PathBuf::from("../../../contracts/build/universal_deployer.json").into(),
                     name: None,
                 },
                 GenesisClassJson {
-                    class_hash: None,
                     class: PathBuf::from("../../../contracts/build/default_account.json").into(),
                     name: Some("MyClass".to_string()),
                 },
@@ -746,12 +718,10 @@ mod tests {
                     genesis.classes,
                     vec![
                         GenesisClassJson {
-                            class_hash: None,
                             class: PathBuf::from("../../../contracts/build/erc20.json").into(),
                             name: Some("MyErc20".to_string()),
                         },
                         GenesisClassJson {
-                            class_hash: Some(felt!("0x80085")),
                             class: PathBuf::from(
                                 "../../../contracts/build/universal_deployer.json"
                             )
@@ -759,7 +729,6 @@ mod tests {
                             name: None,
                         },
                         GenesisClassJson {
-                            class_hash: Some(felt!("0xa55")),
                             class: serde_json::to_value(DEFAULT_ACCOUNT_CLASS.clone())
                                 .unwrap()
                                 .into(),
@@ -782,40 +751,11 @@ mod tests {
         let actual_genesis = Genesis::try_from(json).unwrap();
 
         let expected_classes = BTreeMap::from([
-            (
-                felt!("0x8"),
-                GenesisClass {
-                    compiled_class_hash: felt!("0x8"),
-                    class: DEFAULT_LEGACY_ERC20_CLASS.clone().into(),
-                },
-            ),
-            (
-                felt!("0x80085"),
-                GenesisClass {
-                    compiled_class_hash: felt!("0x80085"),
-                    class: DEFAULT_LEGACY_UDC_CLASS.clone().into(),
-                },
-            ),
-            (
-                DEFAULT_ACCOUNT_CLASS_HASH,
-                GenesisClass {
-                    compiled_class_hash: DEFAULT_ACCOUNT_COMPILED_CLASS_HASH,
-                    class: DEFAULT_ACCOUNT_CLASS.clone().into(),
-                },
-            ),
+            (felt!("0x8"), DEFAULT_LEGACY_ERC20_CLASS.clone().into()),
+            (felt!("0x80085"), DEFAULT_LEGACY_UDC_CLASS.clone().into()),
+            (DEFAULT_ACCOUNT_CLASS_HASH, DEFAULT_ACCOUNT_CLASS.clone().into()),
             #[cfg(feature = "controller")]
-            (
-                CONTROLLER_CLASS_HASH,
-                GenesisClass {
-                    class: CONTROLLER_ACCOUNT_CLASS.clone().into(),
-                    compiled_class_hash: CONTROLLER_ACCOUNT_CLASS
-                        .clone()
-                        .compile()
-                        .unwrap()
-                        .class_hash()
-                        .unwrap(),
-                },
-            ),
+            (CONTROLLER_CLASS_HASH, CONTROLLER_ACCOUNT_CLASS.clone().into()),
         ]);
 
         let acc_1 = address!("0x66efb28ac62686966ae85095ff3a772e014e7fbf56d4c5f6fac5606d4dde23a");
@@ -936,8 +876,7 @@ mod tests {
 
         for class in actual_genesis.classes {
             let expected_class = expected_genesis.classes.get(&class.0).unwrap();
-            assert_eq!(class.1.compiled_class_hash, expected_class.compiled_class_hash);
-            assert_eq!(class.1.class, expected_class.class);
+            assert_eq!(&class.1, expected_class);
         }
     }
 
@@ -991,26 +930,9 @@ mod tests {
         let actual_genesis = Genesis::try_from(genesis_json).unwrap();
 
         let classes = BTreeMap::from([
-            (
-                DEFAULT_ACCOUNT_CLASS_HASH,
-                GenesisClass {
-                    compiled_class_hash: DEFAULT_ACCOUNT_COMPILED_CLASS_HASH,
-                    class: DEFAULT_ACCOUNT_CLASS.clone().into(),
-                },
-            ),
+            (DEFAULT_ACCOUNT_CLASS_HASH, DEFAULT_ACCOUNT_CLASS.clone().into()),
             #[cfg(feature = "controller")]
-            (
-                CONTROLLER_CLASS_HASH,
-                GenesisClass {
-                    class: CONTROLLER_ACCOUNT_CLASS.clone().into(),
-                    compiled_class_hash: CONTROLLER_ACCOUNT_CLASS
-                        .clone()
-                        .compile()
-                        .unwrap()
-                        .class_hash()
-                        .unwrap(),
-                },
-            ),
+            (CONTROLLER_CLASS_HASH, CONTROLLER_ACCOUNT_CLASS.clone().into()),
         ]);
 
         let allocations = BTreeMap::from([(
@@ -1047,9 +969,7 @@ mod tests {
 
         for (hash, class) in actual_genesis.classes {
             let expected_class = expected_genesis.classes.get(&hash).unwrap();
-
-            assert_eq!(class.compiled_class_hash, expected_class.compiled_class_hash);
-            assert_eq!(class.class, expected_class.class);
+            assert_eq!(&class, expected_class);
         }
     }
 

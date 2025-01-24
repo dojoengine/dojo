@@ -124,13 +124,14 @@ impl ChainSpec {
         for (class_hash, class) in &self.genesis.classes {
             let class_hash = *class_hash;
 
-            if class.class.is_legacy() {
+            if class.is_legacy() {
                 states.state_updates.deprecated_declared_classes.insert(class_hash);
             } else {
-                states.state_updates.declared_classes.insert(class_hash, class.compiled_class_hash);
+                let casm_hash = class.as_ref().clone().compile().unwrap().class_hash().unwrap();
+                states.state_updates.declared_classes.insert(class_hash, casm_hash);
             }
 
-            states.classes.insert(class_hash, class.class.as_ref().clone());
+            states.classes.insert(class_hash, class.as_ref().clone());
         }
 
         for (address, alloc) in &self.genesis.allocations {
@@ -313,7 +314,6 @@ mod tests {
         DEFAULT_LEGACY_ERC20_CLASS, DEFAULT_LEGACY_ERC20_COMPILED_CLASS_HASH,
         DEFAULT_LEGACY_UDC_CLASS, DEFAULT_LEGACY_UDC_COMPILED_CLASS_HASH,
     };
-    use katana_primitives::genesis::GenesisClass;
     use katana_primitives::version::CURRENT_STARKNET_VERSION;
     use starknet::macros::felt;
 
@@ -324,35 +324,11 @@ mod tests {
         // setup initial states to test
 
         let classes = BTreeMap::from([
-            (
-                DEFAULT_LEGACY_UDC_CLASS_HASH,
-                GenesisClass {
-                    class: DEFAULT_LEGACY_UDC_CLASS.clone().into(),
-                    compiled_class_hash: DEFAULT_LEGACY_UDC_COMPILED_CLASS_HASH,
-                },
-            ),
-            (
-                DEFAULT_LEGACY_ERC20_CLASS_HASH,
-                GenesisClass {
-                    class: DEFAULT_LEGACY_ERC20_CLASS.clone().into(),
-                    compiled_class_hash: DEFAULT_LEGACY_ERC20_COMPILED_CLASS_HASH,
-                },
-            ),
-            (
-                DEFAULT_ACCOUNT_CLASS_HASH,
-                GenesisClass {
-                    compiled_class_hash: DEFAULT_ACCOUNT_COMPILED_CLASS_HASH,
-                    class: DEFAULT_ACCOUNT_CLASS.clone().into(),
-                },
-            ),
+            (DEFAULT_LEGACY_UDC_CLASS_HASH, DEFAULT_LEGACY_UDC_CLASS.clone().into()),
+            (DEFAULT_LEGACY_ERC20_CLASS_HASH, DEFAULT_LEGACY_ERC20_CLASS.clone().into()),
+            (DEFAULT_ACCOUNT_CLASS_HASH, DEFAULT_ACCOUNT_CLASS.clone().into()),
             #[cfg(feature = "controller")]
-            (
-                CONTROLLER_CLASS_HASH,
-                GenesisClass {
-                    compiled_class_hash: CONTROLLER_CLASS_HASH,
-                    class: CONTROLLER_ACCOUNT_CLASS.clone().into(),
-                },
-            ),
+            (CONTROLLER_CLASS_HASH, CONTROLLER_ACCOUNT_CLASS.clone().into()),
         ]);
 
         let allocations = [
