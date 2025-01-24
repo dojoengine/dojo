@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1737743886381,
+  "lastUpdate": 1737744000673,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -47605,6 +47605,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 11832932194,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "894478e5748b1ebf2d57182c6d87c87aa7171f92",
+          "message": "feat(katana): simplify genesis class (#2948)",
+          "timestamp": "2025-01-25T02:21:52+08:00",
+          "tree_id": "5858c6b1df4bd2e06e4998d578f047ec4c96f5ad",
+          "url": "https://github.com/dojoengine/dojo/commit/894478e5748b1ebf2d57182c6d87c87aa7171f92"
+        },
+        "date": 1737743998642,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2437744,
+            "range": "± 40362",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 7997165,
+            "range": "± 311648",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2521687690,
+            "range": "± 194799523",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 7897535,
+            "range": "± 362956",
             "unit": "ns/iter"
           }
         ]
