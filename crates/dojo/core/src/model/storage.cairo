@@ -39,7 +39,7 @@ pub trait ModelStorage<S, M> {
     fn read_member<T, +Serde<T>>(self: @S, ptr: ModelPtr<M>, field_selector: felt252) -> T;
 
     /// Retrieves a single member from multiple models.
-    fn read_members<T, +Serde<T>, +Drop<T>>(
+    fn read_member_of_models<T, +Serde<T>, +Drop<T>>(
         self: @S, ptrs: Span<ModelPtr<M>>, field_selector: felt252,
     ) -> Array<T>;
 
@@ -49,7 +49,7 @@ pub trait ModelStorage<S, M> {
     );
 
     /// Updates a member of multiple models.
-    fn write_members<T, +Serde<T>, +Drop<T>>(
+    fn write_member_of_models<T, +Serde<T>, +Drop<T>>(
         ref self: S, ptrs: Span<ModelPtr<M>>, field_selector: felt252, values: Span<T>,
     );
 

@@ -195,7 +195,7 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
         )
     }
 
-    fn read_members<T, +Serde<T>, +Drop<T>>(
+    fn read_member_of_models<T, +Serde<T>, +Drop<T>>(
         self: @WorldStorage, ptrs: Span<ModelPtr<M>>, field_selector: felt252,
     ) -> Array<T> {
         let mut values: Array<T> = array![];
@@ -222,7 +222,7 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
         );
     }
 
-    fn write_members<T, +Serde<T>, +Drop<T>>(
+    fn write_member_of_models<T, +Serde<T>, +Drop<T>>(
         ref self: WorldStorage, ptrs: Span<ModelPtr<M>>, field_selector: felt252, values: Span<T>,
     ) {
         let mut serialized_values = ArrayTrait::<Span<felt252>>::new();

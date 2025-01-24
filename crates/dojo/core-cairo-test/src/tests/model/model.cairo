@@ -213,8 +213,8 @@ fn test_read_members() {
     let foo2 = Foo { k1: 5, k2: 6, v1: 7, v2: 8 };
     world.write_models([@foo, @foo2].span());
     let ptrs = [foo.ptr(), foo2.ptr()].span();
-    let v1s: Array<u128> = world.read_members(ptrs, selector!("v1"));
-    let v2s: Array<u32> = world.read_members(ptrs, selector!("v2"));
+    let v1s: Array<u128> = world.read_member_of_models(ptrs, selector!("v1"));
+    let v2s: Array<u32> = world.read_member_of_models(ptrs, selector!("v2"));
     assert!(v1s == array![foo.v1, foo2.v1]);
     assert!(v2s == array![foo.v2, foo2.v2]);
 }
@@ -236,9 +236,9 @@ fn test_write_members() {
     world.write_models([@foo, @foo2].span());
     let ptrs = [foo.ptr(), foo2.ptr()].span();
     let v1s = array![42, 43];
-    world.write_members(ptrs, selector!("v1"), v1s.span());
-    let v1s_read: Array<u128> = world.read_members(ptrs, selector!("v1"));
-    let v2s_read: Array<u32> = world.read_members(ptrs, selector!("v2"));
+    world.write_member_of_models(ptrs, selector!("v1"), v1s.span());
+    let v1s_read: Array<u128> = world.read_member_of_models(ptrs, selector!("v1"));
+    let v2s_read: Array<u32> = world.read_member_of_models(ptrs, selector!("v2"));
     assert!(v1s_read == v1s);
     assert!(v2s_read == array![foo.v2, foo2.v2]);
 }
