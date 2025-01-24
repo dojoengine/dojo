@@ -4135,7 +4135,7 @@ dependencies = [
 [[package]]
 name = "create-output-dir"
 version = "1.0.0"
-source = "git+https://github.com/dojoengine/scarb?rev=b5ab351aa9b52dcf27a397021d84a423afd016dc#b5ab351aa9b52dcf27a397021d84a423afd016dc"
+source = "git+https://github.com/dojoengine/scarb?rev=a3b3c7fae12aecd3ce1502b1a651fced6be546df#a3b3c7fae12aecd3ce1502b1a651fced6be546df"
 dependencies = [
  "anyhow",
  "core-foundation 0.10.0",
@@ -4873,7 +4873,7 @@ dependencies = [
 [[package]]
 name = "dojo-lang"
 version = "1.0.12"
-source = "git+https://github.com/dojoengine/dojo?rev=99bdd37c1aeb6d75028c32d4039916b97cb3a438#99bdd37c1aeb6d75028c32d4039916b97cb3a438"
+source = "git+https://github.com/dojoengine/dojo?rev=d32e89a1035a8cd6abafe2e35b2c640b4d43de38#d32e89a1035a8cd6abafe2e35b2c640b4d43de38"
 dependencies = [
  "anyhow",
  "cairo-lang-defs",
@@ -4883,7 +4883,7 @@ dependencies = [
  "cairo-lang-semantic",
  "cairo-lang-syntax",
  "cairo-lang-utils",
- "dojo-types 1.0.12 (git+https://github.com/dojoengine/dojo?rev=99bdd37c1aeb6d75028c32d4039916b97cb3a438)",
+ "dojo-types 1.0.12 (git+https://github.com/dojoengine/dojo?rev=d32e89a1035a8cd6abafe2e35b2c640b4d43de38)",
  "itertools 0.12.1",
  "serde",
  "smol_str",
@@ -4965,7 +4965,7 @@ dependencies = [
 [[package]]
 name = "dojo-types"
 version = "1.0.12"
-source = "git+https://github.com/dojoengine/dojo?rev=99bdd37c1aeb6d75028c32d4039916b97cb3a438#99bdd37c1aeb6d75028c32d4039916b97cb3a438"
+source = "git+https://github.com/dojoengine/dojo?rev=d32e89a1035a8cd6abafe2e35b2c640b4d43de38#d32e89a1035a8cd6abafe2e35b2c640b4d43de38"
 dependencies = [
  "anyhow",
  "cainome 0.4.11",
@@ -13182,7 +13182,7 @@ dependencies = [
 [[package]]
 name = "scarb"
 version = "2.9.2"
-source = "git+https://github.com/dojoengine/scarb?rev=b5ab351aa9b52dcf27a397021d84a423afd016dc#b5ab351aa9b52dcf27a397021d84a423afd016dc"
+source = "git+https://github.com/dojoengine/scarb?rev=a3b3c7fae12aecd3ce1502b1a651fced6be546df#a3b3c7fae12aecd3ce1502b1a651fced6be546df"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -13214,7 +13214,7 @@ dependencies = [
  "derive_builder",
  "dialoguer",
  "directories",
- "dojo-lang 1.0.12 (git+https://github.com/dojoengine/dojo?rev=99bdd37c1aeb6d75028c32d4039916b97cb3a438)",
+ "dojo-lang 1.0.12 (git+https://github.com/dojoengine/dojo?rev=d32e89a1035a8cd6abafe2e35b2c640b4d43de38)",
  "dunce",
  "flate2",
  "fs4",
@@ -13235,9 +13235,9 @@ dependencies = [
  "redb",
  "reqwest 0.11.27",
  "scarb-build-metadata",
- "scarb-metadata 1.13.0 (git+https://github.com/dojoengine/scarb?rev=b5ab351aa9b52dcf27a397021d84a423afd016dc)",
- "scarb-proc-macro-server-types 0.1.0 (git+https://github.com/dojoengine/scarb?rev=b5ab351aa9b52dcf27a397021d84a423afd016dc)",
- "scarb-stable-hash 1.0.0 (git+https://github.com/dojoengine/scarb?rev=b5ab351aa9b52dcf27a397021d84a423afd016dc)",
+ "scarb-metadata 1.13.0 (git+https://github.com/dojoengine/scarb?rev=a3b3c7fae12aecd3ce1502b1a651fced6be546df)",
+ "scarb-proc-macro-server-types 0.1.0 (git+https://github.com/dojoengine/scarb?rev=a3b3c7fae12aecd3ce1502b1a651fced6be546df)",
+ "scarb-stable-hash 1.0.0 (git+https://github.com/dojoengine/scarb?rev=a3b3c7fae12aecd3ce1502b1a651fced6be546df)",
  "scarb-ui",
  "semver 1.0.23",
  "serde",
@@ -13267,7 +13267,7 @@ dependencies = [
 [[package]]
 name = "scarb-build-metadata"
 version = "2.9.2"
-source = "git+https://github.com/dojoengine/scarb?rev=b5ab351aa9b52dcf27a397021d84a423afd016dc#b5ab351aa9b52dcf27a397021d84a423afd016dc"
+source = "git+https://github.com/dojoengine/scarb?rev=a3b3c7fae12aecd3ce1502b1a651fced6be546df#a3b3c7fae12aecd3ce1502b1a651fced6be546df"
 dependencies = [
  "cargo_metadata",
 ]
@@ -13288,7 +13288,7 @@ dependencies = [
 [[package]]
 name = "scarb-metadata"
 version = "1.13.0"
-source = "git+https://github.com/dojoengine/scarb?rev=b5ab351aa9b52dcf27a397021d84a423afd016dc#b5ab351aa9b52dcf27a397021d84a423afd016dc"
+source = "git+https://github.com/dojoengine/scarb?rev=a3b3c7fae12aecd3ce1502b1a651fced6be546df#a3b3c7fae12aecd3ce1502b1a651fced6be546df"
 dependencies = [
  "camino",
  "derive_builder",
@@ -13312,7 +13312,7 @@ dependencies = [
 [[package]]
 name = "scarb-proc-macro-server-types"
 version = "0.1.0"
-source = "git+https://github.com/dojoengine/scarb?rev=b5ab351aa9b52dcf27a397021d84a423afd016dc#b5ab351aa9b52dcf27a397021d84a423afd016dc"
+source = "git+https://github.com/dojoengine/scarb?rev=a3b3c7fae12aecd3ce1502b1a651fced6be546df#a3b3c7fae12aecd3ce1502b1a651fced6be546df"
 dependencies = [
  "cairo-lang-macro",
  "serde",
@@ -13332,7 +13332,7 @@ dependencies = [
 [[package]]
 name = "scarb-stable-hash"
 version = "1.0.0"
-source = "git+https://github.com/dojoengine/scarb?rev=b5ab351aa9b52dcf27a397021d84a423afd016dc#b5ab351aa9b52dcf27a397021d84a423afd016dc"
+source = "git+https://github.com/dojoengine/scarb?rev=a3b3c7fae12aecd3ce1502b1a651fced6be546df#a3b3c7fae12aecd3ce1502b1a651fced6be546df"
 dependencies = [
  "data-encoding",
  "xxhash-rust",
@@ -13341,14 +13341,14 @@ dependencies = [
 [[package]]
 name = "scarb-ui"
 version = "0.1.5"
-source = "git+https://github.com/dojoengine/scarb?rev=b5ab351aa9b52dcf27a397021d84a423afd016dc#b5ab351aa9b52dcf27a397021d84a423afd016dc"
+source = "git+https://github.com/dojoengine/scarb?rev=a3b3c7fae12aecd3ce1502b1a651fced6be546df#a3b3c7fae12aecd3ce1502b1a651fced6be546df"
 dependencies = [
  "anyhow",
  "camino",
  "clap",
  "console",
  "indicatif",
- "scarb-metadata 1.13.0 (git+https://github.com/dojoengine/scarb?rev=b5ab351aa9b52dcf27a397021d84a423afd016dc)",
+ "scarb-metadata 1.13.0 (git+https://github.com/dojoengine/scarb?rev=a3b3c7fae12aecd3ce1502b1a651fced6be546df)",
  "serde",
  "serde_json",
  "tracing-core",
@@ -14136,7 +14136,7 @@ dependencies = [
  "notify",
  "reqwest 0.11.27",
  "scarb",
- "scarb-metadata 1.13.0 (git+https://github.com/dojoengine/scarb?rev=b5ab351aa9b52dcf27a397021d84a423afd016dc)",
+ "scarb-metadata 1.13.0 (git+https://github.com/dojoengine/scarb?rev=a3b3c7fae12aecd3ce1502b1a651fced6be546df)",
  "scarb-ui",
  "semver 1.0.23",
  "serde",
