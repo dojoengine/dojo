@@ -4,8 +4,6 @@ resolver = "2"
 members = [
 	"bin/dojo-language-server",
 	"bin/katana",
-	"bin/saya",
-	"bin/scheduler",
 	"bin/sozo",
 	"bin/torii",
 	"crates/dojo/bindgen",
@@ -42,8 +40,6 @@ members = [
 	"crates/katana/tasks",
 	"crates/katana/trie",
 	"crates/metrics",
-	"crates/saya/core",
-	"crates/saya/provider",
 	"crates/sozo/scarbext",
 	"crates/sozo/signers",
 	"crates/sozo/walnut",
@@ -129,10 +125,6 @@ torii-relay = { path = "crates/torii/libp2p" }
 torii-server = { path = "crates/torii/server" }
 torii-runner = { path = "crates/torii/runner" }
 torii-typed-data = { path = "crates/torii/typed-data" }
-
-# saya
-saya-core = { path = "crates/saya/core" }
-saya-provider = { path = "crates/saya/provider" }
 
 # sozo
 sozo-ops = { path = "crates/sozo/ops" }
