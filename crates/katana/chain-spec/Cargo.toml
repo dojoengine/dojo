@@ -1,0 +1,27 @@
+[package]
+edition.workspace = true
+license.workspace = true
+name = "katana-chain-spec"
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+katana-primitives.workspace = true
+
+alloy-primitives.workspace = true
+anyhow.workspace = true
+lazy_static.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+starknet.workspace = true
+thiserror.workspace = true
+url.workspace = true
+dirs = "6.0.0"
+toml.workspace = true
+
+[dev-dependencies]
+similar-asserts.workspace = true
+tempfile.workspace = true
+
+[features]
+controller = [ "katana-primitives/controller" ]

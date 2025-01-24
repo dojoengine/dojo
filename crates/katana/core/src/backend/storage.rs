@@ -1,15 +1,14 @@
 use std::sync::Arc;
 
 use anyhow::{anyhow, bail, Context, Result};
+use katana_chain_spec::ChainSpec;
 use katana_db::mdbx::DbEnv;
 use katana_primitives::block::{
     BlockHashOrNumber, BlockIdOrTag, BlockNumber, FinalityStatus, SealedBlockWithStatus,
 };
-use katana_primitives::chain_spec::ChainSpec;
 use katana_primitives::da::L1DataAvailabilityMode;
 use katana_primitives::hash::{self, StarkHash};
 use katana_primitives::state::StateUpdatesWithClasses;
-use katana_primitives::version::ProtocolVersion;
 use katana_provider::providers::db::DbProvider;
 use katana_provider::providers::fork::ForkedProvider;
 use katana_provider::traits::block::{BlockProvider, BlockWriter};
@@ -160,7 +159,6 @@ impl Blockchain {
         let block_num = forked_block.block_number;
 
         chain.id = chain_id.into();
-        chain.version = ProtocolVersion::parse(&forked_block.starknet_version)?;
 
         // adjust the genesis to match the forked block
         chain.genesis.timestamp = forked_block.timestamp;
@@ -257,7 +255,7 @@ mod tests {
     use katana_primitives::state::StateUpdatesWithClasses;
     use katana_primitives::trace::TxExecInfo;
     use katana_primitives::transaction::{InvokeTx, Tx, TxWithHash};
-    use katana_primitives::{chain_spec, Felt};
+    use katana_primitives::Felt;
     use katana_provider::providers::db::DbProvider;
     use katana_provider::traits::block::{
         BlockHashProvider, BlockNumberProvider, BlockProvider, BlockWriter,
@@ -272,7 +270,7 @@ mod tests {
     fn blockchain_from_genesis_states() {
         let provider = DbProvider::new_ephemeral();
 
-        let blockchain = Blockchain::new_with_chain(provider, &chain_spec::DEV)
+        let blockchain = Blockchain::new_with_chain(provider, &katana_chain_spec::DEV)
             .expect("failed to create blockchain from genesis block");
         let state = blockchain.provider().latest().expect("failed to get latest state");
 
@@ -314,7 +312,7 @@ mod tests {
 
         {
             let db = katana_db::init_db(&db_path).expect("Failed to init database");
-            let blockchain = Blockchain::new_with_db(db, &chain_spec::DEV)
+            let blockchain = Blockchain::new_with_db(db, &katana_chain_spec::DEV)
                 .expect("Failed to create db-backed blockchain storage");
 
             blockchain
@@ -361,7 +359,7 @@ mod tests {
 
         {
             let db = katana_db::init_db(db_path).expect("Failed to init database");
-            let blockchain = Blockchain::new_with_db(db, &chain_spec::DEV)
+            let blockchain = Blockchain::new_with_db(db, &katana_chain_spec::DEV)
                 .expect("Failed to create db-backed blockchain storage");
 
             // assert genesis state is correct
