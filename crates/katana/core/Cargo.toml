@@ -46,8 +46,10 @@ alloy-rpc-types-eth = { workspace = true, default-features = false }
 alloy-transport = { workspace = true, default-features = false }
 
 [dev-dependencies]
+arbitrary.workspace = true
 assert_matches.workspace = true
 hex.workspace = true
+rand.workspace = true
 tempfile.workspace = true
 
 [features]

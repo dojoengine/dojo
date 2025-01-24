@@ -28,6 +28,10 @@ use tracing::{error, info, trace, warn};
 
 use crate::backend::Backend;
 
+#[cfg(test)]
+#[path = "block_producer_tests.rs"]
+mod tests;
+
 pub(crate) const LOG_TARGET: &str = "miner";
 
 #[derive(Debug, thiserror::Error)]
