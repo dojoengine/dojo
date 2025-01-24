@@ -6,7 +6,7 @@ use std::sync::Arc;
 use anyhow::{Context, Result};
 use clap::Args;
 use inquire::{Confirm, CustomType, Select};
-use katana_chain_spec::{SettlementLayer, DEV_UNALLOCATED};
+use katana_chain_spec::{FeeContracts, SettlementLayer, DEV_UNALLOCATED};
 use katana_primitives::chain::ChainId;
 use katana_primitives::genesis::allocation::DevAllocationsGenerator;
 use katana_primitives::genesis::Genesis;
@@ -40,10 +40,15 @@ impl InitArgs {
             core_contract: input.settlement_contract,
         };
 
-        let mut chain_spec = DEV_UNALLOCATED.clone();
-        chain_spec.genesis = GENESIS.clone();
-        chain_spec.id = ChainId::parse(&input.id)?;
-        chain_spec.settlement = Some(settlement);
+        let id = ChainId::parse(&input.id)?;
+        let genesis = GENESIS.clone();
+        let settlement = Some(settlement);
+        let fee_contracts = FeeContracts {
+            eth: DEFAULT_APPCHAIN_FEE_TOKEN_ADDRESS.into(),
+            strk: DEFAULT_APPCHAIN_FEE_TOKEN_ADDRESS.into(),
+        };
+
+        let chain_spec = ChainSpec { id, genesis, settlement, fee_contracts };
 
         katana_chain_spec::file::write(&chain_spec).context("failed to write chain spec file")?;
 
@@ -187,3 +192,6 @@ lazy_static! {
         genesis
     };
 }
+
+const DEFAULT_APPCHAIN_FEE_TOKEN_ADDRESS: Felt =
+    felt!("0x2e7442625bab778683501c0eadbc1ea17b3535da040a12ac7d281066e915eea");
