@@ -1,16 +1,16 @@
 use std::sync::Arc;
 
 use alloy_primitives::U256;
+use katana_chain_spec::ChainSpec;
 use katana_db::mdbx::test_utils;
+use katana_primitives::address;
 use katana_primitives::block::{BlockHash, FinalityStatus};
-use katana_primitives::chain_spec::ChainSpec;
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::genesis::allocation::{
     DevGenesisAccount, GenesisAccountAlloc, GenesisAllocation,
 };
-use katana_primitives::genesis::{Genesis, GenesisClass};
+use katana_primitives::genesis::Genesis;
 use katana_primitives::utils::class::parse_sierra_class;
-use katana_primitives::{address, chain_spec};
 use starknet::macros::felt;
 
 use crate::providers::db::DbProvider;
@@ -41,7 +41,7 @@ fn initialize_test_provider<P: BlockWriter>(provider: &P) {
 /// This includes:
 /// - An account with simple `__execute__` function, deployed at address `0x1`.
 pub fn create_chain_for_testing() -> ChainSpec {
-    let mut chain = chain_spec::DEV_UNALLOCATED.clone();
+    let mut chain = katana_chain_spec::DEV_UNALLOCATED.clone();
 
     let class_hash = felt!("0x111");
     let address = address!("0x1");
@@ -50,7 +50,7 @@ pub fn create_chain_for_testing() -> ChainSpec {
     let class = {
         let json = include_str!("../test-data/simple_account.sierra.json");
         let class = parse_sierra_class(json).unwrap();
-        GenesisClass { compiled_class_hash: class_hash, class: Arc::new(class) }
+        Arc::new(class)
     };
 
     // setup test account

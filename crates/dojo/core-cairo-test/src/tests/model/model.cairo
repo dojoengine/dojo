@@ -1,8 +1,8 @@
-use dojo::model::{Model, ModelValue, ModelStorage, ModelValueStorage};
+use dojo::model::{Model, ModelValue, ModelStorage, ModelValueStorage, ModelPtr};
 use dojo::world::WorldStorage;
 use dojo_cairo_test::{spawn_test_world, NamespaceDef, TestResource};
 
-#[derive(Copy, Drop, Serde, Debug)]
+#[derive(Copy, Drop, Serde, Debug, PartialEq)]
 #[dojo::model]
 struct Foo {
     #[key]
@@ -243,3 +243,28 @@ fn test_write_members() {
     assert!(v2s_read == array![foo.v2, foo2.v2]);
 }
 
+#[test]
+fn test_ptr_from() {
+    let foo = Foo { k1: 1, k2: 2, v1: 3, v2: 4 };
+    let ptr_a = ModelPtr::<Foo> { id: foo.entity_id() };
+    let ptr_b = Model::<Foo>::ptr_from_keys(foo.keys());
+    let ptr_c = Model::<Foo>::ptr_from_serialized_keys([foo.k1.into(), foo.k2].span());
+    let ptr_d = Model::<Foo>::ptr_from_id(foo.entity_id());
+    assert!(ptr_a == ptr_b && ptr_a == ptr_c && ptr_a == ptr_d);
+}
+
+#[test]
+fn test_ptrs_from() {
+    let foo = Foo { k1: 1, k2: 2, v1: 3, v2: 4 };
+    let foo2 = Foo { k1: 3, k2: 4, v1: 5, v2: 6 };
+    let ptrs_a = [ModelPtr::<Foo> { id: foo.entity_id() }, ModelPtr::<Foo> { id: foo2.entity_id() }]
+        .span();
+    let ptrs_b = Model::<Foo>::ptrs_from_keys([foo.keys(), foo2.keys()].span());
+    let ptrs_c = Model::<
+        Foo,
+    >::ptrs_from_serialized_keys(
+        [[foo.k1.into(), foo.k2].span(), [foo2.k1.into(), foo2.k2].span()].span(),
+    );
+    let ptrs_d = Model::<Foo>::ptrs_from_ids([foo.entity_id(), foo2.entity_id()].span());
+    assert!(ptrs_a == ptrs_b && ptrs_a == ptrs_c && ptrs_a == ptrs_d);
+}

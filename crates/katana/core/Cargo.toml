@@ -7,6 +7,7 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
+katana-chain-spec.workspace = true
 katana-db.workspace = true
 katana-executor = { workspace = true, features = [ "blockifier" ] }
 katana-pool.workspace = true
@@ -45,8 +46,10 @@ alloy-rpc-types-eth = { workspace = true, default-features = false }
 alloy-transport = { workspace = true, default-features = false }
 
 [dev-dependencies]
+arbitrary.workspace = true
 assert_matches.workspace = true
 hex.workspace = true
+rand.workspace = true
 tempfile.workspace = true
 
 [features]
