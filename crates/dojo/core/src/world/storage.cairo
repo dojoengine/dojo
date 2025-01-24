@@ -1,7 +1,6 @@
 //! A simple storage abstraction for the world's storage.
 
 use core::panic_with_felt252;
-use core::poseidon::poseidon_hash_span;
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait, Resource};
 use dojo::model::{Model, ModelIndex, ModelValueKey, ModelValue, ModelStorage, ModelPtr};
 use dojo::event::{Event, EventStorage};
