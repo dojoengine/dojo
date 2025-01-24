@@ -216,9 +216,10 @@ pub mod actions {
             self.world(@"ns")
         }
 
-        /// A gas optimized version of `world_default`, where hash are computed at compile time.
-        fn world_default_from_hash(self: @ContractState) -> dojo::world::WorldStorage {
-            self.world_from_hash(poseidon_hash_string!("ns"))
+        /// A gas optimized version of `world_default`, where hash is computed at compile time.
+        /// Can make a difference if switching between namespaces is frequent.
+        fn world_default_ns_hash(self: @ContractState) -> dojo::world::WorldStorage {
+            self.world_ns_hash(bytearray_hash!("ns"))
         }
     }
 }

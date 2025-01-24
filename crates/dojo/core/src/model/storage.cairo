@@ -12,7 +12,7 @@ pub trait ModelStorage<S, M> {
 
     /// Sets multiple models of type `M`.
     fn write_models(ref self: S, models: Span<@M>);
-    
+
     /// Retrieves a model of type `M` using the provided key of type `K`.
     fn read_model<K, +Drop<K>, +Serde<K>>(self: @S, keys: K) -> M;
 

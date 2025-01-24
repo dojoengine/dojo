@@ -9,13 +9,13 @@ use cairo_lang_syntax::node::{ast, TypedStablePtr, TypedSyntaxNode};
 use dojo_types::naming;
 
 #[derive(Debug, Default)]
-pub struct PoseidonHashStringMacro;
+pub struct BytearrayHashMacro;
 
-impl NamedPlugin for PoseidonHashStringMacro {
-    const NAME: &'static str = "poseidon_hash_string";
+impl NamedPlugin for BytearrayHashMacro {
+    const NAME: &'static str = "bytearray_hash";
 }
 
-impl InlineMacroExprPlugin for PoseidonHashStringMacro {
+impl InlineMacroExprPlugin for BytearrayHashMacro {
     fn generate_code(
         &self,
         db: &dyn cairo_lang_syntax::node::db::SyntaxGroup,
@@ -33,27 +33,28 @@ impl InlineMacroExprPlugin for PoseidonHashStringMacro {
                 code: None,
                 diagnostics: vec![PluginDiagnostic {
                     stable_ptr: syntax.stable_ptr().untyped(),
-                    message: "Invalid arguments. Expected \"poseidon_hash_string!(\"tag\")\""
+                    message: "Invalid arguments. Expected \"bytearray_hash!(\"long string\")\""
                         .to_string(),
                     severity: Severity::Error,
                 }],
             };
         }
 
-        let tag = &args[0].as_syntax_node().get_text(db).replace('\"', "");
+        let bytearray = &args[0].as_syntax_node().get_text(db).replace('\"', "");
 
-        let selector = naming::compute_bytearray_hash(tag);
+        let bytearray_hash = naming::compute_bytearray_hash(bytearray);
 
         let mut builder = PatchBuilder::new(db, syntax);
-        builder.add_str(&format!("{:#64x}", selector));
+        builder.add_str(&format!("{:#64x}", bytearray_hash));
 
         let (code, code_mappings) = builder.build();
 
         InlinePluginResult {
             code: Some(PluginGeneratedFile {
-                name: "poseidon_hash_string_macro".into(),
+                name: "bytearray_hash_macro".into(),
                 content: code,
                 code_mappings,
+                diagnostics_note: None,
                 aux_data: None,
             }),
             diagnostics: vec![],

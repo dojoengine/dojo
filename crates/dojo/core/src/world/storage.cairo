@@ -41,7 +41,6 @@ pub impl WorldStorageInternalImpl of WorldStorageTrait {
         self.namespace_hash = dojo::utils::bytearray_hash(namespace);
     }
 
-
     fn dns(self: @WorldStorage, contract_name: @ByteArray) -> Option<(ContractAddress, ClassHash)> {
         Self::dns_from_hash(self, dojo::utils::bytearray_hash(contract_name))
     }
@@ -50,7 +49,7 @@ pub impl WorldStorageInternalImpl of WorldStorageTrait {
         self: @WorldStorage, contract_name_hash: felt252,
     ) -> Option<(ContractAddress, ClassHash)> {
         Self::dns_from_selector(
-            self, poseidon_hash_span([*self.namespace_hash, contract_name_hash].span()),
+            self, dojo::utils::selector_from_hashes(*self.namespace_hash, contract_name_hash),
         )
     }
 

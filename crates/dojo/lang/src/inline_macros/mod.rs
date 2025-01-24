@@ -8,21 +8,21 @@ use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, Terminal, TypedStablePtr, TypedSyntaxNode};
 use smol_str::SmolStr;
 
+pub mod bytearray_hash;
 pub mod delete;
 pub mod emit;
 pub mod get;
 pub mod get_models_test_class_hashes;
-pub mod poseidon_hash_string;
 pub mod selector_from_tag;
 pub mod set;
 pub mod spawn_test_world;
 pub mod utils;
 
+pub use bytearray_hash::BytearrayHashMacro;
 pub use delete::DeleteMacro;
 pub use emit::EmitMacro;
 pub use get::GetMacro;
 pub use get_models_test_class_hashes::GetModelsTestClassHashes;
-pub use poseidon_hash_string::PoseidonHashStringMacro;
 pub use selector_from_tag::SelectorFromTagMacro;
 pub use set::SetMacro;
 pub use spawn_test_world::SpawnTestWorld;
