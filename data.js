@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1737671669216,
+  "lastUpdate": 1737691911376,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -47341,6 +47341,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 7744263,
             "range": "± 51720",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "158306087+bengineer42@users.noreply.github.com",
+            "name": "Benjamin",
+            "username": "bengineer42"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "94e6e163a861d27037fbcba0b07e296185206d03",
+          "message": "feat(dojo-core): add support for making multiple model pointers (#2940)\n\nfeat(model): add support for multiple model pointers and serialization methods\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2025-01-24T03:55:08Z",
+          "tree_id": "f14dec3b43dbc854151576133fb7c61d01ffb694",
+          "url": "https://github.com/dojoengine/dojo/commit/94e6e163a861d27037fbcba0b07e296185206d03"
+        },
+        "date": 1737691908663,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 11999237795,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
