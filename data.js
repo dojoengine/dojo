@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1737759101162,
+  "lastUpdate": 1737760682455,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -47809,6 +47809,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 7693052,
             "range": "± 646953",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "158306087+bengineer42@users.noreply.github.com",
+            "name": "Benjamin",
+            "username": "bengineer42"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9b722fd63ef1744dffa837fcbec0db4fff06159a",
+          "message": "feat(dojo-core): add support to read/write the same member from multiple models (#2939)\n\n* feat(model-storage): enhance model storage with new read/write methods for multiple members\r\n\r\n* chamged read-members\r\n\r\n* Removed unused code\r\n\r\n* feat(model): add read/write methods for  multiple members and tests\r\n\r\n* refactor(model-storage): rename read/write methods for clarity and consistency\r\n\r\n* tests: regenerate test db\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2025-01-24T23:01:54Z",
+          "tree_id": "05c55f799a619edb1319236851cb31552b8b040b",
+          "url": "https://github.com/dojoengine/dojo/commit/9b722fd63ef1744dffa837fcbec0db4fff06159a"
+        },
+        "date": 1737760680259,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 11420874307,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
