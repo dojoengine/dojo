@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1737693696491,
+  "lastUpdate": 1737693807335,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -47449,6 +47449,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 11869154512,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "158306087+bengineer42@users.noreply.github.com",
+            "name": "Benjamin",
+            "username": "bengineer42"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8c484fd12b316b0ca731dc88d2debde7bbbc1f1b",
+          "message": "feat(dojo-lang): add `bytearray_hash` macro (#2946)\n\n* feat(namespace): add poseidon_hash_string macro and related tests\r\n\r\n* fix(world-storage): retrieve class hash using syscall for contract resources and fmting\r\n\r\n* fix: avoid double declaration of plugin + renamings\r\n\r\n* chore: bump scarb\r\n\r\n* tests: use new name in tests\r\n\r\n* tests: regenerate test db\r\n\r\n* tests: fix rename of macro\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2025-01-23T22:25:04-06:00",
+          "tree_id": "8201d46ac4d6b0bb5dbf710be7b83fbb096ec380",
+          "url": "https://github.com/dojoengine/dojo/commit/8c484fd12b316b0ca731dc88d2debde7bbbc1f1b"
+        },
+        "date": 1737693804496,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2507201,
+            "range": "± 26038",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8095816,
+            "range": "± 302815",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2570765480,
+            "range": "± 244336195",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 7795145,
+            "range": "± 128112",
             "unit": "ns/iter"
           }
         ]
