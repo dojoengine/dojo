@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1737740115465,
+  "lastUpdate": 1737740159367,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -47527,6 +47527,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 12740470815,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4ffbac02ddb3fc43d9f22a7e45431bcb11168a9d",
+          "message": "refactor(katana): use the exact same UDC class as Starknet (#2949)\n\nThe UDC class that is currently being used hash a class hash of `0x035e13e8852c6fc49a9d87f9448079f69d6dae1795fe64e8a737eab8fd24dcb0` while the one that Starknet is officially using has the class hash of [`0x07b3e05f48f0c69e4a65ce5e076a66271a527aff2c34ce1083ec6e1526997a69`](https://voyager.online/class/0x07b3e05f48f0c69e4a65ce5e076a66271a527aff2c34ce1083ec6e1526997a69). \r\n\r\nThe updated UDC class is exactly the same as the one used by Starknet therefore will result in the same class hash when it is computed. It is not an issue currently because we're hardcoding the class hash ourselves when it is inserted in the genesis. But we're moving away from allowing hardcoded class hash to maintain correctness.\r\n\r\nThe reason why we want to use the same version is to maintain compatibility and predictability across libs.\r\n\r\n---\r\n\r\nThis doesn't introduce any breaking changes as the hardcoded class hash is the correct one for the new class.",
+          "timestamp": "2025-01-25T01:17:54+08:00",
+          "tree_id": "33a2719f16152331e63c1b30a667bba909908d0e",
+          "url": "https://github.com/dojoengine/dojo/commit/4ffbac02ddb3fc43d9f22a7e45431bcb11168a9d"
+        },
+        "date": 1737740157082,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2557062,
+            "range": "± 48479",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8040814,
+            "range": "± 147180",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2669351303,
+            "range": "± 295486031",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 7743911,
+            "range": "± 114999",
             "unit": "ns/iter"
           }
         ]
