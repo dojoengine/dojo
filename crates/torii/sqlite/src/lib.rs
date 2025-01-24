@@ -946,7 +946,7 @@ fn add_columns_recursive(
             let sql_type = format!(
                 "TEXT CONSTRAINT [{column_name}_check] CHECK([{column_name}] IN ({all_options}))"
             );
-            if enum_diff.is_some() {
+            if enum_diff.is_some_and(|diff| diff != e) {
                 // For upgrades, modify the existing option column to add the new options to the
                 // CHECK constraint We need to drop the old column and create a new
                 // one with the new CHECK constraint
