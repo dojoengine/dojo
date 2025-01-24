@@ -1,17 +1,18 @@
 use std::sync::Arc;
 
-use gas_oracle::L1GasOracle;
+use gas_oracle::GasOracle;
+use katana_chain_spec::ChainSpec;
 use katana_executor::{ExecutionOutput, ExecutionResult, ExecutorFactory};
 use katana_primitives::block::{
     BlockHash, BlockNumber, FinalityStatus, Header, PartialHeader, SealedBlock,
     SealedBlockWithStatus,
 };
-use katana_primitives::chain_spec::ChainSpec;
 use katana_primitives::da::L1DataAvailabilityMode;
 use katana_primitives::env::BlockEnv;
 use katana_primitives::receipt::{Event, ReceiptWithTxHash};
 use katana_primitives::state::{compute_state_diff_hash, StateUpdates};
 use katana_primitives::transaction::{TxHash, TxWithHash};
+use katana_primitives::version::CURRENT_STARKNET_VERSION;
 use katana_primitives::{address, ContractAddress, Felt};
 use katana_provider::traits::block::{BlockHashProvider, BlockWriter};
 use katana_provider::traits::trie::TrieWriter;
@@ -42,7 +43,7 @@ pub struct Backend<EF: ExecutorFactory> {
 
     pub executor_factory: Arc<EF>,
 
-    pub gas_oracle: L1GasOracle,
+    pub gas_oracle: GasOracle,
 }
 
 impl<EF: ExecutorFactory> Backend<EF> {
@@ -174,7 +175,7 @@ impl<EF: ExecutorFactory> Backend<EF> {
             parent_hash,
             number: block_env.number,
             timestamp: block_env.timestamp,
-            protocol_version: self.chain_spec.version.clone(),
+            protocol_version: CURRENT_STARKNET_VERSION,
             sequencer_address: block_env.sequencer_address,
             l1_gas_prices: block_env.l1_gas_prices,
             l1_data_gas_prices: block_env.l1_data_gas_prices,

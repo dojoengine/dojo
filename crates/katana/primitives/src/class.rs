@@ -30,6 +30,10 @@ pub enum ContractClassCompilationError {
     SierraCompilation(#[from] StarknetSierraCompilationError),
 }
 
+// NOTE:
+// Ideally, we can implement this enum as an untagged `serde` enum, so that we can deserialize from
+// the raw JSON class artifact directly into this (ie
+// `serde_json::from_str::<ContractClass>(json)`). But that is not possible due to a limitation with untagged enums derivation (see https://github.com/serde-rs/serde/pull/2781).
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]

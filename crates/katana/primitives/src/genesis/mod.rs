@@ -7,7 +7,7 @@ use std::fmt::Debug;
 use std::sync::Arc;
 
 use constant::DEFAULT_ACCOUNT_CLASS;
-#[cfg(feature = "slot")]
+#[cfg(feature = "controller")]
 use constant::{CONTROLLER_ACCOUNT_CLASS, CONTROLLER_CLASS_HASH};
 use serde::{Deserialize, Serialize};
 
@@ -40,7 +40,6 @@ impl core::fmt::Debug for GenesisClass {
 }
 
 /// Genesis block configuration.
-#[serde_with::serde_as]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Genesis {
     /// The genesis block parent hash.
@@ -124,11 +123,16 @@ impl Default for Genesis {
                     class: DEFAULT_ACCOUNT_CLASS.clone().into(),
                 },
             ),
-            #[cfg(feature = "slot")]
+            #[cfg(feature = "controller")]
             (
                 CONTROLLER_CLASS_HASH,
                 GenesisClass {
-                    compiled_class_hash: CONTROLLER_CLASS_HASH,
+                    compiled_class_hash: CONTROLLER_ACCOUNT_CLASS
+                        .clone()
+                        .compile()
+                        .expect("failed to compile")
+                        .class_hash()
+                        .expect("failed to compute class hash"),
                     class: CONTROLLER_ACCOUNT_CLASS.clone().into(),
                 },
             ),

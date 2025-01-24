@@ -1,47 +1,55 @@
 use std::collections::BTreeMap;
 
 use alloy_primitives::U256;
-use lazy_static::lazy_static;
-use starknet::core::utils::cairo_short_string_to_felt;
-use starknet_crypto::Felt;
-
-use crate::block::{Block, Header};
-use crate::chain::ChainId;
-use crate::class::ClassHash;
-use crate::contract::ContractAddress;
-use crate::da::L1DataAvailabilityMode;
-use crate::genesis::allocation::{DevAllocationsGenerator, GenesisAllocation};
-use crate::genesis::constant::{
+use katana_primitives::block::{Block, Header};
+use katana_primitives::chain::ChainId;
+use katana_primitives::class::ClassHash;
+use katana_primitives::contract::ContractAddress;
+use katana_primitives::da::L1DataAvailabilityMode;
+use katana_primitives::genesis::allocation::{DevAllocationsGenerator, GenesisAllocation};
+use katana_primitives::genesis::constant::{
     get_fee_token_balance_base_storage_address, DEFAULT_ACCOUNT_CLASS_PUBKEY_STORAGE_SLOT,
     DEFAULT_ETH_FEE_TOKEN_ADDRESS, DEFAULT_LEGACY_ERC20_CLASS, DEFAULT_LEGACY_ERC20_CLASS_HASH,
     DEFAULT_LEGACY_UDC_CLASS, DEFAULT_LEGACY_UDC_CLASS_HASH, DEFAULT_PREFUNDED_ACCOUNT_BALANCE,
     DEFAULT_STRK_FEE_TOKEN_ADDRESS, DEFAULT_UDC_ADDRESS, ERC20_DECIMAL_STORAGE_SLOT,
     ERC20_NAME_STORAGE_SLOT, ERC20_SYMBOL_STORAGE_SLOT, ERC20_TOTAL_SUPPLY_STORAGE_SLOT,
 };
-use crate::genesis::Genesis;
-use crate::state::StateUpdatesWithClasses;
-use crate::utils::split_u256;
-use crate::version::{ProtocolVersion, CURRENT_STARKNET_VERSION};
+use katana_primitives::genesis::Genesis;
+use katana_primitives::state::StateUpdatesWithClasses;
+use katana_primitives::utils::split_u256;
+use katana_primitives::version::CURRENT_STARKNET_VERSION;
+use katana_primitives::{eth, Felt};
+use lazy_static::lazy_static;
+use serde::{Deserialize, Serialize};
+use starknet::core::utils::cairo_short_string_to_felt;
+use url::Url;
 
-/// A chain specification.
-// TODO: include l1 core contract
-// TODO: create a chain spec and genesis builder to abstract inserting aux classes
+pub mod file;
+
+/// The rollup chain specification.
 #[derive(Debug, Clone)]
+#[cfg_attr(test, derive(PartialEq))]
 pub struct ChainSpec {
-    /// The network chain id.
+    /// The rollup network chain id.
     pub id: ChainId,
-    /// The genesis block.
+
+    /// The chain's genesis states.
     pub genesis: Genesis,
+
     /// The chain fee token contract.
     pub fee_contracts: FeeContracts,
-    /// The protocol version.
-    pub version: ProtocolVersion,
+
+    /// The chain's settlement layer configurations.
+    ///
+    /// This should only be optional if the chain is in development mode.
+    pub settlement: Option<SettlementLayer>,
 }
 
 /// Tokens that can be used for transaction fee payments in the chain. As
 /// supported on Starknet.
 // TODO: include both l1 and l2 addresses
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(test, derive(PartialEq))]
 pub struct FeeContracts {
     /// L2 ETH fee token address. Used for paying pre-V3 transactions.
     pub eth: ContractAddress,
@@ -49,11 +57,48 @@ pub struct FeeContracts {
     pub strk: ContractAddress,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(test, derive(PartialEq))]
+#[serde(rename_all = "kebab-case")]
+pub enum SettlementLayer {
+    Ethereum {
+        // The id of the settlement chain.
+        id: eth::ChainId,
+
+        // url for ethereum rpc provider
+        rpc_url: Url,
+
+        /// account on the ethereum network
+        account: eth::Address,
+
+        // - The core appchain contract used to settlement
+        core_contract: eth::Address,
+    },
+
+    Starknet {
+        // The id of the settlement chain.
+        id: ChainId,
+
+        // url for starknet rpc provider
+        rpc_url: Url,
+
+        /// account on the starknet network
+        account: ContractAddress,
+
+        // - The core appchain contract used to settlement
+        core_contract: ContractAddress,
+    },
+}
+
+//////////////////////////////////////////////////////////////
+// 	ChainSpec implementations
+//////////////////////////////////////////////////////////////
+
 impl ChainSpec {
     pub fn block(&self) -> Block {
         let header = Header {
             state_diff_length: 0,
-            protocol_version: self.version.clone(),
+            protocol_version: CURRENT_STARKNET_VERSION,
             number: self.genesis.number,
             timestamp: self.genesis.timestamp,
             events_count: 0,
@@ -142,7 +187,13 @@ lazy_static! {
         let id = ChainId::parse("KATANA").unwrap();
         let genesis = Genesis::default();
         let fee_contracts = FeeContracts { eth: DEFAULT_ETH_FEE_TOKEN_ADDRESS, strk: DEFAULT_STRK_FEE_TOKEN_ADDRESS };
-        ChainSpec { id, genesis, fee_contracts, version: CURRENT_STARKNET_VERSION }
+
+        ChainSpec {
+            id,
+            genesis,
+            fee_contracts,
+            settlement: None,
+        }
     };
 }
 
@@ -248,23 +299,25 @@ mod tests {
     use std::str::FromStr;
 
     use alloy_primitives::U256;
-    use starknet::macros::felt;
-
-    use super::*;
-    use crate::address;
-    use crate::block::{Block, GasPrices, Header};
-    use crate::da::L1DataAvailabilityMode;
-    use crate::genesis::allocation::{GenesisAccount, GenesisAccountAlloc, GenesisContractAlloc};
-    #[cfg(feature = "slot")]
-    use crate::genesis::constant::{CONTROLLER_ACCOUNT_CLASS, CONTROLLER_CLASS_HASH};
-    use crate::genesis::constant::{
+    use katana_primitives::address;
+    use katana_primitives::block::{Block, GasPrices, Header};
+    use katana_primitives::da::L1DataAvailabilityMode;
+    use katana_primitives::genesis::allocation::{
+        GenesisAccount, GenesisAccountAlloc, GenesisContractAlloc,
+    };
+    #[cfg(feature = "controller")]
+    use katana_primitives::genesis::constant::{CONTROLLER_ACCOUNT_CLASS, CONTROLLER_CLASS_HASH};
+    use katana_primitives::genesis::constant::{
         DEFAULT_ACCOUNT_CLASS, DEFAULT_ACCOUNT_CLASS_HASH,
         DEFAULT_ACCOUNT_CLASS_PUBKEY_STORAGE_SLOT, DEFAULT_ACCOUNT_COMPILED_CLASS_HASH,
         DEFAULT_LEGACY_ERC20_CLASS, DEFAULT_LEGACY_ERC20_COMPILED_CLASS_HASH,
         DEFAULT_LEGACY_UDC_CLASS, DEFAULT_LEGACY_UDC_COMPILED_CLASS_HASH,
     };
-    use crate::genesis::GenesisClass;
-    use crate::version::CURRENT_STARKNET_VERSION;
+    use katana_primitives::genesis::GenesisClass;
+    use katana_primitives::version::CURRENT_STARKNET_VERSION;
+    use starknet::macros::felt;
+
+    use super::*;
 
     #[test]
     fn genesis_block_and_state_updates() {
@@ -292,7 +345,7 @@ mod tests {
                     class: DEFAULT_ACCOUNT_CLASS.clone().into(),
                 },
             ),
-            #[cfg(feature = "slot")]
+            #[cfg(feature = "controller")]
             (
                 CONTROLLER_CLASS_HASH,
                 GenesisClass {
@@ -343,7 +396,6 @@ mod tests {
         ];
         let chain_spec = ChainSpec {
             id: ChainId::SEPOLIA,
-            version: CURRENT_STARKNET_VERSION,
             genesis: Genesis {
                 classes,
                 allocations: BTreeMap::from(allocations.clone()),
@@ -358,6 +410,7 @@ mod tests {
                 eth: DEFAULT_ETH_FEE_TOKEN_ADDRESS,
                 strk: DEFAULT_STRK_FEE_TOKEN_ADDRESS,
             },
+            settlement: None,
         };
 
         // setup expected storage values
@@ -386,24 +439,9 @@ mod tests {
         let actual_block = chain_spec.block();
         let actual_state_updates = chain_spec.state_updates();
 
-        // assert individual fields of the block
+        similar_asserts::assert_eq!(actual_block, expected_block);
 
-        assert_eq!(actual_block.header.number, expected_block.header.number);
-        assert_eq!(actual_block.header.timestamp, expected_block.header.timestamp);
-        assert_eq!(actual_block.header.parent_hash, expected_block.header.parent_hash);
-        assert_eq!(actual_block.header.sequencer_address, expected_block.header.sequencer_address);
-        assert_eq!(actual_block.header.l1_gas_prices, expected_block.header.l1_gas_prices);
-        assert_eq!(
-            actual_block.header.l1_data_gas_prices,
-            expected_block.header.l1_data_gas_prices
-        );
-        assert_eq!(actual_block.header.l1_da_mode, expected_block.header.l1_da_mode);
-        assert_eq!(actual_block.header.protocol_version, expected_block.header.protocol_version);
-        assert_eq!(actual_block.header.transaction_count, expected_block.header.transaction_count);
-        assert_eq!(actual_block.header.events_count, expected_block.header.events_count);
-        assert_eq!(actual_block.body, expected_block.body);
-
-        if cfg!(feature = "slot") {
+        if cfg!(feature = "controller") {
             assert!(actual_state_updates.classes.len() == 4);
         } else {
             assert!(actual_state_updates.classes.len() == 3);
@@ -480,7 +518,7 @@ mod tests {
             "The default oz account contract sierra class should be declared"
         );
 
-        #[cfg(feature = "slot")]
+        #[cfg(feature = "controller")]
         {
             assert_eq!(
                 actual_state_updates.state_updates.declared_classes.get(&CONTROLLER_CLASS_HASH),

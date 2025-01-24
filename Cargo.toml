@@ -16,6 +16,7 @@ members = [
 	"crates/dojo/utils",
 	"crates/dojo/world",
 	"crates/dojo/world/abigen",
+	"crates/katana/chain-spec",
 	"crates/katana/cli",
 	"crates/katana/controller",
 	"crates/katana/core",
@@ -93,6 +94,7 @@ topological-sort = "0.2"
 
 # katana
 katana-cairo = { path = "crates/katana/cairo" }
+katana-chain-spec = { path = "crates/katana/chain-spec" }
 katana-cli = { path = "crates/katana/cli" }
 katana-codecs = { path = "crates/katana/storage/codecs" }
 katana-codecs-derive = { path = "crates/katana/storage/codecs/derive" }
@@ -212,12 +214,9 @@ rpassword = "7.2.0"
 rstest = "0.18.2"
 rstest_reuse = "0.6.0"
 salsa = "0.16.1"
-#scarb = { git = "https://github.com/dojoengine/scarb", rev = "f67331d99bca24c13ad56af6752b93f23e5ac373" }
-#scarb-metadata = { git = "https://github.com/dojoengine/scarb", rev = "f67331d99bca24c13ad56af6752b93f23e5ac373" }
-#scarb-ui = { git = "https://github.com/dojoengine/scarb", rev = "f67331d99bca24c13ad56af6752b93f23e5ac373" }
-scarb = { path = "/Users/glihm/swm/scarb/scarb" }
-scarb-metadata = { path = "/Users/glihm/swm/scarb/scarb-metadata" }
-scarb-ui = { path = "/Users/glihm/swm/scarb/utils/scarb-ui" }
+scarb = { git = "https://github.com/dojoengine/scarb", rev = "b5ab351aa9b52dcf27a397021d84a423afd016dc" }
+scarb-metadata = { git = "https://github.com/dojoengine/scarb", rev = "b5ab351aa9b52dcf27a397021d84a423afd016dc" }
+scarb-ui = { git = "https://github.com/dojoengine/scarb", rev = "b5ab351aa9b52dcf27a397021d84a423afd016dc" }
 semver = "1.0.5"
 serde = { version = "1.0", features = [ "derive" ] }
 serde_json = { version = "1.0", features = [ "arbitrary_precision" ] }
