@@ -8,6 +8,7 @@ use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{ast, Terminal, TypedStablePtr, TypedSyntaxNode};
 use smol_str::SmolStr;
 
+pub mod bytearray_hash;
 pub mod delete;
 pub mod emit;
 pub mod get;
@@ -17,6 +18,7 @@ pub mod set;
 pub mod spawn_test_world;
 pub mod utils;
 
+pub use bytearray_hash::BytearrayHashMacro;
 pub use delete::DeleteMacro;
 pub use emit::EmitMacro;
 pub use get::GetMacro;
