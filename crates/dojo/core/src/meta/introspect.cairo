@@ -24,7 +24,7 @@ use core::panics::panic_with_byte_array;
 const ALLOWED_PRIMITIVE_UPGRADES: [[bool; 16]; 16] = [
     // bool
     [
-        false, false, false, false, false, false, false, false, false, false, false, false, false,
+        true, false, false, false, false, false, false, false, false, false, false, false, true,
         false, false, false,
     ],
     // u8
@@ -225,13 +225,13 @@ impl TyCompareImpl of TyCompareTrait<Ty> {
                 let n = *n;
                 let o = *o;
 
-                if n.len() != o.len() {
+                if n.len() < o.len() {
                     return false;
                 }
 
                 let mut i = 0;
                 loop {
-                    if i >= n.len() {
+                    if i >= o.len() {
                         break true;
                     }
                     if !n.at(i).is_an_upgrade_of(o.at(i)) {

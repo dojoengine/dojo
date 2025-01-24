@@ -67,7 +67,7 @@ enum MyEnum {
 struct FooModelMemberChanged {
     #[key]
     pub caller: ContractAddress,
-    pub a: MyEnum,
+    pub a: (MyEnum, u8, u32),
     pub b: u128,
 }
 
@@ -263,7 +263,7 @@ fn test_upgrade_model_with_member_changed() {
 
     // values previously set in deploy_world_for_model_upgrades
     let read: FooModelMemberChanged = world_storage.read_model(caller);
-    assert!(read.a == MyEnum::X(42));
+    assert!(read.a == (MyEnum::X(42), 189, 0));
     assert!(read.b == 456);
 }
 

@@ -65,7 +65,7 @@ enum MyEnum {
 struct FooModelMemberChanged {
     #[key]
     pub caller: ContractAddress,
-    pub a: MyEnum,
+    pub a: (MyEnum, u8),
     pub b: u128,
 }
 
@@ -107,7 +107,7 @@ pub fn deploy_world_for_model_upgrades() -> IWorldDispatcher {
     let caller = starknet::contract_address_const::<0xb0b>();
 
     world_storage.write_model(@FooModelMemberAdded { caller, a: 123, b: 456 });
-    world_storage.write_model(@FooModelMemberChanged { caller, a: MyEnum::X(42), b: 456 });
+    world_storage.write_model(@FooModelMemberChanged { caller, a: (MyEnum::X(42), 189), b: 456 });
 
     world
 }

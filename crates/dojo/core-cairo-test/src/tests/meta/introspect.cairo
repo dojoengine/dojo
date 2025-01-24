@@ -371,7 +371,8 @@ fn test_primitive_upgrade() {
         .span();
 
     let mut allowed_upgrades: Span<(felt252, Span<felt252>)> = [
-        ('bool', [].span()), ('u8', ['u16', 'u32', 'usize', 'u64', 'u128', 'felt252'].span()),
+        ('bool', ['felt252'].span()),
+        ('u8', ['u16', 'u32', 'usize', 'u64', 'u128', 'felt252'].span()),
         ('u16', ['u32', 'usize', 'u64', 'u128', 'felt252'].span()),
         ('u32', ['usize', 'u64', 'u128', 'felt252'].span()),
         ('usize', ['u32', 'u64', 'u128', 'felt252'].span()), ('u64', ['u128', 'felt252'].span()),
@@ -584,7 +585,7 @@ fn test_tuple_upgrade() {
     let upgraded = Ty::Tuple(
         [Ty::Primitive('u8'), Ty::Primitive('u16'), Ty::Primitive('u32')].span(),
     );
-    assert!(!upgraded.is_an_upgrade_of(@t));
+    assert!(upgraded.is_an_upgrade_of(@t));
 }
 
 #[test]
