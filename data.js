@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1737691911376,
+  "lastUpdate": 1737692013323,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -47371,6 +47371,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 11999237795,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "158306087+bengineer42@users.noreply.github.com",
+            "name": "Benjamin",
+            "username": "bengineer42"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "94e6e163a861d27037fbcba0b07e296185206d03",
+          "message": "feat(dojo-core): add support for making multiple model pointers (#2940)\n\nfeat(model): add support for multiple model pointers and serialization methods\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2025-01-24T03:55:08Z",
+          "tree_id": "f14dec3b43dbc854151576133fb7c61d01ffb694",
+          "url": "https://github.com/dojoengine/dojo/commit/94e6e163a861d27037fbcba0b07e296185206d03"
+        },
+        "date": 1737692010854,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2496131,
+            "range": "± 39374",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8061208,
+            "range": "± 357017",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2725273636,
+            "range": "± 245660750",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 7794493,
+            "range": "± 111507",
             "unit": "ns/iter"
           }
         ]
