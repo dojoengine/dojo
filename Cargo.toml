@@ -4,8 +4,6 @@ resolver = "2"
 members = [
 	"bin/dojo-language-server",
 	"bin/katana",
-	"bin/saya",
-	"bin/scheduler",
 	"bin/sozo",
 	"bin/torii",
 	"crates/dojo/bindgen",
@@ -42,8 +40,6 @@ members = [
 	"crates/katana/tasks",
 	"crates/katana/trie",
 	"crates/metrics",
-	"crates/saya/core",
-	"crates/saya/provider",
 	"crates/sozo/scarbext",
 	"crates/sozo/signers",
 	"crates/sozo/walnut",
@@ -130,10 +126,6 @@ torii-server = { path = "crates/torii/server" }
 torii-runner = { path = "crates/torii/runner" }
 torii-typed-data = { path = "crates/torii/typed-data" }
 
-# saya
-saya-core = { path = "crates/saya/core" }
-saya-provider = { path = "crates/saya/provider" }
-
 # sozo
 sozo-ops = { path = "crates/sozo/ops" }
 sozo-scarbext = { path = "crates/sozo/scarbext" }
@@ -214,9 +206,9 @@ rpassword = "7.2.0"
 rstest = "0.18.2"
 rstest_reuse = "0.6.0"
 salsa = "0.16.1"
-scarb = { git = "https://github.com/dojoengine/scarb", rev = "b5ab351aa9b52dcf27a397021d84a423afd016dc" }
-scarb-metadata = { git = "https://github.com/dojoengine/scarb", rev = "b5ab351aa9b52dcf27a397021d84a423afd016dc" }
-scarb-ui = { git = "https://github.com/dojoengine/scarb", rev = "b5ab351aa9b52dcf27a397021d84a423afd016dc" }
+scarb = { git = "https://github.com/dojoengine/scarb", rev = "a3b3c7fae12aecd3ce1502b1a651fced6be546df" }
+scarb-metadata = { git = "https://github.com/dojoengine/scarb", rev = "a3b3c7fae12aecd3ce1502b1a651fced6be546df" }
+scarb-ui = { git = "https://github.com/dojoengine/scarb", rev = "a3b3c7fae12aecd3ce1502b1a651fced6be546df" }
 semver = "1.0.5"
 serde = { version = "1.0", features = [ "derive" ] }
 serde_json = { version = "1.0", features = [ "arbitrary_precision" ] }

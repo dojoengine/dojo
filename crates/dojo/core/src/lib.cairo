@@ -42,7 +42,7 @@ pub mod model {
     pub use definition::{ModelIndex, ModelDefinition, ModelDef};
 
     pub mod model;
-    pub use model::{Model, KeyParser, ModelPtr};
+    pub use model::{Model, KeyParser, ModelPtr, ModelPtrsTrait};
 
     pub mod model_value;
     pub use model_value::{ModelValue, ModelValueKey};
@@ -67,7 +67,9 @@ pub mod storage {
 
 pub mod utils {
     pub mod hash;
-    pub use hash::{bytearray_hash, selector_from_names, selector_from_namespace_and_name};
+    pub use hash::{
+        bytearray_hash, selector_from_hashes, selector_from_names, selector_from_namespace_and_name,
+    };
 
     pub mod key;
     pub use key::{entity_id_from_serialized_keys, combine_key, entity_id_from_keys};

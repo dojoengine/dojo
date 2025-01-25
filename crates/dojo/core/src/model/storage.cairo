@@ -35,12 +35,22 @@ pub trait ModelStorage<S, M> {
     /// The ptr is mostly used for type inferrence.
     fn erase_models_ptrs(ref self: S, ptrs: Span<ModelPtr<M>>);
 
-    /// Retrieves a model of type `M` using the provided entity idref .
+    /// Retrieves a model of type `M` using the provided entity id.
     fn read_member<T, +Serde<T>>(self: @S, ptr: ModelPtr<M>, field_selector: felt252) -> T;
 
-    /// Retrieves a model of type `M` using the provided entity id.
+    /// Retrieves a single member from multiple models.
+    fn read_member_of_models<T, +Serde<T>, +Drop<T>>(
+        self: @S, ptrs: Span<ModelPtr<M>>, field_selector: felt252,
+    ) -> Array<T>;
+
+    /// Updates a member of a model.
     fn write_member<T, +Serde<T>, +Drop<T>>(
         ref self: S, ptr: ModelPtr<M>, field_selector: felt252, value: T,
+    );
+
+    /// Updates a member of multiple models.
+    fn write_member_of_models<T, +Serde<T>, +Drop<T>>(
+        ref self: S, ptrs: Span<ModelPtr<M>>, field_selector: felt252, values: Span<T>,
     );
 
     /// Returns the current namespace hash.
