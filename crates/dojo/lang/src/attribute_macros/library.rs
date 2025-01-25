@@ -179,7 +179,10 @@ impl DojoLibrary {
         vec![RewriteNode::Text(
             "
             #[storage]
-            struct Storage {}
+            struct Storage {
+            #[substorage(v0)]
+                world_provider: world_provider_cpt::Storage,
+            }
             "
             .to_string(),
         )]
@@ -190,7 +193,10 @@ impl DojoLibrary {
             "
             #[event]
             #[derive(Drop, starknet::Event)]
-            enum Event {}
+            enum Event {
+                #[flat]
+                WorldProviderEvent: world_provider_cpt::Event,
+            }
             "
             .to_string(),
         )]
