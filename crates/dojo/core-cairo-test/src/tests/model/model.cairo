@@ -36,12 +36,39 @@ struct Foo3 {
     v2: u32,
 }
 
+#[derive(Copy, Drop, Serde, Debug, Introspect)]
+struct AStruct {
+    a: u8,
+    b: u8,
+    c: u8,
+    d: u8,
+}
+
+#[dojo::model]
+#[derive(Copy, Drop, Serde, Debug)]
+struct Foo4 {
+    #[key]
+    id: felt252,
+    v0: u256,
+    v1: felt252,
+    v2: u128,
+    v3: AStruct,
+}
+
+#[derive(Copy, Drop, Serde, Debug, Introspect)]
+struct FooSchema {
+    v0: u256,
+    v3: AStruct,
+}
+
 fn namespace_def() -> NamespaceDef {
     NamespaceDef {
         namespace: "dojo_cairo_test",
         resources: [
             TestResource::Model(m_Foo::TEST_CLASS_HASH.try_into().unwrap()),
             TestResource::Model(m_Foo2::TEST_CLASS_HASH.try_into().unwrap()),
+            TestResource::Model(m_Foo3::TEST_CLASS_HASH.try_into().unwrap()),
+            TestResource::Model(m_Foo4::TEST_CLASS_HASH.try_into().unwrap()),
         ]
             .span(),
     }
@@ -267,4 +294,49 @@ fn test_ptrs_from() {
     );
     let ptrs_d = Model::<Foo>::ptrs_from_ids([foo.entity_id(), foo2.entity_id()].span());
     assert!(ptrs_a == ptrs_b && ptrs_a == ptrs_c && ptrs_a == ptrs_d);
+}
+
+#[test]
+fn test_read_schema() {
+    let mut world = spawn_foo_world();
+    let foo = Foo4 { id: 1, v0: 2, v1: 3, v2: 4, v3: AStruct { a: 5, b: 6, c: 7, d: 8 } };
+    world.write_model(@foo);
+
+    let schema: FooSchema = world.read_schema(foo.ptr());
+    assert!(
+        schema.v0 == foo.v0
+            && schema.v3.a == foo.v3.a
+            && schema.v3.b == foo.v3.b
+            && schema.v3.c == foo.v3.c
+            && schema.v3.d == foo.v3.d,
+    );
+}
+
+#[test]
+fn test_read_schemas() {
+    let mut world = spawn_foo_world();
+    let foo = Foo4 { id: 1, v0: 2, v1: 3, v2: 4, v3: AStruct { a: 5, b: 6, c: 7, d: 8 } };
+    let mut foo_2 = foo;
+    foo_2.id = 2;
+    foo_2.v0 = 12;
+
+    world.write_models([@foo, @foo_2].span());
+
+    let mut values: Array<FooSchema> = world.read_schemas([foo.ptr(), foo_2.ptr()].span());
+    let schema_1 = values.pop_front().unwrap();
+    let schema_2 = values.pop_front().unwrap();
+    assert!(
+        schema_1.v0 == foo.v0
+            && schema_1.v3.a == foo.v3.a
+            && schema_1.v3.b == foo.v3.b
+            && schema_1.v3.c == foo.v3.c
+            && schema_1.v3.d == foo.v3.d,
+    );
+    assert!(
+        schema_2.v0 == foo_2.v0
+            && schema_2.v3.a == foo_2.v3.a
+            && schema_2.v3.b == foo_2.v3.b
+            && schema_2.v3.c == foo_2.v3.c
+            && schema_2.v3.d == foo_2.v3.d,
+    );
 }

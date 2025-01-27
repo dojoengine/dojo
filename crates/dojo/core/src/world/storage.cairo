@@ -6,7 +6,7 @@ use dojo::model::{
     Model, ModelIndex, ModelValueKey, ModelValue, ModelStorage, ModelPtr, ModelPtrsTrait,
 };
 use dojo::event::{Event, EventStorage};
-use dojo::meta::Layout;
+use dojo::meta::{Layout, FieldLayout, Introspect};
 use dojo::utils::{
     entity_id_from_keys, entity_id_from_serialized_keys, serialize_inline, find_model_field_layout,
     deserialize_unwrap,
@@ -24,6 +24,17 @@ fn field_layout_unwrap<M, +Model<M>>(field_selector: felt252) -> Layout {
         Option::Some(layout) => layout,
         Option::None => panic_with_felt252('bad member id'),
     }
+}
+
+fn make_partial_struct_layout<M, +Model<M>>(field_selectors: Span<felt252>) -> Layout {
+    let mut layouts: Array<FieldLayout> = array![];
+    for selector in field_selectors {
+        layouts
+            .append(
+                FieldLayout { selector: *selector, layout: field_layout_unwrap::<M>(*selector) },
+            );
+    };
+    Layout::Struct(layouts.span())
 }
 
 #[generate_trait]
@@ -265,6 +276,33 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
             indexes.span(),
             Model::<M>::layout(),
         );
+    }
+
+    fn read_schema<T, +Serde<T>, +Introspect<T>>(self: @WorldStorage, ptr: ModelPtr<M>) -> T {
+        deserialize_unwrap(
+            IWorldDispatcherTrait::entity(
+                *self.dispatcher,
+                Model::<M>::selector(*self.namespace_hash),
+                ModelIndex::Id(ptr.id),
+                Introspect::<T>::layout(),
+            ),
+        )
+    }
+
+    fn read_schemas<T, +Drop<T>, +Serde<T>, +Introspect<T>>(
+        self: @WorldStorage, ptrs: Span<ModelPtr<M>>,
+    ) -> Array<T> {
+        let mut values = ArrayTrait::<T>::new();
+
+        for entity in IWorldDispatcherTrait::entities(
+            *self.dispatcher,
+            Model::<M>::selector(*self.namespace_hash),
+            ptrs.to_indexes(),
+            Introspect::<T>::layout(),
+        ) {
+            values.append(deserialize_unwrap(*entity));
+        };
+        values
     }
 
     fn namespace_hash(self: @WorldStorage) -> felt252 {
