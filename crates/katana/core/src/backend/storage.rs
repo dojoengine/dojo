@@ -1,9 +1,11 @@
 use std::sync::Arc;
 
-use anyhow::{bail, Context, Result};
-use katana_chain_spec::ChainSpec;
+use anyhow::{anyhow, bail, Context, Result};
 use katana_db::mdbx::DbEnv;
-use katana_primitives::block::{BlockHashOrNumber, BlockIdOrTag, BlockNumber};
+use katana_primitives::block::{
+    BlockHashOrNumber, BlockIdOrTag, BlockNumber, FinalityStatus, SealedBlockWithStatus,
+};
+use katana_primitives::hash::{self, StarkHash};
 use katana_provider::providers::db::DbProvider;
 use katana_provider::providers::fork::ForkedProvider;
 use katana_provider::traits::block::{BlockProvider, BlockWriter};
@@ -21,6 +23,7 @@ use katana_provider::BlockchainProvider;
 use num_traits::ToPrimitive;
 use starknet::core::types::MaybePendingBlockWithTxHashes;
 use starknet::core::utils::parse_cairo_short_string;
+use starknet::macros::short_string;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
 use tracing::info;
@@ -91,7 +94,7 @@ impl Blockchain {
     pub async fn new_from_forked(
         fork_url: Url,
         fork_block: Option<BlockHashOrNumber>,
-        chain: &mut ChainSpec,
+        chain: &mut katana_chain_spec::dev::ChainSpec,
     ) -> Result<(Self, BlockNumber)> {
         let provider = JsonRpcClient::new(HttpTransport::new(fork_url));
         let chain_id = provider.chain_id().await.context("failed to fetch forked network id")?;
@@ -160,6 +163,61 @@ impl Blockchain {
         // };
 
         Ok((Self::new(database), block_num))
+    }
+
+    /// Creates a new [Blockchain] with the given [Database] implementation and genesis state.
+    pub fn new_dev(
+        provider: impl Database,
+        chain_spec: &katana_chain_spec::dev::ChainSpec,
+    ) -> Result<Self> {
+        // check whether the genesis block has been initialized
+        let genesis_hash = provider.block_hash_by_num(chain_spec.genesis.number)?;
+
+        match genesis_hash {
+            Some(db_hash) => {
+                let genesis_hash = chain_spec.block().header.compute_hash();
+                // check genesis should be the same
+                if db_hash == genesis_hash {
+                    Ok(Self::new(provider))
+                } else {
+                    Err(anyhow!(
+                        "Genesis block hash mismatch: expected {genesis_hash:#x}, got {db_hash:#x}",
+                    ))
+                }
+            }
+
+            // Initialize the dev genesis block
+            None => {
+                let block = chain_spec.block().seal();
+                let block = SealedBlockWithStatus { block, status: FinalityStatus::AcceptedOnL1 };
+                let states = chain_spec.state_updates();
+
+                let mut block = block;
+                let block_number = block.block.header.number;
+
+                let class_trie_root = provider
+                    .trie_insert_declared_classes(
+                        block_number,
+                        &states.state_updates.declared_classes,
+                    )
+                    .context("failed to update class trie")?;
+
+                let contract_trie_root = provider
+                    .trie_insert_contract_updates(block_number, &states.state_updates)
+                    .context("failed to update contract trie")?;
+
+                let genesis_state_root = hash::Poseidon::hash_array(&[
+                    short_string!("STARKNET_STATE_V0"),
+                    contract_trie_root,
+                    class_trie_root,
+                ]);
+
+                block.block.header.state_root = genesis_state_root;
+                provider.insert_block_with_states_and_receipts(block, states, vec![], vec![])?;
+
+                Ok(Self::new(provider))
+            }
+        }
     }
 
     pub fn provider(&self) -> &BlockchainProvider<Box<dyn Database>> {

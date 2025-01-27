@@ -22,7 +22,7 @@ use starknet::core::utils::{get_contract_address, get_selector_from_name};
 use starknet::macros::short_string;
 use starknet::signers::SigningKey;
 
-use crate::ChainSpec;
+use crate::rollup::ChainSpec;
 
 /// A convenience builder for creating valid and executable transactions for the genesis block based
 /// on the [`Genesis`].

@@ -50,7 +50,7 @@ pub fn contract_class() -> (CompiledClass, ContractClass) {
 #[rstest::fixture]
 #[once]
 pub fn chain() -> ChainSpec {
-    let mut chain = katana_chain_spec::DEV_UNALLOCATED.clone();
+    let mut chain = katana_chain_spec::dev::DEV_UNALLOCATED.clone();
 
     // to generate the exact list of accounts as you would when you just run `katana` w/o
     // any additional flags
@@ -63,27 +63,27 @@ pub fn chain() -> ChainSpec {
         .generate();
 
     chain.genesis.extend_allocations(accounts.into_iter().map(|(k, v)| (k, v.into())));
-    chain
+    ChainSpec::Dev(chain)
 }
 
 /// Returns a state provider with some prefilled states.
 #[rstest::fixture]
 pub fn state_provider(chain: &ChainSpec) -> Box<dyn StateProvider> {
-    // let states = chain.state_updates();
-    // let provider = DbProvider::new_ephemeral();
+    let ChainSpec::Dev(chain) = chain else { panic!("should be dev chain spec") };
 
-    // let block = SealedBlockWithStatus {
-    //     status: FinalityStatus::AcceptedOnL2,
-    //     block: Block::default().seal_with_hash(123u64.into()),
-    // };
+    let states = chain.state_updates();
+    let provider = DbProvider::new_ephemeral();
 
-    // provider
-    //     .insert_block_with_states_and_receipts(block, states, vec![], vec![])
-    //     .expect("able to insert block");
+    let block = SealedBlockWithStatus {
+        status: FinalityStatus::AcceptedOnL2,
+        block: Block::default().seal_with_hash(123u64.into()),
+    };
 
-    // provider.latest().unwrap()
+    provider
+        .insert_block_with_states_and_receipts(block, states, vec![], vec![])
+        .expect("able to insert block");
 
-    todo!()
+    provider.latest().unwrap()
 }
 
 // TODO: update the txs to include valid signatures

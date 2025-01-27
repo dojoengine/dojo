@@ -68,57 +68,10 @@ impl<EF> Backend<EF> {
 
 impl<EF: ExecutorFactory> Backend<EF> {
     pub fn init_genesis(&self) -> anyhow::Result<()> {
-        let block = self.chain_spec.block();
-        let header = block.header.clone();
-
-        let state = self.blockchain.provider().latest()?;
-        let mut executor = self.executor_factory.with_state(state);
-        executor.execute_block(block).context("failed to execute genesis block")?;
-
-        let mut output =
-            executor.take_execution_output().context("failed to get execution output")?;
-
-        let mut traces = Vec::with_capacity(output.transactions.len());
-        let mut receipts = Vec::with_capacity(output.transactions.len());
-        let mut transactions = Vec::with_capacity(output.transactions.len());
-
-        // only include successful transactions in the block
-        for (tx, res) in output.transactions {
-            if let ExecutionResult::Success { receipt, trace, .. } = res {
-                receipts.push(ReceiptWithTxHash::new(tx.hash, receipt));
-                transactions.push(tx);
-                traces.push(trace);
-            }
+        match self.chain_spec.as_ref() {
+            ChainSpec::Dev(cs) => self.init_dev_genesis(cs),
+            ChainSpec::Rollup(cs) => self.init_rollup_genesis(cs),
         }
-
-        let block =
-            self.commit_block(header, transactions, &receipts, &mut output.states.state_updates)?;
-
-        // Check whether the genesis block has been initialized or not.
-        let local_hash = self.blockchain.provider().block_hash_by_num(block.header.number)?;
-        if let Some(local_hash) = local_hash {
-            let expected_genesis_hash = block.hash;
-
-            if expected_genesis_hash != local_hash {
-                return Err(anyhow!(
-                    "Genesis block hash mismatch: expected {expected_genesis_hash:#x}, got \
-                     {local_hash:#x}",
-                ));
-            }
-
-            info!("Genesis has already been initialized");
-        } else {
-            let block = SealedBlockWithStatus { block, status: FinalityStatus::AcceptedOnL2 };
-
-            // TODO: maybe should change the arguments for insert_block_with_states_and_receipts to
-            // accept ReceiptWithTxHash instead to avoid this conversion.
-            let receipts = receipts.into_iter().map(|r| r.receipt).collect::<Vec<_>>();
-            self.store_block(block, output.states, receipts, traces)?;
-
-            info!("Genesis initialized");
-        }
-
-        Ok(())
     }
 
     // TODO: add test for this function
@@ -270,6 +223,118 @@ impl<EF: ExecutorFactory> Backend<EF> {
         .commit();
 
         Ok(block)
+    }
+
+    fn init_dev_genesis(
+        &self,
+        chain_spec: &katana_chain_spec::dev::ChainSpec,
+    ) -> anyhow::Result<()> {
+        let provider = self.blockchain.provider();
+
+        // check whether the genesis block has been initialized
+        let local_hash = provider.block_hash_by_num(chain_spec.genesis.number)?;
+
+        if let Some(local_hash) = local_hash {
+            let genesis_hash = chain_spec.block().header.compute_hash();
+            // check genesis should be the same
+            if local_hash != genesis_hash {
+                return Err(anyhow!(
+                    "Genesis block hash mismatch: expected {genesis_hash:#x}, got {local_hash:#x}",
+                ));
+            }
+
+            info!("Genesis has already been initialized");
+        } else {
+            // Initialize the dev genesis block
+
+            let block = chain_spec.block().seal();
+            let block = SealedBlockWithStatus { block, status: FinalityStatus::AcceptedOnL1 };
+            let states = chain_spec.state_updates();
+
+            let mut block = block;
+            let block_number = block.block.header.number;
+
+            let class_trie_root = provider
+                .trie_insert_declared_classes(block_number, &states.state_updates.declared_classes)
+                .context("failed to update class trie")?;
+
+            let contract_trie_root = provider
+                .trie_insert_contract_updates(block_number, &states.state_updates)
+                .context("failed to update contract trie")?;
+
+            let genesis_state_root = hash::Poseidon::hash_array(&[
+                short_string!("STARKNET_STATE_V0"),
+                contract_trie_root,
+                class_trie_root,
+            ]);
+
+            block.block.header.state_root = genesis_state_root;
+            provider.insert_block_with_states_and_receipts(block, states, vec![], vec![])?;
+
+            info!("Genesis initialized");
+        }
+
+        Ok(())
+    }
+
+    fn init_rollup_genesis(
+        &self,
+        chain_spec: &katana_chain_spec::rollup::ChainSpec,
+    ) -> anyhow::Result<()> {
+        let provider = self.blockchain.provider();
+
+        let block = chain_spec.block();
+        let header = block.header.clone();
+
+        let state = provider.latest()?;
+        let mut executor = self.executor_factory.with_state(state);
+        executor.execute_block(block).context("failed to execute genesis block")?;
+
+        let mut output =
+            executor.take_execution_output().context("failed to get execution output")?;
+
+        let mut traces = Vec::with_capacity(output.transactions.len());
+        let mut receipts = Vec::with_capacity(output.transactions.len());
+        let mut transactions = Vec::with_capacity(output.transactions.len());
+
+        // only include successful transactions in the block
+        for (tx, res) in output.transactions {
+            if let ExecutionResult::Success { receipt, trace, .. } = res {
+                receipts.push(ReceiptWithTxHash::new(tx.hash, receipt));
+                transactions.push(tx);
+                traces.push(trace);
+            }
+        }
+
+        let block =
+            self.commit_block(header, transactions, &receipts, &mut output.states.state_updates)?;
+
+        // Check whether the genesis block has been initialized or not.
+        let local_hash = provider.block_hash_by_num(block.header.number)?;
+
+        if let Some(local_hash) = local_hash {
+            let expected_genesis_hash = block.hash;
+
+            if expected_genesis_hash != local_hash {
+                return Err(anyhow!(
+                    "Genesis block hash mismatch: expected {expected_genesis_hash:#x}, got \
+                     {local_hash:#x}",
+                ));
+            }
+
+            info!("Genesis has already been initialized");
+        } else {
+            let block = SealedBlockWithStatus { block, status: FinalityStatus::AcceptedOnL2 };
+
+            // TODO: maybe should change the arguments for insert_block_with_states_and_receipts to
+            // accept ReceiptWithTxHash instead to avoid this conversion.
+            let receipts = receipts.into_iter().map(|r| r.receipt).collect::<Vec<_>>();
+            self.store_block(block, output.states, receipts, traces)?;
+
+            info!("Genesis initialized");
+        }
+
+        Ok(())
     }
 }
 

@@ -7,13 +7,9 @@ use katana_node::config::rpc::DEFAULT_RPC_MAX_PROOF_KEYS;
 use katana_node::config::SequencingConfig;
 use katana_primitives::block::BlockIdOrTag;
 use katana_primitives::class::{ClassHash, CompiledClassHash};
-use katana_primitives::contract::{StorageKey, StorageValue};
-use katana_primitives::{hash, ContractAddress, Felt};
+use katana_primitives::Felt;
 use katana_rpc_api::starknet::StarknetApiClient;
-use katana_rpc_types::trie::ContractStorageKeys;
-use katana_trie::{
-    compute_classes_trie_value, compute_contract_state_hash, ClassesMultiProof, MultiProof,
-};
+use katana_trie::{compute_classes_trie_value, ClassesMultiProof, MultiProof};
 use starknet::accounts::{Account, ConnectedAccount, SingleOwnerAccount};
 use starknet::core::types::BlockTag;
 use starknet::providers::jsonrpc::HttpTransport;

@@ -6,7 +6,8 @@ use std::sync::Arc;
 use anyhow::{Context, Result};
 use clap::Args;
 use inquire::{Confirm, CustomType, Select};
-use katana_chain_spec::{ChainSpec, FeeContracts, SettlementLayer};
+use katana_chain_spec::rollup::FeeContract;
+use katana_chain_spec::{rollup, SettlementLayer};
 use katana_primitives::chain::ChainId;
 use katana_primitives::genesis::allocation::DevAllocationsGenerator;
 use katana_primitives::genesis::constant::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;
@@ -43,15 +44,10 @@ impl InitArgs {
 
         let id = ChainId::parse(&input.id)?;
         let genesis = GENESIS.clone();
-        let settlement = Some(settlement);
-        let fee_contracts = FeeContracts {
-            eth: DEFAULT_APPCHAIN_FEE_TOKEN_ADDRESS.into(),
-            strk: DEFAULT_APPCHAIN_FEE_TOKEN_ADDRESS.into(),
-        };
+        let fee_contract = FeeContract { strk: DEFAULT_APPCHAIN_FEE_TOKEN_ADDRESS.into() };
 
-        let chain_spec = ChainSpec { id, genesis, settlement, fee_contracts };
-
-        katana_chain_spec::file::write(&chain_spec).context("failed to write chain spec file")?;
+        let chain_spec = rollup::ChainSpec { id, genesis, settlement, fee_contract };
+        rollup::file::write(&chain_spec).context("failed to write chain spec file")?;
 
         Ok(())
     }

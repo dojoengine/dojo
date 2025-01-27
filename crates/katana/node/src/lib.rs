@@ -17,7 +17,7 @@ use dojo_metrics::exporters::prometheus::PrometheusRecorder;
 use dojo_metrics::{Report, Server as MetricsServer};
 use hyper::Method;
 use jsonrpsee::RpcModule;
-use katana_chain_spec::SettlementLayer;
+use katana_chain_spec::{ChainSpec, SettlementLayer};
 use katana_core::backend::gas_oracle::GasOracle;
 use katana_core::backend::storage::Blockchain;
 use katana_core::backend::Backend;
@@ -96,7 +96,7 @@ impl Node {
     ///
     /// This method will start all the node process, running them until the node is stopped.
     pub async fn launch(self) -> Result<LaunchedNode> {
-        let chain = self.backend.chain_spec.id;
+        let chain = self.backend.chain_spec.id();
         info!(%chain, "Starting node.");
 
         // TODO: maybe move this to the build stage
@@ -161,15 +161,21 @@ pub async fn build(mut config: Config) -> Result<Node> {
 
     // --- build executor factory
 
+    let fee_token_addresses = match config.chain.as_ref() {
+        ChainSpec::Dev(cs) => {
+            FeeTokenAddressses { eth: cs.fee_contracts.eth, strk: cs.fee_contracts.strk }
+        }
+        ChainSpec::Rollup(cs) => {
+            FeeTokenAddressses { eth: cs.fee_contract.strk, strk: cs.fee_contract.strk }
+        }
+    };
+
     let cfg_env = CfgEnv {
-        chain_id: config.chain.id,
+        fee_token_addresses,
+        chain_id: config.chain.id(),
         invoke_tx_max_n_steps: config.execution.invocation_max_steps,
         validate_max_n_steps: config.execution.validation_max_steps,
         max_recursion_depth: config.execution.max_recursion_depth,
-        fee_token_addresses: FeeTokenAddressses {
-            eth: config.chain.fee_contracts.eth,
-            strk: config.chain.fee_contracts.strk,
-        },
     };
 
     let execution_flags = ExecutionFlags::new()
@@ -182,6 +188,11 @@ pub async fn build(mut config: Config) -> Result<Node> {
 
     let (blockchain, db, forked_client) = if let Some(cfg) = &config.forking {
         let chain_spec = Arc::get_mut(&mut config.chain).expect("get mut Arc");
+
+        let ChainSpec::Dev(chain_spec) = chain_spec else {
+            return Err(anyhow::anyhow!("Forking is only supported in dev mode for now"));
+        };
+
         let (bc, block_num) =
             Blockchain::new_from_forked(cfg.url.clone(), cfg.block, chain_spec).await?;
 
@@ -203,7 +214,7 @@ pub async fn build(mut config: Config) -> Result<Node> {
     let gas_oracle = if let Some(fixed_prices) = &config.dev.fixed_gas_prices {
         // Use fixed gas prices if provided in the configuration
         GasOracle::fixed(fixed_prices.gas_price.clone(), fixed_prices.data_gas_price.clone())
-    } else if let Some(settlement) = &config.chain.settlement {
+    } else if let Some(settlement) = config.chain.settlement() {
         match settlement {
             SettlementLayer::Starknet { .. } => GasOracle::sampled_starknet(),
             SettlementLayer::Ethereum { rpc_url, .. } => {
