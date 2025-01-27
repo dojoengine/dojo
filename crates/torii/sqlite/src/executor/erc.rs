@@ -235,7 +235,8 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
             .await
         {
             token_uri
-        } // erc1155
+        }
+        // erc1155
         else if let Ok(token_uri) = provider
             .call(
                 FunctionCall {
@@ -245,7 +246,8 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 },
                 BlockId::Tag(BlockTag::Pending),
             )
-            .await {
+            .await
+        {
             token_uri
         } else {
             warn!(
