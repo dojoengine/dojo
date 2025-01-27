@@ -271,10 +271,9 @@ impl Ty {
                     .filter_map(|o1| {
                         if let Some(o2) = e2.options.iter().find(|o2| o2.name == o1.name) {
                             // Option exists in both - check if types are different
-                            o1.ty.diff(&o2.ty).map(|diff_ty| EnumOption {
-                                name: o1.name.clone(),
-                                ty: diff_ty,
-                            })
+                            o1.ty
+                                .diff(&o2.ty)
+                                .map(|diff_ty| EnumOption { name: o1.name.clone(), ty: diff_ty })
                         } else {
                             // Option doesn't exist in e2
                             Some(o1.clone())
@@ -297,17 +296,10 @@ impl Ty {
                     Some(Ty::Tuple(t1.clone()))
                 } else {
                     // Compare each tuple element recursively
-                    let diff_elements: Vec<Ty> = t1
-                        .iter()
-                        .zip(t2.iter())
-                        .filter_map(|(ty1, ty2)| ty1.diff(ty2))
-                        .collect();
+                    let diff_elements: Vec<Ty> =
+                        t1.iter().zip(t2.iter()).filter_map(|(ty1, ty2)| ty1.diff(ty2)).collect();
 
-                    if diff_elements.is_empty() {
-                        None
-                    } else {
-                        Some(Ty::Tuple(diff_elements))
-                    }
+                    if diff_elements.is_empty() { None } else { Some(Ty::Tuple(diff_elements)) }
                 }
             }
             (Ty::Array(a1), Ty::Array(a2)) => {
