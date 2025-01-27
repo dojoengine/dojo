@@ -17,3 +17,8 @@ pub fn selector_from_names(namespace: @ByteArray, name: @ByteArray) -> felt252 {
 pub fn selector_from_namespace_and_name(namespace_hash: felt252, name: @ByteArray) -> felt252 {
     poseidon_hash_span([namespace_hash, bytearray_hash(name)].span())
 }
+
+/// Computes the selector from two hashes.
+pub fn selector_from_hashes(namespace_hash: felt252, name_hash: felt252) -> felt252 {
+    poseidon_hash_span([namespace_hash, name_hash].span())
+}
