@@ -45,15 +45,30 @@ pub impl WorldStorageInternalImpl of WorldStorageTrait {
         WorldStorage { dispatcher: world, namespace_hash }
     }
 
+    fn new_from_hash(world: IWorldDispatcher, namespace_hash: felt252) -> WorldStorage {
+        WorldStorage { dispatcher: world, namespace_hash }
+    }
+
     fn set_namespace(ref self: WorldStorage, namespace: @ByteArray) {
         self.namespace_hash = dojo::utils::bytearray_hash(namespace);
     }
 
     fn dns(self: @WorldStorage, contract_name: @ByteArray) -> Option<(ContractAddress, ClassHash)> {
-        match (*self.dispatcher)
-            .resource(
-                dojo::utils::selector_from_namespace_and_name(*self.namespace_hash, contract_name),
-            ) {
+        Self::dns_from_hash(self, dojo::utils::bytearray_hash(contract_name))
+    }
+
+    fn dns_from_hash(
+        self: @WorldStorage, contract_name_hash: felt252,
+    ) -> Option<(ContractAddress, ClassHash)> {
+        Self::dns_from_selector(
+            self, dojo::utils::selector_from_hashes(*self.namespace_hash, contract_name_hash),
+        )
+    }
+
+    fn dns_from_selector(
+        self: @WorldStorage, selector: felt252,
+    ) -> Option<(ContractAddress, ClassHash)> {
+        match (*self.dispatcher).resource(selector) {
             Resource::Contract((
                 contract_address, _,
             )) => {
@@ -206,6 +221,63 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
         )
     }
 
+    fn read_member_of_models<T, +Serde<T>, +Drop<T>>(
+        self: @WorldStorage, ptrs: Span<ModelPtr<M>>, field_selector: felt252,
+    ) -> Array<T> {
+        let mut values: Array<T> = array![];
+        for entity in IWorldDispatcherTrait::entities(
+            *self.dispatcher,
+            Model::<M>::selector(*self.namespace_hash),
+            ptrs.to_member_indexes(field_selector),
+            field_layout_unwrap::<M>(field_selector),
+        ) {
+            values.append(deserialize_unwrap(*entity));
+        };
+        values
+    }
+
+    fn write_member<T, +Serde<T>, +Drop<T>>(
+        ref self: WorldStorage, ptr: ModelPtr<M>, field_selector: felt252, value: T,
+    ) {
+        IWorldDispatcherTrait::set_entity(
+            self.dispatcher,
+            Model::<M>::selector(self.namespace_hash),
+            ModelIndex::MemberId((ptr.id, field_selector)),
+            serialize_inline(@value),
+            field_layout_unwrap::<M>(field_selector),
+        );
+    }
+
+    fn write_member_of_models<T, +Serde<T>, +Drop<T>>(
+        ref self: WorldStorage, ptrs: Span<ModelPtr<M>>, field_selector: felt252, values: Span<T>,
+    ) {
+        let mut serialized_values = ArrayTrait::<Span<felt252>>::new();
+        for value in values {
+            serialized_values.append(serialize_inline(value));
+        };
+        IWorldDispatcherTrait::set_entities(
+            self.dispatcher,
+            Model::<M>::selector(self.namespace_hash),
+            ptrs.to_member_indexes(field_selector),
+            serialized_values.span(),
+            field_layout_unwrap::<M>(field_selector),
+        );
+    }
+
+    fn erase_models_ptrs(ref self: WorldStorage, ptrs: Span<ModelPtr<M>>) {
+        let mut indexes: Array<ModelIndex> = array![];
+        for ptr in ptrs {
+            indexes.append(ModelIndex::Id(*ptr.id));
+        };
+
+        IWorldDispatcherTrait::delete_entities(
+            self.dispatcher,
+            Model::<M>::selector(self.namespace_hash),
+            indexes.span(),
+            Model::<M>::layout(),
+        );
+    }
+
     fn read_schema<T, +Serde<T>, +Introspect<T>>(self: @WorldStorage, ptr: ModelPtr<M>) -> T {
         deserialize_unwrap(
             IWorldDispatcherTrait::entity(
@@ -231,33 +303,6 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
             values.append(deserialize_unwrap(*entity));
         };
         values
-    }
-
-
-    fn write_member<T, +Serde<T>, +Drop<T>>(
-        ref self: WorldStorage, ptr: ModelPtr<M>, field_selector: felt252, value: T,
-    ) {
-        IWorldDispatcherTrait::set_entity(
-            self.dispatcher,
-            Model::<M>::selector(self.namespace_hash),
-            ModelIndex::MemberId((ptr.id, field_selector)),
-            serialize_inline(@value),
-            field_layout_unwrap::<M>(field_selector),
-        );
-    }
-
-    fn erase_models_ptrs(ref self: WorldStorage, ptrs: Span<ModelPtr<M>>) {
-        let mut indexes: Array<ModelIndex> = array![];
-        for ptr in ptrs {
-            indexes.append(ModelIndex::Id(*ptr.id));
-        };
-
-        IWorldDispatcherTrait::delete_entities(
-            self.dispatcher,
-            Model::<M>::selector(self.namespace_hash),
-            indexes.span(),
-            Model::<M>::layout(),
-        );
     }
 
     fn namespace_hash(self: @WorldStorage) -> felt252 {

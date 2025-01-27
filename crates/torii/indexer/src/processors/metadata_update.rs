@@ -1,3 +1,5 @@
+use std::hash::{DefaultHasher, Hash, Hasher};
+
 use anyhow::{Error, Result};
 use async_trait::async_trait;
 use base64::engine::general_purpose;
@@ -14,6 +16,7 @@ use torii_sqlite::Sql;
 use tracing::{error, info};
 
 use super::{EventProcessor, EventProcessorConfig};
+use crate::task_manager::{TaskId, TaskPriority};
 
 pub(crate) const LOG_TARGET: &str = "torii_indexer::processors::metadata_update";
 
@@ -31,6 +34,16 @@ where
 
     fn validate(&self, _event: &Event) -> bool {
         true
+    }
+
+    fn task_priority(&self) -> TaskPriority {
+        3
+    }
+
+    fn task_identifier(&self, event: &Event) -> TaskId {
+        let mut hasher = DefaultHasher::new();
+        event.keys.iter().for_each(|k| k.hash(&mut hasher));
+        hasher.finish()
     }
 
     async fn process(

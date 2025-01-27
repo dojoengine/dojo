@@ -1,3 +1,5 @@
+use std::hash::{DefaultHasher, Hash, Hasher};
+
 use anyhow::Error;
 use async_trait::async_trait;
 use cainome::cairo_serde::{CairoSerde, U256 as U256Cainome};
@@ -8,6 +10,7 @@ use torii_sqlite::Sql;
 use tracing::debug;
 
 use super::{EventProcessor, EventProcessorConfig};
+use crate::task_manager::{TaskId, TaskPriority};
 
 pub(crate) const LOG_TARGET: &str = "torii_indexer::processors::erc721_transfer";
 
@@ -32,6 +35,32 @@ where
         }
 
         false
+    }
+
+    fn task_priority(&self) -> TaskPriority {
+        1
+    }
+
+    fn task_identifier(&self, event: &Event) -> TaskId {
+        let mut hasher = DefaultHasher::new();
+        // Hash the event key (Transfer)
+        event.keys[0].hash(&mut hasher);
+
+        // Take the max of from/to addresses to get a canonical representation
+        // This ensures transfers between the same pair of addresses are grouped together
+        // regardless of direction (A->B or B->A)
+        let canonical_pair = std::cmp::max(event.keys[1], event.keys[2]);
+        canonical_pair.hash(&mut hasher);
+
+        // For ERC721, we can safely parallelize by token ID since each token is unique
+        // and can only be owned by one address at a time. This means:
+        // 1. Transfers of different tokens can happen in parallel
+        // 2. Multiple transfers of the same token must be sequential
+        // 3. The canonical address pair ensures related transfers stay together
+        event.keys[3].hash(&mut hasher);
+        event.keys[4].hash(&mut hasher);
+
+        hasher.finish()
     }
 
     async fn process(
