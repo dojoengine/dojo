@@ -67,10 +67,12 @@ impl DojoLibrary {
                     if let ast::ModuleItem::Enum(ref enum_ast) = el {
                         if enum_ast.name(db).text(db).to_string() == "Event" {
                             has_event = true;
+                            return library.merge_event(db, enum_ast.clone());
                         }
                     } else if let ast::ModuleItem::Struct(ref struct_ast) = el {
                         if struct_ast.name(db).text(db).to_string() == "Storage" {
                             has_storage = true;
+                            return library.merge_storage(db, struct_ast.clone());
                         }
                     } else if let ast::ModuleItem::FreeFunction(ref fn_ast) = el {
                         let fn_decl = fn_ast.declaration(db);
@@ -88,30 +90,6 @@ impl DojoLibrary {
                     vec![RewriteNode::Copied(el.as_syntax_node())]
                 })
                 .collect();
-
-            if has_event {
-                return PluginResult {
-                    code: None,
-                    diagnostics: vec![PluginDiagnostic {
-                        stable_ptr: module_ast.stable_ptr().0,
-                        message: format!("The library {name} cannot have events"),
-                        severity: Severity::Error,
-                    }],
-                    remove_original_item: false,
-                };
-            }
-
-            if has_storage {
-                return PluginResult {
-                    code: None,
-                    diagnostics: vec![PluginDiagnostic {
-                        stable_ptr: module_ast.stable_ptr().0,
-                        message: format!("The library {name} cannot have storage"),
-                        severity: Severity::Error,
-                    }],
-                    remove_original_item: false,
-                };
-            }
 
             if has_constructor {
                 return PluginResult {
@@ -137,8 +115,13 @@ impl DojoLibrary {
                 };
             }
 
-            body_nodes.append(&mut library.create_storage());
-            body_nodes.append(&mut library.create_event());
+            if !has_event {
+                body_nodes.append(&mut library.create_event())
+            }
+
+            if !has_storage {
+                body_nodes.append(&mut library.create_storage())
+            }
 
             let mut builder = PatchBuilder::new(db, module_ast);
             builder.add_modified(RewriteNode::Mapped {
@@ -175,17 +158,30 @@ impl DojoLibrary {
         PluginResult::default()
     }
 
-    pub fn create_storage(&mut self) -> Vec<RewriteNode> {
-        vec![RewriteNode::Text(
+    pub fn merge_event(
+        &mut self,
+        db: &dyn SyntaxGroup,
+        enum_ast: ast::ItemEnum,
+    ) -> Vec<RewriteNode> {
+        let mut rewrite_nodes = vec![];
+
+        let elements = enum_ast.variants(db).elements(db);
+
+        let variants = elements.iter().map(|e| e.as_syntax_node().get_text(db)).collect::<Vec<_>>();
+        let variants = variants.join(",\n");
+
+        rewrite_nodes.push(RewriteNode::interpolate_patched(
             "
-            #[storage]
-            struct Storage {
-            #[substorage(v0)]
-                world_provider: world_provider_cpt::Storage,
+            #[event]
+            #[derive(Drop, starknet::Event)]
+            enum Event {
+                WorldProviderEvent: world_provider_cpt::Event,
+                $variants$
             }
-            "
-            .to_string(),
-        )]
+            ",
+            &UnorderedHashMap::from([("variants".to_string(), RewriteNode::Text(variants))]),
+        ));
+        rewrite_nodes
     }
 
     pub fn create_event(&mut self) -> Vec<RewriteNode> {
@@ -196,6 +192,45 @@ impl DojoLibrary {
             enum Event {
                 #[flat]
                 WorldProviderEvent: world_provider_cpt::Event,
+            }
+            "
+            .to_string(),
+        )]
+    }
+
+    pub fn merge_storage(
+        &mut self,
+        db: &dyn SyntaxGroup,
+        struct_ast: ast::ItemStruct,
+    ) -> Vec<RewriteNode> {
+        let mut rewrite_nodes = vec![];
+
+        let elements = struct_ast.members(db).elements(db);
+
+        let members = elements.iter().map(|e| e.as_syntax_node().get_text(db)).collect::<Vec<_>>();
+        let members = members.join(",\n");
+
+        rewrite_nodes.push(RewriteNode::interpolate_patched(
+            "
+            #[storage]
+            struct Storage {
+                #[substorage(v0)]
+                world_provider: world_provider_cpt::Storage,
+                $members$
+            }
+            ",
+            &UnorderedHashMap::from([("members".to_string(), RewriteNode::Text(members))]),
+        ));
+        rewrite_nodes
+    }
+
+    pub fn create_storage(&mut self) -> Vec<RewriteNode> {
+        vec![RewriteNode::Text(
+            "
+            #[storage]
+            struct Storage {
+            #[substorage(v0)]
+                world_provider: world_provider_cpt::Storage,
             }
             "
             .to_string(),

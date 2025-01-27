@@ -13,9 +13,8 @@ pub mod $name$ {
     pub impl $name$__LibraryImpl of ILibrary<ContractState> {}
 
 
-    // TODO: rename impl ??
     #[abi(embed_v0)]
-    pub impl $name$__DeployedContractImpl of IDeployedResource<ContractState> {
+    pub impl $name$__DeployedLibraryImpl of IDeployedResource<ContractState> {
         fn dojo_name(self: @ContractState) -> ByteArray {
             "$name$"
         }
