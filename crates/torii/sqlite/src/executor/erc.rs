@@ -279,7 +279,9 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
         // ERC1155 standard (https://eips.ethereum.org/EIPS/eip-1155#metadata)
         // requires replacing {id} in the URI with the hex representation of the token ID
         // padded to 64 hex chars (32 bytes). Example:
-        // "ipfs://QmSome/metadata/{id}.json" -> "ipfs://QmSome/metadata/000000000000000000000000000000000000000000000000000000000000000a.json"
+        // "ipfs://QmSome/metadata/{id}.json" ->
+        // "ipfs://QmSome/metadata/000000000000000000000000000000000000000000000000000000000000000a.
+        // json"
         let token_id_hex = format!("{:064x}", register_nft_token.actual_token_id);
         token_uri = token_uri.replace("{id}", &token_id_hex);
 
