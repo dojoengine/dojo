@@ -17,7 +17,7 @@ use super::options::world::WorldOptions;
 use crate::utils;
 
 // Maximum blocks per query
-// - initial value pending benchmarking to determine optimal range
+// TODO: initial value pending benchmarking to determine optimal range
 const MAX_BLOCK_RANGE: u64 = 50_000;
 
 #[derive(Debug, Args)]
