@@ -365,8 +365,8 @@ fn test_introspect_upgrade() {
 #[test]
 fn test_primitive_upgrade() {
     let primitives = [
-        'bool', 'u8', 'u16', 'u32', 'usize', 'u64', 'u128', 'u256', 'i8', 'i16', 'i32', 'i64',
-        'i128', 'felt252', 'ClassHash', 'ContractAddress', 'EthAddress',
+        'bool', 'u8', 'u16', 'u32', 'u64', 'u128', 'u256', 'i8', 'i16', 'i32', 'i64', 'i128',
+        'felt252', 'ClassHash', 'ContractAddress', 'EthAddress',
     ]
         .span();
 
@@ -374,10 +374,8 @@ fn test_primitive_upgrade() {
         ('bool', ['felt252'].span()),
         ('u8', ['u16', 'u32', 'usize', 'u64', 'u128', 'felt252'].span()),
         ('u16', ['u32', 'usize', 'u64', 'u128', 'felt252'].span()),
-        ('u32', ['usize', 'u64', 'u128', 'felt252'].span()),
-        ('usize', ['u32', 'u64', 'u128', 'felt252'].span()), ('u64', ['u128', 'felt252'].span()),
-        ('u128', ['felt252'].span()), ('u256', [].span()),
-        ('i8', ['i16', 'i32', 'i64', 'i128', 'felt252'].span()),
+        ('u32', ['usize', 'u64', 'u128', 'felt252'].span()), ('u128', ['felt252'].span()),
+        ('u256', [].span()), ('i8', ['i16', 'i32', 'i64', 'i128', 'felt252'].span()),
         ('i16', ['i32', 'i64', 'i128', 'felt252'].span()),
         ('i32', ['i64', 'i128', 'felt252'].span()), ('i64', ['i128', 'felt252'].span()),
         ('i128', ['felt252'].span()), ('felt252', ['ClassHash', 'ContractAddress'].span()),
@@ -434,6 +432,22 @@ fn test_primitive_upgrade_backward_compatibility() {
         Ty::Primitive('starknet::ContractAddress')
             .is_an_upgrade_of(@Ty::Primitive('starknet::Classhash')),
     );
+}
+
+#[test]
+#[should_panic(
+    expected: ("The introspection of the primitive type 33053979968501614 is not supported.",),
+)]
+fn test_unknown_primitive() {
+    let _ = Ty::Primitive('unknown').is_an_upgrade_of(@Ty::Primitive('u8'));
+}
+
+#[test]
+#[should_panic(
+    expected: ("Prefer using u32 instead of usize as usize size is architecture-dependent.",),
+)]
+fn test_usize_primitive() {
+    let _ = Ty::Primitive('usize').is_an_upgrade_of(@Ty::Primitive('u8'));
 }
 
 #[test]
@@ -567,6 +581,12 @@ fn test_enum_upgrade() {
     upgraded.children = [('x', Ty::Primitive('u8')), ('y', Ty::Tuple([].span()))].span();
 
     assert!(!upgraded.is_an_upgrade_of(@e), "variant without data");
+
+    // special case: Option<T>
+    let e = Introspect::<Option<u8>>::ty();
+    let upgraded = Introspect::<Option<u32>>::ty();
+
+    assert!(upgraded.is_an_upgrade_of(@e), "Option<T>");
 }
 
 #[test]

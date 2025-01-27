@@ -8,7 +8,7 @@ use core::panics::panic_with_byte_array;
 // 'bool': 0
 // 'u8': 1
 // 'u16': 2
-// 'u32' / 'usize': 3
+// 'u32': 3
 // 'u64': 4
 // 'u128': 5
 // 'u256': 6
@@ -115,7 +115,7 @@ fn primitive_to_index(primitive: felt252) -> u32 {
     if primitive == 'u16' {
         return 2;
     }
-    if primitive == 'u32' || primitive == 'usize' {
+    if primitive == 'u32' {
         return 3;
     }
     if primitive == 'u64' {
@@ -153,6 +153,12 @@ fn primitive_to_index(primitive: felt252) -> u32 {
     }
     if primitive == 'EthAddress' {
         return 15;
+    }
+
+    if primitive == 'usize' {
+        panic_with_byte_array(
+            @format!("Prefer using u32 instead of usize as usize size is architecture-dependent."),
+        )
     }
 
     panic_with_byte_array(
