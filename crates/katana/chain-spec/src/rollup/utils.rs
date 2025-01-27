@@ -326,3 +326,66 @@ impl<'c> GenesisTransactionsBuilder<'c> {
         self.transactions.into_inner()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use alloy_primitives::U256;
+    use katana_primitives::chain::ChainId;
+    use katana_primitives::genesis::allocation::DevAllocationsGenerator;
+    use katana_primitives::genesis::constant::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;
+    use katana_primitives::genesis::Genesis;
+    use katana_primitives::transaction::TxType;
+    use url::Url;
+
+    use super::GenesisTransactionsBuilder;
+    use crate::rollup::{ChainSpec, FeeContract};
+    use crate::SettlementLayer;
+
+    fn chain_spec() -> ChainSpec {
+        // master account
+        let accounts = DevAllocationsGenerator::new(1)
+            .with_balance(U256::from(DEFAULT_PREFUNDED_ACCOUNT_BALANCE))
+            .generate();
+
+        let mut genesis = Genesis::default();
+        genesis.extend_allocations(accounts.into_iter().map(|(k, v)| (k, v.into())));
+
+        let id = ChainId::default();
+        let fee_contract = FeeContract::default();
+
+        let settlement = SettlementLayer::Starknet {
+            id: ChainId::default(),
+            account: Default::default(),
+            core_contract: Default::default(),
+            rpc_url: Url::parse("http://localhost:5050").unwrap(),
+        };
+
+        ChainSpec { id, genesis, settlement, fee_contract }
+    }
+
+    #[test]
+    fn genesis_transactions() {}
+
+    #[test]
+    fn transaction_order() {
+        let chain_spec = chain_spec();
+        let transactions = GenesisTransactionsBuilder::new(&chain_spec).build();
+
+        let expected_order = vec![
+            TxType::Declare,       // Master account class declare
+            TxType::DeployAccount, // Master account
+            TxType::Declare,       // UDC declare
+            TxType::Invoke,        // UDC deploy
+            TxType::Declare,       // ERC20 declare
+            TxType::Invoke,        // ERC20 deploy
+            TxType::Declare,       // Account class declare (V2)
+            TxType::DeployAccount, // Dev account
+            TxType::Invoke,        // Balance transfer
+        ];
+
+        assert_eq!(transactions.len(), expected_order.len());
+        for (tx, expected) in transactions.iter().zip(expected_order) {
+            assert_eq!(tx.transaction.r#type(), expected);
+        }
+    }
+}
