@@ -12,7 +12,7 @@ use katana_primitives::chain::ChainId;
 use katana_primitives::genesis::allocation::DevAllocationsGenerator;
 use katana_primitives::genesis::constant::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;
 use katana_primitives::genesis::Genesis;
-use katana_primitives::{felt, ContractAddress, Felt, U256};
+use katana_primitives::{ContractAddress, Felt, U256};
 use lazy_static::lazy_static;
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::types::{BlockId, BlockTag};
@@ -44,7 +44,8 @@ impl InitArgs {
 
         let id = ChainId::parse(&input.id)?;
         let genesis = GENESIS.clone();
-        let fee_contract = FeeContract { strk: DEFAULT_APPCHAIN_FEE_TOKEN_ADDRESS.into() };
+        // At the moment, the fee token is limited to a predefined token.
+        let fee_contract = FeeContract::default();
 
         let chain_spec = rollup::ChainSpec { id, genesis, settlement, fee_contract };
         rollup::file::write(&chain_spec).context("failed to write chain spec file")?;
@@ -189,6 +190,3 @@ lazy_static! {
         genesis
     };
 }
-
-const DEFAULT_APPCHAIN_FEE_TOKEN_ADDRESS: Felt =
-    felt!("0x2e7442625bab778683501c0eadbc1ea17b3535da040a12ac7d281066e915eea");
