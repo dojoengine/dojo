@@ -10,7 +10,7 @@ use ipfs_api_backend_hyper::{IpfsApi, IpfsClient, TryFromUri};
 use starknet::core::types::U256;
 use starknet_crypto::Felt;
 use tokio_util::bytes::Bytes;
-use tracing::warn;
+use tracing::debug;
 
 use crate::constants::{
     IPFS_CLIENT_MAX_RETRY, IPFS_CLIENT_PASSWORD, IPFS_CLIENT_URL, IPFS_CLIENT_USERNAME,
