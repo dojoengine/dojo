@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1738003817094,
+  "lastUpdate": 1738008096915,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -47965,6 +47965,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8328510,
             "range": "± 407427",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "fb772c83b4b640a0d17f7daa82d5bb610d80c2cc",
+          "message": "feat(blockifier): use same versioned constant as `snos` (#2956)\n\n[`snos`](https://github.com/cartridge-gg/snos/tree/kariy/katana-compat-genesis-rebased-upstream) is using an older version of `blockifier` which only supports up to Starknet version `v0.13.3` while `katana`'s is up to `v0.13.4`. So, we pin the version on `katana` to match `snos` to make sure the execution outcome is similar.\r\n\r\nThe call to `VersionedConstants::latest_constants()` will basically use the latest version ie `v0.13.4`.",
+          "timestamp": "2025-01-28T03:44:39+08:00",
+          "tree_id": "d834057f24089aae39518f4b36ae9b969070be5b",
+          "url": "https://github.com/dojoengine/dojo/commit/fb772c83b4b640a0d17f7daa82d5bb610d80c2cc"
+        },
+        "date": 1738008094624,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 12788636286,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
