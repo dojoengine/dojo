@@ -177,6 +177,7 @@ impl Runner {
                 polling_interval: Duration::from_millis(self.args.indexing.polling_interval),
                 flags,
                 event_processor_config: EventProcessorConfig {
+                    strict_model_reader: self.args.indexing.strict_model_reader,
                     historical_events: self.args.events.historical.into_iter().collect(),
                     namespaces: self.args.indexing.namespaces.into_iter().collect(),
                 },
