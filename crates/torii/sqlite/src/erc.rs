@@ -10,9 +10,9 @@ use starknet::providers::Provider;
 use super::utils::{u256_to_sql_string, I256};
 use super::{Sql, SQL_FELT_DELIMITER};
 use crate::constants::TOKEN_TRANSFER_TABLE;
+use crate::executor::erc::RegisterNftTokenQuery;
 use crate::executor::{
     ApplyBalanceDiffQuery, Argument, QueryMessage, QueryType, RegisterErc20TokenQuery,
-    RegisterErc721TokenQuery,
 };
 use crate::types::ContractType;
 use crate::utils::{
@@ -95,7 +95,7 @@ impl Sql {
         let token_exists: bool = self.local_cache.contains_token_id(&token_id).await;
 
         if !token_exists {
-            self.register_erc721_token_metadata(contract_address, &token_id, actual_token_id)
+            self.register_nft_token_metadata(contract_address, &token_id, actual_token_id)
                 .await?;
         }
 
@@ -141,6 +141,68 @@ impl Sql {
 
         Ok(())
     }
+
+    #[allow(clippy::too_many_arguments)]
+pub async fn handle_erc1155_transfer(
+    &mut self,
+    contract_address: Felt,
+    from_address: Felt,
+    to_address: Felt,
+    token_id: U256,
+    amount: U256,
+    block_timestamp: u64,
+    event_id: &str,
+    block_number: u64,
+) -> Result<()> {
+    // contract_address:id
+    let actual_token_id = token_id;
+    let token_id = felt_and_u256_to_sql_string(&contract_address, &token_id);
+    let token_exists: bool = self.local_cache.contains_token_id(&token_id).await;
+
+    if !token_exists {
+        self.register_nft_token_metadata(contract_address, &token_id, actual_token_id)
+            .await?;
+    }
+
+    self.store_erc_transfer_event(
+        contract_address,
+        from_address,
+        to_address,
+        amount,
+        &token_id,
+        block_timestamp,
+        event_id,
+    )?;
+
+    {
+        let mut erc_cache = self.local_cache.erc_cache.write().await;
+        if from_address != Felt::ZERO {
+            let from_balance_id = format!(
+                "{}{SQL_FELT_DELIMITER}{}",
+                felt_to_sql_string(&from_address),
+                &token_id
+            );
+            let from_balance = erc_cache.entry((ContractType::ERC1155, from_balance_id)).or_default();
+            *from_balance -= I256::from(amount);
+        }
+
+        if to_address != Felt::ZERO {
+            let to_balance_id =
+                format!("{}{SQL_FELT_DELIMITER}{}", felt_to_sql_string(&to_address), &token_id);
+            let to_balance = erc_cache.entry((ContractType::ERC1155, to_balance_id)).or_default();
+            *to_balance += I256::from(amount);
+        }
+    }
+
+    let block_id = BlockId::Number(block_number);
+
+    if self.local_cache.erc_cache.read().await.len() >= 100000 {
+        self.flush().await.with_context(|| "Failed to flush in handle_erc1155_single_transfer")?;
+        self.apply_cache_diff(block_id).await?;
+    }
+
+    Ok(())
+}
 
     async fn register_erc20_token_metadata<P: Provider + Sync>(
         &mut self,
@@ -220,7 +282,7 @@ impl Sql {
         Ok(())
     }
 
-    async fn register_erc721_token_metadata(
+    async fn register_nft_token_metadata(
         &mut self,
         contract_address: Felt,
         token_id: &str,
@@ -229,7 +291,7 @@ impl Sql {
         self.executor.send(QueryMessage::new(
             "".to_string(),
             vec![],
-            QueryType::RegisterErc721Token(RegisterErc721TokenQuery {
+            QueryType::RegisterNftToken(RegisterNftTokenQuery {
                 token_id: token_id.to_string(),
                 contract_address,
                 actual_token_id,
