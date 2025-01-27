@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1737760797905,
+  "lastUpdate": 1738003663102,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -47887,6 +47887,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 7575338,
             "range": "± 59589",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "158306087+bengineer42@users.noreply.github.com",
+            "name": "Benjamin",
+            "username": "bengineer42"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "75dce98285b49e3f2220c35c8a90c0ef1d14e432",
+          "message": "feat(dojo-core): add read schema support  (#2932)\n\n* Made code changes needs testing\r\n\r\n* scheming\r\n\r\n* scheming\r\n\r\n* feat(model): Added the ability to read from a schema\r\n\r\n* fix(tests): fmting\r\n\r\n* fix(tests): fmting\r\n\r\n* feat(benchmark): add initial benchmark setup and model definitions\r\n\r\n* feat(benchmark): added model bvalues in for benchmarking\r\n\r\n* chore: Addressing comments\r\n\r\n* tests: regenerate test db\r\n\r\n* fix: ensure bench example is only for tests\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2025-01-27T18:31:27Z",
+          "tree_id": "e455e9266d199a080b73e13029f6e0f4ca326cef",
+          "url": "https://github.com/dojoengine/dojo/commit/75dce98285b49e3f2220c35c8a90c0ef1d14e432"
+        },
+        "date": 1738003661030,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 11835221485,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
