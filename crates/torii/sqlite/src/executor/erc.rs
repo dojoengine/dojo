@@ -299,8 +299,9 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 serde_json::to_string(&metadata).context("Failed to serialize metadata")?
             } else {
                 warn!(
-                contract_address = format!("{:#x}", register_nft_token.contract_address),
+                    contract_address = format!("{:#x}", register_nft_token.contract_address),
                     token_id = %register_nft_token.actual_token_id,
+                    token_uri = %token_uri,
                     "Error fetching metadata, empty metadata will be used instead.",
                 );
                 "".to_string()
