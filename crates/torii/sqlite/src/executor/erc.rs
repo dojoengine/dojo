@@ -241,7 +241,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
             .call(
                 FunctionCall {
                     contract_address: register_nft_token.contract_address,
-                    entry_point_selector: get_selector_from_name("tokenURI").unwrap(),
+                    entry_point_selector: get_selector_from_name("uri").unwrap(),
                     calldata: vec![],
                 },
                 BlockId::Tag(BlockTag::Pending),

@@ -1,5 +1,3 @@
-use std::hash::{DefaultHasher, Hash, Hasher};
-
 use anyhow::Error;
 use async_trait::async_trait;
 use cainome::cairo_serde::{CairoSerde, U256 as U256Cainome};
