@@ -1,4 +1,4 @@
 [world]
-description = "Simple world."
-name = "simple"
-seed = "simple"
+description = "Benchmark world."
+name = "benchmark"
+seed = "benchmark"
