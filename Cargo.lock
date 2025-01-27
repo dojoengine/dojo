@@ -8309,6 +8309,7 @@ dependencies = [
  "indexmap 2.5.0",
  "jsonrpsee",
  "katana-cairo",
+ "katana-chain-spec",
  "katana-core",
  "katana-executor",
  "katana-node",
