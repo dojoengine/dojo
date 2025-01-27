@@ -6,11 +6,12 @@ use std::sync::Arc;
 use anyhow::{Context, Result};
 use clap::Args;
 use inquire::{Confirm, CustomType, Select};
-use katana_chain_spec::{FeeContracts, SettlementLayer, DEV_UNALLOCATED};
+use katana_chain_spec::{ChainSpec, FeeContracts, SettlementLayer};
 use katana_primitives::chain::ChainId;
 use katana_primitives::genesis::allocation::DevAllocationsGenerator;
+use katana_primitives::genesis::constant::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;
 use katana_primitives::genesis::Genesis;
-use katana_primitives::{ContractAddress, Felt};
+use katana_primitives::{felt, ContractAddress, Felt, U256};
 use lazy_static::lazy_static;
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::types::{BlockId, BlockTag};
@@ -186,7 +187,7 @@ struct PromptOutcome {
 lazy_static! {
     static ref GENESIS: Genesis = {
         // master account
-        let accounts = DevAllocationsGenerator::new(1).generate();
+        let accounts = DevAllocationsGenerator::new(1).with_balance(U256::from(DEFAULT_PREFUNDED_ACCOUNT_BALANCE)).generate();
         let mut genesis = Genesis::default();
         genesis.extend_allocations(accounts.into_iter().map(|(k, v)| (k, v.into())));
         genesis

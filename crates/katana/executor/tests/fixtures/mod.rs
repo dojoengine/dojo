@@ -69,19 +69,21 @@ pub fn chain() -> ChainSpec {
 /// Returns a state provider with some prefilled states.
 #[rstest::fixture]
 pub fn state_provider(chain: &ChainSpec) -> Box<dyn StateProvider> {
-    let states = chain.state_updates();
-    let provider = DbProvider::new_ephemeral();
+    // let states = chain.state_updates();
+    // let provider = DbProvider::new_ephemeral();
 
-    let block = SealedBlockWithStatus {
-        status: FinalityStatus::AcceptedOnL2,
-        block: Block::default().seal_with_hash(123u64.into()),
-    };
+    // let block = SealedBlockWithStatus {
+    //     status: FinalityStatus::AcceptedOnL2,
+    //     block: Block::default().seal_with_hash(123u64.into()),
+    // };
 
-    provider
-        .insert_block_with_states_and_receipts(block, states, vec![], vec![])
-        .expect("able to insert block");
+    // provider
+    //     .insert_block_with_states_and_receipts(block, states, vec![], vec![])
+    //     .expect("able to insert block");
 
-    provider.latest().unwrap()
+    // provider.latest().unwrap()
+
+    todo!()
 }
 
 // TODO: update the txs to include valid signatures

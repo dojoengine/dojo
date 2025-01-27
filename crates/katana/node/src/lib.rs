@@ -10,7 +10,7 @@ pub mod version;
 use std::future::IntoFuture;
 use std::sync::Arc;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use config::rpc::RpcModuleKind;
 use config::Config;
 use dojo_metrics::exporters::prometheus::PrometheusRecorder;
@@ -191,10 +191,10 @@ pub async fn build(mut config: Config) -> Result<Node> {
         (bc, None, Some(forked_client))
     } else if let Some(db_path) = &config.db.dir {
         let db = katana_db::init_db(db_path)?;
-        (Blockchain::new_with_db(db.clone())?, Some(db), None)
+        (Blockchain::new_with_db(db.clone()), Some(db), None)
     } else {
         let db = katana_db::init_ephemeral_db()?;
-        (Blockchain::new_with_db(db.clone())?, Some(db), None)
+        (Blockchain::new_with_db(db.clone()), Some(db), None)
     };
 
     // --- build l1 gas oracle
@@ -226,6 +226,8 @@ pub async fn build(mut config: Config) -> Result<Node> {
         block_context_generator,
         chain_spec: config.chain.clone(),
     });
+
+    backend.init_genesis().context("failed to initialize genesis")?;
 
     // --- build block producer
 

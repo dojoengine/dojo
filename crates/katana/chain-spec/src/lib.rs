@@ -87,7 +87,7 @@ pub enum SettlementLayer {
 //////////////////////////////////////////////////////////////
 
 impl ChainSpec {
-    pub fn block(&mut self) -> ExecutableBlock {
+    pub fn block(&self) -> ExecutableBlock {
         let header = PartialHeader {
             protocol_version: CURRENT_STARKNET_VERSION,
             number: self.genesis.number,

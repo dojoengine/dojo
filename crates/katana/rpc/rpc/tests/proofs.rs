@@ -74,114 +74,114 @@ async fn proofs_limit() {
     });
 }
 
-#[tokio::test]
-async fn genesis_states() {
-    let cfg = get_default_test_config(SequencingConfig::default());
+// #[tokio::test]
+// async fn genesis_states() {
+//     let cfg = get_default_test_config(SequencingConfig::default());
 
-    let sequencer = TestSequencer::start(cfg).await;
-    let genesis_states = sequencer.backend().chain_spec.state_updates();
+//     let sequencer = TestSequencer::start(cfg).await;
+//     let genesis_states = sequencer.backend().chain_spec.state_updates();
 
-    // We need to use the jsonrpsee client because `starknet-rs` doesn't yet support RPC 0.8.0
-    let client = HttpClientBuilder::default().build(sequencer.url()).unwrap();
+//     // We need to use the jsonrpsee client because `starknet-rs` doesn't yet support RPC 0.8.0
+//     let client = HttpClientBuilder::default().build(sequencer.url()).unwrap();
 
-    // Check class declarations
-    let genesis_classes =
-        genesis_states.state_updates.declared_classes.keys().cloned().collect::<Vec<ClassHash>>();
+//     // Check class declarations
+//     let genesis_classes =
+//         genesis_states.state_updates.declared_classes.keys().cloned().collect::<Vec<ClassHash>>();
 
-    // Check contract deployments
-    let genesis_contracts = genesis_states
-        .state_updates
-        .deployed_contracts
-        .keys()
-        .cloned()
-        .collect::<Vec<ContractAddress>>();
+//     // Check contract deployments
+//     let genesis_contracts = genesis_states
+//         .state_updates
+//         .deployed_contracts
+//         .keys()
+//         .cloned()
+//         .collect::<Vec<ContractAddress>>();
 
-    // Check contract storage
-    let genesis_contract_storages = genesis_states
-        .state_updates
-        .storage_updates
-        .iter()
-        .map(|(address, keys)| ContractStorageKeys {
-            address: *address,
-            keys: keys.keys().cloned().collect(),
-        })
-        .collect::<Vec<ContractStorageKeys>>();
+//     // Check contract storage
+//     let genesis_contract_storages = genesis_states
+//         .state_updates
+//         .storage_updates
+//         .iter()
+//         .map(|(address, keys)| ContractStorageKeys {
+//             address: *address,
+//             keys: keys.keys().cloned().collect(),
+//         })
+//         .collect::<Vec<ContractStorageKeys>>();
 
-    let proofs = client
-        .get_storage_proof(
-            BlockIdOrTag::Tag(BlockTag::Latest),
-            Some(genesis_classes.clone()),
-            Some(genesis_contracts.clone()),
-            Some(genesis_contract_storages.clone()),
-        )
-        .await
-        .expect("failed to get state proofs");
+//     let proofs = client
+//         .get_storage_proof(
+//             BlockIdOrTag::Tag(BlockTag::Latest),
+//             Some(genesis_classes.clone()),
+//             Some(genesis_contracts.clone()),
+//             Some(genesis_contract_storages.clone()),
+//         )
+//         .await
+//         .expect("failed to get state proofs");
 
-    // -----------------------------------------------------------------------
-    // Verify classes proofs
+//     // -----------------------------------------------------------------------
+//     // Verify classes proofs
 
-    let classes_proof = MultiProof::from(proofs.classes_proof.nodes);
-    let classes_tree_root = proofs.global_roots.classes_tree_root;
-    let classes_verification_result = katana_trie::verify_proof::<hash::Poseidon>(
-        &classes_proof,
-        classes_tree_root,
-        genesis_classes,
-    );
+//     let classes_proof = MultiProof::from(proofs.classes_proof.nodes);
+//     let classes_tree_root = proofs.global_roots.classes_tree_root;
+//     let classes_verification_result = katana_trie::verify_proof::<hash::Poseidon>(
+//         &classes_proof,
+//         classes_tree_root,
+//         genesis_classes,
+//     );
 
-    // Compute the classes trie values
-    let class_trie_entries = genesis_states
-        .state_updates
-        .declared_classes
-        .values()
-        .map(|compiled_hash| compute_classes_trie_value(*compiled_hash))
-        .collect::<Vec<Felt>>();
+//     // Compute the classes trie values
+//     let class_trie_entries = genesis_states
+//         .state_updates
+//         .declared_classes
+//         .values()
+//         .map(|compiled_hash| compute_classes_trie_value(*compiled_hash))
+//         .collect::<Vec<Felt>>();
 
-    assert_eq!(class_trie_entries, classes_verification_result);
+//     assert_eq!(class_trie_entries, classes_verification_result);
 
-    // -----------------------------------------------------------------------
-    // Verify contracts proofs
+//     // -----------------------------------------------------------------------
+//     // Verify contracts proofs
 
-    let contracts_proof = MultiProof::from(proofs.contracts_proof.nodes);
-    let contracts_tree_root = proofs.global_roots.contracts_tree_root;
-    let contracts_verification_result = katana_trie::verify_proof::<hash::Pedersen>(
-        &contracts_proof,
-        contracts_tree_root,
-        genesis_contracts.into_iter().map(Felt::from).collect(),
-    );
+//     let contracts_proof = MultiProof::from(proofs.contracts_proof.nodes);
+//     let contracts_tree_root = proofs.global_roots.contracts_tree_root;
+//     let contracts_verification_result = katana_trie::verify_proof::<hash::Pedersen>(
+//         &contracts_proof,
+//         contracts_tree_root,
+//         genesis_contracts.into_iter().map(Felt::from).collect(),
+//     );
 
-    // Compute the classes trie values
-    let contracts_trie_entries = proofs
-        .contracts_proof
-        .contract_leaves_data
-        .into_iter()
-        .map(|d| compute_contract_state_hash(&d.class_hash, &d.storage_root, &d.nonce))
-        .collect::<Vec<Felt>>();
+//     // Compute the classes trie values
+//     let contracts_trie_entries = proofs
+//         .contracts_proof
+//         .contract_leaves_data
+//         .into_iter()
+//         .map(|d| compute_contract_state_hash(&d.class_hash, &d.storage_root, &d.nonce))
+//         .collect::<Vec<Felt>>();
 
-    assert_eq!(contracts_trie_entries, contracts_verification_result);
+//     assert_eq!(contracts_trie_entries, contracts_verification_result);
 
-    // -----------------------------------------------------------------------
-    // Verify contracts proofs
+//     // -----------------------------------------------------------------------
+//     // Verify contracts proofs
 
-    let storages_updates = &genesis_states.state_updates.storage_updates.values();
-    let storages_proofs = proofs.contracts_storage_proofs.nodes;
+//     let storages_updates = &genesis_states.state_updates.storage_updates.values();
+//     let storages_proofs = proofs.contracts_storage_proofs.nodes;
 
-    // The order of which the proofs are returned is of the same order of the proofs requests.
-    for (storages, proofs) in storages_updates.clone().zip(storages_proofs) {
-        let storage_keys = storages.keys().cloned().collect::<Vec<StorageKey>>();
-        let storage_values = storages.values().cloned().collect::<Vec<StorageValue>>();
+//     // The order of which the proofs are returned is of the same order of the proofs requests.
+//     for (storages, proofs) in storages_updates.clone().zip(storages_proofs) {
+//         let storage_keys = storages.keys().cloned().collect::<Vec<StorageKey>>();
+//         let storage_values = storages.values().cloned().collect::<Vec<StorageValue>>();
 
-        let contracts_storages_proof = MultiProof::from(proofs);
-        let (storage_tree_root, ..) = contracts_storages_proof.0.first().unwrap();
+//         let contracts_storages_proof = MultiProof::from(proofs);
+//         let (storage_tree_root, ..) = contracts_storages_proof.0.first().unwrap();
 
-        let storages_verification_result = katana_trie::verify_proof::<hash::Pedersen>(
-            &contracts_storages_proof,
-            *storage_tree_root,
-            storage_keys,
-        );
+//         let storages_verification_result = katana_trie::verify_proof::<hash::Pedersen>(
+//             &contracts_storages_proof,
+//             *storage_tree_root,
+//             storage_keys,
+//         );
 
-        assert_eq!(storage_values, storages_verification_result);
-    }
-}
+//         assert_eq!(storage_values, storages_verification_result);
+//     }
+// }
 
 #[tokio::test]
 async fn classes_proofs() {

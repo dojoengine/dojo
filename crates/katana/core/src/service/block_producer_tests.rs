@@ -13,11 +13,12 @@ use crate::backend::storage::Blockchain;
 
 fn test_backend() -> Arc<Backend<NoopExecutorFactory>> {
     let chain_spec = Arc::new(DEV.clone());
-    let provider = DbProvider::new_ephemeral();
     let executor_factory = NoopExecutorFactory::new();
-    let blockchain = Blockchain::new_with_chain(provider, chain_spec.as_ref()).unwrap();
+    let blockchain = Blockchain::new(DbProvider::new_ephemeral());
     let gas_oracle = GasOracle::fixed(Default::default(), Default::default());
-    Arc::new(Backend::new(chain_spec, blockchain, gas_oracle, executor_factory))
+    let backend = Arc::new(Backend::new(chain_spec, blockchain, gas_oracle, executor_factory));
+    backend.init_genesis().expect("failed to initialize genesis");
+    backend
 }
 
 #[tokio::test]

@@ -438,7 +438,8 @@ impl DeclareTx {
     /// Compute the hash of the transaction.
     pub fn calculate_hash(&self, is_query: bool) -> TxHash {
         match self {
-            DeclareTx::V0(..) => todo!(),
+            // v0 declare tx is ignored by the SNOS
+            DeclareTx::V0(..) => Felt::ZERO,
 
             DeclareTx::V1(tx) => compute_declare_v1_tx_hash(
                 Felt::from(tx.sender_address),

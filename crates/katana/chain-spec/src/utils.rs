@@ -29,8 +29,8 @@ use crate::ChainSpec;
 ///
 /// The transactions are crafted in a way that can be executed by the StarknetOS Cairo program and thus `blockifier`.
 #[derive(Debug)]
-pub struct GenesisTransactionsBuilder<'a> {
-    chain_spec: &'a mut ChainSpec,
+pub struct GenesisTransactionsBuilder<'c> {
+    chain_spec: &'c ChainSpec,
     fee_token: OnceCell<ContractAddress>,
     master_address: OnceCell<ContractAddress>,
     master_signer: SigningKey,
@@ -39,9 +39,9 @@ pub struct GenesisTransactionsBuilder<'a> {
     declared_classes: RefCell<HashSet<ClassHash>>,
 }
 
-impl<'a> GenesisTransactionsBuilder<'a> {
+impl<'c> GenesisTransactionsBuilder<'c> {
     /// Creates a new [`GenesisTransactionsBuilder`] for the given [`ChainSpec`].
-    pub fn new(chain_spec: &'a mut ChainSpec) -> Self {
+    pub fn new(chain_spec: &'c ChainSpec) -> Self {
         Self {
             chain_spec,
             fee_token: OnceCell::new(),
@@ -283,9 +283,6 @@ impl<'a> GenesisTransactionsBuilder<'a> {
         let fee_token_address = self.deploy(erc20_class_hash, ctor_args);
 
         self.fee_token.set(fee_token_address).expect("must be uninitialized");
-
-        self.chain_spec.fee_contracts.eth = fee_token_address;
-        self.chain_spec.fee_contracts.strk = fee_token_address;
     }
 
     fn build_allocated_dev_accounts(&mut self) {

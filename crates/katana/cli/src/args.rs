@@ -239,12 +239,9 @@ impl NodeArgs {
 
     fn chain_spec(&self) -> Result<Arc<ChainSpec>> {
         if let Some(id) = &self.chain {
-            use katana_chain_spec::file;
-
-            let mut chain_spec = file::read(id).context("failed to load chain spec")?;
-            chain_spec.genesis.sequencer_address = *DEFAULT_SEQUENCER_ADDRESS;
-
-            Ok(Arc::new(chain_spec))
+            let mut cs = katana_chain_spec::file::read(id).context("failed to load chain spec")?;
+            cs.genesis.sequencer_address = *DEFAULT_SEQUENCER_ADDRESS;
+            Ok(Arc::new(cs))
         }
         // exclusively for development mode
         else {
@@ -680,10 +677,9 @@ chain_id.Named = "Mainnet"
         // Specifiying the dev module without enabling dev mode is forbidden.
         let err =
             NodeArgs::parse_from(["katana", "--http.api", "starknet,dev"]).config().unwrap_err();
-        assert!(
-            err.to_string()
-                .contains("The `dev` module can only be enabled in dev mode (ie `--dev` flag)")
-        );
+        assert!(err
+            .to_string()
+            .contains("The `dev` module can only be enabled in dev mode (ie `--dev` flag)"));
     }
 
     #[test]
