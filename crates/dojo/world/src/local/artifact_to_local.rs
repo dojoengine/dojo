@@ -120,6 +120,13 @@ impl WorldLocal {
                                         "Adding local library from artifact."
                                     );
 
+                                    let version = profile_config
+                                        .lib_versions
+                                        .as_ref()
+                                        .expect("expected lib version a")
+                                        .get(&format!("{}-{}", ns, name))
+                                        .expect("expected lib version b");
+
                                     let resource = ResourceLocal::Library(LibraryLocal {
                                         common: CommonLocalInfo {
                                             namespace: ns,
@@ -130,6 +137,7 @@ impl WorldLocal {
                                             casm_class_hash,
                                         },
                                         systems: systems.clone(),
+                                        version: version.clone(),
                                     });
 
                                     resources.push(resource);

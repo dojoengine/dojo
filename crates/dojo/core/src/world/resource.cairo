@@ -28,6 +28,9 @@ use starknet::{ContractAddress, ClassHash};
 /// - Contract: (ContractAddress, NamespaceHash)
 /// A contract defines user logic to interact with the world's data (models) and to emit events.
 ///
+/// - Library: (ClassHash, NamespaceHash)
+/// A library defines user logic.
+///
 /// - Unregistered: The unregistered state, required to ensure the security of the world
 /// to not have operations done on non-existent resources.
 ///

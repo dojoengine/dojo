@@ -67,7 +67,6 @@ impl WorldRemote {
             world::OwnerUpdated::event_selector(),
             world::MetadataUpdate::event_selector(),
             world::LibraryRegistered::event_selector(),
-            world::LibraryUpgraded::event_selector(),
         ]];
 
         let filter = EventFilter {
@@ -257,13 +256,17 @@ impl WorldRemote {
                     return Ok(());
                 }
 
+                let full_name = e.name.to_string().unwrap();
+                let version = full_name.split(&"_v").last().expect("expected version");
+                let name = full_name.replace(&format!("_v{}", version), "");
                 let r = ResourceRemote::Library(LibraryRemote {
                     common: CommonRemoteInfo::new(
                         e.class_hash.into(),
                         &namespace,
-                        &e.name.to_string()?,
+                        &name.to_string(),
                         Felt::ZERO,
                     ),
+                    version: version.to_string(),
                 });
                 trace!(?r, "Library registered.");
 
@@ -311,21 +314,6 @@ impl WorldRemote {
                     return Ok(());
                 };
                 trace!(?resource, "Contract upgraded.");
-
-                resource.push_class_hash(e.class_hash.into());
-            }
-            WorldEvent::LibraryUpgraded(e) => {
-                let resource = if let Some(resource) = self.resources.get_mut(&e.selector) {
-                    resource
-                } else {
-                    debug!(
-                        selector = format!("{:#066x}", e.selector),
-                        "Library not found (may be excluded by whitelist of namespaces)."
-                    );
-
-                    return Ok(());
-                };
-                trace!(?resource, "Library upgraded.");
 
                 resource.push_class_hash(e.class_hash.into());
             }

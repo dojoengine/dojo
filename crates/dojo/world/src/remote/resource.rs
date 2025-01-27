@@ -51,6 +51,8 @@ pub struct ContractRemote {
 pub struct LibraryRemote {
     /// Common information about the resource.
     pub common: CommonRemoteInfo,
+    /// Version
+    pub version: String,
 }
 
 #[derive(Debug, Clone)]
@@ -299,7 +301,7 @@ impl ResourceRemote {
     pub fn as_library_or_panic(&self) -> &LibraryRemote {
         match self {
             ResourceRemote::Library(library) => library,
-            _ => panic!("Resource is expected to be a contract: {:?}.", self),
+            _ => panic!("Resource is expected to be a library: {:?}.", self),
         }
     }
 

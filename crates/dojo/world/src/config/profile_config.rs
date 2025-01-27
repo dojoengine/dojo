@@ -20,6 +20,7 @@ pub struct ProfileConfig {
     pub world: WorldConfig,
     pub models: Option<Vec<ResourceConfig>>,
     pub contracts: Option<Vec<ResourceConfig>>,
+    pub libraries: Option<Vec<ResourceConfig>>,
     pub events: Option<Vec<ResourceConfig>>,
     pub namespace: NamespaceConfig,
     pub env: Option<Environment>,
@@ -30,6 +31,8 @@ pub struct ProfileConfig {
     pub owners: Option<HashMap<String, HashSet<String>>>,
     /// A mapping <tag, <values>> of init call arguments to be passed to the contract.
     pub init_call_args: Option<HashMap<String, Vec<String>>>,
+    /// A mapping <tag, version> of libraries
+    pub lib_versions: Option<HashMap<String, String>>,
 }
 
 impl ProfileConfig {
@@ -181,6 +184,9 @@ mod tests {
 
         [init_call_args]
         "ns1-actions" = [ "0x1", "0x2" ]
+
+        [lib_versions]
+        "ns1-lib" = "0.0.0"
         "#;
 
         let config = toml::from_str::<ProfileConfig>(content).unwrap();
@@ -261,5 +267,9 @@ mod tests {
                 vec!["0x1".to_string(), "0x2".to_string()]
             )]))
         );
+        assert_eq!(
+            config.lib_versions,
+            Some(HashMap::from([("ns1-lib".to_string(), "0.0.0".to_string())]))
+        )
     }
 }

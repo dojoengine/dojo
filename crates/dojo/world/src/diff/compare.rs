@@ -32,10 +32,12 @@ impl ComparableResource for LibraryLocal {
     fn compare(self, remote: ResourceRemote) -> ResourceDiff {
         let remote_contract = remote.as_library_or_panic();
 
-        if self.common.class_hash == remote_contract.common.current_class_hash() {
+        if self.common.class_hash == remote_contract.common.current_class_hash()
+            && self.version == remote_contract.version
+        {
             ResourceDiff::Synced(ResourceLocal::Library(self), remote)
         } else {
-            ResourceDiff::Updated(ResourceLocal::Library(self), remote)
+            ResourceDiff::Created(ResourceLocal::Library(self))
         }
     }
 }

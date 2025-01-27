@@ -43,8 +43,10 @@ pub struct ContractLocal {
 pub struct LibraryLocal {
     /// Common information about the resource.
     pub common: CommonLocalInfo,
-    /// The systems of the contract.
+    /// The systems of the library.
     pub systems: Vec<String>,
+    /// The version of the library
+    pub version: String,
 }
 
 #[derive(Debug, Clone)]

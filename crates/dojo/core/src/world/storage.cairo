@@ -50,7 +50,7 @@ pub impl WorldStorageInternalImpl of WorldStorageTrait {
             },
             Resource::Library((
                 class_hash, _,
-            )) => { Option::Some((0.try_into().unwrap(), class_hash)) },
+            )) => { Option::Some((starknet::contract_address_const::<0>(), class_hash)) },
             _ => Option::None,
         }
     }

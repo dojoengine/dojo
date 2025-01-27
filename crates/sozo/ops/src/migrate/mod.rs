@@ -146,6 +146,12 @@ where
             invoker.extend_calls(calls);
         }
 
+        // libraries
+        if let Some(configs) = &self.diff.profile_config.libraries {
+            let calls = self.upload_metadata_from_resource_config(service, configs).await?;
+            invoker.extend_calls(calls);
+        }
+
         // models
         if let Some(configs) = &self.diff.profile_config.models {
             let calls = self.upload_metadata_from_resource_config(service, configs).await?;
@@ -431,15 +437,15 @@ where
                     classes.extend(contract_classes);
                 }
                 ResourceType::Library => {
-                    let (contract_calls, contract_classes) =
+                    let (library_calls, library_classes) =
                         self.libraries_calls_classes(resource).await?;
 
-                    if !contract_calls.is_empty() {
+                    if !library_calls.is_empty() {
                         n_resources += 1;
                     }
 
-                    invoker.extend_calls(contract_calls);
-                    classes.extend(contract_classes);
+                    invoker.extend_calls(library_calls);
+                    classes.extend(library_classes);
                 }
                 ResourceType::Model => {
                     let (model_calls, model_classes) = self.models_calls_classes(resource).await?;
@@ -658,36 +664,22 @@ where
                 LabeledClass { label: tag.clone(), casm_class_hash, class },
             );
 
-            calls.push(
-                self.world
-                    .register_library_getcall(&ns_bytearray, &ClassHash(library.common.class_hash)),
-            );
+            let name = ByteArray::from_string(&library.common.name).unwrap();
+            let version = ByteArray::from_string(&library.version).unwrap();
+            calls.push(self.world.register_library_getcall(
+                &ns_bytearray,
+                &ClassHash(library.common.class_hash),
+                &name,
+                &version,
+            ));
         }
 
         if let ResourceDiff::Updated(
-            ResourceLocal::Library(library_local),
+            ResourceLocal::Library(_library_local),
             ResourceRemote::Library(_library_remote),
         ) = resource
         {
-            trace!(
-                namespace,
-                name = library_local.common.name,
-                class_hash = format!("{:#066x}", library_local.common.class_hash),
-                "Upgrading library."
-            );
-
-            let casm_class_hash = library_local.common.casm_class_hash;
-            let class = library_local.common.class.clone().flatten()?;
-
-            classes.insert(
-                casm_class_hash,
-                LabeledClass { label: tag.clone(), casm_class_hash, class },
-            );
-
-            calls.push(self.world.upgrade_library_getcall(
-                &ns_bytearray,
-                &ClassHash(library_local.common.class_hash),
-            ));
+            panic!("libraries cannot be updated!")
         }
 
         Ok((calls, classes))

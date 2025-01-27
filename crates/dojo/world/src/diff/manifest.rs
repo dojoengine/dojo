@@ -76,8 +76,10 @@ pub struct DojoLibrary {
     /// Selector of the contract.
     #[serde_as(as = "UfeHex")]
     pub selector: Felt,
-    /// Systems of the contract.
+    /// Systems of the library.
     pub systems: Vec<String>,
+    /// Version of the library
+    pub version: String,
 }
 
 #[serde_as]
@@ -207,8 +209,18 @@ fn resource_diff_to_dojo_contract(diff: &WorldDiff, resource: &ResourceDiff) -> 
         _ => unreachable!(),
     }
 }
-fn resource_diff_to_dojo_library(_diff: &WorldDiff, resource: &ResourceDiff) -> DojoLibrary {
+fn resource_diff_to_dojo_library(diff: &WorldDiff, resource: &ResourceDiff) -> DojoLibrary {
     let tag = resource.tag();
+
+    let version = diff
+        .profile_config
+        .lib_versions
+        .as_ref()
+        .expect("expected lib_versions")
+        .get(&tag)
+        .expect("library mush have a version");
+
+    let tag = format!("{}_v{}", tag, version);
 
     match &resource {
         ResourceDiff::Created(ResourceLocal::Library(l)) => DojoLibrary {
@@ -217,6 +229,7 @@ fn resource_diff_to_dojo_library(_diff: &WorldDiff, resource: &ResourceDiff) -> 
             tag,
             systems: l.systems.clone(),
             selector: resource.dojo_selector(),
+            version: version.clone(),
         },
         ResourceDiff::Updated(ResourceLocal::Library(l), ResourceRemote::Library(_r))
         | ResourceDiff::Synced(ResourceLocal::Library(l), ResourceRemote::Library(_r)) => {
@@ -226,6 +239,7 @@ fn resource_diff_to_dojo_library(_diff: &WorldDiff, resource: &ResourceDiff) -> 
                 tag,
                 systems: l.systems.clone(),
                 selector: resource.dojo_selector(),
+                version: version.clone(),
             }
         }
         _ => unreachable!(),

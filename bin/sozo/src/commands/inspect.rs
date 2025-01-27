@@ -120,6 +120,8 @@ struct ContractInspect {
 struct LibraryInspect {
     #[tabled(rename = "Libraries")]
     tag: String,
+    #[tabled(rename = "Version")]
+    version: String,
     #[tabled(rename = "Status")]
     status: ResourceStatus,
     #[tabled(rename = "Dojo Selector")]
@@ -416,11 +418,20 @@ fn resource_diff_display(world_diff: &WorldDiff, resource: &ResourceDiff) -> Res
                 status
             };
 
+            let version = world_diff
+                .profile_config
+                .lib_versions
+                .as_ref()
+                .expect("expected lib_versions")
+                .get(&resource.tag())
+                .expect("lib_version not found");
+
             ResourceInspect::Library(LibraryInspect {
                 tag: resource.tag(),
                 status,
                 current_class_hash: format!("{:#066x}", resource.current_class_hash()),
                 selector: format!("{:#066x}", resource.dojo_selector()),
+                version: version.to_string(),
             })
         }
         ResourceType::Model => {

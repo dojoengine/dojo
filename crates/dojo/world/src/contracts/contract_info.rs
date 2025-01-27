@@ -153,6 +153,7 @@ mod tests {
                 tag: "ns-test_library".to_string(),
                 systems: vec!["system_1".to_string()],
                 selector: felt!("0x999"),
+                version: "0.0.0".to_string(),
             }],
             models: vec![DojoModel {
                 tag: "ns-test_model".to_string(),

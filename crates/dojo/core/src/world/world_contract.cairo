@@ -69,7 +69,6 @@ pub mod world {
         ContractUpgraded: ContractUpgraded,
         ContractInitialized: ContractInitialized,
         LibraryRegistered: LibraryRegistered,
-        LibraryUpgraded: LibraryUpgraded,
         EventEmitted: EventEmitted,
         MetadataUpdate: MetadataUpdate,
         StoreSetRecord: StoreSetRecord,
@@ -115,13 +114,6 @@ pub mod world {
         pub name: ByteArray,
         #[key]
         pub namespace: ByteArray,
-        pub class_hash: ClassHash,
-    }
-
-    #[derive(Drop, starknet::Event)]
-    pub struct LibraryUpgraded {
-        #[key]
-        pub selector: felt252,
         pub class_hash: ClassHash,
     }
 
@@ -808,24 +800,27 @@ pub mod world {
         }
 
         fn register_library(
-            ref self: ContractState, namespace: ByteArray, class_hash: ClassHash,
+            ref self: ContractState,
+            namespace: ByteArray,
+            class_hash: ClassHash,
+            name: ByteArray,
+            version: ByteArray,
         ) -> ClassHash {
             let caller = get_caller_address();
 
             let namespace_hash = bytearray_hash(@namespace);
 
-            let contract = IDeployedResourceLibraryDispatcher { class_hash };
-            let contract_name = contract.dojo_name();
+            self.assert_name(@name);
+
+            let contract_name = format!("{}_v{}", name, version);
             let contract_selector = selector_from_namespace_and_name(
                 namespace_hash, @contract_name,
             );
 
-            self.assert_name(@contract_name);
-
             let maybe_existing_library = self.resources.read(contract_selector);
             if !maybe_existing_library.is_unregistered() {
                 panic_with_byte_array(
-                    @errors::contract_already_registered(@namespace, @contract_name),
+                    @errors::library_already_registered(@namespace, @contract_name),
                 );
             }
 
@@ -843,46 +838,6 @@ pub mod world {
             self.emit(LibraryRegistered { class_hash, namespace, name: contract_name });
 
             class_hash
-        }
-
-
-        fn upgrade_library(
-            ref self: ContractState, namespace: ByteArray, class_hash: ClassHash,
-        ) -> ClassHash {
-            let namespace_hash = bytearray_hash(@namespace);
-
-            let contract = IDeployedResourceLibraryDispatcher { class_hash };
-            let contract_name = contract.dojo_name();
-            let contract_selector = selector_from_namespace_and_name(
-                namespace_hash, @contract_name,
-            );
-
-            // If namespace and name are the same, the contract is already registered and we
-            // can upgrade it.
-            match self.resources.read(contract_selector) {
-                Resource::Library((
-                    _, _,
-                )) => {
-                    self.assert_caller_permissions(contract_selector, Permission::Owner);
-
-                    self
-                        .resources
-                        .write(contract_selector, Resource::Library((class_hash, namespace_hash)));
-                    self.emit(LibraryUpgraded { class_hash, selector: contract_selector });
-
-                    class_hash
-                },
-                Resource::Unregistered => {
-                    panic_with_byte_array(
-                        @errors::resource_not_registered_details(@namespace, @contract_name),
-                    )
-                },
-                _ => panic_with_byte_array(
-                    @errors::resource_conflict(
-                        @format!("{}-{}", @namespace, @contract_name), @"library",
-                    ),
-                ),
-            }
         }
 
         fn uuid(ref self: ContractState) -> usize {
