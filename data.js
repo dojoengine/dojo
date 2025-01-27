@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1738008096915,
+  "lastUpdate": 1738008205347,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -47995,6 +47995,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 12788636286,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "fb772c83b4b640a0d17f7daa82d5bb610d80c2cc",
+          "message": "feat(blockifier): use same versioned constant as `snos` (#2956)\n\n[`snos`](https://github.com/cartridge-gg/snos/tree/kariy/katana-compat-genesis-rebased-upstream) is using an older version of `blockifier` which only supports up to Starknet version `v0.13.3` while `katana`'s is up to `v0.13.4`. So, we pin the version on `katana` to match `snos` to make sure the execution outcome is similar.\r\n\r\nThe call to `VersionedConstants::latest_constants()` will basically use the latest version ie `v0.13.4`.",
+          "timestamp": "2025-01-28T03:44:39+08:00",
+          "tree_id": "d834057f24089aae39518f4b36ae9b969070be5b",
+          "url": "https://github.com/dojoengine/dojo/commit/fb772c83b4b640a0d17f7daa82d5bb610d80c2cc"
+        },
+        "date": 1738008203186,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2632063,
+            "range": "± 31966",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 10230309,
+            "range": "± 579676",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2748475462,
+            "range": "± 232979060",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8947341,
+            "range": "± 586304",
             "unit": "ns/iter"
           }
         ]
