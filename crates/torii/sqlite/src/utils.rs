@@ -64,7 +64,7 @@ pub async fn fetch_content_from_ipfs(cid: &str) -> Result<Bytes> {
             Ok(stream) => return Ok(Bytes::from(stream)),
             Err(e) => {
                 retries -= 1;
-                warn!(
+                debug!(
                     error = %e,
                     remaining_attempts = retries,
                     cid = cid,
