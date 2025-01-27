@@ -86,7 +86,8 @@ async fn proofs_limit() {
 
 //     // Check class declarations
 //     let genesis_classes =
-//         genesis_states.state_updates.declared_classes.keys().cloned().collect::<Vec<ClassHash>>();
+//         genesis_states.state_updates.declared_classes.keys().cloned().
+// collect::<Vec<ClassHash>>();
 
 //     // Check contract deployments
 //     let genesis_contracts = genesis_states

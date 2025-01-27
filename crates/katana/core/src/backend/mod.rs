@@ -101,7 +101,8 @@ impl<EF: ExecutorFactory> Backend<EF> {
 
             if expected_genesis_hash != local_hash {
                 return Err(anyhow!(
-                    "Genesis block hash mismatch: expected {expected_genesis_hash:#x}, got {local_hash:#x}",
+                    "Genesis block hash mismatch: expected {expected_genesis_hash:#x}, got \
+                     {local_hash:#x}",
                 ));
             }
 

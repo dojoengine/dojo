@@ -27,7 +27,8 @@ use crate::ChainSpec;
 /// A convenience builder for creating valid and executable transactions for the genesis block based
 /// on the [`Genesis`].
 ///
-/// The transactions are crafted in a way that can be executed by the StarknetOS Cairo program and thus `blockifier`.
+/// The transactions are crafted in a way that can be executed by the StarknetOS Cairo program and
+/// thus `blockifier`.
 #[derive(Debug)]
 pub struct GenesisTransactionsBuilder<'c> {
     chain_spec: &'c ChainSpec,
@@ -185,7 +186,8 @@ impl<'c> GenesisTransactionsBuilder<'c> {
     fn deploy_predeployed_account(&self, account: &DevGenesisAccount) -> ContractAddress {
         // The salt used in `GenesisAccount::new()` to compute the contract address
         //
-        // The only reason we use this value is to make sure the generated account addresses are the same with the previous implementation.
+        // The only reason we use this value is to make sure the generated account addresses are the
+        // same with the previous implementation.
         const SALT: Felt = felt!("666");
 
         let signer = SigningKey::from_secret_scalar(account.private_key);
@@ -291,7 +293,8 @@ impl<'c> GenesisTransactionsBuilder<'c> {
         for (expected_addr, account) in self.chain_spec.genesis.accounts() {
             if account.class_hash() != default_account_class_hash {
                 panic!(
-                    "unexpected account class hash; expected {default_account_class_hash:#x}, got {:#x}",
+                    "unexpected account class hash; expected {default_account_class_hash:#x}, got \
+                     {:#x}",
                     account.class_hash()
                 )
             }

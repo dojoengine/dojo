@@ -677,9 +677,10 @@ chain_id.Named = "Mainnet"
         // Specifiying the dev module without enabling dev mode is forbidden.
         let err =
             NodeArgs::parse_from(["katana", "--http.api", "starknet,dev"]).config().unwrap_err();
-        assert!(err
-            .to_string()
-            .contains("The `dev` module can only be enabled in dev mode (ie `--dev` flag)"));
+        assert!(
+            err.to_string()
+                .contains("The `dev` module can only be enabled in dev mode (ie `--dev` flag)")
+        );
     }
 
     #[test]
