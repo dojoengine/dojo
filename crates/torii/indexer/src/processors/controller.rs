@@ -83,15 +83,14 @@ where
         event: &Event,
         _config: &EventProcessorConfig,
     ) -> Result<(), Error> {
-        if event.data.len() < 29 {
-            return Ok(());
-        }
-
         // Address is the first felt in data
         let address = event.data[0];
 
         let calldata = event.data[5..].to_vec();
-
+        // our calldata has to be more than 25 felts.
+        if calldata.len() < 25 {
+            return Ok(());
+        }
         // check for this sequence of felts
         let cartridge_magic_len = calldata[2];
         // length has to be 22
