@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1738084112037,
+  "lastUpdate": 1738084162809,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -48259,6 +48259,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 11767603960,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e0eb8c0bd0045fd5e0853bb9fde551909fde421f",
+          "message": "fix(dojo-core): remove unsupported syscall (#2962)\n\n* fix: remove unsupported syscall\r\n\r\n* tests: regenerate test db",
+          "timestamp": "2025-01-28T10:51:04-06:00",
+          "tree_id": "fbe1e4a57cf05a30f585b68c3129b0a251e75a04",
+          "url": "https://github.com/dojoengine/dojo/commit/e0eb8c0bd0045fd5e0853bb9fde551909fde421f"
+        },
+        "date": 1738084159625,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2457622,
+            "range": "± 121193",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8466582,
+            "range": "± 359167",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2562894157,
+            "range": "± 221912846",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 7596881,
+            "range": "± 342567",
             "unit": "ns/iter"
           }
         ]
