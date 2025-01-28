@@ -299,10 +299,11 @@ async fn test_load_from_remote_del(sequencer: &RunnerCtx) {
 
     let _ = bootstrap_engine(world_reader, db.clone(), Arc::clone(&provider)).await.unwrap();
 
-    // TODO: seems that we don't delete the record after delete only values are zeroed?
     assert_eq!(count_table("ns-PlayerConfig", &pool).await, 0);
-    assert_eq!(count_table("ns-PlayerConfig$favorite_item", &pool).await, 0);
-    assert_eq!(count_table("ns-PlayerConfig$items", &pool).await, 0);
+    // our entity model relation should be deleted
+    assert_eq!(count_table("entity_model", &pool).await, 0);
+    // our entity should be deleted. since we dont have any more models
+    assert_eq!(count_table("entities", &pool).await, 0);
 
     // TODO: check how we can have a test that is more chronological with Torii re-syncing
     // to ensure we can test intermediate states.
