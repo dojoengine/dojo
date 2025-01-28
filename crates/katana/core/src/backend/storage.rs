@@ -5,6 +5,7 @@ use katana_db::mdbx::DbEnv;
 use katana_primitives::block::{
     BlockHashOrNumber, BlockIdOrTag, BlockNumber, FinalityStatus, SealedBlockWithStatus,
 };
+use katana_primitives::da::L1DataAvailabilityMode;
 use katana_primitives::hash::{self, StarkHash};
 use katana_provider::providers::db::DbProvider;
 use katana_provider::providers::fork::ForkedProvider;
@@ -146,21 +147,21 @@ impl Blockchain {
         // check if the requested block is within the supported range or not.
         let database = ForkedProvider::new(Arc::new(provider), block_id)?;
 
-        // // update the genesis block with the forked block's data
-        // // we dont update the `l1_gas_price` bcs its already done when we set the `gas_prices` in
-        // // genesis. this flow is kinda flawed, we should probably refactor it out of the
-        // // genesis.
-        // let mut block = chain.block();
-        // block.header.l1_data_gas_prices.eth =
-        //     forked_block.l1_data_gas_price.price_in_wei.to_u128().expect("should fit in u128");
-        // block.header.l1_data_gas_prices.strk =
-        //     forked_block.l1_data_gas_price.price_in_fri.to_u128().expect("should fit in u128");
-        // block.header.l1_da_mode = match forked_block.l1_da_mode {
-        //     starknet::core::types::L1DataAvailabilityMode::Blob => L1DataAvailabilityMode::Blob,
-        //     starknet::core::types::L1DataAvailabilityMode::Calldata => {
-        //         L1DataAvailabilityMode::Calldata
-        //     }
-        // };
+        // update the genesis block with the forked block's data
+        // we dont update the `l1_gas_price` bcs its already done when we set the `gas_prices` in
+        // genesis. this flow is kinda flawed, we should probably refactor it out of the
+        // genesis.
+        let mut block = chain.block();
+        block.header.l1_data_gas_prices.eth =
+            forked_block.l1_data_gas_price.price_in_wei.to_u128().expect("should fit in u128");
+        block.header.l1_data_gas_prices.strk =
+            forked_block.l1_data_gas_price.price_in_fri.to_u128().expect("should fit in u128");
+        block.header.l1_da_mode = match forked_block.l1_da_mode {
+            starknet::core::types::L1DataAvailabilityMode::Blob => L1DataAvailabilityMode::Blob,
+            starknet::core::types::L1DataAvailabilityMode::Calldata => {
+                L1DataAvailabilityMode::Calldata
+            }
+        };
 
         Ok((Self::new(database), block_num))
     }

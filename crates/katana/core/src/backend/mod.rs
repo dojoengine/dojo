@@ -204,7 +204,6 @@ impl<EF: ExecutorFactory> Backend<EF> {
 
     fn commit_block(
         &self,
-        // block_env: &BlockEnv,
         header: PartialHeader,
         transactions: Vec<TxWithHash>,
         receipts: &[ReceiptWithTxHash],
