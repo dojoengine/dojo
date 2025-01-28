@@ -16,8 +16,8 @@ use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::{TxHash, TxWithHash};
 use katana_primitives::version::CURRENT_STARKNET_VERSION;
 use katana_primitives::{address, ContractAddress, Felt};
+use katana_provider::providers::in_memory::state::EmptyStateProvider;
 use katana_provider::traits::block::{BlockHashProvider, BlockWriter};
-use katana_provider::traits::state::StateFactoryProvider;
 use katana_provider::traits::trie::TrieWriter;
 use katana_trie::compute_merkle_root;
 use parking_lot::RwLock;
@@ -285,8 +285,7 @@ impl<EF: ExecutorFactory> Backend<EF> {
         let block = chain_spec.block();
         let header = block.header.clone();
 
-        let state = provider.latest()?;
-        let mut executor = self.executor_factory.with_state(state);
+        let mut executor = self.executor_factory.with_state(EmptyStateProvider);
         executor.execute_block(block).context("failed to execute genesis block")?;
 
         let mut output =
