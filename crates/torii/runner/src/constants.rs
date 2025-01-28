@@ -1,3 +1,6 @@
+use starknet::macros::felt;
+use starknet_crypto::Felt;
+
 pub(crate) const LOG_TARGET: &str = "torii:runner";
 
 pub(crate) const CARTRIDGE_PAYMASTER_EUWEST3_ADDRESS: Felt = felt!("0x359a81f67140632ec91c7f9af3fc0b5bca0a898ae0be3f7682585b0f40119a7");
