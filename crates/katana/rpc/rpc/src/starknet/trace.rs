@@ -27,7 +27,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
         transactions: Vec<BroadcastedTx>,
         simulation_flags: Vec<SimulationFlag>,
     ) -> Result<Vec<SimulatedTransaction>, StarknetApiError> {
-        let chain_id = self.inner.backend.chain_spec.id;
+        let chain_id = self.inner.backend.chain_spec.id();
 
         let executables = transactions
             .into_iter()

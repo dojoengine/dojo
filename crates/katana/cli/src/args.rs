@@ -239,16 +239,14 @@ impl NodeArgs {
 
     fn chain_spec(&self) -> Result<Arc<ChainSpec>> {
         if let Some(id) = &self.chain {
-            use katana_chain_spec::file;
-
-            let mut chain_spec = file::read(id).context("failed to load chain spec")?;
-            chain_spec.genesis.sequencer_address = *DEFAULT_SEQUENCER_ADDRESS;
-
-            Ok(Arc::new(chain_spec))
+            let mut cs =
+                katana_chain_spec::rollup::file::read(id).context("failed to load chain spec")?;
+            cs.genesis.sequencer_address = *DEFAULT_SEQUENCER_ADDRESS;
+            Ok(Arc::new(ChainSpec::Rollup(cs)))
         }
         // exclusively for development mode
         else {
-            let mut chain_spec = katana_chain_spec::DEV_UNALLOCATED.clone();
+            let mut chain_spec = katana_chain_spec::dev::DEV_UNALLOCATED.clone();
 
             if let Some(id) = self.starknet.environment.chain_id {
                 chain_spec.id = id;
@@ -273,7 +271,7 @@ impl NodeArgs {
                 katana_slot_controller::add_controller_account(&mut chain_spec.genesis)?;
             }
 
-            Ok(Arc::new(chain_spec))
+            Ok(Arc::new(ChainSpec::Dev(chain_spec)))
         }
     }
 
@@ -438,8 +436,8 @@ mod test {
         assert_eq!(config.execution.invocation_max_steps, DEFAULT_INVOCATION_MAX_STEPS);
         assert_eq!(config.execution.validation_max_steps, DEFAULT_VALIDATION_MAX_STEPS);
         assert_eq!(config.db.dir, None);
-        assert_eq!(config.chain.id, ChainId::parse("KATANA").unwrap());
-        assert_eq!(config.chain.genesis.sequencer_address, *DEFAULT_SEQUENCER_ADDRESS);
+        assert_eq!(config.chain.id(), ChainId::parse("KATANA").unwrap());
+        assert_eq!(config.chain.genesis().sequencer_address, *DEFAULT_SEQUENCER_ADDRESS);
     }
 
     #[test]
@@ -465,8 +463,8 @@ mod test {
         assert_eq!(config.execution.invocation_max_steps, 200);
         assert_eq!(config.execution.validation_max_steps, 100);
         assert_eq!(config.db.dir, Some(PathBuf::from("/path/to/db")));
-        assert_eq!(config.chain.id, ChainId::GOERLI);
-        assert_eq!(config.chain.genesis.sequencer_address, *DEFAULT_SEQUENCER_ADDRESS);
+        assert_eq!(config.chain.id(), ChainId::GOERLI);
+        assert_eq!(config.chain.genesis().sequencer_address, *DEFAULT_SEQUENCER_ADDRESS);
     }
 
     #[test]
@@ -569,13 +567,13 @@ mod test {
         .config()
         .unwrap();
 
-        assert_eq!(config.chain.genesis.number, 0);
-        assert_eq!(config.chain.genesis.parent_hash, felt!("0x999"));
-        assert_eq!(config.chain.genesis.timestamp, 5123512314);
-        assert_eq!(config.chain.genesis.state_root, felt!("0x99"));
-        assert_eq!(config.chain.genesis.sequencer_address, address!("0x100"));
-        assert_eq!(config.chain.genesis.gas_prices.eth, 9999);
-        assert_eq!(config.chain.genesis.gas_prices.strk, 8888);
+        assert_eq!(config.chain.genesis().number, 0);
+        assert_eq!(config.chain.genesis().parent_hash, felt!("0x999"));
+        assert_eq!(config.chain.genesis().timestamp, 5123512314);
+        assert_eq!(config.chain.genesis().state_root, felt!("0x99"));
+        assert_eq!(config.chain.genesis().sequencer_address, address!("0x100"));
+        assert_eq!(config.chain.genesis().gas_prices.eth, 9999);
+        assert_eq!(config.chain.genesis().gas_prices.strk, 8888);
         assert_matches!(config.dev.fixed_gas_prices, Some(prices) => {
             assert_eq!(prices.gas_price.eth, 100);
             assert_eq!(prices.gas_price.strk, 200);
@@ -633,14 +631,14 @@ chain_id.Named = "Mainnet"
             assert_eq!(prices.data_gas_price.eth, 111);
             assert_eq!(prices.data_gas_price.strk, 222);
         });
-        assert_eq!(config.chain.genesis.number, 0);
-        assert_eq!(config.chain.genesis.parent_hash, felt!("0x999"));
-        assert_eq!(config.chain.genesis.timestamp, 5123512314);
-        assert_eq!(config.chain.genesis.state_root, felt!("0x99"));
-        assert_eq!(config.chain.genesis.sequencer_address, address!("0x100"));
-        assert_eq!(config.chain.genesis.gas_prices.eth, 9999);
-        assert_eq!(config.chain.genesis.gas_prices.strk, 8888);
-        assert_eq!(config.chain.id, ChainId::Id(Felt::from_str("0x123").unwrap()));
+        assert_eq!(config.chain.genesis().number, 0);
+        assert_eq!(config.chain.genesis().parent_hash, felt!("0x999"));
+        assert_eq!(config.chain.genesis().timestamp, 5123512314);
+        assert_eq!(config.chain.genesis().state_root, felt!("0x99"));
+        assert_eq!(config.chain.genesis().sequencer_address, address!("0x100"));
+        assert_eq!(config.chain.genesis().gas_prices.eth, 9999);
+        assert_eq!(config.chain.genesis().gas_prices.strk, 8888);
+        assert_eq!(config.chain.id(), ChainId::Id(Felt::from_str("0x123").unwrap()));
     }
 
     #[test]
