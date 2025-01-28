@@ -56,7 +56,7 @@ where
         // ERC1155 TransferBatch event data format:
         // - ids_len: felt (first element)
         // - ids: U256[] (each element stored as 2 felts: [low, high])
-        // - values_len: felt 
+        // - values_len: felt
         // - values: U256[] (each element stored as 2 felts: [low, high])
         // Spec reference: https://eips.ethereum.org/EIPS/eip-1155#transferbatch
         let ids_len = event.data[0].try_into().unwrap_or(0u64) as usize;
