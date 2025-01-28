@@ -108,7 +108,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Processors<P> {
                 ],
             ),
             (
-                ContractType::CARTRIDGE,
+                ContractType::UDC,
                 vec![Box::new(ControllerProcessor) as Box<dyn EventProcessor<P>>],
             ),
         ];

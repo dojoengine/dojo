@@ -3,9 +3,10 @@ use std::hash::{DefaultHasher, Hash, Hasher};
 use anyhow::{Error, Result};
 use async_trait::async_trait;
 use dojo_world::contracts::world::WorldContractReader;
-use starknet::core::types::Event;
+use starknet::{core::types::Event, macros::felt};
 use starknet::core::utils::parse_cairo_short_string;
 use starknet::providers::Provider;
+use starknet_crypto::Felt;
 use torii_sqlite::Sql;
 use tracing::{debug, info};
 
@@ -13,6 +14,13 @@ use super::{EventProcessor, EventProcessorConfig};
 use crate::task_manager::{TaskId, TaskPriority};
 
 pub(crate) const LOG_TARGET: &str = "torii_indexer::processors::controller";
+
+pub(crate) const CARTRIDGE_PAYMASTER_EUWEST3_ADDRESS: Felt =
+    felt!("0x359a81f67140632ec91c7f9af3fc0b5bca0a898ae0be3f7682585b0f40119a7");
+pub(crate) const CARTRIDGE_PAYMASTER_SEA1_ADDRESS: Felt =
+    felt!("0x07a0f23c43a291282d093e85f7fb7c0e23a66d02c10fead324ce4c3d56c4bd67");
+pub(crate) const CARTRIDGE_PAYMASTER_USEAST4_ADDRESS: Felt =
+    felt!("0x2d2e564dd4faa14277fefd0d8cb95e83b13c0353170eb6819ec35bf1bee8e2a");
 
 #[derive(Default, Debug)]
 pub struct ControllerProcessor;
@@ -28,7 +36,7 @@ where
 
     fn validate(&self, event: &Event) -> bool {
         // ContractDeployed event has no keys and contains username in data
-        event.keys.is_empty() && !event.data.is_empty()
+        event.keys.len() == 1 && !event.data.is_empty()
     }
 
     fn task_priority(&self) -> TaskPriority {
@@ -52,11 +60,23 @@ where
         event: &Event,
         _config: &EventProcessorConfig,
     ) -> Result<(), Error> {
+        // Address is the first felt in data
+        let address = event.data[0];
+        // Deployer is the second felt in data
+        let deployer = event.data[1];
+
+        // Check if the deployer is a cartridge paymaster
+        if !CARTRIDGE_PAYMASTER_EUWEST3_ADDRESS.eq(&deployer)
+            && !CARTRIDGE_PAYMASTER_SEA1_ADDRESS.eq(&deployer)
+            && !CARTRIDGE_PAYMASTER_USEAST4_ADDRESS.eq(&deployer)
+        {
+            // ignore non-cartridge controller deployments
+            return Ok(());
+        }
+
         // Last felt in data is the salt which is the username encoded as short string
         let username_felt = event.data[event.data.len() - 1];
         let username = parse_cairo_short_string(&username_felt)?;
-        // Address is the first felt in data
-        let address = event.data[0];
 
         info!(
             target: LOG_TARGET,

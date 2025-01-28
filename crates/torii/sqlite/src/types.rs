@@ -156,7 +156,7 @@ pub enum ContractType {
     WORLD,
     ERC20,
     ERC721,
-    CARTRIDGE,
+    UDC,
 }
 
 impl std::fmt::Display for Contract {
@@ -173,7 +173,7 @@ impl FromStr for ContractType {
             "world" => Ok(ContractType::WORLD),
             "erc20" => Ok(ContractType::ERC20),
             "erc721" => Ok(ContractType::ERC721),
-            "cartridge" => Ok(ContractType::CARTRIDGE),
+            "udc" => Ok(ContractType::UDC),
             _ => Err(anyhow::anyhow!("Invalid ERC type: {}", input)),
         }
     }
@@ -185,7 +185,7 @@ impl std::fmt::Display for ContractType {
             ContractType::WORLD => write!(f, "WORLD"),
             ContractType::ERC20 => write!(f, "ERC20"),
             ContractType::ERC721 => write!(f, "ERC721"),
-            ContractType::CARTRIDGE => write!(f, "CARTRIDGE"),
+            ContractType::UDC => write!(f, "UDC"),
         }
     }
 }

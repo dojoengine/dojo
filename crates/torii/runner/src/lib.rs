@@ -17,6 +17,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use camino::Utf8PathBuf;
+use constants::UDC_ADDRESS;
 use dojo_metrics::exporters::prometheus::PrometheusRecorder;
 use dojo_world::contracts::world::WorldContractReader;
 use sqlx::sqlite::{
@@ -44,10 +45,7 @@ use url::form_urlencoded;
 
 mod constants;
 
-use crate::constants::{
-    CARTRIDGE_PAYMASTER_EUWEST3_ADDRESS, CARTRIDGE_PAYMASTER_SEA1_ADDRESS,
-    CARTRIDGE_PAYMASTER_USEAST4_ADDRESS, LOG_TARGET,
-};
+use crate::constants::LOG_TARGET;
 
 #[derive(Debug, Clone)]
 pub struct Runner {
@@ -72,18 +70,10 @@ impl Runner {
             .push(Contract { address: world_address, r#type: ContractType::WORLD });
 
         if self.args.indexing.cartridge {
-            self.args.indexing.contracts.push(Contract {
-                address: CARTRIDGE_PAYMASTER_EUWEST3_ADDRESS,
-                r#type: ContractType::CARTRIDGE,
-            });
-            self.args.indexing.contracts.push(Contract {
-                address: CARTRIDGE_PAYMASTER_SEA1_ADDRESS,
-                r#type: ContractType::CARTRIDGE,
-            });
-            self.args.indexing.contracts.push(Contract {
-                address: CARTRIDGE_PAYMASTER_USEAST4_ADDRESS,
-                r#type: ContractType::CARTRIDGE,
-            });
+            self.args
+                .indexing
+                .contracts
+                .push(Contract { address: UDC_ADDRESS, r#type: ContractType::UDC });
         }
 
         let filter_layer = EnvFilter::try_from_default_env()
