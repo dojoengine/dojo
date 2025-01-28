@@ -156,7 +156,7 @@ pub enum ContractType {
     WORLD,
     ERC20,
     ERC721,
-    CARTRIDGE
+    CARTRIDGE,
 }
 
 impl std::fmt::Display for Contract {

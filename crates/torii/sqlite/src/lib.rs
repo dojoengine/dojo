@@ -845,10 +845,7 @@ impl Sql {
             Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
         ];
 
-        self.executor.send(QueryMessage::other(
-            insert_controller.to_string(),
-            arguments,
-        ))?;
+        self.executor.send(QueryMessage::other(insert_controller.to_string(), arguments))?;
 
         Ok(())
     }
