@@ -6,5 +6,4 @@ CREATE TABLE controllers (
     deployed_at TIMESTAMP NOT NULL -- Block timestamp of deployment
 );
 
-CREATE INDEX idx_controllers_username ON controllers (username);
 CREATE INDEX idx_controllers_address ON controllers (address);
