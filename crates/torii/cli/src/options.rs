@@ -178,7 +178,7 @@ pub struct IndexingOptions {
         help = "Whether or not to index Cartridge controllers."
     )]
     #[serde(default)]
-    pub cartridge: bool,
+    pub controllers: bool,
 }
 
 impl Default for IndexingOptions {
@@ -193,7 +193,7 @@ impl Default for IndexingOptions {
             max_concurrent_tasks: DEFAULT_MAX_CONCURRENT_TASKS,
             namespaces: vec![],
             world_block: 0,
-            cartridge: false,
+            controllers: false,
         }
     }
 }
@@ -237,8 +237,8 @@ impl IndexingOptions {
                 self.world_block = other.world_block;
             }
 
-            if !self.cartridge {
-                self.cartridge = other.cartridge;
+            if !self.controllers {
+                self.controllers = other.controllers;
             }
         }
     }
