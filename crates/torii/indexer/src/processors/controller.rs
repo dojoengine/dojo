@@ -10,7 +10,7 @@ use starknet::macros::felt;
 use starknet::providers::Provider;
 use starknet_crypto::Felt;
 use torii_sqlite::Sql;
-use tracing::{debug, info};
+use tracing::info;
 
 use super::{EventProcessor, EventProcessorConfig};
 use crate::task_manager::{TaskId, TaskPriority};
@@ -114,15 +114,7 @@ where
             target: LOG_TARGET,
             username = %username,
             address = %address,
-            "New controller deployed"
-        );
-
-        debug!(
-            target: LOG_TARGET,
-            username = %username,
-            address = %address,
-            event_id = %event_id,
-            "Processing controller deployment"
+            "Controller deployed."
         );
 
         db.add_controller(&username, &format!("{address:#x}"), block_timestamp).await?;
