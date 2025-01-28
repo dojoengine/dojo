@@ -94,7 +94,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     container:
-      image: ubuntu:noble
+      image: debian:bookworm-slim
     steps:
       - uses: actions/download-artifact@v4
         with:
