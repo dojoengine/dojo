@@ -37,7 +37,8 @@ where
 
     fn task_identifier(&self, event: &Event) -> TaskId {
         let mut hasher = DefaultHasher::new();
-        event.data[event.data.len() - 1].hash(&mut hasher);
+        // the contract address is the first felt in data
+        event.data[0].hash(&mut hasher);
         hasher.finish()
     }
 
