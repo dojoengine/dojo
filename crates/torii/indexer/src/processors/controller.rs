@@ -113,7 +113,7 @@ where
         info!(
             target: LOG_TARGET,
             username = %username,
-            address = %address,
+            address = %format!("{address:#x}"),
             "Controller deployed."
         );
 
