@@ -4,9 +4,10 @@ use anyhow::{Error, Result};
 use async_trait::async_trait;
 use dojo_world::contracts::world::WorldContractReader;
 use lazy_static::lazy_static;
+use starknet::core::types::Event;
 use starknet::core::utils::parse_cairo_short_string;
+use starknet::macros::felt;
 use starknet::providers::Provider;
-use starknet::{core::types::Event, macros::felt};
 use starknet_crypto::Felt;
 use torii_sqlite::Sql;
 use tracing::{debug, info};
@@ -90,7 +91,7 @@ where
         let address = event.data[0];
 
         let calldata = event.data[5..].to_vec();
-        
+
         // check for this sequence of felts
         let cartridge_magic_len = calldata[2];
         // length has to be 22
@@ -98,6 +99,7 @@ where
             return Ok(());
         }
 
+        // this should never fail if since our len is 22
         let cartridge_magic: [Felt; 22] = calldata[3..25].try_into().unwrap();
 
         // has to match with https://x.cartridge.gg/

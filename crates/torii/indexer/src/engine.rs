@@ -107,10 +107,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Processors<P> {
                     Box::new(Erc721LegacyTransferProcessor) as Box<dyn EventProcessor<P>>,
                 ],
             ),
-            (
-                ContractType::UDC,
-                vec![Box::new(ControllerProcessor) as Box<dyn EventProcessor<P>>],
-            ),
+            (ContractType::UDC, vec![Box::new(ControllerProcessor) as Box<dyn EventProcessor<P>>]),
         ];
 
         for (contract_type, processors) in event_processors {
