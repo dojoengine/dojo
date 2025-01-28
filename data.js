@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1738037149804,
+  "lastUpdate": 1738037196170,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -48151,6 +48151,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 12609366094,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "distinct": true,
+          "id": "dd7e42d92ecd5cf59354a34c5dbe6f9d6e20ed0e",
+          "message": "ci(release): use rust 1.81",
+          "timestamp": "2025-01-27T21:48:33-06:00",
+          "tree_id": "72ded6072c0cd550843b5d5bedfdf31c622978e9",
+          "url": "https://github.com/dojoengine/dojo/commit/dd7e42d92ecd5cf59354a34c5dbe6f9d6e20ed0e"
+        },
+        "date": 1738037194058,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2446903,
+            "range": "± 23347",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8410692,
+            "range": "± 139969",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2555778996,
+            "range": "± 245042894",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 7584551,
+            "range": "± 289108",
             "unit": "ns/iter"
           }
         ]
