@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1738107691882,
+  "lastUpdate": 1738107780519,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -48697,6 +48697,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 12133383564,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "remy.baranx@gmail.com",
+            "name": "Rémy Baranx",
+            "username": "remybar"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "17cda07a333e8c157c38dc455ad27472bbd75740",
+          "message": "feat(dojo-core): make the schema upgrade less strict (#2925)\n\n* core: less strict for schema upgrade checking\r\n\r\n* improve primitive upgrade check\r\n\r\n* update tests\r\n\r\n* fixed layouts cannot be upgraded\r\n\r\n* variant renaming is not allowed\r\n\r\n* add a test to be sure that variant without data cannot be upgraded to a variant with data\r\n\r\n* read back model values after an upgrade\r\n\r\n* add primitive type upgrade performance check\r\n\r\n* Improve primitive upgrade check performance\r\n\r\n* rebuild artifacts + some fixes\r\n\r\n* limit key member enum type upgrade to variant adding\r\n\r\n* rebuild artifacts\r\n\r\n* remove starknet:: prefix for ContractAddress and ClassHash introspection + panic if unknown primitive\r\n\r\n* support EthAddress primitive type introspection\r\n\r\n* update test artifacts\r\n\r\n* support 'starknet::ContractAddress' and 'starknet::ClassHash' primitives introspection for backward compatibility\r\n\r\n* update test artifacts\r\n\r\n* some adjusments to be consistent\r\n\r\n* update test artifacts\r\n\r\n* cannot upgrade primitive to usize + Option<T> test\r\n\r\n* ban usize usage for introspect and model keys\r\n\r\n* update test artifacts\r\n\r\n* chore: bump scarb\r\n\r\n* tests: update test db\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2025-01-28T23:25:03Z",
+          "tree_id": "9b110f196715fc2c14a42e692e6cca47958aa9e3",
+          "url": "https://github.com/dojoengine/dojo/commit/17cda07a333e8c157c38dc455ad27472bbd75740"
+        },
+        "date": 1738107778077,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2566830,
+            "range": "± 33721",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8191280,
+            "range": "± 285030",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2565738554,
+            "range": "± 208459197",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 7592236,
+            "range": "± 548371",
             "unit": "ns/iter"
           }
         ]
