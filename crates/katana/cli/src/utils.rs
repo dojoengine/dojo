@@ -10,7 +10,9 @@ use katana_primitives::block::{BlockHash, BlockHashOrNumber, BlockNumber};
 use katana_primitives::class::ClassHash;
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::genesis::allocation::GenesisAccountAlloc;
-use katana_primitives::genesis::constant::{DEFAULT_LEGACY_UDC_CLASS_HASH, DEFAULT_UDC_ADDRESS};
+use katana_primitives::genesis::constant::{
+    DEFAULT_LEGACY_ERC20_CLASS_HASH, DEFAULT_LEGACY_UDC_CLASS_HASH, DEFAULT_UDC_ADDRESS,
+};
 use katana_primitives::genesis::json::GenesisJson;
 use katana_primitives::genesis::Genesis;
 use katana_rpc::cors::HeaderValue;
@@ -123,24 +125,41 @@ ACCOUNTS SEED
     }
 }
 
-fn print_genesis_contracts(_chain: &ChainSpec, account_class_hash: Option<ClassHash>) {
-    //     println!(
-    //         r"
-    // PREDEPLOYED CONTRACTS
-    // ==================
+fn print_genesis_contracts(chain: &ChainSpec, account_class_hash: Option<ClassHash>) {
+    match chain {
+        ChainSpec::Dev(cs) => {
+            println!(
+                r"
+PREDEPLOYED CONTRACTS
+==================
 
-    // | Contract        | ETH Fee Token
-    // | Address         | {}
-    // | Class Hash      | {:#064x}
+| Contract        | ETH Fee Token
+| Address         | {}
+| Class Hash      | {:#064x}
 
-    // | Contract        | STRK Fee Token
-    // | Address         | {}
-    // | Class Hash      | {:#064x}",
-    //         chain.fee_contracts.eth,
-    //         DEFAULT_LEGACY_ERC20_CLASS_HASH,
-    //         chain.fee_contracts.strk,
-    //         DEFAULT_LEGACY_ERC20_CLASS_HASH
-    //     );
+| Contract        | STRK Fee Token
+| Address         | {}
+| Class Hash      | {:#064x}",
+                cs.fee_contracts.eth,
+                DEFAULT_LEGACY_ERC20_CLASS_HASH,
+                cs.fee_contracts.strk,
+                DEFAULT_LEGACY_ERC20_CLASS_HASH
+            );
+        }
+
+        ChainSpec::Rollup(cs) => {
+            println!(
+                r"
+PREDEPLOYED CONTRACTS
+==================
+
+| Contract        | STRK Fee Token
+| Address         | {}
+| Class Hash      | {:#064x}",
+                cs.fee_contract.strk, DEFAULT_LEGACY_ERC20_CLASS_HASH,
+            );
+        }
+    }
 
     println!(
         r"
