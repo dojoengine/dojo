@@ -88,7 +88,6 @@ pub struct ExecutionStats {
 /// The output of a executor after a series of executions.
 #[derive(Debug, Default)]
 pub struct ExecutionOutput {
-    // pub block_env: BlockEnv,
     /// Statistics throughout the executions process.
     pub stats: ExecutionStats,
     /// The state updates produced by the executions.
