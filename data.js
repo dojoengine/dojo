@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1738089194898,
+  "lastUpdate": 1738099166083,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -48433,6 +48433,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8191956,
             "range": "± 327959",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "48bbb22dd6cff903c597998cec3e3e4676e3d7f9",
+          "message": "feat(katana): rollup and dev chain spec (#2957)\n\nThe main idea of this PR is **(1)** to define concrete types for the different ways the node chain spec can be configured, and **(2)** implement different genesis initialization procedures based on the chain spec types.\r\n\r\nWe define two separate chain spec types (but combined as an enum when it is consumed by the node):-\r\n\r\n1. `katana_chain_spec::dev::ChainSpec`\r\n\t- Use the same genesis initialization function as it is now.\r\n\t- No execution, genesis block and states are embedded directly into the database. \r\n\t- Node running with this chain spec type is not meant to be provable (as the block 0 is not provable).\r\n\t\r\n2. `katana_chain_spec::rollup::ChainSpec`\r\n\t- Initialized by executing the block returned by `rollup::ChainSpec::block()`.\r\n\t- The block contains valid, executable transactions generated from the chain spec's genesis.\r\n\t- The transactions are guaranteed to be valid when they are executed by `snos`*, as they are meant to be provable.\r\n\t\r\nBy defining these types separately, the node can handle the different setup processes more clearly.\r\n\r\n---\r\n\r\n\\* Our version of [`snos`](https://github.com/cartridge-gg/snos/pull/1)",
+          "timestamp": "2025-01-29T05:03:07+08:00",
+          "tree_id": "6e49d2e267a101ea4a4dcc139a9e8b7af459da23",
+          "url": "https://github.com/dojoengine/dojo/commit/48bbb22dd6cff903c597998cec3e3e4676e3d7f9"
+        },
+        "date": 1738099164057,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 11519365857,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
