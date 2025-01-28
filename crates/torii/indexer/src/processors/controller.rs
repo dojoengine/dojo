@@ -79,7 +79,7 @@ where
         db: &mut Sql,
         _block_number: u64,
         block_timestamp: u64,
-        event_id: &str,
+        _event_id: &str,
         event: &Event,
         _config: &EventProcessorConfig,
     ) -> Result<(), Error> {
