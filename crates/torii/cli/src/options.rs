@@ -170,6 +170,15 @@ pub struct IndexingOptions {
     )]
     #[serde(default)]
     pub world_block: u64,
+
+    /// Whether or not to index Cartridge controllers.
+    #[arg(
+        long = "indexing.cartridge",
+        default_value_t = false,
+        help = "Whether or not to index Cartridge controllers."
+    )]
+    #[serde(default)]
+    pub cartridge: bool,
 }
 
 impl Default for IndexingOptions {
@@ -184,6 +193,7 @@ impl Default for IndexingOptions {
             max_concurrent_tasks: DEFAULT_MAX_CONCURRENT_TASKS,
             namespaces: vec![],
             world_block: 0,
+            cartridge: false,
         }
     }
 }
@@ -225,6 +235,10 @@ impl IndexingOptions {
 
             if self.world_block == 0 {
                 self.world_block = other.world_block;
+            }
+
+            if !self.cartridge {
+                self.cartridge = other.cartridge;
             }
         }
     }

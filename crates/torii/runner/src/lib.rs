@@ -31,7 +31,6 @@ use tokio::sync::broadcast::Sender;
 use tokio_stream::StreamExt;
 use torii_cli::ToriiArgs;
 use torii_indexer::engine::{Engine, EngineConfig, IndexingFlags, Processors};
-use torii_indexer::processors::store_transaction::StoreTransactionProcessor;
 use torii_indexer::processors::EventProcessorConfig;
 use torii_server::proxy::Proxy;
 use torii_sqlite::cache::ModelCache;
@@ -43,7 +42,10 @@ use tracing::{error, info};
 use tracing_subscriber::{fmt, EnvFilter};
 use url::form_urlencoded;
 
-pub(crate) const LOG_TARGET: &str = "torii:runner";
+mod constants;
+
+use crate::constants::{LOG_TARGET, CARTRIDGE_PAYMASTER_EUWEST3_ADDRESS, CARTRIDGE_PAYMASTER_SEA1_ADDRESS, CARTRIDGE_PAYMASTER_USEAST4_ADDRESS};
+
 
 #[derive(Debug, Clone)]
 pub struct Runner {
@@ -66,6 +68,12 @@ impl Runner {
             .indexing
             .contracts
             .push(Contract { address: world_address, r#type: ContractType::WORLD });
+
+        if self.args.indexing.cartridge {
+            self.args.indexing.contracts.push(Contract { address: CARTRIDGE_PAYMASTER_EUWEST3_ADDRESS, r#type: ContractType::CARTRIDGE });
+            self.args.indexing.contracts.push(Contract { address: CARTRIDGE_PAYMASTER_SEA1_ADDRESS, r#type: ContractType::CARTRIDGE });
+            self.args.indexing.contracts.push(Contract { address: CARTRIDGE_PAYMASTER_USEAST4_ADDRESS, r#type: ContractType::CARTRIDGE });
+        }
 
         let filter_layer = EnvFilter::try_from_default_env()
             .unwrap_or_else(|_| EnvFilter::new("info,hyper_reverse_proxy=off"));
@@ -147,10 +155,7 @@ impl Runner {
         )
         .await?;
 
-        let processors = Processors {
-            transaction: vec![Box::new(StoreTransactionProcessor)],
-            ..Processors::default()
-        };
+        let processors = Processors::default();
 
         let (block_tx, block_rx) = tokio::sync::mpsc::channel(100);
 
