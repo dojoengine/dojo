@@ -1,48 +1,51 @@
-use std::collections::HashMap;
 use std::hash::{DefaultHasher, Hash, Hasher};
 
 use anyhow::{Error, Result};
 use async_trait::async_trait;
 use dojo_world::contracts::world::WorldContractReader;
+use lazy_static::lazy_static;
 use starknet::core::utils::parse_cairo_short_string;
 use starknet::providers::Provider;
 use starknet::{core::types::Event, macros::felt};
 use starknet_crypto::Felt;
 use torii_sqlite::Sql;
 use tracing::{debug, info};
-use lazy_static::lazy_static;
 
 use super::{EventProcessor, EventProcessorConfig};
 use crate::task_manager::{TaskId, TaskPriority};
 
 pub(crate) const LOG_TARGET: &str = "torii_indexer::processors::controller";
 
-pub(crate) const CARTRIDGE_PAYMASTER_EUWEST3_ADDRESS: Felt =
-    felt!("0x359a81f67140632ec91c7f9af3fc0b5bca0a898ae0be3f7682585b0f40119a7");
-pub(crate) const CARTRIDGE_PAYMASTER_SEA1_ADDRESS: Felt =
-    felt!("0x07a0f23c43a291282d093e85f7fb7c0e23a66d02c10fead324ce4c3d56c4bd67");
-pub(crate) const CARTRIDGE_PAYMASTER_USEAST4_ADDRESS: Felt =
-    felt!("0x2d2e564dd4faa14277fefd0d8cb95e83b13c0353170eb6819ec35bf1bee8e2a");
-
-lazy_static! {
-    pub(crate) static ref PAYMASTER_ACCOUNTS: HashMap<String, bool> = {
-        let mut map = HashMap::new();
-        map.insert(format!("{CARTRIDGE_PAYMASTER_EUWEST3_ADDRESS:#064x}"), true);
-        map.insert(format!("{CARTRIDGE_PAYMASTER_SEA1_ADDRESS:#064x}"), true);
-        map.insert(format!("{CARTRIDGE_PAYMASTER_USEAST4_ADDRESS:#064x}"), true);
-
-        let accounts_csv = include_str!("./paymaster_accounts.csv");
-        for line in accounts_csv.lines().skip(1) {
-            let parts = line.split(',').collect::<Vec<&str>>();
-            let address = parts[0];
-            map.insert(address.to_string(), true);
-        }
-        map
-    };
-}
-
 #[derive(Default, Debug)]
 pub struct ControllerProcessor;
+
+lazy_static! {
+    // https://x.cartridge.gg/
+    pub(crate) static ref CARTRIDGE_MAGIC: [Felt; 22] = [
+        felt!("0x68"),
+        felt!("0x74"),
+        felt!("0x74"),
+        felt!("0x70"),
+        felt!("0x73"),
+        felt!("0x3a"),
+        felt!("0x2f"),
+        felt!("0x2f"),
+        felt!("0x78"),
+        felt!("0x2e"),
+        felt!("0x63"),
+        felt!("0x61"),
+        felt!("0x72"),
+        felt!("0x74"),
+        felt!("0x72"),
+        felt!("0x69"),
+        felt!("0x64"),
+        felt!("0x67"),
+        felt!("0x65"),
+        felt!("0x2e"),
+        felt!("0x67"),
+        felt!("0x67"),
+    ];
+}
 
 #[async_trait]
 impl<P> EventProcessor<P> for ControllerProcessor
@@ -79,14 +82,26 @@ where
         event: &Event,
         _config: &EventProcessorConfig,
     ) -> Result<(), Error> {
+        if event.data.len() < 29 {
+            return Ok(());
+        }
+
         // Address is the first felt in data
         let address = event.data[0];
-        // Deployer is the second felt in data
-        let deployer = event.data[1];
 
-        // Check if the deployer is a cartridge paymaster
-        if !PAYMASTER_ACCOUNTS.contains_key(&format!("{deployer:#064x}")) {
-            // ignore non-cartridge controller deployments
+        let calldata = event.data[5..].to_vec();
+        
+        // check for this sequence of felts
+        let cartridge_magic_len = calldata[2];
+        // length has to be 22
+        if cartridge_magic_len != Felt::from(22) {
+            return Ok(());
+        }
+
+        let cartridge_magic: [Felt; 22] = calldata[3..25].try_into().unwrap();
+
+        // has to match with https://x.cartridge.gg/
+        if !CARTRIDGE_MAGIC.eq(&cartridge_magic) {
             return Ok(());
         }
 
