@@ -1,14 +1,16 @@
+use std::collections::HashMap;
 use std::hash::{DefaultHasher, Hash, Hasher};
 
 use anyhow::{Error, Result};
 use async_trait::async_trait;
 use dojo_world::contracts::world::WorldContractReader;
-use starknet::{core::types::Event, macros::felt};
 use starknet::core::utils::parse_cairo_short_string;
 use starknet::providers::Provider;
+use starknet::{core::types::Event, macros::felt};
 use starknet_crypto::Felt;
 use torii_sqlite::Sql;
 use tracing::{debug, info};
+use lazy_static::lazy_static;
 
 use super::{EventProcessor, EventProcessorConfig};
 use crate::task_manager::{TaskId, TaskPriority};
@@ -21,6 +23,23 @@ pub(crate) const CARTRIDGE_PAYMASTER_SEA1_ADDRESS: Felt =
     felt!("0x07a0f23c43a291282d093e85f7fb7c0e23a66d02c10fead324ce4c3d56c4bd67");
 pub(crate) const CARTRIDGE_PAYMASTER_USEAST4_ADDRESS: Felt =
     felt!("0x2d2e564dd4faa14277fefd0d8cb95e83b13c0353170eb6819ec35bf1bee8e2a");
+
+lazy_static! {
+    pub(crate) static ref PAYMASTER_ACCOUNTS: HashMap<String, bool> = {
+        let mut map = HashMap::new();
+        map.insert(format!("{CARTRIDGE_PAYMASTER_EUWEST3_ADDRESS:#064x}"), true);
+        map.insert(format!("{CARTRIDGE_PAYMASTER_SEA1_ADDRESS:#064x}"), true);
+        map.insert(format!("{CARTRIDGE_PAYMASTER_USEAST4_ADDRESS:#064x}"), true);
+
+        let accounts_csv = include_str!("./paymaster_accounts.csv");
+        for line in accounts_csv.lines().skip(1) {
+            let parts = line.split(',').collect::<Vec<&str>>();
+            let address = parts[0];
+            map.insert(address.to_string(), true);
+        }
+        map
+    };
+}
 
 #[derive(Default, Debug)]
 pub struct ControllerProcessor;
@@ -66,10 +85,7 @@ where
         let deployer = event.data[1];
 
         // Check if the deployer is a cartridge paymaster
-        if !CARTRIDGE_PAYMASTER_EUWEST3_ADDRESS.eq(&deployer)
-            && !CARTRIDGE_PAYMASTER_SEA1_ADDRESS.eq(&deployer)
-            && !CARTRIDGE_PAYMASTER_USEAST4_ADDRESS.eq(&deployer)
-        {
+        if !PAYMASTER_ACCOUNTS.contains_key(&format!("{deployer:#064x}")) {
             // ignore non-cartridge controller deployments
             return Ok(());
         }
