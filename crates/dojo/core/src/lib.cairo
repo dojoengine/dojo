@@ -29,7 +29,7 @@ pub mod meta {
     };
 
     pub mod introspect;
-    pub use introspect::{Introspect, Ty, StructCompareTrait};
+    pub use introspect::{Introspect, Ty, TyCompareTrait};
 
     pub mod layout;
     pub use layout::{Layout, FieldLayout, LayoutCompareTrait};

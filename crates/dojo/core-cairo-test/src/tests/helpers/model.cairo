@@ -1,3 +1,4 @@
+use dojo::model::ModelStorage;
 use core::starknet::ContractAddress;
 
 use dojo::world::IWorldDispatcher;
@@ -54,6 +55,33 @@ struct FooModelMemberAdded {
     pub b: u128,
 }
 
+#[derive(Introspect, Copy, Drop, Serde)]
+enum MyEnum {
+    X: u8,
+}
+
+#[derive(Introspect, Copy, Drop, Serde)]
+#[dojo::model]
+struct FooModelMemberChanged {
+    #[key]
+    pub caller: ContractAddress,
+    pub a: (MyEnum, u8),
+    pub b: u128,
+}
+
+#[derive(Introspect, Copy, Drop, Serde)]
+enum AnotherEnum {
+    X: u8,
+}
+
+#[derive(Introspect, Copy, Drop, Serde)]
+#[dojo::model]
+struct FooModelMemberIllegalChange {
+    #[key]
+    pub caller: ContractAddress,
+    pub a: AnotherEnum,
+    pub b: u128,
+}
 
 pub fn deploy_world_for_model_upgrades() -> IWorldDispatcher {
     let namespace_def = NamespaceDef {
@@ -66,8 +94,20 @@ pub fn deploy_world_for_model_upgrades() -> IWorldDispatcher {
             ),
             TestResource::Model(m_FooModelMemberAddedButMoved::TEST_CLASS_HASH.try_into().unwrap()),
             TestResource::Model(m_FooModelMemberAdded::TEST_CLASS_HASH.try_into().unwrap()),
+            TestResource::Model(m_FooModelMemberChanged::TEST_CLASS_HASH.try_into().unwrap()),
+            TestResource::Model(m_FooModelMemberIllegalChange::TEST_CLASS_HASH.try_into().unwrap()),
         ]
             .span(),
     };
-    spawn_test_world([namespace_def].span()).dispatcher
+    let world = spawn_test_world([namespace_def].span()).dispatcher;
+
+    // write some model values to be able to check if after a successfully upgrade, these values
+    // remain the same
+    let mut world_storage = dojo::world::WorldStorageTrait::new(world, @"dojo");
+    let caller = starknet::contract_address_const::<0xb0b>();
+
+    world_storage.write_model(@FooModelMemberAdded { caller, a: 123, b: 456 });
+    world_storage.write_model(@FooModelMemberChanged { caller, a: (MyEnum::X(42), 189), b: 456 });
+
+    world
 }
