@@ -449,7 +449,7 @@ impl Sql {
                  WHERE entity_id = ? AND model_id = ?"
             )
             .to_string(),
-            vec![Argument::String(entity_id.clone()), Argument::String(format!("{:#x}", model_id))],
+            vec![Argument::String(entity_id.clone()), Argument::String(entity_id.clone()), Argument::String(format!("{:#x}", model_id))],
             QueryType::DeleteEntity(DeleteEntityQuery {
                 entity_id: entity_id.clone(),
                 event_id: event_id.to_string(),
