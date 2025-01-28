@@ -3,9 +3,8 @@ use std::hash::{DefaultHasher, Hash, Hasher};
 use anyhow::{Error, Result};
 use async_trait::async_trait;
 use dojo_world::contracts::world::WorldContractReader;
-use starknet::core::types::{Event, Felt};
+use starknet::core::types::Event;
 use starknet::core::utils::parse_cairo_short_string;
-use starknet::macros::short_string;
 use starknet::providers::Provider;
 use torii_sqlite::Sql;
 use tracing::{debug, info};
@@ -13,13 +12,13 @@ use tracing::{debug, info};
 use super::{EventProcessor, EventProcessorConfig};
 use crate::task_manager::{TaskId, TaskPriority};
 
-pub(crate) const LOG_TARGET: &str = "torii_indexer::processors::controller_deployed";
+pub(crate) const LOG_TARGET: &str = "torii_indexer::processors::controller";
 
 #[derive(Default, Debug)]
-pub struct ControllerDeployedProcessor;
+pub struct ControllerProcessor;
 
 #[async_trait]
-impl<P> EventProcessor<P> for ControllerDeployedProcessor
+impl<P> EventProcessor<P> for ControllerProcessor
 where
     P: Provider + Send + Sync + std::fmt::Debug,
 {

@@ -28,6 +28,7 @@ use torii_sqlite::{Cursors, Sql};
 use tracing::{debug, error, info, trace, warn};
 
 use crate::constants::LOG_TARGET;
+use crate::processors::controller::ControllerProcessor;
 use crate::processors::erc20_legacy_transfer::Erc20LegacyTransferProcessor;
 use crate::processors::erc20_transfer::Erc20TransferProcessor;
 use crate::processors::erc721_legacy_transfer::Erc721LegacyTransferProcessor;
@@ -105,6 +106,10 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Processors<P> {
                     Box::new(Erc721TransferProcessor) as Box<dyn EventProcessor<P>>,
                     Box::new(Erc721LegacyTransferProcessor) as Box<dyn EventProcessor<P>>,
                 ],
+            ),
+            (
+                ContractType::CARTRIDGE,
+                vec![Box::new(ControllerProcessor) as Box<dyn EventProcessor<P>>],
             ),
         ];
 
