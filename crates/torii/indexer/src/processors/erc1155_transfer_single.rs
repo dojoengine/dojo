@@ -27,10 +27,7 @@ where
     fn validate(&self, event: &Event) -> bool {
         // key: [hash(TransferSingle), operator, from, to]
         // data: [id.low, id.high, value.low, value.high]
-        if event.keys.len() == 4 && event.data.len() == 4 {
-            return true;
-        }
-        false
+        event.keys.len() == 4 && event.data.len() == 4
     }
 
     fn task_priority(&self) -> TaskPriority {

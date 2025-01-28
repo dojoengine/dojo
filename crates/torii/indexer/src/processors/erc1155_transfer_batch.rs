@@ -28,10 +28,7 @@ where
         // key: [hash(TransferBatch), operator, from, to]
         // data: [ids_len, ids[0].low, ids[0].high, ..., values_len, values[0].low, values[0].high,
         // ...]
-        if event.keys.len() == 4 && !event.data.is_empty() {
-            return true;
-        }
-        false
+        event.keys.len() == 4 && !event.data.is_empty()
     }
 
     fn task_priority(&self) -> TaskPriority {
@@ -56,6 +53,12 @@ where
         let from = event.keys[2];
         let to = event.keys[3];
 
+        // ERC1155 TransferBatch event data format:
+        // - ids_len: felt (first element)
+        // - ids: U256[] (each element stored as 2 felts: [low, high])
+        // - values_len: felt 
+        // - values: U256[] (each element stored as 2 felts: [low, high])
+        // Spec reference: https://eips.ethereum.org/EIPS/eip-1155#transferbatch
         let ids_len = event.data[0].try_into().unwrap_or(0u64) as usize;
         let mut current_idx = 1;
 
