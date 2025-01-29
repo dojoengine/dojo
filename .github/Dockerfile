@@ -42,4 +42,3 @@ WORKDIR /
 COPY --from=builder /app/target/release/katana /app/artifacts/
 COPY --from=builder /app/target/release/torii /app/artifacts/
 COPY --from=builder /app/target/release/sozo /app/artifacts/
-COPY --from=builder /app/target/release/saya /app/artifacts/
