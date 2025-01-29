@@ -299,6 +299,9 @@ async fn test_load_from_remote_del(sequencer: &RunnerCtx) {
     let _ = bootstrap_engine(world_reader, db.clone(), Arc::clone(&provider)).await.unwrap();
 
     assert_eq!(count_table("ns-PlayerConfig", &pool).await, 0);
+    assert_eq!(count_table("ns-Position", &pool).await, 0);
+    assert_eq!(count_table("ns-Moves", &pool).await, 0);
+
     // our entity model relation should be deleted
     assert_eq!(count_table("entity_model", &pool).await, 0);
     // our entity should be deleted. since we dont have any more models
