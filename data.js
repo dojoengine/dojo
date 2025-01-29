@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1738171692981,
+  "lastUpdate": 1738187847083,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -49057,6 +49057,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8152449,
             "range": "± 298387",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "010bf80bb986b8f8a59cdd668862ff7f064911d6",
+          "message": "feat(katana): check predeployed settlement contract is configured correctly (#2971)",
+          "timestamp": "2025-01-30T05:41:01+08:00",
+          "tree_id": "c35c965b280657c5d57bfc56a1c5f6986f4e7179",
+          "url": "https://github.com/dojoengine/dojo/commit/010bf80bb986b8f8a59cdd668862ff7f064911d6"
+        },
+        "date": 1738187844051,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 12058279019,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
