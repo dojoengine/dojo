@@ -4,6 +4,7 @@ use clap_complete::Shell;
 use katana_cli::NodeArgs;
 use katana_node::version::VERSION;
 
+mod config;
 mod db;
 mod init;
 
@@ -24,6 +25,7 @@ impl Cli {
                 Commands::Completions(args) => args.execute(),
                 Commands::Db(args) => args.execute(),
                 Commands::Init(args) => args.execute(),
+                Commands::Config(args) => args.execute(),
             };
         }
 
@@ -33,8 +35,11 @@ impl Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    #[command(about = "Initialize chain", hide = true)]
+    #[command(about = "Initialize chain")]
     Init(init::InitArgs),
+
+    #[command(about = "Chain configuration utilities")]
+    Config(config::ConfigArgs),
 
     #[command(about = "Database utilities")]
     Db(db::DbArgs),
