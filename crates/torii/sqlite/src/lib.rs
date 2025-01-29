@@ -441,16 +441,14 @@ impl Sql {
         block_timestamp: u64,
     ) -> Result<()> {
         let entity_id = format!("{:#x}", entity_id);
+        let model_id = format!("{:#x}", model_id);
         let model_table = entity.name();
 
         self.executor.send(QueryMessage::new(
-            format!(
-                "DELETE FROM [{model_table}] WHERE internal_id = ?; DELETE FROM entity_model \
-                 WHERE entity_id = ? AND model_id = ?"
-            )
-            .to_string(),
-            vec![Argument::String(entity_id.clone()), Argument::String(format!("{:#x}", model_id))],
+            format!("DELETE FROM [{model_table}] WHERE internal_id = ?").to_string(),
+            vec![Argument::String(entity_id.clone())],
             QueryType::DeleteEntity(DeleteEntityQuery {
+                model_id: model_id.clone(),
                 entity_id: entity_id.clone(),
                 event_id: event_id.to_string(),
                 block_timestamp: utc_dt_string_from_timestamp(block_timestamp),
