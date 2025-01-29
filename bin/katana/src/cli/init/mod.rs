@@ -20,7 +20,7 @@ use starknet::core::utils::{cairo_short_string_to_felt, parse_cairo_short_string
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider, Url};
 use starknet::signers::{LocalWallet, SigningKey};
-use tokio::runtime::Runtime;
+use tokio::runtime::Runtime as AsyncRuntime;
 
 const CARTRIDGE_SN_SEPOLIA_PROVIDER: &str = "https://api.cartridge.gg/x/starknet/sepolia";
 
@@ -53,7 +53,7 @@ impl InitArgs {
         Ok(())
     }
 
-    fn prompt(&self, rt: &Runtime) -> Result<PromptOutcome> {
+    fn prompt(&self, rt: &AsyncRuntime) -> Result<PromptOutcome> {
         let chain_id = CustomType::<String>::new("Id")
         .with_help_message("This will be the id of your rollup chain.")
         // checks that the input is a valid ascii string.
@@ -128,13 +128,6 @@ impl InitArgs {
             ExecutionEncoding::New,
         );
 
-        // TODO: uncomment once we actually using the fee token.
-        // // The L1 fee token. Must be an existing token.
-        // let fee_token = CustomType::<ContractAddress>::new("Fee token")
-        //     .with_parser(contract_exist_parser)
-        //     .with_error_message("Please enter a valid fee token (the token must exist on L1)")
-        //     .prompt()?;
-
         // The core settlement contract on L1c.
         // Prompt the user whether to deploy the settlement contract or not.
         let settlement_contract =
@@ -146,11 +139,20 @@ impl InitArgs {
             }
             // If denied, prompt the user for an already deployed contract.
             else {
-                // TODO: add a check to make sure the contract is indeed a valid settlement
-                // contract.
-                CustomType::<ContractAddress>::new("Settlement contract")
+                let address = CustomType::<ContractAddress>::new("Settlement contract")
                     .with_parser(contract_exist_parser)
-                    .prompt()?
+                    .prompt()?;
+
+                // Check that the settlement contract has been initialized with the correct program
+                // info.
+                let chain_id = cairo_short_string_to_felt(&chain_id)?;
+                rt.block_on(deployment::check_program_info(chain_id, address.into(), &l1_provider))
+                    .context(
+                        "Invalid settlement contract. The contract might have been configured \
+                         incorrectly.",
+                    )?;
+
+                address
             };
 
         Ok(PromptOutcome {
