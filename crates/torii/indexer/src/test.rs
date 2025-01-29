@@ -302,11 +302,30 @@ async fn test_load_from_remote_del(sequencer: &RunnerCtx) {
     assert_eq!(count_table("ns-Position", &pool).await, 0);
     assert_eq!(count_table("ns-Moves", &pool).await, 0);
 
-    // our entity model relations should be deleted
-    // the only one left is the one for MockToken
-    assert_eq!(count_table("entity_model", &pool).await, 1);
-    // our entity should be deleted. since we dont have any more models
-    assert_eq!(count_table("entities", &pool).await, 1);
+    // our entity model relations should be deleted for our player entity
+    let entity_model_count: i64 = sqlx::query_scalar(
+        format!(
+            "SELECT COUNT(*) FROM entity_model WHERE entity_id = '{:#x}'",
+            poseidon_hash_many(&[account.address()])
+        )
+        .as_str(),
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(entity_model_count, 0);
+    // our player entity should be deleted
+    let entity_count: i64 = sqlx::query_scalar(
+        format!(
+            "SELECT COUNT(*) FROM entities WHERE id = '{:#x}'",
+            poseidon_hash_many(&[account.address()])
+        )
+        .as_str(),
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(entity_count, 0);
 
     // TODO: check how we can have a test that is more chronological with Torii re-syncing
     // to ensure we can test intermediate states.
