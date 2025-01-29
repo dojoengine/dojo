@@ -205,7 +205,6 @@ async fn test_load_from_remote(sequencer: &RunnerCtx) {
     assert_eq!(keys, format!("{:#x}/", account.address()));
 }
 
-#[ignore = "This test is being flaky and need to find why. Sometimes it fails, sometimes it passes."]
 #[tokio::test(flavor = "multi_thread")]
 #[katana_runner::test(accounts = 10, db_dir = copy_spawn_and_move_db().as_str())]
 async fn test_load_from_remote_del(sequencer: &RunnerCtx) {
