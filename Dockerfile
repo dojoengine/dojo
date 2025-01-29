@@ -1,4 +1,4 @@
-FROM debian:bookworm-slim as builder
+FROM debian:buster-slim as builder
 
 RUN apt-get update && apt install -y git libtool automake autoconf make tini ca-certificates
 
