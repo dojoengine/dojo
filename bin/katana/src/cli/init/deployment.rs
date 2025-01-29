@@ -29,16 +29,58 @@ type InitializerAccount = SingleOwnerAccount<RpcProvider, LocalWallet>;
 #[rustfmt::skip]
 abigen!(
     AppchainContract,
-    "[{\"type\":\"function\",\"name\":\"set_program_info\",\"inputs\":[{\"name\":\"\
-     program_hash\",\"type\":\"core::Felt\"},{\"name\":\"config_hash\",\"type\":\"\
-     core::Felt\"}],\"outputs\":[],\"state_mutability\":\"external\"},{\"type\":\"\
-     function\",\"name\":\"set_facts_registry\",\"inputs\":[{\"name\":\"address\",\"type\"\
-     :\"core::starknet::contract_address::ContractAddress\"}],\"outputs\":[],\"\
-     state_mutability\":\"external\"},{\"type\":\"function\",\"name\":\"\
-     get_facts_registry\",\"inputs\":[],\"outputs\":[{\"type\":\"\
-     core::starknet::contract_address::ContractAddress\"}],\"state_mutability\":\"view\"},\
-     {\"type\":\"function\",\"name\":\"get_program_info\",\"inputs\":[],\"outputs\":[{\"\
-     type\":\"(core::Felt, core::Felt)\"}],\"state_mutability\":\"view\"}]"
+    [
+      {
+        "type": "function",
+        "name": "set_program_info",
+        "inputs": [
+          {
+            "name": "program_hash",
+            "type": "core::Felt"
+          },
+          {
+            "name": "config_hash",
+            "type": "core::Felt"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "set_facts_registry",
+        "inputs": [
+          {
+            "name": "address",
+            "type": "core::starknet::contract_address::ContractAddress"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "get_facts_registry",
+        "inputs": [],
+        "outputs": [
+          {
+            "type": "core::starknet::contract_address::ContractAddress"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "get_program_info",
+        "inputs": [],
+        "outputs": [
+          {
+            "type": "(core::Felt, core::Felt)"
+          }
+        ],
+        "state_mutability": "view"
+      }
+    ]
 );
 
 const PROGRAM_HASH: Felt =
