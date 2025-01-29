@@ -149,7 +149,7 @@ impl InitArgs {
                 rt.block_on(deployment::check_program_info(chain_id, address.into(), &l1_provider))
                     .context(
                         "Invalid settlement contract. The contract might have been configured \
-                         incorrectly",
+                         incorrectly.",
                     )?;
 
                 address
