@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1738127040361,
+  "lastUpdate": 1738168495837,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -48901,6 +48901,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 7656141,
             "range": "± 76248",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "contact@luca-steeb.com",
+            "name": "Luca Steeb",
+            "username": "steebchen"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "38d22ac0580d79096efa41b8227bb23b1797f492",
+          "message": "ci(docker): sync dojo base image with build (#2966)\n\n* ci(docker): adapt dojo base image\r\n\r\n* Update Dockerfile\r\n\r\n* Update Dockerfile\r\n\r\n* Update Dockerfile",
+          "timestamp": "2025-01-29T10:18:46-06:00",
+          "tree_id": "69893cf8e790a1bfdd6242916b3fe876154f3017",
+          "url": "https://github.com/dojoengine/dojo/commit/38d22ac0580d79096efa41b8227bb23b1797f492"
+        },
+        "date": 1738168493655,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 12021649131,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
