@@ -1,4 +1,4 @@
-FROM debian:buster-slim as builder
+FROM ubuntu:24.04 as builder
 
 RUN apt-get update && apt install -y git libtool automake autoconf make tini ca-certificates
 
@@ -14,7 +14,7 @@ RUN git clone https://github.com/Comcast/Infinite-File-Curtailer.git curtailer \
     && make install \
     && curtail --version
 
-FROM debian:buster-slim as base
+FROM ubuntu:24.04 as base
 
 COPY --from=builder /etc/ssl/certs /etc/ssl/certs
 
