@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1738126918102,
+  "lastUpdate": 1738127040361,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -48853,6 +48853,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 11654619760,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "bc887342e9f64cb342538eecef78732a4730b0d2",
+          "message": "fix(torii-sqlite): ensure deleting entity works as intended (#2961)\n\n* fix(torii-sqlite): deleting entity\r\n\r\n* fix: delete entity model\r\n\r\n* more strict tests\r\n\r\n* uningnore test\r\n\r\n* check moves and position tables\r\n\r\n* fix\r\n\r\n* better test check",
+          "timestamp": "2025-01-28T22:45:59-06:00",
+          "tree_id": "2847e14a47526402e1aa1e60f11b5980da05846a",
+          "url": "https://github.com/dojoengine/dojo/commit/bc887342e9f64cb342538eecef78732a4730b0d2"
+        },
+        "date": 1738127037104,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2467590,
+            "range": "± 47959",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8272242,
+            "range": "± 317394",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2567099150,
+            "range": "± 212213166",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 7656141,
+            "range": "± 76248",
             "unit": "ns/iter"
           }
         ]
