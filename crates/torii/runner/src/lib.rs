@@ -69,7 +69,7 @@ impl Runner {
             .contracts
             .push(Contract { address: world_address, r#type: ContractType::WORLD });
 
-        if self.args.indexing.cartridge {
+        if self.args.indexing.controllers {
             self.args
                 .indexing
                 .contracts
