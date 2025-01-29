@@ -94,8 +94,6 @@ impl<S: StateDb> Clone for CachedState<S> {
     }
 }
 
-// type DeclaredClass = (CompiledClass, ContractClass);
-
 #[derive(Debug)]
 pub(super) struct CachedStateInner<S: StateReader> {
     pub(super) inner: cached_state::CachedState<S>,
@@ -240,47 +238,9 @@ impl<S: StateDb> StateReader for CachedState<S> {
     }
 }
 
-impl<S: StateDb> StateProofProvider for CachedState<S> {
-    fn class_multiproof(
-        &self,
-        classes: Vec<class::ClassHash>,
-    ) -> ProviderResult<katana_trie::MultiProof> {
-        let _ = classes;
-        unimplemented!("not supported in executor's state")
-    }
+impl<S: StateDb> StateProofProvider for CachedState<S> {}
 
-    fn contract_multiproof(
-        &self,
-        addresses: Vec<katana_primitives::ContractAddress>,
-    ) -> ProviderResult<katana_trie::MultiProof> {
-        let _ = addresses;
-        unimplemented!("not supported in executor's state")
-    }
-
-    fn storage_multiproof(
-        &self,
-        address: katana_primitives::ContractAddress,
-        key: Vec<katana_primitives::contract::StorageKey>,
-    ) -> ProviderResult<katana_trie::MultiProof> {
-        let _ = address;
-        let _ = key;
-        unimplemented!("not supported in executor's state")
-    }
-}
-
-impl<S: StateDb> StateRootProvider for CachedState<S> {
-    fn classes_root(&self) -> ProviderResult<Felt> {
-        unimplemented!("not supported in executor's state")
-    }
-
-    fn contracts_root(&self) -> ProviderResult<Felt> {
-        unimplemented!("not supported in executor's state")
-    }
-
-    fn storage_root(&self, _: katana_primitives::ContractAddress) -> ProviderResult<Option<Felt>> {
-        unimplemented!("not supported in executor's state")
-    }
-}
+impl<S: StateDb> StateRootProvider for CachedState<S> {}
 
 #[cfg(test)]
 mod tests {
