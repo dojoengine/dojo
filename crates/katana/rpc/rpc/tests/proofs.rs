@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use assert_matches::assert_matches;
 use dojo_test_utils::sequencer::{get_default_test_config, TestSequencer};
 use jsonrpsee::http_client::HttpClientBuilder;
+use katana_chain_spec::ChainSpec;
 use katana_node::config::rpc::DEFAULT_RPC_MAX_PROOF_KEYS;
 use katana_node::config::SequencingConfig;
 use katana_primitives::block::BlockIdOrTag;
@@ -79,7 +80,11 @@ async fn genesis_states() {
     let cfg = get_default_test_config(SequencingConfig::default());
 
     let sequencer = TestSequencer::start(cfg).await;
-    let genesis_states = sequencer.backend().chain_spec.state_updates();
+    let ChainSpec::Dev(chain_spec) = sequencer.backend().chain_spec.as_ref() else {
+        panic!("should be dev chain spec")
+    };
+
+    let genesis_states = chain_spec.state_updates();
 
     // We need to use the jsonrpsee client because `starknet-rs` doesn't yet support RPC 0.8.0
     let client = HttpClientBuilder::default().build(sequencer.url()).unwrap();

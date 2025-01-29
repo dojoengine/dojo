@@ -6,11 +6,13 @@ use std::sync::Arc;
 use anyhow::{Context, Result};
 use clap::Args;
 use inquire::{Confirm, CustomType, Select};
-use katana_chain_spec::{SettlementLayer, DEV_UNALLOCATED};
+use katana_chain_spec::rollup::FeeContract;
+use katana_chain_spec::{rollup, SettlementLayer};
 use katana_primitives::chain::ChainId;
 use katana_primitives::genesis::allocation::DevAllocationsGenerator;
+use katana_primitives::genesis::constant::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;
 use katana_primitives::genesis::Genesis;
-use katana_primitives::{ContractAddress, Felt};
+use katana_primitives::{ContractAddress, Felt, U256};
 use lazy_static::lazy_static;
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::types::{BlockId, BlockTag};
@@ -40,12 +42,13 @@ impl InitArgs {
             core_contract: input.settlement_contract,
         };
 
-        let mut chain_spec = DEV_UNALLOCATED.clone();
-        chain_spec.genesis = GENESIS.clone();
-        chain_spec.id = ChainId::parse(&input.id)?;
-        chain_spec.settlement = Some(settlement);
+        let id = ChainId::parse(&input.id)?;
+        let genesis = GENESIS.clone();
+        // At the moment, the fee token is limited to a predefined token.
+        let fee_contract = FeeContract::default();
 
-        katana_chain_spec::file::write(&chain_spec).context("failed to write chain spec file")?;
+        let chain_spec = rollup::ChainSpec { id, genesis, settlement, fee_contract };
+        rollup::file::write(&chain_spec).context("failed to write chain spec file")?;
 
         Ok(())
     }
@@ -181,7 +184,7 @@ struct PromptOutcome {
 lazy_static! {
     static ref GENESIS: Genesis = {
         // master account
-        let accounts = DevAllocationsGenerator::new(1).generate();
+        let accounts = DevAllocationsGenerator::new(1).with_balance(U256::from(DEFAULT_PREFUNDED_ACCOUNT_BALANCE)).generate();
         let mut genesis = Genesis::default();
         genesis.extend_allocations(accounts.into_iter().map(|(k, v)| (k, v.into())));
         genesis

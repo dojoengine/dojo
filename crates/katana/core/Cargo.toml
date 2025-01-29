@@ -50,6 +50,7 @@ arbitrary.workspace = true
 assert_matches.workspace = true
 hex.workspace = true
 rand.workspace = true
+rstest.workspace = true
 tempfile.workspace = true
 
 [features]

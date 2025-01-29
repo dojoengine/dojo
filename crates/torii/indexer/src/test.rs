@@ -205,7 +205,6 @@ async fn test_load_from_remote(sequencer: &RunnerCtx) {
     assert_eq!(keys, format!("{:#x}/", account.address()));
 }
 
-#[ignore = "This test is being flaky and need to find why. Sometimes it fails, sometimes it passes."]
 #[tokio::test(flavor = "multi_thread")]
 #[katana_runner::test(accounts = 10, db_dir = copy_spawn_and_move_db().as_str())]
 async fn test_load_from_remote_del(sequencer: &RunnerCtx) {
@@ -299,10 +298,34 @@ async fn test_load_from_remote_del(sequencer: &RunnerCtx) {
 
     let _ = bootstrap_engine(world_reader, db.clone(), Arc::clone(&provider)).await.unwrap();
 
-    // TODO: seems that we don't delete the record after delete only values are zeroed?
     assert_eq!(count_table("ns-PlayerConfig", &pool).await, 0);
-    assert_eq!(count_table("ns-PlayerConfig$favorite_item", &pool).await, 0);
-    assert_eq!(count_table("ns-PlayerConfig$items", &pool).await, 0);
+    assert_eq!(count_table("ns-Position", &pool).await, 0);
+    assert_eq!(count_table("ns-Moves", &pool).await, 0);
+
+    // our entity model relations should be deleted for our player entity
+    let entity_model_count: i64 = sqlx::query_scalar(
+        format!(
+            "SELECT COUNT(*) FROM entity_model WHERE entity_id = '{:#x}'",
+            poseidon_hash_many(&[account.address()])
+        )
+        .as_str(),
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(entity_model_count, 0);
+    // our player entity should be deleted
+    let entity_count: i64 = sqlx::query_scalar(
+        format!(
+            "SELECT COUNT(*) FROM entities WHERE id = '{:#x}'",
+            poseidon_hash_many(&[account.address()])
+        )
+        .as_str(),
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(entity_count, 0);
 
     // TODO: check how we can have a test that is more chronological with Torii re-syncing
     // to ensure we can test intermediate states.
