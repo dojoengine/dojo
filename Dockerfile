@@ -14,7 +14,7 @@ RUN git clone https://github.com/Comcast/Infinite-File-Curtailer.git curtailer \
     && make install \
     && curtail --version
 
-FROM debian:bookworm-slim as base
+FROM debian:buster-slim as base
 
 COPY --from=builder /etc/ssl/certs /etc/ssl/certs
 
