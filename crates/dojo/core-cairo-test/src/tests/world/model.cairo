@@ -232,6 +232,7 @@ fn test_upgrade_model() {
     assert!(read.c == 0);
 }
 
+#[test]
 fn test_upgrade_model_with_member_changed() {
     let caller = starknet::contract_address_const::<0xb0b>();
     let world = deploy_world_for_model_upgrades();
