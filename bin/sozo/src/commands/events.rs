@@ -67,6 +67,7 @@ impl EventsArgs {
             let to_block = self.to_block.unwrap_or(latest_block);
 
             let mut current_start = from_block;
+            let mut continuation_token = self.continuation_token.clone();
             while current_start <= to_block {
                 let chunk_end = std::cmp::min(current_start + MAX_BLOCK_RANGE - 1, to_block);
 
@@ -80,7 +81,7 @@ impl EventsArgs {
                 };
 
                 let res = provider
-                    .get_events(event_filter, self.continuation_token.clone(), self.chunk_size)
+                    .get_events(event_filter, continuation_token.clone(), self.chunk_size)
                     .await?;
 
                 for event in &res.events {
@@ -107,9 +108,10 @@ impl EventsArgs {
                     }
                 }
 
-                if let Some(continuation_token) = res.continuation_token {
-                    println!("Continuation token: {:?}", continuation_token);
-                    println!("----------------------------------------------");
+                if let Some(token) = res.continuation_token {
+                    continuation_token = Some(token);
+                } else {
+                    break;
                 }
 
                 current_start = chunk_end + 1;
