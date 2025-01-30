@@ -110,8 +110,11 @@ hashes, called 'hash' in the following documentation.
 
         #[arg(value_name = "KEYS")]
         #[arg(value_delimiter = ',')]
-        #[arg(help = "Comma separated values e.g., 0x12345,0x69420,sstr:\"hello\". Supported \
-                      prefixes:\n  - sstr: A cairo short string\n  - no prefix: A cairo felt")]
+        #[arg(help = "Comma separated values, e.g., 0x12345,0x69420,sstr:\"hello\", u256:0x123.
+                      Supporting all prefixes:\n  - u256: A 256-bit unsigned integer\n  - str: A \
+                      cairo string (ByteArray)\n  - sstr: A cairo short string\n  - int: A \
+                      signed integer\n  - no prefix: A cairo felt or any type that fits into \
+                      one felt")]
         #[arg(value_parser = model_key_parser)]
         keys: Vec<Vec<Felt>>,
 
