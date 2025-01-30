@@ -29,6 +29,18 @@ struct VerificationPayload {
 pub async fn walnut_verify(ws: &Workspace<'_>) -> anyhow::Result<()> {
     let ui = ws.config().ui();
 
+    ui.print(" ");
+    ui.print("⚠️  Warning: You are about to submit all workspace files to walnut.
+        Ensure your project does not contain private keys. Config files like dojo_*.toml will be uploaded.
+        Press Enter to proceed or any other key to abort:  ");
+    io::stdout();
+    let mut input = String::new();
+    io::stdin().read_line(&mut input)?;
+
+    if !input.trim().is_empty() {
+        ui.print("❌ Verification aborted by user.");
+        return Ok(());
+    }
     // Notify start of verification
     ui.print(" ");
     ui.print("🌰 Verifying classes with Walnut...");
