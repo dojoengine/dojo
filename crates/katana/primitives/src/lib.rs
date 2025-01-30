@@ -21,6 +21,7 @@ pub mod conversion;
 pub mod state;
 pub mod utils;
 
+pub use alloy_primitives::U256;
 pub use contract::ContractAddress;
 pub use starknet::macros::felt;
 pub use starknet_types_core::felt::{Felt, FromStrError};

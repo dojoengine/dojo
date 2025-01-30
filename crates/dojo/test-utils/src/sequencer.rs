@@ -45,7 +45,7 @@ impl TestSequencer {
         let url =
             Url::parse(&format!("http://{}", handle.rpc.addr())).expect("Failed to parse URL");
 
-        let account = handle.node.backend.chain_spec.genesis.accounts().next().unwrap();
+        let account = handle.node.backend.chain_spec.genesis().accounts().next().unwrap();
         let account = TestAccount {
             private_key: Felt::from_bytes_be(&account.1.private_key().unwrap().to_bytes_be()),
             account_address: Felt::from_bytes_be(&account.0.to_bytes_be()),
@@ -81,7 +81,7 @@ impl TestSequencer {
         index: usize,
     ) -> SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet> {
         let accounts: Vec<_> =
-            self.handle.node.backend.chain_spec.genesis.accounts().collect::<_>();
+            self.handle.node.backend.chain_spec.genesis().accounts().collect::<_>();
 
         let account = accounts[index];
         let private_key = Felt::from_bytes_be(&account.1.private_key().unwrap().to_bytes_be());
@@ -115,7 +115,8 @@ impl TestSequencer {
 
 pub fn get_default_test_config(sequencing: SequencingConfig) -> Config {
     let dev = DevConfig { fee: false, account_validation: true, fixed_gas_prices: None };
-    let mut chain = ChainSpec { id: ChainId::SEPOLIA, ..Default::default() };
+    let mut chain =
+        katana_chain_spec::dev::ChainSpec { id: ChainId::SEPOLIA, ..Default::default() };
     chain.genesis.sequencer_address = *DEFAULT_SEQUENCER_ADDRESS;
 
     let rpc = RpcConfig {
@@ -128,5 +129,5 @@ pub fn get_default_test_config(sequencing: SequencingConfig) -> Config {
         max_proof_keys: Some(100),
     };
 
-    Config { sequencing, rpc, dev, chain: chain.into(), ..Default::default() }
+    Config { sequencing, rpc, dev, chain: ChainSpec::Dev(chain).into(), ..Default::default() }
 }

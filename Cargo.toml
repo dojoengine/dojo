@@ -57,7 +57,7 @@ edition = "2021"
 license = "Apache-2.0"
 license-file = "LICENSE"
 repository = "https://github.com/dojoengine/dojo/"
-version = "1.0.12"
+version = "1.1.2"
 
 [profile.performance]
 codegen-units = 1
@@ -70,7 +70,7 @@ debug = true
 inherits = "release"
 
 [workspace.dependencies]
-cainome = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.4.11", features = [ "abigen-rs" ] }
+cainome = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.4.12", features = [ "abigen-rs" ] }
 cainome-cairo-serde = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.4.11" }
 dojo-utils = { path = "crates/dojo/utils" }
 
@@ -206,9 +206,9 @@ rpassword = "7.2.0"
 rstest = "0.18.2"
 rstest_reuse = "0.6.0"
 salsa = "0.16.1"
-scarb = { git = "https://github.com/dojoengine/scarb", rev = "a3b3c7fae12aecd3ce1502b1a651fced6be546df" }
-scarb-metadata = { git = "https://github.com/dojoengine/scarb", rev = "a3b3c7fae12aecd3ce1502b1a651fced6be546df" }
-scarb-ui = { git = "https://github.com/dojoengine/scarb", rev = "a3b3c7fae12aecd3ce1502b1a651fced6be546df" }
+scarb = { git = "https://github.com/dojoengine/scarb", rev = "da5f683adbd25361d080c2d9f624924aa9f112d1" }
+scarb-metadata = { git = "https://github.com/dojoengine/scarb", rev = "da5f683adbd25361d080c2d9f624924aa9f112d1" }
+scarb-ui = { git = "https://github.com/dojoengine/scarb", rev = "da5f683adbd25361d080c2d9f624924aa9f112d1" }
 semver = "1.0.5"
 serde = { version = "1.0", features = [ "derive" ] }
 serde_json = { version = "1.0", features = [ "arbitrary_precision" ] }

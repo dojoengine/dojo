@@ -42,7 +42,7 @@ pub mod world {
     use dojo::meta::{
         Layout, IStoredResourceDispatcher, IStoredResourceDispatcherTrait,
         IDeployedResourceDispatcher, IDeployedResourceDispatcherTrait, LayoutCompareTrait,
-        StructCompareTrait,
+        TyCompareTrait,
     };
     use dojo::model::{Model, ResourceMetadata, metadata, ModelIndex};
     use dojo::storage;
@@ -1098,6 +1098,10 @@ pub mod world {
 
             if !new_layout.is_same_type_of(@old_layout) {
                 panic_with_byte_array(@errors::invalid_resource_layout_upgrade(namespace, name));
+            }
+
+            if let Layout::Fixed(_) = new_layout {
+                panic_with_byte_array(@errors::packed_layout_cannot_be_upgraded(namespace, name));
             }
 
             if !new_schema.is_an_upgrade_of(@old_schema) {
