@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1738194690656,
+  "lastUpdate": 1738208593586,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -49291,6 +49291,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 7644388,
             "range": "± 141150",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "687334d320073e3439a981eb3da02098e0beb5db",
+          "message": "fix: add explicit edition for test cairo contracts across the repo (#2974)\n\nfix: add explicit edition for test cairo contracts",
+          "timestamp": "2025-01-29T21:26:44-06:00",
+          "tree_id": "5b35cdbed7741f58b7cd669699caf9e1251f8a18",
+          "url": "https://github.com/dojoengine/dojo/commit/687334d320073e3439a981eb3da02098e0beb5db"
+        },
+        "date": 1738208591369,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 12802394528,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
