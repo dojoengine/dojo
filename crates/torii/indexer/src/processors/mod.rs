@@ -30,6 +30,7 @@ pub mod upgrade_model;
 pub struct EventProcessorConfig {
     pub historical_events: HashSet<String>,
     pub namespaces: HashSet<String>,
+    pub strict_model_reader: bool,
 }
 
 impl EventProcessorConfig {
