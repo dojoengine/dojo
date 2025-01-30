@@ -7,7 +7,9 @@ use katana_primitives::genesis::json::GenesisJson;
 use katana_primitives::genesis::Genesis;
 use serde::{Deserialize, Serialize};
 
-use crate::{ChainSpec, FeeContracts, SettlementLayer};
+use super::FeeContract;
+use crate::rollup::ChainSpec;
+use crate::SettlementLayer;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -48,7 +50,7 @@ pub fn read(id: &ChainId) -> Result<ChainSpec, Error> {
         genesis,
         id: chain_spec.id,
         settlement: chain_spec.settlement,
-        fee_contracts: chain_spec.fee_contracts,
+        fee_contract: chain_spec.fee_contract,
     })
 }
 
@@ -59,7 +61,7 @@ pub fn write(chain_spec: &ChainSpec) -> Result<(), Error> {
         let cfg = ChainSpecFile {
             id: chain_spec.id,
             settlement: chain_spec.settlement.clone(),
-            fee_contracts: chain_spec.fee_contracts.clone(),
+            fee_contract: chain_spec.fee_contract.clone(),
         };
 
         let content = toml::to_string_pretty(&cfg)?;
@@ -79,9 +81,8 @@ pub fn write(chain_spec: &ChainSpec) -> Result<(), Error> {
 #[serde(rename_all = "kebab-case")]
 struct ChainSpecFile {
     id: ChainId,
-    fee_contracts: FeeContracts,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    settlement: Option<SettlementLayer>,
+    fee_contract: FeeContract,
+    settlement: SettlementLayer,
 }
 
 /// The local directory name where the chain configuration files are stored.
@@ -150,6 +151,9 @@ pub fn local_dir() -> Result<PathBuf, Error> {
 
 #[cfg(test)]
 mod tests {
+    use katana_primitives::ContractAddress;
+    use url::Url;
+
     use super::*;
 
     // To make sure the path returned by `local_dir` is always the same across
@@ -169,18 +173,32 @@ mod tests {
         }
     }
 
+    fn chainspec() -> ChainSpec {
+        ChainSpec {
+            id: ChainId::default(),
+            genesis: Genesis::default(),
+            fee_contract: FeeContract { strk: ContractAddress::default() },
+            settlement: SettlementLayer::Starknet {
+                id: ChainId::default(),
+                account: ContractAddress::default(),
+                core_contract: ContractAddress::default(),
+                rpc_url: Url::parse("http://localhost:5050").expect("valid url"),
+            },
+        }
+    }
+
     #[test]
     fn test_read_write_chainspec() {
         init();
 
-        let chain_spec = ChainSpec::default();
+        let chain_spec = chainspec();
         let id = chain_spec.id;
 
         write(&chain_spec).unwrap();
         let read_spec = read(&id).unwrap();
 
         assert_eq!(chain_spec.id, read_spec.id);
-        assert_eq!(chain_spec.fee_contracts, read_spec.fee_contracts);
+        assert_eq!(chain_spec.fee_contract, read_spec.fee_contract);
         assert_eq!(chain_spec.settlement, read_spec.settlement);
     }
 

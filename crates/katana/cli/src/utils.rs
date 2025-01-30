@@ -81,7 +81,7 @@ impl Display for LogFormat {
 }
 
 pub fn print_intro(args: &NodeArgs, chain: &ChainSpec) {
-    let mut accounts = chain.genesis.accounts().peekable();
+    let mut accounts = chain.genesis().accounts().peekable();
     let account_class_hash = accounts.peek().map(|e| e.1.class_hash());
     let seed = &args.development.seed;
 
@@ -126,8 +126,10 @@ ACCOUNTS SEED
 }
 
 fn print_genesis_contracts(chain: &ChainSpec, account_class_hash: Option<ClassHash>) {
-    println!(
-        r"
+    match chain {
+        ChainSpec::Dev(cs) => {
+            println!(
+                r"
 PREDEPLOYED CONTRACTS
 ==================
 
@@ -138,11 +140,26 @@ PREDEPLOYED CONTRACTS
 | Contract        | STRK Fee Token
 | Address         | {}
 | Class Hash      | {:#064x}",
-        chain.fee_contracts.eth,
-        DEFAULT_LEGACY_ERC20_CLASS_HASH,
-        chain.fee_contracts.strk,
-        DEFAULT_LEGACY_ERC20_CLASS_HASH
-    );
+                cs.fee_contracts.eth,
+                DEFAULT_LEGACY_ERC20_CLASS_HASH,
+                cs.fee_contracts.strk,
+                DEFAULT_LEGACY_ERC20_CLASS_HASH
+            );
+        }
+
+        ChainSpec::Rollup(cs) => {
+            println!(
+                r"
+PREDEPLOYED CONTRACTS
+==================
+
+| Contract        | STRK Fee Token
+| Address         | {}
+| Class Hash      | {:#064x}",
+                cs.fee_contract.strk, DEFAULT_LEGACY_ERC20_CLASS_HASH,
+            );
+        }
+    }
 
     println!(
         r"

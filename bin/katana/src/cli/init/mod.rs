@@ -6,11 +6,13 @@ use std::sync::Arc;
 use anyhow::{Context, Result};
 use clap::Args;
 use inquire::{Confirm, CustomType, Select};
-use katana_chain_spec::{SettlementLayer, DEV_UNALLOCATED};
+use katana_chain_spec::rollup::FeeContract;
+use katana_chain_spec::{rollup, SettlementLayer};
 use katana_primitives::chain::ChainId;
 use katana_primitives::genesis::allocation::DevAllocationsGenerator;
+use katana_primitives::genesis::constant::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;
 use katana_primitives::genesis::Genesis;
-use katana_primitives::{ContractAddress, Felt};
+use katana_primitives::{ContractAddress, Felt, U256};
 use lazy_static::lazy_static;
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::types::{BlockId, BlockTag};
@@ -18,7 +20,7 @@ use starknet::core::utils::{cairo_short_string_to_felt, parse_cairo_short_string
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider, Url};
 use starknet::signers::{LocalWallet, SigningKey};
-use tokio::runtime::Runtime;
+use tokio::runtime::Runtime as AsyncRuntime;
 
 const CARTRIDGE_SN_SEPOLIA_PROVIDER: &str = "https://api.cartridge.gg/x/starknet/sepolia";
 
@@ -40,17 +42,18 @@ impl InitArgs {
             core_contract: input.settlement_contract,
         };
 
-        let mut chain_spec = DEV_UNALLOCATED.clone();
-        chain_spec.genesis = GENESIS.clone();
-        chain_spec.id = ChainId::parse(&input.id)?;
-        chain_spec.settlement = Some(settlement);
+        let id = ChainId::parse(&input.id)?;
+        let genesis = GENESIS.clone();
+        // At the moment, the fee token is limited to a predefined token.
+        let fee_contract = FeeContract::default();
 
-        katana_chain_spec::file::write(&chain_spec).context("failed to write chain spec file")?;
+        let chain_spec = rollup::ChainSpec { id, genesis, settlement, fee_contract };
+        rollup::file::write(&chain_spec).context("failed to write chain spec file")?;
 
         Ok(())
     }
 
-    fn prompt(&self, rt: &Runtime) -> Result<PromptOutcome> {
+    fn prompt(&self, rt: &AsyncRuntime) -> Result<PromptOutcome> {
         let chain_id = CustomType::<String>::new("Id")
         .with_help_message("This will be the id of your rollup chain.")
         // checks that the input is a valid ascii string.
@@ -125,13 +128,6 @@ impl InitArgs {
             ExecutionEncoding::New,
         );
 
-        // TODO: uncomment once we actually using the fee token.
-        // // The L1 fee token. Must be an existing token.
-        // let fee_token = CustomType::<ContractAddress>::new("Fee token")
-        //     .with_parser(contract_exist_parser)
-        //     .with_error_message("Please enter a valid fee token (the token must exist on L1)")
-        //     .prompt()?;
-
         // The core settlement contract on L1c.
         // Prompt the user whether to deploy the settlement contract or not.
         let settlement_contract =
@@ -143,11 +139,20 @@ impl InitArgs {
             }
             // If denied, prompt the user for an already deployed contract.
             else {
-                // TODO: add a check to make sure the contract is indeed a valid settlement
-                // contract.
-                CustomType::<ContractAddress>::new("Settlement contract")
+                let address = CustomType::<ContractAddress>::new("Settlement contract")
                     .with_parser(contract_exist_parser)
-                    .prompt()?
+                    .prompt()?;
+
+                // Check that the settlement contract has been initialized with the correct program
+                // info.
+                let chain_id = cairo_short_string_to_felt(&chain_id)?;
+                rt.block_on(deployment::check_program_info(chain_id, address.into(), &l1_provider))
+                    .context(
+                        "Invalid settlement contract. The contract might have been configured \
+                         incorrectly.",
+                    )?;
+
+                address
             };
 
         Ok(PromptOutcome {
@@ -181,7 +186,7 @@ struct PromptOutcome {
 lazy_static! {
     static ref GENESIS: Genesis = {
         // master account
-        let accounts = DevAllocationsGenerator::new(1).generate();
+        let accounts = DevAllocationsGenerator::new(1).with_balance(U256::from(DEFAULT_PREFUNDED_ACCOUNT_BALANCE)).generate();
         let mut genesis = Genesis::default();
         genesis.extend_allocations(accounts.into_iter().map(|(k, v)| (k, v.into())));
         genesis

@@ -238,10 +238,11 @@ mod appchain_messaging {
             selector: felt252,
             payload: Span<felt252>
         ) -> (felt252, felt252) {
+            let from_address = starknet::get_caller_address();
             let nonce = self.sn_to_appc_nonce.read() + 1;
             self.sn_to_appc_nonce.write(nonce);
 
-            let msg_hash = compute_hash_sn_to_appc(nonce, to_address, selector, payload);
+            let msg_hash = compute_hash_sn_to_appc(from_address, to_address, selector, payload, nonce);
 
             self
                 .emit(

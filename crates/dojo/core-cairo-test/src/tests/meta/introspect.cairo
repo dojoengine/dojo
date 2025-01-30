@@ -1,5 +1,6 @@
-use dojo::meta::introspect::Introspect;
+use dojo::meta::introspect::{Introspect, Struct, Enum, Member, Ty, TyCompareTrait};
 use dojo::meta::{Layout, FieldLayout};
+use crate::utils::GasCounterTrait;
 
 #[derive(Drop, Introspect)]
 struct Base {
@@ -307,4 +308,489 @@ fn test_layout_of_inner_packed_enum() {
 #[should_panic(expected: ("A packed model layout must contain Fixed layouts only.",))]
 fn test_layout_of_not_packed_inner_enum() {
     let _ = Introspect::<EnumInnerNotPacked>::layout();
+}
+
+#[test]
+fn test_introspect_upgrade() {
+    let p = Ty::Primitive('u8');
+    let s = Ty::Struct(Struct { name: 's', attrs: [].span(), children: [].span() });
+    let e = Ty::Enum(Enum { name: 'e', attrs: [].span(), children: [].span() });
+    let t = Ty::Tuple([Ty::Primitive('u8')].span());
+    let a = Ty::Array([Ty::Primitive('u8')].span());
+    let b = Ty::ByteArray;
+
+    assert!(p.is_an_upgrade_of(@p));
+    assert!(!p.is_an_upgrade_of(@s));
+    assert!(!p.is_an_upgrade_of(@e));
+    assert!(!p.is_an_upgrade_of(@t));
+    assert!(!p.is_an_upgrade_of(@a));
+    assert!(!p.is_an_upgrade_of(@b));
+
+    assert!(!s.is_an_upgrade_of(@p));
+    assert!(s.is_an_upgrade_of(@s));
+    assert!(!s.is_an_upgrade_of(@e));
+    assert!(!s.is_an_upgrade_of(@t));
+    assert!(!s.is_an_upgrade_of(@a));
+    assert!(!s.is_an_upgrade_of(@b));
+
+    assert!(!e.is_an_upgrade_of(@p));
+    assert!(!e.is_an_upgrade_of(@s));
+    assert!(e.is_an_upgrade_of(@e));
+    assert!(!e.is_an_upgrade_of(@t));
+    assert!(!e.is_an_upgrade_of(@a));
+    assert!(!e.is_an_upgrade_of(@b));
+
+    assert!(!t.is_an_upgrade_of(@p));
+    assert!(!t.is_an_upgrade_of(@s));
+    assert!(!t.is_an_upgrade_of(@e));
+    assert!(t.is_an_upgrade_of(@t));
+    assert!(!t.is_an_upgrade_of(@a));
+    assert!(!t.is_an_upgrade_of(@b));
+
+    assert!(!a.is_an_upgrade_of(@p));
+    assert!(!a.is_an_upgrade_of(@s));
+    assert!(!a.is_an_upgrade_of(@e));
+    assert!(!a.is_an_upgrade_of(@t));
+    assert!(a.is_an_upgrade_of(@a));
+    assert!(!a.is_an_upgrade_of(@b));
+
+    assert!(!b.is_an_upgrade_of(@p));
+    assert!(!b.is_an_upgrade_of(@s));
+    assert!(!b.is_an_upgrade_of(@e));
+    assert!(!b.is_an_upgrade_of(@t));
+    assert!(!b.is_an_upgrade_of(@a));
+    assert!(b.is_an_upgrade_of(@b));
+}
+
+#[test]
+fn test_primitive_upgrade() {
+    let primitives = [
+        'bool', 'u8', 'u16', 'u32', 'u64', 'u128', 'u256', 'i8', 'i16', 'i32', 'i64', 'i128',
+        'felt252', 'ClassHash', 'ContractAddress', 'EthAddress',
+    ]
+        .span();
+
+    let mut allowed_upgrades: Span<(felt252, Span<felt252>)> = [
+        ('bool', ['felt252'].span()),
+        ('u8', ['u16', 'u32', 'usize', 'u64', 'u128', 'felt252'].span()),
+        ('u16', ['u32', 'usize', 'u64', 'u128', 'felt252'].span()),
+        ('u32', ['usize', 'u64', 'u128', 'felt252'].span()), ('u128', ['felt252'].span()),
+        ('u256', [].span()), ('i8', ['i16', 'i32', 'i64', 'i128', 'felt252'].span()),
+        ('i16', ['i32', 'i64', 'i128', 'felt252'].span()),
+        ('i32', ['i64', 'i128', 'felt252'].span()), ('i64', ['i128', 'felt252'].span()),
+        ('i128', ['felt252'].span()), ('felt252', ['ClassHash', 'ContractAddress'].span()),
+        ('ClassHash', ['felt252', 'ContractAddress'].span()),
+        ('ContractAddress', ['felt252', 'ClassHash'].span()),
+        ('EthAddress', ['felt252', 'ClassHash', 'ContractAddress'].span()),
+    ]
+        .span();
+
+    loop {
+        match allowed_upgrades.pop_front() {
+            Option::Some((
+                src, allowed,
+            )) => {
+                for dest in primitives {
+                    let expected = if src == dest {
+                        true
+                    } else {
+                        let allowed = *allowed;
+                        let mut i = 0;
+
+                        loop {
+                            if i >= allowed.len() {
+                                break false;
+                            }
+
+                            if *allowed.at(i) == *dest {
+                                break true;
+                            }
+
+                            i += 1;
+                        }
+                    };
+
+                    assert_eq!(
+                        Ty::Primitive(*dest).is_an_upgrade_of(@Ty::Primitive(*src)),
+                        expected,
+                        "src: {} dest: {}",
+                        *src,
+                        *dest,
+                    );
+                }
+            },
+            Option::None => { break; },
+        };
+    }
+}
+
+#[test]
+fn test_primitive_upgrade_backward_compatibility() {
+    // Some models may have been deployed with `ContractAddress` and `ClassHash`
+    // primitives, stored with the `starknet::` prefix in the introspection data structure.
+    assert!(
+        Ty::Primitive('starknet::ContractAddress')
+            .is_an_upgrade_of(@Ty::Primitive('starknet::Classhash')),
+    );
+}
+
+#[test]
+#[should_panic(
+    expected: ("The introspection of the primitive type 33053979968501614 is not supported.",),
+)]
+fn test_unknown_primitive() {
+    let _ = Ty::Primitive('unknown').is_an_upgrade_of(@Ty::Primitive('u8'));
+}
+
+#[test]
+#[should_panic(
+    expected: ("Prefer using u32 instead of usize as usize size is architecture-dependent.",),
+)]
+fn test_usize_primitive() {
+    let _ = Ty::Primitive('usize').is_an_upgrade_of(@Ty::Primitive('u8'));
+}
+
+#[test]
+fn test_struct_upgrade() {
+    let s = Struct {
+        name: 's',
+        attrs: ['one'].span(),
+        children: [
+            Member { name: 'x', attrs: ['two'].span(), ty: Ty::Primitive('u8') },
+            Member { name: 'y', attrs: ['three'].span(), ty: Ty::Primitive('u16') },
+        ]
+            .span(),
+    };
+
+    // different name
+    let mut upgraded = s;
+    upgraded.name = 'upgraded';
+    assert!(!upgraded.is_an_upgrade_of(@s), "different name");
+
+    // different attributes
+    let mut upgraded = s;
+    upgraded.attrs = [].span();
+    assert!(!upgraded.is_an_upgrade_of(@s), "different attributes");
+
+    // member name changed
+    let mut upgraded = s;
+    upgraded
+        .children =
+            [
+                Member { name: 'new', attrs: ['two'].span(), ty: Ty::Primitive('u8') },
+                Member { name: 'y', attrs: ['three'].span(), ty: Ty::Primitive('u16') },
+            ]
+        .span();
+    assert!(!upgraded.is_an_upgrade_of(@s), "member name changed");
+
+    // member attr changed
+    let mut upgraded = s;
+    upgraded
+        .children =
+            [
+                Member { name: 'x', attrs: [].span(), ty: Ty::Primitive('u8') },
+                Member { name: 'y', attrs: ['three'].span(), ty: Ty::Primitive('u16') },
+            ]
+        .span();
+    assert!(!upgraded.is_an_upgrade_of(@s), "member attr changed");
+
+    // allowed member change
+    let mut upgraded = s;
+    upgraded
+        .children =
+            [
+                Member { name: 'x', attrs: ['two'].span(), ty: Ty::Primitive('u16') },
+                Member { name: 'y', attrs: ['three'].span(), ty: Ty::Primitive('u16') },
+            ]
+        .span();
+    assert!(upgraded.is_an_upgrade_of(@s), "allowed member change");
+
+    // wrong member change
+    let mut upgraded = s;
+    upgraded
+        .children =
+            [
+                Member { name: 'x', attrs: ['two'].span(), ty: Ty::Primitive('u8') },
+                Member { name: 'y', attrs: ['three'].span(), ty: Ty::Primitive('u8') },
+            ]
+        .span();
+    assert!(!upgraded.is_an_upgrade_of(@s), "wrong member change");
+
+    // new member
+    let mut upgraded = s;
+    upgraded
+        .children =
+            [
+                Member { name: 'x', attrs: ['two'].span(), ty: Ty::Primitive('u8') },
+                Member { name: 'y', attrs: ['three'].span(), ty: Ty::Primitive('u16') },
+                Member { name: 'z', attrs: ['four'].span(), ty: Ty::Primitive('u32') },
+            ]
+        .span();
+    assert!(upgraded.is_an_upgrade_of(@s), "new member");
+}
+
+#[test]
+fn test_enum_upgrade() {
+    let e = Enum {
+        name: 'e',
+        attrs: ['one'].span(),
+        children: [('x', Ty::Primitive('u8')), ('y', Ty::Primitive('u16'))].span(),
+    };
+
+    // different name
+    let mut upgraded = e;
+    upgraded.name = 'upgraded';
+    assert!(!upgraded.is_an_upgrade_of(@e), "different name");
+
+    // different attributes
+    let mut upgraded = e;
+    upgraded.attrs = [].span();
+    assert!(!upgraded.is_an_upgrade_of(@e), "different attrs");
+
+    // variant name changed
+    let mut upgraded = e;
+    upgraded.children = [('new', Ty::Primitive('u8')), ('y', Ty::Primitive('u16'))].span();
+    assert!(!upgraded.is_an_upgrade_of(@e), "variant name changed");
+
+    // allowed variant change
+    let mut upgraded = e;
+    upgraded.children = [('x', Ty::Primitive('u16')), ('y', Ty::Primitive('u16'))].span();
+    assert!(upgraded.is_an_upgrade_of(@e), "allowed variant change");
+
+    // wrong variant change
+    let mut upgraded = e;
+    upgraded.children = [('x', Ty::Primitive('u8')), ('y', Ty::Primitive('u8'))].span();
+    assert!(!upgraded.is_an_upgrade_of(@e), "wrong variant change");
+
+    // new member
+    let mut upgraded = e;
+    upgraded
+        .children =
+            [('x', Ty::Primitive('u8')), ('y', Ty::Primitive('u16')), ('z', Ty::Primitive('u32'))]
+        .span();
+    assert!(upgraded.is_an_upgrade_of(@e), "new member");
+
+    let e = Enum {
+        name: 'e',
+        attrs: [].span(),
+        children: [('x', Ty::Tuple([].span())), ('y', Ty::Tuple([].span()))].span(),
+    };
+
+    // A variant without data (empty tuple / unit type) cannot be upgraded with data
+    let mut upgraded = e;
+    upgraded.children = [('x', Ty::Primitive('u8')), ('y', Ty::Tuple([].span()))].span();
+
+    assert!(!upgraded.is_an_upgrade_of(@e), "variant without data");
+
+    // special case: Option<T>
+    let e = Introspect::<Option<u8>>::ty();
+    let upgraded = Introspect::<Option<u32>>::ty();
+
+    assert!(upgraded.is_an_upgrade_of(@e), "Option<T>");
+}
+
+#[test]
+fn test_tuple_upgrade() {
+    let t = Ty::Tuple([Ty::Primitive('u8'), Ty::Primitive('u16')].span());
+
+    // tuple item is upgradable
+    let upgraded = Ty::Tuple([Ty::Primitive('u16'), Ty::Primitive('u16')].span());
+    assert!(upgraded.is_an_upgrade_of(@t));
+
+    // tuple item is not upgradable
+    let upgraded = Ty::Tuple([Ty::Primitive('bool'), Ty::Primitive('u16')].span());
+    assert!(!upgraded.is_an_upgrade_of(@t));
+
+    // tuple length changed
+    let upgraded = Ty::Tuple(
+        [Ty::Primitive('u8'), Ty::Primitive('u16'), Ty::Primitive('u32')].span(),
+    );
+    assert!(upgraded.is_an_upgrade_of(@t));
+}
+
+#[test]
+fn test_array_upgrade() {
+    let a = Ty::Array([Ty::Primitive('u8')].span());
+
+    // array item is upgradable
+    let upgraded = Ty::Array([Ty::Primitive('u16')].span());
+    assert!(upgraded.is_an_upgrade_of(@a));
+
+    // array item is not upgradable
+    let upgraded = Ty::Array([Ty::Primitive('bool')].span());
+    assert!(!upgraded.is_an_upgrade_of(@a));
+}
+
+#[test]
+#[available_gas(360000)]
+fn test_primitive_upgrade_performance() {
+    let gas = GasCounterTrait::start();
+    let _ = Ty::Primitive('ClassHash').is_an_upgrade_of(@Ty::Primitive('ContractAddress'));
+    gas.end("Upgrade from ContractAddress to ClassHash");
+}
+
+#[test]
+fn test_key_member_upgrade() {
+    let s = Struct {
+        name: 's',
+        attrs: [].span(),
+        children: [
+            Member { name: 'x', attrs: ['key'].span(), ty: Ty::Primitive('u8') },
+            Member {
+                name: 'y',
+                attrs: ['key'].span(),
+                ty: Ty::Enum(
+                    Enum {
+                        name: 'e',
+                        attrs: [].span(),
+                        children: [('A', Ty::Primitive('u8')), ('B', Ty::Primitive('u16'))].span(),
+                    },
+                ),
+            },
+        ]
+            .span(),
+    };
+
+    // primitive type
+    let mut upgraded = s;
+    upgraded
+        .children =
+            [Member { name: 'x', attrs: ['key'].span(), ty: Ty::Primitive('u128') }, *s.children[1]]
+        .span();
+
+    assert!(upgraded.is_an_upgrade_of(@s), "key primitive type upgrade");
+
+    // enum type / new variant
+    let mut upgraded = s;
+    upgraded
+        .children =
+            [
+                *s.children[0],
+                Member {
+                    name: 'y',
+                    attrs: ['key'].span(),
+                    ty: Ty::Enum(
+                        Enum {
+                            name: 'e',
+                            attrs: [].span(),
+                            children: [
+                                ('A', Ty::Primitive('u8')), ('B', Ty::Primitive('u16')),
+                                ('C', Ty::Primitive('u32')),
+                            ]
+                                .span(),
+                        },
+                    ),
+                },
+            ]
+        .span();
+
+    assert!(upgraded.is_an_upgrade_of(@s), "key enum type upgrade (variant added)");
+
+    // enum type / variant data upgrade (not allowed)
+    let mut upgraded = s;
+    upgraded
+        .children =
+            [
+                *s.children[0],
+                Member {
+                    name: 'y',
+                    attrs: ['key'].span(),
+                    ty: Ty::Enum(
+                        Enum {
+                            name: 'e',
+                            attrs: [].span(),
+                            children: [('A', Ty::Primitive('u8')), ('B', Ty::Primitive('u32'))]
+                                .span(),
+                        },
+                    ),
+                },
+            ]
+        .span();
+
+    assert!(!upgraded.is_an_upgrade_of(@s), "key enum type upgrade (variant data upgraded)");
+
+    // struct type (not allowed)
+    let s = Struct {
+        name: 's',
+        attrs: [].span(),
+        children: [
+            Member {
+                name: 'x',
+                attrs: ['key'].span(),
+                ty: Ty::Struct(Struct { name: 'n', attrs: [].span(), children: [].span() }),
+            },
+        ]
+            .span(),
+    };
+
+    let mut upgraded = s;
+    upgraded
+        .children =
+            [
+                Member {
+                    name: 'x',
+                    attrs: ['key'].span(),
+                    ty: Ty::Struct(
+                        Struct {
+                            name: 'n',
+                            attrs: [].span(),
+                            children: [
+                                Member { name: 'y', attrs: [].span(), ty: Ty::Primitive('u16') },
+                            ]
+                                .span(),
+                        },
+                    ),
+                },
+            ]
+        .span();
+
+    assert!(!upgraded.is_an_upgrade_of(@s), "key struct type upgrade");
+
+    // array type (not allowed)
+    let s = Struct {
+        name: 's',
+        attrs: [].span(),
+        children: [
+            Member {
+                name: 'x', attrs: ['key'].span(), ty: Ty::Array([Ty::Primitive('u8')].span()),
+            },
+        ]
+            .span(),
+    };
+
+    let mut upgraded = s;
+    upgraded
+        .children =
+            [
+                Member {
+                    name: 'x', attrs: ['key'].span(), ty: Ty::Array([Ty::Primitive('u16')].span()),
+                },
+            ]
+        .span();
+
+    assert!(!upgraded.is_an_upgrade_of(@s), "key array type upgrade");
+
+    // tuple type (not allowed)
+    let s = Struct {
+        name: 's',
+        attrs: [].span(),
+        children: [
+            Member {
+                name: 'x', attrs: ['key'].span(), ty: Ty::Tuple([Ty::Primitive('u8')].span()),
+            },
+        ]
+            .span(),
+    };
+
+    let mut upgraded = s;
+    upgraded
+        .children =
+            [
+                Member {
+                    name: 'x', attrs: ['key'].span(), ty: Ty::Tuple([Ty::Primitive('u16')].span()),
+                },
+            ]
+        .span();
+
+    assert!(!upgraded.is_an_upgrade_of(@s), "key tuple type upgrade");
 }

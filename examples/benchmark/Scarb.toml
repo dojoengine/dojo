@@ -1,0 +1,23 @@
+[package]
+cairo-version = "=2.9.2"
+name = "dojo_benchmark"
+version = "0.1.0"
+edition = "2024_07"
+
+[[target.starknet-contract]]
+sierra = true
+casm = true
+build-external-contracts = ["dojo::world::world_contract::world"]
+
+[dependencies]
+dojo = { path = "../../crates/dojo/core" }
+starknet = "2.9.2"
+
+[dev-dependencies]
+cairo_test = "2.9.2"
+dojo_cairo_test = { path = "../../crates/dojo/core-cairo-test" }
+
+[features]
+default = []
+
+[profile.sepolia]
