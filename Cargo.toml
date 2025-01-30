@@ -70,7 +70,7 @@ debug = true
 inherits = "release"
 
 [workspace.dependencies]
-cainome = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.4.11", features = [ "abigen-rs" ] }
+cainome = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.4.12", features = [ "abigen-rs" ] }
 cainome-cairo-serde = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.4.11" }
 dojo-utils = { path = "crates/dojo/utils" }
 
