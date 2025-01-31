@@ -26,6 +26,7 @@ use katana_cairo::cairo_vm::types::errors::program_errors::ProgramError;
 use katana_cairo::cairo_vm::vm::runners::cairo_runner::{ExecutionResources, RunResources};
 use katana_cairo::starknet_api::block::{
     BlockInfo, BlockNumber, BlockTimestamp, FeeType, GasPriceVector, GasPrices, NonzeroGasPrice,
+    StarknetVersion,
 };
 use katana_cairo::starknet_api::contract_class::{ClassInfo, EntryPointType, SierraVersion};
 use katana_cairo::starknet_api::core::{
@@ -442,7 +443,18 @@ pub fn block_context_from_envs(block_env: &BlockEnv, cfg_env: &CfgEnv) -> BlockC
 
     let chain_info = ChainInfo { fee_token_addresses, chain_id: to_blk_chain_id(cfg_env.chain_id) };
 
-    let mut versioned_constants = VersionedConstants::latest_constants().clone();
+    // IMPORTANT:
+    //
+    // The versioned constants that we use here must match the version that is used in `snos`.
+    // Otherwise, there might be a mismatch between the calculated fees.
+    //
+    // The version of `snos` we're using is still limited up to Starknet version `0.13.3`.
+    const SN_VERSION: StarknetVersion = StarknetVersion::V0_13_3;
+    let mut versioned_constants = VersionedConstants::get(&SN_VERSION).unwrap().clone();
+
+    // NOTE:
+    // These overrides would potentially make the `snos` run be invalid as it doesn't know about the
+    // new overridden values.
     versioned_constants.max_recursion_depth = cfg_env.max_recursion_depth;
     versioned_constants.validate_max_n_steps = cfg_env.validate_max_n_steps;
     versioned_constants.invoke_tx_max_n_steps = cfg_env.invoke_tx_max_n_steps;

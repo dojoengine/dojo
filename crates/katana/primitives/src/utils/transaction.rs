@@ -101,6 +101,28 @@ pub fn compute_deploy_account_v3_tx_hash(
     ])
 }
 
+/// Compute the hash of a V0 Declare transaction.
+///
+/// Reference: https://github.com/dojoengine/sequencer/blob/6f72e5cc30cae2a0db72b709ee6375ba863cfc58/crates/starknet_api/src/transaction_hash.rs#L471-L488
+pub fn compute_declare_v0_tx_hash(
+    sender_address: Felt,
+    class_hash: Felt,
+    max_fee: u128,
+    chain_id: Felt,
+    is_query: bool,
+) -> Felt {
+    compute_hash_on_elements(&[
+        PREFIX_DECLARE,
+        if is_query { QUERY_VERSION_OFFSET + Felt::ZERO } else { Felt::ZERO }, // version
+        sender_address,
+        Felt::ZERO, // entry_point_selector
+        compute_hash_on_elements(&[]),
+        max_fee.into(),
+        chain_id,
+        class_hash,
+    ])
+}
+
 /// Compute the hash of a V1 Declare transaction.
 pub fn compute_declare_v1_tx_hash(
     sender_address: Felt,

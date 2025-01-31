@@ -68,6 +68,13 @@ impl GasOracle {
         Self::fixed(GasPrices { eth: 0, strk: 0 }, GasPrices { eth: 0, strk: 0 })
     }
 
+    /// Returns a fixed gas oracle with zero gas prices.
+    ///
+    /// Mainly used for testing purposes.
+    pub fn zero() -> Self {
+        Self::fixed(GasPrices { eth: 0, strk: 0 }, GasPrices { eth: 0, strk: 0 })
+    }
+
     /// Returns the current gas prices.
     pub fn current_gas_prices(&self) -> GasPrices {
         match self {
