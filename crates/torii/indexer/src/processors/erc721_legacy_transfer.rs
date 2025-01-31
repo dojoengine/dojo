@@ -80,11 +80,12 @@ where
         let token_id = U256Cainome::cairo_deserialize(&event.data, 2)?;
         let token_id = U256::from_words(token_id.low, token_id.high);
 
-        db.handle_erc721_transfer(
+        db.handle_nft_transfer(
             token_address,
             from,
             to,
             token_id,
+            U256::from(1u8),
             block_timestamp,
             event_id,
             block_number,
