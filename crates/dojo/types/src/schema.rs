@@ -293,7 +293,7 @@ impl Ty {
             }
             (Ty::Tuple(t1), Ty::Tuple(t2)) => {
                 if t1.len() != t2.len() {
-                    Some(Ty::Tuple(t2.clone()))
+                    Some(Ty::Tuple(t1.iter().filter_map(|ty| if !t2.contains(ty) { Some(ty.clone()) } else { None }).collect()))
                 } else {
                     // Compare each tuple element recursively
                     let diff_elements: Vec<Ty> =
@@ -306,21 +306,21 @@ impl Ty {
                 if a1 == a2 {
                     None
                 } else {
-                    Some(Ty::Array(a2.clone()))
+                    Some(Ty::Array(a1.clone()))
                 }
             }
             (Ty::ByteArray(b1), Ty::ByteArray(b2)) => {
                 if b1 == b2 {
                     None
                 } else {
-                    Some(Ty::ByteArray(b2.clone()))
+                    Some(Ty::ByteArray(b1.clone()))
                 }
             }
             (Ty::Primitive(p1), Ty::Primitive(p2)) => {
                 if p1 == p2 {
                     None
                 } else {
-                    Some(Ty::Primitive(*p2))
+                    Some(Ty::Primitive(*p1))
                 }
             }
             // Different types entirely - we cannot diff them

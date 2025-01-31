@@ -899,25 +899,20 @@ fn add_columns_recursive(
             }
         }
         Ty::Tuple(tuple) => {
-            let tuple_diff =
-                if let Some(upgrade_diff) = upgrade_diff { upgrade_diff.as_tuple() } else { None };
+            let elements_to_process = if let Some(diff) = upgrade_diff.and_then(|d| d.as_tuple()) {
+                // Only process elements from the diff
+                diff.iter().filter_map(|m| {
+                    tuple.iter().position(|member| member == m)
+                        .map(|idx| (idx, m))
+                }).collect()
+            } else {
+                // Process all elements
+                tuple.iter().enumerate().collect::<Vec<_>>()
+            };
 
-            for (idx, member) in tuple.iter().enumerate() {
+            for (idx, member) in elements_to_process {
                 let mut new_path = path.to_vec();
                 new_path.push(idx.to_string());
-
-                let member_diff = if let Some(diff) = tuple_diff {
-                    if let Some((_, m)) =
-                        diff.iter().enumerate().find(|(i, _)| *i == idx && *i >= tuple.len())
-                    {
-                        Some(m)
-                    } else {
-                        continue;
-                    }
-                } else {
-                    None
-                };
-
                 add_columns_recursive(
                     &new_path,
                     member,
@@ -925,7 +920,7 @@ fn add_columns_recursive(
                     alter_table_queries,
                     indices,
                     table_id,
-                    member_diff,
+                    None,
                 )?;
             }
         }
