@@ -116,7 +116,7 @@ async fn test_client_messaging() -> Result<(), Box<dyn Error>> {
     });
 
     // Initialize the first client (listener)
-    let client = RelayClient::new("/ip4/127.0.0.1/tcp/9900".to_string())?;
+    let client = RelayClient::new("/ip4/127.0.0.1/tcp/9900".to_string(), None)?;
     tokio::spawn(async move {
         client.event_loop.lock().await.run().await;
     });

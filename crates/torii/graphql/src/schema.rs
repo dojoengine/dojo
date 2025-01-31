@@ -140,8 +140,7 @@ async fn build_objects(pool: &SqlitePool) -> Result<(Vec<ObjectVariant>, Vec<Uni
 
     // model data objects
     for model in models {
-        let schema: Ty = serde_json::from_str(&model.schema)
-            .map_err(|e| anyhow::anyhow!(format!("Failed to parse model schema: {e}")))?;
+        let schema: Ty = model.schema;
         let type_mapping = build_type_mapping(&model.namespace, &schema);
 
         if !type_mapping.is_empty() {
