@@ -581,8 +581,7 @@ impl Sql {
         transaction_hash: Felt,
         block_timestamp: u64,
     ) -> Result<()> {
-        let id = Argument::String(event_id
-        .to_string());
+        let id = Argument::String(event_id.to_string());
         let keys = Argument::String(felts_to_sql_string(&event.keys));
         let data = Argument::String(felts_to_sql_string(&event.data));
         let hash = Argument::FieldElement(transaction_hash);
@@ -907,14 +906,10 @@ fn add_columns_recursive(
                 let mut new_path = path.to_vec();
                 new_path.push(idx.to_string());
 
-                if let Some(diff) = tuple_diff {
-                    if diff.len() <= idx {
-                        continue;
-                    }
-                }
-
                 let member_diff = if let Some(diff) = tuple_diff {
-                    if let Some((_, m)) = diff.iter().enumerate().find(|(i, _)| *i == idx) {
+                    if let Some((_, m)) =
+                        diff.iter().enumerate().find(|(i, _)| *i == idx && *i >= tuple.len())
+                    {
                         Some(m)
                     } else {
                         continue;
