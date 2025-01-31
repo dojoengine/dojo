@@ -97,6 +97,7 @@ impl Service {
             .keys
             .trim_end_matches(SQL_FELT_DELIMITER)
             .split(SQL_FELT_DELIMITER)
+            .filter(|s| !s.is_empty())
             .map(Felt::from_str)
             .collect::<Result<Vec<_>, _>>()
             .map_err(ParseError::from)?;
@@ -104,6 +105,7 @@ impl Service {
             .data
             .trim_end_matches(SQL_FELT_DELIMITER)
             .split(SQL_FELT_DELIMITER)
+            .filter(|s| !s.is_empty())
             .map(Felt::from_str)
             .collect::<Result<Vec<_>, _>>()
             .map_err(ParseError::from)?;

@@ -9,9 +9,9 @@ use crate::contract::{ContractAddress, Nonce};
 use crate::da::DataAvailabilityMode;
 use crate::fee::ResourceBoundsMapping;
 use crate::utils::transaction::{
-    compute_declare_v1_tx_hash, compute_declare_v2_tx_hash, compute_declare_v3_tx_hash,
-    compute_deploy_account_v1_tx_hash, compute_deploy_account_v3_tx_hash,
-    compute_invoke_v1_tx_hash, compute_l1_handler_tx_hash,
+    compute_declare_v0_tx_hash, compute_declare_v1_tx_hash, compute_declare_v2_tx_hash,
+    compute_declare_v3_tx_hash, compute_deploy_account_v1_tx_hash,
+    compute_deploy_account_v3_tx_hash, compute_invoke_v1_tx_hash, compute_l1_handler_tx_hash,
 };
 use crate::{utils, Felt};
 
@@ -114,6 +114,15 @@ pub enum ExecutableTx {
 }
 
 impl ExecutableTx {
+    pub fn calculate_hash(&self, is_query: bool) -> Felt {
+        match self {
+            Self::L1Handler(tx) => tx.calculate_hash(),
+            Self::Invoke(tx) => tx.calculate_hash(is_query),
+            Self::Declare(tx) => tx.calculate_hash(is_query),
+            Self::DeployAccount(tx) => tx.calculate_hash(is_query),
+        }
+    }
+
     pub fn tx_ref(&self) -> TxRef<'_> {
         match self {
             ExecutableTx::Invoke(tx) => TxRef::Invoke(tx),
@@ -429,7 +438,14 @@ impl DeclareTx {
     /// Compute the hash of the transaction.
     pub fn calculate_hash(&self, is_query: bool) -> TxHash {
         match self {
-            DeclareTx::V0(..) => todo!(),
+            // v0 declare tx is ignored by the SNOS
+            DeclareTx::V0(tx) => compute_declare_v0_tx_hash(
+                Felt::from(tx.sender_address),
+                tx.class_hash,
+                tx.max_fee,
+                tx.chain_id.into(),
+                is_query,
+            ),
 
             DeclareTx::V1(tx) => compute_declare_v1_tx_hash(
                 Felt::from(tx.sender_address),

@@ -21,7 +21,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
                 return Err(StarknetApiError::UnsupportedTransactionVersion);
             }
 
-            let tx = tx.into_tx_with_chain_id(this.inner.backend.chain_spec.id);
+            let tx = tx.into_tx_with_chain_id(this.inner.backend.chain_spec.id());
             let tx = ExecutableTxWithHash::new(ExecutableTx::Invoke(tx));
             let hash = this.inner.pool.add_transaction(tx)?;
 
@@ -40,7 +40,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
             }
 
             let tx = tx
-                .try_into_tx_with_chain_id(this.inner.backend.chain_spec.id)
+                .try_into_tx_with_chain_id(this.inner.backend.chain_spec.id())
                 .map_err(|_| StarknetApiError::InvalidContractClass)?;
 
             let class_hash = tx.class_hash();
@@ -61,7 +61,7 @@ impl<EF: ExecutorFactory> StarknetApi<EF> {
                 return Err(StarknetApiError::UnsupportedTransactionVersion);
             }
 
-            let tx = tx.into_tx_with_chain_id(this.inner.backend.chain_spec.id);
+            let tx = tx.into_tx_with_chain_id(this.inner.backend.chain_spec.id());
             let contract_address = tx.contract_address();
 
             let tx = ExecutableTxWithHash::new(ExecutableTx::DeployAccount(tx));

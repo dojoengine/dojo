@@ -23,7 +23,65 @@ use starknet::signers::LocalWallet;
 use thiserror::Error;
 use tracing::trace;
 
-type InitializerAccount = SingleOwnerAccount<Arc<JsonRpcClient<HttpTransport>>, LocalWallet>;
+type RpcProvider = Arc<JsonRpcClient<HttpTransport>>;
+type InitializerAccount = SingleOwnerAccount<RpcProvider, LocalWallet>;
+
+#[rustfmt::skip]
+abigen!(
+    AppchainContract,
+    [
+      {
+        "type": "function",
+        "name": "set_program_info",
+        "inputs": [
+          {
+            "name": "program_hash",
+            "type": "core::Felt"
+          },
+          {
+            "name": "config_hash",
+            "type": "core::Felt"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "set_facts_registry",
+        "inputs": [
+          {
+            "name": "address",
+            "type": "core::starknet::contract_address::ContractAddress"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "get_facts_registry",
+        "inputs": [],
+        "outputs": [
+          {
+            "type": "core::starknet::contract_address::ContractAddress"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "get_program_info",
+        "inputs": [],
+        "outputs": [
+          {
+            "type": "(core::Felt, core::Felt)"
+          }
+        ],
+        "state_mutability": "view"
+      }
+    ]
+);
 
 const PROGRAM_HASH: Felt =
     felt!("0x5ab580b04e3532b6b18f81cfa654a05e29dd8e2352d88df1e765a84072db07");
@@ -54,20 +112,6 @@ pub async fn deploy_settlement_contract(
 
         let class = include_str!(
             "../../../../../crates/katana/contracts/build/appchain_core_contract.json"
-        );
-
-        abigen!(
-            AppchainContract,
-            "[{\"type\":\"function\",\"name\":\"set_program_info\",\"inputs\":[{\"name\":\"\
-             program_hash\",\"type\":\"core::Felt\"},{\"name\":\"config_hash\",\"type\":\"\
-             core::Felt\"}],\"outputs\":[],\"state_mutability\":\"external\"},{\"type\":\"\
-             function\",\"name\":\"set_facts_registry\",\"inputs\":[{\"name\":\"address\",\"type\"\
-             :\"core::starknet::contract_address::ContractAddress\"}],\"outputs\":[],\"\
-             state_mutability\":\"external\"},{\"type\":\"function\",\"name\":\"\
-             get_facts_registry\",\"inputs\":[],\"outputs\":[{\"type\":\"\
-             core::starknet::contract_address::ContractAddress\"}],\"state_mutability\":\"view\"},\
-             {\"type\":\"function\",\"name\":\"get_program_info\",\"inputs\":[],\"outputs\":[{\"\
-             type\":\"(core::Felt, core::Felt)\"}],\"state_mutability\":\"view\"}]"
         );
 
         let class = ContractClass::from_str(class)?;
@@ -176,33 +220,7 @@ pub async fn deploy_settlement_contract(
         // FINAL CHECKS
         // -----------------------------------------------------------------------
 
-        // Assert that the values are correctly set
-        let (program_info_res, facts_registry_res) =
-            tokio::join!(appchain.get_program_info().call(), appchain.get_facts_registry().call());
-
-        let (actual_program_hash, actual_config_hash) = program_info_res?;
-        let facts_registry = facts_registry_res?;
-
-        if actual_program_hash != PROGRAM_HASH {
-            return Err(ContractInitError::InvalidProgramHash {
-                actual: actual_program_hash,
-                expected: PROGRAM_HASH,
-            });
-        }
-
-        if actual_config_hash != config_hash {
-            return Err(ContractInitError::InvalidConfigHash {
-                actual: actual_config_hash,
-                expected: config_hash,
-            });
-        }
-
-        if facts_registry != ATLANTIC_FACT_REGISTRY_SEPOLIA.into() {
-            return Err(ContractInitError::InvalidFactRegistry {
-                actual: facts_registry.into(),
-                expected: ATLANTIC_FACT_REGISTRY_SEPOLIA,
-            });
-        }
+        check_program_info(chain_id, deployed_appchain_contract, account.provider()).await?;
 
         Ok(deployed_appchain_contract.into())
     }
@@ -213,6 +231,52 @@ pub async fn deploy_settlement_contract(
         Err(..) => sp.fail("Deployment failed"),
     }
     result
+}
+
+/// Checks that the program info is correctly set on the contract according to the chain's
+/// configuration.
+pub async fn check_program_info(
+    chain_id: Felt,
+    appchain_address: Felt,
+    provider: &RpcProvider,
+) -> Result<(), ContractInitError> {
+    let appchain = AppchainContractReader::new(appchain_address, provider);
+
+    // Compute the chain's config hash
+    let config_hash = compute_config_hash(
+        chain_id,
+        felt!("0x2e7442625bab778683501c0eadbc1ea17b3535da040a12ac7d281066e915eea"),
+    );
+
+    // Assert that the values are correctly set
+    let (program_info_res, facts_registry_res) =
+        tokio::join!(appchain.get_program_info().call(), appchain.get_facts_registry().call());
+
+    let (actual_program_hash, actual_config_hash) = program_info_res?;
+    let facts_registry = facts_registry_res?;
+
+    if actual_program_hash != PROGRAM_HASH {
+        return Err(ContractInitError::InvalidProgramHash {
+            actual: actual_program_hash,
+            expected: PROGRAM_HASH,
+        });
+    }
+
+    if actual_config_hash != config_hash {
+        return Err(ContractInitError::InvalidConfigHash {
+            actual: actual_config_hash,
+            expected: config_hash,
+        });
+    }
+
+    if facts_registry != ATLANTIC_FACT_REGISTRY_SEPOLIA.into() {
+        return Err(ContractInitError::InvalidFactRegistry {
+            actual: facts_registry.into(),
+            expected: ATLANTIC_FACT_REGISTRY_SEPOLIA,
+        });
+    }
+
+    Ok(())
 }
 
 /// Error that can happen during the initialization of the core contract.
