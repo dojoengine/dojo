@@ -845,6 +845,21 @@ fn add_columns_recursive(
         ));
     };
 
+    let modify_column =
+        |alter_table_queries: &mut Vec<String>, name: &str, sql_type: &str, sql_value: &str| {
+            // SQLite doesn't support ALTER COLUMN directly, so we need to:
+            // 1. Create a new temporary column
+            // 2. Copy the data
+            // 3. Drop the old column
+            // 4. Rename the temporary column
+            alter_table_queries
+                .push(format!("ALTER TABLE [{table_id}] ADD COLUMN [tmp_{name}] {sql_type}"));
+            alter_table_queries.push(format!("UPDATE [{table_id}] SET [tmp_{name}] = {sql_value}"));
+            alter_table_queries.push(format!("ALTER TABLE [{table_id}] DROP COLUMN [{name}]"));
+            alter_table_queries
+                .push(format!("ALTER TABLE [{table_id}] RENAME COLUMN [tmp_{name}] TO [{name}]"));
+        };
+
     match ty {
         Ty::Struct(s) => {
             for member in &s.children {
@@ -938,7 +953,28 @@ fn add_columns_recursive(
             let column_name =
                 if column_prefix.is_empty() { "value".to_string() } else { column_prefix };
 
-            add_column(&column_name, p.to_sql_type().as_ref());
+            if let Some(upgrade_diff) = upgrade_diff {
+                if let Some(old_primitive) = upgrade_diff.as_primitive() {
+                    if old_primitive.can_upgrade_to(p) {
+                        // Modify existing column to new type
+                        modify_column(
+                            alter_table_queries,
+                            &column_name,
+                            p.to_sql_type().as_ref(),
+                            p.to_sql_value().as_ref(),
+                        );
+                    } else {
+                        return Err(anyhow::anyhow!(
+                            "Invalid primitive type upgrade from {:?} to {:?}",
+                            old_primitive,
+                            p
+                        ));
+                    }
+                }
+            } else {
+                // New column
+                add_column(&column_name, p.to_sql_type().as_ref());
+            }
         }
     }
 
