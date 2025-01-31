@@ -903,14 +903,16 @@ fn add_columns_recursive(
                 // Only process elements from the diff
                 diff.iter().filter_map(|m| {
                     tuple.iter().position(|member| member == m)
-                        .map(|idx| (idx, m))
+                        .map(|idx| (idx, m, Some(m)))
                 }).collect()
             } else {
                 // Process all elements
-                tuple.iter().enumerate().collect::<Vec<_>>()
+                tuple.iter().enumerate()
+                    .map(|(idx, member)| (idx, member, None))
+                    .collect::<Vec<_>>()
             };
 
-            for (idx, member) in elements_to_process {
+            for (idx, member, member_diff) in elements_to_process {
                 let mut new_path = path.to_vec();
                 new_path.push(idx.to_string());
                 add_columns_recursive(
@@ -920,7 +922,7 @@ fn add_columns_recursive(
                     alter_table_queries,
                     indices,
                     table_id,
-                    None,
+                    member_diff,
                 )?;
             }
         }
