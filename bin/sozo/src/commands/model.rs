@@ -1,5 +1,6 @@
 use anyhow::Result;
 use clap::{Args, Subcommand};
+use dojo_world::config::calldata_decoder;
 use scarb::core::Config;
 use sozo_ops::model;
 use sozo_ops::resource_descriptor::ResourceDescriptor;
@@ -109,8 +110,13 @@ hashes, called 'hash' in the following documentation.
 
         #[arg(value_name = "KEYS")]
         #[arg(value_delimiter = ',')]
-        #[arg(help = "Comma seperated values e.g., 0x12345,0x69420,...")]
-        keys: Vec<Felt>,
+        #[arg(help = "Comma separated values, e.g., 0x12345,0x69420,sstr:\"hello\", u256:0x123.
+                      Supporting all prefixes:\n  - u256: A 256-bit unsigned integer\n  - str: A \
+                      cairo string (ByteArray)\n  - sstr: A cairo short string\n  - int: A \
+                      signed integer\n  - no prefix: A cairo felt or any type that fits into \
+                      one felt")]
+        #[arg(value_parser = model_key_parser)]
+        keys: Vec<Vec<Felt>>,
 
         #[command(flatten)]
         world: WorldOptions,
@@ -122,6 +128,12 @@ hashes, called 'hash' in the following documentation.
         #[arg(help = "Block number at which to retrieve the model data (pending block by default)")]
         block: Option<u64>,
     },
+}
+
+// Custom parser for model keys
+fn model_key_parser(s: &str) -> Result<Vec<Felt>> {
+    let felts = calldata_decoder::decode_calldata(&vec![s.to_string()])?;
+    Ok(felts)
 }
 
 impl ModelArgs {
@@ -205,9 +217,11 @@ impl ModelArgs {
                     let (world_diff, provider, _) =
                         utils::get_world_diff_and_provider(starknet, world, &ws).await?;
 
+                    let flattened_keys: Vec<Felt> = keys.into_iter().flatten().collect();
+
                     let (record, _, _) = model::model_get(
                         tag.to_string(),
-                        keys,
+                        flattened_keys,
                         world_diff.world_info.address,
                         &provider,
                         block_id,
@@ -220,5 +234,148 @@ impl ModelArgs {
                 }
             }
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    // To do: Add more tests for the flattening of keys
+    // let flattened_keys: Vec<Felt> = keys.into_iter().flatten().collect();
+
+    use clap::Parser;
+    use starknet::core::utils::cairo_short_string_to_felt;
+
+    use super::*;
+
+    #[derive(Parser, Debug)]
+    struct TestCommand {
+        #[command(subcommand)]
+        command: ModelCommand,
+    }
+
+    #[test]
+    fn test_model_get_argument_parsing() {
+        // Test parsing with hex
+        let args = TestCommand::parse_from([
+            "model",
+            "get",
+            "Account",
+            "0x054cb935d86d80b5a0a6e756edf448ab33876d01dd2b07a2a4e63a41e06d0ef5,0x6d69737479",
+        ]);
+
+        if let ModelCommand::Get { keys, .. } = args.command {
+            let expected = vec![
+                vec![
+                    Felt::from_hex(
+                        "0x054cb935d86d80b5a0a6e756edf448ab33876d01dd2b07a2a4e63a41e06d0ef5",
+                    )
+                    .unwrap(),
+                ],
+                vec![Felt::from_hex("0x6d69737479").unwrap()],
+            ];
+            assert_eq!(keys, expected);
+        } else {
+            panic!("Expected Get command");
+        }
+
+        // Test parsing with short string prefix
+        let args = TestCommand::parse_from([
+            "model",
+            "get",
+            "Account",
+            "0x054cb935d86d80b5a0a6e756edf448ab33876d01dd2b07a2a4e63a41e06d0ef5,sstr:\"misty\"",
+        ]);
+
+        if let ModelCommand::Get { keys, .. } = args.command {
+            let expected = vec![
+                vec![
+                    Felt::from_hex(
+                        "0x054cb935d86d80b5a0a6e756edf448ab33876d01dd2b07a2a4e63a41e06d0ef5",
+                    )
+                    .unwrap(),
+                ],
+                vec![cairo_short_string_to_felt("misty").unwrap()],
+            ];
+            assert_eq!(keys, expected);
+        } else {
+            panic!("Expected Get command");
+        }
+
+        // Test parsing with u256 prefix
+        let args = TestCommand::parse_from([
+            "model",
+            "get",
+            "Account",
+            "0x054cb935d86d80b5a0a6e756edf448ab33876d01dd2b07a2a4e63a41e06d0ef5,u256:0x1",
+        ]);
+
+        if let ModelCommand::Get { keys, .. } = args.command {
+            let expected = vec![
+                vec![
+                    Felt::from_hex(
+                        "0x054cb935d86d80b5a0a6e756edf448ab33876d01dd2b07a2a4e63a41e06d0ef5",
+                    )
+                    .unwrap(),
+                ],
+                vec![Felt::ONE, Felt::ZERO],
+            ];
+            assert_eq!(keys, expected);
+        } else {
+            panic!("Expected Get command");
+        }
+
+        // Test parsing with int prefix
+        let args = TestCommand::parse_from(["model", "get", "Account", "int:-123456789"]);
+
+        if let ModelCommand::Get { keys, .. } = args.command {
+            let expected = vec![vec![(-123456789_i64).into()]];
+            assert_eq!(keys, expected);
+        } else {
+            panic!("Expected Get command");
+        }
+
+        // Test parsing with str prefix
+        let args = TestCommand::parse_from(["model", "get", "Account", "str:hello"]);
+
+        if let ModelCommand::Get { keys, .. } = args.command {
+            let expected = vec![vec![
+                Felt::ZERO,
+                cairo_short_string_to_felt("hello").unwrap(),
+                Felt::from_dec_str("5").unwrap(),
+            ]];
+            assert_eq!(keys, expected);
+        } else {
+            panic!("Expected Get command");
+        }
+
+        // Test parsing with all prefixes
+        let args = TestCommand::parse_from([
+            "model",
+            "get",
+            "Account",
+            "0x054cb935d86d80b5a0a6e756edf448ab33876d01dd2b07a2a4e63a41e06d0ef5,u256:0x1,int:\
+             -123456789,str:hello",
+        ]);
+
+        if let ModelCommand::Get { keys, .. } = args.command {
+            let expected = vec![
+                vec![
+                    Felt::from_hex(
+                        "0x054cb935d86d80b5a0a6e756edf448ab33876d01dd2b07a2a4e63a41e06d0ef5",
+                    )
+                    .unwrap(),
+                ],
+                vec![Felt::ONE, Felt::ZERO],
+                vec![(-123456789_i64).into()],
+                vec![
+                    Felt::ZERO,
+                    cairo_short_string_to_felt("hello").unwrap(),
+                    Felt::from_dec_str("5").unwrap(),
+                ],
+            ];
+            assert_eq!(keys, expected);
+        } else {
+            panic!("Expected Get command");
+        }
     }
 }
