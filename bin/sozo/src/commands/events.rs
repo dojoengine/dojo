@@ -8,6 +8,7 @@ use dojo_world::contracts::abigen::world::{self, Event as WorldEvent};
 use dojo_world::diff::WorldDiff;
 use scarb::core::Config;
 use sozo_ops::model;
+use sozo_scarbext::WorkspaceExt;
 use starknet::core::types::{BlockId, BlockTag, EventFilter, Felt};
 use starknet::core::utils::starknet_keccak;
 use starknet::providers::Provider;
@@ -58,15 +59,24 @@ impl EventsArgs {
     pub fn run(self, config: &Config) -> Result<()> {
         config.tokio_handle().block_on(async {
             let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
+            let profile_config = ws.load_profile_config()?;
+
             let (world_diff, provider, _) =
                 utils::get_world_diff_and_provider(self.starknet, self.world, &ws).await?;
             let provider = Arc::new(provider);
 
             let latest_block = provider.block_number().await?;
-            let from_block = self.from_block.unwrap_or_else(|| latest_block.saturating_sub(1000));
+            let from_block = if let Some(world_block) =
+                profile_config.env.as_ref().and_then(|e| e.world_block)
+            {
+                world_block
+            } else {
+                self.from_block.expect("from_block is required when not specified in environment")
+            };
             let to_block = self.to_block.unwrap_or(latest_block);
 
             let mut current_start = from_block;
+            let mut continuation_token = self.continuation_token.clone();
             while current_start <= to_block {
                 let chunk_end = std::cmp::min(current_start + MAX_BLOCK_RANGE - 1, to_block);
 
@@ -80,7 +90,7 @@ impl EventsArgs {
                 };
 
                 let res = provider
-                    .get_events(event_filter, self.continuation_token.clone(), self.chunk_size)
+                    .get_events(event_filter, continuation_token.clone(), self.chunk_size)
                     .await?;
 
                 for event in &res.events {
@@ -107,9 +117,10 @@ impl EventsArgs {
                     }
                 }
 
-                if let Some(continuation_token) = res.continuation_token {
-                    println!("Continuation token: {:?}", continuation_token);
-                    println!("----------------------------------------------");
+                if let Some(token) = res.continuation_token {
+                    continuation_token = Some(token);
+                } else {
+                    break;
                 }
 
                 current_start = chunk_end + 1;
