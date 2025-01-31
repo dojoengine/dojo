@@ -293,7 +293,11 @@ impl Ty {
             }
             (Ty::Tuple(t1), Ty::Tuple(t2)) => {
                 if t1.len() != t2.len() {
-                    Some(Ty::Tuple(t1.iter().filter_map(|ty| if !t2.contains(ty) { Some(ty.clone()) } else { None }).collect()))
+                    Some(Ty::Tuple(
+                        t1.iter()
+                            .filter_map(|ty| if !t2.contains(ty) { Some(ty.clone()) } else { None })
+                            .collect(),
+                    ))
                 } else {
                     // Compare each tuple element recursively
                     let diff_elements: Vec<Ty> =

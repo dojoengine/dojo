@@ -901,13 +901,16 @@ fn add_columns_recursive(
         Ty::Tuple(tuple) => {
             let elements_to_process = if let Some(diff) = upgrade_diff.and_then(|d| d.as_tuple()) {
                 // Only process elements from the diff
-                diff.iter().filter_map(|m| {
-                    tuple.iter().position(|member| member == m)
-                        .map(|idx| (idx, m, Some(m)))
-                }).collect()
+                diff.iter()
+                    .filter_map(|m| {
+                        tuple.iter().position(|member| member == m).map(|idx| (idx, m, Some(m)))
+                    })
+                    .collect()
             } else {
                 // Process all elements
-                tuple.iter().enumerate()
+                tuple
+                    .iter()
+                    .enumerate()
                     .map(|(idx, member)| (idx, member, None))
                     .collect::<Vec<_>>()
             };
