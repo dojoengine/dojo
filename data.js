@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1738276699450,
+  "lastUpdate": 1738282553413,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -49525,6 +49525,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 7668399,
             "range": "± 56778",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f4b733d948da6541241042fb4c5f7cce6d3c1997",
+          "message": "feat(torii-indexer): add option for strict model reader block (#2954)\n\n* feat(torii-indexer): add option for strict model reader block\n\n* event processor config",
+          "timestamp": "2025-01-30T23:59:08Z",
+          "tree_id": "89700cdf76457b35b45ff12049d274b3ca5ea8db",
+          "url": "https://github.com/dojoengine/dojo/commit/f4b733d948da6541241042fb4c5f7cce6d3c1997"
+        },
+        "date": 1738282550655,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 12046824717,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
