@@ -10,7 +10,7 @@ use starknet::core::types::{BlockId, BlockTag, FunctionCall, U256};
 use starknet::core::utils::{get_selector_from_name, parse_cairo_short_string};
 use starknet::providers::Provider;
 use starknet_crypto::Felt;
-use tracing::{debug, trace, warn};
+use tracing::{debug, warn};
 
 use super::{ApplyBalanceDiffQuery, Executor};
 use crate::constants::{SQL_FELT_DELIMITER, TOKEN_BALANCE_TABLE};
@@ -242,22 +242,19 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
         let metadata = if token_uri.is_empty() {
             "".to_string()
         } else {
-            let metadata = Self::fetch_metadata(&token_uri).await.with_context(|| {
-                format!(
-                    "Failed to fetch metadata for token_id: {}",
-                    register_erc721_token.actual_token_id
-                )
-            });
+            let metadata = Self::fetch_metadata(&token_uri).await;
 
-            if let Ok(metadata) = metadata {
-                serde_json::to_string(&metadata).context("Failed to serialize metadata")?
-            } else {
-                warn!(
-                contract_address = format!("{:#x}", register_erc721_token.contract_address),
-                    token_id = %register_erc721_token.actual_token_id,
-                    "Error fetching metadata, empty metadata will be used instead.",
-                );
-                "".to_string()
+            match metadata {
+                Ok(metadata) => serde_json::to_string(&metadata).context("Failed to serialize metadata")?,
+                Err(err) => {
+                    debug!(error = %err, token_uri = %token_uri, "Error fetching metadata");
+                    warn!(
+                        contract_address = format!("{:#x}", register_erc721_token.contract_address),
+                        token_id = %register_erc721_token.actual_token_id,
+                        "Error fetching metadata, empty metadata will be used instead.",
+                    );
+                    "".to_string()
+                }
             }
         };
 
@@ -303,8 +300,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
             }
             uri if uri.starts_with("data") => {
                 // Parse and decode data URI
-                debug!("Parsing metadata from data URI");
-                trace!(data_uri = %token_uri);
+                debug!(data_uri = %token_uri, "Parsing metadata from data URI");
 
                 // HACK: https://github.com/servo/rust-url/issues/908
                 let uri = token_uri.replace("#", "%23");
@@ -324,7 +320,9 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                     .filter(|c| !c.is_ascii_control())
                     .collect::<String>();
 
-                let json: serde_json::Value = serde_json::from_str(&decoded_str)
+                debug!(decoded_str = %decoded_str, "Decoded metadata");
+
+                let json: serde_json::Value = serde_json::from_str(&String::from_utf8_lossy(&decoded.0))
                     .context(format!("Failed to parse metadata JSON from data URI: {}", &uri))?;
 
                 Ok(json)
