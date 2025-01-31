@@ -313,17 +313,15 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 }
 
                 let decoded = data_url.decode_to_vec().context("Failed to decode data URI")?;
-                // HACK: Loot Survior NFT metadata contains control characters which makes the json
-                // DATA invalid so filter them out
+                // Filter out control characters and escape unescaped quotes
                 let decoded_str = String::from_utf8_lossy(&decoded.0)
                     .chars()
                     .filter(|c| !c.is_ascii_control())
-                    .collect::<String>();
+                    .collect::<String>()
+                    .replace(r#"""#, r#"\""#); // Escape unescaped quotes
 
-                debug!(decoded_str = %decoded_str, "Decoded metadata");
-
-                let json: serde_json::Value = serde_json::from_str(&String::from_utf8_lossy(&decoded.0))
-                    .context(format!("Failed to parse metadata JSON from data URI: {}", &uri))?;
+                let json: serde_json::Value = serde_json::from_str(&decoded_str)
+                    .with_context(|| format!("Failed to parse metadata JSON from data URI: {}", &uri))?;
 
                 Ok(json)
             }
