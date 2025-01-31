@@ -179,7 +179,7 @@ pub struct IndexingOptions {
     )]
     #[serde(default)]
     pub controllers: bool,
-  
+
     /// Whether or not to read models from the block number they were registered in.
     /// If false, models will be read from the latest block.
     #[arg(
@@ -251,7 +251,7 @@ impl IndexingOptions {
             if !self.controllers {
                 self.controllers = other.controllers;
             }
-          
+
             if !self.strict_model_reader {
                 self.strict_model_reader = other.strict_model_reader;
             }
