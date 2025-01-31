@@ -65,14 +65,7 @@ impl GasOracle {
     ///
     /// The result of this is the same as running the node with fee disabled.
     pub fn sampled_starknet() -> Self {
-        Self::fixed(GasPrices { eth: 0, strk: 0 }, GasPrices { eth: 0, strk: 0 })
-    }
-
-    /// Returns a fixed gas oracle with zero gas prices.
-    ///
-    /// Mainly used for testing purposes.
-    pub fn zero() -> Self {
-        Self::fixed(GasPrices { eth: 0, strk: 0 }, GasPrices { eth: 0, strk: 0 })
+        Self::fixed(GasPrices { eth: 1, strk: 1 }, GasPrices { eth: 1, strk: 1 })
     }
 
     /// Returns the current gas prices.

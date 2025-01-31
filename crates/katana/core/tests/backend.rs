@@ -36,7 +36,7 @@ fn backend_with_db(chain_spec: &ChainSpec, provider: impl Database) -> Backend<B
     Backend::new(
         chain_spec.clone().into(),
         Blockchain::new(provider),
-        GasOracle::zero(),
+        GasOracle::sampled_starknet(),
         executor(chain_spec),
     )
 }
