@@ -15019,6 +15019,7 @@ dependencies = [
  "hashlink",
  "ipfs-api-backend-hyper",
  "katana-runner",
+ "lazy_static",
  "num-traits 0.2.19",
  "once_cell",
  "reqwest 0.11.27",

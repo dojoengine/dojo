@@ -56,6 +56,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
             let id = id_str.split(SQL_FELT_DELIMITER).collect::<Vec<&str>>();
             match contract_type {
                 ContractType::WORLD => unreachable!(),
+                ContractType::UDC => unreachable!(),
                 ContractType::ERC721 => {
                     // account_address/contract_address:id => ERC721
                     assert!(id.len() == 2);
