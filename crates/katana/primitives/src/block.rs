@@ -54,8 +54,10 @@ pub struct PartialHeader {
     pub protocol_version: ProtocolVersion,
 }
 
+// TODO: Make sure the values can't be zero because in the blockifier executor, we fallback to 1 if
+// the gas price value is 0.
 /// The L1 gas prices.
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "serde", serde(rename_all = "UPPERCASE"))]
@@ -70,6 +72,12 @@ pub struct GasPrices {
 impl GasPrices {
     pub fn new(wei_gas_price: u128, fri_gas_price: u128) -> Self {
         Self { eth: wei_gas_price, strk: fri_gas_price }
+    }
+}
+
+impl Default for GasPrices {
+    fn default() -> Self {
+        Self { eth: 1, strk: 1 }
     }
 }
 
