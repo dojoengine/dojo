@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1738385321565,
+  "lastUpdate": 1738385517829,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -49633,6 +49633,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 11655316925,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a9e65a3204d41db212c5b53c4ae3d305caad017b",
+          "message": "feat(torii): indexing cartridge controllers (#2959)\n\n* feat(torii): indexing cartridge controllers & cartrdige paymaster contracts\n\n* processor and migration\n\n* rename\n\n* use adderss for paralle\n\n* fmt\n\n* use udc to retrieve events\n\n* read paymaster accounts\n\n* use cartridge magic instead of deployer address\n\n* comments\n\n* c\n\n* logs\n\n* chore\n\n* format address in hex\n\n* unused event id\n\n* rename\n\n* fix build",
+          "timestamp": "2025-01-31T22:32:32-06:00",
+          "tree_id": "6f5cccf62c76af480fc7e15edee924c81f1b2c7c",
+          "url": "https://github.com/dojoengine/dojo/commit/a9e65a3204d41db212c5b53c4ae3d305caad017b"
+        },
+        "date": 1738385515555,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2494145,
+            "range": "± 49325",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 10657803,
+            "range": "± 169580",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2895422621,
+            "range": "± 201847358",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 9500247,
+            "range": "± 274968",
             "unit": "ns/iter"
           }
         ]
