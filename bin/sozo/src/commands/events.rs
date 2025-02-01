@@ -17,6 +17,10 @@ use super::options::starknet::StarknetOptions;
 use super::options::world::WorldOptions;
 use crate::utils;
 
+// Maximum blocks per query
+// TODO: initial value pending benchmarking to determine optimal range
+const MAX_BLOCK_RANGE: u64 = 50_000;
+
 #[derive(Debug, Args)]
 pub struct EventsArgs {
     #[arg(help = "List of specific events to be filtered")]
@@ -59,59 +63,67 @@ impl EventsArgs {
 
             let (world_diff, provider, _) =
                 utils::get_world_diff_and_provider(self.starknet, self.world, &ws).await?;
-
             let provider = Arc::new(provider);
 
+            let latest_block = provider.block_number().await?;
             let from_block = if let Some(world_block) =
                 profile_config.env.as_ref().and_then(|e| e.world_block)
             {
-                Some(BlockId::Number(world_block))
+                world_block
             } else {
-                self.from_block.map(BlockId::Number)
+                self.from_block.expect("from_block is required when not specified in environment")
             };
+            let to_block = self.to_block.unwrap_or(latest_block);
 
-            let to_block = self.to_block.map(BlockId::Number);
-            let keys = self
-                .events
-                .map(|e| vec![e.iter().map(|event| starknet_keccak(event.as_bytes())).collect()]);
+            let mut current_start = from_block;
+            let mut continuation_token = self.continuation_token.clone();
+            while current_start <= to_block {
+                let chunk_end = std::cmp::min(current_start + MAX_BLOCK_RANGE - 1, to_block);
 
-            let event_filter = EventFilter {
-                from_block,
-                to_block,
-                address: Some(world_diff.world_info.address),
-                keys,
-            };
+                let event_filter = EventFilter {
+                    from_block: Some(BlockId::Number(current_start)),
+                    to_block: Some(BlockId::Number(chunk_end)),
+                    address: Some(world_diff.world_info.address),
+                    keys: self.events.as_ref().map(|e| {
+                        vec![e.iter().map(|event| starknet_keccak(event.as_bytes())).collect()]
+                    }),
+                };
 
-            let res =
-                provider.get_events(event_filter, self.continuation_token, self.chunk_size).await?;
+                let res = provider
+                    .get_events(event_filter, continuation_token.clone(), self.chunk_size)
+                    .await?;
 
-            for event in &res.events {
-                match world::Event::try_from(event) {
-                    Ok(ev) => {
-                        match_event(
-                            &ev,
-                            &world_diff,
-                            event.block_number,
-                            event.transaction_hash,
-                            &provider,
-                        )
-                        .await
-                        .unwrap_or_else(|e| {
-                            tracing::error!(?e, "Failed to process event: {:?}", ev);
-                        });
-                    }
-                    Err(e) => {
-                        tracing::error!(
-                            ?e,
-                            "Failed to parse remote world event which is supposed to be valid."
-                        );
+                for event in &res.events {
+                    match world::Event::try_from(event) {
+                        Ok(ev) => {
+                            match_event(
+                                &ev,
+                                &world_diff,
+                                event.block_number,
+                                event.transaction_hash,
+                                &provider,
+                            )
+                            .await
+                            .unwrap_or_else(|e| {
+                                tracing::error!(?e, "Failed to process event: {:?}", ev);
+                            });
+                        }
+                        Err(e) => {
+                            tracing::error!(
+                                ?e,
+                                "Failed to parse remote world event which is supposed to be valid."
+                            );
+                        }
                     }
                 }
-            }
 
-            if let Some(continuation_token) = res.continuation_token {
-                println!("Continuation token: {:?}", continuation_token);
-                println!("----------------------------------------------");
+                if let Some(token) = res.continuation_token {
+                    continuation_token = Some(token);
+                } else {
+                    break;
+                }
+
+                current_start = chunk_end + 1;
             }
 
             Ok(())

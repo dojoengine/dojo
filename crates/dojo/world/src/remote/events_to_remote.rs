@@ -66,45 +66,53 @@ impl WorldRemote {
             world::MetadataUpdate::event_selector(),
         ]];
 
-        let filter = EventFilter {
-            // Most of the node providers are struggling with wide block ranges.
-            // For this reason, we must be able to accept a custom from block.
-            from_block: from_block.map(BlockId::Number),
-            to_block: Some(BlockId::Tag(BlockTag::Pending)),
-            address: Some(world_address),
-            keys: Some(keys),
-        };
-
+        // Maximum blocks per query
+        // TODO: initial value pending benchmarking to determine optimal range
+        const MAX_BLOCK_RANGE: u64 = 50_000;
         let chunk_size = 500;
 
-        trace!(
-            world_address = format!("{:#066x}", world_address),
-            chunk_size,
-            ?filter,
-            "Fetching remote world events."
-        );
-
+        let from_block = from_block.unwrap_or(0);
+        let to_block = provider.block_number().await?;
+        let mut current_from = from_block;
         let mut events = Vec::new();
 
-        // Initial fetch.
-        let page = provider.get_events(filter.clone(), None, chunk_size).await?;
-        events.extend(page.events);
+        while current_from <= to_block {
+            let current_to = std::cmp::min(current_from + MAX_BLOCK_RANGE - 1, to_block);
 
-        let mut continuation_token = page.continuation_token;
+            let filter = EventFilter {
+                from_block: Some(BlockId::Number(current_from)),
+                to_block: Some(BlockId::Number(current_to)),
+                address: Some(world_address),
+                keys: Some(keys.clone()),
+            };
 
-        while continuation_token.is_some() {
-            let page = provider.get_events(filter.clone(), continuation_token, chunk_size).await?;
+            trace!(
+                world_address = format!("{:#066x}", world_address),
+                chunk_size,
+                ?filter,
+                "Fetching remote world events for block range {}-{}.",
+                current_from,
+                current_to
+            );
 
-            // Katana is actually returning a null continuation token.
-            // However, we need to remove this check for empty page since worlds deploy on
-            // mainnet may have empty pages.
-            // TODO: @glihm,@kariy check if Katana is actually returning a null continuation token.
-            if is_katana && page.events.is_empty() {
-                break;
+            let mut continuation_token = None;
+            loop {
+                let page =
+                    provider.get_events(filter.clone(), continuation_token, chunk_size).await?;
+
+                if is_katana && page.events.is_empty() {
+                    break;
+                }
+
+                events.extend(page.events);
+
+                continuation_token = page.continuation_token;
+                if continuation_token.is_none() {
+                    break;
+                }
             }
 
-            continuation_token = page.continuation_token;
-            events.extend(page.events);
+            current_from = current_to + 1;
         }
 
         trace!(
