@@ -4,12 +4,30 @@ use dojo::{
 };
 
 use super::{ModelDefinition, ModelDef, ModelIndex};
-/// Trait `KeyParser` defines a trait for parsing keys from a given model.
-///
+
 /// A pointer to a model, which can be expressed by an entity id.
+/// 
+/// # Type Parameters
+/// - `M`: The type of the model being pointed to
+///
+/// # Fields
+/// - `id`: The unique identifier for the model instance
 #[derive(Copy, Drop, Serde, Debug, PartialEq)]
 pub struct ModelPtr<M> {
     pub id: felt252,
+}
+
+/// Trait `KeyParser` defines a trait for parsing keys from a given model.
+/// 
+/// # Type Parameters
+/// - `M`: The type of the model
+/// - `K`: The type of the key
+///
+/// # Methods
+/// - `parse_key`: Parses the key from the given model
+pub trait KeyParser<M, K> {
+    /// Parses the key from the given model.
+    fn parse_key(self: @M) -> K;
 }
 
 /// Trait that defines a method for converting a span of model pointers to a span of model indexes.
@@ -41,11 +59,6 @@ pub impl ModelPtrsImpl<M> of ModelPtrsTrait<M> {
         };
         ids.span()
     }
-}
-
-pub trait KeyParser<M, K> {
-    /// Parses the key from the given model.
-    fn parse_key(self: @M) -> K;
 }
 
 /// Defines a trait for parsing models, providing methods to serialize keys and values.
