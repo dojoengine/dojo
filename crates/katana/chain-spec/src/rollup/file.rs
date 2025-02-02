@@ -109,7 +109,7 @@ fn list_at<P: AsRef<Path>>(dir: P) -> Result<Vec<ChainId>, Error> {
             if entry.file_type()?.is_dir() {
                 if let Some(name) = entry.file_name().to_str() {
                     if let Ok(chain_id) = ChainId::parse(name) {
-                        let cs = ChainConfigDir::open(&chain_id).expect("must exist");
+                        let cs = ChainConfigDir::open_at(dir, &chain_id).expect("must exist");
                         if cs.config_path().exists() {
                             chains.push(chain_id);
                         }
@@ -242,6 +242,16 @@ mod tests {
         with_temp_dir(|dir| super::write_at(dir, chain_spec))
     }
 
+    impl ChainConfigDir {
+        fn open_tmp(id: &ChainId) -> Result<Self, Error> {
+            with_temp_dir(|dir| Self::open_at(dir, id))
+        }
+
+        fn create_tmp(id: &ChainId) -> Result<Self, Error> {
+            with_temp_dir(|dir| Self::create_at(dir, id))
+        }
+    }
+
     fn chainspec() -> ChainSpec {
         ChainSpec {
             id: ChainId::default(),
@@ -274,16 +284,16 @@ mod tests {
         let chain_id = ChainId::parse("test").unwrap();
 
         // Test creation
-        let config_dir = ChainConfigDir::create(&chain_id).unwrap();
+        let config_dir = ChainConfigDir::create_tmp(&chain_id).unwrap();
         assert!(config_dir.0.exists());
 
         // Test opening existing dir
-        let opened_dir = ChainConfigDir::open(&chain_id).unwrap();
+        let opened_dir = ChainConfigDir::open_tmp(&chain_id).unwrap();
         assert_eq!(config_dir.0, opened_dir.0);
 
         // Test opening non-existent dir
         let bad_id = ChainId::parse("nonexistent").unwrap();
-        assert!(matches!(ChainConfigDir::open(&bad_id), Err(Error::DirectoryNotFound { .. })));
+        assert!(matches!(ChainConfigDir::open_tmp(&bad_id), Err(Error::DirectoryNotFound { .. })));
     }
 
     #[test]
@@ -295,7 +305,7 @@ mod tests {
     #[test]
     fn test_config_paths() {
         let chain_id = ChainId::parse("test").unwrap();
-        let config_dir = ChainConfigDir::create(&chain_id).unwrap();
+        let config_dir = ChainConfigDir::create_tmp(&chain_id).unwrap();
 
         assert!(config_dir.config_path().ends_with("config.toml"));
         assert!(config_dir.genesis_path().ends_with("genesis.json"));
