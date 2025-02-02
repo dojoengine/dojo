@@ -97,5 +97,5 @@ pub fn invalid_resource_version_upgrade(
 }
 
 pub fn inconsistent_namespaces(old_hash: felt252, new_hash: felt252) -> ByteArray {
-    format!("Inconsistent namespaces (old: {old_hash} new: {new_hash}")
+    format!("Inconsistent namespaces (old: {old_hash} new: {new_hash})")
 }
