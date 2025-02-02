@@ -79,13 +79,18 @@ pub mod world {
     }
 
     #[derive(Drop, starknet::Event)]
+    /// Event emitted when a new world is spawned
     pub struct WorldSpawned {
+        /// The address of the creator of the world
         pub creator: ContractAddress,
+        /// The class hash of the world contract
         pub class_hash: ClassHash,
     }
 
     #[derive(Drop, starknet::Event)]
+    /// Event emitted when the world contract is upgraded
     pub struct WorldUpgraded {
+        /// The new class hash of the world contract
         pub class_hash: ClassHash,
     }
 
@@ -234,13 +239,21 @@ pub mod world {
     }
 
     #[storage]
+    /// Main storage structure for the World contract
     struct Storage {
+        /// Counter for generating unique identifiers
         nonce: usize,
+        /// Salt used for model deployments
         models_salt: usize,
+        /// Salt used for event deployments
         events_salt: usize,
+        /// Mapping of resource selectors to their corresponding Resource instances
         resources: Map::<felt252, Resource>,
+        /// Mapping of (resource selector, contract address) to owner status
         owners: Map::<(felt252, ContractAddress), bool>,
+        /// Mapping of (resource selector, contract address) to writer status
         writers: Map::<(felt252, ContractAddress), bool>,
+        /// Mapping of contract selectors to their initialization status
         initialized_contracts: Map::<felt252, bool>,
     }
 
