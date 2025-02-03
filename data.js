@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1738553610161,
+  "lastUpdate": 1738553719694,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -49867,6 +49867,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 11693411810,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e823d42bf95bcc5380c3a56b9e85eafc50351659",
+          "message": "feat(torii-sqlite): support enum upgrade of variants (#2930)",
+          "timestamp": "2025-02-03T03:17:37Z",
+          "tree_id": "287e61de18b724a29a09c5d97ab6eb4871c4db09",
+          "url": "https://github.com/dojoengine/dojo/commit/e823d42bf95bcc5380c3a56b9e85eafc50351659"
+        },
+        "date": 1738553717410,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2496453,
+            "range": "± 48717",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 7947896,
+            "range": "± 461448",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2580724870,
+            "range": "± 206576048",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 7879860,
+            "range": "± 119897",
             "unit": "ns/iter"
           }
         ]
