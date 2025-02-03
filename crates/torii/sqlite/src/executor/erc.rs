@@ -45,6 +45,12 @@ pub struct RegisterErc20TokenQuery {
     pub decimals: u8,
 }
 
+#[derive(Debug, Clone)]
+pub struct UpdateErc721MetadataQuery {
+    pub contract_address: Felt,
+    pub token_id: U256,
+}
+
 impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
     pub async fn apply_balance_diff(
         &mut self,

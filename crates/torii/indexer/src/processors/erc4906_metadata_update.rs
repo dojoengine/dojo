@@ -1,5 +1,4 @@
 use std::hash::{DefaultHasher, Hash, Hasher};
-use std::sync::Arc;
 
 use anyhow::Error;
 use async_trait::async_trait;
@@ -67,7 +66,7 @@ where
 
     async fn process(
         &self,
-        world: &WorldContractReader<P>,
+        _world: &WorldContractReader<P>,
         db: &mut Sql,
         _block_number: u64,
         _block_timestamp: u64,
@@ -76,18 +75,42 @@ where
         _config: &EventProcessorConfig,
     ) -> Result<(), Error> {
         let token_address = event.from_address;
-        let token_id = U256Cainome::cairo_deserialize(&event.keys, 1)?;
-        let token_id = U256::from_words(token_id.low, token_id.high);
-        
-        db.update_erc721_metadata(token_address, token_id, Arc::new(world.provider().clone()))
-            .await?;
 
-        debug!(
-            target: LOG_TARGET,
-            token_address = ?token_address,
-            token_id = ?token_id,
-            "ERC721 metadata updated"
-        );
+        if event.keys.len() == 3 {
+            // Single token metadata update
+            let token_id = U256Cainome::cairo_deserialize(&event.keys, 1)?;
+            let token_id = U256::from_words(token_id.low, token_id.high);
+            
+            db.update_erc721_metadata(token_address, token_id).await?;
+
+            debug!(
+                target: LOG_TARGET,
+                token_address = ?token_address,
+                token_id = ?token_id,
+                "ERC721 metadata updated for single token"
+            );
+        } else {
+            // Batch metadata update
+            let from_token_id = U256Cainome::cairo_deserialize(&event.keys, 1)?;
+            let from_token_id = U256::from_words(from_token_id.low, from_token_id.high);
+            
+            let to_token_id = U256Cainome::cairo_deserialize(&event.keys, 3)?;
+            let to_token_id = U256::from_words(to_token_id.low, to_token_id.high);
+
+            let mut token_id = from_token_id;
+            while token_id <= to_token_id {
+                db.update_erc721_metadata(token_address, token_id).await?;
+                token_id += U256::from(1u8);
+            }
+
+            debug!(
+                target: LOG_TARGET,
+                token_address = ?token_address,
+                from_token_id = ?from_token_id,
+                to_token_id = ?to_token_id,
+                "ERC721 metadata updated for token range"
+            );
+        }
 
         Ok(())
     }

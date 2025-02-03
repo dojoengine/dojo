@@ -10,6 +10,7 @@ use starknet::providers::Provider;
 use super::utils::{u256_to_sql_string, I256};
 use super::{Sql, SQL_FELT_DELIMITER};
 use crate::constants::TOKEN_TRANSFER_TABLE;
+use crate::executor::erc::UpdateErc721MetadataQuery;
 use crate::executor::{
     ApplyBalanceDiffQuery, Argument, QueryMessage, QueryType, RegisterErc20TokenQuery,
     RegisterErc721TokenQuery,
@@ -138,6 +139,23 @@ impl Sql {
             self.flush().await.with_context(|| "Failed to flush in handle_erc721_transfer")?;
             self.apply_cache_diff(block_id).await?;
         }
+
+        Ok(())
+    }
+
+    pub async fn update_erc721_metadata(
+        &mut self,
+        contract_address: Felt,
+        token_id: U256,
+    ) -> Result<()> {
+        self.executor.send(QueryMessage::new(
+            "".to_string(),
+            vec![],
+            QueryType::UpdateErc721Metadata(UpdateErc721MetadataQuery {
+                contract_address,
+                token_id,
+            }),
+        ))?;
 
         Ok(())
     }
