@@ -18,7 +18,7 @@ use crate::executor::LOG_TARGET;
 use crate::simple_broker::SimpleBroker;
 use crate::types::{ContractType, TokenBalance};
 use crate::utils::{
-    felt_to_sql_string, fetch_content_from_ipfs, sql_string_to_u256, u256_to_sql_string, I256,
+    felt_to_sql_string, fetch_content_from_ipfs, sanitize_json_string, sql_string_to_u256, u256_to_sql_string, I256
 };
 
 #[derive(Debug, Clone)]
@@ -313,14 +313,17 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 }
 
                 let decoded = data_url.decode_to_vec().context("Failed to decode data URI")?;
-                // Filter out control characters and escape unescaped quotes
+                // HACK: Loot Survior NFT metadata contains control characters which makes the json
+                // DATA invalid so filter them out
                 let decoded_str = String::from_utf8_lossy(&decoded.0)
                     .chars()
                     .filter(|c| !c.is_ascii_control())
-                    .collect::<String>()
-                    .replace(r#"""#, r#"\""#); // Escape unescaped quotes
+                    .collect::<String>();
+                let sanitized_json = sanitize_json_string(&decoded_str);
 
-                let json: serde_json::Value = serde_json::from_str(&decoded_str)
+                println!("sanitized_json: {}", sanitized_json);
+
+                let json: serde_json::Value = serde_json::from_str(&sanitized_json)
                     .with_context(|| format!("Failed to parse metadata JSON from data URI: {}", &uri))?;
 
                 Ok(json)
