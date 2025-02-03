@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1738616712579,
+  "lastUpdate": 1738616821459,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -50023,6 +50023,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 12304537275,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "bf0c5eee37cb6ee8b930711238bfb6745cf9fd77",
+          "message": "feat(katana): non-interactive init (#2988)\n\nIf no arguments are provided, `katana init` retains its interactive prompt (current behavior). This PR adds a non-interactive flow where all required values can be passed directly via CLI options to skip the prompts.",
+          "timestamp": "2025-02-04T04:48:27+08:00",
+          "tree_id": "20b65cf9ba987f1faaa39649f74cbba25d172f59",
+          "url": "https://github.com/dojoengine/dojo/commit/bf0c5eee37cb6ee8b930711238bfb6745cf9fd77"
+        },
+        "date": 1738616819109,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2595807,
+            "range": "± 56436",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 9759121,
+            "range": "± 653650",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2827238498,
+            "range": "± 237132537",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 9185292,
+            "range": "± 838802",
             "unit": "ns/iter"
           }
         ]
