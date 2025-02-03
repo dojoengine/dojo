@@ -321,8 +321,6 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                     .collect::<String>();
                 let sanitized_json = sanitize_json_string(&decoded_str);
 
-                println!("sanitized_json: {}", sanitized_json);
-
                 let json: serde_json::Value = serde_json::from_str(&sanitized_json)
                     .with_context(|| format!("Failed to parse metadata JSON from data URI: {}", &uri))?;
 
