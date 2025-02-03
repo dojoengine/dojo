@@ -47,18 +47,16 @@ where
 
     fn task_identifier(&self, event: &Event) -> TaskId {
         let mut hasher = DefaultHasher::new();
-        event.keys[0].hash(&mut hasher); // Hash the event key
+        event.from_address.hash(&mut hasher); // Hash the contract address
         
         // For single token updates
         if event.keys.len() == 3 {
             event.keys[1].hash(&mut hasher); // token_id.low
             event.keys[2].hash(&mut hasher); // token_id.high
         } else {
-            // For batch updates
-            event.keys[1].hash(&mut hasher); // from_token_id.low
-            event.keys[2].hash(&mut hasher); // from_token_id.high
-            event.keys[3].hash(&mut hasher); // to_token_id.low
-            event.keys[4].hash(&mut hasher); // to_token_id.high
+            // For batch updates, we need to be more conservative
+            // Hash just the contract address to serialize all batch updates for the same contract
+            // This prevents race conditions with overlapping ranges
         }
 
         hasher.finish()
