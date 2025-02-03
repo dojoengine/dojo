@@ -6,7 +6,7 @@ use crate::world::{spawn_test_world, NamespaceDef, TestResource};
 
 /// This file contains some partial event contracts written without the dojo::event
 /// attribute, to avoid having several contracts with a same name/classhash,
-/// as the test runner does not differenciate them.
+/// as the test runner does not differentiate them.
 /// These event contracts are used to test event upgrades in tests/event.cairo.
 
 // This event is used as a base to create the "previous" version of an event to be upgraded.
