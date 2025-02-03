@@ -769,8 +769,9 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 self.update_erc721_metadata(
                     update_metadata.contract_address,
                     update_metadata.token_id,
-                    self.provider.clone()
-                ).await?;
+                    self.provider.clone(),
+                )
+                .await?;
                 debug!(target: LOG_TARGET, duration = ?instant.elapsed(), "Updated ERC721 metadata.");
             }
             QueryType::Other => {

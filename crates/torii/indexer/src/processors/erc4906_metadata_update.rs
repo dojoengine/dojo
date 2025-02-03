@@ -33,7 +33,8 @@ where
             return true;
         }
 
-        // Batch metadata update: [hash(BatchMetadataUpdate), from_token_id.low, from_token_id.high, to_token_id.low, to_token_id.high]
+        // Batch metadata update: [hash(BatchMetadataUpdate), from_token_id.low, from_token_id.high,
+        // to_token_id.low, to_token_id.high]
         if event.keys.len() == 5 && event.data.is_empty() {
             return true;
         }
@@ -48,7 +49,7 @@ where
     fn task_identifier(&self, event: &Event) -> TaskId {
         let mut hasher = DefaultHasher::new();
         event.from_address.hash(&mut hasher); // Hash the contract address
-        
+
         // For single token updates
         if event.keys.len() == 3 {
             event.keys[1].hash(&mut hasher); // token_id.low
@@ -78,7 +79,7 @@ where
             // Single token metadata update
             let token_id = U256Cainome::cairo_deserialize(&event.keys, 1)?;
             let token_id = U256::from_words(token_id.low, token_id.high);
-            
+
             db.update_erc721_metadata(token_address, token_id).await?;
 
             debug!(
@@ -91,7 +92,7 @@ where
             // Batch metadata update
             let from_token_id = U256Cainome::cairo_deserialize(&event.keys, 1)?;
             let from_token_id = U256::from_words(from_token_id.low, from_token_id.high);
-            
+
             let to_token_id = U256Cainome::cairo_deserialize(&event.keys, 3)?;
             let to_token_id = U256::from_words(to_token_id.low, to_token_id.high);
 

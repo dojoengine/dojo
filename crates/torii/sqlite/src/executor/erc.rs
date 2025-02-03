@@ -247,16 +247,14 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
         if token_uri.is_empty() {
             Ok("".to_string())
         } else {
-            let metadata = Self::fetch_metadata(token_uri).await.with_context(|| {
-                format!(
-                    "Failed to fetch metadata for token_id: {}",
-                    token_id
-                )
-            });
+            let metadata = Self::fetch_metadata(token_uri)
+                .await
+                .with_context(|| format!("Failed to fetch metadata for token_id: {}", token_id));
 
             match metadata {
-                Ok(metadata) => serde_json::to_string(&metadata)
-                    .context("Failed to serialize metadata"),
+                Ok(metadata) => {
+                    serde_json::to_string(&metadata).context("Failed to serialize metadata")
+                }
                 Err(e) => {
                     warn!(
                         contract_address = format!("{:#x}", contract_address),
@@ -280,14 +278,12 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
         let metadata = Self::fetch_token_metadata(contract_address, token_id, &token_uri).await?;
 
         // Update metadata in database
-        sqlx::query(
-            "UPDATE tokens SET metadata = ? WHERE contract_address = ? AND id LIKE ?",
-        )
-        .bind(&metadata)
-        .bind(felt_to_sql_string(&contract_address))
-        .bind(format!("%{}", u256_to_sql_string(&token_id)))
-        .execute(&mut *self.transaction)
-        .await?;
+        sqlx::query("UPDATE tokens SET metadata = ? WHERE contract_address = ? AND id LIKE ?")
+            .bind(&metadata)
+            .bind(felt_to_sql_string(&contract_address))
+            .bind(format!("%{}", u256_to_sql_string(&token_id)))
+            .execute(&mut *self.transaction)
+            .await?;
 
         Ok(())
     }
@@ -302,20 +298,17 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
             &provider,
             register_erc721_token.contract_address,
             register_erc721_token.actual_token_id,
-        ).await?;
+        )
+        .await?;
 
         let metadata = Self::fetch_token_metadata(
             register_erc721_token.contract_address,
             register_erc721_token.actual_token_id,
             &token_uri,
-        ).await?;
+        )
+        .await?;
 
-        Ok(RegisterErc721TokenMetadata {
-            query: register_erc721_token,
-            metadata,
-            name,
-            symbol,
-        })
+        Ok(RegisterErc721TokenMetadata { query: register_erc721_token, metadata, name, symbol })
     }
 
     // given a uri which can be either http/https url or data uri, fetch the metadata erc721
