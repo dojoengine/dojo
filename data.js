@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1738613867618,
+  "lastUpdate": 1738613964285,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -49945,6 +49945,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 11475106931,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "140459108+kilavvy@users.noreply.github.com",
+            "name": "kilavvy",
+            "username": "kilavvy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "bdefea223babb8cc18231fb4da4bf612376f58d8",
+          "message": "fix: typos in documentation files (#2987)\n\n* Update benchmarks.cairo\r\n\r\n* Update event.cairo\r\n\r\n* Update 20240815022036_remove_world_class_hash.sql\r\n\r\n* Update types.rs",
+          "timestamp": "2025-02-04T04:01:47+08:00",
+          "tree_id": "bb589e575a6637dd0d252d8e6f58ebb6703b1379",
+          "url": "https://github.com/dojoengine/dojo/commit/bdefea223babb8cc18231fb4da4bf612376f58d8"
+        },
+        "date": 1738613961792,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2572133,
+            "range": "± 58703",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8054766,
+            "range": "± 103354",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2527567453,
+            "range": "± 221253902",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 7888162,
+            "range": "± 105544",
             "unit": "ns/iter"
           }
         ]
