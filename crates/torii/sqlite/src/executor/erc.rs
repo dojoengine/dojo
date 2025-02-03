@@ -18,7 +18,8 @@ use crate::executor::LOG_TARGET;
 use crate::simple_broker::SimpleBroker;
 use crate::types::{ContractType, TokenBalance};
 use crate::utils::{
-    felt_to_sql_string, fetch_content_from_ipfs, sanitize_json_string, sql_string_to_u256, u256_to_sql_string, I256
+    felt_to_sql_string, fetch_content_from_ipfs, sanitize_json_string, sql_string_to_u256,
+    u256_to_sql_string, I256,
 };
 
 #[derive(Debug, Clone)]
@@ -245,7 +246,9 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
             let metadata = Self::fetch_metadata(&token_uri).await;
 
             match metadata {
-                Ok(metadata) => serde_json::to_string(&metadata).context("Failed to serialize metadata")?,
+                Ok(metadata) => {
+                    serde_json::to_string(&metadata).context("Failed to serialize metadata")?
+                }
                 Err(err) => {
                     debug!(error = %err, token_uri = %token_uri, "Error fetching metadata");
                     warn!(
@@ -321,8 +324,10 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                     .collect::<String>();
                 let sanitized_json = sanitize_json_string(&decoded_str);
 
-                let json: serde_json::Value = serde_json::from_str(&sanitized_json)
-                    .with_context(|| format!("Failed to parse metadata JSON from data URI: {}", &uri))?;
+                let json: serde_json::Value =
+                    serde_json::from_str(&sanitized_json).with_context(|| {
+                        format!("Failed to parse metadata JSON from data URI: {}", &uri)
+                    })?;
 
                 Ok(json)
             }

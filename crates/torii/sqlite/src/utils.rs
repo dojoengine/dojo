@@ -58,7 +58,7 @@ pub fn sanitize_json_string(s: &str) -> String {
     let mut result = String::new();
     let mut chars = s.chars().peekable();
     let mut in_string = false;
-    
+
     while let Some(c) = chars.next() {
         match c {
             '"' => {
@@ -101,7 +101,7 @@ pub fn sanitize_json_string(s: &str) -> String {
             }
         }
     }
-    
+
     result
 }
 
@@ -224,13 +224,12 @@ mod tests {
         let expected = r#"{"name":"\"Rage Shout\" DireWolf"}"#;
         let sanitized = sanitize_json_string(input);
         assert_eq!(sanitized, expected);
-    
+
         let input_escaped = r#"{"name":"\"Properly Escaped\" Wolf"}"#;
         let expected_escaped = r#"{"name":"\"Properly Escaped\" Wolf"}"#;
         let sanitized_escaped = sanitize_json_string(input_escaped);
         assert_eq!(sanitized_escaped, expected_escaped);
     }
-
 
     #[test]
     fn test_must_utc_datetime_from_timestamp() {
