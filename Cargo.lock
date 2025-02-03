@@ -2091,8 +2091,8 @@ dependencies = [
 
 [[package]]
 name = "blockifier"
-version = "0.0.0"
-source = "git+https://github.com/dojoengine/sequencer?rev=802c5dc#802c5dc1b3ca231d96b65ffcada349f4b5ab0e3b"
+version = "0.8.0-rc.3"
+source = "git+https://github.com/dojoengine/sequencer?rev=adae779#adae779dd758fb3cdedec0af61651f80ec463279"
 dependencies = [
  "anyhow",
  "ark-ec",
@@ -2103,32 +2103,31 @@ dependencies = [
  "cairo-lang-casm",
  "cairo-lang-runner",
  "cairo-lang-starknet-classes",
+ "cairo-lang-utils",
  "cairo-vm",
  "derive_more 0.99.18",
  "indexmap 2.5.0",
- "itertools 0.12.1",
+ "itertools 0.10.5",
  "keccak",
  "log",
  "num-bigint",
  "num-integer",
  "num-rational",
  "num-traits 0.2.19",
- "papyrus_config",
+ "once_cell",
  "paste",
  "phf",
  "rand",
  "rstest 0.17.0",
- "semver 1.0.23",
  "serde",
  "serde_json",
  "sha2",
+ "sha3",
  "starknet-types-core",
  "starknet_api",
  "strum 0.25.0",
  "strum_macros 0.25.3",
- "tempfile",
  "thiserror 1.0.63",
- "toml 0.8.19",
 ]
 
 [[package]]
@@ -7207,17 +7206,6 @@ checksum = "b9e0384b61958566e926dc50660321d12159025e767c18e043daf26b70104c39"
 
 [[package]]
 name = "idna"
-version = "0.2.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "418a0a6fab821475f634efe3ccc45c013f742efe03d853e8d3355d5cb850ecf8"
-dependencies = [
- "matches",
- "unicode-bidi",
- "unicode-normalization",
-]
-
-[[package]]
-name = "idna"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7d20d6b07bfbc108882d88ed8e37d39636dcc260e15e30c45e6ba089610b917c"
@@ -7264,12 +7252,6 @@ dependencies = [
  "tokio",
  "windows 0.51.1",
 ]
-
-[[package]]
-name = "if_chain"
-version = "1.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cb56e1aa765b4b4f3aadfab769793b7087bb03a4ea4920644a6d238e2df5b9ed"
 
 [[package]]
 name = "igd-next"
@@ -7475,15 +7457,6 @@ dependencies = [
  "quick-xml",
  "rgb",
  "str_stack",
-]
-
-[[package]]
-name = "infra_utils"
-version = "0.0.0"
-source = "git+https://github.com/dojoengine/sequencer?rev=802c5dc#802c5dc1b3ca231d96b65ffcada349f4b5ab0e3b"
-dependencies = [
- "tokio",
- "tracing",
 ]
 
 [[package]]
@@ -9436,12 +9409,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "matches"
-version = "0.1.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2532096657941c2fea9c289d370a250971c689d4f143798ff67113ec042024a5"
-
-[[package]]
 name = "matchit"
 version = "0.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -10433,21 +10400,6 @@ dependencies = [
  "bytecount",
  "fnv",
  "unicode-width",
-]
-
-[[package]]
-name = "papyrus_config"
-version = "0.0.0"
-source = "git+https://github.com/dojoengine/sequencer?rev=802c5dc#802c5dc1b3ca231d96b65ffcada349f4b5ab0e3b"
-dependencies = [
- "clap",
- "infra_utils",
- "itertools 0.12.1",
- "serde",
- "serde_json",
- "strum_macros 0.25.3",
- "thiserror 1.0.63",
- "validator",
 ]
 
 [[package]]
@@ -13808,6 +13760,26 @@ dependencies = [
 
 [[package]]
 name = "starknet-crypto"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d3f2175b0b3fc24ff2ec6dc07f5a720498994effca7e78b11a6e1c1bd02cad52"
+dependencies = [
+ "crypto-bigint",
+ "hex",
+ "hmac",
+ "num-bigint",
+ "num-integer",
+ "num-traits 0.2.19",
+ "rfc6979",
+ "sha2",
+ "starknet-crypto-codegen",
+ "starknet-curve 0.3.0",
+ "starknet-ff",
+ "zeroize",
+]
+
+[[package]]
+name = "starknet-crypto"
 version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2e2c30c01e8eb0fc913c4ee3cf676389fffc1d1182bfe5bb9670e4e72e968064"
@@ -13854,6 +13826,15 @@ dependencies = [
  "starknet-curve 0.4.2",
  "starknet-ff",
  "syn 2.0.90",
+]
+
+[[package]]
+name = "starknet-curve"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "252610baff59e4c4332ce3569f7469c5d3f9b415a2240d698fb238b2b4fc0942"
+dependencies = [
+ "starknet-ff",
 ]
 
 [[package]]
@@ -13953,27 +13934,24 @@ dependencies = [
 
 [[package]]
 name = "starknet_api"
-version = "0.0.0"
-source = "git+https://github.com/dojoengine/sequencer?rev=802c5dc#802c5dc1b3ca231d96b65ffcada349f4b5ab0e3b"
+version = "0.13.0-rc.1"
+source = "git+https://github.com/dojoengine/sequencer?rev=adae779#adae779dd758fb3cdedec0af61651f80ec463279"
 dependencies = [
  "bitvec",
- "cairo-lang-runner",
  "cairo-lang-starknet-classes",
  "derive_more 0.99.18",
  "hex",
  "indexmap 2.5.0",
  "itertools 0.12.1",
- "num-bigint",
- "pretty_assertions",
+ "once_cell",
  "primitive-types",
- "semver 1.0.23",
  "serde",
  "serde_json",
  "sha3",
- "starknet-crypto 0.7.2",
+ "starknet-crypto 0.5.2",
  "starknet-types-core",
- "strum 0.25.0",
- "strum_macros 0.25.3",
+ "strum 0.24.1",
+ "strum_macros 0.24.3",
  "thiserror 1.0.63",
 ]
 
@@ -14033,6 +14011,12 @@ checksum = "7da8b5736845d9f2fcb837ea5d9e2628564b3b043a70948a3f0b778838c5fb4f"
 
 [[package]]
 name = "strum"
+version = "0.24.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "063e6045c0e62079840579a7e47a355ae92f60eb74daaf156fb1e84ba164e63f"
+
+[[package]]
+name = "strum"
 version = "0.25.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "290d54ea6f91c969195bdbcd7442c8c2a2ba87da8bf60a7ee86a235d4bc1e125"
@@ -14044,6 +14028,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8fec0f0aef304996cf250b31b5a10dee7980c85da9d759361292b8bca5a18f06"
 dependencies = [
  "strum_macros 0.26.4",
+]
+
+[[package]]
+name = "strum_macros"
+version = "0.24.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1e385be0d24f186b4ce2f9982191e7101bb737312ad61c1f2f984f34bcf85d59"
+dependencies = [
+ "heck 0.4.1",
+ "proc-macro2",
+ "quote",
+ "rustversion",
+ "syn 1.0.109",
 ]
 
 [[package]]
@@ -15019,6 +15016,7 @@ dependencies = [
  "hashlink",
  "ipfs-api-backend-hyper",
  "katana-runner",
+ "lazy_static",
  "num-traits 0.2.19",
  "once_cell",
  "reqwest 0.11.27",
@@ -15784,45 +15782,6 @@ dependencies = [
  "num-traits 0.2.19",
  "wasm-bindgen",
 ]
-
-[[package]]
-name = "validator"
-version = "0.12.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "841d6937c33ec6039d8071bcf72933146b5bbe378d645d8fa59bdadabfc2a249"
-dependencies = [
- "idna 0.2.3",
- "lazy_static",
- "regex",
- "serde",
- "serde_derive",
- "serde_json",
- "url",
- "validator_derive",
- "validator_types",
-]
-
-[[package]]
-name = "validator_derive"
-version = "0.12.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4286b4497f270f59276a89ae0ad109d5f8f18c69b613e3fb22b61201aadb0c4d"
-dependencies = [
- "if_chain",
- "lazy_static",
- "proc-macro-error",
- "proc-macro2",
- "quote",
- "regex",
- "syn 1.0.109",
- "validator_types",
-]
-
-[[package]]
-name = "validator_types"
-version = "0.12.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ad9680608df133af2c1ddd5eaf1ddce91d60d61b6bc51494ef326458365a470a"
 
 [[package]]
 name = "valuable"

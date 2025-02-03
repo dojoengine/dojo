@@ -820,6 +820,33 @@ impl Sql {
         self.executor.send(rollback)?;
         recv.await?
     }
+
+    pub async fn add_controller(
+        &mut self,
+        username: &str,
+        address: &str,
+        block_timestamp: u64,
+    ) -> Result<()> {
+        let insert_controller = "
+            INSERT INTO controllers (id, username, address, deployed_at)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                username=EXCLUDED.username,
+                address=EXCLUDED.address,
+                deployed_at=EXCLUDED.deployed_at
+            RETURNING *";
+
+        let arguments = vec![
+            Argument::String(username.to_string()),
+            Argument::String(username.to_string()),
+            Argument::String(address.to_string()),
+            Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
+        ];
+
+        self.executor.send(QueryMessage::other(insert_controller.to_string(), arguments))?;
+
+        Ok(())
+    }
 }
 
 fn add_columns_recursive(

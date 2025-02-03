@@ -9,6 +9,7 @@ use torii_sqlite::Sql;
 
 use crate::task_manager::{TaskId, TaskPriority};
 
+pub mod controller;
 pub mod erc20_legacy_transfer;
 pub mod erc20_transfer;
 pub mod erc721_legacy_transfer;
@@ -25,7 +26,6 @@ pub mod store_update_member;
 pub mod store_update_record;
 pub mod upgrade_event;
 pub mod upgrade_model;
-
 #[derive(Clone, Debug, Default)]
 pub struct EventProcessorConfig {
     pub historical_events: HashSet<String>,

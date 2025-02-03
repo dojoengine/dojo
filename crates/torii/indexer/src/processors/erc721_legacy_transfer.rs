@@ -90,7 +90,7 @@ where
             block_number,
         )
         .await?;
-        debug!(target: LOG_TARGET, from = ?from, to = ?to, token_id = ?token_id, "ERC721 Transfer");
+        debug!(target: LOG_TARGET, from = ?from, to = ?to, token_id = ?token_id, "ERC721 Transfer.");
 
         Ok(())
     }

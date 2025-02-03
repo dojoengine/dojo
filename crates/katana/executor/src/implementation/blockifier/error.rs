@@ -1,4 +1,5 @@
 use blockifier::execution::errors::{EntryPointExecutionError, PreExecutionError};
+use blockifier::execution::execution_utils::format_panic_data;
 use blockifier::state::errors::StateError;
 use blockifier::transaction::errors::{
     TransactionExecutionError, TransactionFeeError, TransactionPreValidationError,
@@ -31,8 +32,8 @@ impl From<TransactionExecutionError> for ExecutionError {
 impl From<EntryPointExecutionError> for ExecutionError {
     fn from(error: EntryPointExecutionError) -> Self {
         match error {
-            EntryPointExecutionError::ExecutionFailed { error_trace } => {
-                Self::ExecutionFailed { reason: error_trace.to_string() }
+            EntryPointExecutionError::ExecutionFailed { error_data } => {
+                Self::ExecutionFailed { reason: format_panic_data(&error_data) }
             }
             EntryPointExecutionError::InvalidExecutionInput { input_descriptor, info } => {
                 Self::InvalidInput { input_descriptor, info }
