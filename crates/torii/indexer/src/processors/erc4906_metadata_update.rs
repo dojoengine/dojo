@@ -1,0 +1,94 @@
+use std::hash::{DefaultHasher, Hash, Hasher};
+use std::sync::Arc;
+
+use anyhow::Error;
+use async_trait::async_trait;
+use cainome::cairo_serde::{CairoSerde, U256 as U256Cainome};
+use dojo_world::contracts::world::WorldContractReader;
+use starknet::core::types::{Event, U256};
+use starknet::providers::Provider;
+use torii_sqlite::Sql;
+use tracing::debug;
+
+use super::{EventProcessor, EventProcessorConfig};
+use crate::task_manager::{TaskId, TaskPriority};
+
+pub(crate) const LOG_TARGET: &str = "torii_indexer::processors::erc4906_metadata_update";
+
+#[derive(Default, Debug)]
+pub struct Erc4906MetadataUpdateProcessor;
+
+#[async_trait]
+impl<P> EventProcessor<P> for Erc4906MetadataUpdateProcessor
+where
+    P: Provider + Send + Sync + std::fmt::Debug,
+{
+    fn event_key(&self) -> String {
+        // We'll handle both event types in validate()
+        "MetadataUpdate".to_string()
+    }
+
+    fn validate(&self, event: &Event) -> bool {
+        // Single token metadata update: [hash(MetadataUpdate), token_id.low, token_id.high]
+        if event.keys.len() == 3 && event.data.is_empty() {
+            return true;
+        }
+
+        // Batch metadata update: [hash(BatchMetadataUpdate), from_token_id.low, from_token_id.high, to_token_id.low, to_token_id.high]
+        if event.keys.len() == 5 && event.data.is_empty() {
+            return true;
+        }
+
+        false
+    }
+
+    fn task_priority(&self) -> TaskPriority {
+        2 // Lower priority than transfers
+    }
+
+    fn task_identifier(&self, event: &Event) -> TaskId {
+        let mut hasher = DefaultHasher::new();
+        event.keys[0].hash(&mut hasher); // Hash the event key
+        
+        // For single token updates
+        if event.keys.len() == 3 {
+            event.keys[1].hash(&mut hasher); // token_id.low
+            event.keys[2].hash(&mut hasher); // token_id.high
+        } else {
+            // For batch updates
+            event.keys[1].hash(&mut hasher); // from_token_id.low
+            event.keys[2].hash(&mut hasher); // from_token_id.high
+            event.keys[3].hash(&mut hasher); // to_token_id.low
+            event.keys[4].hash(&mut hasher); // to_token_id.high
+        }
+
+        hasher.finish()
+    }
+
+    async fn process(
+        &self,
+        world: &WorldContractReader<P>,
+        db: &mut Sql,
+        _block_number: u64,
+        _block_timestamp: u64,
+        _event_id: &str,
+        event: &Event,
+        _config: &EventProcessorConfig,
+    ) -> Result<(), Error> {
+        let token_address = event.from_address;
+        let token_id = U256Cainome::cairo_deserialize(&event.keys, 1)?;
+        let token_id = U256::from_words(token_id.low, token_id.high);
+        
+        db.update_erc721_metadata(token_address, token_id, Arc::new(world.provider().clone()))
+            .await?;
+
+        debug!(
+            target: LOG_TARGET,
+            token_address = ?token_address,
+            token_id = ?token_id,
+            "ERC721 metadata updated"
+        );
+
+        Ok(())
+    }
+}

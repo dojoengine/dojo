@@ -180,21 +180,17 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
         Ok(())
     }
 
-    pub async fn process_register_erc721_token_query(
-        register_erc721_token: RegisterErc721TokenQuery,
-        provider: Arc<P>,
-        name: String,
-        symbol: String,
-    ) -> Result<RegisterErc721TokenMetadata> {
+    async fn fetch_token_uri(
+        provider: &P,
+        contract_address: Felt,
+        token_id: U256,
+    ) -> Result<String> {
         let token_uri = if let Ok(token_uri) = provider
             .call(
                 FunctionCall {
-                    contract_address: register_erc721_token.contract_address,
+                    contract_address,
                     entry_point_selector: get_selector_from_name("token_uri").unwrap(),
-                    calldata: vec![
-                        register_erc721_token.actual_token_id.low().into(),
-                        register_erc721_token.actual_token_id.high().into(),
-                    ],
+                    calldata: vec![token_id.low().into(), token_id.high().into()],
                 },
                 BlockId::Tag(BlockTag::Pending),
             )
@@ -204,12 +200,9 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
         } else if let Ok(token_uri) = provider
             .call(
                 FunctionCall {
-                    contract_address: register_erc721_token.contract_address,
+                    contract_address,
                     entry_point_selector: get_selector_from_name("tokenURI").unwrap(),
-                    calldata: vec![
-                        register_erc721_token.actual_token_id.low().into(),
-                        register_erc721_token.actual_token_id.high().into(),
-                    ],
+                    calldata: vec![token_id.low().into(), token_id.high().into()],
                 },
                 BlockId::Tag(BlockTag::Pending),
             )
@@ -218,12 +211,10 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
             token_uri
         } else {
             warn!(
-                contract_address = format!("{:#x}", register_erc721_token.contract_address),
-                token_id = %register_erc721_token.actual_token_id,
+                contract_address = format!("{:#x}", contract_address),
+                token_id = %token_id,
                 "Error fetching token URI, empty metadata will be used instead.",
             );
-
-            // Ignoring the token URI if the contract can't return it.
             ByteArray::cairo_serialize(&"".try_into().unwrap())
         };
 
@@ -234,42 +225,97 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 .iter()
                 .map(parse_cairo_short_string)
                 .collect::<Result<Vec<String>, _>>()
-                .map(|strings| strings.join(""))
-                .map_err(|_| anyhow::anyhow!("Failed parsing Array<Felt> to String"))?
+                .map(|strings| strings.join(""))?
         } else {
             return Err(anyhow::anyhow!("token_uri is neither ByteArray nor Array<Felt>"));
         };
 
-        let metadata = if token_uri.is_empty() {
-            "".to_string()
+        Ok(token_uri)
+    }
+
+    async fn fetch_token_metadata(
+        contract_address: Felt,
+        token_id: U256,
+        token_uri: &str,
+    ) -> Result<String> {
+        if token_uri.is_empty() {
+            Ok("".to_string())
         } else {
-            let metadata = Self::fetch_metadata(&token_uri).await.with_context(|| {
+            let metadata = Self::fetch_metadata(token_uri).await.with_context(|| {
                 format!(
                     "Failed to fetch metadata for token_id: {}",
-                    register_erc721_token.actual_token_id
+                    token_id
                 )
             });
 
-            if let Ok(metadata) = metadata {
-                serde_json::to_string(&metadata).context("Failed to serialize metadata")?
-            } else {
-                warn!(
-                contract_address = format!("{:#x}", register_erc721_token.contract_address),
-                    token_id = %register_erc721_token.actual_token_id,
-                    "Error fetching metadata, empty metadata will be used instead.",
-                );
-                "".to_string()
+            match metadata {
+                Ok(metadata) => serde_json::to_string(&metadata)
+                    .context("Failed to serialize metadata"),
+                Err(e) => {
+                    warn!(
+                        contract_address = format!("{:#x}", contract_address),
+                        token_id = %token_id,
+                        error = ?e,
+                        "Error fetching metadata, empty metadata will be used instead.",
+                    );
+                    Ok("".to_string())
+                }
             }
-        };
+        }
+    }
 
-        Ok(RegisterErc721TokenMetadata { query: register_erc721_token, metadata, name, symbol })
+    pub async fn update_erc721_metadata(
+        &mut self,
+        contract_address: Felt,
+        token_id: U256,
+        provider: Arc<P>,
+    ) -> Result<()> {
+        let token_uri = Self::fetch_token_uri(&provider, contract_address, token_id).await?;
+        let metadata = Self::fetch_token_metadata(contract_address, token_id, &token_uri).await?;
+
+        // Update metadata in database
+        sqlx::query(
+            "UPDATE tokens SET metadata = ? WHERE contract_address = ? AND id LIKE ?",
+        )
+        .bind(&metadata)
+        .bind(felt_to_sql_string(&contract_address))
+        .bind(format!("%{}", u256_to_sql_string(&token_id)))
+        .execute(&mut *self.transaction)
+        .await?;
+
+        Ok(())
+    }
+
+    pub async fn process_register_erc721_token_query(
+        register_erc721_token: RegisterErc721TokenQuery,
+        provider: Arc<P>,
+        name: String,
+        symbol: String,
+    ) -> Result<RegisterErc721TokenMetadata> {
+        let token_uri = Self::fetch_token_uri(
+            &provider,
+            register_erc721_token.contract_address,
+            register_erc721_token.actual_token_id,
+        ).await?;
+
+        let metadata = Self::fetch_token_metadata(
+            register_erc721_token.contract_address,
+            register_erc721_token.actual_token_id,
+            &token_uri,
+        ).await?;
+
+        Ok(RegisterErc721TokenMetadata {
+            query: register_erc721_token,
+            metadata,
+            name,
+            symbol,
+        })
     }
 
     // given a uri which can be either http/https url or data uri, fetch the metadata erc721
     // metadata json schema
     pub async fn fetch_metadata(token_uri: &str) -> Result<serde_json::Value> {
         // Parse the token_uri
-
         match token_uri {
             uri if uri.starts_with("http") || uri.starts_with("https") => {
                 // Fetch metadata from HTTP/HTTPS URL

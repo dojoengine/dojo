@@ -26,6 +26,8 @@ pub mod store_update_member;
 pub mod store_update_record;
 pub mod upgrade_event;
 pub mod upgrade_model;
+pub mod erc4906_metadata_update;
+
 #[derive(Clone, Debug, Default)]
 pub struct EventProcessorConfig {
     pub historical_events: HashSet<String>,
