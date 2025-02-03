@@ -18,14 +18,15 @@ use crate::executor::LOG_TARGET;
 use crate::simple_broker::SimpleBroker;
 use crate::types::{ContractType, TokenBalance};
 use crate::utils::{
-    felt_to_sql_string, fetch_content_from_ipfs, sql_string_to_u256, u256_to_sql_string, I256,
+    felt_and_u256_to_sql_string, felt_to_sql_string, fetch_content_from_ipfs, sql_string_to_u256,
+    u256_to_sql_string, I256,
 };
 
 #[derive(Debug, Clone)]
 pub struct RegisterErc721TokenQuery {
-    pub token_id: String,
+    pub id: String,
     pub contract_address: Felt,
-    pub actual_token_id: U256,
+    pub token_id: U256,
 }
 
 #[derive(Debug, Clone)]
@@ -278,10 +279,9 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
         let metadata = Self::fetch_token_metadata(contract_address, token_id, &token_uri).await?;
 
         // Update metadata in database
-        sqlx::query("UPDATE tokens SET metadata = ? WHERE contract_address = ? AND id LIKE ?")
+        sqlx::query("UPDATE tokens SET metadata = ? WHERE id = ?")
             .bind(&metadata)
-            .bind(felt_to_sql_string(&contract_address))
-            .bind(format!("%{}", u256_to_sql_string(&token_id)))
+            .bind(felt_and_u256_to_sql_string(&contract_address, &token_id))
             .execute(&mut *self.transaction)
             .await?;
 
@@ -297,13 +297,13 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
         let token_uri = Self::fetch_token_uri(
             &provider,
             register_erc721_token.contract_address,
-            register_erc721_token.actual_token_id,
+            register_erc721_token.token_id,
         )
         .await?;
 
         let metadata = Self::fetch_token_metadata(
             register_erc721_token.contract_address,
-            register_erc721_token.actual_token_id,
+            register_erc721_token.token_id,
             &token_uri,
         )
         .await?;
@@ -387,7 +387,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
             "INSERT INTO tokens (id, contract_address, name, symbol, decimals, metadata) VALUES \
              (?, ?, ?, ?, ?, ?)",
         )
-        .bind(&result.query.token_id)
+        .bind(result.query.id.clone())
         .bind(felt_to_sql_string(&result.query.contract_address))
         .bind(&result.name)
         .bind(&result.symbol)

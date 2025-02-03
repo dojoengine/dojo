@@ -91,13 +91,11 @@ impl Sql {
         block_number: u64,
     ) -> Result<()> {
         // contract_address:id
-        let actual_token_id = token_id;
-        let token_id = felt_and_u256_to_sql_string(&contract_address, &token_id);
-        let token_exists: bool = self.local_cache.contains_token_id(&token_id).await;
+        let id = felt_and_u256_to_sql_string(&contract_address, &token_id);
+        let token_exists: bool = self.local_cache.contains_token_id(&id).await;
 
         if !token_exists {
-            self.register_erc721_token_metadata(contract_address, &token_id, actual_token_id)
-                .await?;
+            self.register_erc721_token_metadata(&id, contract_address, token_id).await?;
         }
 
         self.store_erc_transfer_event(
@@ -105,7 +103,7 @@ impl Sql {
             from_address,
             to_address,
             U256::from(1u8),
-            &token_id,
+            &id,
             block_timestamp,
             event_id,
         )?;
@@ -240,17 +238,17 @@ impl Sql {
 
     async fn register_erc721_token_metadata(
         &mut self,
+        id: &str,
         contract_address: Felt,
-        token_id: &str,
         actual_token_id: U256,
     ) -> Result<()> {
         self.executor.send(QueryMessage::new(
             "".to_string(),
             vec![],
             QueryType::RegisterErc721Token(RegisterErc721TokenQuery {
-                token_id: token_id.to_string(),
+                id: id.to_string(),
                 contract_address,
-                actual_token_id,
+                token_id: actual_token_id,
             }),
         ))?;
 
@@ -258,7 +256,7 @@ impl Sql {
         // this cache is used while applying the cache diff
         // so we need to make sure that all RegisterErc*Token queries
         // are applied before the cache diff is applied
-        self.local_cache.register_token_id(token_id.to_string()).await;
+        self.local_cache.register_token_id(id.to_string()).await;
 
         Ok(())
     }
