@@ -162,6 +162,7 @@ enum ComparisonOperator {
 }
 
 message Token {
+    string token_id = 1;
     string contract_address = 2;
     string name = 3;
     string symbol = 4;

@@ -56,12 +56,7 @@ use crate::proto::types::member_value::ValueType;
 use crate::proto::types::LogicalOperator;
 use crate::proto::world::world_server::WorldServer;
 use crate::proto::world::{
-    RetrieveEntitiesStreamingResponse, RetrieveEventMessagesRequest, RetrieveTokenBalancesRequest,
-    RetrieveTokenBalancesResponse, RetrieveTokensRequest, RetrieveTokensResponse,
-    SubscribeEntitiesRequest, SubscribeEntityResponse, SubscribeEventMessagesRequest,
-    SubscribeEventsResponse, SubscribeIndexerRequest, SubscribeIndexerResponse,
-    SubscribeTokenBalancesResponse, UpdateEventMessagesSubscriptionRequest,
-    UpdateTokenBalancesSubscriptionRequest, WorldMetadataRequest, WorldMetadataResponse,
+    RetrieveEntitiesStreamingResponse, RetrieveEventMessagesRequest, RetrieveTokenBalancesRequest, RetrieveTokenBalancesResponse, RetrieveTokensRequest, RetrieveTokensResponse, SubscribeEntitiesRequest, SubscribeEntityResponse, SubscribeEventMessagesRequest, SubscribeEventsResponse, SubscribeIndexerRequest, SubscribeIndexerResponse, SubscribeTokenBalancesResponse, SubscribeTokensResponse, UpdateEventMessagesSubscriptionRequest, UpdateTokenBalancesSubscriptionRequest, WorldMetadataRequest, WorldMetadataResponse
 };
 use crate::proto::{self};
 use crate::types::schema::SchemaError;
@@ -1248,6 +1243,8 @@ type RetrieveEntitiesStreamingResponseStream =
     Pin<Box<dyn Stream<Item = Result<RetrieveEntitiesStreamingResponse, Status>> + Send>>;
 type SubscribeTokenBalancesResponseStream =
     Pin<Box<dyn Stream<Item = Result<SubscribeTokenBalancesResponse, Status>> + Send>>;
+type SubscribeTokensResponseStream =
+    Pin<Box<dyn Stream<Item = Result<SubscribeTokensResponse, Status>> + Send>>;
 
 #[tonic::async_trait]
 impl proto::world::world_server::World for DojoWorld {
@@ -1258,7 +1255,8 @@ impl proto::world::world_server::World for DojoWorld {
     type SubscribeIndexerStream = SubscribeIndexerResponseStream;
     type RetrieveEntitiesStreamingStream = RetrieveEntitiesStreamingResponseStream;
     type SubscribeTokenBalancesStream = SubscribeTokenBalancesResponseStream;
-
+    type SubscribeTokensStream = SubscribeTokensResponseStream;
+    
     async fn world_metadata(
         &self,
         _request: Request<WorldMetadataRequest>,

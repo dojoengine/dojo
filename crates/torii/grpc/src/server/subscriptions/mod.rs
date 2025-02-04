@@ -10,6 +10,7 @@ pub mod event_message;
 pub mod indexer;
 pub mod model_diff;
 pub mod token_balance;
+pub mod token;
 
 pub(crate) fn match_entity_keys(
     id: Felt,
