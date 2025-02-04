@@ -141,7 +141,7 @@ impl Primitive {
     set_primitive!(set_class_hash, ClassHash, Felt);
     set_primitive!(set_contract_address, ContractAddress, Felt);
     set_primitive!(set_eth_address, EthAddress, Felt);
-    
+
     pub fn to_numeric(&self) -> usize {
         match self {
             Primitive::Bool(_) => 0,
@@ -507,10 +507,7 @@ mod tests {
                 vec![Felt::from(123456789u128)],
                 Primitive::ContractAddress(Some(Felt::from(123456789))),
             ),
-            (
-                vec![Felt::from(123456789u128)],
-                Primitive::EthAddress(Some(Felt::from(123456789))),
-            ),
+            (vec![Felt::from(123456789u128)], Primitive::EthAddress(Some(Felt::from(123456789)))),
         ];
 
         for (serialized, expected) in test_cases {
