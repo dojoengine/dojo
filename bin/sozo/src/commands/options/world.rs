@@ -14,6 +14,19 @@ pub struct WorldOptions {
     #[arg(long = "world", env = DOJO_WORLD_ADDRESS_ENV_VAR)]
     #[arg(global = true)]
     pub world_address: Option<Felt>,
+
+    #[arg(long, default_value = "false")]
+    #[arg(help = "Whether the migration is a guest migration, which means the migration is \
+                  performed on a world you are not the owner of.")]
+    pub guest: bool,
+
+    #[arg(
+        long,
+        help = "Whitelisted namespaces, separated by commas. If not provided, all namespaces will \
+                be fetched."
+    )]
+    #[arg(value_delimiter = ',', num_args = 0..)]
+    pub namespaces: Vec<String>,
 }
 
 impl WorldOptions {

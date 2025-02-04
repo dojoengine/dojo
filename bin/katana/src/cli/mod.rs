@@ -1,9 +1,13 @@
-use anyhow::Result;
+use std::future::Future;
+
+use anyhow::{Context, Result};
 use clap::{Args, CommandFactory, Parser, Subcommand};
 use clap_complete::Shell;
 use katana_cli::NodeArgs;
 use katana_node::version::VERSION;
+use tokio::runtime::Runtime;
 
+mod config;
 mod db;
 mod init;
 
@@ -21,20 +25,24 @@ impl Cli {
     pub fn run(self) -> Result<()> {
         if let Some(cmd) = self.commands {
             return match cmd {
-                Commands::Completions(args) => args.execute(),
                 Commands::Db(args) => args.execute(),
-                Commands::Init(args) => args.execute(),
+                Commands::Config(args) => args.execute(),
+                Commands::Completions(args) => args.execute(),
+                Commands::Init(args) => execute_async(args.execute())?,
             };
         }
 
-        self.node.with_config_file()?.execute()
+        execute_async(self.node.with_config_file()?.execute())?
     }
 }
 
 #[derive(Subcommand)]
 enum Commands {
-    #[command(about = "Initialize chain", hide = true)]
+    #[command(about = "Initialize chain")]
     Init(init::InitArgs),
+
+    #[command(about = "Chain configuration utilities")]
+    Config(config::ConfigArgs),
 
     #[command(about = "Database utilities")]
     Db(db::DbArgs),
@@ -55,4 +63,12 @@ impl CompletionsArgs {
         clap_complete::generate(self.shell, &mut command, name, &mut std::io::stdout());
         Ok(())
     }
+}
+
+pub fn execute_async<F: Future>(future: F) -> Result<F::Output> {
+    Ok(build_tokio_runtime().context("Failed to build tokio runtime")?.block_on(future))
+}
+
+fn build_tokio_runtime() -> std::io::Result<Runtime> {
+    tokio::runtime::Builder::new_multi_thread().enable_all().build()
 }

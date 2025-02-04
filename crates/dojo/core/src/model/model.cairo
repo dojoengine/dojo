@@ -3,13 +3,44 @@ use dojo::{
     utils::{entity_id_from_serialized_keys, find_model_field_layout, entity_id_from_keys},
 };
 
-use super::{ModelDefinition, ModelDef};
+use super::{ModelDefinition, ModelDef, ModelIndex};
 /// Trait `KeyParser` defines a trait for parsing keys from a given model.
 ///
 /// A pointer to a model, which can be expressed by an entity id.
 #[derive(Copy, Drop, Serde, Debug, PartialEq)]
 pub struct ModelPtr<M> {
     pub id: felt252,
+}
+
+/// Trait that defines a method for converting a span of model pointers to a span of model indexes.
+///
+/// # Type Parameters
+/// - `M`: The type of the model.
+///
+/// # Methods
+/// - `to_indexes(self: Span<ModelPtr<M>>) -> Span<ModelIndex>`:
+///   Converts the span of model pointers to a span of model indexes.
+pub trait ModelPtrsTrait<M> {
+    fn to_indexes(self: Span<ModelPtr<M>>) -> Span<ModelIndex>;
+    fn to_member_indexes(self: Span<ModelPtr<M>>, field_selector: felt252) -> Span<ModelIndex>;
+}
+
+pub impl ModelPtrsImpl<M> of ModelPtrsTrait<M> {
+    fn to_indexes(self: Span<ModelPtr<M>>) -> Span<ModelIndex> {
+        let mut ids = ArrayTrait::<ModelIndex>::new();
+        for ptr in self {
+            ids.append(ModelIndex::Id(*ptr.id));
+        };
+        ids.span()
+    }
+
+    fn to_member_indexes(self: Span<ModelPtr<M>>, field_selector: felt252) -> Span<ModelIndex> {
+        let mut ids = ArrayTrait::<ModelIndex>::new();
+        for ptr in self {
+            ids.append(ModelIndex::MemberId((*ptr.id, field_selector)));
+        };
+        ids.span()
+    }
 }
 
 pub trait KeyParser<M, K> {
@@ -58,17 +89,23 @@ pub trait Model<M> {
     fn definition() -> ModelDef;
     /// Returns the selector of the model computed for the given namespace hash.
     fn selector(namespace_hash: felt252) -> felt252;
-    /// Returns the pointer to the model from the key.
-    fn ptr_from_keys<K, +Serde<K>, +Drop<K>>(keys: K) -> ModelPtr<M>;
     /// Returns the pointer to the model from the keys.
+    fn ptr_from_keys<K, +Serde<K>, +Drop<K>>(keys: K) -> ModelPtr<M>;
+    /// Returns the pointer to the model from the serialised keys.
     fn ptr_from_serialized_keys(keys: Span<felt252>) -> ModelPtr<M>;
     /// Returns the pointer to the model from the entity id.
     fn ptr_from_id(entity_id: felt252) -> ModelPtr<M>;
+    /// Returns the pointers to models from the keys.
+    fn ptrs_from_keys<K, +Serde<K>, +Drop<K>>(keys: Span<K>) -> Span<ModelPtr<M>>;
+    /// Returns the pointers to models from the serialised keys.
+    fn ptrs_from_serialized_keys(keys: Span<Span<felt252>>) -> Span<ModelPtr<M>>;
+    /// Returns the pointers to models from the entity ids.
+    fn ptrs_from_ids(entity_ids: Span<felt252>) -> Span<ModelPtr<M>>;
     /// Returns the ptr of the model.
     fn ptr(self: @M) -> ModelPtr<M>;
 }
 
-pub impl ModelImpl<M, +ModelParser<M>, +ModelDefinition<M>, +Serde<M>> of Model<M> {
+pub impl ModelImpl<M, +ModelParser<M>, +ModelDefinition<M>, +Serde<M>, +Drop<M>> of Model<M> {
     fn keys<K, +KeyParser<M, K>>(self: @M) -> K {
         KeyParser::<M, K>::parse_key(self)
     }
@@ -145,6 +182,30 @@ pub impl ModelImpl<M, +ModelParser<M>, +ModelDefinition<M>, +Serde<M>> of Model<
 
     fn ptr_from_id(entity_id: felt252) -> ModelPtr<M> {
         ModelPtr::<M> { id: entity_id }
+    }
+
+    fn ptrs_from_keys<K, +Serde<K>, +Drop<K>>(keys: Span<K>) -> Span<ModelPtr<M>> {
+        let mut ptrs = ArrayTrait::<ModelPtr<M>>::new();
+        for key in keys {
+            ptrs.append(ModelPtr { id: entity_id_from_keys(key) });
+        };
+        ptrs.span()
+    }
+
+    fn ptrs_from_serialized_keys(keys: Span<Span<felt252>>) -> Span<ModelPtr<M>> {
+        let mut ptrs = ArrayTrait::<ModelPtr<M>>::new();
+        for key in keys {
+            ptrs.append(Self::ptr_from_serialized_keys(*key));
+        };
+        ptrs.span()
+    }
+
+    fn ptrs_from_ids(entity_ids: Span<felt252>) -> Span<ModelPtr<M>> {
+        let mut ptrs = ArrayTrait::<ModelPtr<M>>::new();
+        for entity_id in entity_ids {
+            ptrs.append(Self::ptr_from_id(*entity_id));
+        };
+        ptrs.span()
     }
 
     fn ptr(self: @M) -> ModelPtr<M> {

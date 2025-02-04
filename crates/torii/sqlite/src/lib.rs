@@ -43,8 +43,7 @@ pub struct Sql {
     pub pool: Pool<Sqlite>,
     pub executor: UnboundedSender<QueryMessage>,
     model_cache: Arc<ModelCache>,
-    // when SQL struct is cloned a empty local_cache is created
-    local_cache: LocalCache,
+    local_cache: Arc<LocalCache>,
 }
 
 #[derive(Debug, Clone)]
@@ -75,7 +74,8 @@ impl Sql {
         }
 
         let local_cache = LocalCache::new(pool.clone()).await;
-        let db = Self { pool: pool.clone(), executor, model_cache, local_cache };
+        let db =
+            Self { pool: pool.clone(), executor, model_cache, local_cache: Arc::new(local_cache) };
 
         db.execute().await?;
 
@@ -441,16 +441,14 @@ impl Sql {
         block_timestamp: u64,
     ) -> Result<()> {
         let entity_id = format!("{:#x}", entity_id);
+        let model_id = format!("{:#x}", model_id);
         let model_table = entity.name();
 
         self.executor.send(QueryMessage::new(
-            format!(
-                "DELETE FROM [{model_table}] WHERE internal_id = ?; DELETE FROM entity_model \
-                 WHERE entity_id = ? AND model_id = ?"
-            )
-            .to_string(),
-            vec![Argument::String(entity_id.clone()), Argument::String(format!("{:#x}", model_id))],
+            format!("DELETE FROM [{model_table}] WHERE internal_id = ?").to_string(),
+            vec![Argument::String(entity_id.clone())],
             QueryType::DeleteEntity(DeleteEntityQuery {
+                model_id: model_id.clone(),
                 entity_id: entity_id.clone(),
                 event_id: event_id.to_string(),
                 block_timestamp: utc_dt_string_from_timestamp(block_timestamp),
@@ -822,6 +820,33 @@ impl Sql {
         self.executor.send(rollback)?;
         recv.await?
     }
+
+    pub async fn add_controller(
+        &mut self,
+        username: &str,
+        address: &str,
+        block_timestamp: u64,
+    ) -> Result<()> {
+        let insert_controller = "
+            INSERT INTO controllers (id, username, address, deployed_at)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                username=EXCLUDED.username,
+                address=EXCLUDED.address,
+                deployed_at=EXCLUDED.deployed_at
+            RETURNING *";
+
+        let arguments = vec![
+            Argument::String(username.to_string()),
+            Argument::String(username.to_string()),
+            Argument::String(address.to_string()),
+            Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
+        ];
+
+        self.executor.send(QueryMessage::other(insert_controller.to_string(), arguments))?;
+
+        Ok(())
+    }
 }
 
 fn add_columns_recursive(
@@ -850,32 +875,41 @@ fn add_columns_recursive(
     let modify_column =
         |alter_table_queries: &mut Vec<String>, name: &str, sql_type: &str, sql_value: &str| {
             // SQLite doesn't support ALTER COLUMN directly, so we need to:
-            // 1. Create a new temporary column
-            // 2. Copy the data
-            // 3. Drop the old column
-            // 4. Rename the temporary column
-            alter_table_queries
-                .push(format!("ALTER TABLE [{table_id}] ADD COLUMN [tmp_{name}] {sql_type}"));
-            alter_table_queries.push(format!("UPDATE [{table_id}] SET [tmp_{name}] = {sql_value}"));
+            // 1. Create a temporary table to store the current values
+            // 2. Drop the old column & index
+            // 3. Create new column with new type/constraint
+            // 4. Copy values back & create new index
+            alter_table_queries.push(format!(
+                "CREATE TEMPORARY TABLE tmp_values_{name} AS SELECT internal_id, [{name}] FROM \
+                 [{table_id}]"
+            ));
+            alter_table_queries.push(format!("DROP INDEX IF EXISTS [idx_{table_id}_{name}]"));
             alter_table_queries.push(format!("ALTER TABLE [{table_id}] DROP COLUMN [{name}]"));
             alter_table_queries
-                .push(format!("ALTER TABLE [{table_id}] RENAME COLUMN [tmp_{name}] TO [{name}]"));
+                .push(format!("ALTER TABLE [{table_id}] ADD COLUMN [{name}] {sql_type}"));
+            alter_table_queries.push(format!("UPDATE [{table_id}] SET [{name}] = {sql_value}"));
+            alter_table_queries.push(format!("DROP TABLE tmp_values_{name}"));
+            alter_table_queries.push(format!(
+                "CREATE INDEX IF NOT EXISTS [idx_{table_id}_{name}] ON [{table_id}] ([{name}]);"
+            ));
         };
 
     match ty {
         Ty::Struct(s) => {
+            let struct_diff =
+                if let Some(upgrade_diff) = upgrade_diff { upgrade_diff.as_struct() } else { None };
+
             for member in &s.children {
-                if let Some(upgrade_diff) = upgrade_diff {
-                    if !upgrade_diff
-                        .as_struct()
-                        .unwrap()
-                        .children
-                        .iter()
-                        .any(|m| m.name == member.name)
-                    {
+                let member_diff = if let Some(diff) = struct_diff {
+                    if let Some(m) = diff.children.iter().find(|m| m.name == member.name) {
+                        Some(&m.ty)
+                    } else {
+                        // If the member is not in the diff, skip it
                         continue;
                     }
-                }
+                } else {
+                    None
+                };
 
                 let mut new_path = path.to_vec();
                 new_path.push(member.name.clone());
@@ -887,15 +921,30 @@ fn add_columns_recursive(
                     alter_table_queries,
                     indices,
                     table_id,
-                    None,
+                    member_diff,
                 )?;
             }
         }
         Ty::Tuple(tuple) => {
-            for (idx, member) in tuple.iter().enumerate() {
+            let elements_to_process = if let Some(diff) = upgrade_diff.and_then(|d| d.as_tuple()) {
+                // Only process elements from the diff
+                diff.iter()
+                    .filter_map(|m| {
+                        tuple.iter().position(|member| member == m).map(|idx| (idx, m, Some(m)))
+                    })
+                    .collect()
+            } else {
+                // Process all elements
+                tuple
+                    .iter()
+                    .enumerate()
+                    .map(|(idx, member)| (idx, member, None))
+                    .collect::<Vec<_>>()
+            };
+
+            for (idx, member, member_diff) in elements_to_process {
                 let mut new_path = path.to_vec();
                 new_path.push(idx.to_string());
-
                 add_columns_recursive(
                     &new_path,
                     member,
@@ -903,7 +952,7 @@ fn add_columns_recursive(
                     alter_table_queries,
                     indices,
                     table_id,
-                    None,
+                    member_diff,
                 )?;
             }
         }
@@ -914,17 +963,45 @@ fn add_columns_recursive(
             add_column(&column_name, "TEXT");
         }
         Ty::Enum(e) => {
-            // The variant of the enum
+            let enum_diff =
+                if let Some(upgrade_diff) = upgrade_diff { upgrade_diff.as_enum() } else { None };
+
             let column_name =
                 if column_prefix.is_empty() { "option".to_string() } else { column_prefix };
 
             let all_options =
                 e.options.iter().map(|c| format!("'{}'", c.name)).collect::<Vec<_>>().join(", ");
 
-            let sql_type = format!("TEXT CHECK([{column_name}] IN ({all_options}))");
-            add_column(&column_name, &sql_type);
+            let sql_type = format!(
+                "TEXT CONSTRAINT [{column_name}_check] CHECK([{column_name}] IN ({all_options}))"
+            );
+            if enum_diff.is_some_and(|diff| diff != e) {
+                // For upgrades, modify the existing option column to add the new options to the
+                // CHECK constraint We need to drop the old column and create a new
+                // one with the new CHECK constraint
+                modify_column(
+                    alter_table_queries,
+                    &column_name,
+                    &sql_type,
+                    &format!("[{column_name}]"),
+                );
+            } else {
+                // For new tables, create the column directly
+                add_column(&column_name, &sql_type);
+            }
 
             for child in &e.options {
+                // If we have a diff, only process new variants that aren't in the original enum
+                let variant_diff = if let Some(diff) = enum_diff {
+                    if let Some(v) = diff.options.iter().find(|v| v.name == child.name) {
+                        Some(&v.ty)
+                    } else {
+                        continue;
+                    }
+                } else {
+                    None
+                };
+
                 if let Ty::Tuple(tuple) = &child.ty {
                     if tuple.is_empty() {
                         continue;
@@ -941,7 +1018,7 @@ fn add_columns_recursive(
                     alter_table_queries,
                     indices,
                     table_id,
-                    None,
+                    variant_diff,
                 )?;
             }
         }

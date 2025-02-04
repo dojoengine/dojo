@@ -187,7 +187,7 @@ async fn match_event<P: Provider + Send + Sync>(
             ),
         ),
         WorldEvent::ModelUpgraded(e) => {
-            let tag = tags.get(&e.selector).unwrap();
+            let tag = get_tag(e.selector, &tags);
             (
                 format!("Model upgraded ({})", tag),
                 format!(
@@ -198,7 +198,7 @@ async fn match_event<P: Provider + Send + Sync>(
             )
         }
         WorldEvent::EventUpgraded(e) => {
-            let tag = tags.get(&e.selector).unwrap();
+            let tag = get_tag(e.selector, &tags);
             (
                 format!("Event upgraded ({})", tag),
                 format!(
@@ -209,14 +209,14 @@ async fn match_event<P: Provider + Send + Sync>(
             )
         }
         WorldEvent::ContractUpgraded(e) => {
-            let tag = tags.get(&e.selector).unwrap();
+            let tag = get_tag(e.selector, &tags);
             (
                 format!("Contract upgraded ({})", tag),
                 format!("Selector: {:#066x}\nClass hash: {:#066x}", e.selector, e.class_hash.0,),
             )
         }
         WorldEvent::ContractInitialized(e) => {
-            let tag = tags.get(&e.selector).unwrap();
+            let tag = get_tag(e.selector, &tags);
             (
                 format!("Contract initialized ({})", tag),
                 format!(
@@ -231,7 +231,7 @@ async fn match_event<P: Provider + Send + Sync>(
             )
         }
         WorldEvent::WriterUpdated(e) => {
-            let tag = tags.get(&e.resource).unwrap();
+            let tag = get_tag(e.resource, &tags);
             let grantee =
                 if let Some(selector) = contract_selectors_from_address.get(&e.contract.into()) {
                     tags.get(selector).unwrap().to_string()
@@ -245,7 +245,7 @@ async fn match_event<P: Provider + Send + Sync>(
             )
         }
         WorldEvent::OwnerUpdated(e) => {
-            let tag = tags.get(&e.resource).unwrap();
+            let tag = get_tag(e.resource, &tags);
             let grantee =
                 if let Some(selector) = contract_selectors_from_address.get(&e.contract.into()) {
                     tags.get(selector).unwrap().to_string()
@@ -259,15 +259,20 @@ async fn match_event<P: Provider + Send + Sync>(
             )
         }
         WorldEvent::StoreSetRecord(e) => {
-            let tag = tags.get(&e.selector).unwrap();
-            let (record, _, _) = model::model_get(
+            let tag = get_tag(e.selector, &tags);
+            let record = if let Ok((record_str, _, _)) = model::model_get(
                 tag.clone(),
                 e.keys.clone(),
                 world_diff.world_info.address,
                 provider,
                 block_id,
             )
-            .await?;
+            .await
+            {
+                record_str
+            } else {
+                "NOT_AVAILABLE".to_string()
+            };
 
             (
                 format!("Store set record ({})", tag),
@@ -290,7 +295,7 @@ async fn match_event<P: Provider + Send + Sync>(
             )
         }
         WorldEvent::StoreUpdateRecord(e) => {
-            let tag = tags.get(&e.selector).unwrap();
+            let tag = get_tag(e.selector, &tags);
             // TODO: model value impl + print.
             (
                 format!("Store update record ({})", tag),
@@ -307,7 +312,7 @@ async fn match_event<P: Provider + Send + Sync>(
             )
         }
         WorldEvent::StoreUpdateMember(e) => {
-            let tag = tags.get(&e.selector).unwrap();
+            let tag = get_tag(e.selector, &tags);
             // TODO: pretty print of the value.
             (
                 format!("Store update member ({})", tag),
@@ -326,14 +331,14 @@ async fn match_event<P: Provider + Send + Sync>(
             )
         }
         WorldEvent::StoreDelRecord(e) => {
-            let tag = tags.get(&e.selector).unwrap();
+            let tag = get_tag(e.selector, &tags);
             (
                 format!("Store del record ({})", tag),
                 format!("Selector: {:#066x}\nEntity ID: {:#066x}", e.selector, e.entity_id,),
             )
         }
         WorldEvent::EventEmitted(e) => {
-            let tag = tags.get(&e.selector).unwrap();
+            let tag = get_tag(e.selector, &tags);
             let contract_tag = if let Some(selector) =
                 contract_selectors_from_address.get(&e.system_address.into())
             {
@@ -372,4 +377,10 @@ async fn match_event<P: Provider + Send + Sync>(
     println!("> {name} {ptr}\n{content}\n-----\n");
 
     Ok(())
+}
+
+/// Returns the tag for a selector, or the selector itself if it's not found.
+#[inline]
+fn get_tag(selector: Felt, tags: &HashMap<&Felt, String>) -> String {
+    tags.get(&selector).unwrap_or(&format!("external-{:#066x}", selector)).to_string()
 }

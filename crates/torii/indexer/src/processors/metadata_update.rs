@@ -1,3 +1,5 @@
+use std::hash::{DefaultHasher, Hash, Hasher};
+
 use anyhow::{Error, Result};
 use async_trait::async_trait;
 use base64::engine::general_purpose;
@@ -9,12 +11,12 @@ use dojo_world::contracts::world::WorldContractReader;
 use dojo_world::uri::Uri;
 use starknet::core::types::{Event, Felt};
 use starknet::providers::Provider;
-use torii_sqlite::constants::IPFS_CLIENT_MAX_RETRY;
 use torii_sqlite::utils::fetch_content_from_ipfs;
 use torii_sqlite::Sql;
 use tracing::{error, info};
 
 use super::{EventProcessor, EventProcessorConfig};
+use crate::task_manager::{TaskId, TaskPriority};
 
 pub(crate) const LOG_TARGET: &str = "torii_indexer::processors::metadata_update";
 
@@ -32,6 +34,16 @@ where
 
     fn validate(&self, _event: &Event) -> bool {
         true
+    }
+
+    fn task_priority(&self) -> TaskPriority {
+        3
+    }
+
+    fn task_identifier(&self, event: &Event) -> TaskId {
+        let mut hasher = DefaultHasher::new();
+        event.keys.iter().for_each(|k| k.hash(&mut hasher));
+        hasher.finish()
     }
 
     async fn process(
@@ -107,7 +119,7 @@ async fn metadata(uri_str: String) -> Result<(WorldMetadata, Option<String>, Opt
     let uri = Uri::Ipfs(uri_str);
     let cid = uri.cid().ok_or("Uri is malformed").map_err(Error::msg)?;
 
-    let bytes = fetch_content_from_ipfs(cid, IPFS_CLIENT_MAX_RETRY).await?;
+    let bytes = fetch_content_from_ipfs(cid).await?;
     let metadata: WorldMetadata = serde_json::from_str(std::str::from_utf8(&bytes)?)?;
 
     let icon_img = fetch_image(&metadata.icon_uri).await;
@@ -118,7 +130,7 @@ async fn metadata(uri_str: String) -> Result<(WorldMetadata, Option<String>, Opt
 
 async fn fetch_image(image_uri: &Option<Uri>) -> Option<String> {
     if let Some(uri) = image_uri {
-        let data = fetch_content_from_ipfs(uri.cid()?, IPFS_CLIENT_MAX_RETRY).await.ok()?;
+        let data = fetch_content_from_ipfs(uri.cid()?).await.ok()?;
         let encoded = general_purpose::STANDARD.encode(data);
         return Some(encoded);
     }

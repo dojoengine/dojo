@@ -13,28 +13,25 @@ use std::sync::Arc;
 use alloy_primitives::U256;
 use base64::prelude::*;
 use katana_cairo::cairo_vm::types::errors::program_errors::ProgramError;
-use katana_cairo::lang::starknet_classes::casm_contract_class::StarknetSierraCompilationError;
 use serde::de::value::MapAccessDeserializer;
 use serde::de::Visitor;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
-use starknet::core::types::contract::legacy::LegacyContractClass;
-use starknet::core::types::contract::{ComputeClassHashError, JsonError};
+use starknet::core::types::contract::JsonError;
 
 use super::allocation::{
     DevGenesisAccount, GenesisAccount, GenesisAccountAlloc, GenesisContractAlloc,
 };
-#[cfg(feature = "slot")]
+#[cfg(feature = "controller")]
 use super::constant::{CONTROLLER_ACCOUNT_CLASS, CONTROLLER_CLASS_HASH};
-use super::constant::{
-    DEFAULT_ACCOUNT_CLASS, DEFAULT_ACCOUNT_CLASS_HASH, DEFAULT_ACCOUNT_COMPILED_CLASS_HASH,
-};
+use super::constant::{DEFAULT_ACCOUNT_CLASS, DEFAULT_ACCOUNT_CLASS_HASH};
 use super::{Genesis, GenesisAllocation};
 use crate::block::{BlockHash, BlockNumber, GasPrices};
-use crate::class::{ClassHash, ContractClass, SierraContractClass};
+use crate::class::{
+    ClassHash, ComputeClassHashError, ContractClass, ContractClassCompilationError,
+    LegacyContractClass, SierraContractClass,
+};
 use crate::contract::{ContractAddress, StorageKey, StorageValue};
-use crate::genesis::GenesisClass;
-use crate::utils::class::{parse_compiled_class_v1, parse_deprecated_compiled_class};
 use crate::Felt;
 
 type Object = Map<String, Value>;
@@ -89,9 +86,6 @@ impl<'de> Deserialize<'de> for PathOrFullArtifact {
 pub struct GenesisClassJson {
     // pub class: PathBuf,
     pub class: PathOrFullArtifact,
-    /// The class hash of the contract. If not provided, the class hash is computed from the
-    /// class at `path`.
-    pub class_hash: Option<ClassHash>,
     // Allows class identification by a unique name rather than by hash when specifying the class.
     pub name: Option<String>,
 }
@@ -176,9 +170,6 @@ pub enum GenesisJsonError {
     ComputeClassHash(#[from] ComputeClassHashError),
 
     #[error(transparent)]
-    SierraCompilation(#[from] StarknetSierraCompilationError),
-
-    #[error(transparent)]
     ProgramError(#[from] ProgramError),
 
     #[error("Missing class entry for class hash {0}")]
@@ -201,6 +192,9 @@ pub enum GenesisJsonError {
 
     #[error("Class name '{0}' not found in the genesis classes")]
     UnknownClassName(String),
+
+    #[error(transparent)]
+    ContractClassCompilation(#[from] ContractClassCompilationError),
 
     #[error(transparent)]
     Other(#[from] anyhow::Error),
@@ -283,22 +277,16 @@ impl TryFrom<GenesisJson> for Genesis {
     fn try_from(value: GenesisJson) -> Result<Self, Self::Error> {
         // a lookup table for classes that is assigned a name
         let mut class_names: HashMap<String, Felt> = HashMap::new();
-        let mut classes: BTreeMap<ClassHash, GenesisClass> = BTreeMap::new();
+        let mut classes: BTreeMap<ClassHash, Arc<ContractClass>> = BTreeMap::new();
 
-        #[cfg(feature = "slot")]
+        #[cfg(feature = "controller")]
         // Merely a band aid fix for now.
         // Adding this by default so that we can support mounting the genesis file from k8s
         // ConfigMap when we embed the Controller class, and its capacity is only limited to 1MiB.
-        classes.insert(
-            CONTROLLER_CLASS_HASH,
-            GenesisClass {
-                class: CONTROLLER_ACCOUNT_CLASS.clone().into(),
-                compiled_class_hash: CONTROLLER_CLASS_HASH,
-            },
-        );
+        classes.insert(CONTROLLER_CLASS_HASH, CONTROLLER_ACCOUNT_CLASS.clone().into());
 
         for entry in value.classes {
-            let GenesisClassJson { class, class_hash, name } = entry;
+            let GenesisClassJson { class, name } = entry;
 
             // at this point, it is assumed that any class paths should have been resolved to an
             // artifact, otherwise it is an error
@@ -311,32 +299,24 @@ impl TryFrom<GenesisJson> for Genesis {
 
             let sierra = serde_json::from_value::<SierraContractClass>(artifact.clone());
 
-            let (class_hash, compiled_class_hash, class) = match sierra {
+            let (class_hash, class) = match sierra {
                 Ok(sierra) => {
-                    let casm = parse_compiled_class_v1(artifact)?;
-
                     // check if the class hash is provided, otherwise compute it from the
                     // artifacts
                     let class = ContractClass::Class(sierra);
-                    let class_hash = class_hash
-                        .unwrap_or_else(|| class.class_hash().expect("failed to compute hash"));
-                    let compiled_hash = casm.compiled_class_hash();
+                    let class_hash = class.class_hash()?;
 
-                    (class_hash, compiled_hash, Arc::new(class))
+                    (class_hash, Arc::new(class))
                 }
 
                 // if the artifact is not a sierra contract, we check if it's a legacy contract
                 Err(_) => {
-                    let casm = parse_deprecated_compiled_class(artifact.clone())?;
+                    let casm = serde_json::from_value::<LegacyContractClass>(artifact.clone())?;
 
-                    let class_hash = if let Some(class_hash) = class_hash {
-                        class_hash
-                    } else {
-                        let casm: LegacyContractClass = serde_json::from_value(artifact.clone())?;
-                        casm.class_hash()?
-                    };
+                    let casm = ContractClass::Legacy(casm);
+                    let class_hash = casm.class_hash()?;
 
-                    (class_hash, class_hash, Arc::new(ContractClass::Legacy(casm)))
+                    (class_hash, Arc::new(casm))
                 }
             };
 
@@ -355,7 +335,7 @@ impl TryFrom<GenesisJson> for Genesis {
                 }
             }
 
-            classes.insert(class_hash, GenesisClass { compiled_class_hash, class });
+            classes.insert(class_hash, class);
         }
 
         let mut allocations: BTreeMap<ContractAddress, GenesisAllocation> = BTreeMap::new();
@@ -386,10 +366,7 @@ impl TryFrom<GenesisJson> for Genesis {
                     // inserting it
                     if let btree_map::Entry::Vacant(e) = classes.entry(DEFAULT_ACCOUNT_CLASS_HASH) {
                         // insert default account class to the classes map
-                        e.insert(GenesisClass {
-                            class: DEFAULT_ACCOUNT_CLASS.clone().into(),
-                            compiled_class_hash: DEFAULT_ACCOUNT_COMPILED_CLASS_HASH,
-                        });
+                        e.insert(DEFAULT_ACCOUNT_CLASS.clone().into());
                     }
 
                     DEFAULT_ACCOUNT_CLASS_HASH
@@ -473,6 +450,85 @@ impl TryFrom<GenesisJson> for Genesis {
     }
 }
 
+impl TryFrom<Genesis> for GenesisJson {
+    type Error = GenesisJsonError;
+
+    fn try_from(value: Genesis) -> Result<Self, Self::Error> {
+        let mut contracts = BTreeMap::new();
+        let mut accounts = BTreeMap::new();
+        let mut classes = Vec::with_capacity(value.classes.len());
+
+        for (.., class) in value.classes {
+            // Convert the class to an artifact Value
+            let artifact = match class.as_ref() {
+                ContractClass::Legacy(casm) => serde_json::to_value(casm)?,
+                ContractClass::Class(sierra) => serde_json::to_value(sierra)?,
+            };
+
+            classes.push(GenesisClassJson {
+                class: PathOrFullArtifact::Artifact(artifact),
+                name: None,
+            });
+        }
+
+        for (address, allocation) in value.allocations {
+            match allocation {
+                GenesisAllocation::Account(account) => match account {
+                    GenesisAccountAlloc::Account(acc) => {
+                        accounts.insert(
+                            address,
+                            GenesisAccountJson {
+                                nonce: acc.nonce,
+                                private_key: None,
+                                storage: acc.storage,
+                                balance: acc.balance,
+                                public_key: acc.public_key,
+                                class: Some(ClassNameOrHash::Hash(acc.class_hash)),
+                            },
+                        );
+                    }
+                    GenesisAccountAlloc::DevAccount(dev_acc) => {
+                        accounts.insert(
+                            address,
+                            GenesisAccountJson {
+                                nonce: dev_acc.inner.nonce,
+                                balance: dev_acc.inner.balance,
+                                storage: dev_acc.inner.storage,
+                                public_key: dev_acc.inner.public_key,
+                                private_key: Some(dev_acc.private_key),
+                                class: Some(ClassNameOrHash::Hash(dev_acc.inner.class_hash)),
+                            },
+                        );
+                    }
+                },
+                GenesisAllocation::Contract(contract) => {
+                    contracts.insert(
+                        address,
+                        GenesisContractJson {
+                            nonce: contract.nonce,
+                            balance: contract.balance,
+                            storage: contract.storage,
+                            class: contract.class_hash.map(ClassNameOrHash::Hash),
+                        },
+                    );
+                }
+            }
+        }
+
+        Ok(GenesisJson {
+            parent_hash: value.parent_hash,
+            state_root: value.state_root,
+            number: value.number,
+            timestamp: value.timestamp,
+            sequencer_address: value.sequencer_address,
+            gas_prices: value.gas_prices,
+            classes,
+            accounts,
+            contracts,
+        })
+    }
+}
+
 impl FromStr for GenesisJson {
     type Err = GenesisJsonError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -536,7 +592,10 @@ mod tests {
 
     use super::*;
     use crate::address;
-    use crate::genesis::constant::{DEFAULT_LEGACY_ERC20_CLASS, DEFAULT_LEGACY_UDC_CLASS};
+    use crate::genesis::constant::{
+        DEFAULT_LEGACY_ERC20_CLASS, DEFAULT_LEGACY_ERC20_CLASS_HASH, DEFAULT_LEGACY_UDC_CLASS,
+        DEFAULT_LEGACY_UDC_CLASS_HASH,
+    };
 
     #[test]
     fn deserialize_from_json() {
@@ -563,7 +622,7 @@ mod tests {
             Some(U256::from_str("0xD3C21BCECCEDA1000000").unwrap())
         );
         assert_eq!(json.accounts[&acc_1].nonce, Some(felt!("0x1")));
-        assert_eq!(json.accounts[&acc_1].class, Some(ClassNameOrHash::Hash(felt!("0x80085"))));
+        assert_eq!(json.accounts[&acc_1].class, Some(ClassNameOrHash::Name("Foo".to_string())));
         assert_eq!(
             json.accounts[&acc_1].storage,
             Some(BTreeMap::from([(felt!("0x1"), felt!("0x1")), (felt!("0x2"), felt!("0x2")),]))
@@ -629,7 +688,7 @@ mod tests {
         assert_eq!(json.contracts[&contract_3].nonce, None);
         assert_eq!(
             json.contracts[&contract_3].class,
-            Some(ClassNameOrHash::Hash(felt!("0x80085")))
+            Some(ClassNameOrHash::Name("Foo".to_string()))
         );
         assert_eq!(
             json.contracts[&contract_3].storage,
@@ -640,17 +699,14 @@ mod tests {
             json.classes,
             vec![
                 GenesisClassJson {
-                    class_hash: Some(felt!("0x8")),
                     class: PathBuf::from("../../../contracts/build/erc20.json").into(),
                     name: Some("MyErc20".to_string()),
                 },
                 GenesisClassJson {
-                    class_hash: Some(felt!("0x80085")),
                     class: PathBuf::from("../../../contracts/build/universal_deployer.json").into(),
-                    name: None,
+                    name: Some("Foo".to_string()),
                 },
                 GenesisClassJson {
-                    class_hash: None,
                     class: PathBuf::from("../../../contracts/build/default_account.json").into(),
                     name: Some("MyClass".to_string()),
                 },
@@ -661,39 +717,26 @@ mod tests {
     #[test]
     fn deserialize_from_json_with_class() {
         let file = File::open("./src/genesis/test-genesis-with-class.json").unwrap();
-        let genesis_result: Result<GenesisJson, _> = serde_json::from_reader(BufReader::new(file));
-        match genesis_result {
-            Ok(genesis) => {
-                assert_eq!(
-                    genesis.classes,
-                    vec![
-                        GenesisClassJson {
-                            class_hash: None,
-                            class: PathBuf::from("../../../contracts/build/erc20.json").into(),
-                            name: Some("MyErc20".to_string()),
-                        },
-                        GenesisClassJson {
-                            class_hash: Some(felt!("0x80085")),
-                            class: PathBuf::from(
-                                "../../../contracts/build/universal_deployer.json"
-                            )
-                            .into(),
-                            name: None,
-                        },
-                        GenesisClassJson {
-                            class_hash: Some(felt!("0xa55")),
-                            class: serde_json::to_value(DEFAULT_ACCOUNT_CLASS.clone())
-                                .unwrap()
-                                .into(),
-                            name: None,
-                        },
-                    ]
-                );
-            }
-            Err(e) => {
-                println!("Error parsing JSON: {:?}", e);
-            }
-        }
+        let genesis: GenesisJson = serde_json::from_reader(BufReader::new(file)).unwrap();
+        similar_asserts::assert_eq!(
+            genesis.classes,
+            vec![
+                GenesisClassJson {
+                    class: PathBuf::from("../../../contracts/build/erc20.json").into(),
+                    name: Some("MyErc20".to_string()),
+                },
+                GenesisClassJson {
+                    class: PathBuf::from("../../../contracts/build/universal_deployer.json").into(),
+                    name: Some("Foo".to_string()),
+                },
+                GenesisClassJson {
+                    class: serde_json::to_value(DEFAULT_ACCOUNT_CLASS.as_sierra().unwrap())
+                        .unwrap()
+                        .into(),
+                    name: None,
+                },
+            ]
+        );
     }
 
     #[test]
@@ -704,35 +747,11 @@ mod tests {
         let actual_genesis = Genesis::try_from(json).unwrap();
 
         let expected_classes = BTreeMap::from([
-            (
-                felt!("0x8"),
-                GenesisClass {
-                    compiled_class_hash: felt!("0x8"),
-                    class: DEFAULT_LEGACY_ERC20_CLASS.clone().into(),
-                },
-            ),
-            (
-                felt!("0x80085"),
-                GenesisClass {
-                    compiled_class_hash: felt!("0x80085"),
-                    class: DEFAULT_LEGACY_UDC_CLASS.clone().into(),
-                },
-            ),
-            (
-                DEFAULT_ACCOUNT_CLASS_HASH,
-                GenesisClass {
-                    compiled_class_hash: DEFAULT_ACCOUNT_COMPILED_CLASS_HASH,
-                    class: DEFAULT_ACCOUNT_CLASS.clone().into(),
-                },
-            ),
-            #[cfg(feature = "slot")]
-            (
-                CONTROLLER_CLASS_HASH,
-                GenesisClass {
-                    compiled_class_hash: CONTROLLER_CLASS_HASH,
-                    class: CONTROLLER_ACCOUNT_CLASS.clone().into(),
-                },
-            ),
+            (DEFAULT_LEGACY_ERC20_CLASS_HASH, DEFAULT_LEGACY_ERC20_CLASS.clone().into()),
+            (DEFAULT_LEGACY_UDC_CLASS_HASH, DEFAULT_LEGACY_UDC_CLASS.clone().into()),
+            (DEFAULT_ACCOUNT_CLASS_HASH, DEFAULT_ACCOUNT_CLASS.clone().into()),
+            #[cfg(feature = "controller")]
+            (CONTROLLER_CLASS_HASH, CONTROLLER_ACCOUNT_CLASS.clone().into()),
         ]);
 
         let acc_1 = address!("0x66efb28ac62686966ae85095ff3a772e014e7fbf56d4c5f6fac5606d4dde23a");
@@ -753,7 +772,7 @@ mod tests {
                     public_key: felt!("0x1"),
                     balance: Some(U256::from_str("0xD3C21BCECCEDA1000000").unwrap()),
                     nonce: Some(felt!("0x1")),
-                    class_hash: felt!("0x80085"),
+                    class_hash: DEFAULT_LEGACY_UDC_CLASS_HASH,
                     storage: Some(BTreeMap::from([
                         (felt!("0x1"), felt!("0x1")),
                         (felt!("0x2"), felt!("0x2")),
@@ -798,7 +817,7 @@ mod tests {
                 GenesisAllocation::Contract(GenesisContractAlloc {
                     balance: Some(U256::from_str("0xD3C21BCECCEDA1000000").unwrap()),
                     nonce: None,
-                    class_hash: Some(felt!("0x8")),
+                    class_hash: Some(DEFAULT_LEGACY_ERC20_CLASS_HASH),
                     storage: Some(BTreeMap::from([
                         (felt!("0x1"), felt!("0x1")),
                         (felt!("0x2"), felt!("0x2")),
@@ -819,7 +838,7 @@ mod tests {
                 GenesisAllocation::Contract(GenesisContractAlloc {
                     balance: None,
                     nonce: None,
-                    class_hash: Some(felt!("0x80085")),
+                    class_hash: Some(DEFAULT_LEGACY_UDC_CLASS_HASH),
                     storage: Some(BTreeMap::from([(felt!("0x1"), felt!("0x1"))])),
                 }),
             ),
@@ -853,9 +872,24 @@ mod tests {
 
         for class in actual_genesis.classes {
             let expected_class = expected_genesis.classes.get(&class.0).unwrap();
-            assert_eq!(class.1.compiled_class_hash, expected_class.compiled_class_hash);
-            assert_eq!(class.1.class, expected_class.class);
+            assert_eq!(&class.1, expected_class);
         }
+    }
+
+    // We don't care what the intermediate JSON format looks like as long as the
+    // conversion back and forth between GenesisJson and Genesis results in equivalent Genesis
+    // structs
+    #[test]
+    fn genesis_conversion_rt() {
+        let path = PathBuf::from("./src/genesis/test-genesis.json");
+
+        let json = GenesisJson::load(path).unwrap();
+        let genesis = Genesis::try_from(json.clone()).unwrap();
+
+        let json_again = GenesisJson::try_from(genesis.clone()).unwrap();
+        let genesis_again = Genesis::try_from(json_again.clone()).unwrap();
+
+        similar_asserts::assert_eq!(genesis, genesis_again);
     }
 
     #[test]
@@ -892,21 +926,9 @@ mod tests {
         let actual_genesis = Genesis::try_from(genesis_json).unwrap();
 
         let classes = BTreeMap::from([
-            (
-                DEFAULT_ACCOUNT_CLASS_HASH,
-                GenesisClass {
-                    compiled_class_hash: DEFAULT_ACCOUNT_COMPILED_CLASS_HASH,
-                    class: DEFAULT_ACCOUNT_CLASS.clone().into(),
-                },
-            ),
-            #[cfg(feature = "slot")]
-            (
-                CONTROLLER_CLASS_HASH,
-                GenesisClass {
-                    class: CONTROLLER_ACCOUNT_CLASS.clone().into(),
-                    compiled_class_hash: CONTROLLER_CLASS_HASH,
-                },
-            ),
+            (DEFAULT_ACCOUNT_CLASS_HASH, DEFAULT_ACCOUNT_CLASS.clone().into()),
+            #[cfg(feature = "controller")]
+            (CONTROLLER_CLASS_HASH, CONTROLLER_ACCOUNT_CLASS.clone().into()),
         ]);
 
         let allocations = BTreeMap::from([(
@@ -943,9 +965,7 @@ mod tests {
 
         for (hash, class) in actual_genesis.classes {
             let expected_class = expected_genesis.classes.get(&hash).unwrap();
-
-            assert_eq!(class.compiled_class_hash, expected_class.compiled_class_hash);
-            assert_eq!(class.class, expected_class.class);
+            assert_eq!(&class, expected_class);
         }
     }
 

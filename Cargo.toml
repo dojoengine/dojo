@@ -4,8 +4,6 @@ resolver = "2"
 members = [
 	"bin/dojo-language-server",
 	"bin/katana",
-	"bin/saya",
-	"bin/scheduler",
 	"bin/sozo",
 	"bin/torii",
 	"crates/dojo/bindgen",
@@ -16,6 +14,7 @@ members = [
 	"crates/dojo/utils",
 	"crates/dojo/world",
 	"crates/dojo/world/abigen",
+	"crates/katana/chain-spec",
 	"crates/katana/cli",
 	"crates/katana/controller",
 	"crates/katana/core",
@@ -41,8 +40,6 @@ members = [
 	"crates/katana/tasks",
 	"crates/katana/trie",
 	"crates/metrics",
-	"crates/saya/core",
-	"crates/saya/provider",
 	"crates/sozo/scarbext",
 	"crates/sozo/signers",
 	"crates/sozo/walnut",
@@ -60,7 +57,7 @@ edition = "2021"
 license = "Apache-2.0"
 license-file = "LICENSE"
 repository = "https://github.com/dojoengine/dojo/"
-version = "1.0.12"
+version = "1.1.2"
 
 [profile.performance]
 codegen-units = 1
@@ -73,7 +70,7 @@ debug = true
 inherits = "release"
 
 [workspace.dependencies]
-cainome = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.4.11", features = [ "abigen-rs" ] }
+cainome = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.4.12", features = [ "abigen-rs" ] }
 cainome-cairo-serde = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.4.11" }
 dojo-utils = { path = "crates/dojo/utils" }
 
@@ -93,6 +90,7 @@ topological-sort = "0.2"
 
 # katana
 katana-cairo = { path = "crates/katana/cairo" }
+katana-chain-spec = { path = "crates/katana/chain-spec" }
 katana-cli = { path = "crates/katana/cli" }
 katana-codecs = { path = "crates/katana/storage/codecs" }
 katana-codecs-derive = { path = "crates/katana/storage/codecs/derive" }
@@ -127,10 +125,6 @@ torii-relay = { path = "crates/torii/libp2p" }
 torii-server = { path = "crates/torii/server" }
 torii-runner = { path = "crates/torii/runner" }
 torii-typed-data = { path = "crates/torii/typed-data" }
-
-# saya
-saya-core = { path = "crates/saya/core" }
-saya-provider = { path = "crates/saya/provider" }
 
 # sozo
 sozo-ops = { path = "crates/sozo/ops" }
@@ -212,9 +206,9 @@ rpassword = "7.2.0"
 rstest = "0.18.2"
 rstest_reuse = "0.6.0"
 salsa = "0.16.1"
-scarb = { git = "https://github.com/dojoengine/scarb", rev = "f67331d99bca24c13ad56af6752b93f23e5ac373" }
-scarb-metadata = { git = "https://github.com/dojoengine/scarb", rev = "f67331d99bca24c13ad56af6752b93f23e5ac373" }
-scarb-ui = { git = "https://github.com/dojoengine/scarb", rev = "f67331d99bca24c13ad56af6752b93f23e5ac373" }
+scarb = { git = "https://github.com/dojoengine/scarb", rev = "da5f683adbd25361d080c2d9f624924aa9f112d1" }
+scarb-metadata = { git = "https://github.com/dojoengine/scarb", rev = "da5f683adbd25361d080c2d9f624924aa9f112d1" }
+scarb-ui = { git = "https://github.com/dojoengine/scarb", rev = "da5f683adbd25361d080c2d9f624924aa9f112d1" }
 semver = "1.0.5"
 serde = { version = "1.0", features = [ "derive" ] }
 serde_json = { version = "1.0", features = [ "arbitrary_precision" ] }

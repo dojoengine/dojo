@@ -15,16 +15,18 @@ katana-trie.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 
-blockifier = { git = "https://github.com/dojoengine/sequencer", rev = "802c5dc", features = [ "testing" ], optional = true }
+blockifier = { git = "https://github.com/dojoengine/sequencer", rev = "adae779", features = [ "testing" ], optional = true }
 parking_lot = { workspace = true, optional = true }
 starknet = { workspace = true, optional = true }
 
 [dev-dependencies]
-alloy-primitives.workspace = true
-anyhow.workspace = true
 katana-cairo.workspace = true
+katana-chain-spec.workspace = true
 katana-provider = { workspace = true, features = [ "test-utils" ] }
 katana-rpc-types.workspace = true
+
+alloy-primitives.workspace = true
+anyhow.workspace = true
 num-traits.workspace = true
 rstest.workspace = true
 rstest_reuse.workspace = true

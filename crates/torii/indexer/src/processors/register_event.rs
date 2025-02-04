@@ -1,14 +1,17 @@
+use std::hash::{DefaultHasher, Hash, Hasher};
+
 use anyhow::{Error, Ok, Result};
 use async_trait::async_trait;
 use dojo_world::contracts::abigen::world::Event as WorldEvent;
 use dojo_world::contracts::model::ModelReader;
 use dojo_world::contracts::world::WorldContractReader;
-use starknet::core::types::Event;
+use starknet::core::types::{BlockId, Event};
 use starknet::providers::Provider;
 use torii_sqlite::Sql;
 use tracing::{debug, info};
 
 use super::{EventProcessor, EventProcessorConfig};
+use crate::task_manager::{TaskId, TaskPriority};
 
 pub(crate) const LOG_TARGET: &str = "torii_indexer::processors::register_event";
 
@@ -30,11 +33,21 @@ where
         true
     }
 
+    fn task_priority(&self) -> TaskPriority {
+        0
+    }
+
+    fn task_identifier(&self, event: &Event) -> TaskId {
+        let mut hasher = DefaultHasher::new();
+        event.keys.iter().for_each(|k| k.hash(&mut hasher));
+        hasher.finish()
+    }
+
     async fn process(
         &self,
         world: &WorldContractReader<P>,
         db: &mut Sql,
-        _block_number: u64,
+        block_number: u64,
         block_timestamp: u64,
         _event_id: &str,
         event: &Event,
@@ -66,7 +79,11 @@ where
 
         // Called model here by language, but it's an event. Torii rework will make clear
         // distinction.
-        let model = world.model_reader(&namespace, &name).await?;
+        let model = if config.strict_model_reader {
+            world.model_reader_with_block(&namespace, &name, BlockId::Number(block_number)).await?
+        } else {
+            world.model_reader(&namespace, &name).await?
+        };
         let schema = model.schema().await?;
         let layout = model.layout().await?;
 

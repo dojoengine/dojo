@@ -9,7 +9,7 @@ use dojo::model::ModelStorage;
 use dojo::event::{Event, EventStorage};
 
 use crate::tests::helpers::{
-    IbarDispatcherTrait, drop_all_events, deploy_world_and_bar, Foo, m_Foo, test_contract,
+    bar, IbarDispatcherTrait, drop_all_events, deploy_world_and_bar, Foo, m_Foo, test_contract,
     test_contract_with_dojo_init_args, SimpleEvent, e_SimpleEvent, deploy_world,
 };
 use crate::{spawn_test_world, ContractDefTrait, NamespaceDef, TestResource, WorldStorageTestTrait};
@@ -310,4 +310,24 @@ fn test_can_call_init_only_world_args() {
             assert_eq!(e_str, expected_panic);
         },
     }
+}
+
+#[test]
+pub fn dns_valid_class_hash() {
+    let namespace_def = NamespaceDef {
+        namespace: "dojo",
+        resources: [
+            TestResource::Model(m_Foo::TEST_CLASS_HASH),
+            TestResource::Contract(bar::TEST_CLASS_HASH),
+        ]
+            .span(),
+    };
+
+    let mut world = spawn_test_world([namespace_def].span());
+    world.sync_perms_and_inits([].span());
+
+    let (_, class_hash) = world.dns(@"bar").unwrap();
+    assert!(class_hash == 0.try_into().unwrap());
+    // TODO: once starknet 0.13.4 is out, uncomment that.
+//assert!(class_hash == bar::TEST_CLASS_HASH.try_into().unwrap());
 }

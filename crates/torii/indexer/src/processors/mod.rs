@@ -7,6 +7,9 @@ use starknet::core::types::{Event, Felt, Transaction};
 use starknet::providers::Provider;
 use torii_sqlite::Sql;
 
+use crate::task_manager::{TaskId, TaskPriority};
+
+pub mod controller;
 pub mod erc20_legacy_transfer;
 pub mod erc20_transfer;
 pub mod erc721_legacy_transfer;
@@ -23,11 +26,11 @@ pub mod store_update_member;
 pub mod store_update_record;
 pub mod upgrade_event;
 pub mod upgrade_model;
-
 #[derive(Clone, Debug, Default)]
 pub struct EventProcessorConfig {
     pub historical_events: HashSet<String>,
     pub namespaces: HashSet<String>,
+    pub strict_model_reader: bool,
 }
 
 impl EventProcessorConfig {
@@ -52,6 +55,9 @@ where
     }
 
     fn validate(&self, event: &Event) -> bool;
+
+    fn task_priority(&self) -> TaskPriority;
+    fn task_identifier(&self, event: &Event) -> TaskId;
 
     #[allow(clippy::too_many_arguments)]
     async fn process(
