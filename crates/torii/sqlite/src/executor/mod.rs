@@ -621,16 +621,6 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 let semaphore = self.semaphore.clone();
                 let provider = self.provider.clone();
 
-                let token_exists =
-                    sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tokens WHERE id = ?")
-                        .bind(register_erc721_token.id.to_string())
-                        .fetch_one(&mut **tx)
-                        .await?;
-
-                if token_exists > 0 {
-                    return Ok(());
-                }
-
                 let res = sqlx::query_as::<_, (String, String)>(&format!(
                     "SELECT name, symbol FROM {TOKENS_TABLE} WHERE id = ? LIMIT 1"
                 ))
