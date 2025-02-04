@@ -407,6 +407,9 @@ impl Primitive {
     pub fn can_upgrade_to(&self, other: &Primitive) -> bool {
         use Primitive::*;
         match (self, other) {
+            // USize is not allowed to upgrade
+            (USize(_), _) => false,
+
             // Boolean (no upgrades)
             (Bool(_), Bool(_)) => true,
 
@@ -414,7 +417,6 @@ impl Primitive {
             (U8(_), U16(_) | U32(_) | USize(_) | U64(_) | U128(_) | Felt252(_)) => true,
             (U16(_), U32(_) | USize(_) | U64(_) | U128(_) | Felt252(_)) => true,
             (U32(_), USize(_) | U64(_) | U128(_) | Felt252(_)) => true,
-            (USize(_), U32(_) | U64(_) | U128(_) | Felt252(_)) => true,
             (U64(_), U128(_) | Felt252(_)) => true,
             (U128(_), Felt252(_)) => true,
 

@@ -5,6 +5,7 @@ use std::sync::Arc;
 
 use anyhow::{anyhow, Context, Result};
 use dojo_types::naming::get_tag;
+use dojo_types::primitive::SqlType;
 use dojo_types::schema::{Struct, Ty};
 use dojo_world::config::WorldMetadata;
 use dojo_world::contracts::abigen::model::Layout;
@@ -1035,12 +1036,20 @@ fn add_columns_recursive(
             if let Some(upgrade_diff) = upgrade_diff {
                 if let Some(old_primitive) = upgrade_diff.as_primitive() {
                     if old_primitive.can_upgrade_to(p) {
-                        // Modify existing column to new type
+                        // For upgrades to larger numeric types, convert to hex string padded to 64 chars
+                        let sql_value = if old_primitive.to_sql_type() == SqlType::Integer
+                            && p.to_sql_type() == SqlType::Text
+                        {
+                            format!("printf('0x%064x', CAST([{column_name}] AS INTEGER))")
+                        } else {
+                            format!("[{column_name}]")
+                        };
+
                         modify_column(
                             alter_table_queries,
                             &column_name,
                             p.to_sql_type().as_ref(),
-                            p.to_sql_value().as_ref(),
+                            &sql_value,
                         );
                     } else {
                         return Err(anyhow::anyhow!(
