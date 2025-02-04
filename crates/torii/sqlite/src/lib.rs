@@ -1036,7 +1036,8 @@ fn add_columns_recursive(
             if let Some(upgrade_diff) = upgrade_diff {
                 if let Some(old_primitive) = upgrade_diff.as_primitive() {
                     if old_primitive.can_upgrade_to(p) {
-                        // For upgrades to larger numeric types, convert to hex string padded to 64 chars
+                        // For upgrades to larger numeric types, convert to hex string padded to 64
+                        // chars
                         let sql_value = if old_primitive.to_sql_type() == SqlType::Integer
                             && p.to_sql_type() == SqlType::Text
                         {
