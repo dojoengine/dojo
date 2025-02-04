@@ -622,7 +622,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 let provider = self.provider.clone();
 
                 let res = sqlx::query_as::<_, (String, String)>(&format!(
-                    "SELECT name, symbol FROM {TOKENS_TABLE} WHERE id = ? LIMIT 1"
+                    "SELECT name, symbol FROM {TOKENS_TABLE} WHERE contract_address = ? LIMIT 1"
                 ))
                 .bind(felt_to_sql_string(&register_erc721_token.contract_address))
                 .fetch_one(&mut **tx)
