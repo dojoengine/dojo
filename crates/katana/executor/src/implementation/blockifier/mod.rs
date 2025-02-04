@@ -5,19 +5,24 @@ mod error;
 pub mod state;
 pub mod utils;
 
+use std::collections::HashMap;
 use std::num::NonZeroU128;
+use std::sync::Arc;
 
 use blockifier::blockifier::block::{BlockInfo, GasPrices};
 use blockifier::context::BlockContext;
+use blockifier::execution::contract_class::ContractClass as BlockifierContractClass;
 use blockifier::state::cached_state::{self, MutRefState};
 use blockifier::state::state_api::StateReader;
 use katana_cairo::starknet_api::block::{BlockNumber, BlockTimestamp};
 use katana_primitives::block::{ExecutableBlock, GasPrices as KatanaGasPrices, PartialHeader};
+use katana_primitives::class::ClassHash;
 use katana_primitives::env::{BlockEnv, CfgEnv};
 use katana_primitives::fee::TxFeeInfo;
 use katana_primitives::transaction::{ExecutableTx, ExecutableTxWithHash, TxWithHash};
 use katana_primitives::Felt;
 use katana_provider::traits::state::StateProvider;
+use parking_lot::Mutex;
 use tracing::info;
 
 use self::state::CachedState;
@@ -32,12 +37,15 @@ pub(crate) const LOG_TARGET: &str = "katana::executor::blockifier";
 pub struct BlockifierFactory {
     cfg: CfgEnv,
     flags: ExecutionFlags,
+    /// Shared cache
+    compiled_class_cache: Arc<Mutex<HashMap<ClassHash, BlockifierContractClass>>>,
 }
 
 impl BlockifierFactory {
     /// Create a new factory with the given configuration and simulation flags.
     pub fn new(cfg: CfgEnv, flags: ExecutionFlags) -> Self {
-        Self { cfg, flags }
+        let compiled_class_cache = Arc::new(Mutex::new(HashMap::default()));
+        Self { cfg, flags, compiled_class_cache }
     }
 }
 
@@ -59,7 +67,13 @@ impl ExecutorFactory for BlockifierFactory {
     {
         let cfg_env = self.cfg.clone();
         let flags = self.flags.clone();
-        Box::new(StarknetVMProcessor::new(Box::new(state), block_env, cfg_env, flags))
+        Box::new(StarknetVMProcessor::new(
+            Box::new(state),
+            block_env,
+            cfg_env,
+            flags,
+            self.compiled_class_cache.clone(),
+        ))
     }
 
     fn cfg(&self) -> &CfgEnv {
@@ -87,10 +101,11 @@ impl<'a> StarknetVMProcessor<'a> {
         block_env: BlockEnv,
         cfg_env: CfgEnv,
         simulation_flags: ExecutionFlags,
+        compiled_class_cache: Arc<Mutex<HashMap<ClassHash, BlockifierContractClass>>>,
     ) -> Self {
         let transactions = Vec::new();
         let block_context = utils::block_context_from_envs(&block_env, &cfg_env);
-        let state = state::CachedState::new(state);
+        let state = state::CachedState::new(state, compiled_class_cache);
         Self { block_context, state, transactions, simulation_flags, stats: Default::default() }
     }
 

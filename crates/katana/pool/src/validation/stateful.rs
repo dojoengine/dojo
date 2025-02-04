@@ -87,7 +87,7 @@ impl Inner {
     // for transaction validation.
     fn prepare(&self) -> StatefulValidator<StateProviderDb<'static>> {
         let state = Box::new(self.state.clone());
-        let cached_state = CachedState::new(StateProviderDb::new(state));
+        let cached_state = CachedState::new(StateProviderDb::new(state, Default::default()));
         let context = block_context_from_envs(&self.block_env, &self.cfg_env);
         StatefulValidator::create(cached_state, context)
     }

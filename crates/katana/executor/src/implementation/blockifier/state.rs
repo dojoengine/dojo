@@ -30,8 +30,11 @@ pub(crate) struct CachedStateInner<'a> {
 }
 
 impl<'a> CachedState<'a> {
-    pub(super) fn new(state: impl StateProvider + 'a) -> Self {
-        let state = StateProviderDb::new(Box::new(state));
+    pub(super) fn new(
+        state: impl StateProvider + 'a,
+        compiled_class_cache: Arc<Mutex<HashMap<class::ClassHash, BlockifierContractClass>>>,
+    ) -> Self {
+        let state = StateProviderDb::new(Box::new(state), compiled_class_cache.clone());
         let cached_state = cached_state::CachedState::new(state);
 
         let declared_classes = HashMap::new();
@@ -120,19 +123,25 @@ impl<'a> StateProofProvider for CachedState<'a> {}
 impl<'a> StateRootProvider for CachedState<'a> {}
 
 #[derive(Debug)]
-pub struct StateProviderDb<'a>(Box<dyn StateProvider + 'a>);
+pub struct StateProviderDb<'a> {
+    provider: Box<dyn StateProvider + 'a>,
+    compiled_class_cache: Arc<Mutex<HashMap<class::ClassHash, BlockifierContractClass>>>,
+}
 
 impl<'a> Deref for StateProviderDb<'a> {
     type Target = Box<dyn StateProvider + 'a>;
 
     fn deref(&self) -> &Self::Target {
-        &self.0
+        &self.provider
     }
 }
 
 impl<'a> StateProviderDb<'a> {
-    pub fn new(provider: Box<dyn StateProvider + 'a>) -> Self {
-        Self(provider)
+    pub fn new(
+        provider: Box<dyn StateProvider + 'a>,
+        compiled_class_cache: Arc<Mutex<HashMap<class::ClassHash, BlockifierContractClass>>>,
+    ) -> Self {
+        Self { provider, compiled_class_cache }
     }
 }
 
@@ -141,7 +150,7 @@ impl<'a> StateReader for StateProviderDb<'a> {
         &self,
         contract_address: katana_cairo::starknet_api::core::ContractAddress,
     ) -> StateResult<katana_cairo::starknet_api::core::ClassHash> {
-        self.0
+        self.provider
             .class_hash_of_contract(utils::to_address(contract_address))
             .map(|v| ClassHash(v.unwrap_or_default()))
             .map_err(|e| StateError::StateReadError(e.to_string()))
@@ -152,7 +161,7 @@ impl<'a> StateReader for StateProviderDb<'a> {
         class_hash: katana_cairo::starknet_api::core::ClassHash,
     ) -> StateResult<katana_cairo::starknet_api::core::CompiledClassHash> {
         if let Some(hash) = self
-            .0
+            .provider
             .compiled_class_hash_of_class_hash(class_hash.0)
             .map_err(|e| StateError::StateReadError(e.to_string()))?
         {
@@ -166,22 +175,30 @@ impl<'a> StateReader for StateProviderDb<'a> {
         &self,
         class_hash: ClassHash,
     ) -> StateResult<BlockifierContractClass> {
+        let mut class_cache = self.compiled_class_cache.lock();
+        if let Some(class) = class_cache.get(&class_hash.0) {
+            return Ok(class.clone());
+        }
+
         if let Some(class) = self
-            .0
+            .provider
             .compiled_class(class_hash.0)
             .map_err(|e| StateError::StateReadError(e.to_string()))?
         {
-            utils::to_class(class).map_err(|e| StateError::StateReadError(e.to_string()))
-        } else {
-            Err(StateError::UndeclaredClassHash(class_hash))
+            let class =
+                utils::to_class(class).map_err(|e| StateError::StateReadError(e.to_string()))?;
+            class_cache.insert(class_hash.0, class.clone());
+            return Ok(class);
         }
+
+        Err(StateError::UndeclaredClassHash(class_hash))
     }
 
     fn get_nonce_at(
         &self,
         contract_address: katana_cairo::starknet_api::core::ContractAddress,
     ) -> StateResult<katana_cairo::starknet_api::core::Nonce> {
-        self.0
+        self.provider
             .nonce(utils::to_address(contract_address))
             .map(|n| Nonce(n.unwrap_or_default()))
             .map_err(|e| StateError::StateReadError(e.to_string()))
