@@ -55,7 +55,7 @@ use katana_primitives::{class, event, message, trace, Felt};
 use katana_provider::traits::contract::ContractClassProvider;
 use starknet::core::utils::parse_cairo_short_string;
 
-use super::state::{CachedState, StateDb};
+use super::state::CachedState;
 use crate::abstraction::{EntryPointCall, ExecutionFlags};
 use crate::utils::build_receipt;
 use crate::{ExecutionError, ExecutionResult};
@@ -365,7 +365,7 @@ pub fn to_executor_tx(tx: ExecutableTxWithHash) -> Transaction {
             };
 
             let hash = TransactionHash(hash);
-            let class = to_class(compiled).unwrap();
+            let class = to_class_info(compiled).unwrap();
             let tx = DeclareTransaction::new(tx, hash, class).expect("class mismatch");
             Transaction::AccountTransaction(AccountTransaction::Declare(tx))
         }
@@ -433,10 +433,8 @@ pub fn block_context_from_envs(block_env: &BlockEnv, cfg_env: &CfgEnv) -> BlockC
     BlockContext::new(block_info, chain_info, versioned_constants, BouncerConfig::max())
 }
 
-pub(super) fn state_update_from_cached_state<S: StateDb>(
-    state: &CachedState<S>,
-) -> StateUpdatesWithClasses {
-    let state_diff = state.0.lock().inner.to_state_diff().unwrap();
+pub(super) fn state_update_from_cached_state(state: &CachedState<'_>) -> StateUpdatesWithClasses {
+    let state_diff = state.inner.lock().cached_state.to_state_diff().unwrap();
 
     let mut declared_contract_classes: BTreeMap<
         katana_primitives::class::ClassHash,
@@ -558,16 +556,16 @@ pub fn to_blk_chain_id(chain_id: katana_primitives::chain::ChainId) -> ChainId {
     }
 }
 
-pub fn to_class(class: class::CompiledClass) -> Result<ClassInfo, ProgramError> {
+pub fn to_class_info(class: class::CompiledClass) -> Result<ClassInfo, ProgramError> {
     // TODO: @kariy not sure of the variant that must be used in this case. Should we change the
     // return type to include this case of error for contract class conversions?
     match class {
-        class::CompiledClass::Legacy(class) => {
+        class::CompiledClass::Legacy(..) => {
             // For cairo 0, the sierra_program_length must be 0.
-            Ok(ClassInfo::new(&ContractClass::V0(ContractClassV0::try_from(class)?), 0, 0).unwrap())
+            Ok(ClassInfo::new(&to_class(class)?, 0, 0).unwrap())
         }
 
-        class::CompiledClass::Class(casm) => {
+        class::CompiledClass::Class(..) => {
             // NOTE:
             //
             // Right now, we're using dummy values for the sierra class info (ie
@@ -577,12 +575,23 @@ pub fn to_class(class: class::CompiledClass) -> Result<ClassInfo, ProgramError> 
             // Make sure these values are the same over on `snos` when it re-executes the
             // transactions as otherwise the fees would be different.
 
-            let class = ContractClass::V1(ContractClassV1::try_from(casm)?);
+            let class = to_class(class)?;
             let sierra_program_length = 1;
             let abi_length = 0;
 
             let class = ClassInfo::new(&class, sierra_program_length, abi_length).unwrap();
             Ok(class)
+        }
+    }
+}
+
+pub fn to_class(class: class::CompiledClass) -> Result<ContractClass, ProgramError> {
+    match class {
+        class::CompiledClass::Legacy(class) => {
+            Ok(ContractClass::V0(ContractClassV0::try_from(class)?))
+        }
+        class::CompiledClass::Class(casm) => {
+            Ok(ContractClass::V1(ContractClassV1::try_from(casm)?))
         }
     }
 }

@@ -9,10 +9,11 @@ use katana_executor::implementation::blockifier::blockifier::transaction::errors
     TransactionExecutionError, TransactionFeeError, TransactionPreValidationError,
 };
 use katana_executor::implementation::blockifier::blockifier::transaction::transaction_execution::Transaction;
+use katana_executor::implementation::blockifier::state::StateProviderDb;
 use katana_executor::implementation::blockifier::utils::{
     block_context_from_envs, to_address, to_executor_tx,
 };
-use katana_executor::{ExecutionFlags, StateProviderDb};
+use katana_executor::ExecutionFlags;
 use katana_primitives::contract::{ContractAddress, Nonce};
 use katana_primitives::env::{BlockEnv, CfgEnv};
 use katana_primitives::transaction::{ExecutableTx, ExecutableTxWithHash};

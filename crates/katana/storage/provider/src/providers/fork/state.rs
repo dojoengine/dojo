@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, ContractClass};
+use katana_primitives::class::{ClassHash, CompiledClassHash, ContractClass};
 use katana_primitives::contract::{ContractAddress, Nonce, StorageKey, StorageValue};
 
 use super::backend::SharedStateProvider;
@@ -84,13 +84,6 @@ impl ContractClassProvider for ForkedStateDb {
         ContractClassProvider::class(&self.db, hash)
     }
 
-    fn compiled_class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledClass>> {
-        if let class @ Some(_) = self.shared_contract_classes.compiled_classes.read().get(&hash) {
-            return Ok(class.cloned());
-        }
-        ContractClassProvider::compiled_class(&self.db, hash)
-    }
-
     fn compiled_class_hash_of_class_hash(
         &self,
         hash: ClassHash,
@@ -132,10 +125,6 @@ impl StateProvider for LatestStateProvider {
 impl ContractClassProvider for LatestStateProvider {
     fn class(&self, hash: ClassHash) -> ProviderResult<Option<ContractClass>> {
         ContractClassProvider::class(&self.0, hash)
-    }
-
-    fn compiled_class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledClass>> {
-        ContractClassProvider::compiled_class(&self.0, hash)
     }
 
     fn compiled_class_hash_of_class_hash(
@@ -199,14 +188,6 @@ impl ContractClassProvider for ForkedSnapshot {
             Ok(self.classes.classes.read().get(&hash).cloned())
         } else {
             ContractClassProvider::class(&self.inner.db, hash)
-        }
-    }
-
-    fn compiled_class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledClass>> {
-        if self.inner.compiled_class_hashes.contains_key(&hash) {
-            Ok(self.classes.compiled_classes.read().get(&hash).cloned())
-        } else {
-            ContractClassProvider::compiled_class(&self.inner.db, hash)
         }
     }
 

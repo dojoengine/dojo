@@ -2,7 +2,7 @@
 pub use blockifier;
 
 mod error;
-mod state;
+pub mod state;
 pub mod utils;
 
 use std::num::NonZeroU128;
@@ -24,7 +24,6 @@ use self::state::CachedState;
 use crate::{
     BlockExecutor, EntryPointCall, ExecutionError, ExecutionFlags, ExecutionOutput,
     ExecutionResult, ExecutionStats, ExecutorExt, ExecutorFactory, ExecutorResult, ResultAndStates,
-    StateProviderDb,
 };
 
 pub(crate) const LOG_TARGET: &str = "katana::executor::blockifier";
@@ -76,7 +75,7 @@ impl ExecutorFactory for BlockifierFactory {
 #[derive(Debug)]
 pub struct StarknetVMProcessor<'a> {
     block_context: BlockContext,
-    state: CachedState<StateProviderDb<'a>>,
+    state: CachedState<'a>,
     transactions: Vec<(TxWithHash, ExecutionResult)>,
     simulation_flags: ExecutionFlags,
     stats: ExecutionStats,
@@ -84,14 +83,14 @@ pub struct StarknetVMProcessor<'a> {
 
 impl<'a> StarknetVMProcessor<'a> {
     pub fn new(
-        state: Box<dyn StateProvider + 'a>,
+        state: impl StateProvider + 'a,
         block_env: BlockEnv,
         cfg_env: CfgEnv,
         simulation_flags: ExecutionFlags,
     ) -> Self {
         let transactions = Vec::new();
         let block_context = utils::block_context_from_envs(&block_env, &cfg_env);
-        let state = state::CachedState::new(StateProviderDb::new(state));
+        let state = state::CachedState::new(state);
         Self { block_context, state, transactions, simulation_flags, stats: Default::default() }
     }
 
@@ -142,7 +141,7 @@ impl<'a> StarknetVMProcessor<'a> {
         F: FnMut(&mut dyn StateReader, (TxWithHash, ExecutionResult)) -> T,
     {
         let block_context = &self.block_context;
-        let state = &mut self.state.0.lock().inner;
+        let state = &mut self.state.inner.lock().cached_state;
         let mut state = cached_state::CachedState::new(MutRefState::new(state));
 
         let mut results = Vec::with_capacity(transactions.len());
@@ -169,7 +168,7 @@ impl<'a> BlockExecutor<'a> for StarknetVMProcessor<'a> {
     ) -> ExecutorResult<()> {
         let block_context = &self.block_context;
         let flags = &self.simulation_flags;
-        let mut state = self.state.0.lock();
+        let mut state = self.state.inner.lock();
 
         for exec_tx in transactions {
             // Collect class artifacts if its a declare tx
@@ -182,7 +181,7 @@ impl<'a> BlockExecutor<'a> for StarknetVMProcessor<'a> {
 
             let tx = TxWithHash::from(&exec_tx);
             let hash = tx.hash;
-            let res = utils::transact(&mut state.inner, block_context, flags, exec_tx);
+            let res = utils::transact(&mut state.cached_state, block_context, flags, exec_tx);
 
             match &res {
                 ExecutionResult::Success { receipt, trace } => {
@@ -284,8 +283,8 @@ impl ExecutorExt for StarknetVMProcessor<'_> {
 
     fn call(&self, call: EntryPointCall) -> Result<Vec<Felt>, ExecutionError> {
         let block_context = &self.block_context;
-        let mut state = self.state.0.lock();
-        let state = MutRefState::new(&mut state.inner);
+        let mut state = self.state.inner.lock();
+        let state = MutRefState::new(&mut state.cached_state);
         let retdata = utils::call(call, state, block_context, 1_000_000_000)?;
         Ok(retdata)
     }
