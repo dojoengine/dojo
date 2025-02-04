@@ -87,7 +87,7 @@ fn test_upgrade_from_world() {
 
 #[test]
 #[available_gas(7000000)]
-#[should_panic(expected: ('ENTRYPOINT_NOT_FOUND', 'ENTRYPOINT_FAILED'))]
+#[should_panic(expected: ('ENTRYPOINT_NOT_FOUND', 'ENTRYPOINT_FAILED', 'ENTRYPOINT_FAILED'))]
 fn test_upgrade_from_world_not_world_provider() {
     let world = deploy_world();
     let world = world.dispatcher;
@@ -177,7 +177,7 @@ mod invalid_model_world {
     expected: (
         "Namespace `` is invalid according to Dojo naming rules: ^[a-zA-Z0-9_]+$",
         'ENTRYPOINT_FAILED',
-    )
+    ),
 )]
 fn test_register_namespace_empty_name() {
     let world = deploy_world();

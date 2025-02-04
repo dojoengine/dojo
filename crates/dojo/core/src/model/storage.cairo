@@ -1,4 +1,4 @@
-use dojo::{model::{ModelPtr, model_value::ModelValueKey}};
+use dojo::{model::{ModelPtr, model_value::ModelValueKey}, meta::Introspect};
 
 // TODO: define the right interface for member accesses.
 
@@ -35,13 +35,31 @@ pub trait ModelStorage<S, M> {
     /// The ptr is mostly used for type inferrence.
     fn erase_models_ptrs(ref self: S, ptrs: Span<ModelPtr<M>>);
 
-    /// Retrieves a model of type `M` using the provided entity idref .
+    /// Retrieves a model of type `M` using the provided entity id.
     fn read_member<T, +Serde<T>>(self: @S, ptr: ModelPtr<M>, field_selector: felt252) -> T;
 
-    /// Retrieves a model of type `M` using the provided entity id.
+    /// Retrieves a single member from multiple models.
+    fn read_member_of_models<T, +Serde<T>, +Drop<T>>(
+        self: @S, ptrs: Span<ModelPtr<M>>, field_selector: felt252,
+    ) -> Array<T>;
+
+    /// Updates a member of a model.
     fn write_member<T, +Serde<T>, +Drop<T>>(
-        ref self: S, ptr: ModelPtr<M>, field_selector: felt252, value: T
+        ref self: S, ptr: ModelPtr<M>, field_selector: felt252, value: T,
     );
+
+    /// Updates a member of multiple models.
+    fn write_member_of_models<T, +Serde<T>, +Drop<T>>(
+        ref self: S, ptrs: Span<ModelPtr<M>>, field_selector: felt252, values: Span<T>,
+    );
+
+    /// Retrieves a subset of members in a model, matching a defined schema <T>.
+    fn read_schema<T, +Serde<T>, +Introspect<T>>(self: @S, ptr: ModelPtr<M>) -> T;
+
+    /// Retrieves part of multiple models, matching a schema.
+    fn read_schemas<T, +Drop<T>, +Serde<T>, +Introspect<T>>(
+        self: @S, ptrs: Span<ModelPtr<M>>,
+    ) -> Array<T>;
 
     /// Returns the current namespace hash.
     fn namespace_hash(self: @S) -> felt252;
@@ -54,7 +72,7 @@ pub trait ModelValueStorage<S, V> {
 
     /// Retrieves multiple model values of type `V` using the provided keys of type `K`.
     fn read_values<K, +Drop<K>, +Serde<K>, +ModelValueKey<V, K>>(
-        self: @S, keys: Span<K>
+        self: @S, keys: Span<K>,
     ) -> Array<V>;
 
     /// Retrieves a model value of type `V` using the provided entity id.
@@ -68,7 +86,7 @@ pub trait ModelValueStorage<S, V> {
 
     /// Updates multiple model values of type `V`.
     fn write_values<K, +Drop<K>, +Serde<K>, +ModelValueKey<V, K>>(
-        ref self: S, keys: Span<K>, values: Span<@V>
+        ref self: S, keys: Span<K>, values: Span<@V>,
     );
 
     /// Updates a model value of type `V`.
@@ -102,11 +120,11 @@ pub trait ModelStorageTest<S, M> {
 pub trait ModelValueStorageTest<S, V> {
     /// Updates a model value of type `V`.
     fn write_value_test<K, +Drop<K>, +Serde<K>, +ModelValueKey<V, K>>(
-        ref self: S, keys: K, value: @V
+        ref self: S, keys: K, value: @V,
     );
     /// Updates multiple model values of type `V`.
     fn write_values_test<K, +Drop<K>, +Serde<K>, +ModelValueKey<V, K>>(
-        ref self: S, keys: Span<K>, values: Span<@V>
+        ref self: S, keys: Span<K>, values: Span<@V>,
     );
     /// Updates a model value of type `V`.
     fn write_value_from_id_test(ref self: S, entity_id: felt252, value: @V);

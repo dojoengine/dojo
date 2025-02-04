@@ -32,22 +32,22 @@ pub mod world {
     };
     pub use starknet::storage::{
         StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess,
-        StoragePointerWriteAccess
+        StoragePointerWriteAccess,
     };
 
     use dojo::world::errors;
     use dojo::contract::components::upgradeable::{
-        IUpgradeableDispatcher, IUpgradeableDispatcherTrait
+        IUpgradeableDispatcher, IUpgradeableDispatcherTrait,
     };
     use dojo::meta::{
         Layout, IStoredResourceDispatcher, IStoredResourceDispatcherTrait,
         IDeployedResourceDispatcher, IDeployedResourceDispatcherTrait, LayoutCompareTrait,
-        StructCompareTrait
+        TyCompareTrait,
     };
     use dojo::model::{Model, ResourceMetadata, metadata, ModelIndex};
     use dojo::storage;
     use dojo::utils::{
-        entity_id_from_serialized_keys, bytearray_hash, selector_from_namespace_and_name
+        entity_id_from_serialized_keys, bytearray_hash, selector_from_namespace_and_name,
     };
     use dojo::world::{IWorld, IUpgradeableWorld, Resource, ResourceIsNoneTrait};
     use super::Permission;
@@ -112,14 +112,14 @@ pub mod world {
         #[key]
         pub resource: felt252,
         pub uri: ByteArray,
-        pub hash: felt252
+        pub hash: felt252,
     }
 
     #[derive(Drop, starknet::Event)]
     pub struct NamespaceRegistered {
         #[key]
         pub namespace: ByteArray,
-        pub hash: felt252
+        pub hash: felt252,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -204,7 +204,7 @@ pub mod world {
         pub resource: felt252,
         #[key]
         pub contract: ContractAddress,
-        pub value: bool
+        pub value: bool,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -272,8 +272,8 @@ pub mod world {
             .write(
                 metadata::resource_metadata_selector(internal_ns_hash),
                 Resource::Model(
-                    (metadata::default_address(), metadata::default_class_hash().into())
-                )
+                    (metadata::default_address(), metadata::default_class_hash().into()),
+                ),
             );
 
         self.emit(WorldSpawned { creator, class_hash: world_class_hash });
@@ -287,13 +287,13 @@ pub mod world {
             model_selector: felt252,
             index: ModelIndex,
             values: Span<felt252>,
-            layout: Layout
+            layout: Layout,
         ) {
             self.set_entity_internal(model_selector, index, values, layout);
         }
 
         fn delete_entity_test(
-            ref self: ContractState, model_selector: felt252, index: ModelIndex, layout: Layout
+            ref self: ContractState, model_selector: felt252, index: ModelIndex, layout: Layout,
         ) {
             self.delete_entity_internal(model_selector, index, layout);
         }
@@ -307,19 +307,22 @@ pub mod world {
             self
                 .emit(
                     EventEmitted {
-                        selector: event_selector, system_address: get_caller_address(), keys, values
-                    }
+                        selector: event_selector,
+                        system_address: get_caller_address(),
+                        keys,
+                        values,
+                    },
                 );
         }
 
         fn dojo_contract_address(
-            self: @ContractState, contract_selector: felt252
+            self: @ContractState, contract_selector: felt252,
         ) -> ContractAddress {
             match self.resources.read(contract_selector) {
                 Resource::Contract((a, _)) => a,
                 _ => core::panics::panic_with_byte_array(
-                    @format!("Contract not registered: {}", contract_selector)
-                )
+                    @format!("Contract not registered: {}", contract_selector),
+                ),
             }
         }
     }
@@ -332,14 +335,14 @@ pub mod world {
             let mut values = storage::entity_model::read_model_entity(
                 metadata::resource_metadata_selector(internal_ns_hash),
                 entity_id_from_serialized_keys([resource_selector].span()),
-                Model::<ResourceMetadata>::layout()
+                Model::<ResourceMetadata>::layout(),
             );
 
             let mut keys = [resource_selector].span();
 
             match Model::<ResourceMetadata>::from_serialized(keys, values) {
                 Option::Some(x) => x,
-                Option::None => panic!("Model `ResourceMetadata`: deserialization failed.")
+                Option::None => panic!("Model `ResourceMetadata`: deserialization failed."),
             }
         }
 
@@ -352,7 +355,7 @@ pub mod world {
                 metadata::resource_metadata_selector(internal_ns_hash),
                 entity_id_from_serialized_keys([metadata.resource_id].span()),
                 metadata.serialized_values(),
-                Model::<ResourceMetadata>::layout()
+                Model::<ResourceMetadata>::layout(),
             );
 
             self
@@ -360,8 +363,8 @@ pub mod world {
                     MetadataUpdate {
                         resource: metadata.resource_id,
                         uri: metadata.metadata_uri,
-                        hash: metadata.metadata_hash
-                    }
+                        hash: metadata.metadata_hash,
+                    },
                 );
         }
 
@@ -462,8 +465,8 @@ pub mod world {
                         name: event_name.clone(),
                         namespace: namespace.clone(),
                         address: contract_address,
-                        class_hash
-                    }
+                        class_hash,
+                    },
                 );
         }
 
@@ -497,17 +500,19 @@ pub mod world {
                 Resource::Event((model_address, _)) => { prev_address = model_address; },
                 Resource::Unregistered => {
                     panic_with_byte_array(
-                        @errors::resource_not_registered_details(@namespace, @event_name)
+                        @errors::resource_not_registered_details(@namespace, @event_name),
                     )
                 },
                 _ => panic_with_byte_array(
-                    @errors::resource_conflict(@format!("{}-{}", @namespace, @event_name), @"event")
-                )
+                    @errors::resource_conflict(
+                        @format!("{}-{}", @namespace, @event_name), @"event",
+                    ),
+                ),
             };
 
             self
                 .assert_resource_upgradability(
-                    @namespace, @event_name, prev_address, new_contract_address
+                    @namespace, @event_name, prev_address, new_contract_address,
                 );
 
             self
@@ -521,7 +526,7 @@ pub mod world {
                         prev_address,
                         address: new_contract_address,
                         class_hash,
-                    }
+                    },
                 );
         }
 
@@ -566,8 +571,8 @@ pub mod world {
                         name: model_name.clone(),
                         namespace: namespace.clone(),
                         address: contract_address,
-                        class_hash
-                    }
+                        class_hash,
+                    },
                 );
         }
 
@@ -601,17 +606,19 @@ pub mod world {
                 Resource::Model((model_address, _)) => { prev_address = model_address; },
                 Resource::Unregistered => {
                     panic_with_byte_array(
-                        @errors::resource_not_registered_details(@namespace, @model_name)
+                        @errors::resource_not_registered_details(@namespace, @model_name),
                     )
                 },
                 _ => panic_with_byte_array(
-                    @errors::resource_conflict(@format!("{}-{}", @namespace, @model_name), @"model")
-                )
+                    @errors::resource_conflict(
+                        @format!("{}-{}", @namespace, @model_name), @"model",
+                    ),
+                ),
             };
 
             self
                 .assert_resource_upgradability(
-                    @namespace, @model_name, prev_address, new_contract_address
+                    @namespace, @model_name, prev_address, new_contract_address,
                 );
 
             self
@@ -625,7 +632,7 @@ pub mod world {
                         prev_address,
                         address: new_contract_address,
                         class_hash,
-                    }
+                    },
                 );
         }
 
@@ -638,7 +645,7 @@ pub mod world {
 
             match self.resources.read(hash) {
                 Resource::Namespace => panic_with_byte_array(
-                    @errors::namespace_already_registered(@namespace)
+                    @errors::namespace_already_registered(@namespace),
                 ),
                 Resource::Unregistered => {
                     self.resources.write(hash, Resource::Namespace(namespace.clone()));
@@ -648,7 +655,7 @@ pub mod world {
                 },
                 _ => {
                     panic_with_byte_array(@errors::resource_conflict(@namespace, @"namespace"));
-                }
+                },
             };
         }
 
@@ -665,7 +672,7 @@ pub mod world {
             let contract = IDeployedResourceDispatcher { contract_address };
             let contract_name = contract.dojo_name();
             let contract_selector = selector_from_namespace_and_name(
-                namespace_hash, @contract_name
+                namespace_hash, @contract_name,
             );
 
             self.assert_name(@contract_name);
@@ -673,7 +680,7 @@ pub mod world {
             let maybe_existing_contract = self.resources.read(contract_selector);
             if !maybe_existing_contract.is_unregistered() {
                 panic_with_byte_array(
-                    @errors::contract_already_registered(@namespace, @contract_name)
+                    @errors::contract_already_registered(@namespace, @contract_name),
                 );
             }
 
@@ -692,14 +699,14 @@ pub mod world {
                 .emit(
                     ContractRegistered {
                         salt, class_hash, address: contract_address, namespace, name: contract_name,
-                    }
+                    },
                 );
 
             contract_address
         }
 
         fn upgrade_contract(
-            ref self: ContractState, namespace: ByteArray, class_hash: ClassHash
+            ref self: ContractState, namespace: ByteArray, class_hash: ClassHash,
         ) -> ClassHash {
             // Only contracts use an external salt during registration. To ensure the
             // upgrade can also be done into a multicall, we combine the transaction hash
@@ -709,7 +716,8 @@ pub mod world {
                 [
                     starknet::get_tx_info().unbox().transaction_hash,
                     dojo::utils::bytearray_hash(@namespace),
-                ].span()
+                ]
+                    .span(),
             );
 
             let (new_contract_address, _) = deploy_syscall(class_hash, salt, [].span(), false)
@@ -720,14 +728,14 @@ pub mod world {
             let contract = IDeployedResourceDispatcher { contract_address: new_contract_address };
             let contract_name = contract.dojo_name();
             let contract_selector = selector_from_namespace_and_name(
-                namespace_hash, @contract_name
+                namespace_hash, @contract_name,
             );
 
             // If namespace and name are the same, the contract is already registered and we
             // can upgrade it.
             match self.resources.read(contract_selector) {
                 Resource::Contract((
-                    contract_address, _
+                    contract_address, _,
                 )) => {
                     self.assert_caller_permissions(contract_selector, Permission::Owner);
 
@@ -738,14 +746,14 @@ pub mod world {
                 },
                 Resource::Unregistered => {
                     panic_with_byte_array(
-                        @errors::resource_not_registered_details(@namespace, @contract_name)
+                        @errors::resource_not_registered_details(@namespace, @contract_name),
                     )
                 },
                 _ => panic_with_byte_array(
                     @errors::resource_conflict(
-                        @format!("{}-{}", @namespace, @contract_name), @"contract"
-                    )
-                )
+                        @format!("{}-{}", @namespace, @contract_name), @"contract",
+                    ),
+                ),
             }
         }
 
@@ -754,7 +762,7 @@ pub mod world {
                 if self.initialized_contracts.read(selector) {
                     let dispatcher = IDeployedResourceDispatcher { contract_address };
                     panic_with_byte_array(
-                        @errors::contract_already_initialized(@dispatcher.dojo_name())
+                        @errors::contract_already_initialized(@dispatcher.dojo_name()),
                     );
                 } else {
                     self.assert_caller_permissions(selector, Permission::Owner);
@@ -765,7 +773,7 @@ pub mod world {
                     // <crates/compiler/src/plugin/attribute_macros/contract.rs#L275>
 
                     starknet::syscalls::call_contract_syscall(
-                        contract_address, DOJO_INIT_SELECTOR, init_calldata
+                        contract_address, DOJO_INIT_SELECTOR, init_calldata,
                     )
                         .unwrap_syscall();
 
@@ -775,7 +783,7 @@ pub mod world {
                 }
             } else {
                 panic_with_byte_array(
-                    @errors::resource_conflict(@format!("{selector}"), @"contract")
+                    @errors::resource_conflict(@format!("{selector}"), @"contract"),
                 );
             }
         }
@@ -802,11 +810,11 @@ pub mod world {
                             system_address: get_caller_address(),
                             keys,
                             values,
-                        }
+                        },
                     );
             } else {
                 panic_with_byte_array(
-                    @errors::resource_conflict(@format!("{event_selector}"), @"event")
+                    @errors::resource_conflict(@format!("{event_selector}"), @"event"),
                 );
             }
         }
@@ -822,7 +830,7 @@ pub mod world {
 
                 if keys.len() != values.len() {
                     panic_with_byte_array(
-                        @errors::lengths_mismatch(@"keys", @"values", @"emit_events")
+                        @errors::lengths_mismatch(@"keys", @"values", @"emit_events"),
                     );
                 }
 
@@ -839,26 +847,29 @@ pub mod world {
                                 system_address: get_caller_address(),
                                 keys: *keys[i],
                                 values: *values[i],
-                            }
+                            },
                         );
 
                     i += 1;
                 }
             } else {
                 panic_with_byte_array(
-                    @errors::resource_conflict(@format!("{event_selector}"), @"event")
+                    @errors::resource_conflict(@format!("{event_selector}"), @"event"),
                 );
             }
         }
 
         fn entity(
-            self: @ContractState, model_selector: felt252, index: ModelIndex, layout: Layout
+            self: @ContractState, model_selector: felt252, index: ModelIndex, layout: Layout,
         ) -> Span<felt252> {
             self.get_entity_internal(model_selector, index, layout)
         }
 
         fn entities(
-            self: @ContractState, model_selector: felt252, indexes: Span<ModelIndex>, layout: Layout
+            self: @ContractState,
+            model_selector: felt252,
+            indexes: Span<ModelIndex>,
+            layout: Layout,
         ) -> Span<Span<felt252>> {
             let mut models: Array<Span<felt252>> = array![];
 
@@ -874,14 +885,14 @@ pub mod world {
             model_selector: felt252,
             index: ModelIndex,
             values: Span<felt252>,
-            layout: Layout
+            layout: Layout,
         ) {
             if let Resource::Model((_, _)) = self.resources.read(model_selector) {
                 self.assert_caller_permissions(model_selector, Permission::Writer);
                 self.set_entity_internal(model_selector, index, values, layout);
             } else {
                 panic_with_byte_array(
-                    @errors::resource_conflict(@format!("{model_selector}"), @"model")
+                    @errors::resource_conflict(@format!("{model_selector}"), @"model"),
                 );
             }
         }
@@ -891,11 +902,11 @@ pub mod world {
             model_selector: felt252,
             indexes: Span<ModelIndex>,
             values: Span<Span<felt252>>,
-            layout: Layout
+            layout: Layout,
         ) {
             if indexes.len() != values.len() {
                 panic_with_byte_array(
-                    @errors::lengths_mismatch(@"indexes", @"values", @"set_entities")
+                    @errors::lengths_mismatch(@"indexes", @"values", @"set_entities"),
                 );
             }
 
@@ -914,20 +925,20 @@ pub mod world {
                 };
             } else {
                 panic_with_byte_array(
-                    @errors::resource_conflict(@format!("{model_selector}"), @"model")
+                    @errors::resource_conflict(@format!("{model_selector}"), @"model"),
                 );
             }
         }
 
         fn delete_entity(
-            ref self: ContractState, model_selector: felt252, index: ModelIndex, layout: Layout
+            ref self: ContractState, model_selector: felt252, index: ModelIndex, layout: Layout,
         ) {
             if let Resource::Model((_, _)) = self.resources.read(model_selector) {
                 self.assert_caller_permissions(model_selector, Permission::Writer);
                 self.delete_entity_internal(model_selector, index, layout);
             } else {
                 panic_with_byte_array(
-                    @errors::resource_conflict(@format!("{model_selector}"), @"model")
+                    @errors::resource_conflict(@format!("{model_selector}"), @"model"),
                 );
             }
         }
@@ -936,7 +947,7 @@ pub mod world {
             ref self: ContractState,
             model_selector: felt252,
             indexes: Span<ModelIndex>,
-            layout: Layout
+            layout: Layout,
         ) {
             if let Resource::Model((_, _)) = self.resources.read(model_selector) {
                 self.assert_caller_permissions(model_selector, Permission::Writer);
@@ -946,7 +957,7 @@ pub mod world {
                 }
             } else {
                 panic_with_byte_array(
-                    @errors::resource_conflict(@format!("{model_selector}"), @"model")
+                    @errors::resource_conflict(@format!("{model_selector}"), @"model"),
                 );
             }
         }
@@ -1000,7 +1011,7 @@ pub mod world {
         ///   * `resource_selector` - the selector of the resource.
         ///   * `permission` - the required permission.
         fn assert_caller_permissions(
-            self: @ContractState, resource_selector: felt252, permission: Permission
+            self: @ContractState, resource_selector: felt252, permission: Permission,
         ) {
             let caller = get_caller_address();
 
@@ -1027,7 +1038,7 @@ pub mod world {
                 Resource::Unregistered => {
                     panic_with_byte_array(@errors::resource_not_registered(resource_selector))
                 },
-                _ => self.panic_with_details(caller, resource_selector, permission)
+                _ => self.panic_with_details(caller, resource_selector, permission),
             };
 
             if permission == Permission::Writer {
@@ -1075,7 +1086,7 @@ pub mod world {
             namespace: @ByteArray,
             name: @ByteArray,
             prev_address: ContractAddress,
-            new_address: ContractAddress
+            new_address: ContractAddress,
         ) {
             let resource = IStoredResourceDispatcher { contract_address: prev_address };
             let old_layout = resource.layout();
@@ -1087,6 +1098,10 @@ pub mod world {
 
             if !new_layout.is_same_type_of(@old_layout) {
                 panic_with_byte_array(@errors::invalid_resource_layout_upgrade(namespace, name));
+            }
+
+            if let Layout::Fixed(_) = new_layout {
+                panic_with_byte_array(@errors::packed_layout_cannot_be_upgraded(namespace, name));
             }
 
             if !new_schema.is_an_upgrade_of(@old_schema) {
@@ -1104,30 +1119,30 @@ pub mod world {
             self: @ContractState,
             caller: ContractAddress,
             resource_selector: felt252,
-            permission: Permission
+            permission: Permission,
         ) -> core::never {
             let resource_name = match self.resources.read(resource_selector) {
                 Resource::Contract((
-                    contract_address, _
+                    contract_address, _,
                 )) => {
                     let d = IDeployedResourceDispatcher { contract_address };
                     format!("contract (or its namespace) `{}`", d.dojo_name())
                 },
                 Resource::Event((
-                    contract_address, _
+                    contract_address, _,
                 )) => {
                     let d = IDeployedResourceDispatcher { contract_address };
                     format!("event (or its namespace) `{}`", d.dojo_name())
                 },
                 Resource::Model((
-                    contract_address, _
+                    contract_address, _,
                 )) => {
                     let d = IDeployedResourceDispatcher { contract_address };
                     format!("model (or its namespace) `{}`", d.dojo_name())
                 },
                 Resource::Namespace(ns) => { format!("namespace `{}`", ns) },
                 Resource::World => { format!("world") },
-                Resource::Unregistered => { panic!("Unreachable") }
+                Resource::Unregistered => { panic!("Unreachable") },
             };
 
             let caller_name = if caller == get_tx_info().account_contract_address {
@@ -1146,7 +1161,7 @@ pub mod world {
             };
 
             panic_with_byte_array(
-                @format!("{} does NOT have {} role on {}", caller_name, permission, resource_name)
+                @format!("{} does NOT have {} role on {}", caller_name, permission, resource_name),
             )
         }
 
@@ -1158,7 +1173,7 @@ pub mod world {
         fn is_namespace_registered(self: @ContractState, namespace_hash: felt252) -> bool {
             match self.resources.read(namespace_hash) {
                 Resource::Namespace => true,
-                _ => false
+                _ => false,
             }
         }
 
@@ -1175,35 +1190,35 @@ pub mod world {
             model_selector: felt252,
             index: ModelIndex,
             values: Span<felt252>,
-            layout: Layout
+            layout: Layout,
         ) {
             match index {
                 ModelIndex::Keys(keys) => {
                     let entity_id = entity_id_from_serialized_keys(keys);
                     storage::entity_model::write_model_entity(
-                        model_selector, entity_id, values, layout
+                        model_selector, entity_id, values, layout,
                     );
                     self.emit(StoreSetRecord { selector: model_selector, keys, values, entity_id });
                 },
                 ModelIndex::Id(entity_id) => {
                     storage::entity_model::write_model_entity(
-                        model_selector, entity_id, values, layout
+                        model_selector, entity_id, values, layout,
                     );
                     self.emit(StoreUpdateRecord { selector: model_selector, entity_id, values });
                 },
                 ModelIndex::MemberId((
-                    entity_id, member_selector
+                    entity_id, member_selector,
                 )) => {
                     storage::entity_model::write_model_member(
-                        model_selector, entity_id, member_selector, values, layout
+                        model_selector, entity_id, member_selector, values, layout,
                     );
                     self
                         .emit(
                             StoreUpdateMember {
-                                selector: model_selector, entity_id, member_selector, values
-                            }
+                                selector: model_selector, entity_id, member_selector, values,
+                            },
                         );
-                }
+                },
             }
         }
 
@@ -1215,7 +1230,7 @@ pub mod world {
         /// * `index` - The index of the record/entity to delete.
         /// * `layout` - The memory layout of the model.
         fn delete_entity_internal(
-            ref self: ContractState, model_selector: felt252, index: ModelIndex, layout: Layout
+            ref self: ContractState, model_selector: felt252, index: ModelIndex, layout: Layout,
         ) {
             match index {
                 ModelIndex::Keys(keys) => {
@@ -1227,7 +1242,7 @@ pub mod world {
                     storage::entity_model::delete_model_entity(model_selector, entity_id, layout);
                     self.emit(StoreDelRecord { selector: model_selector, entity_id });
                 },
-                ModelIndex::MemberId(_) => { panic_with_felt252(errors::DELETE_ENTITY_MEMBER); }
+                ModelIndex::MemberId(_) => { panic_with_felt252(errors::DELETE_ENTITY_MEMBER); },
             }
         }
 
@@ -1239,7 +1254,7 @@ pub mod world {
         /// * `index` - The entity/member to read for the given model.
         /// * `layout` - The memory layout of the model.
         fn get_entity_internal(
-            self: @ContractState, model_selector: felt252, index: ModelIndex, layout: Layout
+            self: @ContractState, model_selector: felt252, index: ModelIndex, layout: Layout,
         ) -> Span<felt252> {
             match index {
                 ModelIndex::Keys(keys) => {
@@ -1250,12 +1265,12 @@ pub mod world {
                     storage::entity_model::read_model_entity(model_selector, entity_id, layout)
                 },
                 ModelIndex::MemberId((
-                    entity_id, member_id
+                    entity_id, member_id,
                 )) => {
                     storage::entity_model::read_model_member(
-                        model_selector, entity_id, member_id, layout
+                        model_selector, entity_id, member_id, layout,
                     )
-                }
+                },
             }
         }
 

@@ -10,8 +10,9 @@ use std::collections::HashSet;
 
 use anyhow::Result;
 use starknet::core::types::{BlockId, BlockTag, EventFilter, Felt, StarknetError};
+use starknet::macros::felt;
 use starknet::providers::{Provider, ProviderError};
-use tracing::trace;
+use tracing::{debug, trace};
 
 use super::permissions::PermissionsUpdateable;
 use super::{ResourceRemote, WorldRemote};
@@ -26,10 +27,16 @@ impl WorldRemote {
         world_address: Felt,
         provider: &P,
         from_block: Option<u64>,
+        whitelisted_namespaces: Option<Vec<String>>,
     ) -> Result<Self> {
         let mut world = Self::default();
 
         world.address = world_address;
+
+        let chain_id = provider.chain_id().await?;
+        // Katana if it's not `SN_SEPOLIA` or `SN_MAIN`.
+        let is_katana =
+            chain_id != felt!("0x534e5f5345504f4c4941") && chain_id != felt!("0x534e5f4d41494e");
 
         match provider.get_class_hash_at(BlockId::Tag(BlockTag::Pending), world_address).await {
             Ok(_) => {
@@ -88,8 +95,11 @@ impl WorldRemote {
         while continuation_token.is_some() {
             let page = provider.get_events(filter.clone(), continuation_token, chunk_size).await?;
 
-            // TODO: remove this once rebased with latest katana.
-            if page.events.is_empty() {
+            // Katana is actually returning a null continuation token.
+            // However, we need to remove this check for empty page since worlds deploy on
+            // mainnet may have empty pages.
+            // TODO: @glihm,@kariy check if Katana is actually returning a null continuation token.
+            if is_katana && page.events.is_empty() {
                 break;
             }
 
@@ -107,7 +117,7 @@ impl WorldRemote {
             match world::Event::try_from(event) {
                 Ok(ev) => {
                     trace!(?ev, "Processing world event.");
-                    world.match_event(ev)?;
+                    world.match_event(ev, &whitelisted_namespaces)?;
                 }
                 Err(e) => {
                     tracing::error!(
@@ -122,7 +132,11 @@ impl WorldRemote {
     }
 
     /// Matches the given event to the corresponding remote resource and inserts it into the world.
-    fn match_event(&mut self, event: WorldEvent) -> Result<()> {
+    fn match_event(
+        &mut self,
+        event: WorldEvent,
+        whitelisted_namespaces: &Option<Vec<String>>,
+    ) -> Result<()> {
         match event {
             WorldEvent::WorldSpawned(e) => {
                 self.class_hashes.push(e.class_hash.into());
@@ -143,11 +157,27 @@ impl WorldRemote {
             }
             WorldEvent::NamespaceRegistered(e) => {
                 let r = ResourceRemote::Namespace(NamespaceRemote::new(e.namespace.to_string()?));
-                trace!(?r, "Namespace registered.");
 
-                self.add_resource(r);
+                if is_whitelisted(whitelisted_namespaces, &e.namespace.to_string()?) {
+                    trace!(?r, "Namespace registered.");
+                    self.add_resource(r);
+                } else {
+                    debug!(namespace = e.namespace.to_string()?, "Namespace not whitelisted.");
+                }
             }
             WorldEvent::ModelRegistered(e) => {
+                let namespace = e.namespace.to_string()?;
+
+                if !is_whitelisted(whitelisted_namespaces, &namespace) {
+                    debug!(
+                        namespace,
+                        model = e.name.to_string()?,
+                        "Model's namespace not whitelisted."
+                    );
+
+                    return Ok(());
+                }
+
                 let r = ResourceRemote::Model(ModelRemote {
                     common: CommonRemoteInfo::new(
                         e.class_hash.into(),
@@ -161,6 +191,17 @@ impl WorldRemote {
                 self.add_resource(r);
             }
             WorldEvent::EventRegistered(e) => {
+                let namespace = e.namespace.to_string()?;
+
+                if !is_whitelisted(whitelisted_namespaces, &namespace) {
+                    debug!(
+                        namespace,
+                        event = e.name.to_string()?,
+                        "Event's namespace not whitelisted."
+                    );
+                    return Ok(());
+                }
+
                 let r = ResourceRemote::Event(EventRemote {
                     common: CommonRemoteInfo::new(
                         e.class_hash.into(),
@@ -174,10 +215,22 @@ impl WorldRemote {
                 self.add_resource(r);
             }
             WorldEvent::ContractRegistered(e) => {
+                let namespace = e.namespace.to_string()?;
+
+                if !is_whitelisted(whitelisted_namespaces, &namespace) {
+                    debug!(
+                        namespace,
+                        contract = e.name.to_string()?,
+                        "Contract's namespace not whitelisted."
+                    );
+
+                    return Ok(());
+                }
+
                 let r = ResourceRemote::Contract(ContractRemote {
                     common: CommonRemoteInfo::new(
                         e.class_hash.into(),
-                        &e.namespace.to_string()?,
+                        &namespace,
                         &e.name.to_string()?,
                         e.address.into(),
                     ),
@@ -188,29 +241,62 @@ impl WorldRemote {
                 self.add_resource(r);
             }
             WorldEvent::ModelUpgraded(e) => {
-                // Unwrap is safe because the model must exist in the world.
-                let resource = self.resources.get_mut(&e.selector).unwrap();
+                let resource = if let Some(resource) = self.resources.get_mut(&e.selector) {
+                    resource
+                } else {
+                    debug!(
+                        selector = format!("{:#066x}", e.selector),
+                        "Model not found (may be excluded by whitelist of namespaces)."
+                    );
+
+                    return Ok(());
+                };
                 trace!(?resource, "Model upgraded.");
 
                 resource.push_class_hash(e.class_hash.into());
             }
             WorldEvent::EventUpgraded(e) => {
-                // Unwrap is safe because the event must exist in the world.
-                let resource = self.resources.get_mut(&e.selector).unwrap();
+                let resource = if let Some(resource) = self.resources.get_mut(&e.selector) {
+                    resource
+                } else {
+                    debug!(
+                        selector = format!("{:#066x}", e.selector),
+                        "Event not found (may be excluded by whitelist of namespaces)."
+                    );
+
+                    return Ok(());
+                };
                 trace!(?resource, "Event upgraded.");
 
                 resource.push_class_hash(e.class_hash.into());
             }
             WorldEvent::ContractUpgraded(e) => {
-                // Unwrap is safe because the contract must exist in the world.
-                let resource = self.resources.get_mut(&e.selector).unwrap();
+                let resource = if let Some(resource) = self.resources.get_mut(&e.selector) {
+                    resource
+                } else {
+                    debug!(
+                        selector = format!("{:#066x}", e.selector),
+                        "Contract not found (may be excluded by whitelist of namespaces)."
+                    );
+
+                    return Ok(());
+                };
                 trace!(?resource, "Contract upgraded.");
 
                 resource.push_class_hash(e.class_hash.into());
             }
             WorldEvent::ContractInitialized(e) => {
-                // Unwrap is safe because the contract must exist in the world.
-                let resource = self.resources.get_mut(&e.selector).unwrap();
+                let resource = if let Some(resource) = self.resources.get_mut(&e.selector) {
+                    resource
+                } else {
+                    debug!(
+                        selector = format!("{:#066x}", e.selector),
+                        "Contract not found (may be excluded by whitelist of namespaces)."
+                    );
+
+                    return Ok(());
+                };
+
                 let contract = resource.as_contract_mut()?;
                 contract.is_initialized = true;
 
@@ -272,6 +358,17 @@ impl WorldRemote {
     }
 }
 
+/// Returns true if the namespace is whitelisted, false otherwise.
+/// If no whitelist is provided, all namespaces are considered whitelisted.
+#[inline]
+fn is_whitelisted(whitelisted_namespaces: &Option<Vec<String>>, namespace: &str) -> bool {
+    if let Some(namespaces) = whitelisted_namespaces {
+        return namespaces.contains(&namespace.to_string());
+    }
+
+    true
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::HashSet;
@@ -281,6 +378,8 @@ mod tests {
 
     use super::*;
 
+    const NO_WHITELIST: Option<Vec<String>> = None;
+
     #[tokio::test]
     async fn test_world_spawned_event() {
         let mut world_remote = WorldRemote::default();
@@ -289,7 +388,7 @@ mod tests {
             creator: Felt::ONE.into(),
         });
 
-        world_remote.match_event(event).unwrap();
+        world_remote.match_event(event, &NO_WHITELIST).unwrap();
         assert_eq!(world_remote.class_hashes.len(), 1);
     }
 
@@ -299,7 +398,7 @@ mod tests {
         let event =
             WorldEvent::WorldUpgraded(world::WorldUpgraded { class_hash: Felt::ONE.into() });
 
-        world_remote.match_event(event).unwrap();
+        world_remote.match_event(event, &NO_WHITELIST).unwrap();
         assert_eq!(world_remote.class_hashes.len(), 1);
     }
 
@@ -311,13 +410,27 @@ mod tests {
             hash: 123.into(),
         });
 
-        world_remote.match_event(event).unwrap();
+        world_remote.match_event(event, &NO_WHITELIST).unwrap();
 
         let selector = naming::compute_bytearray_hash("ns");
         assert!(world_remote.resources.contains_key(&selector));
 
         let resource = world_remote.resources.get(&selector).unwrap();
         assert!(matches!(resource, ResourceRemote::Namespace(_)));
+    }
+
+    #[tokio::test]
+    async fn test_namespace_registered_event_not_whitelisted() {
+        let mut world_remote = WorldRemote::default();
+        let event = WorldEvent::NamespaceRegistered(world::NamespaceRegistered {
+            namespace: ByteArray::from_string("ns").unwrap(),
+            hash: 123.into(),
+        });
+
+        world_remote.match_event(event, &Some(vec!["ns2".to_string()])).unwrap();
+
+        let selector = naming::compute_bytearray_hash("ns");
+        assert!(!world_remote.resources.contains_key(&selector));
     }
 
     #[tokio::test]
@@ -330,7 +443,7 @@ mod tests {
             namespace: ByteArray::from_string("ns").unwrap(),
         });
 
-        world_remote.match_event(event).unwrap();
+        world_remote.match_event(event, &NO_WHITELIST).unwrap();
         let selector = naming::compute_selector_from_names("ns", "m");
         assert!(world_remote.resources.contains_key(&selector));
 
@@ -348,7 +461,7 @@ mod tests {
             namespace: ByteArray::from_string("ns").unwrap(),
         });
 
-        world_remote.match_event(event).unwrap();
+        world_remote.match_event(event, &NO_WHITELIST).unwrap();
         let selector = naming::compute_selector_from_names("ns", "e");
         assert!(world_remote.resources.contains_key(&selector));
 
@@ -367,7 +480,7 @@ mod tests {
             salt: Felt::ONE,
         });
 
-        world_remote.match_event(event).unwrap();
+        world_remote.match_event(event, &NO_WHITELIST).unwrap();
         let selector = naming::compute_selector_from_names("ns", "c");
         assert!(world_remote.resources.contains_key(&selector));
 
@@ -393,7 +506,7 @@ mod tests {
             prev_address: Felt::ONE.into(),
         });
 
-        world_remote.match_event(event).unwrap();
+        world_remote.match_event(event, &NO_WHITELIST).unwrap();
 
         let resource = world_remote.resources.get(&selector).unwrap();
         assert_eq!(resource.as_model_or_panic().common.class_hashes, vec![Felt::ONE, Felt::TWO]);
@@ -417,7 +530,7 @@ mod tests {
             prev_address: Felt::ONE.into(),
         });
 
-        world_remote.match_event(event).unwrap();
+        world_remote.match_event(event, &NO_WHITELIST).unwrap();
 
         let resource = world_remote.resources.get(&selector).unwrap();
         assert_eq!(resource.as_event_or_panic().common.class_hashes, vec![Felt::ONE, Felt::TWO]);
@@ -440,7 +553,7 @@ mod tests {
             class_hash: Felt::TWO.into(),
         });
 
-        world_remote.match_event(event).unwrap();
+        world_remote.match_event(event, &NO_WHITELIST).unwrap();
         let resource = world_remote.resources.get(&selector).unwrap();
         assert_eq!(resource.as_contract_or_panic().common.class_hashes, vec![Felt::ONE, Felt::TWO]);
     }
@@ -462,7 +575,7 @@ mod tests {
             init_calldata: vec![],
         });
 
-        world_remote.match_event(event).unwrap();
+        world_remote.match_event(event, &NO_WHITELIST).unwrap();
 
         let resource = world_remote.resources.get(&selector).unwrap();
         assert!(resource.as_contract_or_panic().is_initialized);
@@ -482,7 +595,7 @@ mod tests {
             value: true,
         });
 
-        world_remote.match_event(event).unwrap();
+        world_remote.match_event(event, &NO_WHITELIST).unwrap();
 
         let resource = world_remote.resources.get(&selector).unwrap();
         assert_eq!(resource.as_namespace_or_panic().writers, HashSet::from([Felt::ONE]));
@@ -493,7 +606,7 @@ mod tests {
             value: false,
         });
 
-        world_remote.match_event(event).unwrap();
+        world_remote.match_event(event, &NO_WHITELIST).unwrap();
 
         let resource = world_remote.resources.get(&selector).unwrap();
         assert_eq!(resource.as_namespace_or_panic().writers, HashSet::from([]));
@@ -513,7 +626,7 @@ mod tests {
             value: true,
         });
 
-        world_remote.match_event(event).unwrap();
+        world_remote.match_event(event, &NO_WHITELIST).unwrap();
 
         let resource = world_remote.resources.get(&selector).unwrap();
         assert_eq!(resource.as_namespace_or_panic().owners, HashSet::from([Felt::ONE]));
@@ -524,7 +637,7 @@ mod tests {
             value: false,
         });
 
-        world_remote.match_event(event).unwrap();
+        world_remote.match_event(event, &NO_WHITELIST).unwrap();
 
         let resource = world_remote.resources.get(&selector).unwrap();
         assert_eq!(resource.as_namespace_or_panic().owners, HashSet::from([]));
@@ -546,7 +659,7 @@ mod tests {
             hash: Felt::THREE,
         });
 
-        world_remote.match_event(event).unwrap();
+        world_remote.match_event(event, &NO_WHITELIST).unwrap();
 
         let resource = world_remote.resources.get(&selector).unwrap();
         assert_eq!(resource.metadata_hash(), Felt::THREE);
@@ -557,7 +670,7 @@ mod tests {
             hash: Felt::ONE,
         });
 
-        world_remote.match_event(event).unwrap();
+        world_remote.match_event(event, &NO_WHITELIST).unwrap();
 
         let resource = world_remote.resources.get(&selector).unwrap();
         assert_eq!(resource.metadata_hash(), Felt::ONE);

@@ -162,6 +162,7 @@ impl WorldDiff {
         world_local: WorldLocal,
         provider: P,
         from_block: Option<u64>,
+        whitelisted_namespaces: &[String],
     ) -> Result<Self>
     where
         P: Provider,
@@ -170,7 +171,13 @@ impl WorldDiff {
             .get_class_hash_at(BlockId::Tag(BlockTag::Pending), world_address)
             .await
         {
-            Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => Ok(false),
+            Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => {
+                trace!(
+                    contract_address = format!("{:#066x}", world_address),
+                    "World not deployed."
+                );
+                Ok(false)
+            }
             Ok(_) => {
                 trace!(
                     contract_address = format!("{:#066x}", world_address),
@@ -181,9 +188,15 @@ impl WorldDiff {
             Err(e) => Err(e),
         }?;
 
+        let namespaces = if whitelisted_namespaces.is_empty() {
+            None
+        } else {
+            Some(whitelisted_namespaces.to_vec())
+        };
+
         if is_deployed {
             let world_remote =
-                WorldRemote::from_events(world_address, &provider, from_block).await?;
+                WorldRemote::from_events(world_address, &provider, from_block, namespaces).await?;
 
             Ok(Self::new(world_local, world_remote))
         } else {

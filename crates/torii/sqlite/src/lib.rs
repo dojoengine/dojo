@@ -43,8 +43,7 @@ pub struct Sql {
     pub pool: Pool<Sqlite>,
     pub executor: UnboundedSender<QueryMessage>,
     model_cache: Arc<ModelCache>,
-    // when SQL struct is cloned a empty local_cache is created
-    local_cache: LocalCache,
+    local_cache: Arc<LocalCache>,
 }
 
 #[derive(Debug, Clone)]
@@ -75,7 +74,8 @@ impl Sql {
         }
 
         let local_cache = LocalCache::new(pool.clone()).await;
-        let db = Self { pool: pool.clone(), executor, model_cache, local_cache };
+        let db =
+            Self { pool: pool.clone(), executor, model_cache, local_cache: Arc::new(local_cache) };
 
         db.execute().await?;
 
@@ -441,16 +441,14 @@ impl Sql {
         block_timestamp: u64,
     ) -> Result<()> {
         let entity_id = format!("{:#x}", entity_id);
+        let model_id = format!("{:#x}", model_id);
         let model_table = entity.name();
 
         self.executor.send(QueryMessage::new(
-            format!(
-                "DELETE FROM [{model_table}] WHERE internal_id = ?; DELETE FROM entity_model \
-                 WHERE entity_id = ? AND model_id = ?"
-            )
-            .to_string(),
-            vec![Argument::String(entity_id.clone()), Argument::String(format!("{:#x}", model_id))],
+            format!("DELETE FROM [{model_table}] WHERE internal_id = ?").to_string(),
+            vec![Argument::String(entity_id.clone())],
             QueryType::DeleteEntity(DeleteEntityQuery {
+                model_id: model_id.clone(),
                 entity_id: entity_id.clone(),
                 event_id: event_id.to_string(),
                 block_timestamp: utc_dt_string_from_timestamp(block_timestamp),

@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use katana_cairo::lang::starknet_classes::abi;
 use katana_cairo::lang::starknet_classes::casm_contract_class::StarknetSierraCompilationError;
 use katana_cairo::lang::starknet_classes::contract_class::ContractEntryPoint;
@@ -28,6 +30,10 @@ pub enum ContractClassCompilationError {
     SierraCompilation(#[from] StarknetSierraCompilationError),
 }
 
+// NOTE:
+// Ideally, we can implement this enum as an untagged `serde` enum, so that we can deserialize from
+// the raw JSON class artifact directly into this (ie
+// `serde_json::from_str::<ContractClass>(json)`). But that is not possible due to a limitation with untagged enums derivation (see https://github.com/serde-rs/serde/pull/2781).
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
@@ -61,7 +67,48 @@ impl ContractClass {
     ///
     /// Returns `true` if the contract class is a legacy class, `false` otherwise.
     pub fn is_legacy(&self) -> bool {
-        matches!(self, Self::Legacy(_))
+        self.as_legacy().is_some()
+    }
+
+    pub fn as_legacy(&self) -> Option<&LegacyContractClass> {
+        match self {
+            Self::Legacy(class) => Some(class),
+            _ => None,
+        }
+    }
+
+    pub fn as_sierra(&self) -> Option<&SierraContractClass> {
+        match self {
+            Self::Class(class) => Some(class),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Debug, thiserror::Error)]
+#[error(transparent)]
+pub struct ContractClassFromStrError(serde_json::Error);
+
+#[cfg(feature = "serde")]
+impl FromStr for ContractClass {
+    type Err = ContractClassFromStrError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        #[derive(::serde::Serialize, ::serde::Deserialize)]
+        #[allow(clippy::large_enum_variant)]
+        #[serde(untagged)]
+        enum ContractClassJson {
+            Class(SierraContractClass),
+            Legacy(LegacyContractClass),
+        }
+
+        let class: ContractClassJson =
+            serde_json::from_str(s).map_err(ContractClassFromStrError)?;
+
+        match class {
+            ContractClassJson::Class(class) => Ok(Self::Class(class)),
+            ContractClassJson::Legacy(class) => Ok(Self::Legacy(class)),
+        }
     }
 }
 
@@ -92,6 +139,13 @@ impl CompiledClass {
             Self::Class(class) => Ok(class.compiled_class_hash()),
             Self::Legacy(class) => Ok(compute_legacy_class_hash(class)?),
         }
+    }
+
+    /// Checks if the compiled contract class is a legacy (Cairo 0) class.
+    ///
+    /// Returns `true` if the compiled contract class is a legacy class, `false` otherwise.
+    pub fn is_legacy(&self) -> bool {
+        matches!(self, Self::Legacy(_))
     }
 }
 

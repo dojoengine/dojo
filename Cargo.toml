@@ -4,8 +4,6 @@ resolver = "2"
 members = [
 	"bin/dojo-language-server",
 	"bin/katana",
-	"bin/saya",
-	"bin/scheduler",
 	"bin/sozo",
 	"bin/torii",
 	"crates/dojo/bindgen",
@@ -16,6 +14,7 @@ members = [
 	"crates/dojo/utils",
 	"crates/dojo/world",
 	"crates/dojo/world/abigen",
+	"crates/katana/chain-spec",
 	"crates/katana/cli",
 	"crates/katana/controller",
 	"crates/katana/core",
@@ -41,8 +40,6 @@ members = [
 	"crates/katana/tasks",
 	"crates/katana/trie",
 	"crates/metrics",
-	"crates/saya/core",
-	"crates/saya/provider",
 	"crates/sozo/scarbext",
 	"crates/sozo/signers",
 	"crates/sozo/walnut",
@@ -60,7 +57,7 @@ edition = "2021"
 license = "Apache-2.0"
 license-file = "LICENSE"
 repository = "https://github.com/dojoengine/dojo/"
-version = "1.0.12"
+version = "1.1.2"
 
 [profile.performance]
 codegen-units = 1
@@ -93,6 +90,7 @@ topological-sort = "0.2"
 
 # katana
 katana-cairo = { path = "crates/katana/cairo" }
+katana-chain-spec = { path = "crates/katana/chain-spec" }
 katana-cli = { path = "crates/katana/cli" }
 katana-codecs = { path = "crates/katana/storage/codecs" }
 katana-codecs-derive = { path = "crates/katana/storage/codecs/derive" }
@@ -128,10 +126,6 @@ torii-server = { path = "crates/torii/server" }
 torii-runner = { path = "crates/torii/runner" }
 torii-typed-data = { path = "crates/torii/typed-data" }
 
-# saya
-saya-core = { path = "crates/saya/core" }
-saya-provider = { path = "crates/saya/provider" }
-
 # sozo
 sozo-ops = { path = "crates/sozo/ops" }
 sozo-scarbext = { path = "crates/sozo/scarbext" }
@@ -147,28 +141,28 @@ auto_impl = "1.2.0"
 base64 = "0.21.2"
 bigdecimal = "0.4.1"
 bytes = "1.6"
-cairo-lang-compiler = "=2.8.4"
-cairo-lang-debug = "=2.8.4"
-cairo-lang-defs = "=2.8.4"
-cairo-lang-diagnostics = "2.7.0"
-cairo-lang-filesystem = "=2.8.4"
-cairo-lang-formatter = "=2.8.4"
-cairo-lang-language-server = "=2.8.4"
-cairo-lang-lowering = "=2.8.4"
-cairo-lang-parser = "=2.8.4"
-cairo-lang-plugins = { version = "=2.8.4", features = [ "testing" ] }
-cairo-lang-project = "=2.8.4"
-cairo-lang-semantic = "=2.8.4"
-cairo-lang-sierra = "=2.8.4"
-cairo-lang-sierra-generator = "=2.8.4"
-cairo-lang-sierra-to-casm = "=2.8.4"
-cairo-lang-starknet = "=2.8.4"
-cairo-lang-starknet-classes = "=2.8.4"
-cairo-lang-syntax = "=2.8.4"
-cairo-lang-test-plugin = "=2.8.4"
-cairo-lang-test-runner = "=2.8.4"
-cairo-lang-test-utils = "=2.8.4"
-cairo-lang-utils = "=2.8.4"
+cairo-lang-compiler = "=2.9.2"
+cairo-lang-debug = "=2.9.2"
+cairo-lang-defs = "=2.9.2"
+cairo-lang-diagnostics = "=2.9.2"
+cairo-lang-filesystem = "=2.9.2"
+cairo-lang-formatter = "=2.9.2"
+cairo-lang-language-server = "=2.9.2"
+cairo-lang-lowering = "=2.9.2"
+cairo-lang-parser = "=2.9.2"
+cairo-lang-plugins = { version = "=2.9.2", features = [ "testing" ] }
+cairo-lang-project = "=2.9.2"
+cairo-lang-semantic = "=2.9.2"
+cairo-lang-sierra = "=2.9.2"
+cairo-lang-sierra-generator = "=2.9.2"
+cairo-lang-sierra-to-casm = "=2.9.2"
+cairo-lang-starknet = "=2.9.2"
+cairo-lang-starknet-classes = "=2.9.2"
+cairo-lang-syntax = "=2.9.2"
+cairo-lang-test-plugin = "=2.9.2"
+cairo-lang-test-runner = "=2.9.2"
+cairo-lang-test-utils = "=2.9.2"
+cairo-lang-utils = "=2.9.2"
 cairo-vm = "1.0.0-rc4"
 camino = { version = "1.1.2", features = [ "serde1" ] }
 chrono = { version = "0.4.24", features = [ "serde" ] }
@@ -182,7 +176,7 @@ convert_case = "0.6.0"
 crypto-bigint = { version = "0.5.3", features = [ "serde" ] }
 data-url = "0.3"
 derive_more = "0.99.17"
-flate2 = "1.0.24"
+flate2 = "1.0.35"
 fluent-uri = "0.3"
 futures = "0.3.30"
 futures-util = "0.3.30"
@@ -212,8 +206,9 @@ rpassword = "7.2.0"
 rstest = "0.18.2"
 rstest_reuse = "0.6.0"
 salsa = "0.16.1"
-scarb = { git = "https://github.com/dojoengine/scarb", rev = "e2c01f5351c5c9097f61b2201163611f84f62156" }
-scarb-ui = { git = "https://github.com/dojoengine/scarb", rev = "e2c01f5351c5c9097f61b2201163611f84f62156" }
+scarb = { git = "https://github.com/dojoengine/scarb", rev = "da5f683adbd25361d080c2d9f624924aa9f112d1" }
+scarb-metadata = { git = "https://github.com/dojoengine/scarb", rev = "da5f683adbd25361d080c2d9f624924aa9f112d1" }
+scarb-ui = { git = "https://github.com/dojoengine/scarb", rev = "da5f683adbd25361d080c2d9f624924aa9f112d1" }
 semver = "1.0.5"
 serde = { version = "1.0", features = [ "derive" ] }
 serde_json = { version = "1.0", features = [ "arbitrary_precision" ] }
@@ -222,7 +217,8 @@ similar-asserts = "1.5.0"
 smol_str = { version = "0.2.0", features = [ "serde" ] }
 spinoff = "0.8.0"
 sqlx = { version = "0.8.2", features = [ "chrono", "macros", "regexp", "runtime-async-std", "runtime-tokio", "sqlite", "uuid" ] }
-starknet_api = "0.11.0"
+#starknet_api = "0.11.0"
+starknet_api = { git = "https://github.com/dojoengine/sequencer", rev = "802c5dc" }
 strum = "0.25"
 strum_macros = "0.25"
 tempfile = "3.9.0"

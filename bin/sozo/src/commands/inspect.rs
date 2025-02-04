@@ -40,7 +40,7 @@ impl InspectArgs {
                 utils::get_world_diff_and_provider(starknet.clone(), world, &ws).await?;
 
             if let Some(resource) = resource {
-                inspect_resource(&resource, &world_diff);
+                inspect_resource(&resource, &world_diff)?;
             } else {
                 inspect_world(&world_diff);
             }
@@ -166,7 +166,7 @@ struct GranteeDisplay {
 }
 
 /// Inspects a resource.
-fn inspect_resource(resource_name_or_tag: &str, world_diff: &WorldDiff) {
+fn inspect_resource(resource_name_or_tag: &str, world_diff: &WorldDiff) -> Result<()> {
     let selector = if naming::is_valid_tag(resource_name_or_tag) {
         naming::compute_selector_from_tag(resource_name_or_tag)
     } else {
@@ -175,8 +175,7 @@ fn inspect_resource(resource_name_or_tag: &str, world_diff: &WorldDiff) {
     let resource_diff = world_diff.resources.get(&selector);
 
     if resource_diff.is_none() {
-        println!("Resource not found locally.");
-        return;
+        return Err(anyhow::anyhow!("Resource not found locally."));
     }
 
     let resource_diff = resource_diff.unwrap();
@@ -243,6 +242,7 @@ fn inspect_resource(resource_name_or_tag: &str, world_diff: &WorldDiff) {
 
     print_table(&writers_disp, Some(Color::FG_BRIGHT_CYAN), Some("\n> Writers"));
     print_table(&owners_disp, Some(Color::FG_BRIGHT_MAGENTA), Some("\n> Owners"));
+    Ok(())
 }
 
 /// Inspects the whole world.

@@ -1,13 +1,13 @@
 pub mod transaction;
 
 use alloy_primitives::U256;
+use katana_chain_spec::ChainSpec;
 use katana_executor::implementation::noop::NoopExecutorFactory;
 use katana_executor::{ExecutionFlags, ExecutorFactory};
 use katana_primitives::block::{
     Block, ExecutableBlock, FinalityStatus, GasPrices, PartialHeader, SealedBlockWithStatus,
 };
 use katana_primitives::chain::ChainId;
-use katana_primitives::chain_spec::{self, ChainSpec};
 use katana_primitives::class::{CompiledClass, ContractClass};
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::da::L1DataAvailabilityMode;
@@ -50,7 +50,7 @@ pub fn contract_class() -> (CompiledClass, ContractClass) {
 #[rstest::fixture]
 #[once]
 pub fn chain() -> ChainSpec {
-    let mut chain = chain_spec::DEV_UNALLOCATED.clone();
+    let mut chain = katana_chain_spec::dev::DEV_UNALLOCATED.clone();
 
     // to generate the exact list of accounts as you would when you just run `katana` w/o
     // any additional flags
@@ -63,12 +63,14 @@ pub fn chain() -> ChainSpec {
         .generate();
 
     chain.genesis.extend_allocations(accounts.into_iter().map(|(k, v)| (k, v.into())));
-    chain
+    ChainSpec::Dev(chain)
 }
 
 /// Returns a state provider with some prefilled states.
 #[rstest::fixture]
 pub fn state_provider(chain: &ChainSpec) -> Box<dyn StateProvider> {
+    let ChainSpec::Dev(chain) = chain else { panic!("should be dev chain spec") };
+
     let states = chain.state_updates();
     let provider = DbProvider::new_ephemeral();
 

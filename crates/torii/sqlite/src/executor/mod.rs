@@ -53,6 +53,7 @@ pub enum BrokerMessage {
 #[derive(Debug, Clone)]
 pub struct DeleteEntityQuery {
     pub entity_id: String,
+    pub model_id: String,
     pub event_id: String,
     pub block_timestamp: String,
     pub ty: Ty,
@@ -474,6 +475,12 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                     return Ok(());
                 }
 
+                sqlx::query("DELETE FROM entity_model WHERE entity_id = ? AND model_id = ?")
+                    .bind(entity.entity_id.clone())
+                    .bind(entity.model_id)
+                    .execute(&mut **tx)
+                    .await?;
+
                 let row = sqlx::query(
                     "UPDATE entities SET updated_at=CURRENT_TIMESTAMP, executed_at=?, event_id=? \
                      WHERE id = ? RETURNING *",
@@ -775,10 +782,10 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
         if new_transaction {
             let transaction = mem::replace(&mut self.transaction, self.pool.begin().await?);
             transaction.commit().await?;
-        }
 
-        for message in self.publish_queue.drain(..) {
-            send_broker_message(message);
+            for message in self.publish_queue.drain(..) {
+                send_broker_message(message);
+            }
         }
 
         while let Some(result) = self.register_tasks.join_next().await {

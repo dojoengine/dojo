@@ -49,7 +49,7 @@ pub fn assert_array(value: Span<felt252>, expected: Span<felt252>) {
             "Bad array value [{}] (expected: {} got: {})",
             i,
             *expected.at(i),
-            *value.at(i)
+            *value.at(i),
         );
 
         i += 1;
