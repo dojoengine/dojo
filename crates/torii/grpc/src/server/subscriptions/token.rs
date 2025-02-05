@@ -60,11 +60,7 @@ impl TokenManager {
         Ok(receiver)
     }
 
-    pub async fn update_subscriber(
-        &self,
-        id: u64,
-        contract_addresses: Vec<Felt>,
-    ) {
+    pub async fn update_subscriber(&self, id: u64, contract_addresses: Vec<Felt>) {
         let sender = {
             let subscribers = self.subscribers.read().await;
             if let Some(subscriber) = subscribers.get(&id) {
@@ -98,10 +94,8 @@ pub struct Service {
 impl Service {
     pub fn new(subs_manager: Arc<TokenManager>) -> Self {
         let (balance_sender, balance_receiver) = unbounded_channel();
-        let service = Self {
-            simple_broker: Box::pin(SimpleBroker::<Token>::subscribe()),
-            balance_sender,
-        };
+        let service =
+            Self { simple_broker: Box::pin(SimpleBroker::<Token>::subscribe()), balance_sender };
 
         tokio::spawn(Self::publish_updates(subs_manager, balance_receiver));
 
@@ -135,7 +129,6 @@ impl Service {
             {
                 continue;
             }
-
 
             let resp = SubscribeTokensResponse {
                 token: Some(proto::types::Token {

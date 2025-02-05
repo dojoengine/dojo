@@ -56,7 +56,13 @@ use crate::proto::types::member_value::ValueType;
 use crate::proto::types::LogicalOperator;
 use crate::proto::world::world_server::WorldServer;
 use crate::proto::world::{
-    RetrieveEntitiesStreamingResponse, RetrieveEventMessagesRequest, RetrieveTokenBalancesRequest, RetrieveTokenBalancesResponse, RetrieveTokensRequest, RetrieveTokensResponse, SubscribeEntitiesRequest, SubscribeEntityResponse, SubscribeEventMessagesRequest, SubscribeEventsResponse, SubscribeIndexerRequest, SubscribeIndexerResponse, SubscribeTokenBalancesResponse, SubscribeTokensResponse, UpdateEventMessagesSubscriptionRequest, UpdateTokenBalancesSubscriptionRequest, WorldMetadataRequest, WorldMetadataResponse
+    RetrieveEntitiesStreamingResponse, RetrieveEventMessagesRequest, RetrieveTokenBalancesRequest,
+    RetrieveTokenBalancesResponse, RetrieveTokensRequest, RetrieveTokensResponse,
+    SubscribeEntitiesRequest, SubscribeEntityResponse, SubscribeEventMessagesRequest,
+    SubscribeEventsResponse, SubscribeIndexerRequest, SubscribeIndexerResponse,
+    SubscribeTokenBalancesResponse, SubscribeTokensResponse,
+    UpdateEventMessagesSubscriptionRequest, UpdateTokenBalancesSubscriptionRequest,
+    WorldMetadataRequest, WorldMetadataResponse,
 };
 use crate::proto::{self};
 use crate::types::schema::SchemaError;
@@ -1256,7 +1262,7 @@ impl proto::world::world_server::World for DojoWorld {
     type RetrieveEntitiesStreamingStream = RetrieveEntitiesStreamingResponseStream;
     type SubscribeTokenBalancesStream = SubscribeTokenBalancesResponseStream;
     type SubscribeTokensStream = SubscribeTokensResponseStream;
-    
+
     async fn world_metadata(
         &self,
         _request: Request<WorldMetadataRequest>,
