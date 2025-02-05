@@ -340,7 +340,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
     ) -> Result<()> {
         let query = sqlx::query(
             "INSERT INTO tokens (id, contract_address, name, symbol, decimals, metadata) VALUES \
-             (?, ?, ?, ?, ?, ?)",
+             (?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING",
         )
         .bind(&result.query.token_id)
         .bind(felt_to_sql_string(&result.query.contract_address))
