@@ -82,7 +82,8 @@ impl CalldataDecoder for U256CalldataDecoder {
 struct StrCalldataDecoder;
 impl CalldataDecoder for StrCalldataDecoder {
     fn decode(&self, input: &str) -> DecoderResult<Vec<Felt>> {
-        let ba = ByteArray::from_string(input)?;
+        let no_quotes = input.trim_start_matches('"').trim_end_matches('"');
+        let ba = ByteArray::from_string(no_quotes)?;
         Ok(ByteArray::cairo_serialize(&ba))
     }
 }
@@ -91,7 +92,8 @@ impl CalldataDecoder for StrCalldataDecoder {
 struct ShortStrCalldataDecoder;
 impl CalldataDecoder for ShortStrCalldataDecoder {
     fn decode(&self, input: &str) -> DecoderResult<Vec<Felt>> {
-        Ok(vec![cairo_short_string_to_felt(input)?])
+        let no_quotes = input.trim_start_matches('"').trim_end_matches('"');
+        Ok(vec![cairo_short_string_to_felt(no_quotes)?])
     }
 }
 

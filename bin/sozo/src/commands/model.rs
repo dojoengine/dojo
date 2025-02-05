@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use clap::{Args, Subcommand};
 use dojo_world::config::calldata_decoder;
 use scarb::core::Config;
@@ -11,6 +11,7 @@ use tracing::trace;
 use super::options::starknet::StarknetOptions;
 use super::options::world::WorldOptions;
 use crate::utils;
+use crate::utils::CALLDATA_DOC;
 
 #[derive(Debug, Args)]
 pub struct ModelArgs {
@@ -109,14 +110,12 @@ hashes, called 'hash' in the following documentation.
         tag_or_name: ResourceDescriptor,
 
         #[arg(value_name = "KEYS")]
-        #[arg(value_delimiter = ',')]
-        #[arg(help = "Comma separated values, e.g., 0x12345,0x69420,sstr:\"hello\", u256:0x123.
-                      Supporting all prefixes:\n  - u256: A 256-bit unsigned integer\n  - str: A \
-                      cairo string (ByteArray)\n  - sstr: A cairo short string\n  - int: A \
-                      signed integer\n  - no prefix: A cairo felt or any type that fits into \
-                      one felt")]
-        #[arg(value_parser = model_key_parser)]
-        keys: Vec<Vec<Felt>>,
+        #[arg(num_args = 1..)]
+        #[arg(required = true)]
+        #[arg(
+            help = format!("List of values representing the serialized keys of the model.\n{CALLDATA_DOC}")
+        )]
+        keys: Vec<String>,
 
         #[command(flatten)]
         world: WorldOptions,
@@ -128,12 +127,6 @@ hashes, called 'hash' in the following documentation.
         #[arg(help = "Block number at which to retrieve the model data (pending block by default)")]
         block: Option<u64>,
     },
-}
-
-// Custom parser for model keys
-fn model_key_parser(s: &str) -> Result<Vec<Felt>> {
-    let felts = calldata_decoder::decode_calldata(&vec![s.to_string()])?;
-    Ok(felts)
 }
 
 impl ModelArgs {
@@ -217,11 +210,9 @@ impl ModelArgs {
                     let (world_diff, provider, _) =
                         utils::get_world_diff_and_provider(starknet, world, &ws).await?;
 
-                    let flattened_keys: Vec<Felt> = keys.into_iter().flatten().collect();
-
                     let (record, _, _) = model::model_get(
                         tag.to_string(),
-                        flattened_keys,
+                        parse_keys(&keys)?,
                         world_diff.world_info.address,
                         &provider,
                         block_id,
@@ -237,6 +228,20 @@ impl ModelArgs {
     }
 }
 
+/// Parses the keys from the command line into a vector of Felt representing the serialized keys of
+/// the model.
+fn parse_keys(keys: &[String]) -> Result<Vec<Felt>> {
+    let mut keys_serde = vec![];
+
+    for key in keys {
+        let key_felt = calldata_decoder::decode_single_calldata(key)
+            .with_context(|| format!("Failed to decode key: {}", key))?;
+        keys_serde.extend(key_felt);
+    }
+
+    Ok(keys_serde)
+}
+
 #[cfg(test)]
 mod tests {
     // To do: Add more tests for the flattening of keys
@@ -244,6 +249,7 @@ mod tests {
 
     use clap::Parser;
     use starknet::core::utils::cairo_short_string_to_felt;
+    use starknet::macros::felt;
 
     use super::*;
 
@@ -260,20 +266,17 @@ mod tests {
             "model",
             "get",
             "Account",
-            "0x054cb935d86d80b5a0a6e756edf448ab33876d01dd2b07a2a4e63a41e06d0ef5,0x6d69737479",
+            "0x054cb935d86d80b5a0a6e756edf448ab33876d01dd2b07a2a4e63a41e06d0ef5",
+            "0x6d69737479",
         ]);
 
         if let ModelCommand::Get { keys, .. } = args.command {
             let expected = vec![
-                vec![
-                    Felt::from_hex(
-                        "0x054cb935d86d80b5a0a6e756edf448ab33876d01dd2b07a2a4e63a41e06d0ef5",
-                    )
-                    .unwrap(),
-                ],
-                vec![Felt::from_hex("0x6d69737479").unwrap()],
+                felt!("0x054cb935d86d80b5a0a6e756edf448ab33876d01dd2b07a2a4e63a41e06d0ef5"),
+                felt!("0x6d69737479"),
             ];
-            assert_eq!(keys, expected);
+
+            assert_eq!(parse_keys(&keys).unwrap(), expected);
         } else {
             panic!("Expected Get command");
         }
@@ -283,20 +286,17 @@ mod tests {
             "model",
             "get",
             "Account",
-            "0x054cb935d86d80b5a0a6e756edf448ab33876d01dd2b07a2a4e63a41e06d0ef5,sstr:\"misty\"",
+            "0x054cb935d86d80b5a0a6e756edf448ab33876d01dd2b07a2a4e63a41e06d0ef5",
+            "sstr:\"misty\"",
         ]);
 
         if let ModelCommand::Get { keys, .. } = args.command {
             let expected = vec![
-                vec![
-                    Felt::from_hex(
-                        "0x054cb935d86d80b5a0a6e756edf448ab33876d01dd2b07a2a4e63a41e06d0ef5",
-                    )
-                    .unwrap(),
-                ],
-                vec![cairo_short_string_to_felt("misty").unwrap()],
+                felt!("0x054cb935d86d80b5a0a6e756edf448ab33876d01dd2b07a2a4e63a41e06d0ef5"),
+                cairo_short_string_to_felt("misty").unwrap(),
             ];
-            assert_eq!(keys, expected);
+
+            assert_eq!(parse_keys(&keys).unwrap(), expected);
         } else {
             panic!("Expected Get command");
         }
@@ -306,20 +306,18 @@ mod tests {
             "model",
             "get",
             "Account",
-            "0x054cb935d86d80b5a0a6e756edf448ab33876d01dd2b07a2a4e63a41e06d0ef5,u256:0x1",
+            "0x054cb935d86d80b5a0a6e756edf448ab33876d01dd2b07a2a4e63a41e06d0ef5",
+            "u256:0x1",
         ]);
 
         if let ModelCommand::Get { keys, .. } = args.command {
             let expected = vec![
-                vec![
-                    Felt::from_hex(
-                        "0x054cb935d86d80b5a0a6e756edf448ab33876d01dd2b07a2a4e63a41e06d0ef5",
-                    )
-                    .unwrap(),
-                ],
-                vec![Felt::ONE, Felt::ZERO],
+                felt!("0x054cb935d86d80b5a0a6e756edf448ab33876d01dd2b07a2a4e63a41e06d0ef5"),
+                Felt::ONE,
+                Felt::ZERO,
             ];
-            assert_eq!(keys, expected);
+
+            assert_eq!(parse_keys(&keys).unwrap(), expected);
         } else {
             panic!("Expected Get command");
         }
@@ -328,8 +326,9 @@ mod tests {
         let args = TestCommand::parse_from(["model", "get", "Account", "int:-123456789"]);
 
         if let ModelCommand::Get { keys, .. } = args.command {
-            let expected = vec![vec![(-123456789_i64).into()]];
-            assert_eq!(keys, expected);
+            let expected = vec![(-123456789_i64).into()];
+
+            assert_eq!(parse_keys(&keys).unwrap(), expected);
         } else {
             panic!("Expected Get command");
         }
@@ -338,12 +337,13 @@ mod tests {
         let args = TestCommand::parse_from(["model", "get", "Account", "str:hello"]);
 
         if let ModelCommand::Get { keys, .. } = args.command {
-            let expected = vec![vec![
+            let expected = vec![
                 Felt::ZERO,
                 cairo_short_string_to_felt("hello").unwrap(),
                 Felt::from_dec_str("5").unwrap(),
-            ]];
-            assert_eq!(keys, expected);
+            ];
+
+            assert_eq!(parse_keys(&keys).unwrap(), expected);
         } else {
             panic!("Expected Get command");
         }
@@ -353,27 +353,24 @@ mod tests {
             "model",
             "get",
             "Account",
-            "0x054cb935d86d80b5a0a6e756edf448ab33876d01dd2b07a2a4e63a41e06d0ef5,u256:0x1,int:\
-             -123456789,str:hello",
+            "0x054cb935d86d80b5a0a6e756edf448ab33876d01dd2b07a2a4e63a41e06d0ef5",
+            "u256:0x1",
+            "int:-123456789",
+            "str:hello",
         ]);
 
         if let ModelCommand::Get { keys, .. } = args.command {
             let expected = vec![
-                vec![
-                    Felt::from_hex(
-                        "0x054cb935d86d80b5a0a6e756edf448ab33876d01dd2b07a2a4e63a41e06d0ef5",
-                    )
-                    .unwrap(),
-                ],
-                vec![Felt::ONE, Felt::ZERO],
-                vec![(-123456789_i64).into()],
-                vec![
-                    Felt::ZERO,
-                    cairo_short_string_to_felt("hello").unwrap(),
-                    Felt::from_dec_str("5").unwrap(),
-                ],
+                felt!("0x054cb935d86d80b5a0a6e756edf448ab33876d01dd2b07a2a4e63a41e06d0ef5"),
+                Felt::ONE,
+                Felt::ZERO,
+                (-123456789_i64).into(),
+                Felt::ZERO,
+                cairo_short_string_to_felt("hello").unwrap(),
+                Felt::from_dec_str("5").unwrap(),
             ];
-            assert_eq!(keys, expected);
+
+            assert_eq!(parse_keys(&keys).unwrap(), expected);
         } else {
             panic!("Expected Get command");
         }
