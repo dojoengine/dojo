@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1738795712652,
+  "lastUpdate": 1738799732142,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -50539,6 +50539,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 7931693,
             "range": "± 102639",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ce57ea4d24b43227466e662bcec674e1b2216d63",
+          "message": "fix(torii-erc): lenient parsing for invalid json for erc721 (#2977)\n\n* fix(torii): metadata data uri parsing for erc721\r\n\r\n* escape unescaped quotes\r\n\r\n* sanitize json string\r\n\r\n* remove print\r\n\r\n* fmt",
+          "timestamp": "2025-02-05T17:39:31-06:00",
+          "tree_id": "d70f86ebdf8efb02c2bafe242b6df4e98d3a4e88",
+          "url": "https://github.com/dojoengine/dojo/commit/ce57ea4d24b43227466e662bcec674e1b2216d63"
+        },
+        "date": 1738799729706,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 11632544607,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
