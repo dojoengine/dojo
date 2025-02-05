@@ -83,7 +83,7 @@ where
             block_number,
         )
         .await?;
-        debug!(target: LOG_TARGET,from = ?from, to = ?to, value = ?value, "ERC20 Transfer");
+        debug!(target: LOG_TARGET,from = ?from, to = ?to, value = ?value, "ERC20 Transfer.");
 
         Ok(())
     }

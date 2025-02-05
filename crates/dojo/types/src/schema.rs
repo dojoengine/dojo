@@ -242,13 +242,19 @@ impl Ty {
                 let diff_children: Vec<Member> = s1
                     .children
                     .iter()
-                    .filter(|m1| {
-                        s2.children
-                            .iter()
-                            .find(|m2| m2.name == m1.name)
-                            .map_or(true, |m2| *m1 != m2)
+                    .filter_map(|m1| {
+                        if let Some(m2) = s2.children.iter().find(|m2| m2.name == m1.name) {
+                            // Member exists in both - check if types are different
+                            m1.ty.diff(&m2.ty).map(|diff_ty| Member {
+                                name: m1.name.clone(),
+                                ty: diff_ty,
+                                key: m1.key,
+                            })
+                        } else {
+                            // Member doesn't exist in s2
+                            Some(m1.clone())
+                        }
                     })
-                    .cloned()
                     .collect();
 
                 if diff_children.is_empty() {
@@ -262,10 +268,17 @@ impl Ty {
                 let diff_options: Vec<EnumOption> = e1
                     .options
                     .iter()
-                    .filter(|o1| {
-                        e2.options.iter().find(|o2| o2.name == o1.name).map_or(true, |o2| *o1 != o2)
+                    .filter_map(|o1| {
+                        if let Some(o2) = e2.options.iter().find(|o2| o2.name == o1.name) {
+                            // Option exists in both - check if types are different
+                            o1.ty
+                                .diff(&o2.ty)
+                                .map(|diff_ty| EnumOption { name: o1.name.clone(), ty: diff_ty })
+                        } else {
+                            // Option doesn't exist in e2
+                            Some(o1.clone())
+                        }
                     })
-                    .cloned()
                     .collect();
 
                 if diff_options.is_empty() {
@@ -278,18 +291,26 @@ impl Ty {
                     }))
                 }
             }
+            (Ty::Tuple(t1), Ty::Tuple(t2)) => {
+                if t1.len() != t2.len() {
+                    Some(Ty::Tuple(
+                        t1.iter()
+                            .filter_map(|ty| if !t2.contains(ty) { Some(ty.clone()) } else { None })
+                            .collect(),
+                    ))
+                } else {
+                    // Compare each tuple element recursively
+                    let diff_elements: Vec<Ty> =
+                        t1.iter().zip(t2.iter()).filter_map(|(ty1, ty2)| ty1.diff(ty2)).collect();
+
+                    if diff_elements.is_empty() { None } else { Some(Ty::Tuple(diff_elements)) }
+                }
+            }
             (Ty::Array(a1), Ty::Array(a2)) => {
                 if a1 == a2 {
                     None
                 } else {
                     Some(Ty::Array(a1.clone()))
-                }
-            }
-            (Ty::Tuple(t1), Ty::Tuple(t2)) => {
-                if t1 == t2 {
-                    None
-                } else {
-                    Some(Ty::Tuple(t1.clone()))
                 }
             }
             (Ty::ByteArray(b1), Ty::ByteArray(b2)) => {
