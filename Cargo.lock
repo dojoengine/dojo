@@ -4789,6 +4789,7 @@ dependencies = [
  "cainome 0.4.11 (git+https://github.com/cartridge-gg/cainome?tag=v0.4.12)",
  "cairo-lang-starknet-classes",
  "dojo-types 1.1.2",
+ "dojo-utils",
  "futures",
  "hex",
  "hex-literal",

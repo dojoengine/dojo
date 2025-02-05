@@ -6,7 +6,7 @@
 //! Events are also sequential, a resource is not expected to be upgraded before
 //! being registered. We take advantage of this fact to optimize the data gathering.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use anyhow::Result;
 use starknet::core::types::{BlockId, BlockTag, EventFilter, Felt, StarknetError};
@@ -129,6 +129,31 @@ impl WorldRemote {
         }
 
         Ok(world)
+    }
+
+    /// Get the current state of external contracts and external contract
+    /// classes from the blockchain.
+    pub async fn load_external_contract_states<P: Provider>(
+        &mut self,
+        provider: &P,
+        external_contract_classes: Vec<(String, Felt)>,
+        external_contracts: HashMap<String, Felt>,
+    ) -> Result<()> {
+        for (name, hash) in external_contract_classes {
+            if dojo_utils::is_declared(&name, hash, provider).await? {
+                trace!(name, "External contract class already declared.");
+                self.declared_external_contract_classes.push(name);
+            }
+        }
+
+        for (name, address) in external_contracts {
+            if dojo_utils::is_deployed(address, provider).await? {
+                trace!(name, "External contract already deployed.");
+                self.deployed_external_contracts.push(name);
+            }
+        }
+
+        Ok(())
     }
 
     /// Matches the given event to the corresponding remote resource and inserts it into the world.

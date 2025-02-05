@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::Path;
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use serde::Deserialize;
 use toml;
 
@@ -11,6 +11,15 @@ use super::migration_config::MigrationConfig;
 use super::namespace_config::NamespaceConfig;
 use super::resource_config::ResourceConfig;
 use super::world_config::WorldConfig;
+
+/// External contract configuration for the Profile config.
+#[derive(Debug, Clone, Deserialize)]
+pub struct ExternalContractConfig {
+    pub contract_name: String,
+    pub instance_name: Option<String>,
+    pub salt: String,
+    pub constructor_data: Option<Vec<String>>,
+}
 
 /// Profile configuration that is used to configure the world and its environment.
 ///
@@ -21,6 +30,7 @@ pub struct ProfileConfig {
     pub models: Option<Vec<ResourceConfig>>,
     pub contracts: Option<Vec<ResourceConfig>>,
     pub events: Option<Vec<ResourceConfig>>,
+    pub external_contracts: Option<Vec<ExternalContractConfig>>,
     pub namespace: NamespaceConfig,
     pub env: Option<Environment>,
     pub migration: Option<MigrationConfig>,
@@ -81,6 +91,44 @@ impl ProfileConfig {
         } else {
             false
         }
+    }
+
+    /// Validate the consistency of the Profile configuration.
+    ///
+    /// Rules:
+    /// - for a same external contract name we should have:
+    ///   + only one [[external_contracts]] block if instance name is not set OR,
+    ///   + one or several [[external_contracts]] blocks with different instance names.
+    pub fn validate(&self) -> Result<()> {
+        if let Some(contracts) = &self.external_contracts {
+            let mut map = HashMap::<String, Vec<Option<String>>>::new();
+
+            for contract in contracts {
+                map.entry(contract.contract_name.clone())
+                    .or_default()
+                    .push(contract.instance_name.clone());
+            }
+
+            for (contract_name, instance_names) in map {
+                if instance_names.len() > 1 && instance_names.iter().any(|n| n.is_none()) {
+                    bail!(
+                        "There must be only one [[external_contracts]] block in the profile \
+                         config mentioning the contract name '{}' without instance name.",
+                        contract_name
+                    );
+                }
+
+                let set: HashSet<_> = instance_names.iter().cloned().collect();
+                if set.len() != instance_names.len() {
+                    bail!(
+                        "There are duplicated instance names for the external contract name '{}'",
+                        contract_name
+                    );
+                }
+            }
+        }
+
+        Ok(())
     }
 }
 
@@ -261,5 +309,82 @@ mod tests {
                 vec!["0x1".to_string(), "0x2".to_string()]
             )]))
         );
+    }
+
+    #[test]
+    fn test_profile_config_validation() {
+        let mut config = ProfileConfig::new("world", "seed", NamespaceConfig::new("ns"));
+
+        // duplicated None instance name for a same contract name
+        config.external_contracts = Some(vec![
+            ExternalContractConfig {
+                contract_name: "c1".to_string(),
+                instance_name: Some("x".to_string()),
+                salt: "0x01".to_string(),
+                constructor_data: None,
+            },
+            ExternalContractConfig {
+                contract_name: "c1".to_string(),
+                instance_name: None,
+                salt: "0x01".to_string(),
+                constructor_data: None,
+            },
+        ]);
+
+        assert!(config.validate().is_err());
+
+        // duplicated instance name for a same contract name
+        config.external_contracts = Some(vec![
+            ExternalContractConfig {
+                contract_name: "c1".to_string(),
+                instance_name: Some("x".to_string()),
+                salt: "0x01".to_string(),
+                constructor_data: None,
+            },
+            ExternalContractConfig {
+                contract_name: "c1".to_string(),
+                instance_name: Some("y".to_string()),
+                salt: "0x01".to_string(),
+                constructor_data: None,
+            },
+            ExternalContractConfig {
+                contract_name: "c1".to_string(),
+                instance_name: Some("x".to_string()),
+                salt: "0x01".to_string(),
+                constructor_data: None,
+            },
+        ]);
+
+        assert!(config.validate().is_err());
+
+        // nominal case
+        config.external_contracts = Some(vec![
+            ExternalContractConfig {
+                contract_name: "c1".to_string(),
+                instance_name: None,
+                salt: "0x01".to_string(),
+                constructor_data: None,
+            },
+            ExternalContractConfig {
+                contract_name: "c2".to_string(),
+                instance_name: Some("x".to_string()),
+                salt: "0x01".to_string(),
+                constructor_data: None,
+            },
+            ExternalContractConfig {
+                contract_name: "c2".to_string(),
+                instance_name: Some("y".to_string()),
+                salt: "0x01".to_string(),
+                constructor_data: None,
+            },
+            ExternalContractConfig {
+                contract_name: "c3".to_string(),
+                instance_name: Some("c3".to_string()),
+                salt: "0x01".to_string(),
+                constructor_data: None,
+            },
+        ]);
+
+        assert!(config.validate().is_ok());
     }
 }

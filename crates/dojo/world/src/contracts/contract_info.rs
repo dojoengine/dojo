@@ -154,6 +154,7 @@ mod tests {
                 selector: felt!("0x5555"),
             }],
             events: vec![],
+            external_contracts: vec![],
         };
 
         let contracts_info: HashMap<String, ContractInfo> = (&manifest).into();
