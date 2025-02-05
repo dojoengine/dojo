@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1738769659013,
+  "lastUpdate": 1738769758473,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -50101,6 +50101,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 11823528882,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d875ec8c4c1f90e962f8507877a49427cb010891",
+          "message": "feat(katana): Cairo short string (#2991)\n\nDefine Cairo short string type book.cairo-lang.org/ch02-02-data-types.html#short-strings",
+          "timestamp": "2025-02-05T23:18:00+08:00",
+          "tree_id": "d3090c8f74d7d4486ae9ce9b7fab20b15aae31fa",
+          "url": "https://github.com/dojoengine/dojo/commit/d875ec8c4c1f90e962f8507877a49427cb010891"
+        },
+        "date": 1738769755285,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2532841,
+            "range": "± 61060",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8014293,
+            "range": "± 399761",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2544893054,
+            "range": "± 228067244",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 7845635,
+            "range": "± 370302",
             "unit": "ns/iter"
           }
         ]
