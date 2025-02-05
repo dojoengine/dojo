@@ -620,6 +620,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
             QueryType::RegisterErc721Token(register_erc721_token) => {
                 let semaphore = self.semaphore.clone();
                 let provider = self.provider.clone();
+
                 let res = sqlx::query_as::<_, (String, String)>(&format!(
                     "SELECT name, symbol FROM {TOKENS_TABLE} WHERE contract_address = ? LIMIT 1"
                 ))

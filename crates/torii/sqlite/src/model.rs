@@ -315,10 +315,6 @@ pub fn map_row_to_ty(
                         primitive.set_u256(Some(U256::from_be_hex(hex_str)))?;
                     }
                 }
-                Primitive::USize(_) => {
-                    let value = row.try_get::<u32, &str>(column_name)?;
-                    primitive.set_usize(Some(value))?;
-                }
                 Primitive::Bool(_) => {
                     let value = row.try_get::<bool, &str>(column_name)?;
                     primitive.set_bool(Some(value))?;
@@ -343,6 +339,14 @@ pub fn map_row_to_ty(
                     let value = row.try_get::<String, &str>(column_name)?;
                     if !value.is_empty() {
                         primitive.set_contract_address(Some(
+                            Felt::from_str(&value).map_err(ParseError::FromStr)?,
+                        ))?;
+                    }
+                }
+                Primitive::EthAddress(_) => {
+                    let value = row.try_get::<String, &str>(column_name)?;
+                    if !value.is_empty() {
+                        primitive.set_eth_address(Some(
                             Felt::from_str(&value).map_err(ParseError::FromStr)?,
                         ))?;
                     }

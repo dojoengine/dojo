@@ -113,13 +113,9 @@ pub struct NodeArgs {
 }
 
 impl NodeArgs {
-    pub fn execute(&self) -> Result<()> {
+    pub async fn execute(&self) -> Result<()> {
         self.init_logging()?;
-        tokio::runtime::Builder::new_multi_thread()
-            .enable_all()
-            .build()
-            .context("failed to build tokio runtime")?
-            .block_on(self.start_node())
+        self.start_node().await
     }
 
     async fn start_node(&self) -> Result<()> {
