@@ -17,4 +17,4 @@ impl BasicObject for EmptyObject {
     fn type_mapping(&self) -> &TypeMapping {
         &EMPTY_MAPPING
     }
-} 
+}

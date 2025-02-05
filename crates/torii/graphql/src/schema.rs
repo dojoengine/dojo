@@ -11,10 +11,11 @@ use super::object::model_data::ModelDataObject;
 use super::types::ScalarType;
 use super::utils;
 use crate::constants::{
-    ERC20_TYPE_NAME, ERC721_TYPE_NAME, QUERY_TYPE_NAME, SUBSCRIPTION_TYPE_NAME, TOKEN_TYPE_NAME,
-    EMPTY_TYPE_NAME,
+    EMPTY_TYPE_NAME, ERC20_TYPE_NAME, ERC721_TYPE_NAME, QUERY_TYPE_NAME, SUBSCRIPTION_TYPE_NAME,
+    TOKEN_TYPE_NAME,
 };
 use crate::object::controller::ControllerObject;
+use crate::object::empty::EmptyObject;
 use crate::object::erc::erc_token::{Erc20TokenObject, Erc721TokenObject};
 use crate::object::erc::token_balance::ErcBalanceObject;
 use crate::object::erc::token_transfer::ErcTransferObject;
@@ -26,7 +27,6 @@ use crate::object::model::ModelObject;
 use crate::object::transaction::TransactionObject;
 use crate::object::ObjectVariant;
 use crate::query::build_type_mapping;
-use crate::object::empty::EmptyObject;
 
 // The graphql schema is built dynamically at runtime, this is because we won't know the schema of
 // the models until runtime. There are however, predefined objects such as entities and
@@ -165,7 +165,8 @@ async fn build_objects(pool: &SqlitePool) -> Result<(Vec<ObjectVariant>, Vec<Uni
         }
     }
 
-    // When creating an empty union, add the empty type (this is required otherwise the schema will be invalid)
+    // When creating an empty union, add the empty type (this is required otherwise the schema will
+    // be invalid)
     if models.is_empty() {
         model_union = model_union.possible_type(EMPTY_TYPE_NAME);
     }
