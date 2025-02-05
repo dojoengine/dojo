@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1738779605084,
+  "lastUpdate": 1738780232561,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -50383,6 +50383,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 7869484,
             "range": "± 63201",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b751c5081b18a8038000863a4b8f2f18de7423fb",
+          "message": "refactor(torii-indexer): add token contract address to task identifier (#2985)",
+          "timestamp": "2025-02-05T18:13:34Z",
+          "tree_id": "4a78b78c158aa88f018a9516b5cb02bb4910d9c7",
+          "url": "https://github.com/dojoengine/dojo/commit/b751c5081b18a8038000863a4b8f2f18de7423fb"
+        },
+        "date": 1738780229518,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 12364172227,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
