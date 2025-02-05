@@ -881,13 +881,16 @@ fn add_columns_recursive(
             // 3. Create new column with new type/constraint
             // 4. Copy values back & create new index
             alter_table_queries.push(format!(
-                "CREATE TEMPORARY TABLE tmp_values_{name} AS SELECT internal_id, [{name}] FROM [{table_id}]"
+                "CREATE TEMPORARY TABLE tmp_values_{name} AS SELECT internal_id, [{name}] FROM \
+                 [{table_id}]"
             ));
             alter_table_queries.push(format!("DROP INDEX IF EXISTS [idx_{table_id}_{name}]"));
             alter_table_queries.push(format!("ALTER TABLE [{table_id}] DROP COLUMN [{name}]"));
-            alter_table_queries.push(format!("ALTER TABLE [{table_id}] ADD COLUMN [{name}] {sql_type}"));
+            alter_table_queries
+                .push(format!("ALTER TABLE [{table_id}] ADD COLUMN [{name}] {sql_type}"));
             alter_table_queries.push(format!(
-                "UPDATE [{table_id}] SET [{name}] = (SELECT {sql_value} FROM tmp_values_{name} WHERE tmp_values_{name}.internal_id = [{table_id}].internal_id)"
+                "UPDATE [{table_id}] SET [{name}] = (SELECT {sql_value} FROM tmp_values_{name} \
+                 WHERE tmp_values_{name}.internal_id = [{table_id}].internal_id)"
             ));
             alter_table_queries.push(format!("DROP TABLE tmp_values_{name}"));
             alter_table_queries.push(format!(
