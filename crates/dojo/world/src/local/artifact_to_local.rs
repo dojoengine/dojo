@@ -177,29 +177,14 @@ impl WorldLocal {
                         }
                     }
 
-                    // No Dojo resource found in this file so it is a classic starknet contract
+                    // No Dojo resource found in this file so it is a classic Starknet contract
                     if !dojo_resource_found {
                         trace!(
                             filename = path.file_name().unwrap().to_str().unwrap(),
                             "Classic Starknet contract."
                         );
 
-                        // The last AbiEntry of type `event` and kind `enum` is always the main
-                        // Event enum of the contract. So, we find it and
-                        // use its name to get the contract name.
-                        let mut contract_name = None;
-
-                        for entry in abi.iter().rev() {
-                            if let AbiEntry::Event(AbiEvent::Typed(TypedAbiEvent::Enum(e))) = entry
-                            {
-                                let mut it = e.name.rsplit("::");
-                                let _ = it.next();
-                                contract_name = Some(it.next().unwrap().to_string());
-                                break;
-                            }
-                        }
-
-                        let contract_name = match contract_name {
+                        let contract_name = match contract_name_from_abi(&abi) {
                             Some(c) => c,
                             None => {
                                 bail!(
@@ -381,6 +366,23 @@ fn systems_from_abi(abi: &[AbiEntry]) -> Vec<String> {
     }
 
     abi.iter().flat_map(extract_systems_from_abi_entry).collect()
+}
+
+/// Get the contract name from the ABI.
+///
+/// Note: The last AbiEntry of type `event` and kind `enum` is always the main
+/// Event enum of the contract. So, we find it and use its name to get
+/// the contract name.
+fn contract_name_from_abi(abi: &[AbiEntry]) -> Option<String> {
+    for entry in abi.iter().rev() {
+        if let AbiEntry::Event(AbiEvent::Typed(TypedAbiEvent::Enum(e))) = entry {
+            let mut it = e.name.rsplit("::");
+            let _ = it.next();
+            return Some(it.next().unwrap().to_string());
+        }
+    }
+
+    None
 }
 
 #[cfg(test)]

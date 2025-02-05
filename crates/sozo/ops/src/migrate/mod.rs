@@ -560,6 +560,10 @@ where
             .iter()
             .filter_map(|(_, c)| self.external_contract_classes(c))
             .collect();
+
+        let ui_text = format!("Declaring {} external contract classes...", classes.len());
+        ui.update_text_boxed(ui_text);
+
         self.declare_classes(ui, classes).await?;
 
         // then deploying new external contracts
@@ -584,13 +588,13 @@ where
         let has_changed = !invoker.calls.is_empty();
 
         if self.do_multicall() {
-            let ui_text = format!("Syncing {} external contracts...", invoker.calls.len());
+            let ui_text = format!("Deploying {} external contracts...", invoker.calls.len());
             ui.update_text_boxed(ui_text);
 
             invoker.multicall().await?;
         } else {
             let ui_text =
-                format!("Syncing {} external contracts (sequentially)...", invoker.calls.len());
+                format!("Deploying {} external contracts (sequentially)...", invoker.calls.len());
             ui.update_text_boxed(ui_text);
 
             invoker.invoke_all_sequentially().await?;
