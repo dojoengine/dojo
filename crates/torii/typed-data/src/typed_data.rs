@@ -552,9 +552,6 @@ pub fn parse_value_to_ty(value: &PrimitiveType, ty: &mut Ty) -> Result<(), Error
                 Primitive::U64(ref mut u64) => {
                     *u64 = Some(number.as_u64().unwrap());
                 }
-                Primitive::USize(ref mut usize) => {
-                    *usize = Some(number.as_u64().unwrap() as u32);
-                }
                 _ => {
                     return Err(Error::InvalidType(format!(
                         "Invalid number type for {}",
@@ -601,9 +598,6 @@ pub fn parse_value_to_ty(value: &PrimitiveType, ty: &mut Ty) -> Result<(), Error
                 Primitive::U128(v) => {
                     *v = Some(from_str!(string, u128)?);
                 }
-                Primitive::USize(v) => {
-                    *v = Some(from_str!(string, u32)?);
-                }
                 Primitive::Felt252(v) => {
                     *v = Some(Felt::from_str(string).unwrap());
                 }
@@ -611,6 +605,9 @@ pub fn parse_value_to_ty(value: &PrimitiveType, ty: &mut Ty) -> Result<(), Error
                     *v = Some(Felt::from_str(string).unwrap());
                 }
                 Primitive::ContractAddress(v) => {
+                    *v = Some(Felt::from_str(string).unwrap());
+                }
+                Primitive::EthAddress(v) => {
                     *v = Some(Felt::from_str(string).unwrap());
                 }
                 Primitive::Bool(v) => {
@@ -674,7 +671,6 @@ pub fn map_ty_to_primitive(ty: &Ty) -> Result<PrimitiveType, Error> {
             Primitive::U32(n) => Ok(PrimitiveType::Number(Number::from(n.unwrap_or(0)))),
             Primitive::U64(n) => Ok(PrimitiveType::String((n.unwrap_or(0)).to_string())),
             Primitive::U128(n) => Ok(PrimitiveType::String((n.unwrap_or(0)).to_string())),
-            Primitive::USize(n) => Ok(PrimitiveType::Number(Number::from(n.unwrap_or(0)))),
             Primitive::Felt252(f) => {
                 Ok(PrimitiveType::String((f.unwrap_or(Felt::ZERO)).to_string()))
             }
@@ -683,6 +679,9 @@ pub fn map_ty_to_primitive(ty: &Ty) -> Result<PrimitiveType, Error> {
             }
             Primitive::ContractAddress(c) => {
                 Ok(PrimitiveType::String((c.unwrap_or(Felt::ZERO)).to_string()))
+            }
+            Primitive::EthAddress(e) => {
+                Ok(PrimitiveType::String((e.unwrap_or(Felt::ZERO)).to_string()))
             }
             Primitive::U256(u256) => {
                 let mut object = IndexMap::new();
@@ -714,7 +713,6 @@ fn map_ty_type(types: &mut IndexMap<String, Vec<Field>>, name: &str, ty: Ty) -> 
             | Primitive::U16(_)
             | Primitive::U32(_)
             | Primitive::U64(_)
-            | Primitive::USize(_)
             | Primitive::U128(_) => Field::SimpleType(SimpleField {
                 name: name.to_string(),
                 r#type: "u128".to_string(),
@@ -738,6 +736,10 @@ fn map_ty_type(types: &mut IndexMap<String, Vec<Field>>, name: &str, ty: Ty) -> 
             Primitive::ContractAddress(_) => Field::SimpleType(SimpleField {
                 name: name.to_string(),
                 r#type: "ContractAddress".to_string(),
+            }),
+            Primitive::EthAddress(_) => Field::SimpleType(SimpleField {
+                name: name.to_string(),
+                r#type: "EthAddress".to_string(),
             }),
         },
         Ty::Array(array) => {
