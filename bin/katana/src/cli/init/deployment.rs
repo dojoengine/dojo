@@ -3,7 +3,6 @@ use std::sync::Arc;
 
 use anyhow::{anyhow, Result};
 use cainome::cairo_serde;
-use cainome::rs::abigen;
 use dojo_utils::{TransactionWaiter, TransactionWaitingError};
 use katana_primitives::class::{
     CompiledClassHash, ComputeClassHashError, ContractClass, ContractClassCompilationError,
@@ -11,6 +10,7 @@ use katana_primitives::class::{
 };
 use katana_primitives::{felt, ContractAddress, Felt};
 use katana_rpc_types::class::RpcContractClass;
+use piltover::{AppchainContract, AppchainContractReader, ProgramInfo};
 use spinoff::{spinners, Color, Spinner};
 use starknet::accounts::{Account, AccountError, ConnectedAccount, SingleOwnerAccount};
 use starknet::contract::ContractFactory;
@@ -26,64 +26,11 @@ use tracing::trace;
 type RpcProvider = Arc<JsonRpcClient<HttpTransport>>;
 type InitializerAccount = SingleOwnerAccount<RpcProvider, LocalWallet>;
 
-#[rustfmt::skip]
-abigen!(
-    AppchainContract,
-    [
-      {
-        "type": "function",
-        "name": "set_program_info",
-        "inputs": [
-          {
-            "name": "program_hash",
-            "type": "core::Felt"
-          },
-          {
-            "name": "config_hash",
-            "type": "core::Felt"
-          }
-        ],
-        "outputs": [],
-        "state_mutability": "external"
-      },
-      {
-        "type": "function",
-        "name": "set_facts_registry",
-        "inputs": [
-          {
-            "name": "address",
-            "type": "core::starknet::contract_address::ContractAddress"
-          }
-        ],
-        "outputs": [],
-        "state_mutability": "external"
-      },
-      {
-        "type": "function",
-        "name": "get_facts_registry",
-        "inputs": [],
-        "outputs": [
-          {
-            "type": "core::starknet::contract_address::ContractAddress"
-          }
-        ],
-        "state_mutability": "view"
-      },
-      {
-        "type": "function",
-        "name": "get_program_info",
-        "inputs": [],
-        "outputs": [
-          {
-            "type": "(core::Felt, core::Felt)"
-          }
-        ],
-        "state_mutability": "view"
-      }
-    ]
-);
+const SNOS_PROGRAM_HASH: Felt =
+    felt!("0x5ab580b04e3532b6b18f81cfa654a05e29dd8e2352d88df1e765a84072db07");
 
-const PROGRAM_HASH: Felt =
+// TODO: to replace with actual value.
+const LAYOUT_BRIDGE_PROGRAM_HASH: Felt =
     felt!("0x5ab580b04e3532b6b18f81cfa654a05e29dd8e2352d88df1e765a84072db07");
 
 /// The contract address that handles fact verification.
@@ -188,8 +135,14 @@ pub async fn deploy_settlement_contract(
 
         sp.update_text("Setting program info...");
 
+        let program_info = ProgramInfo {
+            program_hash: LAYOUT_BRIDGE_PROGRAM_HASH,
+            config_hash,
+            snos_program_hash: SNOS_PROGRAM_HASH,
+        };
+
         let res = appchain
-            .set_program_info(&PROGRAM_HASH, &config_hash)
+            .set_program_info(&program_info)
             .send()
             .await
             .inspect(|res| {
@@ -252,19 +205,26 @@ pub async fn check_program_info(
     let (program_info_res, facts_registry_res) =
         tokio::join!(appchain.get_program_info().call(), appchain.get_facts_registry().call());
 
-    let (actual_program_hash, actual_config_hash) = program_info_res?;
+    let actual_program_info = program_info_res?;
     let facts_registry = facts_registry_res?;
 
-    if actual_program_hash != PROGRAM_HASH {
+    if actual_program_info.program_hash != LAYOUT_BRIDGE_PROGRAM_HASH {
         return Err(ContractInitError::InvalidProgramHash {
-            actual: actual_program_hash,
-            expected: PROGRAM_HASH,
+            actual: actual_program_info.program_hash,
+            expected: LAYOUT_BRIDGE_PROGRAM_HASH,
         });
     }
 
-    if actual_config_hash != config_hash {
+    if actual_program_info.snos_program_hash != SNOS_PROGRAM_HASH {
+        return Err(ContractInitError::InvalidSnosProgramHash {
+            actual: actual_program_info.snos_program_hash,
+            expected: SNOS_PROGRAM_HASH,
+        });
+    }
+
+    if actual_program_info.config_hash != config_hash {
         return Err(ContractInitError::InvalidConfigHash {
-            actual: actual_config_hash,
+            actual: actual_program_info.config_hash,
             expected: config_hash,
         });
     }
@@ -296,7 +256,14 @@ pub enum ContractInitError {
     )]
     InvalidProgramHash { expected: Felt, actual: Felt },
 
-    #[error("invalid program info: config hash mismatch - expected {expected:#x}, got {actual:#x}")]
+    #[error(
+        "invalid program info: snos program hash mismatch - expected {expected:#x}, got {actual:#x}"
+    )]
+    InvalidSnosProgramHash { expected: Felt, actual: Felt },
+
+    #[error(
+        "invalid program info: config hash mismatch - expected {expected:#x}, got {actual:#x}"
+    )]
     InvalidConfigHash { expected: Felt, actual: Felt },
 
     #[error("invalid program state: fact registry mismatch - expected {expected:}, got {actual}")]
