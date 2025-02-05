@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1738776637287,
+  "lastUpdate": 1738776760621,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -50179,6 +50179,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 11697556550,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mijailovicmarija@hotmail.com",
+            "name": "Marija Mijailović",
+            "username": "marijamijailovic"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "870087b567d05bcac23b0f34c2d5b26d583fefbd",
+          "message": "feat(sozo-walnut): remove sensitive data from dojo configuration file (#2978)\n\n* Added message to prevent user from exspose their private key during verification\r\n\r\n* Verification propmt message lint fix\r\n\r\n* Remove env section from dojo_*.toml before upload it",
+          "timestamp": "2025-02-05T17:14:30Z",
+          "tree_id": "298999bf5356dbf5df64639553623d6a87b0d7ce",
+          "url": "https://github.com/dojoengine/dojo/commit/870087b567d05bcac23b0f34c2d5b26d583fefbd"
+        },
+        "date": 1738776758043,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2546082,
+            "range": "± 40527",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8763475,
+            "range": "± 631592",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2614957656,
+            "range": "± 255809876",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 8505850,
+            "range": "± 749351",
             "unit": "ns/iter"
           }
         ]
