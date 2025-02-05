@@ -119,6 +119,7 @@ impl RpcServer {
             .timeout(Duration::from_secs(20));
 
         let builder = ServerBuilder::new()
+            .max_response_body_size(100_000_000)
             .set_middleware(middleware)
             .set_host_filtering(AllowHosts::Any)
             .max_connections(self.max_connections);

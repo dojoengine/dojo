@@ -24,8 +24,7 @@ comfy-table = "7.1.1"
 dojo-utils.workspace = true
 inquire = "0.7.5"
 lazy_static.workspace = true
-#piltover = { git = "https://github.com/keep-starknet-strange/piltover.git", rev = "d98b901dd9a306224e2c084a5f21b3ed6c93e711" }
-piltover = { path = "/Users/glihm/cgg/piltover/piltover" }
+piltover = { git = "https://github.com/keep-starknet-strange/piltover.git", rev = "71253c1" }
 rand.workspace = true
 shellexpand = "3.1.0"
 spinoff.workspace = true
