@@ -177,4 +177,20 @@ lazy_static! {
         (Name::new("imagePath"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
     ]);
 
+<<<<<<< Updated upstream
+=======
+    pub static ref CONTROLLER_MAPPING: TypeMapping = IndexMap::from([
+        (Name::new("id"), TypeData::Simple(TypeRef::named(TypeRef::ID))),
+        (Name::new("username"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
+        (Name::new("address"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
+        (
+            Name::new("deployedAt"),
+            TypeData::Simple(TypeRef::named_nn(GraphqlType::DateTime.to_string())),
+        ),
+    ]);
+
+    pub static ref EMPTY_MAPPING: TypeMapping = IndexMap::from([
+        (Name::new("id"), TypeData::Simple(TypeRef::named(TypeRef::ID))),
+    ]);
+>>>>>>> Stashed changes
 }
