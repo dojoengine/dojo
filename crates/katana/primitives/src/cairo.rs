@@ -179,7 +179,7 @@ mod tests {
     use assert_matches::assert_matches;
 
     use super::ShortString;
-    use crate::cairo::ShortStringFromFeltError;
+    use crate::cairo::{ShortStringFromFeltError, ShortStringTryFromStrError};
     use crate::Felt;
 
     #[test]
@@ -191,14 +191,15 @@ mod tests {
     }
 
     #[test]
-    fn try_from_valid_str() {
+    fn try_from_str() {
         let s = ShortString::from_str("hello").unwrap();
         assert_eq!(s.as_str(), "hello");
         assert_eq!(s.len(), 5);
-    }
 
-    #[test]
-    fn try_from_invalid_str_too_long() {
+        let s = "a".repeat(31);
+        let short = ShortString::from_str(&s).unwrap();
+        assert_eq!(short.len(), 31);
+
         let long_str = "a".repeat(32);
         assert!(ShortString::from_str(long_str.as_str()).is_err());
     }
@@ -275,6 +276,14 @@ mod tests {
             ShortString::try_from(felt),
             Err(ShortStringFromFeltError::UnexpectedNullTerminator)
         ));
+    }
+
+    #[test]
+    fn try_from_non_ascii_str() {
+        assert_matches!(
+            ShortString::from_str("café"),
+            Err(ShortStringTryFromStrError::InvalidAsciiString)
+        );
     }
 
     #[cfg(feature = "arbitrary")]
