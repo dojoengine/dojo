@@ -18,7 +18,7 @@ use torii_sqlite::types::Token;
 use tracing::{error, trace};
 
 use crate::proto;
-use crate::proto::world::{SubscribeTokenBalancesResponse, SubscribeTokensResponse};
+use crate::proto::world::SubscribeTokensResponse;
 
 pub(crate) const LOG_TARGET: &str = "torii::grpc::server::subscriptions::balance";
 
@@ -28,7 +28,7 @@ pub struct TokenSubscriber {
     /// If empty, subscriber receives updates for all contracts
     pub contract_addresses: HashSet<Felt>,
     /// The channel to send the response back to the subscriber.
-    pub sender: Sender<Result<SubscribeTokenBalancesResponse, tonic::Status>>,
+    pub sender: Sender<Result<SubscribeTokensResponse, tonic::Status>>,
 }
 
 #[derive(Debug, Default)]
@@ -40,14 +40,12 @@ impl TokenManager {
     pub async fn add_subscriber(
         &self,
         contract_addresses: Vec<Felt>,
-    ) -> Result<Receiver<Result<SubscribeTokenBalancesResponse, tonic::Status>>, Error> {
+    ) -> Result<Receiver<Result<SubscribeTokensResponse, tonic::Status>>, Error> {
         let subscription_id = rand::thread_rng().gen::<u64>();
         let (sender, receiver) = channel(1);
 
         // Send initial empty response
-        let _ = sender
-            .send(Ok(SubscribeTokenBalancesResponse { subscription_id, balance: None }))
-            .await;
+        let _ = sender.send(Ok(SubscribeTokensResponse { token: None })).await;
 
         self.subscribers.write().await.insert(
             subscription_id,
@@ -113,15 +111,12 @@ impl Service {
         }
     }
 
-    async fn process_balance_update(
-        subs: &Arc<TokenManager>,
-        balance: &Token,
-    ) -> Result<(), Error> {
+    async fn process_balance_update(subs: &Arc<TokenManager>, token: &Token) -> Result<(), Error> {
         let mut closed_stream = Vec::new();
 
         for (idx, sub) in subs.subscribers.read().await.iter() {
             let contract_address =
-                Felt::from_str(&balance.contract_address).map_err(ParseError::FromStr)?;
+                Felt::from_str(&token.contract_address).map_err(ParseError::FromStr)?;
 
             // Skip if contract address filter doesn't match
             if !sub.contract_addresses.is_empty()
@@ -132,12 +127,12 @@ impl Service {
 
             let resp = SubscribeTokensResponse {
                 token: Some(proto::types::Token {
-                    id: balance.id.clone(),
-                    contract_address: balance.contract_address.clone(),
-                    name: balance.name.clone(),
-                    symbol: balance.symbol.clone(),
-                    decimals: balance.decimals,
-                    metadata: balance.metadata.clone(),
+                    token_id: token.id.clone(),
+                    contract_address: token.contract_address.clone(),
+                    name: token.name.clone(),
+                    symbol: token.symbol.clone(),
+                    decimals: token.decimals as u32,
+                    metadata: token.metadata.clone(),
                 }),
             };
 
