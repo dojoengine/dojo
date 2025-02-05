@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1738779360642,
+  "lastUpdate": 1738779542912,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -50305,6 +50305,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 7936898,
             "range": "± 148915",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1d2381ca72291afe6c7601a5de011da4f59faf3d",
+          "message": "feat(torii): add eth address to ty and remove usize (#2989)\n\n* feat(torii): add eth address to ty\n\n* update proto schema\n\n* sozo",
+          "timestamp": "2025-02-05T12:02:22-06:00",
+          "tree_id": "af1f535d4c1b359088e5320fee661f9b62eba153",
+          "url": "https://github.com/dojoengine/dojo/commit/1d2381ca72291afe6c7601a5de011da4f59faf3d"
+        },
+        "date": 1738779539871,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 11891037390,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
