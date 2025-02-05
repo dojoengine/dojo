@@ -184,8 +184,9 @@ impl WorldLocal {
                             "Classic Starknet contract."
                         );
 
-                        // The last AbiEntry of type `event` and kind `enum` is always the main Event enum
-                        // of the contract. So, we find it and use its name to get the contract name.
+                        // The last AbiEntry of type `event` and kind `enum` is always the main
+                        // Event enum of the contract. So, we find it and
+                        // use its name to get the contract name.
                         let mut contract_name = None;
 
                         for entry in abi.iter().rev() {
