@@ -6,7 +6,7 @@ use strum::IntoEnumIterator;
 use strum_macros::{AsRefStr, Display, EnumIter, EnumString};
 
 // ValueMapping is used to map the values of the fields of a model and TypeMapping their
-// correpsonding types. Both are used at runtime to dynamically build/resolve graphql
+// corresponding types. Both are used at runtime to dynamically build/resolve graphql
 // queries/schema. `Value` from async-graphql supports nesting, but TypeRef does not. TypeData is
 // used to support nesting.
 pub type ValueMapping = IndexMap<Name, Value>;

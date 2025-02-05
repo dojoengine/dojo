@@ -45,6 +45,9 @@ pub enum Error {
     #[error("Invalid file name")]
     InvalidFileName,
 
+    #[error("Failed to serialize toml: {0}")]
+    TomlSerializationError(#[from] toml::ser::Error),
+
     #[error("Namespace prefix not found in file name")]
     NamespacePrefixNotFound,
 
