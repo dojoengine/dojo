@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1738616821459,
+  "lastUpdate": 1738769659013,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -50071,6 +50071,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 9185292,
             "range": "± 838802",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d875ec8c4c1f90e962f8507877a49427cb010891",
+          "message": "feat(katana): Cairo short string (#2991)\n\nDefine Cairo short string type book.cairo-lang.org/ch02-02-data-types.html#short-strings",
+          "timestamp": "2025-02-05T23:18:00+08:00",
+          "tree_id": "d3090c8f74d7d4486ae9ce9b7fab20b15aae31fa",
+          "url": "https://github.com/dojoengine/dojo/commit/d875ec8c4c1f90e962f8507877a49427cb010891"
+        },
+        "date": 1738769656104,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 11823528882,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
