@@ -186,3 +186,9 @@ enum OrderDirection {
     ASC = 0;
     DESC = 1;
 }
+
+message Controller {
+    bytes address = 1;
+    string username = 2;
+    uint64 deployed_at_timestamp = 3;
+}
