@@ -1,4 +1,5 @@
 pub mod connection;
+pub mod controller;
 pub mod entity;
 pub mod erc;
 pub mod event;
@@ -8,7 +9,6 @@ pub mod metadata;
 pub mod model;
 pub mod model_data;
 pub mod transaction;
-pub mod controller;
 
 use async_graphql::dynamic::{
     Enum, Field, FieldFuture, FieldValue, InputObject, InputValue, Object, SubscriptionField,

@@ -1,9 +1,7 @@
 use async_graphql::dynamic::Field;
 
 use super::{BasicObject, ResolvableObject, TypeMapping};
-use crate::constants::{
-    CONTROLLER_NAMES, CONTROLLER_TABLE, CONTROLLER_TYPE_NAME, ID_COLUMN,
-};
+use crate::constants::{CONTROLLER_NAMES, CONTROLLER_TABLE, CONTROLLER_TYPE_NAME, ID_COLUMN};
 use crate::mapping::CONTROLLER_MAPPING;
 use crate::object::{resolve_many, resolve_one};
 
@@ -44,4 +42,4 @@ impl ResolvableObject for ControllerObject {
 
         vec![resolve_one, resolve_many]
     }
-} 
+}
