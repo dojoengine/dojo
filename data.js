@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1738795646435,
+  "lastUpdate": 1738795712652,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -50491,6 +50491,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 12236847051,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "57766083+emarc99@users.noreply.github.com",
+            "name": "Aroso Emmanuel  Adedeji",
+            "username": "emarc99"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9c5d099ca5028dfd69632e68e97bd5266ea88a6c",
+          "message": "fix(sozo): model get not using prefixes (#2867)\n\n* fix(sozo): model get not using prefixes\r\n\r\n* rewrote model get key parser\r\n\r\n* handle the potential empty felts\r\n\r\n* rust fmt\r\n\r\n* rust fmt\r\n\r\n* rust fmt\r\n\r\n* add support for all prfixes\r\n\r\n* updated help text of model get keys to show supported prefixes\r\n\r\n* remove trimming of quotes\r\n\r\n* refactor to use new calldata\r\n\r\n* add tests for quotes management in calldata decoder\r\n\r\n* update test db and policies\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2025-02-05T22:30:41Z",
+          "tree_id": "bc9c0aaf467684a0436c3b3967274d701b70a695",
+          "url": "https://github.com/dojoengine/dojo/commit/9c5d099ca5028dfd69632e68e97bd5266ea88a6c"
+        },
+        "date": 1738795709529,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2501106,
+            "range": "± 54924",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8000951,
+            "range": "± 82825",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2534582455,
+            "range": "± 237075883",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 7931693,
+            "range": "± 102639",
             "unit": "ns/iter"
           }
         ]
