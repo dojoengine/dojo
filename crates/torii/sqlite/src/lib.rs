@@ -1042,7 +1042,7 @@ fn add_columns_recursive(
                             && p.to_sql_type() == SqlType::Text
                         {
                             // Convert integer to hex string with '0x' prefix and proper padding
-                            format!("'0x' || substr('0000000000000000000000000000000000000000000000000000000000000000' || hex([{column_name}]), -64)")
+                            format!("printf('%064x', [{column_name}])")
                         } else {
                             format!("[{column_name}]")
                         };
