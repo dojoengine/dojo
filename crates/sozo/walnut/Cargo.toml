@@ -7,7 +7,9 @@ version.workspace = true
 
 [dependencies]
 anyhow.workspace = true
+clap.workspace = true
 console.workspace = true
+dojo-utils.workspace = true
 reqwest.workspace = true
 scarb.workspace = true
 scarb-ui.workspace = true
@@ -15,11 +17,10 @@ serde.workspace = true
 serde_json.workspace = true
 starknet.workspace = true
 thiserror.workspace = true
+toml.workspace = true
 url.workspace = true
 urlencoding = "2.1.3"
 walkdir.workspace = true
-dojo-utils.workspace = true
-clap.workspace = true
 
 [dev-dependencies]
 starknet.workspace = true

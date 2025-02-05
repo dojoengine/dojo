@@ -13433,6 +13433,7 @@ dependencies = [
  "serde_json",
  "starknet",
  "thiserror 1.0.63",
+ "toml 0.8.19",
  "url",
  "urlencoding",
  "walkdir",

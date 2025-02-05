@@ -86,11 +86,41 @@ fn collect_source_code(root_dir: &Path) -> Result<Value, Error> {
                         // Safe to unwrap here because we're iterating over files within root_dir,
                         // so path will always have root_dir as a prefix
                         let relative_path = path.strip_prefix(root_dir).unwrap();
-                        let file_content = std::fs::read_to_string(path)?;
-                        file_data.insert(
-                            relative_path.to_string_lossy().into_owned(),
-                            serde_json::Value::String(file_content),
-                        );
+                        let mut file_content = std::fs::read_to_string(path)?;
+
+                        // Check if the file is a TOML file and its name starts with "dojo_"
+                        if extension == "toml"
+                            && path
+                                .file_stem()
+                                .and_then(OsStr::to_str)
+                                .map_or(false, |name| name.starts_with("dojo_"))
+                        {
+                            if let Ok(mut toml_data) = file_content.parse::<toml::Value>() {
+                                if let Some(table) = toml_data.as_table_mut() {
+                                    // Remove the "env" table if it exists
+                                    table.remove("env");
+
+                                    // Serialize the modified TOML data back into a string, and
+                                    // handle any serialization error
+                                    file_content = toml::to_string(&toml_data)
+                                        .map_err(Error::TomlSerializationError)?;
+
+                                    // Insert the updated content into file_data, using the relative
+                                    // path as the key
+                                    file_data.insert(
+                                        relative_path.to_string_lossy().into_owned(),
+                                        Value::String(file_content),
+                                    );
+                                }
+                            }
+                        } else {
+                            // If the file is not a "dojo_" prefixed TOML file, just insert the
+                            // original content
+                            file_data.insert(
+                                relative_path.to_string_lossy().into_owned(),
+                                Value::String(file_content),
+                            );
+                        }
                     }
                 }
             }
