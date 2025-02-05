@@ -82,7 +82,8 @@ impl CalldataDecoder for U256CalldataDecoder {
 struct StrCalldataDecoder;
 impl CalldataDecoder for StrCalldataDecoder {
     fn decode(&self, input: &str) -> DecoderResult<Vec<Felt>> {
-        let ba = ByteArray::from_string(input)?;
+        let no_quotes = input.trim_start_matches('"').trim_end_matches('"');
+        let ba = ByteArray::from_string(no_quotes)?;
         Ok(ByteArray::cairo_serialize(&ba))
     }
 }
@@ -91,7 +92,8 @@ impl CalldataDecoder for StrCalldataDecoder {
 struct ShortStrCalldataDecoder;
 impl CalldataDecoder for ShortStrCalldataDecoder {
     fn decode(&self, input: &str) -> DecoderResult<Vec<Felt>> {
-        Ok(vec![cairo_short_string_to_felt(input)?])
+        let no_quotes = input.trim_start_matches('"').trim_end_matches('"');
+        Ok(vec![cairo_short_string_to_felt(no_quotes)?])
     }
 }
 
@@ -298,6 +300,39 @@ mod tests {
             cairo_short_string_to_felt("ring longer than 31 chars").unwrap(),
             // Remaining word's length.
             25_u128.into(),
+        ];
+
+        let result = decode_calldata(&input).unwrap();
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_str_decoder_long_with_quotes() {
+        let input =
+            vec_of_strings!["str:\"hello with spaces and a long string longer than 31 chars\""];
+
+        let expected = vec![
+            // Length of the data.
+            1_u128.into(),
+            // Data element.
+            cairo_short_string_to_felt("hello with spaces and a long st").unwrap(),
+            // Remaining word.
+            cairo_short_string_to_felt("ring longer than 31 chars").unwrap(),
+            // Remaining word's length.
+            25_u128.into(),
+        ];
+
+        let result = decode_calldata(&input).unwrap();
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_str_decoder_inner_quotes() {
+        let input = vec_of_strings!["str:\"hello\" there\""];
+        let expected = vec![
+            0_u128.into(),
+            cairo_short_string_to_felt("hello\" there").unwrap(),
+            12_u128.into(),
         ];
 
         let result = decode_calldata(&input).unwrap();
