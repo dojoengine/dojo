@@ -1038,31 +1038,23 @@ fn add_columns_recursive(
 
             if let Some(upgrade_diff) = upgrade_diff {
                 if let Some(old_primitive) = upgrade_diff.as_primitive() {
-                    if old_primitive.can_upgrade_to(p) {
-                        // For upgrades to larger numeric types, convert to hex string padded to 64
-                        // chars
-                        let sql_value = if old_primitive.to_sql_type() == SqlType::Integer
-                            && p.to_sql_type() == SqlType::Text
-                        {
-                            // Convert integer to hex string with '0x' prefix and proper padding
-                            format!("printf('%064x', [{column_name}])")
-                        } else {
-                            format!("[{column_name}]")
-                        };
-
-                        modify_column(
-                            alter_table_queries,
-                            &column_name,
-                            p.to_sql_type().as_ref(),
-                            &sql_value,
-                        );
+                    // For upgrades to larger numeric types, convert to hex string padded to 64
+                    // chars
+                    let sql_value = if old_primitive.to_sql_type() == SqlType::Integer
+                        && p.to_sql_type() == SqlType::Text
+                    {
+                        // Convert integer to hex string with '0x' prefix and proper padding
+                        format!("printf('%064x', [{column_name}])")
                     } else {
-                        return Err(anyhow::anyhow!(
-                            "Invalid primitive type upgrade from {:?} to {:?}",
-                            old_primitive,
-                            p
-                        ));
-                    }
+                        format!("[{column_name}]")
+                    };
+
+                    modify_column(
+                        alter_table_queries,
+                        &column_name,
+                        p.to_sql_type().as_ref(),
+                        &sql_value,
+                    );
                 }
             } else {
                 // New column
