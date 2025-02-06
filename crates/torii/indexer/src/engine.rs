@@ -28,9 +28,9 @@ use torii_sqlite::{Cursors, Sql};
 use tracing::{debug, error, info, trace, warn};
 
 use crate::constants::LOG_TARGET;
+use crate::processors::controller::ControllerProcessor;
 use crate::processors::erc1155_transfer_batch::Erc1155TransferBatchProcessor;
 use crate::processors::erc1155_transfer_single::Erc1155TransferSingleProcessor;
-use crate::processors::controller::ControllerProcessor;
 use crate::processors::erc20_legacy_transfer::Erc20LegacyTransferProcessor;
 use crate::processors::erc20_transfer::Erc20TransferProcessor;
 use crate::processors::erc721_legacy_transfer::Erc721LegacyTransferProcessor;
