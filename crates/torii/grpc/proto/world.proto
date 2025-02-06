@@ -54,6 +54,17 @@ service World {
 
     // Retrieve token balances
     rpc RetrieveTokenBalances (RetrieveTokenBalancesRequest) returns (RetrieveTokenBalancesResponse);
+
+    // Retrieve controllers
+    rpc RetrieveControllers (RetrieveControllersRequest) returns (RetrieveControllersResponse);
+}
+
+message RetrieveControllersRequest {
+    repeated bytes contract_addresses = 1;
+}
+
+message RetrieveControllersResponse {
+    repeated types.Controller controllers = 1;
 }
 
 // A request to update a token balance subscription
