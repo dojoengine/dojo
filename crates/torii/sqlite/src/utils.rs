@@ -7,6 +7,7 @@ use anyhow::Result;
 use chrono::{DateTime, Utc};
 use futures_util::TryStreamExt;
 use ipfs_api_backend_hyper::{IpfsApi, IpfsClient, TryFromUri};
+use sqlx::error::BoxDynError;
 use starknet::core::types::U256;
 use starknet_crypto::Felt;
 use tokio_util::bytes::Bytes;
@@ -16,6 +17,13 @@ use crate::constants::{
     IPFS_CLIENT_MAX_RETRY, IPFS_CLIENT_PASSWORD, IPFS_CLIENT_URL, IPFS_CLIENT_USERNAME,
     SQL_FELT_DELIMITER,
 };
+
+pub(crate) fn map_column_decode_error(column_name: &str, error: BoxDynError) -> sqlx::Error {
+    sqlx::Error::ColumnDecode {
+        index: column_name.to_string(),
+        source: error,
+    }
+}
 
 pub fn must_utc_datetime_from_timestamp(timestamp: u64) -> DateTime<Utc> {
     let naive_dt = DateTime::from_timestamp(timestamp as i64, 0)

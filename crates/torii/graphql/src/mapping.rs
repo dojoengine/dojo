@@ -51,10 +51,10 @@ lazy_static! {
             Name::new("contractAddress"),
             TypeData::Simple(TypeRef::named(Primitive::Felt252(None).to_string())),
         ),
-        (
-            Name::new("transactionHash"),
-            TypeData::Simple(TypeRef::named(Primitive::Felt252(None).to_string())),
-        ),
+        // (
+        //     Name::new("transactionHash"),
+        //     TypeData::Simple(TypeRef::named(Primitive::Felt252(None).to_string())),
+        // ),
         (
             Name::new("executedAt"),
             TypeData::Simple(TypeRef::named(GraphqlType::DateTime.to_string())),

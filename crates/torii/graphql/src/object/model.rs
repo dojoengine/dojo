@@ -1,8 +1,11 @@
+use std::str::FromStr;
+
 use async_graphql::dynamic::indexmap::IndexMap;
 use async_graphql::dynamic::{
     Enum, Field, InputObject, InputValue, SubscriptionField, SubscriptionFieldFuture, TypeRef,
 };
 use async_graphql::{Name, Value};
+use starknet_crypto::Felt;
 use tokio_stream::StreamExt;
 use torii_sqlite::simple_broker::SimpleBroker;
 use torii_sqlite::types::Model;
@@ -80,7 +83,7 @@ impl ResolvableObject for ModelObject {
                 {
                     SubscriptionFieldFuture::new(async move {
                         let id = match ctx.args.get("id") {
-                            Some(id) => Some(id.string()?.to_string()),
+                            Some(id) => Some(Felt::from_str(&id.string()?.to_string())?),
                             None => None,
                         };
                         // if id is None, then subscribe to all models
@@ -104,12 +107,12 @@ impl ResolvableObject for ModelObject {
 impl ModelObject {
     pub fn value_mapping(model: Model) -> ValueMapping {
         IndexMap::from([
-            (Name::new("id"), Value::from(model.id)),
+            (Name::new("id"), Value::from(format!("{:#x}", model.id))),
             (Name::new("name"), Value::from(model.name)),
             (Name::new("namespace"), Value::from(model.namespace)),
-            (Name::new("classHash"), Value::from(model.class_hash)),
-            (Name::new("contractAddress"), Value::from(model.contract_address)),
-            (Name::new("transactionHash"), Value::from(model.transaction_hash)),
+            (Name::new("classHash"), Value::from(format!("{:#x}", model.class_hash))),
+            (Name::new("contractAddress"), Value::from(format!("{:#x}", model.contract_address))),
+            // (Name::new("transactionHash"), Value::from(format!("{:#x}", model.transaction_hash))),
             (
                 Name::new("createdAt"),
                 Value::from(model.created_at.format(DATETIME_FORMAT).to_string()),

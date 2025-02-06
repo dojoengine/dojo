@@ -1,6 +1,9 @@
+use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 
+use dojo_types::naming::compute_selector_from_tag;
+use dojo_world::contracts::abigen::model::Layout;
 use futures::channel::mpsc::{UnboundedReceiver, UnboundedSender};
 use futures::channel::oneshot;
 use futures::lock::Mutex;
@@ -12,13 +15,17 @@ use libp2p::swarm::{NetworkBehaviour, Swarm, SwarmEvent};
 #[cfg(not(target_arch = "wasm32"))]
 use libp2p::tcp;
 use libp2p::{identify, identity, noise, ping, yamux, Multiaddr, PeerId};
+use starknet::core::types::Event;
+use starknet_crypto::Felt;
+use torii_sqlite::executor::QueryMessage;
+use torii_sqlite::Sql;
 use tracing::info;
 
 pub mod events;
 use crate::client::events::ClientEvent;
 use crate::constants;
 use crate::error::Error;
-use crate::types::Message;
+use crate::types::{Message, Update};
 
 pub(crate) const LOG_TARGET: &str = "torii::relay::client";
 
@@ -39,6 +46,7 @@ pub struct RelayClient {
 #[allow(missing_debug_implementations)]
 pub struct EventLoop {
     swarm: Swarm<Behaviour>,
+    sql: Option<Sql>,
     command_receiver: UnboundedReceiver<Command>,
 }
 
@@ -49,7 +57,7 @@ enum Command {
 
 impl RelayClient {
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn new(relay_addr: String) -> Result<Self, Error> {
+    pub fn new(relay_addr: String, replica_db: Option<Sql>) -> Result<Self, Error> {
         let local_key = identity::Keypair::generate_ed25519();
         let peer_id = PeerId::from(local_key.public());
 
@@ -87,18 +95,30 @@ impl RelayClient {
             })
             .build();
 
+        if replica_db.is_some() {
+            swarm
+                .behaviour_mut()
+                .gossipsub
+                .subscribe(&IdentTopic::new(constants::UPDATE_MESSAGING_TOPIC))?;
+        }
+
         info!(target: LOG_TARGET, addr = %relay_addr, "Dialing relay.");
         swarm.dial(relay_addr.parse::<Multiaddr>()?)?;
 
         let (command_sender, command_receiver) = futures::channel::mpsc::unbounded();
         Ok(Self {
             command_sender: CommandSender::new(command_sender),
-            event_loop: Arc::new(Mutex::new(EventLoop { swarm, command_receiver })),
+            event_loop: Arc::new(Mutex::new(EventLoop {
+                swarm,
+                command_receiver,
+                sql: replica_db,
+            })),
         })
     }
 
     #[cfg(target_arch = "wasm32")]
-    pub fn new(relay_addr: String) -> Result<Self, Error> {
+    // We are never gonna be a replica in the browser.
+    pub fn new(relay_addr: String, _replica_db: Option<Sql>) -> Result<Self, Error> {
         let local_key = identity::Keypair::generate_ed25519();
         let peer_id = PeerId::from(local_key.public());
 
@@ -195,6 +215,82 @@ impl EventLoop {
         }
     }
 
+    async fn handle_update(&mut self, update: Update) {
+        // TODO: Implement update handling.
+        info!(target: LOG_TARGET, update = ?update, "Received update.");
+        // We can safely unwrap because we subscribe to updates only if replica_db is provided.
+        let sql = self.sql.as_mut().unwrap();
+
+        match update {
+            Update::Head(cursor) => {
+                sql.set_head(
+                    cursor.head as u64,
+                    cursor.last_block_timestamp as u64,
+                    0,
+                    cursor.contract_address,
+                )
+                .await
+                .unwrap();
+            }
+            Update::Model(model) => {
+                sql.register_model(
+                    &model.namespace,
+                    &model.schema,
+                    model.layout,
+                    model.class_hash,
+                    model.contract_address,
+                    model.packed_size,
+                    model.unpacked_size,
+                    model.executed_at.timestamp() as u64,
+                    None,
+                )
+                .await
+                .unwrap();
+            }
+            Update::Entity(entity) => {
+                let id = Felt::from_str(&entity.id).unwrap();
+                let model = entity.updated_model.unwrap();
+                let model_id = compute_selector_from_tag(&model.name());
+                if entity.deleted {
+                    sql.delete_entity(
+                        id,
+                        model_id,
+                        model,
+                        &entity.event_id,
+                        entity.executed_at.timestamp() as u64,
+                    )
+                    .await
+                    .unwrap();
+                } else {
+                    sql.set_entity(
+                        model,
+                        &entity.event_id,
+                        entity.executed_at.timestamp() as u64,
+                        id,
+                        model_id,
+                        Some(&entity.keys),
+                    )
+                    .await
+                    .unwrap();
+                }
+            }
+            Update::EventMessage(event_message) => {
+                let model = event_message.updated_model.unwrap();
+                sql.set_event_message(
+                    model,
+                    &event_message.event_id,
+                    event_message.executed_at.timestamp() as u64,
+                    event_message.historical,
+                )
+                .await
+                .unwrap();
+            }
+            Update::Event(event) => {
+                // TODO
+            }
+        }
+    }
+
     pub async fn run(&mut self) {
         let mut is_relay_ready = false;
         let commands_queue = Arc::new(Mutex::new(Vec::new()));
@@ -207,6 +303,11 @@ impl EventLoop {
                 },
                 event = self.swarm.select_next_some() => {
                     match event {
+                        SwarmEvent::Behaviour(ClientEvent::Gossipsub(gossipsub::Event::Message { message, .. })) => {
+                            if let Ok(update) = serde_json::from_slice::<Update>(&message.data) {
+                                self.handle_update(update).await;
+                            }
+                        },
                         SwarmEvent::Behaviour(ClientEvent::Gossipsub(gossipsub::Event::Subscribed { topic, .. })) => {
                             // Handle behaviour events.
                             info!(target: LOG_TARGET, topic = ?topic, "Relay ready. Received subscription confirmation.");
