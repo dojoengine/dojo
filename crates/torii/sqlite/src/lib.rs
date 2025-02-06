@@ -5,6 +5,7 @@ use std::sync::Arc;
 
 use anyhow::{anyhow, Context, Result};
 use dojo_types::naming::get_tag;
+use dojo_types::primitive::SqlType;
 use dojo_types::schema::{Struct, Ty};
 use dojo_world::config::WorldMetadata;
 use dojo_world::contracts::abigen::model::Layout;
@@ -880,15 +881,18 @@ fn add_columns_recursive(
             // 3. Create new column with new type/constraint
             // 4. Copy values back & create new index
             alter_table_queries.push(format!(
-                "CREATE TEMPORARY TABLE tmp_values_{name} AS SELECT internal_id, [{name}] FROM \
+                "CREATE TEMPORARY TABLE [tmp_values_{name}] AS SELECT internal_id, [{name}] FROM \
                  [{table_id}]"
             ));
             alter_table_queries.push(format!("DROP INDEX IF EXISTS [idx_{table_id}_{name}]"));
             alter_table_queries.push(format!("ALTER TABLE [{table_id}] DROP COLUMN [{name}]"));
             alter_table_queries
                 .push(format!("ALTER TABLE [{table_id}] ADD COLUMN [{name}] {sql_type}"));
-            alter_table_queries.push(format!("UPDATE [{table_id}] SET [{name}] = {sql_value}"));
-            alter_table_queries.push(format!("DROP TABLE tmp_values_{name}"));
+            alter_table_queries.push(format!(
+                "UPDATE [{table_id}] SET [{name}] = (SELECT {sql_value} FROM [tmp_values_{name}] \
+                 WHERE [tmp_values_{name}].internal_id = [{table_id}].internal_id)"
+            ));
+            alter_table_queries.push(format!("DROP TABLE [tmp_values_{name}]"));
             alter_table_queries.push(format!(
                 "CREATE INDEX IF NOT EXISTS [idx_{table_id}_{name}] ON [{table_id}] ([{name}]);"
             ));
@@ -1032,7 +1036,30 @@ fn add_columns_recursive(
             let column_name =
                 if column_prefix.is_empty() { "value".to_string() } else { column_prefix };
 
-            add_column(&column_name, p.to_sql_type().as_ref());
+            if let Some(upgrade_diff) = upgrade_diff {
+                if let Some(old_primitive) = upgrade_diff.as_primitive() {
+                    // For upgrades to larger numeric types, convert to hex string padded to 64
+                    // chars
+                    let sql_value = if old_primitive.to_sql_type() == SqlType::Integer
+                        && p.to_sql_type() == SqlType::Text
+                    {
+                        // Convert integer to hex string with '0x' prefix and proper padding
+                        format!("printf('%064x', [{column_name}])")
+                    } else {
+                        format!("[{column_name}]")
+                    };
+
+                    modify_column(
+                        alter_table_queries,
+                        &column_name,
+                        p.to_sql_type().as_ref(),
+                        &sql_value,
+                    );
+                }
+            } else {
+                // New column
+                add_column(&column_name, p.to_sql_type().as_ref());
+            }
         }
     }
 
