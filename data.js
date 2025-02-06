@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1738815308635,
+  "lastUpdate": 1738815340567,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -50724,6 +50724,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 12160234206,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "99d2e60fbe9226dad4ca25a8baccf87f38958b72",
+          "message": "fix(torii-graphql): empty models union workaround (#2994)\n\n* fix(torii-graphql): empty models union workaround\n\n* fix conflict\n\n* fix",
+          "timestamp": "2025-02-06T03:59:23Z",
+          "tree_id": "c7a73ec8121266b0dddabaf8951fba71f9fca13a",
+          "url": "https://github.com/dojoengine/dojo/commit/99d2e60fbe9226dad4ca25a8baccf87f38958b72"
+        },
+        "date": 1738815338274,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 11871353982,
             "range": "± 0",
             "unit": "ns/iter"
           }
