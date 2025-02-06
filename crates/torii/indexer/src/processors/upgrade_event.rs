@@ -94,7 +94,7 @@ where
             world.model_reader(&namespace, &name).await?
         };
         let new_schema = model.schema().await?;
-        let schema_diff = new_schema.diff(&prev_schema);
+        let schema_diff = prev_schema.diff(&new_schema);
         // No changes to the schema. This can happen if torii is re-run with a fresh database.
         // As the register model fetches the latest schema from the chain.
         if schema_diff.is_none() {

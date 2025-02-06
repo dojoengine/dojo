@@ -57,11 +57,11 @@ use crate::proto::types::member_value::ValueType;
 use crate::proto::types::LogicalOperator;
 use crate::proto::world::world_server::WorldServer;
 use crate::proto::world::{
-    RetrieveEntitiesStreamingResponse, RetrieveEventMessagesRequest, RetrieveTokenBalancesRequest,
-    RetrieveTokenBalancesResponse, RetrieveTokensRequest, RetrieveTokensResponse,
-    SubscribeEntitiesRequest, SubscribeEntityResponse, SubscribeEventMessagesRequest,
-    SubscribeEventsResponse, SubscribeIndexerRequest, SubscribeIndexerResponse,
-    SubscribeTokenBalancesResponse, SubscribeTokensResponse,
+    RetrieveControllersRequest, RetrieveControllersResponse, RetrieveEntitiesStreamingResponse,
+    RetrieveEventMessagesRequest, RetrieveTokenBalancesRequest, RetrieveTokenBalancesResponse,
+    RetrieveTokensRequest, RetrieveTokensResponse, SubscribeEntitiesRequest,
+    SubscribeEntityResponse, SubscribeEventMessagesRequest, SubscribeEventsResponse,
+    SubscribeIndexerRequest, SubscribeIndexerResponse, SubscribeTokenBalancesResponse, SubscribeTokensResponse,
     UpdateEventMessagesSubscriptionRequest, UpdateTokenBalancesSubscriptionRequest,
     WorldMetadataRequest, WorldMetadataResponse,
 };
@@ -1057,6 +1057,38 @@ impl DojoWorld {
             .add_subscriber(clause.into_iter().map(|keys| keys.into()).collect())
             .await
     }
+
+    async fn retrieve_controllers(
+        &self,
+        contract_addresses: Vec<Felt>,
+    ) -> Result<proto::world::RetrieveControllersResponse, Error> {
+        let query = if contract_addresses.is_empty() {
+            "SELECT address, username, deployed_at FROM controllers".to_string()
+        } else {
+            format!(
+                "SELECT address, username, deployed_at FROM controllers WHERE address IN ({})",
+                contract_addresses.iter().map(|_| "?".to_string()).collect::<Vec<_>>().join(", ")
+            )
+        };
+
+        let mut db_query = sqlx::query_as::<_, (String, String, DateTime<Utc>)>(&query);
+        for address in &contract_addresses {
+            db_query = db_query.bind(format!("{:#x}", address));
+        }
+
+        let rows = db_query.fetch_all(&self.pool).await?;
+
+        let controllers = rows
+            .into_iter()
+            .map(|(address, username, deployed_at)| proto::types::Controller {
+                address: address.parse::<Felt>().unwrap().to_bytes_be().to_vec(),
+                username,
+                deployed_at_timestamp: deployed_at.timestamp() as u64,
+            })
+            .collect();
+
+        Ok(RetrieveControllersResponse { controllers })
+    }
 }
 
 fn process_event_field(data: &str) -> Result<Vec<Vec<u8>>, Error> {
@@ -1287,6 +1319,23 @@ impl proto::world::world_server::World for DojoWorld {
         })?);
 
         Ok(Response::new(WorldMetadataResponse { metadata }))
+    }
+
+    async fn retrieve_controllers(
+        &self,
+        request: Request<RetrieveControllersRequest>,
+    ) -> Result<Response<RetrieveControllersResponse>, Status> {
+        let RetrieveControllersRequest { contract_addresses } = request.into_inner();
+        let contract_addresses = contract_addresses
+            .iter()
+            .map(|address| Felt::from_bytes_be_slice(address))
+            .collect::<Vec<_>>();
+
+        let controllers = self
+            .retrieve_controllers(contract_addresses)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+        Ok(Response::new(controllers))
     }
 
     async fn retrieve_tokens(
