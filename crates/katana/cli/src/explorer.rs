@@ -1,6 +1,6 @@
 // crates/katana/cli/src/explorer.rs
 use std::path::PathBuf;
-use anyhow::{Context, Result};
+use anyhow::{Result};
 use tiny_http::{Server, Response};
 use std::thread;
 use tracing::info;
@@ -29,9 +29,8 @@ impl ExplorerServer {
         thread::spawn(move || {
             info!(
                 target: "katana",
-                "Explorer server started. addr=http://{}, build_dir={:?}", 
+                "Explorer server started. addr=http://{}", 
                 addr,
-                build_dir
             );
 
             for request in server.incoming_requests() {

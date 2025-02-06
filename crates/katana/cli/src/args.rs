@@ -122,6 +122,22 @@ impl NodeArgs {
         // Initialize logging first
         self.init_logging()?;
 
+        // Finally start the node
+        self.start_node().await
+    }
+
+    async fn start_node(&self) -> Result<()> {
+        // Build the node
+        let config = self.config()?;
+        let node = katana_node::build(config).await.context("failed to build node")?;
+
+        if !self.silent {
+            utils::print_intro(self, &node.backend.chain_spec);
+        }
+
+        // Launch the node
+        let handle = node.launch().await.context("failed to launch node")?;
+
         // Then start the explorer if enabled
         if self.explorer.explorer {
             let build_dir = self.explorer.explorer_build_dir
@@ -144,21 +160,6 @@ impl NodeArgs {
             explorer.start()?;
         }
 
-        // Finally start the node
-        self.start_node().await
-    }
-
-    async fn start_node(&self) -> Result<()> {
-        // Build the node
-        let config = self.config()?;
-        let node = katana_node::build(config).await.context("failed to build node")?;
-
-        if !self.silent {
-            utils::print_intro(self, &node.backend.chain_spec);
-        }
-
-        // Launch the node
-        let handle = node.launch().await.context("failed to launch node")?;
 
         // Wait until an OS signal (ie SIGINT, SIGTERM) is received or the node is shutdown.
         tokio::select! {
@@ -251,7 +252,7 @@ impl NodeArgs {
             // Add explorer URL to CORS origins if explorer is enabled
             if self.explorer.explorer {
                 cors_origins.push(
-                    HeaderValue::from_str("*")
+                    HeaderValue::from_str(&format!("http://127.0.0.1:{}", self.explorer.explorer_port))
                         .context("Failed to create CORS header")?
                 );
             }
