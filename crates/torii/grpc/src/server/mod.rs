@@ -1057,7 +1057,7 @@ impl DojoWorld {
             )
         };
 
-        let mut db_query = sqlx::query_as::<_, (String, String, u64)>(&query);
+        let mut db_query = sqlx::query_as::<_, (String, String, DateTime<Utc>)>(&query);
         for address in &contract_addresses {
             db_query = db_query.bind(format!("{:#x}", address));
         }
@@ -1069,7 +1069,7 @@ impl DojoWorld {
             .map(|(address, username, deployed_at)| proto::types::Controller {
                 address: address.parse::<Felt>().unwrap().to_bytes_be().to_vec(),
                 username,
-                deployed_at_timestamp: deployed_at,
+                deployed_at_timestamp: deployed_at.timestamp() as u64,
             })
             .collect();
 
