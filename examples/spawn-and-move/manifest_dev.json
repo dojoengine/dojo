@@ -2228,7 +2228,7 @@
       "class_hash": "0x43c8ddc01583708bdd17143d24db2b3b7b55fa26a7eff9e47672e46e08fd61d",
       "contract_name": "Bank",
       "instance_name": "Bank",
-      "address": "0x75b34c66e9a5f564aee6f733b5a62efe8b5dfa5cd11911b6dd06cd61964c769",
+      "address": "0x5a60002654a846445dfea12b82adcfb2411d6f8fd829b0f7b30ba3eb5c8dec0",
       "abi": [
         {
           "type": "constructor",
@@ -2255,7 +2255,7 @@
       "class_hash": "0x1c2a30a51500465288c00a56a4d698bdae3c7f7e105f25cb36106db8de128b8",
       "contract_name": "ERC20Token",
       "instance_name": "GoldToken",
-      "address": "0x2c20b165ce91a316026a449d0df8e37d6e73ade9224a265db47060d3ec5536b",
+      "address": "0x3709f11a9cc84325fd5f0a378b920f3ca743532a3f9d752cec4a1fa0984818e",
       "abi": [
         {
           "type": "impl",
@@ -2616,7 +2616,7 @@
       "class_hash": "0x16d53869ac9db1b59669e9e20961af3050659e3314928487102597a3036dc27",
       "contract_name": "Saloon",
       "instance_name": "Saloon",
-      "address": "0x6a3dff7dd2717304579c3453b127c449f0ca7bb10a734346a04d0531e6fc597",
+      "address": "0x11454706a2026b16c2f4a414da698b1251ef69f3bd9c7097198c73b1816087d",
       "abi": [
         {
           "type": "constructor",
@@ -2636,7 +2636,7 @@
       "class_hash": "0x1c2a30a51500465288c00a56a4d698bdae3c7f7e105f25cb36106db8de128b8",
       "contract_name": "ERC20Token",
       "instance_name": "WoodToken",
-      "address": "0x1cbfe38718eb99f31af7b396252c85011bd1d592ca0d356575f36fb1985ef1",
+      "address": "0x6daaff5d03e3cc24854228be79bd93de1af13c5bf36fddd1bce2b84f8bc6396",
       "abi": [
         {
           "type": "impl",

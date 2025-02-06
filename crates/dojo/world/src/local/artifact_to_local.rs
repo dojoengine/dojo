@@ -1,18 +1,18 @@
 //! Converts Scarb artifacts to local resources.
 
-use std::fs;
-use std::path::{Path, PathBuf};
-use std::str::FromStr;
-
 use anyhow::{bail, Result};
 use cairo_lang_starknet_classes::casm_contract_class::CasmContractClass;
 use cairo_lang_starknet_classes::contract_class::ContractClass;
+use dojo_types::naming::compute_bytearray_hash;
 use serde_json;
 use starknet::core::types::contract::{
     AbiEntry, AbiEvent, AbiImpl, CompiledClass, SierraClass, StateMutability, TypedAbiEvent,
 };
 use starknet::core::types::Felt;
 use starknet::core::utils as snutils;
+use starknet_crypto::poseidon_hash_many;
+use std::fs;
+use std::path::{Path, PathBuf};
 use tracing::trace;
 
 use super::*;
@@ -217,7 +217,14 @@ impl WorldLocal {
                     } else {
                         vec![]
                     };
-                    let salt = Felt::from_str(&contract.salt)?;
+
+                    let instance_name =
+                        contract.instance_name.clone().unwrap_or(contract.contract_name.clone());
+
+                    let salt = poseidon_hash_many(&[
+                        compute_bytearray_hash(&instance_name),
+                        compute_bytearray_hash(&contract.salt),
+                    ]);
                     let class_hash = local_class.class.class_hash()?;
 
                     let address = snutils::get_contract_address(
@@ -230,10 +237,7 @@ impl WorldLocal {
                     let instance = ExternalContractLocal {
                         contract_name: contract.contract_name.clone(),
                         class_hash,
-                        instance_name: contract
-                            .instance_name
-                            .clone()
-                            .unwrap_or(contract.contract_name.clone()),
+                        instance_name,
                         salt,
                         constructor_data: contract.constructor_data.clone().unwrap_or(vec![]),
                         raw_constructor_data,

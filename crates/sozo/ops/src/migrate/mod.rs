@@ -99,11 +99,11 @@ where
         let resources_have_changed =
             if !self.diff.is_synced() { self.sync_resources(ui).await? } else { false };
 
-        let external_contracts_have_changed = self.sync_external_contracts(ui).await?;
-
         let permissions_have_changed = self.sync_permissions(ui).await?;
 
         let contracts_have_changed = self.initialize_contracts(ui).await?;
+
+        let external_contracts_have_changed = self.sync_external_contracts(ui).await?;
 
         Ok(MigrationResult {
             has_changes: world_has_changed
