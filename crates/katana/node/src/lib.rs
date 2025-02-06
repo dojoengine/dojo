@@ -34,6 +34,7 @@ use katana_pool::ordering::FiFo;
 use katana_pool::TxPool;
 use katana_primitives::block::GasPrices;
 use katana_primitives::env::{CfgEnv, FeeTokenAddressses};
+use katana_provider::traits::{state::StateFactoryProvider, state_update::StateUpdateProvider};
 use katana_rpc::cors::Cors;
 use katana_rpc::dev::DevApi;
 use katana_rpc::saya::SayaApi;
@@ -233,12 +234,15 @@ pub async fn build(mut config: Config) -> Result<Node> {
     let backend = Arc::new(Backend {
         gas_oracle,
         blockchain,
-        executor_factory,
+        executor_factory: executor_factory.clone(),
         block_context_generator,
         chain_spec: config.chain.clone(),
     });
 
     backend.init_genesis().context("failed to initialize genesis")?;
+    let latest = backend.blockchain.provider().latest()?;
+    let classes = backend.blockchain.provider().declared_classes(0.into())?.unwrap();
+    executor_factory.warmup_class_cache(latest, &classes.keys().map(|c| *c).collect::<Vec<_>>());
 
     // --- build block producer
 

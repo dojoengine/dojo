@@ -585,6 +585,7 @@ pub fn to_class_info(class: class::CompiledClass) -> Result<ClassInfo, ProgramEr
     }
 }
 
+/// Convert katana-primitives compiled class to blockfiier's contract class.
 pub fn to_class(class: class::CompiledClass) -> Result<ContractClass, ProgramError> {
     match class {
         class::CompiledClass::Legacy(class) => {

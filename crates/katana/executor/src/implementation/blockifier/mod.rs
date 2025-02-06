@@ -1,5 +1,7 @@
 // Re-export the blockifier crate.
 pub use blockifier;
+use katana_provider::traits::contract::{ContractClassProvider, ContractClassProviderExt};
+use katana_provider::traits::state_update::StateUpdateProvider;
 
 mod error;
 pub mod state;
@@ -46,6 +48,20 @@ impl BlockifierFactory {
     pub fn new(cfg: CfgEnv, flags: ExecutionFlags) -> Self {
         let compiled_class_cache = Arc::new(Mutex::new(HashMap::default()));
         Self { cfg, flags, compiled_class_cache }
+    }
+
+    pub fn warmup_class_cache<P>(&self, provider: P, classes: &[ClassHash])
+    where
+        P: ContractClassProviderExt,
+    {
+        let mut cache = self.compiled_class_cache.lock();
+        for &class_hash in classes {
+            if let Ok(Some(compiled)) = provider.compiled_class(class_hash) {
+                if let Ok(blockifier_class) = utils::to_class(compiled) {
+                    cache.insert(class_hash, blockifier_class);
+                }
+            }
+        }
     }
 }
 
