@@ -382,8 +382,9 @@ fn contract_name_from_abi(abi: &[AbiEntry]) -> Option<String> {
     for entry in abi.iter().rev() {
         if let AbiEntry::Event(AbiEvent::Typed(TypedAbiEvent::Enum(e))) = entry {
             let mut it = e.name.rsplit("::");
-            let _ = it.next();
-            return Some(it.next().unwrap().to_string());
+            if let (Some(_), Some(name)) = (it.next(), it.next()) {
+                return Some(name.to_string());
+            }
         }
     }
 
