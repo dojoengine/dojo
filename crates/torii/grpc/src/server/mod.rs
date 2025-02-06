@@ -61,9 +61,9 @@ use crate::proto::world::{
     RetrieveEventMessagesRequest, RetrieveTokenBalancesRequest, RetrieveTokenBalancesResponse,
     RetrieveTokensRequest, RetrieveTokensResponse, SubscribeEntitiesRequest,
     SubscribeEntityResponse, SubscribeEventMessagesRequest, SubscribeEventsResponse,
-    SubscribeIndexerRequest, SubscribeIndexerResponse, SubscribeTokenBalancesResponse, SubscribeTokensResponse,
-    UpdateEventMessagesSubscriptionRequest, UpdateTokenBalancesSubscriptionRequest,
-    WorldMetadataRequest, WorldMetadataResponse,
+    SubscribeIndexerRequest, SubscribeIndexerResponse, SubscribeTokenBalancesResponse,
+    SubscribeTokensResponse, UpdateEventMessagesSubscriptionRequest,
+    UpdateTokenBalancesSubscriptionRequest, WorldMetadataRequest, WorldMetadataResponse,
 };
 use crate::proto::{self};
 use crate::types::schema::SchemaError;
