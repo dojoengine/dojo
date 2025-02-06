@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1738815340567,
+  "lastUpdate": 1738815410757,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -50755,6 +50755,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 11871353982,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9b248d88db8df4dc8a18dd6e65ccf42cbc9af48f",
+          "message": "feat(torii-sqlite): primitive upgrades towards bigger types (#2931)\n\n* refactor(torii): primitive upgrades towards bigger types\n\n* fmt\n\n* fix can upgrade to and column mod\n\n* transform to hex\n\n* fmt\n\n* fix; select for update\n\n* correct hex conversion for primitive upgrades\n\n* fmt\n\n* no need for can upgrade to\n\n* fix nestde primitives",
+          "timestamp": "2025-02-06T10:58:44+07:00",
+          "tree_id": "54b020145a5760e97a8ada4de19e226efbaea5df",
+          "url": "https://github.com/dojoengine/dojo/commit/9b248d88db8df4dc8a18dd6e65ccf42cbc9af48f"
+        },
+        "date": 1738815407560,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2493347,
+            "range": "± 34152",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 7965337,
+            "range": "± 305398",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2579175337,
+            "range": "± 218307034",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 7874506,
+            "range": "± 79708",
             "unit": "ns/iter"
           }
         ]
