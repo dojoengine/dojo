@@ -14,8 +14,8 @@ use torii_grpc::client::{
     EntityUpdateStreaming, EventUpdateStreaming, IndexerUpdateStreaming, TokenBalanceStreaming,
 };
 use torii_grpc::proto::world::{
-    RetrieveEntitiesResponse, RetrieveEventsResponse, RetrieveTokenBalancesResponse,
-    RetrieveTokensResponse,
+    RetrieveControllersResponse, RetrieveEntitiesResponse, RetrieveEventsResponse,
+    RetrieveTokenBalancesResponse, RetrieveTokensResponse,
 };
 use torii_grpc::types::schema::Entity;
 use torii_grpc::types::{
