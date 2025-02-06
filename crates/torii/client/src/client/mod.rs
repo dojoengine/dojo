@@ -18,7 +18,7 @@ use torii_grpc::proto::world::{
     RetrieveTokensResponse,
 };
 use torii_grpc::types::schema::Entity;
-use torii_grpc::types::{EntityKeysClause, Event, EventQuery, Query, Token, TokenBalance};
+use torii_grpc::types::{Controller, EntityKeysClause, Event, EventQuery, Query, Token, TokenBalance};
 use torii_relay::client::EventLoop;
 use torii_relay::types::Message;
 
@@ -88,6 +88,14 @@ impl Client {
     /// Returns a read lock on the World metadata that the client is connected to.
     pub fn metadata(&self) -> RwLockReadGuard<'_, WorldMetadata> {
         self.metadata.read()
+    }
+
+    /// Retrieves controllers matching contract addresses.
+    pub async fn controllers(&self, contract_addresses: Vec<Felt>) -> Result<Vec<Controller>, Error> {
+        let mut grpc_client = self.inner.write().await;
+        let RetrieveControllersResponse { controllers } =
+            grpc_client.retrieve_controllers(contract_addresses).await?;
+        Ok(controllers.into_iter().map(TryInto::try_into).collect::<Result<Vec<Controller>, _>>()?)
     }
 
     /// Retrieves tokens matching contract addresses.
