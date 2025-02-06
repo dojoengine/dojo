@@ -31,7 +31,7 @@ const SNOS_PROGRAM_HASH: Felt =
 
 // TODO: to replace with actual value.
 const LAYOUT_BRIDGE_PROGRAM_HASH: Felt =
-    felt!("0x054d3603ed14fb897d0925c48f26330ea9950bd4ca95746dad4f7f09febffe0d");
+    felt!("0x193641eb151b0f41674641089952e60bc3aded26e3cf42793655c562b8c3aa0");
 
 /// The contract address that handles fact verification.
 ///
