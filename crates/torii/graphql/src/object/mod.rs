@@ -1,5 +1,6 @@
 pub mod connection;
 pub mod controller;
+pub mod empty;
 pub mod entity;
 pub mod erc;
 pub mod event;

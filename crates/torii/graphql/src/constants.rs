@@ -65,6 +65,7 @@ pub const TOKEN_TRANSFER_NAME: (&str, &str) = ("", "tokenTransfers");
 pub const ORDER_DIR_TYPE_NAME: &str = "OrderDirection";
 pub const ORDER_ASC: &str = "ASC";
 pub const ORDER_DESC: &str = "DESC";
-
+pub const EMPTY_TYPE_NAME: &str = "World__Empty";
+pub const EMPTY_NAMES: (&str, &str) = ("empty", "");
 pub const CONTROLLER_TYPE_NAME: &str = "World__Controller";
 pub const CONTROLLER_NAMES: (&str, &str) = ("controller", "controllers");

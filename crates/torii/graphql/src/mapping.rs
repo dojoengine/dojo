@@ -177,6 +177,10 @@ lazy_static! {
         (Name::new("imagePath"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
     ]);
 
+    pub static ref EMPTY_MAPPING: TypeMapping = IndexMap::from([
+        (Name::new("id"), TypeData::Simple(TypeRef::named(TypeRef::ID))),
+    ]);
+
     pub static ref CONTROLLER_MAPPING: TypeMapping = IndexMap::from([
         (Name::new("id"), TypeData::Simple(TypeRef::named(TypeRef::ID))),
         (Name::new("username"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
