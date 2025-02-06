@@ -30,6 +30,7 @@ use tracing::{debug, error, info, trace, warn};
 use crate::constants::LOG_TARGET;
 use crate::processors::erc1155_transfer_batch::Erc1155TransferBatchProcessor;
 use crate::processors::erc1155_transfer_single::Erc1155TransferSingleProcessor;
+use crate::processors::controller::ControllerProcessor;
 use crate::processors::erc20_legacy_transfer::Erc20LegacyTransferProcessor;
 use crate::processors::erc20_transfer::Erc20TransferProcessor;
 use crate::processors::erc721_legacy_transfer::Erc721LegacyTransferProcessor;
@@ -41,6 +42,7 @@ use crate::processors::register_event::RegisterEventProcessor;
 use crate::processors::register_model::RegisterModelProcessor;
 use crate::processors::store_del_record::StoreDelRecordProcessor;
 use crate::processors::store_set_record::StoreSetRecordProcessor;
+use crate::processors::store_transaction::StoreTransactionProcessor;
 use crate::processors::store_update_member::StoreUpdateMemberProcessor;
 use crate::processors::store_update_record::StoreUpdateRecordProcessor;
 use crate::processors::upgrade_event::UpgradeEventProcessor;
@@ -64,7 +66,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Default for Processo
     fn default() -> Self {
         Self {
             block: vec![],
-            transaction: vec![],
+            transaction: vec![Box::new(StoreTransactionProcessor)],
             // We shouldn't have a catch all for now since the world doesn't forward raw events
             // anymore.
             catch_all_event: Box::new(RawEventProcessor) as Box<dyn EventProcessor<P>>,
@@ -114,6 +116,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Processors<P> {
                     Box::new(Erc1155TransferSingleProcessor) as Box<dyn EventProcessor<P>>,
                 ],
             ),
+            (ContractType::UDC, vec![Box::new(ControllerProcessor) as Box<dyn EventProcessor<P>>]),
         ];
 
         for (contract_type, processors) in event_processors {

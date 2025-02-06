@@ -43,8 +43,8 @@ where
 
     fn task_identifier(&self, event: &Event) -> TaskId {
         let mut hasher = DefaultHasher::new();
-        // Hash the event key (Transfer)
-        event.keys[0].hash(&mut hasher);
+        // Hash the contract address
+        event.from_address.hash(&mut hasher);
 
         // Take the max of from/to addresses to get a canonical representation
         // This ensures transfers between the same pair of addresses are grouped together
@@ -83,7 +83,7 @@ where
             block_number,
         )
         .await?;
-        debug!(target: LOG_TARGET,from = ?from, to = ?to, value = ?value, "ERC20 Transfer");
+        debug!(target: LOG_TARGET,from = ?from, to = ?to, value = ?value, "ERC20 Transfer.");
 
         Ok(())
     }

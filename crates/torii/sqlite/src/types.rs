@@ -157,6 +157,7 @@ pub enum ContractType {
     ERC20,
     ERC721,
     ERC1155,
+    UDC,
 }
 
 impl std::fmt::Display for Contract {
@@ -174,6 +175,7 @@ impl FromStr for ContractType {
             "erc20" => Ok(ContractType::ERC20),
             "erc721" => Ok(ContractType::ERC721),
             "erc1155" => Ok(ContractType::ERC1155),
+            "udc" => Ok(ContractType::UDC),
             _ => Err(anyhow::anyhow!("Invalid ERC type: {}", input)),
         }
     }
@@ -186,6 +188,7 @@ impl std::fmt::Display for ContractType {
             ContractType::ERC20 => write!(f, "ERC20"),
             ContractType::ERC721 => write!(f, "ERC721"),
             ContractType::ERC1155 => write!(f, "ERC1155"),
+            ContractType::UDC => write!(f, "UDC"),
         }
     }
 }

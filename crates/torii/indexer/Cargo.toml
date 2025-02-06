@@ -38,6 +38,7 @@ ipfs-api-backend-hyper.workspace = true
 tokio-util.workspace = true
 tracing.workspace = true
 torii-sqlite.workspace = true
+lazy_static.workspace = true
 
 [dev-dependencies]
 dojo-test-utils.workspace = true
