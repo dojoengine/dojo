@@ -14,6 +14,7 @@ use crate::constants::{
     EMPTY_TYPE_NAME, ERC20_TYPE_NAME, ERC721_TYPE_NAME, QUERY_TYPE_NAME, SUBSCRIPTION_TYPE_NAME,
     TOKEN_TYPE_NAME,
 };
+use crate::object::controller::ControllerObject;
 use crate::object::empty::EmptyObject;
 use crate::object::erc::erc_token::{Erc20TokenObject, Erc721TokenObject};
 use crate::object::erc::token_balance::ErcBalanceObject;
@@ -123,6 +124,7 @@ async fn build_objects(pool: &SqlitePool) -> Result<(Vec<ObjectVariant>, Vec<Uni
         ObjectVariant::Resolvable(Box::new(TransactionObject)),
         ObjectVariant::Resolvable(Box::new(ErcBalanceObject)),
         ObjectVariant::Resolvable(Box::new(ErcTransferObject)),
+        ObjectVariant::Resolvable(Box::new(ControllerObject)),
         ObjectVariant::Basic(Box::new(SocialObject)),
         ObjectVariant::Basic(Box::new(ContentObject)),
         ObjectVariant::Basic(Box::new(PageInfoObject)),
