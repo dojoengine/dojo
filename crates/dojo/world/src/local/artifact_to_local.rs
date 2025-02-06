@@ -1,5 +1,8 @@
 //! Converts Scarb artifacts to local resources.
 
+use std::fs;
+use std::path::{Path, PathBuf};
+
 use anyhow::{bail, Result};
 use cairo_lang_starknet_classes::casm_contract_class::CasmContractClass;
 use cairo_lang_starknet_classes::contract_class::ContractClass;
@@ -11,8 +14,6 @@ use starknet::core::types::contract::{
 use starknet::core::types::Felt;
 use starknet::core::utils as snutils;
 use starknet_crypto::poseidon_hash_many;
-use std::fs;
-use std::path::{Path, PathBuf};
 use tracing::trace;
 
 use super::*;
