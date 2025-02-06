@@ -28,11 +28,13 @@ use tracing::{info, Subscriber};
 use tracing_log::LogTracer;
 use tracing_subscriber::{fmt, EnvFilter};
 use url::Url;
+use katana_rpc::cors::HeaderValue;
 
 use crate::file::NodeArgsConfig;
 use crate::options::*;
 use crate::utils;
 use crate::utils::{parse_seed, LogFormat};
+use crate::explorer::ExplorerServer;
 
 pub(crate) const LOG_TARGET: &str = "katana::cli";
 
@@ -110,11 +112,39 @@ pub struct NodeArgs {
     #[cfg(feature = "slot")]
     #[command(flatten)]
     pub slot: SlotOptions,
+
+    #[command(flatten)]
+    pub explorer: ExplorerOptions,
 }
 
 impl NodeArgs {
     pub async fn execute(&self) -> Result<()> {
+        // Initialize logging first
         self.init_logging()?;
+
+        // Then start the explorer if enabled
+        if self.explorer.explorer {
+            let build_dir = self.explorer.explorer_build_dir
+                .clone()
+                .unwrap_or_else(|| {
+                    PathBuf::from("crates/katana")
+                        .join("explorer")
+                        .join("build")
+                });
+
+            if !build_dir.exists() {
+                anyhow::bail!("Explorer build directory not found at {:?}. Please build the explorer first or specify a different path with --explorer-build-dir", build_dir);
+            }
+
+            let explorer = ExplorerServer::new(
+                self.explorer.explorer_port,
+                build_dir,
+            )?;
+            
+            explorer.start()?;
+        }
+
+        // Finally start the node
         self.start_node().await
     }
 
@@ -216,12 +246,22 @@ impl NodeArgs {
                 modules
             };
 
+            let mut cors_origins = self.server.http_cors_origins.clone();
+            
+            // Add explorer URL to CORS origins if explorer is enabled
+            if self.explorer.explorer {
+                cors_origins.push(
+                    HeaderValue::from_str("*")
+                        .context("Failed to create CORS header")?
+                );
+            }
+
             Ok(RpcConfig {
                 apis: modules,
                 port: self.server.http_port,
                 addr: self.server.http_addr,
                 max_connections: self.server.max_connections,
-                cors_origins: self.server.http_cors_origins.clone(),
+                cors_origins: cors_origins,
                 max_event_page_size: Some(self.server.max_event_page_size),
                 max_proof_keys: Some(self.server.max_proof_keys),
             })
