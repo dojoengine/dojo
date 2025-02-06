@@ -14,7 +14,6 @@ use crate::constants::{
     EMPTY_TYPE_NAME, ERC20_TYPE_NAME, ERC721_TYPE_NAME, QUERY_TYPE_NAME, SUBSCRIPTION_TYPE_NAME,
     TOKEN_TYPE_NAME,
 };
-use crate::object::controller::ControllerObject;
 use crate::object::empty::EmptyObject;
 use crate::object::erc::erc_token::{Erc20TokenObject, Erc721TokenObject};
 use crate::object::erc::token_balance::ErcBalanceObject;
