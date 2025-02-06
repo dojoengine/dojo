@@ -395,13 +395,16 @@ pub fn block_context_from_envs(block_env: &BlockEnv, cfg_env: &CfgEnv) -> BlockC
         NonZeroU128::new(block_env.l1_gas_prices.eth).unwrap_or(NonZeroU128::new(1).unwrap());
     let strk_l1_gas_price =
         NonZeroU128::new(block_env.l1_gas_prices.strk).unwrap_or(NonZeroU128::new(1).unwrap());
+    let strk_l1_data_gas_price =
+        NonZeroU128::new(block_env.l1_data_gas_prices.strk).unwrap_or(NonZeroU128::new(1).unwrap());
+    let eth_l1_data_gas_price =
+        NonZeroU128::new(block_env.l1_data_gas_prices.eth).unwrap_or(NonZeroU128::new(1).unwrap());
 
     let gas_prices = GasPrices {
         eth_l1_gas_price,
         strk_l1_gas_price,
-        // TODO: should those be the same value?
-        eth_l1_data_gas_price: eth_l1_gas_price,
-        strk_l1_data_gas_price: strk_l1_gas_price,
+        eth_l1_data_gas_price,
+        strk_l1_data_gas_price,
     };
 
     let block_info = BlockInfo {
