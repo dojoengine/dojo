@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1738799849436,
+  "lastUpdate": 1738813008151,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -50617,6 +50617,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 7952468,
             "range": "± 112596",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a3181d83b93224f2f483612325600303b970771e",
+          "message": "feat(torii): retrieve controllers & usernames graphql and grpc (#2992)\n\n* feat(torii): retrieve controllers & usernames\r\n\r\n* add to graphq\r\n\r\n* fmt\r\n\r\n* add controller object\r\n\r\n* fix timestamp type",
+          "timestamp": "2025-02-05T21:20:26-06:00",
+          "tree_id": "e6828bd62ef96ab076fd3bc4f33853fefe0908b8",
+          "url": "https://github.com/dojoengine/dojo/commit/a3181d83b93224f2f483612325600303b970771e"
+        },
+        "date": 1738813005937,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 12343653555,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
