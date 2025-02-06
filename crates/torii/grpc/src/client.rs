@@ -10,7 +10,15 @@ use tonic::codec::CompressionEncoding;
 use tonic::transport::Endpoint;
 
 use crate::proto::world::{
-    world_client, RetrieveControllersRequest, RetrieveControllersResponse, RetrieveEntitiesRequest, RetrieveEntitiesResponse, RetrieveEventMessagesRequest, RetrieveEventsRequest, RetrieveEventsResponse, RetrieveTokenBalancesRequest, RetrieveTokenBalancesResponse, RetrieveTokensRequest, RetrieveTokensResponse, SubscribeEntitiesRequest, SubscribeEntityResponse, SubscribeEventMessagesRequest, SubscribeEventsRequest, SubscribeEventsResponse, SubscribeIndexerRequest, SubscribeIndexerResponse, SubscribeModelsRequest, SubscribeModelsResponse, SubscribeTokenBalancesResponse, UpdateEntitiesSubscriptionRequest, UpdateEventMessagesSubscriptionRequest, UpdateTokenBalancesSubscriptionRequest, WorldMetadataRequest
+    world_client, RetrieveControllersRequest, RetrieveControllersResponse, RetrieveEntitiesRequest,
+    RetrieveEntitiesResponse, RetrieveEventMessagesRequest, RetrieveEventsRequest,
+    RetrieveEventsResponse, RetrieveTokenBalancesRequest, RetrieveTokenBalancesResponse,
+    RetrieveTokensRequest, RetrieveTokensResponse, SubscribeEntitiesRequest,
+    SubscribeEntityResponse, SubscribeEventMessagesRequest, SubscribeEventsRequest,
+    SubscribeEventsResponse, SubscribeIndexerRequest, SubscribeIndexerResponse,
+    SubscribeModelsRequest, SubscribeModelsResponse, SubscribeTokenBalancesResponse,
+    UpdateEntitiesSubscriptionRequest, UpdateEventMessagesSubscriptionRequest,
+    UpdateTokenBalancesSubscriptionRequest, WorldMetadataRequest,
 };
 use crate::types::schema::{Entity, SchemaError};
 use crate::types::{
