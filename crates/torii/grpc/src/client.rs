@@ -10,15 +10,7 @@ use tonic::codec::CompressionEncoding;
 use tonic::transport::Endpoint;
 
 use crate::proto::world::{
-    world_client, RetrieveControllersRequest, RetrieveEntitiesRequest, RetrieveEntitiesResponse,
-    RetrieveEventMessagesRequest, RetrieveEventsRequest, RetrieveEventsResponse,
-    RetrieveTokenBalancesRequest, RetrieveTokenBalancesResponse, RetrieveTokensRequest,
-    RetrieveTokensResponse, SubscribeEntitiesRequest, SubscribeEntityResponse,
-    SubscribeEventMessagesRequest, SubscribeEventsRequest, SubscribeEventsResponse,
-    SubscribeIndexerRequest, SubscribeIndexerResponse, SubscribeModelsRequest,
-    SubscribeModelsResponse, SubscribeTokenBalancesResponse, UpdateEntitiesSubscriptionRequest,
-    UpdateEventMessagesSubscriptionRequest, UpdateTokenBalancesSubscriptionRequest,
-    WorldMetadataRequest,
+    world_client, RetrieveControllersRequest, RetrieveControllersResponse, RetrieveEntitiesRequest, RetrieveEntitiesResponse, RetrieveEventMessagesRequest, RetrieveEventsRequest, RetrieveEventsResponse, RetrieveTokenBalancesRequest, RetrieveTokenBalancesResponse, RetrieveTokensRequest, RetrieveTokensResponse, SubscribeEntitiesRequest, SubscribeEntityResponse, SubscribeEventMessagesRequest, SubscribeEventsRequest, SubscribeEventsResponse, SubscribeIndexerRequest, SubscribeIndexerResponse, SubscribeModelsRequest, SubscribeModelsResponse, SubscribeTokenBalancesResponse, UpdateEntitiesSubscriptionRequest, UpdateEventMessagesSubscriptionRequest, UpdateTokenBalancesSubscriptionRequest, WorldMetadataRequest
 };
 use crate::types::schema::{Entity, SchemaError};
 use crate::types::{
@@ -100,7 +92,12 @@ impl WorldClient {
         contract_addresses: Vec<Felt>,
     ) -> Result<RetrieveControllersResponse, Error> {
         self.inner
-            .retrieve_controllers(RetrieveControllersRequest { contract_addresses })
+            .retrieve_controllers(RetrieveControllersRequest {
+                contract_addresses: contract_addresses
+                    .into_iter()
+                    .map(|c| c.to_bytes_be().to_vec())
+                    .collect(),
+            })
             .await
             .map_err(Error::Grpc)
             .map(|res| res.into_inner())
