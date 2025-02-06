@@ -27,11 +27,11 @@ type RpcProvider = Arc<JsonRpcClient<HttpTransport>>;
 type InitializerAccount = SingleOwnerAccount<RpcProvider, LocalWallet>;
 
 const SNOS_PROGRAM_HASH: Felt =
-    felt!("0x5ab580b04e3532b6b18f81cfa654a05e29dd8e2352d88df1e765a84072db07");
+    felt!("0x054d3603ed14fb897d0925c48f26330ea9950bd4ca95746dad4f7f09febffe0d");
 
 // TODO: to replace with actual value.
 const LAYOUT_BRIDGE_PROGRAM_HASH: Felt =
-    felt!("0x5ab580b04e3532b6b18f81cfa654a05e29dd8e2352d88df1e765a84072db07");
+    felt!("0x054d3603ed14fb897d0925c48f26330ea9950bd4ca95746dad4f7f09febffe0d");
 
 /// The contract address that handles fact verification.
 ///
