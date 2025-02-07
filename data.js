@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1738899252380,
+  "lastUpdate": 1738944672952,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -50929,6 +50929,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8290478,
             "range": "± 290092",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "73721937+augustin-v@users.noreply.github.com",
+            "name": "Augustin Villetard",
+            "username": "augustin-v"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0416153d7a6309331a58475c191de12c5903e8c2",
+          "message": "fix(katana): data gas prices (#3001)",
+          "timestamp": "2025-02-07T23:54:59+08:00",
+          "tree_id": "c45c2e450c4bca5c86da670e0703ccbfba1946c7",
+          "url": "https://github.com/dojoengine/dojo/commit/0416153d7a6309331a58475c191de12c5903e8c2"
+        },
+        "date": 1738944669949,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 11797561356,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
