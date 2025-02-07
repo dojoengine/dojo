@@ -98,10 +98,14 @@ pub async fn deploy_settlement_contract(
         // appchain::constructor() https://github.com/cartridge-gg/piltover/blob/d373a844c3428383a48518adf468bf83249dec3a/src/appchain.cairo#L119-L125
         let request = factory.deploy_v1(
             vec![
-                account.address(), // owner
-                Felt::ZERO,        // state_root
-                Felt::ZERO,        // block_number
-                Felt::ZERO,        // block_hash
+                // owner.
+                account.address(),
+                // state root.
+                Felt::ZERO,
+                // block_number must be magic value for genesis block.
+                Felt::MAX,
+                // block_hash.
+                Felt::ZERO,
             ],
             salt,
             false,
@@ -257,13 +261,12 @@ pub enum ContractInitError {
     InvalidProgramHash { expected: Felt, actual: Felt },
 
     #[error(
-        "invalid program info: snos program hash mismatch - expected {expected:#x}, got {actual:#x}"
+        "invalid program info: snos program hash mismatch - expected {expected:#x}, got \
+         {actual:#x}"
     )]
     InvalidSnosProgramHash { expected: Felt, actual: Felt },
 
-    #[error(
-        "invalid program info: config hash mismatch - expected {expected:#x}, got {actual:#x}"
-    )]
+    #[error("invalid program info: config hash mismatch - expected {expected:#x}, got {actual:#x}")]
     InvalidConfigHash { expected: Felt, actual: Felt },
 
     #[error("invalid program state: fact registry mismatch - expected {expected:}, got {actual}")]
