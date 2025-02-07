@@ -54,8 +54,6 @@ hex.workspace = true
 rand.workspace = true
 rstest.workspace = true
 tempfile.workspace = true
-arbitrary.workspace = true
-rand.workspace = true
 pprof.workspace = true
 
 [features]
