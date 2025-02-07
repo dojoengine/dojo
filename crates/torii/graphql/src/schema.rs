@@ -11,8 +11,11 @@ use super::object::model_data::ModelDataObject;
 use super::types::ScalarType;
 use super::utils;
 use crate::constants::{
-    ERC20_TYPE_NAME, ERC721_TYPE_NAME, QUERY_TYPE_NAME, SUBSCRIPTION_TYPE_NAME, TOKEN_TYPE_NAME,
+    EMPTY_TYPE_NAME, ERC20_TYPE_NAME, ERC721_TYPE_NAME, QUERY_TYPE_NAME, SUBSCRIPTION_TYPE_NAME,
+    TOKEN_TYPE_NAME,
 };
+use crate::object::controller::ControllerObject;
+use crate::object::empty::EmptyObject;
 use crate::object::erc::erc_token::{Erc20TokenObject, Erc721TokenObject};
 use crate::object::erc::token_balance::ErcBalanceObject;
 use crate::object::erc::token_transfer::ErcTransferObject;
@@ -121,11 +124,13 @@ async fn build_objects(pool: &SqlitePool) -> Result<(Vec<ObjectVariant>, Vec<Uni
         ObjectVariant::Resolvable(Box::new(TransactionObject)),
         ObjectVariant::Resolvable(Box::new(ErcBalanceObject)),
         ObjectVariant::Resolvable(Box::new(ErcTransferObject)),
+        ObjectVariant::Resolvable(Box::new(ControllerObject)),
         ObjectVariant::Basic(Box::new(SocialObject)),
         ObjectVariant::Basic(Box::new(ContentObject)),
         ObjectVariant::Basic(Box::new(PageInfoObject)),
         ObjectVariant::Basic(Box::new(Erc721TokenObject)),
         ObjectVariant::Basic(Box::new(Erc20TokenObject)),
+        ObjectVariant::Basic(Box::new(EmptyObject)),
     ];
 
     // model union object
@@ -139,7 +144,7 @@ async fn build_objects(pool: &SqlitePool) -> Result<(Vec<ObjectVariant>, Vec<Uni
     unions.push(erc_token_union);
 
     // model data objects
-    for model in models {
+    for model in &models {
         let schema: Ty = serde_json::from_str(&model.schema)
             .map_err(|e| anyhow::anyhow!(format!("Failed to parse model schema: {e}")))?;
         let type_mapping = build_type_mapping(&model.namespace, &schema);
@@ -159,6 +164,12 @@ async fn build_objects(pool: &SqlitePool) -> Result<(Vec<ObjectVariant>, Vec<Uni
                 schema,
             ))));
         }
+    }
+
+    // When creating an empty union, add the empty type (this is required otherwise the schema will
+    // be invalid)
+    if models.is_empty() {
+        model_union = model_union.possible_type(EMPTY_TYPE_NAME);
     }
 
     unions.push(model_union);

@@ -25,11 +25,11 @@ message Primitive {
         uint64 u64 = 9;
         bytes u128 = 10;
         bytes u256 = 11;
-        uint32 usize = 12;
-        bool bool = 13;
-        bytes felt252 = 14;
-        bytes class_hash = 15;
-        bytes contract_address = 16;
+        bool bool = 12;
+        bytes felt252 = 13;
+        bytes class_hash = 14;
+        bytes contract_address = 15;
+        bytes eth_address = 16;
     }
 }
 

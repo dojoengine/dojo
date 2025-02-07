@@ -6687,6 +6687,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "hash32"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "47d60b12902ba28e2730cd37e95b8c9223af2808df9e902d4df49588d1470606"
+dependencies = [
+ "byteorder",
+]
+
+[[package]]
 name = "hashbrown"
 version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6757,6 +6766,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e7f66481bfee273957b1f20485a4ff3362987f85b2c236580d81b4eb7a326429"
 dependencies = [
  "http 0.2.12",
+]
+
+[[package]]
+name = "heapless"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0bfb9eb618601c89945a70e254898da93b13be0388091d42117462b265bb3fad"
+dependencies = [
+ "hash32",
+ "serde",
+ "stable_deref_trait",
 ]
 
 [[package]]
@@ -8110,6 +8130,7 @@ dependencies = [
  "arbitrary",
  "assert_matches",
  "async-trait",
+ "criterion",
  "derive_more 0.99.18",
  "dojo-metrics",
  "futures",
@@ -8126,7 +8147,9 @@ dependencies = [
  "metrics",
  "num-traits 0.2.19",
  "parking_lot 0.12.3",
+ "pprof",
  "rand",
+ "rayon",
  "reqwest 0.11.27",
  "rstest 0.18.2",
  "serde",
@@ -8320,6 +8343,7 @@ dependencies = [
  "base64 0.21.7",
  "derive_more 0.99.18",
  "flate2",
+ "heapless",
  "katana-cairo",
  "lazy_static",
  "num-bigint",
@@ -13422,6 +13446,7 @@ dependencies = [
  "serde_json",
  "starknet",
  "thiserror 1.0.63",
+ "toml 0.8.19",
  "url",
  "urlencoding",
  "walkdir",

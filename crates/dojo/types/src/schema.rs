@@ -349,7 +349,6 @@ impl Ty {
                 Primitive::U32(Some(v)) => Ok(json!(*v)),
                 Primitive::U64(Some(v)) => Ok(json!(v.to_string())),
                 Primitive::U128(Some(v)) => Ok(json!(v.to_string())),
-                Primitive::USize(Some(v)) => Ok(json!(*v)),
                 Primitive::U256(Some(v)) => {
                     let bytes = v.to_be_bytes();
                     let high = u128::from_be_bytes(bytes[..16].try_into().unwrap());
@@ -362,6 +361,7 @@ impl Ty {
                 Primitive::Felt252(Some(v)) => Ok(json!(format!("{:#x}", v))),
                 Primitive::ClassHash(Some(v)) => Ok(json!(format!("{:#x}", v))),
                 Primitive::ContractAddress(Some(v)) => Ok(json!(format!("{:#x}", v))),
+                Primitive::EthAddress(Some(v)) => Ok(json!(format!("{:#x}", v))),
                 _ => Err(PrimitiveError::MissingFieldElement),
             },
             Ty::Struct(s) => {
@@ -448,11 +448,6 @@ impl Ty {
                         *v = s.parse().ok();
                     }
                 }
-                Primitive::USize(v) => {
-                    if let JsonValue::Number(n) = value {
-                        *v = n.as_u64().map(|n| n as u32);
-                    }
-                }
                 Primitive::U256(v) => {
                     if let JsonValue::Object(obj) = value {
                         if let (Some(JsonValue::String(high)), Some(JsonValue::String(low))) =
@@ -479,6 +474,11 @@ impl Ty {
                     }
                 }
                 Primitive::ContractAddress(v) => {
+                    if let JsonValue::String(s) = value {
+                        *v = Felt::from_str(&s).ok();
+                    }
+                }
+                Primitive::EthAddress(v) => {
                     if let JsonValue::String(s) = value {
                         *v = Felt::from_str(&s).ok();
                     }
@@ -719,11 +719,6 @@ fn format_member(m: &Member) -> String {
                     str.push_str(&format!(" = {}", value));
                 }
             }
-            Primitive::USize(value) => {
-                if let Some(value) = value {
-                    str.push_str(&format!(" = {}", value));
-                }
-            }
             Primitive::Bool(value) => {
                 if let Some(value) = value {
                     str.push_str(&format!(" = {}", value));
@@ -740,6 +735,11 @@ fn format_member(m: &Member) -> String {
                 }
             }
             Primitive::ContractAddress(value) => {
+                if let Some(value) = value {
+                    str.push_str(&format!(" = {:#x}", value));
+                }
+            }
+            Primitive::EthAddress(value) => {
                 if let Some(value) = value {
                     str.push_str(&format!(" = {:#x}", value));
                 }

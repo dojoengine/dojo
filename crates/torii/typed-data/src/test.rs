@@ -24,11 +24,6 @@ fn test_parse_primitive_to_ty() {
     parse_value_to_ty(&value, &mut ty).unwrap();
     assert_eq!(ty, Ty::Primitive(Primitive::U32(Some(1))));
 
-    let mut ty = Ty::Primitive(Primitive::USize(None));
-    let value = PrimitiveType::Number(Number::from(1u64));
-    parse_value_to_ty(&value, &mut ty).unwrap();
-    assert_eq!(ty, Ty::Primitive(Primitive::USize(Some(1))));
-
     let mut ty = Ty::Primitive(Primitive::U64(None));
     let value = PrimitiveType::Number(Number::from(1u64));
     parse_value_to_ty(&value, &mut ty).unwrap();
@@ -67,6 +62,11 @@ fn test_parse_primitive_to_ty() {
     parse_value_to_ty(&value, &mut ty).unwrap();
     assert_eq!(ty, Ty::Primitive(Primitive::ContractAddress(Some(Felt::ONE))));
 
+    let mut ty = Ty::Primitive(Primitive::EthAddress(None));
+    let value = PrimitiveType::String("1".to_string());
+    parse_value_to_ty(&value, &mut ty).unwrap();
+    assert_eq!(ty, Ty::Primitive(Primitive::EthAddress(Some(Felt::ONE))));
+
     let mut ty = Ty::Primitive(Primitive::Bool(None));
     let value = PrimitiveType::Bool(true);
     parse_value_to_ty(&value, &mut ty).unwrap();
@@ -90,10 +90,6 @@ fn test_map_ty_to_primitive() {
     assert_eq!(value, map_ty_to_primitive(&ty).unwrap());
 
     let ty = Ty::Primitive(Primitive::U32(Some(1)));
-    let value = PrimitiveType::Number(Number::from(1u64));
-    assert_eq!(value, map_ty_to_primitive(&ty).unwrap());
-
-    let ty = Ty::Primitive(Primitive::USize(Some(1)));
     let value = PrimitiveType::Number(Number::from(1u64));
     assert_eq!(value, map_ty_to_primitive(&ty).unwrap());
 
@@ -125,6 +121,10 @@ fn test_map_ty_to_primitive() {
     assert_eq!(value, map_ty_to_primitive(&ty).unwrap());
 
     let ty = Ty::Primitive(Primitive::ContractAddress(Some(Felt::ONE)));
+    let value = PrimitiveType::String("1".to_string());
+    assert_eq!(value, map_ty_to_primitive(&ty).unwrap());
+
+    let ty = Ty::Primitive(Primitive::EthAddress(Some(Felt::ONE)));
     let value = PrimitiveType::String("1".to_string());
     assert_eq!(value, map_ty_to_primitive(&ty).unwrap());
 
