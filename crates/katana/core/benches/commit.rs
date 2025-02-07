@@ -1,14 +1,13 @@
 use std::collections::BTreeMap;
+use std::time::Duration;
 
 use arbitrary::{Arbitrary, Unstructured};
 use criterion::{black_box, criterion_group, criterion_main, BatchSize, Criterion};
 use katana_core::backend::UncommittedBlock;
-use katana_primitives::block::{GasPrices, PartialHeader};
-use katana_primitives::da::L1DataAvailabilityMode;
-use katana_primitives::receipt::{Receipt, ReceiptWithTxHash};
+use katana_primitives::block::PartialHeader;
+use katana_primitives::receipt::ReceiptWithTxHash;
 use katana_primitives::state::StateUpdates;
-use katana_primitives::transaction::{Tx, TxWithHash};
-use katana_primitives::version::CURRENT_STARKNET_VERSION;
+use katana_primitives::transaction::TxWithHash;
 use katana_primitives::{ContractAddress, Felt};
 use katana_provider::providers::db::DbProvider;
 use pprof::criterion::{Output, PProfProfiler};
@@ -62,23 +61,17 @@ fn random_felt() -> Felt {
 }
 
 #[inline(always)]
-fn random_tx() -> Tx {
-    Tx::arbitrary(&mut Unstructured::new(&random_array(Tx::size_hint(0).0))).unwrap()
-}
-
-#[inline(always)]
 fn random_tx_with_hash() -> TxWithHash {
-    TxWithHash { hash: random_felt(), transaction: random_tx() }
-}
-
-#[inline(always)]
-fn random_receipt() -> Receipt {
-    Receipt::arbitrary(&mut Unstructured::new(&random_array(Receipt::size_hint(0).0))).unwrap()
+    TxWithHash::arbitrary(&mut Unstructured::new(&random_array(TxWithHash::size_hint(0).0)))
+        .unwrap()
 }
 
 #[inline(always)]
 fn random_receipt_with_hash() -> ReceiptWithTxHash {
-    ReceiptWithTxHash { tx_hash: random_felt(), receipt: random_receipt() }
+    ReceiptWithTxHash::arbitrary(&mut Unstructured::new(&random_array(
+        ReceiptWithTxHash::size_hint(0).0,
+    )))
+    .unwrap()
 }
 
 #[inline(always)]
@@ -91,7 +84,15 @@ fn random_address_to_felt_map(size: usize) -> BTreeMap<ContractAddress, Felt> {
     (0..size).map(|_| (ContractAddress::new(random_felt()), random_felt())).collect()
 }
 
-fn build_block(config: BlockConfig) -> (Vec<TxWithHash>, Vec<ReceiptWithTxHash>, StateUpdates) {
+#[inline(always)]
+fn random_header() -> PartialHeader {
+    PartialHeader::arbitrary(&mut Unstructured::new(&random_array(PartialHeader::size_hint(0).0)))
+        .unwrap()
+}
+
+fn build_block(
+    config: BlockConfig,
+) -> (PartialHeader, Vec<TxWithHash>, Vec<ReceiptWithTxHash>, StateUpdates) {
     let transactions: Vec<TxWithHash> =
         (0..config.nb_of_txs).map(|_| random_tx_with_hash()).collect();
 
@@ -124,36 +125,45 @@ fn build_block(config: BlockConfig) -> (Vec<TxWithHash>, Vec<ReceiptWithTxHash>,
         ..Default::default()
     };
 
-    (transactions, receipts, state_updates)
+    let header = random_header();
+
+    (header, transactions, receipts, state_updates)
 }
 
-fn commit_benchmark(c: &mut Criterion) {
-    let gas_prices = GasPrices { eth: 100 * u128::pow(10, 9), strk: 100 * u128::pow(10, 9) };
-    let sequencer_address = ContractAddress(1u64.into());
+fn commit_small(c: &mut Criterion) {
+    let mut c = c.benchmark_group("Commit.Small");
+    c.warm_up_time(Duration::from_secs(1));
 
-    let header = PartialHeader {
-        protocol_version: CURRENT_STARKNET_VERSION,
-        number: 1,
-        timestamp: 100,
-        sequencer_address,
-        parent_hash: 123u64.into(),
-        l1_gas_prices: gas_prices.clone(),
-        l1_data_gas_prices: gas_prices.clone(),
-        l1_da_mode: L1DataAvailabilityMode::Calldata,
-    };
+    let (header, small_transactions, small_receipts, small_state_updates) =
+        build_block(SMALL_BLOCK_CONFIG);
 
-    let (small_transactions, small_receipts, small_state_updates) = build_block(SMALL_BLOCK_CONFIG);
-
-    let small_block = UncommittedBlock::new(
-        header.clone(),
+    let block = UncommittedBlock::new(
+        header,
         small_transactions,
         small_receipts.as_slice(),
         &small_state_updates,
         DbProvider::new_ephemeral(),
     );
 
-    let (big_transactions, big_receipts, big_state_updates) = build_block(BIG_BLOCK_CONFIG);
-    let big_block = UncommittedBlock::new(
+    c.bench_function("Serial", |b| {
+        b.iter_batched(|| block.clone(), |input| commit(black_box(input)), BatchSize::SmallInput);
+    });
+
+    c.bench_function("Parallel", |b| {
+        b.iter_batched(
+            || block.clone(),
+            |input| commit_parallel(black_box(input)),
+            BatchSize::SmallInput,
+        );
+    });
+}
+
+fn commit_big(c: &mut Criterion) {
+    let mut c = c.benchmark_group("Commit.Big");
+    c.warm_up_time(Duration::from_secs(1));
+
+    let (header, big_transactions, big_receipts, big_state_updates) = build_block(BIG_BLOCK_CONFIG);
+    let block = UncommittedBlock::new(
         header,
         big_transactions,
         big_receipts.as_slice(),
@@ -161,37 +171,22 @@ fn commit_benchmark(c: &mut Criterion) {
         DbProvider::new_ephemeral(),
     );
 
-    c.bench_function("Commit.Small.Serial", |b| {
-        b.iter_batched(
-            || small_block.clone(),
-            |input| commit(black_box(input)),
-            BatchSize::SmallInput,
-        );
-    });
-
     c.bench_function("Commit.Small.Parallel", |b| {
-        b.iter_batched(
-            || small_block.clone(),
-            |input| commit_parallel(black_box(input)),
-            BatchSize::SmallInput,
-        );
-    });
-
-    c.bench_function("Commit.Big.Serial", |b| {
-        b.iter_batched(
-            || big_block.clone(),
-            |input| commit(black_box(input)),
-            BatchSize::SmallInput,
-        );
+        b.iter_batched(|| block.clone(), |input| commit(black_box(input)), BatchSize::SmallInput);
     });
 
     c.bench_function("Commit.Big.Parallel", |b| {
         b.iter_batched(
-            || big_block.clone(),
+            || block.clone(),
             |input| commit_parallel(black_box(input)),
             BatchSize::SmallInput,
         );
     });
+}
+
+fn commit_benchmark(c: &mut Criterion) {
+    commit_small(c);
+    commit_big(c);
 }
 
 criterion_group! {
