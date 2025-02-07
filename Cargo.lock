@@ -10683,7 +10683,7 @@ checksum = "5be167a7af36ee22fe3115051bc51f6e6c7054c9348e28deb4f49bd6f705a315"
 [[package]]
 name = "piltover"
 version = "0.1.0"
-source = "git+https://github.com/keep-starknet-strange/piltover.git?rev=71253c1#71253c135ff493220054d090fa629ecf93e2c620"
+source = "git+https://github.com/keep-starknet-strange/piltover.git?rev=a1de1b4#a1de1b47dedbf1f29509281b7992b03a20d7881c"
 dependencies = [
  "cainome 0.4.11 (git+https://github.com/cartridge-gg/cainome?tag=v0.4.12)",
  "starknet",
