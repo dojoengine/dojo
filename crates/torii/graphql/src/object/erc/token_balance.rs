@@ -5,6 +5,7 @@ use serde::Deserialize;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{FromRow, Pool, Row, Sqlite, SqliteConnection};
 use starknet_crypto::Felt;
+use tokio_stream::StreamExt;
 use torii_sqlite::constants::TOKEN_BALANCE_TABLE;
 use torii_sqlite::simple_broker::SimpleBroker;
 use torii_sqlite::types::TokenBalance;
@@ -100,25 +101,56 @@ impl ResolvableObject for ErcBalanceObject {
                             None => None,
                         };
 
-                        Ok(SimpleBroker::<TokenBalance>::subscribe().then(move |token_balance| async move {
-                            // Filter by account address if provided
-                            if let Some(addr) = &address {
-                                if &token_balance.account_address != addr {
-                                    return None;
-                                }
-                            }
+                        let pool = ctx.data::<Pool<Sqlite>>()?;
+                        Ok(SimpleBroker::<TokenBalance>::subscribe()
+                            .then(move |token_balance| {
+                                let address = address.clone();
+                                let pool = pool.clone();
+                                async move {
+                                    // Filter by account address if provided
+                                    if let Some(addr) = &address {
+                                        if token_balance.account_address != *addr {
+                                            return None;
+                                        }
+                                    }
+                                    // Fetch associated token data
+                                    let query = format!(
+                                        "SELECT b.id, t.contract_address, t.name, t.symbol, t.decimals, b.balance, b.token_id, \
+                                        t.metadata, c.contract_type
+                                        FROM {} b
+                                        JOIN tokens t ON b.token_id = t.id
+                                        JOIN contracts c ON t.contract_address = c.contract_address
+                                        WHERE b.id = ?",
+                                        TOKEN_BALANCE_TABLE
+                                    );
 
-                            token_balances_connection_output(
-                                &[token_balance],
-                                1,  // total_count
-                                PageInfo {
-                                    has_previous_page: false,
-                                    has_next_page: false,
-                                    start_cursor: None,
-                                    end_cursor: None,
-                                },
-                            ).ok().map(|v| Ok(v.into_value()))
-                        }))
+                                    let row = match sqlx::query(&query)
+                                        .bind(&token_balance.id)
+                                        .fetch_one(&pool)
+                                        .await 
+                                    {
+                                        Ok(row) => row,
+                                        Err(_) => return None,
+                                    };
+
+                                    // Create connection with single edge
+                                    match token_balances_connection_output(
+                                        &[row],
+                                        1,  // total_count
+                                        PageInfo {
+                                            has_previous_page: false,
+                                            has_next_page: false,
+                                            start_cursor: None,
+                                            end_cursor: None,
+                                        },
+                                    ) {
+                                        Ok(value) => Some(Ok(value)),
+                                        Err(_) => None,
+                                    }
+                                }
+                            })
+                            .filter_map(|result| result)
+                        )
                     })
                 },
             )
