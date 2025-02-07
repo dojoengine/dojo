@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1738944781754,
+  "lastUpdate": 1738956329367,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -51007,6 +51007,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8062703,
             "range": "± 213352",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "remy.baranx@gmail.com",
+            "name": "Rémy Baranx",
+            "username": "remybar"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "022d71afc2b725c8f46f2206c3e1b577898e2d65",
+          "message": "perf(katana): optimisations + benchmark setup (#2900)\n\n* optimisations + benchmark setup\r\n\r\n* after review\r\n\r\n* fix duplicates in Cargo.toml\r\n\r\n* fix fmt\r\n\r\n* group by block size\r\n\r\n* fix name\r\n\r\n---------\r\n\r\nCo-authored-by: Ammar Arif <evergreenkary@gmail.com>",
+          "timestamp": "2025-02-08T03:09:21+08:00",
+          "tree_id": "ca09d437163f6ff47889e40bd7ed80bdfae76b6d",
+          "url": "https://github.com/dojoengine/dojo/commit/022d71afc2b725c8f46f2206c3e1b577898e2d65"
+        },
+        "date": 1738956327206,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 11826423748,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
