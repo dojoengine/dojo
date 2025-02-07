@@ -11,7 +11,6 @@ use katana_primitives::transaction::{Tx, TxWithHash};
 use katana_primitives::version::CURRENT_STARKNET_VERSION;
 use katana_primitives::{ContractAddress, Felt};
 use katana_provider::providers::db::DbProvider;
-
 use pprof::criterion::{Output, PProfProfiler};
 
 struct BlockConfig {
