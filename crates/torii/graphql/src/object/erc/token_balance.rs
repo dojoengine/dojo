@@ -1,11 +1,13 @@
 use async_graphql::connection::PageInfo;
-use async_graphql::dynamic::{Field, FieldFuture, FieldValue, InputValue, TypeRef};
+use async_graphql::dynamic::{Field, FieldFuture, FieldValue, InputValue, SubscriptionField, SubscriptionFieldFuture, TypeRef};
 use convert_case::{Case, Casing};
 use serde::Deserialize;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{FromRow, Pool, Row, Sqlite, SqliteConnection};
 use starknet_crypto::Felt;
 use torii_sqlite::constants::TOKEN_BALANCE_TABLE;
+use torii_sqlite::simple_broker::SimpleBroker;
+use torii_sqlite::types::TokenBalance;
 use torii_sqlite::utils::felt_to_sql_string;
 use tracing::warn;
 
@@ -84,6 +86,47 @@ impl ResolvableObject for ErcBalanceObject {
 
         field = connection_arguments(field);
         vec![field]
+    }
+
+    fn subscriptions(&self) -> Option<Vec<SubscriptionField>> {
+        Some(vec![
+            SubscriptionField::new(
+                "tokenBalanceUpdated", 
+                TypeRef::named_nn(format!("{}Connection", self.type_name())),
+                |ctx| {
+                    SubscriptionFieldFuture::new(async move {
+                        let address = match ctx.args.get("accountAddress") {
+                            Some(addr) => Some(addr.string()?.to_string()),
+                            None => None,
+                        };
+
+                        Ok(SimpleBroker::<TokenBalance>::subscribe().then(move |token_balance| async move {
+                            // Filter by account address if provided
+                            if let Some(addr) = &address {
+                                if &token_balance.account_address != addr {
+                                    return None;
+                                }
+                            }
+
+                            token_balances_connection_output(
+                                &[token_balance],
+                                1,  // total_count
+                                PageInfo {
+                                    has_previous_page: false,
+                                    has_next_page: false,
+                                    start_cursor: None,
+                                    end_cursor: None,
+                                },
+                            ).ok().map(|v| Ok(v.into_value()))
+                        }))
+                    })
+                },
+            )
+            .argument(InputValue::new(
+                "accountAddress",
+                TypeRef::named(TypeRef::STRING),
+            )),
+        ])
     }
 }
 
