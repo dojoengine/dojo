@@ -259,6 +259,7 @@ alloy-primitives = { version = "0.8.3", default-features = false }
 alloy-sol-types = { version = "0.8.3", default-features = false }
 
 criterion = "0.5.1"
+pprof = { version = "0.13.0", features = [ "criterion", "flamegraph" ] }
 
 # Slot integration. Dojo don't need to manually include `account_sdk` as dependency as `slot` already re-exports it.
 slot = { git = "https://github.com/cartridge-gg/slot", rev = "1298a30" }
