@@ -190,8 +190,12 @@ pub async fn deploy_settlement_contract(
     result
 }
 
-/// Checks that the program info is correctly set on the contract according to the chain's
-/// configuration.
+/// Checks that the settlement contract is correctly configured.
+///
+/// The values checked are:-
+/// * Program info (config hash, and StarknetOS program hash)
+/// * Fact registry contract address
+/// * Layout bridge program hash
 pub async fn check_program_info(
     chain_id: Felt,
     appchain_address: Felt,
@@ -202,6 +206,10 @@ pub async fn check_program_info(
     // Compute the chain's config hash
     let config_hash = compute_config_hash(
         chain_id,
+        // TODO:
+        //
+        // This is the default fee token contract address. We shouldn't hardcode
+        // this and need to handle this more elegantly.
         felt!("0x2e7442625bab778683501c0eadbc1ea17b3535da040a12ac7d281066e915eea"),
     );
 
