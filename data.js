@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1738815469635,
+  "lastUpdate": 1738899119288,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -50851,6 +50851,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 7892257,
             "range": "± 156057",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d11a7ec6542dfa056455ac6fc7974b755f190210",
+          "message": "feat(torii-client): retrieve controllers from client (#2996)\n\n* feat(torii-client): retrieve controllers from client\n\n* fmt\n\n* add to grpc client\n\n* fix imports\n\n* fmt",
+          "timestamp": "2025-02-06T21:15:40-06:00",
+          "tree_id": "7818617613c940595bed100f6fa5d9ada24ceccd",
+          "url": "https://github.com/dojoengine/dojo/commit/d11a7ec6542dfa056455ac6fc7974b755f190210"
+        },
+        "date": 1738899117196,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 12075827622,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
