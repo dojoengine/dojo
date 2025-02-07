@@ -39,12 +39,14 @@ const SNOS_PROGRAM_HASH: Felt =
 /// To execute the SNOS program, a specific layout named "all_cairo" is required.
 /// However, this layout can't be verified by the Cairo verifier that lives on Starknet.
 ///
-/// This is why we're using an other program, the Layout Bridge program, which act as a verifier written in Cairo
-/// which uses a layout supported by the Cairo verifier.
+/// This is why we're using an other program, the Layout Bridge program, which act as a verifier
+/// written in Cairo which uses a layout supported by the Cairo verifier.
 ///
-/// By verifying a SNOS proof using the Layout Bridge program, a new proof is generated which can be verified by the Cairo verifier.
+/// By verifying a SNOS proof using the Layout Bridge program, a new proof is generated which can be
+/// verified by the Cairo verifier.
 ///
-/// For the same reason as above, the Layout Bridge program is required to be known by the settlement contract for security reasons.
+/// For the same reason as above, the Layout Bridge program is required to be known by the
+/// settlement contract for security reasons.
 ///
 /// This program can be found here: <https://github.com/starkware-libs/cairo-lang/blob/8276ac35830148a397e1143389f23253c8b80e93/src/starkware/cairo/cairo_verifier/layouts/all_cairo/cairo_verifier.cairo>.
 const LAYOUT_BRIDGE_PROGRAM_HASH: Felt =
@@ -54,6 +56,8 @@ const LAYOUT_BRIDGE_PROGRAM_HASH: Felt =
 ///
 /// This address points to Herodotus' Atlantic Fact Registry contract on Starknet Sepolia as we rely
 /// on their services to generates and verifies proofs.
+///
+/// See on [Voyager](https://sepolia.voyager.online/contract/0x04ce7851f00b6c3289674841fd7a1b96b6fd41ed1edc248faccd672c26371b8c).
 const ATLANTIC_FACT_REGISTRY_SEPOLIA: Felt =
     felt!("0x4ce7851f00b6c3289674841fd7a1b96b6fd41ed1edc248faccd672c26371b8c");
 
