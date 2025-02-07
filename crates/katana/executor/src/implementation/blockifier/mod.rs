@@ -1,7 +1,6 @@
 // Re-export the blockifier crate.
 pub use blockifier;
-use katana_provider::traits::contract::{ContractClassProvider, ContractClassProviderExt};
-use katana_provider::traits::state_update::StateUpdateProvider;
+use katana_provider::traits::contract::ContractClassProviderExt;
 
 mod error;
 pub mod state;
@@ -24,8 +23,9 @@ use katana_primitives::fee::TxFeeInfo;
 use katana_primitives::transaction::{ExecutableTx, ExecutableTxWithHash, TxWithHash};
 use katana_primitives::Felt;
 use katana_provider::traits::state::StateProvider;
+use lazy_static::lazy_static;
 use parking_lot::Mutex;
-use tracing::info;
+use tracing::{info, trace};
 
 use self::state::CachedState;
 use crate::{
@@ -33,35 +33,42 @@ use crate::{
     ExecutionResult, ExecutionStats, ExecutorExt, ExecutorFactory, ExecutorResult, ResultAndStates,
 };
 
+lazy_static! {
+    pub static ref COMPILED_CLASS_CACHE: Arc<Mutex<HashMap<ClassHash, BlockifierContractClass>>> =
+        Arc::new(Mutex::new(HashMap::default()));
+}
+
 pub(crate) const LOG_TARGET: &str = "katana::executor::blockifier";
 
 #[derive(Debug)]
 pub struct BlockifierFactory {
     cfg: CfgEnv,
     flags: ExecutionFlags,
-    /// Shared cache
-    compiled_class_cache: Arc<Mutex<HashMap<ClassHash, BlockifierContractClass>>>,
 }
 
 impl BlockifierFactory {
     /// Create a new factory with the given configuration and simulation flags.
     pub fn new(cfg: CfgEnv, flags: ExecutionFlags) -> Self {
-        let compiled_class_cache = Arc::new(Mutex::new(HashMap::default()));
-        Self { cfg, flags, compiled_class_cache }
+        Self { cfg, flags }
     }
 
     pub fn warmup_class_cache<P>(&self, provider: P, classes: &[ClassHash])
     where
         P: ContractClassProviderExt,
     {
-        let mut cache = self.compiled_class_cache.lock();
+        let mut cache = COMPILED_CLASS_CACHE.lock();
+
+        let mut total_classes = 0;
         for &class_hash in classes {
             if let Ok(Some(compiled)) = provider.compiled_class(class_hash) {
                 if let Ok(blockifier_class) = utils::to_class(compiled) {
                     cache.insert(class_hash, blockifier_class);
+                    total_classes += 1;
                 }
             }
         }
+
+        trace!(target: "executor", %total_classes, "Compiled class cache warmed up");
     }
 }
 
@@ -83,13 +90,7 @@ impl ExecutorFactory for BlockifierFactory {
     {
         let cfg_env = self.cfg.clone();
         let flags = self.flags.clone();
-        Box::new(StarknetVMProcessor::new(
-            Box::new(state),
-            block_env,
-            cfg_env,
-            flags,
-            self.compiled_class_cache.clone(),
-        ))
+        Box::new(StarknetVMProcessor::new(Box::new(state), block_env, cfg_env, flags))
     }
 
     fn cfg(&self) -> &CfgEnv {
@@ -117,11 +118,10 @@ impl<'a> StarknetVMProcessor<'a> {
         block_env: BlockEnv,
         cfg_env: CfgEnv,
         simulation_flags: ExecutionFlags,
-        compiled_class_cache: Arc<Mutex<HashMap<ClassHash, BlockifierContractClass>>>,
     ) -> Self {
         let transactions = Vec::new();
         let block_context = utils::block_context_from_envs(&block_env, &cfg_env);
-        let state = state::CachedState::new(state, compiled_class_cache);
+        let state = state::CachedState::new(state, COMPILED_CLASS_CACHE.clone());
         Self { block_context, state, transactions, simulation_flags, stats: Default::default() }
     }
 

@@ -15,6 +15,7 @@ use katana_provider::traits::contract::{ContractClassProvider, ContractClassProv
 use katana_provider::traits::state::{StateProofProvider, StateProvider, StateRootProvider};
 use katana_provider::ProviderResult;
 use parking_lot::Mutex;
+use tracing::trace;
 
 use super::utils::{self};
 
@@ -34,7 +35,7 @@ impl<'a> CachedState<'a> {
         state: impl StateProvider + 'a,
         compiled_class_cache: Arc<Mutex<HashMap<class::ClassHash, BlockifierContractClass>>>,
     ) -> Self {
-        let state = StateProviderDb::new(Box::new(state), compiled_class_cache.clone());
+        let state = StateProviderDb::new(Box::new(state), compiled_class_cache);
         let cached_state = cached_state::CachedState::new(state);
 
         let declared_classes = HashMap::new();
@@ -176,7 +177,9 @@ impl<'a> StateReader for StateProviderDb<'a> {
         class_hash: ClassHash,
     ) -> StateResult<BlockifierContractClass> {
         let mut class_cache = self.compiled_class_cache.lock();
+
         if let Some(class) = class_cache.get(&class_hash.0) {
+            trace!(target: "executor::class_cache", class = format!("{}", class_hash.to_hex_string()), "Class cache hit");
             return Ok(class.clone());
         }
 
@@ -185,8 +188,11 @@ impl<'a> StateReader for StateProviderDb<'a> {
             .compiled_class(class_hash.0)
             .map_err(|e| StateError::StateReadError(e.to_string()))?
         {
+            trace!(target: "executor::class_cache", class = format!("{}", class_hash.to_hex_string()), "Class cache miss");
+
             let class =
                 utils::to_class(class).map_err(|e| StateError::StateReadError(e.to_string()))?;
+
             class_cache.insert(class_hash.0, class.clone());
             return Ok(class);
         }

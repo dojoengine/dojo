@@ -11,6 +11,7 @@ katana-cairo = { workspace = true, optional = true }
 katana-primitives.workspace = true
 katana-provider.workspace = true
 
+lazy_static.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 
