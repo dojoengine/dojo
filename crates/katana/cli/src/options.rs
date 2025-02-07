@@ -109,11 +109,11 @@ pub struct ServerOptions {
     #[arg(long = "rpc.max-connections", value_name = "MAX")]
     pub max_connections: Option<u32>,
 
-    /// Maximum request body size.
+    /// Maximum request body size (in bytes).
     #[arg(long = "rpc.max-request-body-size", value_name = "SIZE")]
     pub max_request_body_size: Option<u32>,
 
-    /// Maximum response body size.
+    /// Maximum response body size (in bytes).
     #[arg(long = "rpc.max-response-body-size", value_name = "SIZE")]
     pub max_response_body_size: Option<u32>,
 
