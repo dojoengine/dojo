@@ -215,12 +215,13 @@ impl NodeArgs {
 
                 modules
             };
-
             Ok(RpcConfig {
                 apis: modules,
                 port: self.server.http_port,
                 addr: self.server.http_addr,
                 max_connections: self.server.max_connections,
+                max_request_body_size: None,
+                max_response_body_size: None,
                 cors_origins: self.server.http_cors_origins.clone(),
                 max_event_page_size: Some(self.server.max_event_page_size),
                 max_proof_keys: Some(self.server.max_proof_keys),

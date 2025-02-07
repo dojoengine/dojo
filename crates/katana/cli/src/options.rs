@@ -18,8 +18,7 @@ use katana_node::config::metrics::{DEFAULT_METRICS_ADDR, DEFAULT_METRICS_PORT};
 use katana_node::config::rpc::{RpcModulesList, DEFAULT_RPC_MAX_PROOF_KEYS};
 #[cfg(feature = "server")]
 use katana_node::config::rpc::{
-    DEFAULT_RPC_ADDR, DEFAULT_RPC_MAX_CONNECTIONS, DEFAULT_RPC_MAX_EVENT_PAGE_SIZE,
-    DEFAULT_RPC_PORT,
+    DEFAULT_RPC_ADDR, DEFAULT_RPC_MAX_EVENT_PAGE_SIZE, DEFAULT_RPC_PORT,
 };
 use katana_primitives::block::BlockHashOrNumber;
 use katana_primitives::chain::ChainId;
@@ -107,10 +106,16 @@ pub struct ServerOptions {
     pub http_modules: Option<RpcModulesList>,
 
     /// Maximum number of concurrent connections allowed.
-    #[arg(long = "rpc.max-connections", value_name = "COUNT")]
-    #[arg(default_value_t = DEFAULT_RPC_MAX_CONNECTIONS)]
-    #[serde(default = "default_max_connections")]
-    pub max_connections: u32,
+    #[arg(long = "rpc.max-connections", value_name = "MAX")]
+    pub max_connections: Option<u32>,
+
+    /// Maximum request body size.
+    #[arg(long = "rpc.max-request-body-size", value_name = "SIZE")]
+    pub max_request_body_size: Option<u32>,
+
+    /// Maximum response body size.
+    #[arg(long = "rpc.max-response-body-size", value_name = "SIZE")]
+    pub max_response_body_size: Option<u32>,
 
     /// Maximum page size for event queries.
     #[arg(long = "rpc.max-event-page-size", value_name = "SIZE")]
@@ -133,9 +138,11 @@ impl Default for ServerOptions {
             http_port: DEFAULT_RPC_PORT,
             http_cors_origins: Vec::new(),
             http_modules: Some(RpcModulesList::default()),
-            max_connections: DEFAULT_RPC_MAX_CONNECTIONS,
             max_event_page_size: DEFAULT_RPC_MAX_EVENT_PAGE_SIZE,
             max_proof_keys: DEFAULT_RPC_MAX_PROOF_KEYS,
+            max_connections: None,
+            max_request_body_size: None,
+            max_response_body_size: None,
         }
     }
 }
@@ -382,11 +389,6 @@ fn default_http_addr() -> IpAddr {
 #[cfg(feature = "server")]
 fn default_http_port() -> u16 {
     DEFAULT_RPC_PORT
-}
-
-#[cfg(feature = "server")]
-fn default_max_connections() -> u32 {
-    DEFAULT_RPC_MAX_CONNECTIONS
 }
 
 #[cfg(feature = "server")]
