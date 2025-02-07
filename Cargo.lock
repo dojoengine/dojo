@@ -8146,6 +8146,7 @@ dependencies = [
  "metrics",
  "num-traits 0.2.19",
  "parking_lot 0.12.3",
+ "pprof",
  "rand 0.8.5",
  "rayon",
  "reqwest 0.11.27",
