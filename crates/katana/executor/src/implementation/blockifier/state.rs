@@ -67,7 +67,11 @@ impl<'a> ContractClassProvider for CachedState<'a> {
             return Ok(None);
         };
 
-        if hash.0 == Felt::ZERO { Ok(None) } else { Ok(Some(hash.0)) }
+        if hash.0 == Felt::ZERO {
+            Ok(None)
+        } else {
+            Ok(Some(hash.0))
+        }
     }
 }
 
@@ -82,7 +86,11 @@ impl<'a> StateProvider for CachedState<'a> {
             return Ok(None);
         };
 
-        if hash.0 == Felt::ZERO { Ok(None) } else { Ok(Some(hash.0)) }
+        if hash.0 == Felt::ZERO {
+            Ok(None)
+        } else {
+            Ok(Some(hash.0))
+        }
     }
 
     fn nonce(
@@ -179,7 +187,7 @@ impl<'a> StateReader for StateProviderDb<'a> {
         let mut class_cache = self.compiled_class_cache.lock();
 
         if let Some(class) = class_cache.get(&class_hash.0) {
-            trace!(target: "executor::class_cache", class = format!("{}", class_hash.to_hex_string()), "Class cache hit");
+            trace!(target: "executor", class = format!("{}", class_hash.to_hex_string()), "Class cache hit");
             return Ok(class.clone());
         }
 
@@ -188,7 +196,7 @@ impl<'a> StateReader for StateProviderDb<'a> {
             .compiled_class(class_hash.0)
             .map_err(|e| StateError::StateReadError(e.to_string()))?
         {
-            trace!(target: "executor::class_cache", class = format!("{}", class_hash.to_hex_string()), "Class cache miss");
+            trace!(target: "executor", class = format!("{}", class_hash.to_hex_string()), "Class cache miss");
 
             let class =
                 utils::to_class(class).map_err(|e| StateError::StateReadError(e.to_string()))?;
