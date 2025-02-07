@@ -171,11 +171,11 @@ fn commit_big(c: &mut Criterion) {
         DbProvider::new_ephemeral(),
     );
 
-    c.bench_function("Commit.Small.Parallel", |b| {
+    c.bench_function("Serial", |b| {
         b.iter_batched(|| block.clone(), |input| commit(black_box(input)), BatchSize::SmallInput);
     });
 
-    c.bench_function("Commit.Big.Parallel", |b| {
+    c.bench_function("Parallel", |b| {
         b.iter_batched(
             || block.clone(),
             |input| commit_parallel(black_box(input)),
