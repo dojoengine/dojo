@@ -445,8 +445,11 @@ impl DojoWorld {
         entity_updated_after: Option<String>,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         let keys_pattern = build_keys_pattern(keys_clause)?;
-        let model_selectors: Vec<String> =
-            keys_clause.models.iter().map(|model| format!("{:#x}", compute_selector_from_tag(model))).collect();
+        let model_selectors: Vec<String> = keys_clause
+            .models
+            .iter()
+            .map(|model| format!("{:#x}", compute_selector_from_tag(model)))
+            .collect();
 
         let where_clause = if model_selectors.is_empty() {
             format!(
@@ -459,7 +462,8 @@ impl DojoWorld {
             )
         } else {
             format!(
-                "({table}.keys REGEXP ? AND {model_relation_table}.model_id IN ({})) OR {model_relation_table}.model_id NOT IN ({}) {}",
+                "({table}.keys REGEXP ? AND {model_relation_table}.model_id IN ({})) OR \
+                 {model_relation_table}.model_id NOT IN ({}) {}",
                 vec!["?"; model_selectors.len()].join(", "),
                 vec!["?"; model_selectors.len()].join(", "),
                 if entity_updated_after.is_some() {
@@ -1201,7 +1205,9 @@ fn build_composite_clause(
             ClauseType::Keys(keys) => {
                 let keys_pattern = build_keys_pattern(keys)?;
                 bind_values.push(keys_pattern);
-                let model_selectors: Vec<String> = keys.models.iter()
+                let model_selectors: Vec<String> = keys
+                    .models
+                    .iter()
                     .map(|model| format!("{:#x}", compute_selector_from_tag(model)))
                     .collect();
 
@@ -1211,9 +1217,9 @@ fn build_composite_clause(
                     // Add bind value placeholders for each model selector
                     let placeholders = vec!["?"; model_selectors.len()].join(", ");
                     where_clauses.push(format!(
-                        "({table}.keys REGEXP ? AND {model_relation_table}.model_id IN ({})) OR {model_relation_table}.model_id NOT IN ({})",
-                        placeholders,
-                        placeholders
+                        "({table}.keys REGEXP ? AND {model_relation_table}.model_id IN ({})) OR \
+                         {model_relation_table}.model_id NOT IN ({})",
+                        placeholders, placeholders
                     ));
                     // Add each model selector twice (once for IN and once for NOT IN)
                     bind_values.extend(model_selectors.clone());
