@@ -26,10 +26,26 @@ use tracing::trace;
 type RpcProvider = Arc<JsonRpcClient<HttpTransport>>;
 type InitializerAccount = SingleOwnerAccount<RpcProvider, LocalWallet>;
 
+/// The StarknetOS program (SNOS) is the cairo program that executes the state
+/// transition of a new Katana block from the previous block.
+/// This program hash is required to be known by the settlement contract in order to
+/// only accept a new state from a valid SNOS program.
+///
+/// This program can be found here: <https://github.com/starkware-libs/cairo-lang/blob/a86e92bfde9c171c0856d7b46580c66e004922f3/src/starkware/starknet/core/os/os.cairo>.
 const SNOS_PROGRAM_HASH: Felt =
     felt!("0x054d3603ed14fb897d0925c48f26330ea9950bd4ca95746dad4f7f09febffe0d");
 
-// TODO: to replace with actual value.
+/// To execute the SNOS program, a specific layout named "all_cairo" is required.
+/// However, this layout can't be verified by the Cairo verifier that lives on Starknet.
+///
+/// This is why we're using an other program, the Layout Bridge program, which act as a verifier written in Cairo
+/// which uses a layout supported by the Cairo verifier.
+///
+/// By verifying a SNOS proof using the Layout Bridge program, a new proof is generated which can be verified by the Cairo verifier.
+///
+/// For the same reason as above, the Layout Bridge program is required to be known by the settlement contract for security reasons.
+///
+/// This program can be found here: <https://github.com/starkware-libs/cairo-lang/blob/8276ac35830148a397e1143389f23253c8b80e93/src/starkware/cairo/cairo_verifier/layouts/all_cairo/cairo_verifier.cairo>.
 const LAYOUT_BRIDGE_PROGRAM_HASH: Felt =
     felt!("0x193641eb151b0f41674641089952e60bc3aded26e3cf42793655c562b8c3aa0");
 
