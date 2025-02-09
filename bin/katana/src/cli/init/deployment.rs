@@ -52,6 +52,16 @@ const SNOS_PROGRAM_HASH: Felt =
 const LAYOUT_BRIDGE_PROGRAM_HASH: Felt =
     felt!("0x193641eb151b0f41674641089952e60bc3aded26e3cf42793655c562b8c3aa0");
 
+/// The bootloader program hash is the program hash of the bootloader program.
+///
+/// This program is used to run the layout bridge program in SHARP. This program hash is also
+/// required since the fact is computed based on the bootloader program hash and its output.
+///
+/// TODO: no bootloader program in cairo-lang give this hash when compiled. Investigating with
+/// Starkware.
+const BOOTLOADER_PROGRAM_HASH: Felt =
+    felt!("0x5ab580b04e3532b6b18f81cfa654a05e29dd8e2352d88df1e765a84072db07");
+
 /// The contract address that handles fact verification.
 ///
 /// This address points to Herodotus' Atlantic Fact Registry contract on Starknet Sepolia as we rely
@@ -177,10 +187,12 @@ pub async fn deploy_settlement_contract(
 
         sp.update_text("Setting program info...");
 
+        // TODO: this will be updated in piltover to have a field for the layout bridge program
+        // hash.
         let program_info = ProgramInfo {
             config_hash,
             snos_program_hash: SNOS_PROGRAM_HASH,
-            program_hash: LAYOUT_BRIDGE_PROGRAM_HASH,
+            program_hash: BOOTLOADER_PROGRAM_HASH,
         };
 
         let res = appchain
