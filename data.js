@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1738956445805,
+  "lastUpdate": 1739126584046,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -51085,6 +51085,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 7950035,
             "range": "± 68099",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c3882b98bdcef4779a77768f7c613505cfce64a3",
+          "message": "fix(katana): skip legacy class when fetching compiled class hash (#2998)",
+          "timestamp": "2025-02-10T02:26:48+08:00",
+          "tree_id": "9bf39678e33938c090cfd98a83dbf92a74dbad42",
+          "url": "https://github.com/dojoengine/dojo/commit/c3882b98bdcef4779a77768f7c613505cfce64a3"
+        },
+        "date": 1739126581577,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 11880415950,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
