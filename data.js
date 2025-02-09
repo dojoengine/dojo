@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1739126584046,
+  "lastUpdate": 1739126683938,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -51115,6 +51115,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 11880415950,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c3882b98bdcef4779a77768f7c613505cfce64a3",
+          "message": "fix(katana): skip legacy class when fetching compiled class hash (#2998)",
+          "timestamp": "2025-02-10T02:26:48+08:00",
+          "tree_id": "9bf39678e33938c090cfd98a83dbf92a74dbad42",
+          "url": "https://github.com/dojoengine/dojo/commit/c3882b98bdcef4779a77768f7c613505cfce64a3"
+        },
+        "date": 1739126680492,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2421588,
+            "range": "± 34468",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 7949567,
+            "range": "± 262338",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2513839475,
+            "range": "± 189761001",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 7945300,
+            "range": "± 193215",
             "unit": "ns/iter"
           }
         ]
