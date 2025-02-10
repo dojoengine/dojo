@@ -32,7 +32,7 @@ use self::state::CachedState;
 use crate::{
     BlockExecutor, BlockLimits, EntryPointCall, ExecutionError, ExecutionFlags, ExecutionOutput,
     ExecutionResult, ExecutionStats, ExecutorError, ExecutorExt, ExecutorFactory, ExecutorResult,
-    ResultAndStates, StateProviderDb,
+    ResultAndStates,
 };
 
 lazy_static! {
