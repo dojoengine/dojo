@@ -569,7 +569,7 @@ where
         // then deploying new external contracts
         let deployer = Deployer::new(&self.world.account, self.txn_config);
 
-        for contract in &self.diff.external_contracts {
+        for contract in self.diff.external_contracts.values() {
             if let ExternalContractDiff::Created(contract) = contract {
                 if let Some((_, call)) = deployer
                     .deploy_via_udc_getcall(

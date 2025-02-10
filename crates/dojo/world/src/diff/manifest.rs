@@ -159,7 +159,7 @@ impl Manifest {
             }
         }
 
-        for contract in &diff.external_contracts {
+        for contract in diff.external_contracts.values() {
             let contract = contract.contract_data();
 
             external_contracts.push(ExternalContract {

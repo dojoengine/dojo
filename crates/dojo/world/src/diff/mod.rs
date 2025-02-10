@@ -75,7 +75,7 @@ pub struct WorldDiff {
     /// The external contract classes.
     pub external_contract_classes: HashMap<String, ExternalContractClassDiff>,
     /// The external contracts.
-    pub external_contracts: Vec<ExternalContractDiff>,
+    pub external_contracts: HashMap<String, ExternalContractDiff>,
 }
 
 impl WorldDiff {
@@ -95,7 +95,7 @@ impl WorldDiff {
             },
             namespaces: vec![],
             resources: HashMap::new(),
-            external_contracts: vec![],
+            external_contracts: HashMap::new(),
             external_contract_classes: HashMap::new(),
             profile_config: local.profile_config,
             external_writers: HashMap::new(),
@@ -116,7 +116,8 @@ impl WorldDiff {
         }
 
         for contract in local.external_contracts {
-            diff.external_contracts.push(ExternalContractDiff::Created(contract));
+            diff.external_contracts
+                .insert(contract.instance_name.clone(), ExternalContractDiff::Created(contract));
         }
 
         Ok(diff)
@@ -150,7 +151,7 @@ impl WorldDiff {
             external_writers: remote.external_writers.clone(),
             external_owners: remote.external_owners.clone(),
             external_contract_classes: HashMap::new(),
-            external_contracts: vec![],
+            external_contracts: HashMap::new(),
         };
 
         for (local_selector, local_resource) in local.resources {
@@ -180,9 +181,13 @@ impl WorldDiff {
 
         for contract in local.external_contracts {
             if remote.deployed_external_contracts.contains(&contract.instance_name) {
-                diff.external_contracts.push(ExternalContractDiff::Synced(contract));
+                diff.external_contracts
+                    .insert(contract.instance_name.clone(), ExternalContractDiff::Synced(contract));
             } else {
-                diff.external_contracts.push(ExternalContractDiff::Created(contract));
+                diff.external_contracts.insert(
+                    contract.instance_name.clone(),
+                    ExternalContractDiff::Created(contract),
+                );
             }
         }
 

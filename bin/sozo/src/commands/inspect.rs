@@ -2,7 +2,7 @@ use anyhow::Result;
 use clap::Args;
 use colored::*;
 use dojo_types::naming;
-use dojo_world::diff::{ResourceDiff, WorldDiff, WorldStatus};
+use dojo_world::diff::{ExternalContractDiff, ResourceDiff, WorldDiff, WorldStatus};
 use dojo_world::ResourceType;
 use scarb::core::Config;
 use serde::Serialize;
@@ -17,9 +17,9 @@ use crate::utils;
 
 #[derive(Debug, Args)]
 pub struct InspectArgs {
-    #[arg(help = "The tag of the resource to inspect. If not provided, a world summary will be \
-                  displayed.")]
-    resource: Option<String>,
+    #[arg(help = "The tag of the resource or the external contract instance name to inspect. If \
+                  not provided, a world summary will be displayed.")]
+    element: Option<String>,
 
     #[command(flatten)]
     world: WorldOptions,
@@ -33,14 +33,14 @@ impl InspectArgs {
         trace!(args = ?self);
         let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
 
-        let InspectArgs { world, starknet, resource } = self;
+        let InspectArgs { world, starknet, element } = self;
 
         config.tokio_handle().block_on(async {
             let (world_diff, _, _) =
                 utils::get_world_diff_and_provider(starknet.clone(), world, &ws).await?;
 
-            if let Some(resource) = resource {
-                inspect_resource(&resource, &world_diff)?;
+            if let Some(element) = element {
+                inspect_element(&element, &world_diff)?;
             } else {
                 inspect_world(&world_diff);
             }
@@ -135,6 +135,17 @@ struct EventInspect {
     selector: String,
 }
 
+#[derive(Debug, Serialize)]
+struct ExternalContractInspect {
+    contract_name: String,
+    instance_name: String,
+    class_hash: String,
+    status: String,
+    salt: String,
+    constructor_calldata: Vec<String>,
+    address: String,
+}
+
 #[derive(Debug, Tabled)]
 enum GranteeSource {
     #[tabled(rename = "Local")]
@@ -165,21 +176,25 @@ struct GranteeDisplay {
     source: GranteeSource,
 }
 
-/// Inspects a resource.
-fn inspect_resource(resource_name_or_tag: &str, world_diff: &WorldDiff) -> Result<()> {
-    let selector = if naming::is_valid_tag(resource_name_or_tag) {
-        naming::compute_selector_from_tag(resource_name_or_tag)
+/// Inspects a world element (resource or external contract).
+fn inspect_element(element_name: &str, world_diff: &WorldDiff) -> Result<()> {
+    let selector = if naming::is_valid_tag(element_name) {
+        naming::compute_selector_from_tag(element_name)
     } else {
-        naming::compute_bytearray_hash(resource_name_or_tag)
+        naming::compute_bytearray_hash(element_name)
     };
-    let resource_diff = world_diff.resources.get(&selector);
 
-    if resource_diff.is_none() {
-        return Err(anyhow::anyhow!("Resource not found locally."));
+    if let Some(diff) = world_diff.resources.get(&selector) {
+        inspect_resource(diff, world_diff)
+    } else if let Some(diff) = world_diff.external_contracts.get(element_name) {
+        inspect_external_contract(diff)
+    } else {
+        Err(anyhow::anyhow!("Resource or external contract not found locally."))
     }
+}
 
-    let resource_diff = resource_diff.unwrap();
-
+/// Inspects a resource.
+fn inspect_resource(resource_diff: &ResourceDiff, world_diff: &WorldDiff) -> Result<()> {
     let inspect = resource_diff_display(world_diff, resource_diff);
     pretty_print_toml(&toml::to_string_pretty(&inspect).unwrap());
 
@@ -242,6 +257,14 @@ fn inspect_resource(resource_name_or_tag: &str, world_diff: &WorldDiff) -> Resul
 
     print_table(&writers_disp, Some(Color::FG_BRIGHT_CYAN), Some("\n> Writers"));
     print_table(&owners_disp, Some(Color::FG_BRIGHT_MAGENTA), Some("\n> Owners"));
+    Ok(())
+}
+
+/// Inspects an external contract.
+fn inspect_external_contract(contract_diff: &ExternalContractDiff) -> Result<()> {
+    let inspect = external_contract_diff_display(contract_diff);
+    print_section_header("[External Contract]");
+    pretty_print_toml(&toml::to_string_pretty(&inspect).unwrap());
     Ok(())
 }
 
@@ -428,6 +451,21 @@ fn resource_diff_display(world_diff: &WorldDiff, resource: &ResourceDiff) -> Res
     }
 }
 
+/// Displays the external contract diff.
+fn external_contract_diff_display(contract: &ExternalContractDiff) -> ExternalContractInspect {
+    let contract_data = contract.contract_data();
+
+    ExternalContractInspect {
+        contract_name: contract_data.contract_name,
+        instance_name: contract_data.instance_name,
+        address: contract_data.address.to_fixed_hex_string(),
+        class_hash: contract_data.class_hash.to_fixed_hex_string(),
+        status: contract.status(),
+        salt: contract_data.salt.to_fixed_hex_string(),
+        constructor_calldata: contract_data.constructor_data,
+    }
+}
+
 /// Prints a table.
 fn print_table<T>(data: T, color: Option<Color>, title: Option<&str>)
 where
@@ -452,12 +490,16 @@ where
     println!("{table}\n");
 }
 
+/// Pretty prints a section header
+fn print_section_header(str: &str) {
+    println!("\n{}", str.blue());
+}
+
 /// Pretty prints a TOML string.
 fn pretty_print_toml(str: &str) {
     for line in str.lines() {
         if line.starts_with("[") {
-            // Print section headers.
-            println!("\n{}", line.blue());
+            print_section_header(line);
         } else if line.contains('=') {
             // Print key-value pairs with keys in green and values.
             let parts: Vec<&str> = line.splitn(2, '=').collect();

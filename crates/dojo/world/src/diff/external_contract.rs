@@ -31,4 +31,11 @@ impl ExternalContractDiff {
             ExternalContractDiff::Synced(c) => c.clone(),
         }
     }
+
+    pub fn status(&self) -> String {
+        match self {
+            ExternalContractDiff::Created(_) => "Created".to_string(),
+            ExternalContractDiff::Synced(_) => "Synced".to_string(),
+        }
+    }
 }
