@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1739155350731,
+  "lastUpdate": 1739213476688,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -51241,6 +51241,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 7888128,
             "range": "± 96995",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6ee7082365de71b5a245e7560ab9e94c5d30d012",
+          "message": "fix(katana-contracts): update piltover (#2980)\n\n* update piltover on PR cartridge-gg/piltover#5\r\n\r\n* update piltover submodule\r\n\r\n* update piltover to latest version\r\n\r\n* update to latest piltover changes\r\n\r\n* ensure katana rpc server can return big responses\r\n\r\n* update SNOS program hash\r\n\r\n* wip\r\n\r\n* update piltover rev\r\n\r\n* bump piltover with block-0 correctly handled\r\n\r\n* point piltover to main\r\n\r\n* feat(rpc): add `max_request_body_size` and `max_response_body_size`\r\n\r\n* doc: update comment\r\n\r\n* update\r\n\r\n* add comments for the two programs hashes\r\n\r\n* comments\r\n\r\n* fmt\r\n\r\n* add bootloader program hash\r\n\r\n* add bootloader support for correct piltover configuration\r\n\r\n* change piltover rev to main\r\n\r\n---------\r\n\r\nCo-authored-by: Ammar Arif <evergreenkary@gmail.com>",
+          "timestamp": "2025-02-10T18:34:55Z",
+          "tree_id": "3a649d273d1aad2a93c5d3f78302be731cb4215f",
+          "url": "https://github.com/dojoengine/dojo/commit/6ee7082365de71b5a245e7560ab9e94c5d30d012"
+        },
+        "date": 1739213473737,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 11835189411,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
