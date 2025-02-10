@@ -57,8 +57,8 @@ const LAYOUT_BRIDGE_PROGRAM_HASH: Felt =
 /// This program is used to run the layout bridge program in SHARP. This program hash is also
 /// required since the fact is computed based on the bootloader program hash and its output.
 ///
-/// TODO: no bootloader program in cairo-lang give this hash when compiled. Investigating with
-/// Starkware.
+/// TODO: waiting for SHARP team to confirm if it's a custom bootloader or if we
+/// can find it in cairo-lang.
 const BOOTLOADER_PROGRAM_HASH: Felt =
     felt!("0x5ab580b04e3532b6b18f81cfa654a05e29dd8e2352d88df1e765a84072db07");
 
@@ -173,7 +173,7 @@ pub async fn deploy_settlement_contract(
         let appchain = AppchainContract::new(deployed_appchain_contract, &account);
 
         // Compute the chain's config hash
-        let config_hash = compute_config_hash(
+        let snos_config_hash = compute_config_hash(
             chain_id,
             // NOTE:
             //
@@ -187,12 +187,11 @@ pub async fn deploy_settlement_contract(
 
         sp.update_text("Setting program info...");
 
-        // TODO: this will be updated in piltover to have a field for the layout bridge program
-        // hash.
         let program_info = ProgramInfo {
-            config_hash,
+            snos_config_hash,
             snos_program_hash: SNOS_PROGRAM_HASH,
-            program_hash: BOOTLOADER_PROGRAM_HASH,
+            bootloader_program_hash: BOOTLOADER_PROGRAM_HASH,
+            layout_bridge_program_hash: LAYOUT_BRIDGE_PROGRAM_HASH,
         };
 
         let res = appchain
@@ -270,10 +269,17 @@ pub async fn check_program_info(
     let actual_program_info = program_info_res?;
     let facts_registry = facts_registry_res?;
 
-    if actual_program_info.program_hash != LAYOUT_BRIDGE_PROGRAM_HASH {
-        return Err(ContractInitError::InvalidProgramHash {
-            actual: actual_program_info.program_hash,
+    if actual_program_info.layout_bridge_program_hash != LAYOUT_BRIDGE_PROGRAM_HASH {
+        return Err(ContractInitError::InvalidLayoutBridgeProgramHash {
+            actual: actual_program_info.layout_bridge_program_hash,
             expected: LAYOUT_BRIDGE_PROGRAM_HASH,
+        });
+    }
+
+    if actual_program_info.bootloader_program_hash != BOOTLOADER_PROGRAM_HASH {
+        return Err(ContractInitError::InvalidBootloaderProgramHash {
+            actual: actual_program_info.bootloader_program_hash,
+            expected: BOOTLOADER_PROGRAM_HASH,
         });
     }
 
@@ -284,9 +290,9 @@ pub async fn check_program_info(
         });
     }
 
-    if actual_program_info.config_hash != config_hash {
+    if actual_program_info.snos_config_hash != config_hash {
         return Err(ContractInitError::InvalidConfigHash {
-            actual: actual_program_info.config_hash,
+            actual: actual_program_info.snos_config_hash,
             expected: config_hash,
         });
     }
@@ -314,9 +320,16 @@ pub enum ContractInitError {
     Initialization(AccountError<<InitializerAccount as Account>::SignError>),
 
     #[error(
-        "invalid program info: program hash mismatch - expected {expected:#x}, got {actual:#x}"
+        "invalid program info: layout bridge program hash mismatch - expected {expected:#x}, got \
+         {actual:#x}"
     )]
-    InvalidProgramHash { expected: Felt, actual: Felt },
+    InvalidLayoutBridgeProgramHash { expected: Felt, actual: Felt },
+
+    #[error(
+        "invalid program info: bootloader program hash mismatch - expected {expected:#x}, got \
+         {actual:#x}"
+    )]
+    InvalidBootloaderProgramHash { expected: Felt, actual: Felt },
 
     #[error(
         "invalid program info: snos program hash mismatch - expected {expected:#x}, got \
