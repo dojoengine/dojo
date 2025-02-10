@@ -3,6 +3,7 @@ use std::fs;
 use std::path::Path;
 
 use anyhow::{bail, Result};
+use dojo_types::naming;
 use serde::Deserialize;
 use toml;
 
@@ -118,12 +119,21 @@ impl ProfileConfig {
                     );
                 }
 
-                let set: HashSet<_> = instance_names.iter().cloned().collect();
-                if set.len() != instance_names.len() {
+                let instance_name_set: HashSet<_> = instance_names.iter().cloned().collect();
+                if instance_name_set.len() != instance_names.len() {
                     bail!(
                         "There are duplicated instance names for the external contract name '{}'",
                         contract_name
                     );
+                }
+
+                for instance_name in instance_name_set.into_iter().flatten() {
+                    if !naming::is_name_valid(&instance_name) {
+                        bail!(
+                            "The instance name '{}' is not valid according to Dojo format rules.",
+                            instance_name
+                        );
+                    }
                 }
             }
         }
@@ -331,7 +341,13 @@ mod tests {
             },
         ]);
 
-        assert!(config.validate().is_err());
+        let res = config.validate();
+        assert!(res.is_err());
+        assert_eq!(
+            res.err().unwrap().to_string(),
+            "There must be only one [[external_contracts]] block in the profile config mentioning \
+             the contract name 'c1' without instance name."
+        );
 
         // duplicated instance name for a same contract name
         config.external_contracts = Some(vec![
@@ -355,7 +371,47 @@ mod tests {
             },
         ]);
 
-        assert!(config.validate().is_err());
+        let res = config.validate();
+        assert!(res.is_err());
+        assert_eq!(
+            res.err().unwrap().to_string(),
+            "There are duplicated instance names for the external contract name 'c1'"
+        );
+
+        // bad instance name
+        config.external_contracts = Some(vec![
+            ExternalContractConfig {
+                contract_name: "c1".to_string(),
+                instance_name: None,
+                salt: "0x01".to_string(),
+                constructor_data: None,
+            },
+            ExternalContractConfig {
+                contract_name: "c2".to_string(),
+                instance_name: Some("x@".to_string()),
+                salt: "0x01".to_string(),
+                constructor_data: None,
+            },
+            ExternalContractConfig {
+                contract_name: "c2".to_string(),
+                instance_name: Some("y".to_string()),
+                salt: "0x01".to_string(),
+                constructor_data: None,
+            },
+            ExternalContractConfig {
+                contract_name: "c3".to_string(),
+                instance_name: Some("c3".to_string()),
+                salt: "0x01".to_string(),
+                constructor_data: None,
+            },
+        ]);
+
+        let res = config.validate();
+        assert!(res.is_err());
+        assert_eq!(
+            res.err().unwrap().to_string(),
+            "The instance name 'x@' is not valid according to Dojo format rules."
+        );
 
         // nominal case
         config.external_contracts = Some(vec![
