@@ -121,10 +121,7 @@ How to run the scripts:
 
 ```bash
    # From installed Katana.
-   katana --messaging crates/katana/contracts/messaging/l3.messaging.json -p 6060`
-
-   # Dev mode
-   cargo run --bin katana --features "starknet-messaging" -- --messaging crates/katana/contracts/messaging/l3.messaging.json -p 6060
+   katana --messaging crates/katana/contracts/messaging/l3.messaging.json -p 6060
 ```
 
 - Open an other terminal and `cd ~/dojo/crates/katana/core/contracts/messaging`.
