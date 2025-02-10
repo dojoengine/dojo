@@ -260,7 +260,7 @@ impl<Db: Database> BlockStatusProvider for DbProvider<Db> {
 fn dup_entries<Db, Tb, V, T>(
     db_tx: &<Db as Database>::Tx,
     key: <Tb as Table>::Key,
-    f: impl FnMut(Result<KeyValue<Tb>, DatabaseError>) -> ProviderResult<T>,
+    mut f: impl FnMut(Result<KeyValue<Tb>, DatabaseError>) -> ProviderResult<Option<T>>,
 ) -> ProviderResult<V>
 where
     Db: Database,
@@ -270,7 +270,7 @@ where
     Ok(db_tx
         .cursor_dup::<Tb>()?
         .walk_dup(Some(key), None)?
-        .map(|walker| walker.map(f).collect::<ProviderResult<V>>())
+        .map(|walker| walker.filter_map(|i| f(i).transpose()).collect::<ProviderResult<V>>())
         .transpose()?
         .unwrap_or_default())
 }
@@ -288,7 +288,7 @@ impl<Db: Database> StateUpdateProvider for DbProvider<Db> {
                 _,
             >(&db_tx, block_num, |entry| {
                 let (_, ContractNonceChange { contract_address, nonce }) = entry?;
-                Ok((contract_address, nonce))
+                Ok(Some((contract_address, nonce)))
             })?;
 
             let deployed_contracts = dup_entries::<
@@ -298,7 +298,7 @@ impl<Db: Database> StateUpdateProvider for DbProvider<Db> {
                 _,
             >(&db_tx, block_num, |entry| {
                 let (_, ContractClassChange { contract_address, class_hash }) = entry?;
-                Ok((contract_address, class_hash))
+                Ok(Some((contract_address, class_hash)))
             })?;
 
             let mut declared_classes = BTreeMap::new();
@@ -328,7 +328,7 @@ impl<Db: Database> StateUpdateProvider for DbProvider<Db> {
                     _,
                 >(&db_tx, block_num, |entry| {
                     let (_, ContractStorageEntry { key, value }) = entry?;
-                    Ok((key.contract_address, (key.key, value)))
+                    Ok(Some((key.contract_address, (key.key, value))))
                 })?;
 
                 let mut map: BTreeMap<_, BTreeMap<StorageKey, StorageValue>> = BTreeMap::new();
@@ -371,11 +371,11 @@ impl<Db: Database> StateUpdateProvider for DbProvider<Db> {
             >(&db_tx, block_num, |entry| {
                 let (_, class_hash) = entry?;
 
-                let compiled_hash = db_tx
-                    .get::<tables::CompiledClassHashes>(class_hash)?
-                    .ok_or(ProviderError::MissingCompiledClassHash(class_hash))?;
-
-                Ok((class_hash, compiled_hash))
+                if let Some(compiled_hash) = db_tx.get::<tables::CompiledClassHashes>(class_hash)? {
+                    Ok(Some((class_hash, compiled_hash)))
+                } else {
+                    Ok(None)
+                }
             })?;
 
             db_tx.commit()?;
@@ -400,7 +400,7 @@ impl<Db: Database> StateUpdateProvider for DbProvider<Db> {
                 _,
             >(&db_tx, block_num, |entry| {
                 let (_, ContractClassChange { contract_address, class_hash }) = entry?;
-                Ok((contract_address, class_hash))
+                Ok(Some((contract_address, class_hash)))
             })?;
 
             db_tx.commit()?;

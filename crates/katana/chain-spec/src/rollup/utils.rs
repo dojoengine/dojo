@@ -336,7 +336,7 @@ mod tests {
 
     use alloy_primitives::U256;
     use katana_executor::implementation::blockifier::BlockifierFactory;
-    use katana_executor::ExecutorFactory;
+    use katana_executor::{BlockLimits, ExecutorFactory};
     use katana_primitives::chain::ChainId;
     use katana_primitives::contract::Nonce;
     use katana_primitives::env::CfgEnv;
@@ -386,6 +386,7 @@ mod tests {
                 ..Default::default()
             },
             Default::default(),
+            BlockLimits::max(),
         )
     }
 

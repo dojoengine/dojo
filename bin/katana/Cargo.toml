@@ -24,6 +24,7 @@ comfy-table = "7.1.1"
 dojo-utils.workspace = true
 inquire = "0.7.5"
 lazy_static.workspace = true
+piltover = { git = "https://github.com/keep-starknet-strange/piltover.git", rev = "fb9d988" }
 rand.workspace = true
 shellexpand = "3.1.0"
 spinoff.workspace = true
