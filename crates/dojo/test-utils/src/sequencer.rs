@@ -6,6 +6,7 @@ use katana_core::constants::DEFAULT_SEQUENCER_ADDRESS;
 use katana_executor::implementation::blockifier::BlockifierFactory;
 use katana_node::config::dev::DevConfig;
 use katana_node::config::rpc::{RpcConfig, DEFAULT_RPC_ADDR};
+use katana_node::config::sequencing::SequencingConfig;
 pub use katana_node::config::*;
 use katana_node::LaunchedNode;
 use katana_primitives::chain::ChainId;

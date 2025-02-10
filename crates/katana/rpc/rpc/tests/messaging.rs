@@ -11,7 +11,7 @@ use cainome::rs::abigen;
 use dojo_test_utils::sequencer::{get_default_test_config, TestSequencer};
 use dojo_utils::TransactionWaiter;
 use katana_core::service::messaging::MessagingConfig;
-use katana_node::config::SequencingConfig;
+use katana_node::config::sequencing::SequencingConfig;
 use katana_primitives::felt;
 use katana_primitives::utils::transaction::{
     compute_l1_handler_tx_hash, compute_l1_to_l2_message_hash, compute_l2_to_l1_message_hash,

@@ -19,7 +19,8 @@ use katana_node::config::metrics::MetricsConfig;
 use katana_node::config::rpc::RpcConfig;
 #[cfg(feature = "server")]
 use katana_node::config::rpc::{RpcModuleKind, RpcModulesList};
-use katana_node::config::{Config, SequencingConfig};
+use katana_node::config::sequencing::SequencingConfig;
+use katana_node::config::Config;
 use katana_primitives::chain::ChainId;
 use katana_primitives::genesis::allocation::DevAllocationsGenerator;
 use katana_primitives::genesis::constant::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;
@@ -57,6 +58,10 @@ pub struct NodeArgs {
     #[arg(short, long)]
     #[arg(value_name = "MILLISECONDS")]
     pub block_time: Option<u64>,
+
+    #[arg(long = "sequencing.block-max-cairo-steps")]
+    #[arg(value_name = "TOTAL")]
+    pub block_cairo_steps_limit: Option<u64>,
 
     /// Directory path of the database to initialize from.
     ///
@@ -187,7 +192,11 @@ impl NodeArgs {
     }
 
     fn sequencer_config(&self) -> SequencingConfig {
-        SequencingConfig { block_time: self.block_time, no_mining: self.no_mining }
+        SequencingConfig {
+            block_time: self.block_time,
+            no_mining: self.no_mining,
+            block_cairo_steps_limit: self.block_cairo_steps_limit,
+        }
     }
 
     fn rpc_config(&self) -> Result<RpcConfig> {

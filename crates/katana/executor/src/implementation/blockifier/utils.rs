@@ -3,7 +3,7 @@ use std::num::NonZeroU128;
 use std::sync::Arc;
 
 use blockifier::blockifier::block::{BlockInfo, GasPrices};
-use blockifier::bouncer::BouncerConfig;
+use blockifier::bouncer::{Bouncer, BouncerConfig};
 use blockifier::context::{BlockContext, ChainInfo, FeeTokenAddresses, TransactionContext};
 use blockifier::execution::call_info::{
     CallExecution, CallInfo, OrderedEvent, OrderedL2ToL1Message,
@@ -14,8 +14,8 @@ use blockifier::execution::contract_class::{
 };
 use blockifier::execution::entry_point::{CallEntryPoint, CallType, EntryPointExecutionContext};
 use blockifier::fee::fee_utils::get_fee_by_gas_vector;
-use blockifier::state::cached_state;
-use blockifier::state::state_api::StateReader;
+use blockifier::state::cached_state::{self, TransactionalState};
+use blockifier::state::state_api::{StateReader, UpdatableState};
 use blockifier::transaction::account_transaction::AccountTransaction;
 use blockifier::transaction::objects::{
     DeprecatedTransactionInfo, FeeType, HasRelatedFeeType, TransactionExecutionInfo,
@@ -58,16 +58,17 @@ use starknet::core::utils::parse_cairo_short_string;
 use super::state::{CachedState, StateDb};
 use crate::abstraction::{EntryPointCall, ExecutionFlags};
 use crate::utils::build_receipt;
-use crate::{ExecutionError, ExecutionResult};
+use crate::{ExecutionError, ExecutionResult, ExecutorResult};
 
 pub fn transact<S: StateReader>(
     state: &mut cached_state::CachedState<S>,
     block_context: &BlockContext,
     simulation_flags: &ExecutionFlags,
     tx: ExecutableTxWithHash,
-) -> ExecutionResult {
-    fn transact_inner<S: StateReader>(
-        state: &mut cached_state::CachedState<S>,
+    bouncer: Option<&mut Bouncer>,
+) -> ExecutorResult<ExecutionResult> {
+    fn transact_inner<U: UpdatableState>(
+        state: &mut U,
         block_context: &BlockContext,
         simulation_flags: &ExecutionFlags,
         tx: Transaction,
@@ -122,15 +123,36 @@ pub fn transact<S: StateReader>(
         Ok((info, fee_info))
     }
 
-    match transact_inner(state, block_context, simulation_flags, to_executor_tx(tx.clone())) {
+    let transaction = to_executor_tx(tx.clone());
+    let mut tx_state = TransactionalState::create_transactional(state);
+    let result = transact_inner(&mut tx_state, block_context, simulation_flags, transaction);
+
+    match result {
         Ok((info, fee)) => {
+            if let Some(bouncer) = bouncer {
+                let tx_state_changes_keys =
+                    tx_state.get_actual_state_changes().unwrap().into_keys();
+
+                bouncer.try_update(
+                    &tx_state,
+                    &tx_state_changes_keys,
+                    &info.summarize(),
+                    &info.transaction_receipt.resources,
+                )?;
+            }
+
+            tx_state.commit();
+
             // get the trace and receipt from the execution info
             let trace = to_exec_info(info, tx.r#type());
             let receipt = build_receipt(tx.tx_ref(), fee, &trace);
-            ExecutionResult::new_success(receipt, trace)
+            Ok(ExecutionResult::new_success(receipt, trace))
         }
 
-        Err(e) => ExecutionResult::new_failed(e),
+        Err(e) => {
+            tx_state.commit();
+            Ok(ExecutionResult::new_failed(e))
+        }
     }
 }
 
