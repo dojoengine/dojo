@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1739215887113,
+  "lastUpdate": 1739215991201,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -51349,6 +51349,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 12180149466,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9f744a0edde485aa2bd86bf9863c3446508b217d",
+          "message": "feat(katana): automatically close block if resources limit reached (#3003)\n\nAdd resource limit parameter for interval block mining. Blocks will now be prompted to close when the total execution resources of their transactions reaches this configurable threshold. Configure via the new `--sequencing.block-max-cairo-steps` CLI argument.",
+          "timestamp": "2025-02-11T03:15:07+08:00",
+          "tree_id": "9ce89b82c12b36869d427be2abe5671595a987f5",
+          "url": "https://github.com/dojoengine/dojo/commit/9f744a0edde485aa2bd86bf9863c3446508b217d"
+        },
+        "date": 1739215988592,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2423146,
+            "range": "± 66684",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 8385344,
+            "range": "± 264177",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2695829083,
+            "range": "± 209992501",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 7828240,
+            "range": "± 89635",
             "unit": "ns/iter"
           }
         ]
