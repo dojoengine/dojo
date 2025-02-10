@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1739213559315,
+  "lastUpdate": 1739215887113,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -51319,6 +51319,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 8036238,
             "range": "± 166446",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9f744a0edde485aa2bd86bf9863c3446508b217d",
+          "message": "feat(katana): automatically close block if resources limit reached (#3003)\n\nAdd resource limit parameter for interval block mining. Blocks will now be prompted to close when the total execution resources of their transactions reaches this configurable threshold. Configure via the new `--sequencing.block-max-cairo-steps` CLI argument.",
+          "timestamp": "2025-02-11T03:15:07+08:00",
+          "tree_id": "9ce89b82c12b36869d427be2abe5671595a987f5",
+          "url": "https://github.com/dojoengine/dojo/commit/9f744a0edde485aa2bd86bf9863c3446508b217d"
+        },
+        "date": 1739215884833,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 12180149466,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
