@@ -195,7 +195,7 @@ where
     fn pending_executor(&self) -> Option<PendingExecutor> {
         self.inner.block_producer.as_ref().and_then(|bp| match &*bp.producer.read() {
             BlockProducerMode::Instant(_) => None,
-            BlockProducerMode::Interval(producer) => Some(producer.executor()),
+            BlockProducerMode::Interval(producer) => producer.executor(),
         })
     }
 

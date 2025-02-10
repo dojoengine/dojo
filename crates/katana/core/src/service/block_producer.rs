@@ -196,7 +196,7 @@ pub struct IntervalBlockProducer<EF: ExecutorFactory> {
     ongoing_mining: Option<BlockProductionFuture>,
     /// Backlog of sets of transactions ready to be mined
     queued: VecDeque<Vec<ExecutableTxWithHash>>,
-    executor: PendingExecutor,
+    executor: Option<PendingExecutor>,
     blocking_task_spawner: BlockingTaskPool,
     ongoing_execution: Option<TxExecutionFuture>,
     /// Listeners notified when a new executed tx is added.
@@ -241,10 +241,10 @@ impl<EF: ExecutorFactory> IntervalBlockProducer<EF> {
             backend,
             block_time,
             timer: None,
+            executor: None,
             ongoing_mining: None,
             ongoing_execution: None,
             queued: VecDeque::default(),
-            executor: PendingExecutor::new(executor),
             tx_execution_listeners: RwLock::new(vec![]),
             blocking_task_spawner: BlockingTaskPool::new().unwrap(),
         }
@@ -257,22 +257,27 @@ impl<EF: ExecutorFactory> IntervalBlockProducer<EF> {
         Self::new(backend, None)
     }
 
-    pub fn executor(&self) -> PendingExecutor {
+    pub fn executor(&self) -> Option<PendingExecutor> {
         self.executor.clone()
     }
 
     /// Force mine a new block. It will only able to mine if there is no ongoing mining process.
     pub fn force_mine(&mut self) {
-        match Self::do_mine(self.permit.clone(), self.executor.clone(), self.backend.clone()) {
+        let executor = if let Some(exec) = self.executor.take() {
+            exec
+        } else {
+            self.create_new_executor().unwrap()
+        };
+
+        match Self::do_mine(self.permit.clone(), executor, self.backend.clone()) {
             Ok(outcome) => {
                 info!(target: LOG_TARGET, block_number = %outcome.block_number, "Force mined block.");
-                self.executor =
-                    self.create_new_executor_for_next_block().expect("fail to create executor");
 
                 // update pool validator state here ---------
 
                 let provider = self.backend.blockchain.provider();
-                let state = self.executor.0.read().state();
+                // the latest state
+                let state = provider.latest().unwrap();
                 let num = provider.latest_number().unwrap();
                 let block_env = provider.block_env_at(num.into()).unwrap().unwrap();
 
@@ -282,6 +287,7 @@ impl<EF: ExecutorFactory> IntervalBlockProducer<EF> {
 
                 unsafe { self.permit.raw().unlock() };
             }
+
             Err(e) => {
                 error!(target: LOG_TARGET, error = %e, "On force mine.");
             }
@@ -336,7 +342,7 @@ impl<EF: ExecutorFactory> IntervalBlockProducer<EF> {
         Ok(results)
     }
 
-    fn create_new_executor_for_next_block(&self) -> Result<PendingExecutor, BlockProductionError> {
+    fn create_new_executor(&self) -> Result<PendingExecutor, BlockProductionError> {
         let backend = &self.backend;
         let provider = backend.blockchain.provider();
 
@@ -395,7 +401,10 @@ impl<EF: ExecutorFactory> Stream for IntervalBlockProducer<EF> {
             // Mine block if the interval is over
             if timer.poll_tick(cx).is_ready() && pin.ongoing_mining.is_none() {
                 pin.ongoing_mining = Some(Box::pin({
-                    let executor = pin.executor.clone();
+                    // take out the executer because we can't execute anything while there is an ongoing mining.
+                    let executor =
+                        pin.executor.take().expect("qed; executor should exist at thit point");
+
                     let backend = pin.backend.clone();
                     let permit = pin.permit.clone();
 
@@ -412,7 +421,27 @@ impl<EF: ExecutorFactory> Stream for IntervalBlockProducer<EF> {
                 && pin.ongoing_execution.is_none()
                 && pin.ongoing_mining.is_none()
             {
-                let executor = pin.executor.clone();
+                let executor = if let Some(exec) = pin.executor() {
+                    exec
+                } else {
+                    // if no executor is present, then we create a new one.
+                    let executor = pin.create_new_executor().unwrap();
+                    pin.executor = Some(executor.clone());
+
+                    // update pool validator state here ---------
+                    let _guard = pin.permit.lock();
+
+                    let provider = pin.backend.blockchain.provider();
+                    let state = executor.0.read().state();
+                    let num = provider.latest_number()?;
+                    let block_env = provider.block_env_at(num.into()).unwrap().unwrap();
+
+                    pin.validator.update(state, block_env);
+
+                    // -------------------------------------------
+
+                    executor
+                };
 
                 let transactions: Vec<ExecutableTxWithHash> =
                     std::mem::take(&mut pin.queued).into_iter().flatten().collect();
@@ -466,7 +495,7 @@ impl<EF: ExecutorFactory> Stream for IntervalBlockProducer<EF> {
             if let Poll::Ready(res) = mining.poll_unpin(cx) {
                 match res {
                     Ok(outcome) => {
-                        match pin.create_new_executor_for_next_block() {
+                        match pin.create_new_executor() {
                             Ok(executor) => {
                                 // update pool validator state here ---------
 
@@ -479,7 +508,6 @@ impl<EF: ExecutorFactory> Stream for IntervalBlockProducer<EF> {
 
                                 // -------------------------------------------
 
-                                pin.executor = executor;
                                 unsafe { pin.permit.raw().unlock() };
                             }
 
