@@ -67,11 +67,7 @@ impl<'a> ContractClassProvider for CachedState<'a> {
             return Ok(None);
         };
 
-        if hash.0 == Felt::ZERO {
-            Ok(None)
-        } else {
-            Ok(Some(hash.0))
-        }
+        if hash.0 == Felt::ZERO { Ok(None) } else { Ok(Some(hash.0)) }
     }
 }
 
@@ -86,11 +82,7 @@ impl<'a> StateProvider for CachedState<'a> {
             return Ok(None);
         };
 
-        if hash.0 == Felt::ZERO {
-            Ok(None)
-        } else {
-            Ok(Some(hash.0))
-        }
+        if hash.0 == Felt::ZERO { Ok(None) } else { Ok(Some(hash.0)) }
     }
 
     fn nonce(
