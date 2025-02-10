@@ -36,7 +36,7 @@ pub const MODEL_ORDER_TYPE_NAME: &str = "World__ModelOrder";
 pub const MODEL_ORDER_FIELD_TYPE_NAME: &str = "World__ModelOrderField";
 pub const TOKEN_BALANCE_TYPE_NAME: &str = "Token__Balance";
 pub const TOKEN_TRANSFER_TYPE_NAME: &str = "Token__Transfer";
-pub const TOKEN_TYPE_NAME: &str = "ERC__Token";
+pub const TOKEN_UNION_TYPE_NAME: &str = "ERC__Token";
 // pub const ERC721_METADATA_TYPE_NAME: &str = "ERC721__Metadata";
 
 pub const ERC20_TYPE_NAME: &str = "ERC20__Token";

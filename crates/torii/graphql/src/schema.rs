@@ -12,7 +12,7 @@ use super::types::ScalarType;
 use super::utils;
 use crate::constants::{
     EMPTY_TYPE_NAME, ERC20_TYPE_NAME, ERC721_TYPE_NAME, QUERY_TYPE_NAME, SUBSCRIPTION_TYPE_NAME,
-    TOKEN_TYPE_NAME,
+    TOKEN_UNION_TYPE_NAME,
 };
 use crate::object::controller::ControllerObject;
 use crate::object::empty::EmptyObject;
@@ -139,7 +139,7 @@ async fn build_objects(pool: &SqlitePool) -> Result<(Vec<ObjectVariant>, Vec<Uni
 
     // erc_token union object
     let erc_token_union =
-        Union::new(TOKEN_TYPE_NAME).possible_type(ERC20_TYPE_NAME).possible_type(ERC721_TYPE_NAME);
+        Union::new(TOKEN_UNION_TYPE_NAME).possible_type(ERC20_TYPE_NAME).possible_type(ERC721_TYPE_NAME);
 
     unions.push(erc_token_union);
 

@@ -107,3 +107,63 @@ impl ErcTokenType {
         }
     }
 }
+
+#[derive(Debug)]
+pub struct TokenObject;
+
+impl BasicObject for TokenObject {
+    fn name(&self) -> (&str, &str) {
+        ("tokens", "token")
+    }
+
+    fn type_name(&self) -> &str {
+        "Token"
+    }
+
+    fn type_mapping(&self) -> &TypeMapping {
+        &TOKEN_TYPE_MAPPING
+    }
+}
+
+impl ResolvableObject for TokenObject {
+    fn subscriptions(&self) -> Option<Vec<SubscriptionField>> {
+        Some(vec![
+            SubscriptionField::new(
+                "tokenRegistered",
+                TypeRef::named_nn(self.type_name()),
+                |ctx| {
+                    SubscriptionFieldFuture::new(async move {
+                        let pool = ctx.data::<Pool<Sqlite>>()?;
+                        Ok(SimpleBroker::<Token>::subscribe()
+                            .then(move |token| {
+                                let pool = pool.clone();
+                                async move {
+                                    let query = "SELECT * FROM tokens WHERE id = ?";
+                                    
+                                    let row = match sqlx::query(query)
+                                        .bind(&token.id)
+                                        .fetch_one(&pool)
+                                        .await 
+                                    {
+                                        Ok(row) => row,
+                                        Err(_) => return None,
+                                    };
+
+                                    Some(Ok(FieldValue::value(Value::Object(ValueMapping::from([
+                                        (Name::new("id"), Value::String(token.id)),
+                                        (Name::new("contractAddress"), Value::String(token.contract_address)),
+                                        (Name::new("name"), Value::String(token.name)),
+                                        (Name::new("symbol"), Value::String(token.symbol)),
+                                        (Name::new("decimals"), Value::Number(token.decimals.into())),
+                                        (Name::new("metadata"), Value::String(token.metadata)),
+                                    ])))))
+                                }
+                            })
+                            .filter_map(|result| result)
+                        )
+                    })
+                },
+            )
+        ])
+    }
+}
