@@ -45,6 +45,35 @@ pub struct FooEventMemberAdded {
     pub c: u256,
 }
 
+#[derive(Introspect, Copy, Drop, Serde, PartialEq)]
+enum MyEnum {
+    X: u8,
+    Y: u16,
+}
+
+#[derive(Introspect, Copy, Drop, Serde)]
+#[dojo::event]
+struct FooEventMemberChanged {
+    #[key]
+    pub caller: ContractAddress,
+    pub a: (MyEnum, u8, u32),
+    pub b: u128,
+}
+
+#[derive(Introspect, Copy, Drop, Serde)]
+enum AnotherEnum {
+    X: bool,
+}
+
+#[derive(Introspect, Copy, Drop, Serde)]
+#[dojo::event]
+struct FooEventMemberIllegalChange {
+    #[key]
+    pub caller: ContractAddress,
+    pub a: MyEnum,
+    pub b: u128,
+}
+
 #[test]
 fn test_register_event_for_namespace_owner() {
     let bob = starknet::contract_address_const::<0xb0b>();
@@ -170,6 +199,35 @@ fn test_upgrade_event() {
 }
 
 #[test]
+fn test_upgrade_event_with_member_changed() {
+    let world = deploy_world_for_event_upgrades();
+
+    drop_all_events(world.contract_address);
+
+    world.upgrade_event("dojo", e_FooEventMemberChanged::TEST_CLASS_HASH.try_into().unwrap());
+
+    let event = starknet::testing::pop_log::<world::Event>(world.contract_address);
+    assert(event.is_some(), 'no event)');
+
+    if let world::Event::EventUpgraded(event) = event.unwrap() {
+        assert(
+            event.selector == Event::<FooEventMemberChanged>::selector(DOJO_NSH),
+            'bad event selector',
+        );
+        assert(
+            event.class_hash == e_FooEventMemberChanged::TEST_CLASS_HASH.try_into().unwrap(),
+            'bad event class_hash',
+        );
+        assert(
+            event.address != core::num::traits::Zero::<ContractAddress>::zero(),
+            'bad event address',
+        );
+    } else {
+        core::panic_with_felt252('no EventUpgraded event');
+    }
+}
+
+#[test]
 #[should_panic(
     expected: (
         "Invalid new layout to upgrade the resource `dojo-FooEventBadLayoutType`",
@@ -218,6 +276,18 @@ fn test_upgrade_event_with_member_added_but_removed() {
 fn test_upgrade_event_with_member_moved() {
     let world = deploy_world_for_event_upgrades();
     world.upgrade_event("dojo", e_FooEventMemberAddedButMoved::TEST_CLASS_HASH.try_into().unwrap());
+}
+
+#[test]
+#[should_panic(
+    expected: (
+        "Invalid new schema to upgrade the resource `dojo-FooEventMemberIllegalChange`",
+        'ENTRYPOINT_FAILED',
+    ),
+)]
+fn test_upgrade_event_with_member_illegal_change() {
+    let world = deploy_world_for_event_upgrades();
+    world.upgrade_event("dojo", e_FooEventMemberIllegalChange::TEST_CLASS_HASH.try_into().unwrap());
 }
 
 #[test]

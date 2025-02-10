@@ -6,6 +6,7 @@ pub mod execution;
 pub mod fork;
 pub mod metrics;
 pub mod rpc;
+pub mod sequencing;
 
 use db::DbConfig;
 use dev::DevConfig;
@@ -15,6 +16,7 @@ use katana_chain_spec::ChainSpec;
 use katana_core::service::messaging::MessagingConfig;
 use metrics::MetricsConfig;
 use rpc::RpcConfig;
+use sequencing::SequencingConfig;
 
 /// Node configurations.
 ///
@@ -47,16 +49,4 @@ pub struct Config {
 
     /// Development options.
     pub dev: DevConfig,
-}
-
-/// Configurations related to block production.
-#[derive(Debug, Clone, Default)]
-pub struct SequencingConfig {
-    /// The time in milliseconds for a block to be produced.
-    pub block_time: Option<u64>,
-
-    /// Disable automatic block production.
-    ///
-    /// Allowing block to only be produced manually.
-    pub no_mining: bool,
 }

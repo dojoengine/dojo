@@ -6,6 +6,7 @@
 use std::net::SocketAddr;
 use std::time::Duration;
 
+use jsonrpsee::core::TEN_MB_SIZE_BYTES;
 use jsonrpsee::server::{AllowHosts, ServerBuilder, ServerHandle};
 use jsonrpsee::RpcModule;
 use tower::ServiceBuilder;
@@ -23,6 +24,13 @@ mod utils;
 use cors::Cors;
 use health::HealthCheck;
 use metrics::RpcServerMetrics;
+
+/// The default maximum number of concurrent RPC connections.
+pub const DEFAULT_RPC_MAX_CONNECTIONS: u32 = 100;
+/// The default maximum size in bytes for an RPC request body.
+pub const DEFAULT_MAX_REQUEST_BODY_SIZE: u32 = TEN_MB_SIZE_BYTES;
+/// The default maximum size in bytes for an RPC response body.
+pub const DEFAULT_MAX_RESPONSE_BODY_SIZE: u32 = TEN_MB_SIZE_BYTES;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -66,6 +74,8 @@ pub struct RpcServer {
     health_check: bool,
     module: RpcModule<()>,
     max_connections: u32,
+    max_request_body_size: u32,
+    max_response_body_size: u32,
 }
 
 impl RpcServer {
@@ -74,9 +84,29 @@ impl RpcServer {
             cors: None,
             metrics: false,
             health_check: false,
-            max_connections: 100,
             module: RpcModule::new(()),
+            max_connections: 100,
+            max_request_body_size: TEN_MB_SIZE_BYTES,
+            max_response_body_size: TEN_MB_SIZE_BYTES,
         }
+    }
+
+    /// Set the maximum number of connections allowed. Default is 100.
+    pub fn max_connections(mut self, max: u32) -> Self {
+        self.max_connections = max;
+        self
+    }
+
+    /// Set the maximum size of a request body (in bytes). Default is 10 MiB.
+    pub fn max_request_body_size(mut self, max: u32) -> Self {
+        self.max_request_body_size = max;
+        self
+    }
+
+    /// Set the maximum size of a response body (in bytes). Default is 10 MiB.
+    pub fn max_response_body_size(mut self, max: u32) -> Self {
+        self.max_response_body_size = max;
+        self
     }
 
     /// Collect metrics about the RPC server.
@@ -121,7 +151,9 @@ impl RpcServer {
         let builder = ServerBuilder::new()
             .set_middleware(middleware)
             .set_host_filtering(AllowHosts::Any)
-            .max_connections(self.max_connections);
+            .max_connections(self.max_connections)
+            .max_request_body_size(self.max_request_body_size)
+            .max_response_body_size(self.max_response_body_size);
 
         let handle = if self.metrics {
             let logger = RpcServerMetrics::new(&modules);

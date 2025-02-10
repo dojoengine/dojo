@@ -4,7 +4,13 @@ use katana_primitives::Felt;
 
 /// Errors that can be returned by the executor.
 #[derive(Debug, thiserror::Error)]
-pub enum ExecutorError {}
+pub enum ExecutorError {
+    #[error("Limits exhausted")]
+    LimitsExhausted,
+
+    #[error(transparent)]
+    Other(Box<dyn core::error::Error + Send + Sync + 'static>),
+}
 
 /// Errors that can occur during the transaction execution.
 #[derive(Debug, Clone, thiserror::Error)]

@@ -19,6 +19,24 @@ use crate::proto::{self};
 pub mod schema;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
+pub struct Controller {
+    pub address: Felt,
+    pub username: String,
+    pub deployed_at: u64,
+}
+
+impl TryFrom<proto::types::Controller> for Controller {
+    type Error = SchemaError;
+    fn try_from(value: proto::types::Controller) -> Result<Self, Self::Error> {
+        Ok(Self {
+            address: Felt::from_bytes_be_slice(&value.address),
+            username: value.username,
+            deployed_at: value.deployed_at_timestamp,
+        })
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub struct Token {
     pub contract_address: Felt,
     pub name: String,

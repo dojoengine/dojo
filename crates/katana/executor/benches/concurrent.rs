@@ -9,7 +9,7 @@ use std::time::Duration;
 use criterion::measurement::WallTime;
 use criterion::{criterion_group, criterion_main, BatchSize, BenchmarkGroup, Criterion};
 use katana_executor::implementation::blockifier::BlockifierFactory;
-use katana_executor::{ExecutionFlags, ExecutorFactory};
+use katana_executor::{BlockLimits, ExecutionFlags, ExecutorFactory};
 use katana_primitives::env::{BlockEnv, CfgEnv};
 use katana_primitives::transaction::ExecutableTxWithHash;
 use katana_provider::test_utils;
@@ -44,7 +44,7 @@ fn blockifier(
     (block_env, cfg_env): (BlockEnv, CfgEnv),
     tx: ExecutableTxWithHash,
 ) {
-    let factory = Arc::new(BlockifierFactory::new(cfg_env, flags.clone()));
+    let factory = Arc::new(BlockifierFactory::new(cfg_env, flags.clone(), BlockLimits::max()));
 
     group.bench_function("Blockifier.1", |b| {
         b.iter_batched(

@@ -38,13 +38,14 @@ pub enum Primitive {
     U64(Option<u64>),
     U128(Option<u128>),
     U256(Option<U256>),
-    USize(Option<u32>),
     Bool(Option<bool>),
     Felt252(Option<Felt>),
     #[strum(serialize = "ClassHash")]
     ClassHash(Option<Felt>),
     #[strum(serialize = "ContractAddress")]
     ContractAddress(Option<Felt>),
+    #[strum(serialize = "EthAddress")]
+    EthAddress(Option<Felt>),
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -118,11 +119,11 @@ impl Primitive {
     as_primitive!(as_u64, U64, u64);
     as_primitive!(as_u128, U128, u128);
     as_primitive!(as_u256, U256, U256);
-    as_primitive!(as_usize, USize, u32);
     as_primitive!(as_bool, Bool, bool);
     as_primitive!(as_felt252, Felt252, Felt);
     as_primitive!(as_class_hash, ClassHash, Felt);
     as_primitive!(as_contract_address, ContractAddress, Felt);
+    as_primitive!(as_eth_address, EthAddress, Felt);
 
     set_primitive!(set_i8, I8, i8);
     set_primitive!(set_i16, I16, i16);
@@ -135,30 +136,30 @@ impl Primitive {
     set_primitive!(set_u64, U64, u64);
     set_primitive!(set_u128, U128, u128);
     set_primitive!(set_u256, U256, U256);
-    set_primitive!(set_usize, USize, u32);
     set_primitive!(set_bool, Bool, bool);
     set_primitive!(set_felt252, Felt252, Felt);
     set_primitive!(set_class_hash, ClassHash, Felt);
     set_primitive!(set_contract_address, ContractAddress, Felt);
+    set_primitive!(set_eth_address, EthAddress, Felt);
 
     pub fn to_numeric(&self) -> usize {
         match self {
-            Primitive::U8(_) => 0,
-            Primitive::U16(_) => 1,
-            Primitive::U32(_) => 2,
-            Primitive::U64(_) => 3,
-            Primitive::U128(_) => 4,
-            Primitive::U256(_) => 5,
-            Primitive::USize(_) => 6,
-            Primitive::Bool(_) => 7,
-            Primitive::Felt252(_) => 8,
-            Primitive::ClassHash(_) => 9,
-            Primitive::ContractAddress(_) => 10,
-            Primitive::I8(_) => 11,
-            Primitive::I16(_) => 12,
-            Primitive::I32(_) => 13,
-            Primitive::I64(_) => 14,
-            Primitive::I128(_) => 15,
+            Primitive::Bool(_) => 0,
+            Primitive::U8(_) => 1,
+            Primitive::U16(_) => 2,
+            Primitive::U32(_) => 3,
+            Primitive::U64(_) => 4,
+            Primitive::U128(_) => 5,
+            Primitive::U256(_) => 6,
+            Primitive::I8(_) => 7,
+            Primitive::I16(_) => 8,
+            Primitive::I32(_) => 9,
+            Primitive::I64(_) => 10,
+            Primitive::I128(_) => 11,
+            Primitive::Felt252(_) => 12,
+            Primitive::ClassHash(_) => 13,
+            Primitive::ContractAddress(_) => 14,
+            Primitive::EthAddress(_) => 15,
         }
     }
 
@@ -176,7 +177,6 @@ impl Primitive {
             | Primitive::U8(_)
             | Primitive::U16(_)
             | Primitive::U32(_)
-            | Primitive::USize(_)
             | Primitive::Bool(_) => SqlType::Integer,
 
             // u64 cannot fit into a i64, so we use text
@@ -186,7 +186,8 @@ impl Primitive {
             | Primitive::U256(_)
             | Primitive::ContractAddress(_)
             | Primitive::ClassHash(_)
-            | Primitive::Felt252(_) => SqlType::Text,
+            | Primitive::Felt252(_)
+            | Primitive::EthAddress(_) => SqlType::Text,
         }
     }
 
@@ -201,7 +202,6 @@ impl Primitive {
             Primitive::U8(u8) => format!("{}", u8.unwrap_or_default()),
             Primitive::U16(u16) => format!("{}", u16.unwrap_or_default()),
             Primitive::U32(u32) => format!("{}", u32.unwrap_or_default()),
-            Primitive::USize(u32) => format!("{}", u32.unwrap_or_default()),
             Primitive::Bool(bool) => format!("{}", bool.unwrap_or_default() as i32),
 
             // Hex string
@@ -211,7 +211,7 @@ impl Primitive {
             Primitive::Felt252(felt) => format!("0x{:064x}", felt.unwrap_or_default()),
             Primitive::U128(u128) => format!("0x{:064x}", u128.unwrap_or_default()),
             Primitive::U64(u64) => format!("0x{:064x}", u64.unwrap_or_default()),
-
+            Primitive::EthAddress(felt) => format!("0x{:064x}", felt.unwrap_or_default()),
             Primitive::U256(u256) => format!("0x{:064x}", u256.unwrap_or_default()),
         }
     }
@@ -311,14 +311,6 @@ impl Primitive {
                 *value = Some(U256::from_be_bytes(bytes));
             }
 
-            Primitive::USize(ref mut value) => {
-                let felt = felts.remove(0);
-                *value = Some(felt.to_u32().ok_or_else(|| PrimitiveError::ValueOutOfRange {
-                    r#type: type_name::<u32>(),
-                    value: felt,
-                })?);
-            }
-
             Primitive::Bool(ref mut value) => {
                 let raw = felts.remove(0);
                 *value = Some(raw == Felt::ONE);
@@ -333,6 +325,10 @@ impl Primitive {
             }
 
             Primitive::Felt252(ref mut value) => {
+                *value = Some(felts.remove(0));
+            }
+
+            Primitive::EthAddress(ref mut value) => {
                 *value = Some(felts.remove(0));
             }
         }
@@ -386,9 +382,6 @@ impl Primitive {
                     Ok(vec![value0, value1])
                 })
                 .unwrap_or(Err(PrimitiveError::MissingFieldElement)),
-            Primitive::USize(value) => value
-                .map(|v| Ok(vec![Felt::from(v)]))
-                .unwrap_or(Err(PrimitiveError::MissingFieldElement)),
             Primitive::Bool(value) => value
                 .map(|v| Ok(vec![if v { Felt::ONE } else { Felt::ZERO }]))
                 .unwrap_or(Err(PrimitiveError::MissingFieldElement)),
@@ -399,6 +392,9 @@ impl Primitive {
                 value.map(|v| Ok(vec![v])).unwrap_or(Err(PrimitiveError::MissingFieldElement))
             }
             Primitive::Felt252(value) => {
+                value.map(|v| Ok(vec![v])).unwrap_or(Err(PrimitiveError::MissingFieldElement))
+            }
+            Primitive::EthAddress(value) => {
                 value.map(|v| Ok(vec![v])).unwrap_or(Err(PrimitiveError::MissingFieldElement))
             }
         }
@@ -471,9 +467,6 @@ mod tests {
         let mut primitive = Primitive::U256(None);
         primitive.set_u256(Some(U256::from(1u128))).unwrap();
         assert_eq!(primitive.as_u256(), Some(U256::from(1u128)));
-        let mut primitive = Primitive::USize(None);
-        primitive.set_usize(Some(1u32)).unwrap();
-        assert_eq!(primitive.as_usize(), Some(1u32));
         let mut primitive = Primitive::Bool(None);
         primitive.set_bool(Some(true)).unwrap();
         assert_eq!(primitive.as_bool(), Some(true));
@@ -486,6 +479,9 @@ mod tests {
         let mut primitive = Primitive::ContractAddress(None);
         primitive.set_contract_address(Some(Felt::from(1u128))).unwrap();
         assert_eq!(primitive.as_contract_address(), Some(Felt::from(1u128)));
+        let mut primitive = Primitive::EthAddress(None);
+        primitive.set_eth_address(Some(Felt::from(1u128))).unwrap();
+        assert_eq!(primitive.as_eth_address(), Some(Felt::from(1u128)));
     }
 
     #[test]
@@ -504,7 +500,6 @@ mod tests {
             (vec![Felt::from(100000u32)], Primitive::U32(Some(100000))),
             (vec![Felt::from(1000000000u64)], Primitive::U64(Some(1000000000))),
             (vec![Felt::from(1000000000000000000u128)], Primitive::U128(Some(1000000000000000000))),
-            (vec![Felt::from(42u32)], Primitive::USize(Some(42))),
             (vec![Felt::from(1u8)], Primitive::Bool(Some(true))),
             (vec![Felt::from(123456789u128)], Primitive::Felt252(Some(Felt::from(123456789)))),
             (vec![Felt::from(987654321u128)], Primitive::ClassHash(Some(Felt::from(987654321)))),
@@ -512,6 +507,7 @@ mod tests {
                 vec![Felt::from(123456789u128)],
                 Primitive::ContractAddress(Some(Felt::from(123456789))),
             ),
+            (vec![Felt::from(123456789u128)], Primitive::EthAddress(Some(Felt::from(123456789)))),
         ];
 
         for (serialized, expected) in test_cases {

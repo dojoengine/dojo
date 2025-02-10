@@ -13,6 +13,7 @@ anyhow.workspace = true
 arbitrary = { workspace = true, optional = true }
 base64.workspace = true
 derive_more.workspace = true
+heapless = { version = "0.8.0", features = [ "serde" ] }
 lazy_static.workspace = true
 num-traits.workspace = true
 rand = { workspace = true, features = [ "small_rng" ] }

@@ -208,7 +208,7 @@ fn bench_simple_struct() {
 
 #[derive(Copy, Drop, Serde, IntrospectPacked)]
 #[dojo::model]
-struct PositionWithQuaterions {
+struct PositionWithQuaternions {
     #[key]
     id: felt252,
     x: felt252,
@@ -226,7 +226,7 @@ struct PositionWithQuaterions {
 fn test_struct_with_many_fields_fixed() {
     let gas = GasCounterTrait::start();
 
-    let mut pos = PositionWithQuaterions {
+    let mut pos = PositionWithQuaternions {
         id: 0x123456789abcdef,
         x: 0x123456789abcdef,
         y: 0x123456789abcdef,
@@ -264,7 +264,7 @@ fn test_struct_with_many_fields_fixed() {
         idx += 1;
     };
 
-    let layout = match dojo::model::Model::<PositionWithQuaterions>::layout() {
+    let layout = match dojo::model::Model::<PositionWithQuaternions>::layout() {
         Layout::Fixed(layout) => layout,
         _ => panic!("expected fixed layout"),
     };

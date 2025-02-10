@@ -5,7 +5,8 @@ use katana_core::backend::Backend;
 use katana_core::constants::DEFAULT_SEQUENCER_ADDRESS;
 use katana_executor::implementation::blockifier::BlockifierFactory;
 use katana_node::config::dev::DevConfig;
-use katana_node::config::rpc::{RpcConfig, DEFAULT_RPC_ADDR, DEFAULT_RPC_MAX_CONNECTIONS};
+use katana_node::config::rpc::{RpcConfig, DEFAULT_RPC_ADDR};
+use katana_node::config::sequencing::SequencingConfig;
 pub use katana_node::config::*;
 use katana_node::LaunchedNode;
 use katana_primitives::chain::ChainId;
@@ -124,9 +125,9 @@ pub fn get_default_test_config(sequencing: SequencingConfig) -> Config {
         port: 0,
         addr: DEFAULT_RPC_ADDR,
         apis: RpcModulesList::all(),
-        max_connections: DEFAULT_RPC_MAX_CONNECTIONS,
         max_event_page_size: Some(100),
         max_proof_keys: Some(100),
+        ..Default::default()
     };
 
     Config { sequencing, rpc, dev, chain: ChainSpec::Dev(chain).into(), ..Default::default() }

@@ -192,11 +192,11 @@ fn get_name_from_schema(schema: &Ty) -> String {
             Primitive::U64(_) => "u64".to_string(),
             Primitive::U128(_) => "u128".to_string(),
             Primitive::U256(_) => "u256".to_string(),
-            Primitive::USize(_) => "usize".to_string(),
             Primitive::Bool(_) => "bool".to_string(),
             Primitive::Felt252(_) => "felt252".to_string(),
             Primitive::ClassHash(_) => "ClassHash".to_string(),
             Primitive::ContractAddress(_) => "ContractAddress".to_string(),
+            Primitive::EthAddress(_) => "EthAddress".to_string(),
         },
         Ty::Tuple(t) => {
             format!("({})", t.iter().map(get_name_from_schema).collect::<Vec<_>>().join(", "))
