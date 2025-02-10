@@ -50,7 +50,6 @@ vergen = { version = "9.0.0", features = [ "build", "cargo", "emit_and_set" ] }
 vergen-gitcl = { version = "1.0.0", features = [ "build", "cargo", "rustc", "si" ] }
 
 [features]
-starknet-messaging = [ "katana-core/starknet-messaging" ]
 # experimental feature to test katana full node mode
 full-node = [ "dep:katana-feeder-gateway", "dep:katana-provider", "dep:tokio" ]
 

@@ -45,4 +45,3 @@ default = [ "jemalloc", "katana-cli/slot" ]
 
 init-custom-settlement-chain = [  ]
 jemalloc = [  ]
-starknet-messaging = [ "katana-cli/starknet-messaging" ]
