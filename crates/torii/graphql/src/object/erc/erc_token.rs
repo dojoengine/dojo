@@ -138,7 +138,7 @@ impl ResolvableObject for TokenObject {
 
     fn subscriptions(&self) -> Option<Vec<SubscriptionField>> {
         Some(vec![SubscriptionField::new(
-            "tokenRegistered",
+            "tokenUpdated",
             TypeRef::named_nn(self.type_name()),
             |ctx| {
                 SubscriptionFieldFuture::new(async move {
