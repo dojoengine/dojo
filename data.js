@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1739155287108,
+  "lastUpdate": 1739155350731,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -51193,6 +51193,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 12292063252,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d9227dbf3c7e3067ed865901465c89be20339360",
+          "message": "feat(torii-grpc): subscribe to token updates (metadata etc.) (#2990)\n\n* feat(torii): subscribe to token updates (metadata etc.)\n\n* fmt\n\n* token subscription\n\n* fmt",
+          "timestamp": "2025-02-09T20:24:50-06:00",
+          "tree_id": "c56bf2e6a4988f1a1e50675adae98853015f1c98",
+          "url": "https://github.com/dojoengine/dojo/commit/d9227dbf3c7e3067ed865901465c89be20339360"
+        },
+        "date": 1739155348295,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2430634,
+            "range": "± 32791",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 7947731,
+            "range": "± 206035",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2549271152,
+            "range": "± 226536569",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 7888128,
+            "range": "± 96995",
             "unit": "ns/iter"
           }
         ]
