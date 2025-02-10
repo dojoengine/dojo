@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1739215991201,
+  "lastUpdate": 1739230048282,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -51397,6 +51397,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 7828240,
             "range": "± 89635",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d3a4f2dc80aef60df199fd8ff7126649c6ffdfe5",
+          "message": "feat: remove `starknet-messaging` feature (#3005)\n\nremove starknet messaging feature",
+          "timestamp": "2025-02-10T17:11:11-06:00",
+          "tree_id": "497b3a986b860d5bd6d26bf95a7ac3436e6c981c",
+          "url": "https://github.com/dojoengine/dojo/commit/d3a4f2dc80aef60df199fd8ff7126649c6ffdfe5"
+        },
+        "date": 1739230045860,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 12139619170,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
