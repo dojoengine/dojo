@@ -34,6 +34,7 @@ use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use subscriptions::event::EventManager;
 use subscriptions::indexer::IndexerManager;
+use subscriptions::token::TokenManager;
 use subscriptions::token_balance::TokenBalanceManager;
 use tokio::net::TcpListener;
 use tokio::sync::mpsc::{channel, Receiver};
@@ -61,8 +62,8 @@ use crate::proto::world::{
     RetrieveTokensRequest, RetrieveTokensResponse, SubscribeEntitiesRequest,
     SubscribeEntityResponse, SubscribeEventMessagesRequest, SubscribeEventsResponse,
     SubscribeIndexerRequest, SubscribeIndexerResponse, SubscribeTokenBalancesResponse,
-    UpdateEventMessagesSubscriptionRequest, UpdateTokenBalancesSubscriptionRequest,
-    WorldMetadataRequest, WorldMetadataResponse,
+    SubscribeTokensResponse, UpdateEventMessagesSubscriptionRequest,
+    UpdateTokenBalancesSubscriptionRequest, WorldMetadataRequest, WorldMetadataResponse,
 };
 use crate::proto::{self};
 use crate::types::schema::SchemaError;
@@ -96,6 +97,7 @@ impl From<SchemaError> for Error {
 impl From<Token> for proto::types::Token {
     fn from(value: Token) -> Self {
         Self {
+            token_id: value.id,
             contract_address: value.contract_address,
             name: value.name,
             symbol: value.symbol,
@@ -127,6 +129,7 @@ pub struct DojoWorld {
     state_diff_manager: Arc<StateDiffManager>,
     indexer_manager: Arc<IndexerManager>,
     token_balance_manager: Arc<TokenBalanceManager>,
+    token_manager: Arc<TokenManager>,
 }
 
 impl DojoWorld {
@@ -143,6 +146,7 @@ impl DojoWorld {
         let state_diff_manager = Arc::new(StateDiffManager::default());
         let indexer_manager = Arc::new(IndexerManager::default());
         let token_balance_manager = Arc::new(TokenBalanceManager::default());
+        let token_manager = Arc::new(TokenManager::default());
 
         tokio::task::spawn(subscriptions::model_diff::Service::new_with_block_rcv(
             block_rx,
@@ -165,6 +169,8 @@ impl DojoWorld {
             &token_balance_manager,
         )));
 
+        tokio::task::spawn(subscriptions::token::Service::new(Arc::clone(&token_manager)));
+
         Self {
             pool,
             world_address,
@@ -175,6 +181,7 @@ impl DojoWorld {
             state_diff_manager,
             indexer_manager,
             token_balance_manager,
+            token_manager,
         }
     }
 }
@@ -790,6 +797,13 @@ impl DojoWorld {
         Ok(RetrieveTokensResponse { tokens })
     }
 
+    async fn subscribe_tokens(
+        &self,
+        contract_addresses: Vec<Felt>,
+    ) -> Result<Receiver<Result<SubscribeTokensResponse, tonic::Status>>, Error> {
+        self.token_manager.add_subscriber(contract_addresses).await
+    }
+
     async fn retrieve_token_balances(
         &self,
         account_addresses: Vec<Felt>,
@@ -1281,6 +1295,8 @@ type RetrieveEntitiesStreamingResponseStream =
     Pin<Box<dyn Stream<Item = Result<RetrieveEntitiesStreamingResponse, Status>> + Send>>;
 type SubscribeTokenBalancesResponseStream =
     Pin<Box<dyn Stream<Item = Result<SubscribeTokenBalancesResponse, Status>> + Send>>;
+type SubscribeTokensResponseStream =
+    Pin<Box<dyn Stream<Item = Result<SubscribeTokensResponse, Status>> + Send>>;
 
 #[tonic::async_trait]
 impl proto::world::world_server::World for DojoWorld {
@@ -1291,6 +1307,7 @@ impl proto::world::world_server::World for DojoWorld {
     type SubscribeIndexerStream = SubscribeIndexerResponseStream;
     type RetrieveEntitiesStreamingStream = RetrieveEntitiesStreamingResponseStream;
     type SubscribeTokenBalancesStream = SubscribeTokenBalancesResponseStream;
+    type SubscribeTokensStream = SubscribeTokensResponseStream;
 
     async fn world_metadata(
         &self,
@@ -1336,6 +1353,23 @@ impl proto::world::world_server::World for DojoWorld {
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
         Ok(Response::new(tokens))
+    }
+
+    async fn subscribe_tokens(
+        &self,
+        request: Request<RetrieveTokensRequest>,
+    ) -> ServiceResult<Self::SubscribeTokensStream> {
+        let RetrieveTokensRequest { contract_addresses } = request.into_inner();
+        let contract_addresses = contract_addresses
+            .iter()
+            .map(|address| Felt::from_bytes_be_slice(address))
+            .collect::<Vec<_>>();
+
+        let rx = self
+            .subscribe_tokens(contract_addresses)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+        Ok(Response::new(Box::pin(ReceiverStream::new(rx)) as Self::SubscribeTokensStream))
     }
 
     async fn retrieve_token_balances(
