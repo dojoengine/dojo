@@ -9,7 +9,7 @@ pub mod utils;
 
 use std::collections::HashMap;
 use std::num::NonZeroU128;
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock};
 
 use blockifier::blockifier::block::{BlockInfo, GasPrices};
 use blockifier::context::BlockContext;
@@ -17,14 +17,13 @@ use blockifier::execution::contract_class::ContractClass as BlockifierContractCl
 use blockifier::state::cached_state::{self, MutRefState};
 use blockifier::state::state_api::StateReader;
 use katana_cairo::starknet_api::block::{BlockNumber, BlockTimestamp};
-use katana_primitives::Felt;
 use katana_primitives::block::{ExecutableBlock, GasPrices as KatanaGasPrices, PartialHeader};
 use katana_primitives::class::ClassHash;
 use katana_primitives::env::{BlockEnv, CfgEnv};
 use katana_primitives::fee::TxFeeInfo;
 use katana_primitives::transaction::{ExecutableTx, ExecutableTxWithHash, TxWithHash};
+use katana_primitives::Felt;
 use katana_provider::traits::state::StateProvider;
-use lazy_static::lazy_static;
 use parking_lot::Mutex;
 use tracing::{info, trace};
 
@@ -35,10 +34,8 @@ use crate::{
     ResultAndStates,
 };
 
-lazy_static! {
-    pub static ref COMPILED_CLASS_CACHE: Arc<Mutex<HashMap<ClassHash, BlockifierContractClass>>> =
-        Arc::new(Mutex::new(HashMap::default()));
-}
+pub static COMPILED_CLASS_CACHE: LazyLock<Arc<Mutex<HashMap<ClassHash, BlockifierContractClass>>>> =
+    LazyLock::new(|| Arc::new(Mutex::new(HashMap::default())));
 
 pub(crate) const LOG_TARGET: &str = "katana::executor::blockifier";
 
