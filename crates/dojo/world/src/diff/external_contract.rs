@@ -1,3 +1,5 @@
+use starknet_crypto::Felt;
+
 use crate::local::{ExternalContractClassLocal, ExternalContractLocal};
 
 /// The difference between a local and a remote external contract class.
@@ -29,6 +31,12 @@ impl ExternalContractDiff {
         match self {
             ExternalContractDiff::Created(c) => c.clone(),
             ExternalContractDiff::Synced(c) => c.clone(),
+        }
+    }
+    pub fn address(&self) -> Felt {
+        match self {
+            ExternalContractDiff::Created(c) => c.address,
+            ExternalContractDiff::Synced(c) => c.address,
         }
     }
 }
