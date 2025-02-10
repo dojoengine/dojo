@@ -102,8 +102,7 @@ impl<'a> BlockExecutor<'a> for NoopExecutor {
         &mut self,
         transactions: Vec<ExecutableTxWithHash>,
     ) -> ExecutorResult<(usize, Option<ExecutorError>)> {
-        let _ = transactions;
-        Ok((0, None))
+        Ok((transactions.len(), None))
     }
 
     fn take_execution_output(&mut self) -> ExecutorResult<ExecutionOutput> {

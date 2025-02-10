@@ -346,7 +346,7 @@ impl<EF: ExecutorFactory> IntervalBlockProducer<EF> {
         // Take only the results of the newly executed transactions
         let results = txs
             .iter()
-            .skip(total_txs - total_executed)
+            .skip(total_txs.saturating_sub(total_executed))
             .filter_map(|(tx, res)| match res {
                 ExecutionResult::Failed { .. } => None,
                 ExecutionResult::Success { receipt, trace, .. } => Some(TxWithOutcome {
@@ -428,6 +428,7 @@ impl<EF: ExecutorFactory> Stream for IntervalBlockProducer<EF> {
             {
                 if pin.is_block_full {
                     info!("Block has reached capacity! Closing block...");
+                    pin.is_block_full = false;
                 }
 
                 pin.ongoing_mining = Some(Box::pin({
@@ -437,8 +438,6 @@ impl<EF: ExecutorFactory> Stream for IntervalBlockProducer<EF> {
 
                     pin.blocking_task_spawner.spawn(|| Self::do_mine(permit, executor, backend))
                 }));
-
-                pin.is_block_full = false;
             } else {
                 pin.timer = Some(timer);
             }
