@@ -13,7 +13,7 @@ use crate::abstraction::{
     BlockExecutor, EntryPointCall, ExecutionFlags, ExecutionOutput, ExecutionResult, ExecutorExt,
     ExecutorFactory, ExecutorResult, ResultAndStates,
 };
-use crate::ExecutionError;
+use crate::{ExecutionError, ExecutorError};
 
 /// A no-op executor factory. Creates an executor that does nothing.
 #[derive(Debug, Default)]
@@ -101,9 +101,9 @@ impl<'a> BlockExecutor<'a> for NoopExecutor {
     fn execute_transactions(
         &mut self,
         transactions: Vec<ExecutableTxWithHash>,
-    ) -> ExecutorResult<()> {
+    ) -> ExecutorResult<(usize, Option<ExecutorError>)> {
         let _ = transactions;
-        Ok(())
+        Ok((0, None))
     }
 
     fn take_execution_output(&mut self) -> ExecutorResult<ExecutionOutput> {

@@ -3,7 +3,7 @@ use assert_matches::assert_matches;
 use cainome::rs::abigen_legacy;
 use dojo_test_utils::sequencer::{get_default_test_config, TestSequencer};
 use katana_node::config::fork::ForkingConfig;
-use katana_node::config::SequencingConfig;
+use katana_node::config::sequencing::SequencingConfig;
 use katana_primitives::block::{BlockHash, BlockHashOrNumber, BlockIdOrTag, BlockNumber, BlockTag};
 use katana_primitives::chain::NamedChainId;
 use katana_primitives::event::MaybeForkedContinuationToken;

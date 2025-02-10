@@ -1,3 +1,14 @@
+//! **********************************************************************************************
+//!
+//!     "We are all in the gutter, but some of us are looking at the stars."
+//!                                                       — Oscar Wilde, Lady Windermere's Fan
+//!
+//!     Within this imperfect realm lies a spark of aspiration. What you find may be tangled
+//!     and weathered, but in its heart beats the rhythm of possibility. Tread gently, dear
+//!     wanderer, and perhaps together we can guide it toward those distant stars.
+//!
+//! **********************************************************************************************
+
 use std::collections::VecDeque;
 use std::future::Future;
 use std::pin::Pin;
@@ -46,6 +57,16 @@ pub enum BlockProductionError {
     TransactionExecutionError(#[from] katana_executor::ExecutorError),
 }
 
+impl BlockProductionError {
+    /// Returns `true` if the error is caused by block limit being exhausted.
+    pub fn is_block_limit_exhausted(&self) -> bool {
+        matches!(
+            self,
+            Self::TransactionExecutionError(katana_executor::ExecutorError::LimitsExhausted)
+        )
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct MinedBlockOutcome {
     pub block_number: u64,
@@ -65,7 +86,8 @@ type ServiceFuture<T> = Pin<Box<dyn Future<Output = BlockingTaskResult<T>> + Sen
 type BlockProductionResult = Result<MinedBlockOutcome, BlockProductionError>;
 type BlockProductionFuture = ServiceFuture<Result<MinedBlockOutcome, BlockProductionError>>;
 
-type TxExecutionResult = Result<Vec<TxWithOutcome>, BlockProductionError>;
+type TxExecutionResult =
+    Result<(Vec<TxWithOutcome>, Option<Vec<ExecutableTxWithHash>>), BlockProductionError>;
 type TxExecutionFuture = ServiceFuture<TxExecutionResult>;
 
 type BlockProductionWithTxnsFuture =
@@ -213,6 +235,8 @@ pub struct IntervalBlockProducer<EF: ExecutorFactory> {
     /// - `block_time` is `Some`,
     /// - and, at least one transaction has been executed and thus a new block is opened.
     timer: Option<Interval>,
+
+    is_block_full: bool,
 }
 
 impl<EF: ExecutorFactory> IntervalBlockProducer<EF> {
@@ -236,6 +260,7 @@ impl<EF: ExecutorFactory> IntervalBlockProducer<EF> {
             TxValidator::new(state, flags.clone(), cfg.clone(), block_env, permit.clone());
 
         Self {
+            is_block_full: false,
             validator,
             permit,
             backend,
@@ -309,12 +334,11 @@ impl<EF: ExecutorFactory> IntervalBlockProducer<EF> {
 
     fn execute_transactions(
         executor: PendingExecutor,
-        transactions: Vec<ExecutableTxWithHash>,
+        mut transactions: Vec<ExecutableTxWithHash>,
     ) -> TxExecutionResult {
         let executor = &mut executor.write();
 
-        let new_txs_count = transactions.len();
-        executor.execute_transactions(transactions)?;
+        let (total_executed, is_full) = executor.execute_transactions(transactions.clone())?;
 
         let txs = executor.transactions();
         let total_txs = txs.len();
@@ -322,7 +346,7 @@ impl<EF: ExecutorFactory> IntervalBlockProducer<EF> {
         // Take only the results of the newly executed transactions
         let results = txs
             .iter()
-            .skip(total_txs - new_txs_count)
+            .skip(total_txs - total_executed)
             .filter_map(|(tx, res)| match res {
                 ExecutionResult::Failed { .. } => None,
                 ExecutionResult::Success { receipt, trace, .. } => Some(TxWithOutcome {
@@ -333,7 +357,10 @@ impl<EF: ExecutorFactory> IntervalBlockProducer<EF> {
             })
             .collect::<Vec<TxWithOutcome>>();
 
-        Ok(results)
+        let non_executed_txs =
+            if is_full.is_some() { Some(transactions.split_off(total_executed)) } else { None };
+
+        Ok((results, non_executed_txs))
     }
 
     fn create_new_executor_for_next_block(&self) -> Result<PendingExecutor, BlockProductionError> {
@@ -393,7 +420,16 @@ impl<EF: ExecutorFactory> Stream for IntervalBlockProducer<EF> {
 
         if let Some(mut timer) = pin.timer.take() {
             // Mine block if the interval is over
-            if timer.poll_tick(cx).is_ready() && pin.ongoing_mining.is_none() {
+            //
+            // if block is already full but the timer hasn't ready yet, we will still mine but we
+            // don't have to do anything to the timer as it will be dropped and reset once new
+            // transaction is executed.
+            if (timer.poll_tick(cx).is_ready() || pin.is_block_full) && pin.ongoing_mining.is_none()
+            {
+                if pin.is_block_full {
+                    info!("Block has reached capacity! Closing block...");
+                }
+
                 pin.ongoing_mining = Some(Box::pin({
                     let executor = pin.executor.clone();
                     let backend = pin.backend.clone();
@@ -401,10 +437,24 @@ impl<EF: ExecutorFactory> Stream for IntervalBlockProducer<EF> {
 
                     pin.blocking_task_spawner.spawn(|| Self::do_mine(permit, executor, backend))
                 }));
+
+                pin.is_block_full = false;
             } else {
-                // Unable to close the block due to ongoing mining.
                 pin.timer = Some(timer);
             }
+        } else if pin.is_block_full && pin.ongoing_mining.is_none() {
+            info!("Block has reached capacity! Closing block...");
+
+            pin.ongoing_mining = Some(Box::pin({
+                let executor = pin.executor.clone();
+                let backend = pin.backend.clone();
+                let permit = pin.permit.clone();
+
+                pin.blocking_task_spawner.spawn(|| Self::do_mine(permit, executor, backend))
+            }));
+
+            pin.is_block_full = false;
+            pin.timer = None;
         }
 
         loop {
@@ -438,7 +488,18 @@ impl<EF: ExecutorFactory> Stream for IntervalBlockProducer<EF> {
             if let Some(mut execution) = pin.ongoing_execution.take() {
                 if let Poll::Ready(executor) = execution.poll_unpin(cx) {
                     match executor {
-                        Ok(Ok(txs)) => {
+                        Ok(Ok((txs, leftovers))) => {
+                            if let Some(leftovers) = leftovers {
+                                pin.is_block_full = true;
+
+                                // Push leftover transactions back to front of queue
+                                pin.queued.push_front(leftovers);
+
+                                // Schedule future poll if block is full
+                                cx.waker().wake_by_ref();
+                                break;
+                            }
+
                             pin.notify_listener(txs);
                             continue;
                         }
@@ -485,6 +546,8 @@ impl<EF: ExecutorFactory> Stream for IntervalBlockProducer<EF> {
 
                             Err(e) => return Poll::Ready(Some(Err(e))),
                         }
+
+                        pin.is_block_full = false;
 
                         return Poll::Ready(Some(outcome));
                     }

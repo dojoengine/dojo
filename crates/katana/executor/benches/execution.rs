@@ -49,7 +49,9 @@ fn blockifier(
 
                 (state, &block_context, execution_flags, tx.clone())
             },
-            |(mut state, block_context, flags, tx)| transact(&mut state, block_context, flags, tx),
+            |(mut state, block_context, flags, tx)| {
+                transact(&mut state, block_context, flags, tx, None)
+            },
             BatchSize::SmallInput,
         )
     });

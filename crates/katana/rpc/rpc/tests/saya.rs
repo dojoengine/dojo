@@ -6,7 +6,7 @@ use std::sync::Arc;
 use dojo_test_utils::sequencer::{get_default_test_config, TestSequencer};
 use dojo_utils::TransactionWaiter;
 use jsonrpsee::http_client::HttpClientBuilder;
-use katana_node::config::SequencingConfig;
+use katana_node::config::sequencing::SequencingConfig;
 use katana_primitives::block::{BlockIdOrTag, BlockTag};
 use katana_rpc_api::dev::DevApiClient;
 use katana_rpc_api::saya::SayaApiClient;
