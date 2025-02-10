@@ -8017,6 +8017,7 @@ dependencies = [
  "katana-primitives",
  "katana-rpc-types",
  "lazy_static",
+ "piltover",
  "rand",
  "rstest 0.18.2",
  "shellexpand",
@@ -8074,7 +8075,7 @@ dependencies = [
  "alloy-primitives",
  "anyhow",
  "assert_matches",
- "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.4.11)",
+ "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.4.12)",
  "clap",
  "console",
  "dojo-utils",
@@ -10702,6 +10703,15 @@ name = "pico-args"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5be167a7af36ee22fe3115051bc51f6e6c7054c9348e28deb4f49bd6f705a315"
+
+[[package]]
+name = "piltover"
+version = "0.1.0"
+source = "git+https://github.com/keep-starknet-strange/piltover.git?rev=fb9d988#fb9d9889100f9c88eba1ff91f619c1a67afc2a71"
+dependencies = [
+ "cainome 0.4.11 (git+https://github.com/cartridge-gg/cainome?tag=v0.4.12)",
+ "starknet",
+]
 
 [[package]]
 name = "pin-project"
