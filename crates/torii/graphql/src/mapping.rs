@@ -192,12 +192,11 @@ lazy_static! {
     ]);
 
     pub static ref TOKEN_TYPE_MAPPING: TypeMapping = IndexMap::from([
-        ("id".to_string(), TypeRef::named_nn(TypeRef::STRING)),
-        ("contractAddress".to_string(), TypeRef::named_nn(TypeRef::STRING)),
-        ("name".to_string(), TypeRef::named_nn(TypeRef::STRING)),
-        ("symbol".to_string(), TypeRef::named_nn(TypeRef::STRING)),
-            ("decimals".to_string(), TypeRef::named_nn(TypeRef::INT)),
-            (Name::new("tokenMetadata"), TypeData::Nested((TypeRef::named_nn(TOKEN_UNION_TYPE_NAME), IndexMap::new()))),
-
+        (Name::new("id"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
+        (Name::new("contractAddress"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
+        (Name::new("name"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
+        (Name::new("symbol"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
+        (Name::new("decimals"), TypeData::Simple(TypeRef::named_nn(TypeRef::INT))),
+        (Name::new("tokenMetadata"), TypeData::Nested((TypeRef::named_nn(TOKEN_UNION_TYPE_NAME), IndexMap::new()))),
     ]);
 }

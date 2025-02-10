@@ -16,7 +16,7 @@ use crate::constants::{
 };
 use crate::object::controller::ControllerObject;
 use crate::object::empty::EmptyObject;
-use crate::object::erc::erc_token::{Erc20TokenObject, Erc721TokenObject};
+use crate::object::erc::erc_token::{Erc20TokenObject, Erc721TokenObject, TokenObject};
 use crate::object::erc::token_balance::ErcBalanceObject;
 use crate::object::erc::token_transfer::ErcTransferObject;
 use crate::object::event_message::EventMessageObject;
@@ -131,6 +131,7 @@ async fn build_objects(pool: &SqlitePool) -> Result<(Vec<ObjectVariant>, Vec<Uni
         ObjectVariant::Basic(Box::new(Erc721TokenObject)),
         ObjectVariant::Basic(Box::new(Erc20TokenObject)),
         ObjectVariant::Basic(Box::new(EmptyObject)),
+        ObjectVariant::Resolvable(Box::new(TokenObject)),
     ];
 
     // model union object
@@ -138,8 +139,9 @@ async fn build_objects(pool: &SqlitePool) -> Result<(Vec<ObjectVariant>, Vec<Uni
     let mut model_union = Union::new("ModelUnion");
 
     // erc_token union object
-    let erc_token_union =
-        Union::new(TOKEN_UNION_TYPE_NAME).possible_type(ERC20_TYPE_NAME).possible_type(ERC721_TYPE_NAME);
+    let erc_token_union = Union::new(TOKEN_UNION_TYPE_NAME)
+        .possible_type(ERC20_TYPE_NAME)
+        .possible_type(ERC721_TYPE_NAME);
 
     unions.push(erc_token_union);
 

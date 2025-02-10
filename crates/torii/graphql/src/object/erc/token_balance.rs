@@ -1,5 +1,7 @@
 use async_graphql::connection::PageInfo;
-use async_graphql::dynamic::{Field, FieldFuture, FieldValue, InputValue, SubscriptionField, SubscriptionFieldFuture, TypeRef};
+use async_graphql::dynamic::{
+    Field, FieldFuture, FieldValue, InputValue, SubscriptionField, SubscriptionFieldFuture, TypeRef,
+};
 use convert_case::{Case, Casing};
 use serde::Deserialize;
 use sqlx::sqlite::SqliteRow;
@@ -92,7 +94,7 @@ impl ResolvableObject for ErcBalanceObject {
     fn subscriptions(&self) -> Option<Vec<SubscriptionField>> {
         Some(vec![
             SubscriptionField::new(
-                "tokenBalanceUpdated", 
+                "tokenBalanceUpdated",
                 TypeRef::named_nn(format!("{}Connection", self.type_name())),
                 |ctx| {
                     SubscriptionFieldFuture::new(async move {
@@ -115,11 +117,13 @@ impl ResolvableObject for ErcBalanceObject {
                                     }
                                     // Fetch associated token data
                                     let query = format!(
-                                        "SELECT b.id, t.contract_address, t.name, t.symbol, t.decimals, b.balance, b.token_id, \
-                                        t.metadata, c.contract_type
+                                        "SELECT b.id, t.contract_address, t.name, t.symbol, \
+                                         t.decimals, b.balance, b.token_id, t.metadata, \
+                                         c.contract_type
                                         FROM {} b
                                         JOIN tokens t ON b.token_id = t.id
-                                        JOIN contracts c ON t.contract_address = c.contract_address
+                                        JOIN contracts c ON t.contract_address = \
+                                         c.contract_address
                                         WHERE b.id = ?",
                                         TOKEN_BALANCE_TABLE
                                     );
@@ -127,7 +131,7 @@ impl ResolvableObject for ErcBalanceObject {
                                     let row = match sqlx::query(&query)
                                         .bind(&token_balance.id)
                                         .fetch_one(&pool)
-                                        .await 
+                                        .await
                                     {
                                         Ok(row) => row,
                                         Err(_) => return None,
@@ -136,7 +140,7 @@ impl ResolvableObject for ErcBalanceObject {
                                     // Create connection with single edge
                                     match token_balances_connection_output(
                                         &[row],
-                                        1,  // total_count
+                                        1, // total_count
                                         PageInfo {
                                             has_previous_page: false,
                                             has_next_page: false,
@@ -149,15 +153,11 @@ impl ResolvableObject for ErcBalanceObject {
                                     }
                                 }
                             })
-                            .filter_map(|result| result)
-                        )
+                            .filter_map(|result| result))
                     })
                 },
             )
-            .argument(InputValue::new(
-                "accountAddress",
-                TypeRef::named(TypeRef::STRING),
-            )),
+            .argument(InputValue::new("accountAddress", TypeRef::named(TypeRef::STRING))),
         ])
     }
 }
