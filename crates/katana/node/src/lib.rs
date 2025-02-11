@@ -237,7 +237,7 @@ pub async fn build(mut config: Config) -> Result<Node> {
     let backend = Arc::new(Backend {
         gas_oracle,
         blockchain,
-        executor_factory: executor_factory.clone(),
+        executor_factory,
         block_context_generator,
         chain_spec: config.chain.clone(),
     });
