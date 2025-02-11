@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1739316884953,
+  "lastUpdate": 1739317009933,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -51817,6 +51817,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 11851307977,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "32d5073d1ef49c41d9aa2f752b0a23bcccfabea8",
+          "message": "feat(katana): exact path for chain config  (#3009)\n\n* katana init output path\r\n\r\n* fmt\r\n\r\n* better error clarity",
+          "timestamp": "2025-02-11T23:18:32Z",
+          "tree_id": "729b5cabd8b08c1266d6b148071a48415b66db59",
+          "url": "https://github.com/dojoengine/dojo/commit/32d5073d1ef49c41d9aa2f752b0a23bcccfabea8"
+        },
+        "date": 1739317006956,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2424480,
+            "range": "± 32466",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 397345,
+            "range": "± 10055",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2793906785,
+            "range": "± 212336187",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 16809445,
+            "range": "± 155572",
             "unit": "ns/iter"
           }
         ]
