@@ -1,7 +1,5 @@
 pub mod actions;
-pub mod erc20_token;
-pub mod bank;
-pub mod saloon;
+pub mod externals;
 pub mod models;
 pub mod utils;
 pub mod others;

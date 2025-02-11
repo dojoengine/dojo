@@ -11,6 +11,7 @@ sierra-replace-ids = true
 
 [[target.starknet-contract]]
 build-external-contracts = [ "dojo::world::world_contract::world", "armory::m_Flatbow", "bestiary::m_RiverSkale" ]
+allowed-libfuncs-list.name = "experimental"
 
 [dependencies]
 openzeppelin = "0.20.0"
