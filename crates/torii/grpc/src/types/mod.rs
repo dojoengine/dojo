@@ -38,6 +38,7 @@ impl TryFrom<proto::types::Controller> for Controller {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub struct Token {
+    pub id: String,
     pub contract_address: Felt,
     pub name: String,
     pub symbol: String,
@@ -49,6 +50,7 @@ impl TryFrom<proto::types::Token> for Token {
     type Error = SchemaError;
     fn try_from(value: proto::types::Token) -> Result<Self, Self::Error> {
         Ok(Self {
+            id: value.token_id,
             contract_address: Felt::from_str(&value.contract_address)?,
             name: value.name,
             symbol: value.symbol,
