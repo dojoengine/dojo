@@ -16,17 +16,23 @@ pub enum Error {
     #[error("OS not supported")]
     UnsupportedOS,
 
-    #[error("no local config directory found for chain `{id}`")]
+    #[error("No local config directory found for chain `{id}`")]
     LocalConfigDirectoryNotFound { id: String },
 
-    #[error("chain config path must be a directory")]
+    #[error("Chain config path must be a directory")]
     MustBeADirectory,
 
-    #[error("failed to read config file: {0}")]
+    #[error("Failed to read config file: {0}")]
     ConfigReadError(#[from] toml::ser::Error),
 
-    #[error("failed to write config file: {0}")]
+    #[error("Failed to write config file: {0}")]
     ConfigWriteError(#[from] toml::de::Error),
+
+    #[error("Missing chain configuration file")]
+    MissingConfigFile,
+
+    #[error("Missing genesis file")]
+    MissingGenesisFile,
 
     #[error(transparent)]
     IO(#[from] std::io::Error),
@@ -54,13 +60,24 @@ pub fn list() -> Result<Vec<ChainId>, Error> {
 }
 
 pub fn read(dir: &ChainConfigDir) -> Result<ChainSpec, Error> {
+    let config_path = dir.config_path();
+    let genesis_path = dir.genesis_path();
+
+    if !config_path.exists() {
+        return Err(Error::MissingConfigFile);
+    }
+
+    if !genesis_path.exists() {
+        return Err(Error::MissingGenesisFile);
+    }
+
     let chain_spec: ChainSpecFile = {
-        let content = std::fs::read_to_string(dir.config_path())?;
+        let content = fs::read_to_string(config_path)?;
         toml::from_str(&content)?
     };
 
     let genesis: Genesis = {
-        let file = BufReader::new(File::open(dir.genesis_path())?);
+        let file = BufReader::new(File::open(genesis_path)?);
         let json: GenesisJson = serde_json::from_reader(file).map_err(io::Error::from)?;
         Genesis::try_from(json)?
     };
