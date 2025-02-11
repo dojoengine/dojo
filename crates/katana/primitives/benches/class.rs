@@ -1,4 +1,5 @@
-use std::{str::FromStr, time::Duration};
+use std::str::FromStr;
+use std::time::Duration;
 
 use criterion::{criterion_group, criterion_main, Criterion};
 use katana_primitives::class::ContractClass;
