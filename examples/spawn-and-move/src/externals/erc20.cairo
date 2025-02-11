@@ -51,13 +51,13 @@ mod ERC20Token {
         self.erc20.mint(recipient, initial_supply);
     }
 
+    /// This implementation is not secure, only for testing purposes and quick minting.
     #[generate_trait]
     #[abi(per_item)]
     impl ExternalImpl of ExternalTrait {
         #[external(v0)]
-        fn mint(ref self: ContractState, recipient: ContractAddress, amount: u256) {
-            self.ownable.assert_only_owner();
-            self.erc20.mint(recipient, amount);
+        fn mint(ref self: ContractState, amount: u256) {
+            self.erc20.mint(starknet::get_caller_address(), amount);
         }
     }
 }

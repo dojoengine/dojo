@@ -55,18 +55,13 @@ mod ERC721Token {
         self.erc721.initializer(name, symbol, base_uri);
     }
 
+    /// This implementation is not secure, only for testing purposes and quick minting.
     #[generate_trait]
     #[abi(per_item)]
     impl ERC721Demo of ERC721DemoTrait {
         #[external(v0)]
-        fn mint(
-            ref self: ContractState,
-            recipient: ContractAddress,
-            token_id: u256,
-            data: Span<felt252>,
-        ) {
-            self.ownable.assert_only_owner();
-            self.erc721.safe_mint(recipient, token_id, data);
+        fn mint(ref self: ContractState, token_id: u256) {
+            self.erc721.mint(starknet::get_caller_address(), token_id);
         }
     }
 }

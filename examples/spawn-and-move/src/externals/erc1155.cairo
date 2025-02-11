@@ -49,31 +49,36 @@ mod ERC1155Token {
         self.erc1155.initializer(base_uri);
     }
 
+    /// This implementation is not secure, only for testing purposes and quick minting.
     #[generate_trait]
     #[abi(per_item)]
     impl ExternalImpl of ExternalTrait {
         #[external(v0)]
-        fn mint(
-            ref self: ContractState,
-            account: ContractAddress,
-            token_id: u256,
-            value: u256,
-            data: Span<felt252>,
-        ) {
-            self.ownable.assert_only_owner();
-            self.erc1155.mint_with_acceptance_check(account, token_id, value, data);
+        fn mint(ref self: ContractState, token_id: u256, value: u256) {
+            self
+                .erc1155
+                .update(
+                    starknet::contract_address_const::<0x0>(),
+                    starknet::get_caller_address(),
+                    array![token_id].span(),
+                    array![value].span(),
+                );
+            // Seems to not be supported by default dojo account.
+        // self.erc1155.mint_with_acceptance_check(account, token_id, value, data);
         }
 
         #[external(v0)]
-        fn batch_mint(
-            ref self: ContractState,
-            account: ContractAddress,
-            token_ids: Span<u256>,
-            values: Span<u256>,
-            data: Span<felt252>,
-        ) {
-            self.ownable.assert_only_owner();
-            self.erc1155.batch_mint_with_acceptance_check(account, token_ids, values, data);
+        fn batch_mint(ref self: ContractState, token_ids: Span<u256>, values: Span<u256>) {
+            self
+                .erc1155
+                .update(
+                    starknet::contract_address_const::<0x0>(),
+                    starknet::get_caller_address(),
+                    token_ids,
+                    values,
+                );
+            // Seems to not be supported by default dojo account.
+        // self.erc1155.batch_mint_with_acceptance_check(account, token_ids, values, data);
         }
     }
 }

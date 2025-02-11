@@ -2225,10 +2225,10 @@
   ],
   "external_contracts": [
     {
-      "class_hash": "0x341ff7f48430212aa1f6560da355406f0d751d61d3468af2a53fc44c3a3b122",
+      "class_hash": "0x19d35ddf3df2cd0b9fb3f9884848d617a63ea906df575f0848b13c9cb39aad1",
       "contract_name": "ERC721Token",
       "instance_name": "Badge",
-      "address": "0x1887be99eb7a616d24e5c238257941edb41611c8071babafd3ed7a7d0baed72",
+      "address": "0x1c70a08dd12c4b4af640d4c26f3c2892fa0d006451f6b6339aab9ea9256f06e",
       "abi": [
         {
           "type": "struct",
@@ -2245,30 +2245,12 @@
           ]
         },
         {
-          "type": "struct",
-          "name": "core::array::Span::<core::felt252>",
-          "members": [
-            {
-              "name": "snapshot",
-              "type": "@core::array::Array::<core::felt252>"
-            }
-          ]
-        },
-        {
           "type": "function",
           "name": "mint",
           "inputs": [
             {
-              "name": "recipient",
-              "type": "core::starknet::contract_address::ContractAddress"
-            },
-            {
               "name": "token_id",
               "type": "core::integer::u256"
-            },
-            {
-              "name": "data",
-              "type": "core::array::Span::<core::felt252>"
             }
           ],
           "outputs": [],
@@ -2278,6 +2260,16 @@
           "type": "impl",
           "name": "ERC721MixinImpl",
           "interface_name": "openzeppelin_token::erc721::interface::ERC721ABI"
+        },
+        {
+          "type": "struct",
+          "name": "core::array::Span::<core::felt252>",
+          "members": [
+            {
+              "name": "snapshot",
+              "type": "@core::array::Array::<core::felt252>"
+            }
+          ]
         },
         {
           "type": "enum",
@@ -2944,10 +2936,10 @@
       ]
     },
     {
-      "class_hash": "0x603899e1a58105bc37560d1ee1f2db07315678b00c69d426dba1e7676f3d058",
+      "class_hash": "0x273417f4ad2ad408b6db9dba9005ddf88f4b194ae1a9a00908f0bdd17b699f8",
       "contract_name": "ERC20Token",
       "instance_name": "GoldToken",
-      "address": "0x4e3723a6bb71f2d67fa9b61f957873654a063e20a4cf975ea21435a52e76a59",
+      "address": "0x3222c22e7ed4d1334cbf96deb96cca8ff3134bbc6b51b74fe77ea876fdd07a2",
       "abi": [
         {
           "type": "struct",
@@ -2967,10 +2959,6 @@
           "type": "function",
           "name": "mint",
           "inputs": [
-            {
-              "name": "recipient",
-              "type": "core::starknet::contract_address::ContractAddress"
-            },
             {
               "name": "amount",
               "type": "core::integer::u256"
@@ -3442,10 +3430,10 @@
       ]
     },
     {
-      "class_hash": "0x7f915eef782544e38b700b01e0b3c3cc1b483962939d61767928721c0dcbe3b",
+      "class_hash": "0x231c35c4767d591a61cb18164e3430ace7787e9a51b3a6b426b80f1d465c33b",
       "contract_name": "ERC1155Token",
       "instance_name": "Rewards",
-      "address": "0x345360ead3b27fd97e6cfb45b294d9360ff911fa92824e1fc253a33cc67f2c",
+      "address": "0x409312ed6504099a5a86d5a5b7c84e880e6933dd8c98367b6b7a7bdcba56607",
       "abi": [
         {
           "type": "struct",
@@ -3462,23 +3450,9 @@
           ]
         },
         {
-          "type": "struct",
-          "name": "core::array::Span::<core::felt252>",
-          "members": [
-            {
-              "name": "snapshot",
-              "type": "@core::array::Array::<core::felt252>"
-            }
-          ]
-        },
-        {
           "type": "function",
           "name": "mint",
           "inputs": [
-            {
-              "name": "account",
-              "type": "core::starknet::contract_address::ContractAddress"
-            },
             {
               "name": "token_id",
               "type": "core::integer::u256"
@@ -3486,10 +3460,6 @@
             {
               "name": "value",
               "type": "core::integer::u256"
-            },
-            {
-              "name": "data",
-              "type": "core::array::Span::<core::felt252>"
             }
           ],
           "outputs": [],
@@ -3510,20 +3480,12 @@
           "name": "batch_mint",
           "inputs": [
             {
-              "name": "account",
-              "type": "core::starknet::contract_address::ContractAddress"
-            },
-            {
               "name": "token_ids",
               "type": "core::array::Span::<core::integer::u256>"
             },
             {
               "name": "values",
               "type": "core::array::Span::<core::integer::u256>"
-            },
-            {
-              "name": "data",
-              "type": "core::array::Span::<core::felt252>"
             }
           ],
           "outputs": [],
@@ -3541,6 +3503,16 @@
             {
               "name": "snapshot",
               "type": "@core::array::Array::<core::starknet::contract_address::ContractAddress>"
+            }
+          ]
+        },
+        {
+          "type": "struct",
+          "name": "core::array::Span::<core::felt252>",
+          "members": [
+            {
+              "name": "snapshot",
+              "type": "@core::array::Array::<core::felt252>"
             }
           ]
         },
@@ -4188,10 +4160,10 @@
       "constructor_calldata": []
     },
     {
-      "class_hash": "0x603899e1a58105bc37560d1ee1f2db07315678b00c69d426dba1e7676f3d058",
+      "class_hash": "0x273417f4ad2ad408b6db9dba9005ddf88f4b194ae1a9a00908f0bdd17b699f8",
       "contract_name": "ERC20Token",
       "instance_name": "WoodToken",
-      "address": "0x673f2fa066203c29b074af60185256488b14cb46d0a0549d299010dc85f0720",
+      "address": "0x62fed1352472192eda3ac19346961a55e44ad01820505aa861ad1dd0625579e",
       "abi": [
         {
           "type": "struct",
@@ -4211,10 +4183,6 @@
           "type": "function",
           "name": "mint",
           "inputs": [
-            {
-              "name": "recipient",
-              "type": "core::starknet::contract_address::ContractAddress"
-            },
             {
               "name": "amount",
               "type": "core::integer::u256"
