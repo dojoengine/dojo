@@ -239,8 +239,8 @@ where
 }
 
 // Chain IDs can be arbitrary ASCII strings, making them indistinguishable from filesystem paths.
-// To handle this ambiguity, we first try parsing single-component inputs as paths, then as chain IDs.
-// Multi-component inputs are always treated as paths.
+// To handle this ambiguity, we first try parsing single-component inputs as paths, then as chain
+// IDs. Multi-component inputs are always treated as paths.
 pub fn parse_chain_config_dir(value: &str) -> Result<ChainConfigDir> {
     let path = PathBuf::from(value);
 
