@@ -20,7 +20,7 @@ use tracing::{error, trace};
 use crate::proto;
 use crate::proto::world::SubscribeTokensResponse;
 
-pub(crate) const LOG_TARGET: &str = "torii::grpc::server::subscriptions::balance";
+pub(crate) const LOG_TARGET: &str = "torii::grpc::server::subscriptions::token";
 
 #[derive(Debug)]
 pub struct TokenSubscriber {
@@ -45,7 +45,7 @@ impl TokenManager {
         let (sender, receiver) = channel(1);
 
         // Send initial empty response
-        let _ = sender.send(Ok(SubscribeTokensResponse { token: None })).await;
+        let _ = sender.send(Ok(SubscribeTokensResponse { subscription_id, token: None })).await;
 
         self.subscribers.write().await.insert(
             subscription_id,
@@ -86,32 +86,32 @@ impl TokenManager {
 #[allow(missing_debug_implementations)]
 pub struct Service {
     simple_broker: Pin<Box<dyn Stream<Item = Token> + Send>>,
-    balance_sender: UnboundedSender<Token>,
+    token_sender: UnboundedSender<Token>,
 }
 
 impl Service {
     pub fn new(subs_manager: Arc<TokenManager>) -> Self {
-        let (balance_sender, balance_receiver) = unbounded_channel();
+        let (token_sender, token_receiver) = unbounded_channel();
         let service =
-            Self { simple_broker: Box::pin(SimpleBroker::<Token>::subscribe()), balance_sender };
+            Self { simple_broker: Box::pin(SimpleBroker::<Token>::subscribe()), token_sender };
 
-        tokio::spawn(Self::publish_updates(subs_manager, balance_receiver));
+        tokio::spawn(Self::publish_updates(subs_manager, token_receiver));
 
         service
     }
 
     async fn publish_updates(
         subs: Arc<TokenManager>,
-        mut balance_receiver: UnboundedReceiver<Token>,
+        mut token_receiver: UnboundedReceiver<Token>,
     ) {
-        while let Some(balance) = balance_receiver.recv().await {
-            if let Err(e) = Self::process_balance_update(&subs, &balance).await {
-                error!(target = LOG_TARGET, error = %e, "Processing balance update.");
+        while let Some(token) = token_receiver.recv().await {
+            if let Err(e) = Self::process_token_update(&subs, &token).await {
+                error!(target = LOG_TARGET, error = %e, "Processing token update.");
             }
         }
     }
 
-    async fn process_balance_update(subs: &Arc<TokenManager>, token: &Token) -> Result<(), Error> {
+    async fn process_token_update(subs: &Arc<TokenManager>, token: &Token) -> Result<(), Error> {
         let mut closed_stream = Vec::new();
 
         for (idx, sub) in subs.subscribers.read().await.iter() {
@@ -126,6 +126,7 @@ impl Service {
             }
 
             let resp = SubscribeTokensResponse {
+                subscription_id: *idx,
                 token: Some(proto::types::Token {
                     token_id: token.id.clone(),
                     contract_address: token.contract_address.clone(),
@@ -142,7 +143,7 @@ impl Service {
         }
 
         for id in closed_stream {
-            trace!(target = LOG_TARGET, id = %id, "Closing balance stream.");
+            trace!(target = LOG_TARGET, id = %id, "Closing token stream.");
             subs.remove_subscriber(id).await
         }
 
@@ -156,9 +157,9 @@ impl Future for Service {
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let this = self.get_mut();
 
-        while let Poll::Ready(Some(balance)) = this.simple_broker.poll_next_unpin(cx) {
-            if let Err(e) = this.balance_sender.send(balance) {
-                error!(target = LOG_TARGET, error = %e, "Sending balance update to processor.");
+        while let Poll::Ready(Some(token)) = this.simple_broker.poll_next_unpin(cx) {
+            if let Err(e) = this.token_sender.send(token) {
+                error!(target = LOG_TARGET, error = %e, "Sending token update to processor.");
             }
         }
 

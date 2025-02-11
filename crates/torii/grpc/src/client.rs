@@ -18,12 +18,13 @@ use crate::proto::world::{
     SubscribeEntityResponse, SubscribeEventMessagesRequest, SubscribeEventsRequest,
     SubscribeEventsResponse, SubscribeIndexerRequest, SubscribeIndexerResponse,
     SubscribeModelsRequest, SubscribeModelsResponse, SubscribeTokenBalancesResponse,
-    UpdateEntitiesSubscriptionRequest, UpdateEventMessagesSubscriptionRequest,
-    UpdateTokenBalancesSubscriptionRequest, WorldMetadataRequest, SubscribeTokensResponse
+    SubscribeTokensResponse, UpdateEntitiesSubscriptionRequest,
+    UpdateEventMessagesSubscriptionRequest, UpdateTokenBalancesSubscriptionRequest,
+    UpdateTokenSubscriptionRequest, WorldMetadataRequest,
 };
 use crate::types::schema::{Entity, SchemaError};
 use crate::types::{
-    EntityKeysClause, Event, EventQuery, IndexerUpdate, ModelKeysClause, Query, TokenBalance, Token
+    EntityKeysClause, Event, EventQuery, IndexerUpdate, ModelKeysClause, Query, Token, TokenBalance,
 };
 
 #[derive(Debug, thiserror::Error)]
@@ -132,12 +133,49 @@ impl WorldClient {
         &mut self,
         contract_addresses: Vec<Felt>,
     ) -> Result<TokenUpdateStreaming, Error> {
-        let request = RetrieveTokensRequest { contract_addresses: contract_addresses.into_iter().map(|c| c.to_bytes_be().to_vec()).collect() };
-        let stream = self.inner.subscribe_tokens(request).await.map_err(Error::Grpc).map(|res| res.into_inner())?;
-        Ok(TokenUpdateStreaming(stream.map_ok(Box::new(|res| match res.token {
-            Some(token) => token.try_into().expect("must able to serialize"),
-            None => Token { id: "".to_string(), contract_address: Felt::ZERO, name: "".to_string(), symbol: "".to_string(), decimals: 0, metadata: "".to_string() },
+        let request = RetrieveTokensRequest {
+            contract_addresses: contract_addresses
+                .into_iter()
+                .map(|c| c.to_bytes_be().to_vec())
+                .collect(),
+        };
+        let stream = self
+            .inner
+            .subscribe_tokens(request)
+            .await
+            .map_err(Error::Grpc)
+            .map(|res| res.into_inner())?;
+        Ok(TokenUpdateStreaming(stream.map_ok(Box::new(|res| {
+            (
+                res.subscription_id,
+                match res.token {
+                    Some(token) => token.try_into().expect("must able to serialize"),
+                    None => Token {
+                        id: "".to_string(),
+                        contract_address: Felt::ZERO,
+                        name: "".to_string(),
+                        symbol: "".to_string(),
+                        decimals: 0,
+                        metadata: "".to_string(),
+                    },
+                },
+            )
         }))))
+    }
+
+    pub async fn update_tokens_subscription(
+        &mut self,
+        subscription_id: u64,
+        contract_addresses: Vec<Felt>,
+    ) -> Result<(), Error> {
+        let contract_addresses =
+            contract_addresses.into_iter().map(|c| c.to_bytes_be().to_vec()).collect();
+        let request = UpdateTokenSubscriptionRequest { subscription_id, contract_addresses };
+        self.inner
+            .update_tokens_subscription(request)
+            .await
+            .map_err(Error::Grpc)
+            .map(|res| res.into_inner())
     }
 
     pub async fn retrieve_token_balances(
@@ -351,10 +389,18 @@ impl WorldClient {
             .map_err(Error::Grpc)
             .map(|res| res.into_inner())?;
         Ok(TokenBalanceStreaming(stream.map_ok(Box::new(|res| {
-            (res.subscription_id, match res.balance {
-                Some(balance) => balance.try_into().expect("must able to serialize"),
-                None => TokenBalance { balance: U256::ZERO, account_address: Felt::ZERO, contract_address: Felt::ZERO, token_id: "".to_string() },
-            })
+            (
+                res.subscription_id,
+                match res.balance {
+                    Some(balance) => balance.try_into().expect("must able to serialize"),
+                    None => TokenBalance {
+                        balance: U256::ZERO,
+                        account_address: Felt::ZERO,
+                        contract_address: Felt::ZERO,
+                        token_id: "".to_string(),
+                    },
+                },
+            )
         }))))
     }
 
@@ -386,7 +432,7 @@ impl WorldClient {
 
 type TokenMappedStream = MapOk<
     tonic::Streaming<SubscribeTokensResponse>,
-    Box<dyn Fn(SubscribeTokensResponse) -> Token + Send>,
+    Box<dyn Fn(SubscribeTokensResponse) -> (SubscriptionId, Token) + Send>,
 >;
 
 #[derive(Debug)]

@@ -43,6 +43,9 @@ service World {
     // Subscribe to token updates.
     rpc SubscribeTokens (RetrieveTokensRequest) returns (stream SubscribeTokensResponse);
 
+    // Update token subscription
+    rpc UpdateTokensSubscription (UpdateTokenSubscriptionRequest) returns (google.protobuf.Empty);
+
     // Retrieve entities
     rpc RetrieveEventMessages (RetrieveEventMessagesRequest) returns (RetrieveEntitiesResponse);
 
@@ -101,7 +104,18 @@ message RetrieveTokensResponse {
 
 // A response containing token updates
 message SubscribeTokensResponse {
-    types.Token token = 1;
+    // The subscription ID
+    uint64 subscription_id = 1;
+    // The token
+    types.Token token = 2;
+}
+
+// A request to update a token subscription
+message UpdateTokenSubscriptionRequest {
+    // The subscription ID
+    uint64 subscription_id = 1;
+    // The list of contract addresses to subscribe to
+    repeated bytes contract_addresses = 2;
 }
 
 // A request to retrieve token balances
