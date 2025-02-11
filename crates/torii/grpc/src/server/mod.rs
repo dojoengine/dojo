@@ -452,17 +452,40 @@ impl DojoWorld {
         entity_updated_after: Option<String>,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         let keys_pattern = build_keys_pattern(keys_clause)?;
+        let model_selectors: Vec<String> = keys_clause
+            .models
+            .iter()
+            .map(|model| format!("{:#x}", compute_selector_from_tag(model)))
+            .collect();
 
-        let where_clause = format!(
-            "{table}.keys REGEXP ? {}",
-            if entity_updated_after.is_some() {
-                format!("AND {table}.updated_at >= ?")
-            } else {
-                String::new()
-            }
-        );
+        let where_clause = if model_selectors.is_empty() {
+            format!(
+                "{table}.keys REGEXP ? {}",
+                if entity_updated_after.is_some() {
+                    format!("AND {table}.updated_at >= ?")
+                } else {
+                    String::new()
+                }
+            )
+        } else {
+            format!(
+                "({table}.keys REGEXP ? AND {model_relation_table}.model_id IN ({})) OR \
+                 {model_relation_table}.model_id NOT IN ({}) {}",
+                vec!["?"; model_selectors.len()].join(", "),
+                vec!["?"; model_selectors.len()].join(", "),
+                if entity_updated_after.is_some() {
+                    format!("AND {table}.updated_at >= ?")
+                } else {
+                    String::new()
+                }
+            )
+        };
 
         let mut bind_values = vec![keys_pattern];
+        if !model_selectors.is_empty() {
+            bind_values.extend(model_selectors.clone());
+            bind_values.extend(model_selectors);
+        }
         if let Some(entity_updated_after) = entity_updated_after.clone() {
             bind_values.push(entity_updated_after);
         }
@@ -711,7 +734,7 @@ impl DojoWorld {
         entity_updated_after: Option<String>,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         let (where_clause, bind_values) =
-            build_composite_clause(table, &composite, entity_updated_after)?;
+            build_composite_clause(table, model_relation_table, &composite, entity_updated_after)?;
 
         let entity_models =
             entity_models.iter().map(|model| compute_selector_from_tag(model)).collect::<Vec<_>>();
@@ -1171,6 +1194,7 @@ fn build_keys_pattern(clause: &proto::types::KeysClause) -> Result<String, Error
 // builds a composite clause for a query
 fn build_composite_clause(
     table: &str,
+    model_relation_table: &str,
     composite: &proto::types::CompositeClause,
     entity_updated_after: Option<String>,
 ) -> Result<(String, Vec<String>), Error> {
@@ -1195,20 +1219,26 @@ fn build_composite_clause(
             ClauseType::Keys(keys) => {
                 let keys_pattern = build_keys_pattern(keys)?;
                 bind_values.push(keys_pattern);
-                where_clauses.push(format!("({table}.keys REGEXP ?)"));
+                let model_selectors: Vec<String> = keys
+                    .models
+                    .iter()
+                    .map(|model| format!("{:#x}", compute_selector_from_tag(model)))
+                    .collect();
 
-                // Add model checks for specified models
-
-                // NOTE: disabled since we are now using the top level entity models
-
-                // for model in &keys.models {
-                //     let (namespace, model_name) = model
-                //         .split_once('-')
-                //         .ok_or(QueryError::InvalidNamespacedModel(model.clone()))?;
-                //     let model_id = compute_selector_from_names(namespace, model_name);
-
-                //     having_clauses.push(format!("INSTR(model_ids, '{:#x}') > 0", model_id));
-                // }
+                if model_selectors.is_empty() {
+                    where_clauses.push(format!("({table}.keys REGEXP ?)"));
+                } else {
+                    // Add bind value placeholders for each model selector
+                    let placeholders = vec!["?"; model_selectors.len()].join(", ");
+                    where_clauses.push(format!(
+                        "({table}.keys REGEXP ? AND {model_relation_table}.model_id IN ({})) OR \
+                         {model_relation_table}.model_id NOT IN ({})",
+                        placeholders, placeholders
+                    ));
+                    // Add each model selector twice (once for IN and once for NOT IN)
+                    bind_values.extend(model_selectors.clone());
+                    bind_values.extend(model_selectors);
+                }
             }
             ClauseType::Member(member) => {
                 let comparison_operator = ComparisonOperator::from_repr(member.operator as usize)
@@ -1250,8 +1280,12 @@ fn build_composite_clause(
             }
             ClauseType::Composite(nested) => {
                 // Handle nested composite by recursively building the clause
-                let (nested_where, nested_values) =
-                    build_composite_clause(table, nested, entity_updated_after.clone())?;
+                let (nested_where, nested_values) = build_composite_clause(
+                    table,
+                    model_relation_table,
+                    nested,
+                    entity_updated_after.clone(),
+                )?;
 
                 if !nested_where.is_empty() {
                     where_clauses.push(nested_where);
