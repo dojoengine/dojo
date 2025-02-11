@@ -139,17 +139,35 @@ impl WorldRemote {
         external_contract_classes: Vec<(String, Felt)>,
         external_contracts: HashMap<String, Felt>,
     ) -> Result<()> {
+        // dojo.utils is not wasm compatible, and dojo-world needs to be compatible with wasm.
+        // Hence, the is_declared and is_deployed functions are implemented here.
         for (name, hash) in external_contract_classes {
-            if dojo_utils::is_declared(&name, hash, provider).await? {
-                trace!(name, "External contract class already declared.");
-                self.declared_external_contract_classes.push(name);
-            }
+            match provider.get_class(BlockId::Tag(BlockTag::Pending), hash).await {
+                Err(ProviderError::StarknetError(StarknetError::ClassHashNotFound)) => {}
+                Ok(_) => {
+                    trace!(
+                        name,
+                        class_hash = format!("{:#066x}", hash),
+                        "External contract class already declared."
+                    );
+                    self.declared_external_contract_classes.push(name);
+                }
+                Err(e) => return Err(e.into()),
+            };
         }
 
         for (name, address) in external_contracts {
-            if dojo_utils::is_deployed(address, provider).await? {
-                trace!(name, "External contract already deployed.");
-                self.deployed_external_contracts.push(name);
+            match provider.get_class_hash_at(BlockId::Tag(BlockTag::Pending), address).await {
+                Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => {}
+                Ok(_) => {
+                    trace!(
+                        name,
+                        contract_address = format!("{:#066x}", address),
+                        "External contract already deployed."
+                    );
+                    self.deployed_external_contracts.push(name);
+                }
+                Err(e) => return Err(e.into()),
             }
         }
 

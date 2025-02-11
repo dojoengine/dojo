@@ -1,5 +1,6 @@
 //! Client implementation for the gRPC service.
 use std::num::ParseIntError;
+#[cfg(not(target_arch = "wasm32"))]
 use std::time::Duration;
 
 use futures_util::stream::MapOk;
