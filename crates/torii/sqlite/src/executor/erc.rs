@@ -252,16 +252,16 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
 
             match metadata {
                 Ok(metadata) => {
-                    serde_json::to_string(&metadata).context("Failed to serialize metadata")?
+                    serde_json::to_string(&metadata).context("Failed to serialize metadata")
                 }
                 Err(err) => {
                     debug!(error = %err, token_uri = %token_uri, "Error fetching metadata");
                     warn!(
-                        contract_address = format!("{:#x}", register_erc721_token.contract_address),
-                        token_id = %register_erc721_token.actual_token_id,
+                        contract_address = format!("{:#x}", contract_address),
+                        token_id = %token_id,
                         "Error fetching metadata, empty metadata will be used instead.",
                     );
-                    "".to_string()
+                    Ok("".to_string())
                 }
             }
         }
