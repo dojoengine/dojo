@@ -14,7 +14,7 @@ use tokio::sync::mpsc::{
 use tokio::sync::RwLock;
 use torii_sqlite::error::{Error, ParseError};
 use torii_sqlite::simple_broker::SimpleBroker;
-use torii_sqlite::types::Token;
+use torii_sqlite::types::OptimisticToken;
 use tracing::{error, trace};
 
 use crate::proto;
@@ -85,15 +85,17 @@ impl TokenManager {
 #[must_use = "Service does nothing unless polled"]
 #[allow(missing_debug_implementations)]
 pub struct Service {
-    simple_broker: Pin<Box<dyn Stream<Item = Token> + Send>>,
-    token_sender: UnboundedSender<Token>,
+    simple_broker: Pin<Box<dyn Stream<Item = OptimisticToken> + Send>>,
+    token_sender: UnboundedSender<OptimisticToken>,
 }
 
 impl Service {
     pub fn new(subs_manager: Arc<TokenManager>) -> Self {
         let (token_sender, token_receiver) = unbounded_channel();
-        let service =
-            Self { simple_broker: Box::pin(SimpleBroker::<Token>::subscribe()), token_sender };
+        let service = Self {
+            simple_broker: Box::pin(SimpleBroker::<OptimisticToken>::subscribe()),
+            token_sender,
+        };
 
         tokio::spawn(Self::publish_updates(subs_manager, token_receiver));
 
@@ -102,7 +104,7 @@ impl Service {
 
     async fn publish_updates(
         subs: Arc<TokenManager>,
-        mut token_receiver: UnboundedReceiver<Token>,
+        mut token_receiver: UnboundedReceiver<OptimisticToken>,
     ) {
         while let Some(token) = token_receiver.recv().await {
             if let Err(e) = Self::process_token_update(&subs, &token).await {
@@ -111,7 +113,10 @@ impl Service {
         }
     }
 
-    async fn process_token_update(subs: &Arc<TokenManager>, token: &Token) -> Result<(), Error> {
+    async fn process_token_update(
+        subs: &Arc<TokenManager>,
+        token: &OptimisticToken,
+    ) -> Result<(), Error> {
         let mut closed_stream = Vec::new();
 
         for (idx, sub) in subs.subscribers.read().await.iter() {

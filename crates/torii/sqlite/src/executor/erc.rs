@@ -16,7 +16,7 @@ use super::{ApplyBalanceDiffQuery, BrokerMessage, Executor};
 use crate::constants::{SQL_FELT_DELIMITER, TOKEN_BALANCE_TABLE};
 use crate::executor::LOG_TARGET;
 use crate::simple_broker::SimpleBroker;
-use crate::types::{ContractType, Token, TokenBalance};
+use crate::types::{ContractType, OptimisticTokenBalance, Token, TokenBalance};
 use crate::utils::{
     felt_to_sql_string, fetch_content_from_ipfs, sanitize_json_string, sql_string_to_u256,
     u256_to_sql_string, I256,
@@ -176,7 +176,10 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
         .await?;
 
         debug!(target: LOG_TARGET, token_balance = ?token_balance, "Applied balance diff");
-        SimpleBroker::publish(token_balance);
+        SimpleBroker::publish(unsafe {
+            std::mem::transmute::<TokenBalance, OptimisticTokenBalance>(token_balance.clone())
+        });
+        self.publish_queue.push(BrokerMessage::TokenBalanceUpdated(token_balance));
 
         Ok(())
     }

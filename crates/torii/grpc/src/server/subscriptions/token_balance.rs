@@ -14,7 +14,7 @@ use tokio::sync::mpsc::{
 use tokio::sync::RwLock;
 use torii_sqlite::error::{Error, ParseError};
 use torii_sqlite::simple_broker::SimpleBroker;
-use torii_sqlite::types::TokenBalance;
+use torii_sqlite::types::OptimisticTokenBalance;
 use tracing::{error, trace};
 
 use crate::proto;
@@ -98,15 +98,15 @@ impl TokenBalanceManager {
 #[must_use = "Service does nothing unless polled"]
 #[allow(missing_debug_implementations)]
 pub struct Service {
-    simple_broker: Pin<Box<dyn Stream<Item = TokenBalance> + Send>>,
-    balance_sender: UnboundedSender<TokenBalance>,
+    simple_broker: Pin<Box<dyn Stream<Item = OptimisticTokenBalance> + Send>>,
+    balance_sender: UnboundedSender<OptimisticTokenBalance>,
 }
 
 impl Service {
     pub fn new(subs_manager: Arc<TokenBalanceManager>) -> Self {
         let (balance_sender, balance_receiver) = unbounded_channel();
         let service = Self {
-            simple_broker: Box::pin(SimpleBroker::<TokenBalance>::subscribe()),
+            simple_broker: Box::pin(SimpleBroker::<OptimisticTokenBalance>::subscribe()),
             balance_sender,
         };
 
@@ -117,7 +117,7 @@ impl Service {
 
     async fn publish_updates(
         subs: Arc<TokenBalanceManager>,
-        mut balance_receiver: UnboundedReceiver<TokenBalance>,
+        mut balance_receiver: UnboundedReceiver<OptimisticTokenBalance>,
     ) {
         while let Some(balance) = balance_receiver.recv().await {
             if let Err(e) = Self::process_balance_update(&subs, &balance).await {
@@ -128,7 +128,7 @@ impl Service {
 
     async fn process_balance_update(
         subs: &Arc<TokenBalanceManager>,
-        balance: &TokenBalance,
+        balance: &OptimisticTokenBalance,
     ) -> Result<(), Error> {
         let mut closed_stream = Vec::new();
 

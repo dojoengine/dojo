@@ -23,7 +23,7 @@ use crate::simple_broker::SimpleBroker;
 use crate::types::{
     ContractCursor, ContractType, Entity as EntityUpdated, Event as EventEmitted,
     EventMessage as EventMessageUpdated, Model as ModelRegistered, OptimisticEntity,
-    OptimisticEventMessage, Token,
+    OptimisticEventMessage, Token, TokenBalance,
 };
 use crate::utils::{felt_to_sql_string, I256};
 
@@ -49,6 +49,7 @@ pub enum BrokerMessage {
     EventMessageUpdated(EventMessageUpdated),
     EventEmitted(EventEmitted),
     TokenRegistered(Token),
+    TokenBalanceUpdated(TokenBalance),
 }
 
 #[derive(Debug, Clone)]
@@ -511,19 +512,10 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                     entity_updated.deleted = true;
                 }
 
-                let optimistic_entity = OptimisticEntity {
-                    id: entity_updated.id.clone(),
-                    keys: entity_updated.keys.clone(),
-                    event_id: entity_updated.event_id.clone(),
-                    executed_at: entity_updated.executed_at,
-                    created_at: entity_updated.created_at,
-                    updated_at: entity_updated.updated_at,
-                    updated_model: entity_updated.updated_model.clone(),
-                    deleted: entity_updated.deleted,
-                };
-                SimpleBroker::publish(optimistic_entity);
-                let broker_message = BrokerMessage::EntityUpdated(entity_updated);
-                self.publish_queue.push(broker_message);
+                SimpleBroker::publish(unsafe {
+                    std::mem::transmute::<EntityUpdated, OptimisticEntity>(entity_updated.clone())
+                });
+                self.publish_queue.push(BrokerMessage::EntityUpdated(entity_updated));
             }
             QueryType::RegisterModel => {
                 let row = query.fetch_one(&mut **tx).await.with_context(|| {
@@ -587,20 +579,12 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 event_message.updated_model = Some(em_query.ty);
                 event_message.historical = em_query.is_historical;
 
-                let optimistic_event_message = OptimisticEventMessage {
-                    id: event_message.id.clone(),
-                    keys: event_message.keys.clone(),
-                    event_id: event_message.event_id.clone(),
-                    executed_at: event_message.executed_at,
-                    created_at: event_message.created_at,
-                    updated_at: event_message.updated_at,
-                    updated_model: event_message.updated_model.clone(),
-                    historical: event_message.historical,
-                };
-                SimpleBroker::publish(optimistic_event_message);
-
-                let broker_message = BrokerMessage::EventMessageUpdated(event_message);
-                self.publish_queue.push(broker_message);
+                SimpleBroker::publish(unsafe {
+                    std::mem::transmute::<EventMessageUpdated, OptimisticEventMessage>(
+                        event_message.clone(),
+                    )
+                });
+                self.publish_queue.push(BrokerMessage::EventMessageUpdated(event_message));
             }
             QueryType::StoreEvent => {
                 let row = query.fetch_one(&mut **tx).await.with_context(|| {
@@ -840,5 +824,6 @@ fn send_broker_message(message: BrokerMessage) {
         BrokerMessage::EventMessageUpdated(event) => SimpleBroker::publish(event),
         BrokerMessage::EventEmitted(event) => SimpleBroker::publish(event),
         BrokerMessage::TokenRegistered(token) => SimpleBroker::publish(token),
+        BrokerMessage::TokenBalanceUpdated(token_balance) => SimpleBroker::publish(token_balance),
     }
 }
