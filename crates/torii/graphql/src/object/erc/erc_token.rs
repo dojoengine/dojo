@@ -392,6 +392,9 @@ impl ResolvableObject for TokenObject {
                                         ErcTokenType::Erc20(token)
                                     }
                                     "erc721" => {
+                                        let id = row.get::<String, _>("id");
+                                        let token_id = id.split(':').collect::<Vec<&str>>()[1].to_string();
+
                                         let metadata_str: String = row.get("metadata");
                                         let (
                                             metadata_str,
@@ -435,8 +438,7 @@ impl ResolvableObject for TokenObject {
                                             metadata: metadata_str,
                                             contract_address: row.get("contract_address"),
                                             symbol: row.get("symbol"),
-                                            token_id: "0".to_string(), /* New token has no
-                                                                        * specific token_id */
+                                            token_id,
                                             metadata_name,
                                             metadata_description,
                                             metadata_attributes,
