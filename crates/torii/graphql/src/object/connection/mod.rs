@@ -71,7 +71,7 @@ impl BasicObject for ConnectionObject {
 }
 
 pub fn parse_connection_arguments(ctx: &ResolverContext<'_>) -> Result<ConnectionArguments, Error> {
-    let first = extract::<u64>(ctx.args.as_index_map(), "first").ok();
+    let first: Option<u64> = extract::<u64>(ctx.args.as_index_map(), "first").ok();
     let last = extract::<u64>(ctx.args.as_index_map(), "last").ok();
     let after = extract::<String>(ctx.args.as_index_map(), "after").ok();
     let before = extract::<String>(ctx.args.as_index_map(), "before").ok();

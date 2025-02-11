@@ -10,16 +10,16 @@ use starknet::core::types::{BlockId, BlockTag, FunctionCall, U256};
 use starknet::core::utils::{get_selector_from_name, parse_cairo_short_string};
 use starknet::providers::Provider;
 use starknet_crypto::Felt;
-use tracing::{debug, trace, warn};
+use tracing::{debug, warn};
 
-use super::{ApplyBalanceDiffQuery, Executor};
+use super::{ApplyBalanceDiffQuery, BrokerMessage, Executor};
 use crate::constants::{SQL_FELT_DELIMITER, TOKEN_BALANCE_TABLE};
 use crate::executor::LOG_TARGET;
 use crate::simple_broker::SimpleBroker;
-use crate::types::{ContractType, TokenBalance};
+use crate::types::{ContractType, Token, TokenBalance};
 use crate::utils::{
     felt_and_u256_to_sql_string, felt_to_sql_string, fetch_content_from_ipfs, sql_string_to_u256,
-    u256_to_sql_string, I256,
+    u256_to_sql_string, I256, sanitize_json_string
 };
 
 #[derive(Debug, Clone)]
@@ -248,22 +248,20 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
         if token_uri.is_empty() {
             Ok("".to_string())
         } else {
-            let metadata = Self::fetch_metadata(token_uri)
-                .await
-                .with_context(|| format!("Failed to fetch metadata for token_id: {}", token_id));
+            let metadata = Self::fetch_metadata(&token_uri).await;
 
             match metadata {
                 Ok(metadata) => {
-                    serde_json::to_string(&metadata).context("Failed to serialize metadata")
+                    serde_json::to_string(&metadata).context("Failed to serialize metadata")?
                 }
-                Err(e) => {
+                Err(err) => {
+                    debug!(error = %err, token_uri = %token_uri, "Error fetching metadata");
                     warn!(
-                        contract_address = format!("{:#x}", contract_address),
-                        token_id = %token_id,
-                        error = ?e,
+                        contract_address = format!("{:#x}", register_erc721_token.contract_address),
+                        token_id = %register_erc721_token.actual_token_id,
                         "Error fetching metadata, empty metadata will be used instead.",
                     );
-                    Ok("".to_string())
+                    "".to_string()
                 }
             }
         }
@@ -349,8 +347,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
             }
             uri if uri.starts_with("data") => {
                 // Parse and decode data URI
-                debug!("Parsing metadata from data URI");
-                trace!(data_uri = %token_uri);
+                debug!(data_uri = %token_uri, "Parsing metadata from data URI");
 
                 // HACK: https://github.com/servo/rust-url/issues/908
                 let uri = token_uri.replace("#", "%23");
@@ -369,9 +366,12 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                     .chars()
                     .filter(|c| !c.is_ascii_control())
                     .collect::<String>();
+                let sanitized_json = sanitize_json_string(&decoded_str);
 
-                let json: serde_json::Value = serde_json::from_str(&decoded_str)
-                    .context(format!("Failed to parse metadata JSON from data URI: {}", &uri))?;
+                let json: serde_json::Value =
+                    serde_json::from_str(&sanitized_json).with_context(|| {
+                        format!("Failed to parse metadata JSON from data URI: {}", &uri)
+                    })?;
 
                 Ok(json)
             }
@@ -383,9 +383,9 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
         &mut self,
         result: RegisterErc721TokenMetadata,
     ) -> Result<()> {
-        let query = sqlx::query(
+        let query = sqlx::query_as::<_, Token>(
             "INSERT INTO tokens (id, contract_address, name, symbol, decimals, metadata) VALUES \
-             (?, ?, ?, ?, ?, ?)",
+             (?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING RETURNING *",
         )
         .bind(result.query.id.clone())
         .bind(felt_to_sql_string(&result.query.contract_address))
@@ -394,10 +394,14 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
         .bind(0)
         .bind(&result.metadata);
 
-        query
-            .execute(&mut *self.transaction)
+        let token = query
+            .fetch_optional(&mut *self.transaction)
             .await
             .with_context(|| format!("Failed to execute721Token query: {:?}", result))?;
+
+        if let Some(token) = token {
+            self.publish_queue.push(BrokerMessage::TokenRegistered(token));
+        }
 
         Ok(())
     }

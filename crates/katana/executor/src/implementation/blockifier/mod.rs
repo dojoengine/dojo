@@ -1,5 +1,6 @@
 // Re-export the blockifier crate.
 pub use blockifier;
+use blockifier::bouncer::{Bouncer, BouncerConfig, BouncerWeights};
 
 mod error;
 mod state;
@@ -22,9 +23,9 @@ use tracing::info;
 
 use self::state::CachedState;
 use crate::{
-    BlockExecutor, EntryPointCall, ExecutionError, ExecutionFlags, ExecutionOutput,
-    ExecutionResult, ExecutionStats, ExecutorExt, ExecutorFactory, ExecutorResult, ResultAndStates,
-    StateProviderDb,
+    BlockExecutor, BlockLimits, EntryPointCall, ExecutionError, ExecutionFlags, ExecutionOutput,
+    ExecutionResult, ExecutionStats, ExecutorError, ExecutorExt, ExecutorFactory, ExecutorResult,
+    ResultAndStates, StateProviderDb,
 };
 
 pub(crate) const LOG_TARGET: &str = "katana::executor::blockifier";
@@ -33,12 +34,13 @@ pub(crate) const LOG_TARGET: &str = "katana::executor::blockifier";
 pub struct BlockifierFactory {
     cfg: CfgEnv,
     flags: ExecutionFlags,
+    limits: BlockLimits,
 }
 
 impl BlockifierFactory {
     /// Create a new factory with the given configuration and simulation flags.
-    pub fn new(cfg: CfgEnv, flags: ExecutionFlags) -> Self {
-        Self { cfg, flags }
+    pub fn new(cfg: CfgEnv, flags: ExecutionFlags, limits: BlockLimits) -> Self {
+        Self { cfg, flags, limits }
     }
 }
 
@@ -60,7 +62,8 @@ impl ExecutorFactory for BlockifierFactory {
     {
         let cfg_env = self.cfg.clone();
         let flags = self.flags.clone();
-        Box::new(StarknetVMProcessor::new(Box::new(state), block_env, cfg_env, flags))
+        let limits = self.limits.clone();
+        Box::new(StarknetVMProcessor::new(Box::new(state), block_env, cfg_env, flags, limits))
     }
 
     fn cfg(&self) -> &CfgEnv {
@@ -80,6 +83,7 @@ pub struct StarknetVMProcessor<'a> {
     transactions: Vec<(TxWithHash, ExecutionResult)>,
     simulation_flags: ExecutionFlags,
     stats: ExecutionStats,
+    bouncer: Bouncer,
 }
 
 impl<'a> StarknetVMProcessor<'a> {
@@ -88,11 +92,24 @@ impl<'a> StarknetVMProcessor<'a> {
         block_env: BlockEnv,
         cfg_env: CfgEnv,
         simulation_flags: ExecutionFlags,
+        limits: BlockLimits,
     ) -> Self {
         let transactions = Vec::new();
         let block_context = utils::block_context_from_envs(&block_env, &cfg_env);
         let state = state::CachedState::new(StateProviderDb::new(state));
-        Self { block_context, state, transactions, simulation_flags, stats: Default::default() }
+
+        let mut block_max_capacity = BouncerWeights::max();
+        block_max_capacity.n_steps = limits.cairo_steps as usize;
+        let bouncer = Bouncer::new(BouncerConfig { block_max_capacity });
+
+        Self {
+            state,
+            transactions,
+            block_context,
+            simulation_flags,
+            stats: Default::default(),
+            bouncer,
+        }
     }
 
     fn fill_block_env_from_header(&mut self, header: &PartialHeader) {
@@ -148,7 +165,9 @@ impl<'a> StarknetVMProcessor<'a> {
         let mut results = Vec::with_capacity(transactions.len());
         for exec_tx in transactions {
             let tx = TxWithHash::from(&exec_tx);
-            let res = utils::transact(&mut state, block_context, flags, exec_tx);
+            // Safe to unwrap here because the only way the call to `transact` can return an error
+            // is when bouncer is `Some`.
+            let res = utils::transact(&mut state, block_context, flags, exec_tx, None).unwrap();
             results.push(op(&mut state, (tx, res)));
         }
 
@@ -166,11 +185,12 @@ impl<'a> BlockExecutor<'a> for StarknetVMProcessor<'a> {
     fn execute_transactions(
         &mut self,
         transactions: Vec<ExecutableTxWithHash>,
-    ) -> ExecutorResult<()> {
+    ) -> ExecutorResult<(usize, Option<ExecutorError>)> {
         let block_context = &self.block_context;
         let flags = &self.simulation_flags;
         let mut state = self.state.0.lock();
 
+        let mut total_executed = 0;
         for exec_tx in transactions {
             // Collect class artifacts if its a declare tx
             let class_decl_artifacts = if let ExecutableTx::Declare(tx) = exec_tx.as_ref() {
@@ -182,34 +202,48 @@ impl<'a> BlockExecutor<'a> for StarknetVMProcessor<'a> {
 
             let tx = TxWithHash::from(&exec_tx);
             let hash = tx.hash;
-            let res = utils::transact(&mut state.inner, block_context, flags, exec_tx);
+            let result = utils::transact(
+                &mut state.inner,
+                block_context,
+                flags,
+                exec_tx,
+                Some(&mut self.bouncer),
+            );
 
-            match &res {
-                ExecutionResult::Success { receipt, trace } => {
-                    self.stats.l1_gas_used += receipt.fee().gas_consumed;
-                    self.stats.cairo_steps_used +=
-                        receipt.resources_used().vm_resources.n_steps as u128;
+            match result {
+                Ok(exec_result) => {
+                    match &exec_result {
+                        ExecutionResult::Success { receipt, trace } => {
+                            self.stats.l1_gas_used += receipt.fee().gas_consumed;
+                            self.stats.cairo_steps_used +=
+                                receipt.resources_used().vm_resources.n_steps as u128;
 
-                    if let Some(reason) = receipt.revert_reason() {
-                        info!(target: LOG_TARGET, hash = format!("{hash:#x}"), %reason, "Transaction reverted.");
+                            if let Some(reason) = receipt.revert_reason() {
+                                info!(target: LOG_TARGET, hash = format!("{hash:#x}"), %reason, "Transaction reverted.");
+                            }
+
+                            if let Some((class_hash, class)) = class_decl_artifacts {
+                                state.declared_classes.insert(class_hash, class.as_ref().clone());
+                            }
+
+                            crate::utils::log_resources(&trace.actual_resources);
+                        }
+
+                        ExecutionResult::Failed { error } => {
+                            info!(target: LOG_TARGET, hash = format!("{hash:#x}"), %error, "Executing transaction.");
+                        }
                     }
 
-                    if let Some((class_hash, class)) = class_decl_artifacts {
-                        state.declared_classes.insert(class_hash, class.as_ref().clone());
-                    }
-
-                    crate::utils::log_resources(&trace.actual_resources);
+                    total_executed += 1;
+                    self.transactions.push((tx, exec_result));
                 }
 
-                ExecutionResult::Failed { error } => {
-                    info!(target: LOG_TARGET, hash = format!("{hash:#x}"), %error, "Executing transaction.");
-                }
+                Err(e @ ExecutorError::LimitsExhausted) => return Ok((total_executed, Some(e))),
+                Err(e) => return Err(e),
             };
-
-            self.transactions.push((tx, res));
         }
 
-        Ok(())
+        Ok((total_executed, None))
     }
 
     fn take_execution_output(&mut self) -> ExecutorResult<ExecutionOutput> {

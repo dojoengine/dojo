@@ -1,5 +1,5 @@
 use dojo_test_utils::sequencer::{get_default_test_config, TestSequencer};
-use katana_node::config::SequencingConfig;
+use katana_node::config::sequencing::SequencingConfig;
 use katana_provider::traits::block::{BlockNumberProvider, BlockProvider};
 use katana_provider::traits::env::BlockEnvProvider;
 use katana_rpc_api::dev::DevApiClient;

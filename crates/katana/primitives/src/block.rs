@@ -42,6 +42,7 @@ pub enum FinalityStatus {
 
 /// Represents a partial block header.
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct PartialHeader {
     pub parent_hash: BlockHash,

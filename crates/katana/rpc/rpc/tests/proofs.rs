@@ -5,7 +5,7 @@ use dojo_test_utils::sequencer::{get_default_test_config, TestSequencer};
 use jsonrpsee::http_client::HttpClientBuilder;
 use katana_chain_spec::ChainSpec;
 use katana_node::config::rpc::DEFAULT_RPC_MAX_PROOF_KEYS;
-use katana_node::config::SequencingConfig;
+use katana_node::config::sequencing::SequencingConfig;
 use katana_primitives::block::BlockIdOrTag;
 use katana_primitives::class::{ClassHash, CompiledClassHash};
 use katana_primitives::contract::{StorageKey, StorageValue};

@@ -17,7 +17,7 @@
 //! updates on Ethereum, since the process of proving and verifying of state updates, and then
 //! posting in on the settlement layer are not yet present in Katana.
 //!
-//! Katana also has a `starknet-messaging` feature, where an opiniated implementation of L2 <-> L3
+//! Katana also has starknet messaging built-in, where an opiniated implementation of L2 <-> L3
 //! messaging is implemented using Starknet as settlement chain.
 //!
 //! With this feature, Katana also has the capability to directly send `invoke` transactions to a
@@ -34,7 +34,6 @@
 
 mod ethereum;
 mod service;
-#[cfg(feature = "starknet-messaging")]
 mod starknet;
 
 use std::future::Future;
@@ -55,12 +54,10 @@ use serde::{Deserialize, Serialize};
 use tracing::{error, info, trace};
 
 pub use self::service::{MessagingOutcome, MessagingService};
-#[cfg(feature = "starknet-messaging")]
 use self::starknet::StarknetMessaging;
 
 pub(crate) const LOG_TARGET: &str = "messaging";
 pub(crate) const CONFIG_CHAIN_ETHEREUM: &str = "ethereum";
-#[cfg(feature = "starknet-messaging")]
 pub(crate) const CONFIG_CHAIN_STARKNET: &str = "starknet";
 
 type MessengerResult<T> = Result<T, Error>;
@@ -170,7 +167,6 @@ pub trait Messenger {
 #[derive(Debug)]
 pub enum MessengerMode {
     Ethereum(EthereumMessaging),
-    #[cfg(feature = "starknet-messaging")]
     Starknet(StarknetMessaging),
 }
 
@@ -188,7 +184,6 @@ impl MessengerMode {
                 }
             },
 
-            #[cfg(feature = "starknet-messaging")]
             CONFIG_CHAIN_STARKNET => match StarknetMessaging::new(config).await {
                 Ok(m_sn) => {
                     info!(target: LOG_TARGET, "Messaging enabled [Starknet].");

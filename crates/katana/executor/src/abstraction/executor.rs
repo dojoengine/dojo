@@ -5,6 +5,7 @@ use katana_primitives::transaction::{ExecutableTxWithHash, TxWithHash};
 use katana_primitives::Felt;
 use katana_provider::traits::state::StateProvider;
 
+use super::ExecutorError;
 use crate::{
     EntryPointCall, ExecutionError, ExecutionFlags, ExecutionOutput, ExecutionResult,
     ExecutorResult, ResultAndStates,
@@ -38,10 +39,11 @@ pub trait BlockExecutor<'a>: ExecutorExt + Send + Sync + core::fmt::Debug {
     /// Executes the given block.
     fn execute_block(&mut self, block: ExecutableBlock) -> ExecutorResult<()>;
 
+    /// Execute transactions and returns the total number of transactions that was executed.
     fn execute_transactions(
         &mut self,
         transactions: Vec<ExecutableTxWithHash>,
-    ) -> ExecutorResult<()>;
+    ) -> ExecutorResult<(usize, Option<ExecutorError>)>;
 
     /// Takes the output state of the executor.
     fn take_execution_output(&mut self) -> ExecutorResult<ExecutionOutput>;

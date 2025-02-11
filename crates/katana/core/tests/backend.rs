@@ -5,6 +5,7 @@ use katana_core::backend::gas_oracle::GasOracle;
 use katana_core::backend::storage::{Blockchain, Database};
 use katana_core::backend::Backend;
 use katana_executor::implementation::blockifier::BlockifierFactory;
+use katana_executor::BlockLimits;
 use katana_primitives::chain::ChainId;
 use katana_primitives::env::CfgEnv;
 use katana_primitives::felt;
@@ -25,6 +26,7 @@ fn executor(chain_spec: &ChainSpec) -> BlockifierFactory {
             ..Default::default()
         },
         Default::default(),
+        BlockLimits::max(),
     )
 }
 

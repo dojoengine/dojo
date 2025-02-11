@@ -17,6 +17,19 @@ use katana_trie::MultiProof;
 
 pub type ExecutorResult<T> = Result<T, error::ExecutorError>;
 
+/// See <https://docs.starknet.io/chain-info/#current_limits>.
+#[derive(Debug, Clone, Default)]
+pub struct BlockLimits {
+    /// The maximum number of Cairo steps that can be completed within each block.
+    pub cairo_steps: u64,
+}
+
+impl BlockLimits {
+    pub fn max() -> Self {
+        Self { cairo_steps: u64::MAX }
+    }
+}
+
 /// Transaction execution simulation flags.
 ///
 /// These flags can be used to control the behavior of the transaction execution, such as skipping
