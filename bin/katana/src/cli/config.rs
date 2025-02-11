@@ -1,6 +1,6 @@
 use anyhow::Result;
 use clap::Args;
-use katana_chain_spec::rollup::file::ChainConfigDir;
+use katana_chain_spec::rollup::LocalChainConfigDir;
 use katana_primitives::chain::ChainId;
 use starknet::core::utils::parse_cairo_short_string;
 
@@ -15,14 +15,13 @@ impl ConfigArgs {
     pub fn execute(self) -> Result<()> {
         match self.chain {
             Some(chain) => {
-                let cs = ChainConfigDir::open(&chain)?;
-                let path = cs.config_path();
+                let path = LocalChainConfigDir::open(&chain)?.config_path();
                 let config = std::fs::read_to_string(&path)?;
                 println!("File: {}\n\n{config}", path.display());
             }
 
             None => {
-                let chains = katana_chain_spec::rollup::file::list()?;
+                let chains = katana_chain_spec::rollup::list()?;
                 for chain in chains {
                     // TODO:
                     // We can't just assume that the id is a valid (and readable) ascii string

@@ -8,6 +8,7 @@ use alloy_primitives::U256;
 use anyhow::bail;
 use anyhow::{Context, Result};
 use clap::Parser;
+use katana_chain_spec::rollup::ChainConfigDir;
 use katana_chain_spec::ChainSpec;
 use katana_core::constants::DEFAULT_SEQUENCER_ADDRESS;
 use katana_core::service::messaging::MessagingConfig;
@@ -21,7 +22,6 @@ use katana_node::config::rpc::RpcConfig;
 use katana_node::config::rpc::{RpcModuleKind, RpcModulesList};
 use katana_node::config::sequencing::SequencingConfig;
 use katana_node::config::Config;
-use katana_primitives::chain::ChainId;
 use katana_primitives::genesis::allocation::DevAllocationsGenerator;
 use katana_primitives::genesis::constant::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;
 use serde::{Deserialize, Serialize};
@@ -32,8 +32,7 @@ use url::Url;
 
 use crate::file::NodeArgsConfig;
 use crate::options::*;
-use crate::utils;
-use crate::utils::{parse_seed, LogFormat};
+use crate::utils::{self, parse_chain_config_dir, parse_seed, LogFormat};
 
 pub(crate) const LOG_TARGET: &str = "katana::cli";
 
@@ -46,8 +45,8 @@ pub struct NodeArgs {
 
     /// Path to the chain configuration file.
     #[arg(long, hide = true)]
-    #[arg(value_parser = ChainId::parse)]
-    pub chain: Option<ChainId>,
+    #[arg(value_parser = parse_chain_config_dir)]
+    pub chain: Option<ChainConfigDir>,
 
     /// Disable auto and interval mining, and mine on demand instead via an endpoint.
     #[arg(long)]
@@ -244,9 +243,8 @@ impl NodeArgs {
     }
 
     fn chain_spec(&self) -> Result<Arc<ChainSpec>> {
-        if let Some(id) = &self.chain {
-            let mut cs =
-                katana_chain_spec::rollup::file::read(id).context("failed to load chain spec")?;
+        if let Some(path) = &self.chain {
+            let mut cs = katana_chain_spec::rollup::read(path)?;
             cs.genesis.sequencer_address = *DEFAULT_SEQUENCER_ADDRESS;
             Ok(Arc::new(ChainSpec::Rollup(cs)))
         }
