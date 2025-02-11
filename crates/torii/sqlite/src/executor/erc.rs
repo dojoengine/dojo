@@ -12,11 +12,11 @@ use starknet::providers::Provider;
 use starknet_crypto::Felt;
 use tracing::{debug, warn};
 
-use super::{ApplyBalanceDiffQuery, Executor};
+use super::{ApplyBalanceDiffQuery, BrokerMessage, Executor};
 use crate::constants::{SQL_FELT_DELIMITER, TOKEN_BALANCE_TABLE};
 use crate::executor::LOG_TARGET;
 use crate::simple_broker::SimpleBroker;
-use crate::types::{ContractType, TokenBalance};
+use crate::types::{ContractType, Token, TokenBalance};
 use crate::utils::{
     felt_to_sql_string, fetch_content_from_ipfs, sanitize_json_string, sql_string_to_u256,
     u256_to_sql_string, I256,
@@ -340,9 +340,9 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
         &mut self,
         result: RegisterErc721TokenMetadata,
     ) -> Result<()> {
-        let query = sqlx::query(
+        let query = sqlx::query_as::<_, Token>(
             "INSERT INTO tokens (id, contract_address, name, symbol, decimals, metadata) VALUES \
-             (?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING",
+             (?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING RETURNING *",
         )
         .bind(&result.query.token_id)
         .bind(felt_to_sql_string(&result.query.contract_address))
@@ -351,10 +351,14 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
         .bind(0)
         .bind(&result.metadata);
 
-        query
-            .execute(&mut *self.transaction)
+        let token = query
+            .fetch_optional(&mut *self.transaction)
             .await
             .with_context(|| format!("Failed to execute721Token query: {:?}", result))?;
+
+        if let Some(token) = token {
+            self.publish_queue.push(BrokerMessage::TokenRegistered(token));
+        }
 
         Ok(())
     }

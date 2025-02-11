@@ -23,7 +23,7 @@ use crate::simple_broker::SimpleBroker;
 use crate::types::{
     ContractCursor, ContractType, Entity as EntityUpdated, Event as EventEmitted,
     EventMessage as EventMessageUpdated, Model as ModelRegistered, OptimisticEntity,
-    OptimisticEventMessage,
+    OptimisticEventMessage, Token,
 };
 use crate::utils::{felt_to_sql_string, I256};
 
@@ -48,6 +48,7 @@ pub enum BrokerMessage {
     EntityUpdated(EntityUpdated),
     EventMessageUpdated(EventMessageUpdated),
     EventEmitted(EventEmitted),
+    TokenRegistered(Token),
 }
 
 #[derive(Debug, Clone)]
@@ -695,13 +696,12 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                         symbol,
                     )
                     .await;
-
                     drop(permit);
                     result
                 });
             }
             QueryType::RegisterErc20Token(register_erc20_token) => {
-                let query = sqlx::query(
+                let query = sqlx::query_as::<_, Token>(
                     "INSERT INTO tokens (id, contract_address, name, symbol, decimals) VALUES (?, \
                      ?, ?, ?, ?)",
                 )
@@ -711,12 +711,14 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 .bind(&register_erc20_token.symbol)
                 .bind(register_erc20_token.decimals);
 
-                query.execute(&mut **tx).await.with_context(|| {
+                let token = query.fetch_one(&mut **tx).await.with_context(|| {
                     format!(
                         "Failed to execute RegisterErc20Token query: {:?}",
                         register_erc20_token
                     )
                 })?;
+
+                self.publish_queue.push(BrokerMessage::TokenRegistered(token));
             }
             QueryType::Flush => {
                 debug!(target: LOG_TARGET, "Flushing query.");
@@ -837,5 +839,6 @@ fn send_broker_message(message: BrokerMessage) {
         BrokerMessage::EntityUpdated(entity) => SimpleBroker::publish(entity),
         BrokerMessage::EventMessageUpdated(event) => SimpleBroker::publish(event),
         BrokerMessage::EventEmitted(event) => SimpleBroker::publish(event),
+        BrokerMessage::TokenRegistered(token) => SimpleBroker::publish(token),
     }
 }
