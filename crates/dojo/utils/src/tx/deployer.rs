@@ -37,14 +37,14 @@ where
         Self { account, txn_config }
     }
 
-    /// Deploys a contract via the UDC.
-    pub async fn deploy_via_udc(
+    /// Get a Call for deploying a contract via the UDC.
+    pub async fn deploy_via_udc_getcall(
         &self,
         class_hash: Felt,
         salt: Felt,
         constructor_calldata: &[Felt],
         deployer_address: Felt,
-    ) -> Result<TransactionResult, TransactionError<A::SignError>> {
+    ) -> Result<Option<(Felt, Call)>, TransactionError<A::SignError>> {
         let udc_calldata = [
             vec![class_hash, salt, deployer_address, Felt::from(constructor_calldata.len())],
             constructor_calldata.to_vec(),
@@ -55,10 +55,30 @@ where
             get_contract_address(salt, class_hash, constructor_calldata, deployer_address);
 
         if is_deployed(contract_address, &self.account.provider()).await? {
-            return Ok(TransactionResult::Noop);
+            return Ok(None);
         }
 
-        let call = Call { calldata: udc_calldata, selector: UDC_DEPLOY_SELECTOR, to: UDC_ADDRESS };
+        Ok(Some((
+            contract_address,
+            Call { calldata: udc_calldata, selector: UDC_DEPLOY_SELECTOR, to: UDC_ADDRESS },
+        )))
+    }
+
+    /// Deploys a contract via the UDC.
+    pub async fn deploy_via_udc(
+        &self,
+        class_hash: Felt,
+        salt: Felt,
+        constructor_calldata: &[Felt],
+        deployer_address: Felt,
+    ) -> Result<TransactionResult, TransactionError<A::SignError>> {
+        let (contract_address, call) = match self
+            .deploy_via_udc_getcall(class_hash, salt, constructor_calldata, deployer_address)
+            .await?
+        {
+            Some(res) => res,
+            None => return Ok(TransactionResult::Noop),
+        };
 
         let InvokeTransactionResult { transaction_hash } = match self.txn_config.fee_config {
             FeeConfig::Strk(_) => {

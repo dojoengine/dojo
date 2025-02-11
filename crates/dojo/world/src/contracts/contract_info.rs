@@ -23,10 +23,10 @@ use crate::diff::{Manifest, ResourceDiff, WorldDiff};
 use crate::local::ResourceLocal;
 use crate::remote::ResourceRemote;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct ContractInfo {
     /// Tag of the contract (or world).
-    pub tag: String,
+    pub tag_or_name: String,
     /// The address of the contract.
     pub address: Felt,
     /// The entrypoints that can be targeted with a transaction.
@@ -42,7 +42,7 @@ impl From<&Manifest> for HashMap<String, ContractInfo> {
         contracts.insert(
             "world".to_string(),
             ContractInfo {
-                tag: "world".to_string(),
+                tag_or_name: "world".to_string(),
                 address: manifest.world.address,
                 entrypoints: manifest.world.entrypoints.clone(),
             },
@@ -52,9 +52,20 @@ impl From<&Manifest> for HashMap<String, ContractInfo> {
             contracts.insert(
                 c.tag.clone(),
                 ContractInfo {
-                    tag: c.tag.clone(),
+                    tag_or_name: c.tag.clone(),
                     address: c.address,
                     entrypoints: c.systems.clone(),
+                },
+            );
+        }
+
+        for c in &manifest.external_contracts {
+            contracts.insert(
+                c.instance_name.clone(),
+                ContractInfo {
+                    tag_or_name: c.instance_name.clone(),
+                    address: c.address,
+                    entrypoints: vec![],
                 },
             );
         }
@@ -71,7 +82,7 @@ impl From<&WorldDiff> for HashMap<String, ContractInfo> {
         contracts.insert(
             "world".to_string(),
             ContractInfo {
-                tag: "world".to_string(),
+                tag_or_name: "world".to_string(),
                 address: world_diff.world_info.address,
                 entrypoints: world_diff.world_info.entrypoints.clone(),
             },
@@ -86,14 +97,18 @@ impl From<&WorldDiff> for HashMap<String, ContractInfo> {
                     let address = world_diff.get_contract_address(*selector).unwrap();
                     contracts.insert(
                         tag.clone(),
-                        ContractInfo { tag: tag.clone(), address, entrypoints: c.systems.clone() },
+                        ContractInfo {
+                            tag_or_name: tag.clone(),
+                            address,
+                            entrypoints: c.systems.clone(),
+                        },
                     );
                 }
                 ResourceDiff::Updated(ResourceLocal::Contract(l), ResourceRemote::Contract(r)) => {
                     contracts.insert(
                         tag.clone(),
                         ContractInfo {
-                            tag: tag.clone(),
+                            tag_or_name: tag.clone(),
                             address: r.common.address,
                             entrypoints: l.systems.clone(),
                         },
@@ -103,7 +118,7 @@ impl From<&WorldDiff> for HashMap<String, ContractInfo> {
                     contracts.insert(
                         tag.clone(),
                         ContractInfo {
-                            tag: tag.clone(),
+                            tag_or_name: tag.clone(),
                             address: r.common.address,
                             entrypoints: l.systems.clone(),
                         },
@@ -111,6 +126,19 @@ impl From<&WorldDiff> for HashMap<String, ContractInfo> {
                 }
                 _ => {}
             }
+        }
+
+        for contract in world_diff.external_contracts.values() {
+            let contract = contract.contract_data();
+
+            contracts.insert(
+                contract.instance_name.clone(),
+                ContractInfo {
+                    tag_or_name: contract.instance_name,
+                    address: contract.address,
+                    entrypoints: vec![], // Not available for Starknet contracts.
+                },
+            );
         }
 
         contracts
@@ -125,7 +153,7 @@ mod tests {
 
     use super::*;
     use crate::diff::{DojoContract, DojoModel, WorldContract};
-    use crate::local::{CommonLocalInfo, ContractLocal, WorldLocal};
+    use crate::local::{CommonLocalInfo, ContractLocal, ExternalContractLocal, WorldLocal};
 
     #[test]
     fn test_manifest_to_contracts_info() {
@@ -154,6 +182,7 @@ mod tests {
                 selector: felt!("0x5555"),
             }],
             events: vec![],
+            external_contracts: vec![],
         };
 
         let contracts_info: HashMap<String, ContractInfo> = (&manifest).into();
@@ -162,7 +191,7 @@ mod tests {
         assert_eq!(contracts_info["world"].entrypoints, vec!["execute".to_string()]);
         assert_eq!(contracts_info["ns-test_contract"].address, felt!("0x1234"));
         assert_eq!(contracts_info["ns-test_contract"].entrypoints, vec!["system_1".to_string()]);
-        assert_eq!(contracts_info["ns-test_contract"].tag, "ns-test_contract".to_string());
+        assert_eq!(contracts_info["ns-test_contract"].tag_or_name, "ns-test_contract".to_string());
     }
 
     #[test]
@@ -200,10 +229,31 @@ mod tests {
         local.profile_config.namespace.default = "ns".to_string();
         local.add_resource(ResourceLocal::Contract(contract));
 
+        local.external_contracts = vec![
+            ExternalContractLocal {
+                contract_name: "Contract".to_string(),
+                instance_name: "Instance1".to_string(),
+                class_hash: Felt::ONE,
+                salt: Felt::ZERO,
+                constructor_data: vec![],
+                raw_constructor_data: vec![],
+                address: Felt::from_hex("0x6789").unwrap(),
+            },
+            ExternalContractLocal {
+                contract_name: "Contract".to_string(),
+                instance_name: "Instance2".to_string(),
+                class_hash: Felt::ONE,
+                salt: Felt::ZERO,
+                constructor_data: vec![],
+                raw_constructor_data: vec![],
+                address: Felt::from_hex("0x1234").unwrap(),
+            },
+        ];
+
         let world_diff = WorldDiff::from_local(local).unwrap();
 
         let contracts_info: HashMap<String, ContractInfo> = (&world_diff).into();
-        assert_eq!(contracts_info.len(), 2);
+        assert_eq!(contracts_info.len(), 4);
         assert_eq!(
             contracts_info["world"].address,
             felt!("0x66c1fe28a8f6c5f1dfe797df547fb683d1c9d18c87b049021f115f026be8077")
@@ -214,6 +264,23 @@ mod tests {
             felt!("0x2a03d1761c3e0ee912794d32d5f9be9ae7d1af0fc349fc040fe292a096785ad")
         );
         assert_eq!(contracts_info["ns-test_contract"].entrypoints, vec!["system_1".to_string()]);
-        assert_eq!(contracts_info["ns-test_contract"].tag, "ns-test_contract".to_string());
+        assert_eq!(contracts_info["ns-test_contract"].tag_or_name, "ns-test_contract".to_string());
+
+        assert_eq!(
+            contracts_info["Instance1"],
+            ContractInfo {
+                tag_or_name: "Instance1".to_string(),
+                address: Felt::from_hex("0x6789").unwrap(),
+                entrypoints: vec![]
+            }
+        );
+        assert_eq!(
+            contracts_info["Instance2"],
+            ContractInfo {
+                tag_or_name: "Instance2".to_string(),
+                address: Felt::from_hex("0x1234").unwrap(),
+                entrypoints: vec![]
+            }
+        );
     }
 }
