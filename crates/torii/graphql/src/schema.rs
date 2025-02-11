@@ -125,13 +125,13 @@ async fn build_objects(pool: &SqlitePool) -> Result<(Vec<ObjectVariant>, Vec<Uni
         ObjectVariant::Resolvable(Box::new(ErcBalanceObject)),
         ObjectVariant::Resolvable(Box::new(ErcTransferObject)),
         ObjectVariant::Resolvable(Box::new(ControllerObject)),
+        ObjectVariant::Resolvable(Box::new(TokenObject)),
         ObjectVariant::Basic(Box::new(SocialObject)),
         ObjectVariant::Basic(Box::new(ContentObject)),
         ObjectVariant::Basic(Box::new(PageInfoObject)),
         ObjectVariant::Basic(Box::new(Erc721TokenObject)),
         ObjectVariant::Basic(Box::new(Erc20TokenObject)),
         ObjectVariant::Basic(Box::new(EmptyObject)),
-        ObjectVariant::Resolvable(Box::new(TokenObject)),
     ];
 
     // model union object
