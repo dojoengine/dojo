@@ -18,8 +18,8 @@ use crate::executor::LOG_TARGET;
 use crate::simple_broker::SimpleBroker;
 use crate::types::{ContractType, Token, TokenBalance};
 use crate::utils::{
-    felt_and_u256_to_sql_string, felt_to_sql_string, fetch_content_from_ipfs, sql_string_to_u256,
-    u256_to_sql_string, I256, sanitize_json_string
+    felt_and_u256_to_sql_string, felt_to_sql_string, fetch_content_from_ipfs, sanitize_json_string,
+    sql_string_to_u256, u256_to_sql_string, I256,
 };
 
 #[derive(Debug, Clone)]
