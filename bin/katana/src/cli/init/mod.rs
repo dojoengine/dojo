@@ -1,9 +1,10 @@
+use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::Context;
 use clap::Args;
-use katana_chain_spec::rollup::FeeContract;
+use katana_chain_spec::rollup::{ChainConfigDir, FeeContract};
 use katana_chain_spec::{rollup, SettlementLayer};
 use katana_primitives::chain::ChainId;
 use katana_primitives::genesis::allocation::DevAllocationsGenerator;
@@ -43,6 +44,10 @@ pub struct InitArgs {
     #[arg(long = "settlement-contract")]
     #[arg(requires_all = ["id", "settlement_chain", "settlement_account", "settlement_account_private_key"])]
     settlement_contract: Option<ContractAddress>,
+
+    /// Specify the path of the directory where the configuration files will be stored at.
+    #[arg(long)]
+    output_path: Option<PathBuf>,
 }
 
 impl InitArgs {
@@ -66,9 +71,16 @@ impl InitArgs {
         let genesis = GENESIS.clone();
         // At the moment, the fee token is limited to a predefined token.
         let fee_contract = FeeContract::default();
-
         let chain_spec = rollup::ChainSpec { id, genesis, settlement, fee_contract };
-        rollup::file::write(&chain_spec).context("failed to write chain spec file")?;
+
+        if let Some(path) = self.output_path {
+            let dir = ChainConfigDir::create(path)?;
+            rollup::write(&dir, &chain_spec).context("failed to write chain spec file")?;
+        } else {
+            // Write to the local chain config directory by default if user
+            // doesn't specify the output path
+            rollup::write_local(&chain_spec).context("failed to write chain spec file")?;
+        }
 
         Ok(())
     }
