@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1739244802579,
+  "lastUpdate": 1739260411557,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -51553,6 +51553,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 7713923,
             "range": "± 98198",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b8e5ebb4347d6c4b36da843b4fc0a3dc210f9c66",
+          "message": "feat(torii-graphql): subscriptions for tokens and token balances (#2999)\n\n* feat(torii-graphql): subscriptions for tokens and token balances\n\n* token balance sub\n\n* finish up token balances subscription and start token updte\n\n* fmt\n\n* rename tokenreigstered to token updated\n\n* fix subscriptions and add tokens resolvers\n\n* fix token id subscription\n\n* fmt\n\n* fix unique resolver",
+          "timestamp": "2025-02-11T07:37:25Z",
+          "tree_id": "3498261377feb0ba27e08f7bbb940d8fbdd1e59c",
+          "url": "https://github.com/dojoengine/dojo/commit/b8e5ebb4347d6c4b36da843b4fc0a3dc210f9c66"
+        },
+        "date": 1739260409316,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 11987026254,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
