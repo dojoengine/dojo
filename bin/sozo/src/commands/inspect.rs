@@ -1,8 +1,8 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use clap::Args;
 use colored::*;
 use dojo_types::naming;
-use dojo_world::diff::{ResourceDiff, WorldDiff, WorldStatus};
+use dojo_world::diff::{Manifest, ResourceDiff, WorldDiff, WorldStatus};
 use dojo_world::ResourceType;
 use scarb::core::Config;
 use serde::Serialize;
@@ -21,6 +21,20 @@ pub struct InspectArgs {
                   displayed.")]
     resource: Option<String>,
 
+    #[arg(
+        long = "output-manifest",
+        short = 'o',
+        help = "Outputs the generated manifest to stdout in JSON format."
+    )]
+    output_manifest: bool,
+
+    #[arg(
+        long = "force",
+        short = 'f',
+        help = "Force the generation of the manifest, even if the world is not up to date."
+    )]
+    force: bool,
+
     #[command(flatten)]
     world: WorldOptions,
 
@@ -33,16 +47,21 @@ impl InspectArgs {
         trace!(args = ?self);
         let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
 
-        let InspectArgs { world, starknet, resource } = self;
+        let InspectArgs { world, starknet, resource, output_manifest, force } =
+            self;
 
         config.tokio_handle().block_on(async {
             let (world_diff, _, _) =
                 utils::get_world_diff_and_provider(starknet.clone(), world, &ws).await?;
 
-            if let Some(resource) = resource {
-                inspect_resource(&resource, &world_diff)?;
+            if output_manifest {
+                generate_manifest(&world_diff, force)?;
             } else {
-                inspect_world(&world_diff);
+                if let Some(resource) = resource {
+                    inspect_resource(&resource, &world_diff)?;
+                } else {
+                    inspect_world(&world_diff);
+                }
             }
 
             Ok(())
@@ -490,4 +509,31 @@ fn pretty_print_toml(str: &str) {
             println!("{}", line);
         }
     }
+}
+
+/// Generates the manifest of an existing remote world if:
+/// - it exists
+/// - it is up to date (except when the force flag is set)
+fn generate_manifest(world_diff: &WorldDiff, force: bool) -> Result<()> {
+    if world_diff.world_info.status == WorldStatus::NotDeployed {
+        let formatted_address = format!("{:#066x}", world_diff.world_info.address).green();
+        return Err(anyhow!("No world is deployed at address {}!", formatted_address));
+    }
+
+    // Check if there is some contracts that are not up to date.
+    if !world_diff.is_synced() {
+        if !force {
+            return Err(anyhow!(
+                "The world is not up to date. Use --force to generate the manifest anyway."
+            ));
+        } else {
+            eprintln!("Warning: The world is not up to date, but generation is forced. The generated manifest might not represent the remote world.");
+        }
+    }
+
+    let manifest = Manifest::new(&world_diff);
+
+    println!("{}", serde_json::to_string_pretty(&manifest)?);
+
+    Ok(())
 }
