@@ -114,6 +114,13 @@ impl Client {
         Ok(tokens.into_iter().map(TryInto::try_into).collect::<Result<Vec<Token>, _>>()?)
     }
 
+    /// A direct stream to grpc subscribe tokens
+    pub async fn on_token_updated(&self, contract_addresses: Vec<Felt>) -> Result<TokenUpdateStreaming, Error> {
+        let mut grpc_client = self.inner.write().await;
+        let stream = grpc_client.subscribe_tokens(contract_addresses).await?;
+        Ok(stream)
+    }
+
     /// Retrieves token balances for account addresses and contract addresses.
     pub async fn token_balances(
         &self,
