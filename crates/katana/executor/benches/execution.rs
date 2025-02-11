@@ -3,7 +3,8 @@ use std::time::Duration;
 use blockifier::state::cached_state::CachedState;
 use criterion::measurement::WallTime;
 use criterion::{criterion_group, criterion_main, BatchSize, BenchmarkGroup, Criterion};
-use katana_executor::{ExecutionFlags, StateProviderDb};
+use katana_executor::implementation::blockifier::state::StateProviderDb;
+use katana_executor::ExecutionFlags;
 use katana_primitives::env::{BlockEnv, CfgEnv};
 use katana_primitives::transaction::ExecutableTxWithHash;
 use katana_provider::test_utils;
@@ -45,7 +46,7 @@ fn blockifier(
             || {
                 // setup state
                 let state = provider.latest().expect("failed to get latest state");
-                let state = CachedState::new(StateProviderDb::new(state));
+                let state = CachedState::new(StateProviderDb::new(state, Default::default()));
 
                 (state, &block_context, execution_flags, tx.clone())
             },

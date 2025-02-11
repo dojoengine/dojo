@@ -7,6 +7,7 @@ use starknet::macros::short_string;
 use starknet_types_core::hash::StarkHash;
 
 use super::contract::ContractClassProvider;
+use crate::error::ProviderError;
 use crate::ProviderResult;
 
 #[auto_impl::auto_impl(&, Box, Arc)]
@@ -22,18 +23,25 @@ pub trait StateRootProvider: Send + Sync {
     }
 
     /// Retrieves the root of the classes trie.
-    fn classes_root(&self) -> ProviderResult<Felt>;
+    fn classes_root(&self) -> ProviderResult<Felt> {
+        Err(ProviderError::StateRootNotFound)
+    }
 
     /// Retrieves the root of the contracts trie.
-    fn contracts_root(&self) -> ProviderResult<Felt>;
+    fn contracts_root(&self) -> ProviderResult<Felt> {
+        Err(ProviderError::StateRootNotFound)
+    }
 
     /// Retrieves the root of a contract's storage trie.
-    fn storage_root(&self, contract: ContractAddress) -> ProviderResult<Option<Felt>>;
+    fn storage_root(&self, contract: ContractAddress) -> ProviderResult<Option<Felt>> {
+        let _ = contract;
+        Ok(None)
+    }
 }
 
 #[auto_impl::auto_impl(&, Box, Arc)]
 pub trait StateProvider:
-    ContractClassProvider + StateProofProvider + StateRootProvider + Send + Sync + std::fmt::Debug
+    ContractClassProvider + StateProofProvider + StateRootProvider + std::fmt::Debug
 {
     /// Returns the nonce of a contract.
     fn nonce(&self, address: ContractAddress) -> ProviderResult<Option<Nonce>>;
@@ -91,9 +99,19 @@ pub trait StateProofProvider: Send + Sync {
         &self,
         address: ContractAddress,
         key: Vec<StorageKey>,
-    ) -> ProviderResult<MultiProof>;
+    ) -> ProviderResult<MultiProof> {
+        let _ = address;
+        let _ = key;
+        Err(ProviderError::StateProofNotSupported)
+    }
 
-    fn contract_multiproof(&self, addresses: Vec<ContractAddress>) -> ProviderResult<MultiProof>;
+    fn contract_multiproof(&self, addresses: Vec<ContractAddress>) -> ProviderResult<MultiProof> {
+        let _ = addresses;
+        Err(ProviderError::StateProofNotSupported)
+    }
 
-    fn class_multiproof(&self, classes: Vec<ClassHash>) -> ProviderResult<MultiProof>;
+    fn class_multiproof(&self, classes: Vec<ClassHash>) -> ProviderResult<MultiProof> {
+        let _ = classes;
+        Err(ProviderError::StateProofNotSupported)
+    }
 }

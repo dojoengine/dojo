@@ -8204,7 +8204,6 @@ dependencies = [
  "katana-primitives",
  "katana-provider",
  "katana-rpc-types",
- "katana-trie",
  "num-traits 0.2.19",
  "oneshot",
  "parking_lot 0.12.3",

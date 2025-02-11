@@ -9,10 +9,12 @@ use katana_executor::implementation::blockifier::blockifier::transaction::errors
     TransactionExecutionError, TransactionFeeError, TransactionPreValidationError,
 };
 use katana_executor::implementation::blockifier::blockifier::transaction::transaction_execution::Transaction;
+use katana_executor::implementation::blockifier::state::StateProviderDb;
 use katana_executor::implementation::blockifier::utils::{
     block_context_from_envs, to_address, to_executor_tx,
 };
-use katana_executor::{ExecutionFlags, StateProviderDb};
+use katana_executor::implementation::blockifier::COMPILED_CLASS_CACHE;
+use katana_executor::ExecutionFlags;
 use katana_primitives::contract::{ContractAddress, Nonce};
 use katana_primitives::env::{BlockEnv, CfgEnv};
 use katana_primitives::transaction::{ExecutableTx, ExecutableTxWithHash};
@@ -86,7 +88,8 @@ impl Inner {
     // for transaction validation.
     fn prepare(&self) -> StatefulValidator<StateProviderDb<'static>> {
         let state = Box::new(self.state.clone());
-        let cached_state = CachedState::new(StateProviderDb::new(state));
+        let cached_state =
+            CachedState::new(StateProviderDb::new(state, COMPILED_CLASS_CACHE.clone()));
         let context = block_context_from_envs(&self.block_env, &self.cfg_env);
         StatefulValidator::create(cached_state, context)
     }

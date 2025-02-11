@@ -3,30 +3,38 @@ pub use blockifier;
 use blockifier::bouncer::{Bouncer, BouncerConfig, BouncerWeights};
 
 mod error;
-mod state;
+pub mod state;
 pub mod utils;
 
+use std::collections::HashMap;
 use std::num::NonZeroU128;
+use std::sync::{Arc, LazyLock};
 
 use blockifier::blockifier::block::{BlockInfo, GasPrices};
 use blockifier::context::BlockContext;
+use blockifier::execution::contract_class::ContractClass as BlockifierContractClass;
 use blockifier::state::cached_state::{self, MutRefState};
 use blockifier::state::state_api::StateReader;
 use katana_cairo::starknet_api::block::{BlockNumber, BlockTimestamp};
 use katana_primitives::block::{ExecutableBlock, GasPrices as KatanaGasPrices, PartialHeader};
+use katana_primitives::class::ClassHash;
 use katana_primitives::env::{BlockEnv, CfgEnv};
 use katana_primitives::fee::TxFeeInfo;
 use katana_primitives::transaction::{ExecutableTx, ExecutableTxWithHash, TxWithHash};
 use katana_primitives::Felt;
 use katana_provider::traits::state::StateProvider;
+use parking_lot::Mutex;
 use tracing::info;
 
 use self::state::CachedState;
 use crate::{
     BlockExecutor, BlockLimits, EntryPointCall, ExecutionError, ExecutionFlags, ExecutionOutput,
     ExecutionResult, ExecutionStats, ExecutorError, ExecutorExt, ExecutorFactory, ExecutorResult,
-    ResultAndStates, StateProviderDb,
+    ResultAndStates,
 };
+
+pub static COMPILED_CLASS_CACHE: LazyLock<Arc<Mutex<HashMap<ClassHash, BlockifierContractClass>>>> =
+    LazyLock::new(|| Arc::new(Mutex::new(HashMap::default())));
 
 pub(crate) const LOG_TARGET: &str = "katana::executor::blockifier";
 
@@ -79,7 +87,7 @@ impl ExecutorFactory for BlockifierFactory {
 #[derive(Debug)]
 pub struct StarknetVMProcessor<'a> {
     block_context: BlockContext,
-    state: CachedState<StateProviderDb<'a>>,
+    state: CachedState<'a>,
     transactions: Vec<(TxWithHash, ExecutionResult)>,
     simulation_flags: ExecutionFlags,
     stats: ExecutionStats,
@@ -88,7 +96,7 @@ pub struct StarknetVMProcessor<'a> {
 
 impl<'a> StarknetVMProcessor<'a> {
     pub fn new(
-        state: Box<dyn StateProvider + 'a>,
+        state: impl StateProvider + 'a,
         block_env: BlockEnv,
         cfg_env: CfgEnv,
         simulation_flags: ExecutionFlags,
@@ -96,7 +104,7 @@ impl<'a> StarknetVMProcessor<'a> {
     ) -> Self {
         let transactions = Vec::new();
         let block_context = utils::block_context_from_envs(&block_env, &cfg_env);
-        let state = state::CachedState::new(StateProviderDb::new(state));
+        let state = state::CachedState::new(state, COMPILED_CLASS_CACHE.clone());
 
         let mut block_max_capacity = BouncerWeights::max();
         block_max_capacity.n_steps = limits.cairo_steps as usize;
@@ -159,7 +167,7 @@ impl<'a> StarknetVMProcessor<'a> {
         F: FnMut(&mut dyn StateReader, (TxWithHash, ExecutionResult)) -> T,
     {
         let block_context = &self.block_context;
-        let state = &mut self.state.0.lock().inner;
+        let state = &mut self.state.inner.lock().cached_state;
         let mut state = cached_state::CachedState::new(MutRefState::new(state));
 
         let mut results = Vec::with_capacity(transactions.len());
@@ -188,7 +196,7 @@ impl<'a> BlockExecutor<'a> for StarknetVMProcessor<'a> {
     ) -> ExecutorResult<(usize, Option<ExecutorError>)> {
         let block_context = &self.block_context;
         let flags = &self.simulation_flags;
-        let mut state = self.state.0.lock();
+        let mut state = self.state.inner.lock();
 
         let mut total_executed = 0;
         for exec_tx in transactions {
@@ -203,7 +211,7 @@ impl<'a> BlockExecutor<'a> for StarknetVMProcessor<'a> {
             let tx = TxWithHash::from(&exec_tx);
             let hash = tx.hash;
             let result = utils::transact(
-                &mut state.inner,
+                &mut state.cached_state,
                 block_context,
                 flags,
                 exec_tx,
@@ -318,8 +326,8 @@ impl ExecutorExt for StarknetVMProcessor<'_> {
 
     fn call(&self, call: EntryPointCall) -> Result<Vec<Felt>, ExecutionError> {
         let block_context = &self.block_context;
-        let mut state = self.state.0.lock();
-        let state = MutRefState::new(&mut state.inner);
+        let mut state = self.state.inner.lock();
+        let state = MutRefState::new(&mut state.cached_state);
         let retdata = utils::call(call, state, block_context, 1_000_000_000)?;
         Ok(retdata)
     }
