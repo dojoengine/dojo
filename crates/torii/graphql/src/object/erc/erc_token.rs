@@ -3,7 +3,8 @@ use async_graphql::dynamic::{
     Field, FieldFuture, FieldValue, InputValue, SubscriptionField, SubscriptionFieldFuture, TypeRef,
 };
 use async_graphql::{Name, Value};
-use sqlx::{sqlite::SqliteRow, Pool, Row, Sqlite, SqliteConnection};
+use sqlx::sqlite::SqliteRow;
+use sqlx::{Pool, Row, Sqlite, SqliteConnection};
 use tokio_stream::StreamExt;
 use torii_sqlite::simple_broker::SimpleBroker;
 use torii_sqlite::types::Token;
@@ -393,7 +394,8 @@ impl ResolvableObject for TokenObject {
                                     }
                                     "erc721" => {
                                         let id = row.get::<String, _>("id");
-                                        let token_id = id.split(':').collect::<Vec<&str>>()[1].to_string();
+                                        let token_id =
+                                            id.split(':').collect::<Vec<&str>>()[1].to_string();
 
                                         let metadata_str: String = row.get("metadata");
                                         let (

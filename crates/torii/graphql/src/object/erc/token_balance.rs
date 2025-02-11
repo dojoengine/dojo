@@ -143,7 +143,11 @@ impl ResolvableObject for ErcBalanceObject {
                                         Err(_) => return None,
                                     };
 
-                                    let balance_value = match row.contract_type.to_lowercase().as_str() {
+                                    let balance_value = match row
+                                        .contract_type
+                                        .to_lowercase()
+                                        .as_str()
+                                    {
                                         "erc20" => {
                                             let token_metadata = Erc20Token {
                                                 contract_address: row.contract_address,
@@ -155,7 +159,8 @@ impl ResolvableObject for ErcBalanceObject {
                                             ErcTokenType::Erc20(token_metadata)
                                         }
                                         "erc721" => {
-                                            let token_id = row.token_id.split(':').collect::<Vec<&str>>();
+                                            let token_id =
+                                                row.token_id.split(':').collect::<Vec<&str>>();
                                             assert!(token_id.len() == 2);
 
                                             let metadata_str = row.metadata;
@@ -169,17 +174,22 @@ impl ResolvableObject for ErcBalanceObject {
                                                 (String::new(), None, None, None, String::new())
                                             } else {
                                                 let metadata: serde_json::Value =
-                                                    serde_json::from_str(&metadata_str).expect("metadata is always json");
-                                                let metadata_name =
-                                                    metadata.get("name").map(|v| v.to_string().trim_matches('"').to_string());
-                                                let metadata_description = metadata
-                                                    .get("description")
-                                                    .map(|v| v.to_string().trim_matches('"').to_string());
-                                                let metadata_attributes = metadata
-                                                    .get("attributes")
-                                                    .map(|v| v.to_string().trim_matches('"').to_string());
+                                                    serde_json::from_str(&metadata_str)
+                                                        .expect("metadata is always json");
+                                                let metadata_name = metadata.get("name").map(|v| {
+                                                    v.to_string().trim_matches('"').to_string()
+                                                });
+                                                let metadata_description =
+                                                    metadata.get("description").map(|v| {
+                                                        v.to_string().trim_matches('"').to_string()
+                                                    });
+                                                let metadata_attributes =
+                                                    metadata.get("attributes").map(|v| {
+                                                        v.to_string().trim_matches('"').to_string()
+                                                    });
 
-                                                let image_path = format!("{}/{}", token_id.join("/"), "image");
+                                                let image_path =
+                                                    format!("{}/{}", token_id.join("/"), "image");
 
                                                 (
                                                     metadata_str,
