@@ -135,14 +135,21 @@ struct EventInspect {
     selector: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Tabled, Serialize)]
 struct ExternalContractInspect {
+    #[tabled(rename = "External Contract")]
     contract_name: String,
+    #[tabled(rename = "Instance Name")]
     instance_name: String,
+    #[tabled(skip)]
     class_hash: String,
-    status: String,
+    #[tabled(rename = "Status")]
+    status: ResourceStatus,
+    #[tabled(skip)]
     salt: String,
+    #[tabled(skip)]
     constructor_calldata: Vec<String>,
+    #[tabled(rename = "Contrat Address")]
     address: String,
 }
 
@@ -288,6 +295,7 @@ fn inspect_world(world_diff: &WorldDiff) {
 
     let mut namespaces_disp = vec![];
     let mut contracts_disp = vec![];
+    let mut external_contracts_disp = vec![];
     let mut models_disp = vec![];
     let mut events_disp = vec![];
 
@@ -313,15 +321,21 @@ fn inspect_world(world_diff: &WorldDiff) {
         }
     }
 
+    for contract in world_diff.external_contracts.values() {
+        external_contracts_disp.push(external_contract_diff_display(contract));
+    }
+
     namespaces_disp.sort_by_key(|m| m.name.to_string());
     contracts_disp.sort_by_key(|m| m.tag.to_string());
     models_disp.sort_by_key(|m| m.tag.to_string());
     events_disp.sort_by_key(|m| m.tag.to_string());
+    external_contracts_disp.sort_by_key(|c| format!("{}-{}", c.contract_name, c.instance_name));
 
     print_table(&namespaces_disp, Some(Color::FG_BRIGHT_BLACK), None);
     print_table(&contracts_disp, Some(Color::FG_BRIGHT_BLACK), None);
     print_table(&models_disp, Some(Color::FG_BRIGHT_BLACK), None);
     print_table(&events_disp, Some(Color::FG_BRIGHT_BLACK), None);
+    print_table(&external_contracts_disp, Some(Color::FG_BRIGHT_BLACK), None);
 }
 
 /// Displays the resource diff with the address and class hash.
@@ -460,7 +474,10 @@ fn external_contract_diff_display(contract: &ExternalContractDiff) -> ExternalCo
         instance_name: contract_data.instance_name,
         address: contract_data.address.to_fixed_hex_string(),
         class_hash: contract_data.class_hash.to_fixed_hex_string(),
-        status: contract.status(),
+        status: match contract {
+            ExternalContractDiff::Created(_) => ResourceStatus::Created,
+            ExternalContractDiff::Synced(_) => ResourceStatus::Synced,
+        },
         salt: contract_data.salt.to_fixed_hex_string(),
         constructor_calldata: contract_data.constructor_data,
     }
