@@ -149,7 +149,7 @@ struct ExternalContractInspect {
     salt: String,
     #[tabled(skip)]
     constructor_calldata: Vec<String>,
-    #[tabled(rename = "Contrat Address")]
+    #[tabled(rename = "Contract Address")]
     address: String,
 }
 
