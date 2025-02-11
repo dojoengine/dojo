@@ -714,10 +714,7 @@ impl<Db: Database> BlockWriter for DbProvider<Db> {
             }
 
             for (class_hash, class) in states.classes {
-                // generate the compiled class
-                let compiled = class.clone().compile()?;
                 db_tx.put::<tables::Classes>(class_hash, class)?;
-                db_tx.put::<tables::CompiledClasses>(class_hash, compiled)?;
             }
 
             // insert storage changes
