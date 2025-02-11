@@ -2,6 +2,7 @@
 use std::num::ParseIntError;
 use std::time::Duration;
 
+use crypto_bigint::U256;
 use futures_util::stream::MapOk;
 use futures_util::{Stream, StreamExt, TryStreamExt};
 use starknet::core::types::{Felt, FromStrError, StateDiff, StateUpdate};
@@ -18,11 +19,11 @@ use crate::proto::world::{
     SubscribeEventsResponse, SubscribeIndexerRequest, SubscribeIndexerResponse,
     SubscribeModelsRequest, SubscribeModelsResponse, SubscribeTokenBalancesResponse,
     UpdateEntitiesSubscriptionRequest, UpdateEventMessagesSubscriptionRequest,
-    UpdateTokenBalancesSubscriptionRequest, WorldMetadataRequest,
+    UpdateTokenBalancesSubscriptionRequest, WorldMetadataRequest, SubscribeTokensResponse
 };
 use crate::types::schema::{Entity, SchemaError};
 use crate::types::{
-    EntityKeysClause, Event, EventQuery, IndexerUpdate, ModelKeysClause, Query, TokenBalance,
+    EntityKeysClause, Event, EventQuery, IndexerUpdate, ModelKeysClause, Query, TokenBalance, Token
 };
 
 #[derive(Debug, thiserror::Error)]
@@ -125,6 +126,18 @@ impl WorldClient {
             .await
             .map_err(Error::Grpc)
             .map(|res| res.into_inner())
+    }
+
+    pub async fn subscribe_tokens(
+        &mut self,
+        contract_addresses: Vec<Felt>,
+    ) -> Result<TokenUpdateStreaming, Error> {
+        let request = RetrieveTokensRequest { contract_addresses: contract_addresses.into_iter().map(|c| c.to_bytes_be().to_vec()).collect() };
+        let stream = self.inner.subscribe_tokens(request).await.map_err(Error::Grpc).map(|res| res.into_inner())?;
+        Ok(TokenUpdateStreaming(stream.map_ok(Box::new(|res| match res.token {
+            Some(token) => token.try_into().expect("must able to serialize"),
+            None => Token { id: "".to_string(), contract_address: Felt::ZERO, name: "".to_string(), symbol: "".to_string(), decimals: 0, metadata: "".to_string() },
+        }))))
     }
 
     pub async fn retrieve_token_balances(
@@ -338,7 +351,10 @@ impl WorldClient {
             .map_err(Error::Grpc)
             .map(|res| res.into_inner())?;
         Ok(TokenBalanceStreaming(stream.map_ok(Box::new(|res| {
-            (res.subscription_id, res.balance.unwrap().try_into().expect("must able to serialize"))
+            (res.subscription_id, match res.balance {
+                Some(balance) => balance.try_into().expect("must able to serialize"),
+                None => TokenBalance { balance: U256::ZERO, account_address: Felt::ZERO, contract_address: Felt::ZERO, token_id: "".to_string() },
+            })
         }))))
     }
 
@@ -365,6 +381,24 @@ impl WorldClient {
             .await
             .map_err(Error::Grpc)
             .map(|res| res.into_inner())
+    }
+}
+
+type TokenMappedStream = MapOk<
+    tonic::Streaming<SubscribeTokensResponse>,
+    Box<dyn Fn(SubscribeTokensResponse) -> Token + Send>,
+>;
+
+#[derive(Debug)]
+pub struct TokenUpdateStreaming(TokenMappedStream);
+
+impl Stream for TokenUpdateStreaming {
+    type Item = <TokenMappedStream as Stream>::Item;
+    fn poll_next(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        self.0.poll_next_unpin(cx)
     }
 }
 
