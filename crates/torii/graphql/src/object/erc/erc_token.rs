@@ -344,7 +344,7 @@ impl ResolvableObject for TokenObject {
                             Some(row) => {
                                 let token_metadata = create_token_metadata_from_row(&row)?;
 
-                                Ok(Some(token_metadata.to_field_value()))
+                                Ok(Some(FieldValue::owned_any(token_metadata)))
                             }
                             None => Ok(None),
                         }
@@ -472,7 +472,7 @@ fn create_token_metadata_from_row(row: &SqliteRow) -> sqlx::Result<ErcTokenType>
                 name: row.get("name"),
                 symbol: row.get("symbol"),
                 decimals: row.get("decimals"),
-                amount: "0".to_string(), // Default amount for new tokens
+                amount: "0".to_string(),
             };
             ErcTokenType::Erc20(token)
         }
