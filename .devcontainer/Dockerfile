@@ -34,6 +34,8 @@ RUN rustup target add x86_64-pc-windows-msvc && \
 
 RUN cargo binstall cargo-get cargo-nextest cargo-llvm-cov cargo-release --secure -y
 
+RUN cargo add dav1d-sys
+
 # Platform specific tooling
 ARG TARGETPLATFORM
 RUN if [ "$TARGETPLATFORM" = "linux/arm64" ] ; then \
