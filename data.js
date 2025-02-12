@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1739404293034,
+  "lastUpdate": 1739404339810,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -52285,6 +52285,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 44499718979,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6e10516cdf31e1375ae01a639bb47c371e137624",
+          "message": "chore: bump `alloy` deps  (#3012)\n\n* bump alloy\r\n\r\n* fix",
+          "timestamp": "2025-02-12T23:34:28Z",
+          "tree_id": "7c74740171043e8ed96542b37fa52ed0145aa25b",
+          "url": "https://github.com/dojoengine/dojo/commit/6e10516cdf31e1375ae01a639bb47c371e137624"
+        },
+        "date": 1739404336398,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2629670,
+            "range": "± 35833",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 392853,
+            "range": "± 14310",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2665735311,
+            "range": "± 196883804",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 16768920,
+            "range": "± 138699",
             "unit": "ns/iter"
           }
         ]
