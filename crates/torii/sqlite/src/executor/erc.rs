@@ -275,7 +275,13 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 .map(|strings| strings.join(""))
                 .map_err(|_| anyhow::anyhow!("Failed parsing Array<Felt> to String"))?
         } else {
-            return Err(anyhow::anyhow!("token_uri is neither ByteArray nor Array<Felt>"));
+            debug!(
+                contract_address = format!("{:#x}", register_nft_token.contract_address),
+                token_id = %register_nft_token.actual_token_id,
+                token_uri = %token_uri.iter().map(|f| format!("{:#x}", f)).collect::<Vec<String>>().join(", "),
+                "token_uri is neither ByteArray nor Array<Felt>"
+            );
+            "".to_string()
         };
 
         // ERC1155 standard (https://eips.ethereum.org/EIPS/eip-1155#metadata)
