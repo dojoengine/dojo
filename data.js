@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1739378088244,
+  "lastUpdate": 1739383866208,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -52021,6 +52021,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 19249569,
             "range": "± 467984",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "130adb18fa2351609c361b5c3542a162863dfc59",
+          "message": "feat(torii-client): token subscription & update subscription via id (#3006)\n\n* chore(torii-client): expose token id\r\n\r\n* add token sub to grpc client\r\n\r\n* add to torii client\r\n\r\n* update tokens subscription\r\n\r\n* fmt\r\n\r\n* optimistic sub grpc\r\n\r\n* fix client build\r\n\r\n* fmt\r\n\r\n* ensure correct convertion from hex string to U256\r\n\r\n* fix registration of ERC20 by returning the inserted row\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2025-02-12T17:54:11Z",
+          "tree_id": "7beaf2fe13248339ec48553df6ca1d7fcf534534",
+          "url": "https://github.com/dojoengine/dojo/commit/130adb18fa2351609c361b5c3542a162863dfc59"
+        },
+        "date": 1739383861671,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 44079608704,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
