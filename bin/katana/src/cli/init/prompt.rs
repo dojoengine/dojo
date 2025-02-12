@@ -125,11 +125,24 @@ pub async fn prompt() -> Result<Outcome> {
             DeploymentOutcome { contract_address: address, block_number }
         };
 
+    // Prompt for slot paymaster accounts
+    let mut slot_paymasters = Vec::new();
+
+    while Confirm::new("Add slot paymaster account?").with_default(true).prompt()? {
+        let public_key = CustomType::<Felt>::new("Paymaster public key")
+            .with_formatter(&|input: Felt| format!("{input:#x}"))
+            .prompt()?;
+
+        slot_paymasters.push(super::slot::PaymasterAccountArgs { public_key });
+    }
+
     Ok(Outcome {
         id: chain_id,
         deployment_outcome,
-        account: account_address,
         rpc_url: settlement_url,
+        account: account_address,
         settlement_id: parse_cairo_short_string(&l1_chain_id)?,
+        #[cfg(feature = "init-slot")]
+        slot_paymasters: Some(slot_paymasters),
     })
 }
