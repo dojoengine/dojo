@@ -38,6 +38,7 @@ mod tests {
 
     mod expanded {
         pub(crate) mod selector_attack;
+        pub(crate) mod bytearray_hash;
     }
 
     mod helpers {

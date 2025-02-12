@@ -7,40 +7,21 @@ use std::fmt::Debug;
 use std::sync::Arc;
 
 use constant::DEFAULT_ACCOUNT_CLASS;
-#[cfg(feature = "slot")]
+#[cfg(feature = "controller")]
 use constant::{CONTROLLER_ACCOUNT_CLASS, CONTROLLER_CLASS_HASH};
 use serde::{Deserialize, Serialize};
 
 use self::allocation::{GenesisAccountAlloc, GenesisAllocation, GenesisContractAlloc};
 use self::constant::{
-    DEFAULT_ACCOUNT_CLASS_HASH, DEFAULT_ACCOUNT_COMPILED_CLASS_HASH, DEFAULT_LEGACY_ERC20_CLASS,
-    DEFAULT_LEGACY_ERC20_CLASS_HASH, DEFAULT_LEGACY_ERC20_COMPILED_CLASS_HASH,
+    DEFAULT_ACCOUNT_CLASS_HASH, DEFAULT_LEGACY_ERC20_CLASS, DEFAULT_LEGACY_ERC20_CLASS_HASH,
     DEFAULT_LEGACY_UDC_CLASS, DEFAULT_LEGACY_UDC_CLASS_HASH,
-    DEFAULT_LEGACY_UDC_COMPILED_CLASS_HASH,
 };
 use crate::block::{BlockHash, BlockNumber, GasPrices};
-use crate::class::{ClassHash, CompiledClassHash, ContractClass};
+use crate::class::{ClassHash, ContractClass};
 use crate::contract::ContractAddress;
 use crate::Felt;
 
-#[derive(Clone, Serialize, PartialEq, Eq, Deserialize)]
-pub struct GenesisClass {
-    /// The compiled class hash of the contract class.
-    pub compiled_class_hash: CompiledClassHash,
-    pub class: Arc<ContractClass>,
-}
-
-impl core::fmt::Debug for GenesisClass {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("GenesisClass")
-            .field("compiled_class_hash", &self.compiled_class_hash)
-            .field("class", &"...")
-            .finish()
-    }
-}
-
 /// Genesis block configuration.
-#[serde_with::serde_as]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Genesis {
     /// The genesis block parent hash.
@@ -56,7 +37,7 @@ pub struct Genesis {
     /// The genesis block L1 gas prices.
     pub gas_prices: GasPrices,
     /// The classes to declare in the genesis block.
-    pub classes: BTreeMap<ClassHash, GenesisClass>,
+    pub classes: BTreeMap<ClassHash, Arc<ContractClass>>,
     /// The genesis contract allocations.
     pub allocations: BTreeMap<ContractAddress, GenesisAllocation>,
 }
@@ -101,37 +82,13 @@ impl Default for Genesis {
     fn default() -> Self {
         let classes = BTreeMap::from([
             // Fee token class
-            (
-                DEFAULT_LEGACY_ERC20_CLASS_HASH,
-                GenesisClass {
-                    class: DEFAULT_LEGACY_ERC20_CLASS.clone().into(),
-                    compiled_class_hash: DEFAULT_LEGACY_ERC20_COMPILED_CLASS_HASH,
-                },
-            ),
+            (DEFAULT_LEGACY_ERC20_CLASS_HASH, DEFAULT_LEGACY_ERC20_CLASS.clone().into()),
             // universal depoyer contract class
-            (
-                DEFAULT_LEGACY_UDC_CLASS_HASH,
-                GenesisClass {
-                    class: DEFAULT_LEGACY_UDC_CLASS.clone().into(),
-                    compiled_class_hash: DEFAULT_LEGACY_UDC_COMPILED_CLASS_HASH,
-                },
-            ),
+            (DEFAULT_LEGACY_UDC_CLASS_HASH, DEFAULT_LEGACY_UDC_CLASS.clone().into()),
             // predeployed account class
-            (
-                DEFAULT_ACCOUNT_CLASS_HASH,
-                GenesisClass {
-                    compiled_class_hash: DEFAULT_ACCOUNT_COMPILED_CLASS_HASH,
-                    class: DEFAULT_ACCOUNT_CLASS.clone().into(),
-                },
-            ),
-            #[cfg(feature = "slot")]
-            (
-                CONTROLLER_CLASS_HASH,
-                GenesisClass {
-                    compiled_class_hash: CONTROLLER_CLASS_HASH,
-                    class: CONTROLLER_ACCOUNT_CLASS.clone().into(),
-                },
-            ),
+            (DEFAULT_ACCOUNT_CLASS_HASH, DEFAULT_ACCOUNT_CLASS.clone().into()),
+            #[cfg(feature = "controller")]
+            (CONTROLLER_CLASS_HASH, CONTROLLER_ACCOUNT_CLASS.clone().into()),
         ]);
 
         Self {

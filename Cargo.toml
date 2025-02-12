@@ -4,8 +4,6 @@ resolver = "2"
 members = [
 	"bin/dojo-language-server",
 	"bin/katana",
-	"bin/saya",
-	"bin/scheduler",
 	"bin/sozo",
 	"bin/torii",
 	"crates/dojo/bindgen",
@@ -16,6 +14,7 @@ members = [
 	"crates/dojo/utils",
 	"crates/dojo/world",
 	"crates/dojo/world/abigen",
+	"crates/katana/chain-spec",
 	"crates/katana/cli",
 	"crates/katana/controller",
 	"crates/katana/core",
@@ -41,8 +40,6 @@ members = [
 	"crates/katana/tasks",
 	"crates/katana/trie",
 	"crates/metrics",
-	"crates/saya/core",
-	"crates/saya/provider",
 	"crates/sozo/scarbext",
 	"crates/sozo/signers",
 	"crates/sozo/walnut",
@@ -60,7 +57,7 @@ edition = "2021"
 license = "Apache-2.0"
 license-file = "LICENSE"
 repository = "https://github.com/dojoengine/dojo/"
-version = "1.0.12"
+version = "1.1.2"
 
 [profile.performance]
 codegen-units = 1
@@ -73,8 +70,8 @@ debug = true
 inherits = "release"
 
 [workspace.dependencies]
-cainome = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.4.11", features = [ "abigen-rs" ] }
-cainome-cairo-serde = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.4.11" }
+cainome = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.4.12", features = [ "abigen-rs" ] }
+cainome-cairo-serde = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.4.12" }
 dojo-utils = { path = "crates/dojo/utils" }
 
 # metrics
@@ -93,6 +90,7 @@ topological-sort = "0.2"
 
 # katana
 katana-cairo = { path = "crates/katana/cairo" }
+katana-chain-spec = { path = "crates/katana/chain-spec" }
 katana-cli = { path = "crates/katana/cli" }
 katana-codecs = { path = "crates/katana/storage/codecs" }
 katana-codecs-derive = { path = "crates/katana/storage/codecs/derive" }
@@ -127,10 +125,6 @@ torii-runner = { path = "crates/torii/runner" }
 torii-server = { path = "crates/torii/server" }
 torii-sqlite = { path = "crates/torii/sqlite" }
 torii-typed-data = { path = "crates/torii/typed-data" }
-
-# saya
-saya-core = { path = "crates/saya/core" }
-saya-provider = { path = "crates/saya/provider" }
 
 # sozo
 sozo-ops = { path = "crates/sozo/ops" }
@@ -207,17 +201,17 @@ pretty_assertions = "1.2.1"
 rand = "0.8.5"
 rayon = "1.8.0"
 regex = "1.10.3"
-reqwest = { version = "0.11.27", features = [ "blocking", "json", "rustls-tls" ], default-features = false }
+reqwest = { version = "0.11.27", features = [ "json", "rustls-tls" ], default-features = false }
 rpassword = "7.2.0"
 rstest = "0.18.2"
 rstest_reuse = "0.6.0"
 salsa = "0.16.1"
-scarb = { path = "../scarb/scarb" }
-scarb-metadata = { path = "../scarb/scarb-metadata" }
-scarb-ui = { path = "../scarb/utils/scarb-ui" }
-# scarb = { git = "https://github.com/dojoengine/scarb", rev = "f67331d99bca24c13ad56af6752b93f23e5ac373" }
-# scarb-metadata = { git = "https://github.com/dojoengine/scarb", rev = "f67331d99bca24c13ad56af6752b93f23e5ac373" }
-# scarb-ui = { git = "https://github.com/dojoengine/scarb", rev = "f67331d99bca24c13ad56af6752b93f23e5ac373" }
+scarb = { path = "../../swm/scarb/scarb" }
+scarb-metadata = { path = "../../swm/scarb/scarb-metadata" }
+scarb-ui = { path = "../../swm/scarb/utils/scarb-ui" }
+#scarb = { git = "https://github.com/dojoengine/scarb", rev = "da5f683adbd25361d080c2d9f624924aa9f112d1" }
+#scarb-metadata = { git = "https://github.com/dojoengine/scarb", rev = "da5f683adbd25361d080c2d9f624924aa9f112d1" }
+#scarb-ui = { git = "https://github.com/dojoengine/scarb", rev = "da5f683adbd25361d080c2d9f624924aa9f112d1" }
 semver = "1.0.5"
 serde = { version = "1.0", features = [ "derive" ] }
 serde_json = { version = "1.0", features = [ "arbitrary_precision" ] }
@@ -247,6 +241,7 @@ walkdir = "2.5.0"
 ipfs-api-backend-hyper = { git = "https://github.com/ferristseng/rust-ipfs-api", rev = "af2c17f7b19ef5b9898f458d97a90055c3605633", features = [ "with-hyper-rustls", "with-send-sync" ] }
 mime_guess = "2.0"
 
+
 # server
 hyper = "0.14.27"
 warp = "0.3"
@@ -268,6 +263,7 @@ alloy-primitives = { version = "0.8.3", default-features = false }
 alloy-sol-types = { version = "0.8.3", default-features = false }
 
 criterion = "0.5.1"
+pprof = { version = "0.13.0", features = [ "criterion", "flamegraph" ] }
 
 # Slot integration. Dojo don't need to manually include `account_sdk` as dependency as `slot` already re-exports it.
 slot = { git = "https://github.com/cartridge-gg/slot", rev = "1298a30" }

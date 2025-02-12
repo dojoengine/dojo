@@ -172,6 +172,16 @@ impl DojoContract {
         let fn_decl = fn_ast.declaration(db);
 
         let params_str = self.params_to_str(db, fn_decl.signature(db).parameters(db));
+        if !is_valid_constructor_params(&params_str) {
+            self.diagnostics.push(PluginDiagnostic {
+                stable_ptr: fn_ast.stable_ptr().untyped(),
+                message: "The constructor must have exactly one parameter, which is `ref self: \
+                          ContractState`. Add a `dojo_init` function instead if you need to \
+                          initialize the contract with parameters."
+                    .to_string(),
+                severity: Severity::Error,
+            });
+        }
 
         let declaration_node = RewriteNode::Mapped {
             node: Box::new(RewriteNode::Text(format!(
@@ -370,5 +380,39 @@ impl DojoContract {
             .collect::<Vec<_>>();
 
         params.join(", ")
+    }
+}
+
+/// Checks if the constructor parameters are valid.
+/// We only allow one parameter for the constructor, which is the contract state,
+/// since `dojo_init` is called by the world after every resource has been deployed.
+fn is_valid_constructor_params(params: &str) -> bool {
+    let frags = params.split(",").collect::<Vec<_>>();
+
+    if frags.len() != 1 {
+        return false;
+    }
+
+    frags.first().unwrap().contains("ref self: ContractState")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_is_valid_constructor_params_ok() {
+        assert!(is_valid_constructor_params("ref self: ContractState"));
+        assert!(is_valid_constructor_params("ref self: ContractState "));
+        assert!(is_valid_constructor_params(" ref self: ContractState"));
+    }
+
+    #[test]
+    fn test_is_valid_constructor_params_not_ok() {
+        assert!(!is_valid_constructor_params(""));
+        assert!(!is_valid_constructor_params("self: ContractState"));
+        assert!(!is_valid_constructor_params("ref self: OtherState"));
+        assert!(!is_valid_constructor_params("ref self: ContractState, other: felt252"));
+        assert!(!is_valid_constructor_params("other: felt252"));
     }
 }

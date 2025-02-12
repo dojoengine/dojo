@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, bail, Result};
 use clap::Args;
 use dojo_utils::{Invoker, TxnConfig};
 use dojo_world::config::calldata_decoder;
@@ -26,8 +26,10 @@ pub struct ExecuteArgs {
 
 A call is made up of a <TAG_OR_ADDRESS>, an <ENTRYPOINT> and an optional <CALLDATA>:
 
-- <TAG_OR_ADDRESS>: the address or the tag (ex: dojo_examples-actions) of the contract to be \
-                  called,
+- <TAG_OR_ADDRESS>: 
+    * the address or the tag of a Dojo contract (ex: dojo_examples-actions) to be called OR
+    * the address or the instance name of a Starknet contract (ex: WoodToken) to be called OR
+    * 'world' to call the Dojo world.
 
 - <ENTRYPOINT>: the name of the entry point to be called,
 
@@ -99,27 +101,43 @@ impl ExecuteArgs {
 
             while let Some(arg) = arg_iter.next() {
                 let tag_or_address = arg;
-                let descriptor = ResourceDescriptor::from_string(&tag_or_address)?
-                    .ensure_namespace(&profile_config.namespace.default);
 
-                let contract_address = match &descriptor {
-                    ResourceDescriptor::Address(address) => Some(*address),
-                    ResourceDescriptor::Tag(tag) => contracts.get(tag).map(|c| c.address),
-                    ResourceDescriptor::Name(_) => {
-                        unimplemented!("Expected to be a resolved tag with default namespace.")
+                let contract_address = if tag_or_address == "world" {
+                    match contracts.get(&tag_or_address) {
+                        Some(c) => c.address,
+                        None => bail!("Unable to find the world address."),
                     }
+                } else {
+                    // first, try to find the contract to call among Dojo contracts
+                    let descriptor = ResourceDescriptor::from_string(&tag_or_address)?
+                        .ensure_namespace(&profile_config.namespace.default);
+
+                    let mut contract_address = match &descriptor {
+                        ResourceDescriptor::Address(address) => Some(*address),
+                        ResourceDescriptor::Tag(tag) => contracts.get(tag).map(|c| c.address),
+                        ResourceDescriptor::Name(_) => {
+                            unimplemented!("Expected to be a resolved tag with default namespace.")
+                        }
+                    };
+
+                    // if not found, try to find a Starknet contract matching with the provided
+                    // contract name.
+                    if contract_address.is_none() {
+                        contract_address = contracts.get(&tag_or_address).map(|c| c.address);
+                    }
+
+                    contract_address.ok_or_else(|| {
+                        let mut message =
+                            format!("Contract {descriptor} not found in the manifest.");
+                        if self.diff {
+                            message.push_str(
+                                " Run the command again with `--diff` to force the fetch of data \
+                                 from the chain.",
+                            );
+                        }
+                        anyhow!(message)
+                    })?
                 };
-
-                let contract_address = contract_address.ok_or_else(|| {
-                    let mut message = format!("Contract {descriptor} not found in the manifest.");
-                    if self.diff {
-                        message.push_str(
-                            " Run the command again with `--diff` to force the fetch of data from \
-                             the chain.",
-                        );
-                    }
-                    anyhow!(message)
-                })?;
 
                 let entrypoint = arg_iter.next().ok_or_else(|| {
                     anyhow!(
@@ -138,7 +156,7 @@ impl ExecuteArgs {
                 }
 
                 trace!(
-                    contract=?descriptor,
+                    contract=?contract_address,
                     entrypoint=entrypoint,
                     calldata=?calldata,
                     "Decoded call."

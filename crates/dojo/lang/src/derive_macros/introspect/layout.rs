@@ -11,6 +11,8 @@ use super::utils::{
     is_unsupported_option_type, primitive_type_introspection,
 };
 
+const CAIRO_DELIMITERS: [char; 7] = ['[', ']', '<', '>', '(', ')', ','];
+
 /// build the full layout for every field in the Struct.
 pub fn build_field_layouts(
     db: &dyn SyntaxGroup,
@@ -23,6 +25,26 @@ pub fn build_field_layouts(
         .iter()
         .filter_map(|m| {
             if m.has_attr(db, "key") {
+                let member_type = m.type_clause(db).ty(db).as_syntax_node().get_text(db);
+
+                // Check if the member type uses the `usize` type, either
+                // directly or as a nested type (the tuple (u8, usize, u32) for example)
+                if member_type.contains("usize")
+                    && member_type
+                        .split(CAIRO_DELIMITERS)
+                        .map(|s| s.trim())
+                        .collect::<Vec<_>>()
+                        .contains(&"usize")
+                {
+                    diagnostics.push(PluginDiagnostic {
+                        stable_ptr: m.type_clause(db).stable_ptr().0,
+                        message: "Use u32 rather than usize for model keys, as usize size is \
+                                  architecture dependent."
+                            .to_string(),
+                        severity: Severity::Error,
+                    });
+                }
+
                 return None;
             }
 
@@ -172,6 +194,16 @@ pub fn build_item_layout_from_type(
             diagnostics.push(PluginDiagnostic {
                 stable_ptr: diagnostic_item,
                 message: "Option<T> cannot be used with tuples. Prefer using a struct.".into(),
+                severity: Severity::Error,
+            });
+        }
+
+        // `usize` is forbidden because its size is architecture-dependent
+        if item_type == "usize" {
+            diagnostics.push(PluginDiagnostic {
+                stable_ptr: diagnostic_item,
+                message: "Use u32 rather than usize as usize size is architecture dependent."
+                    .into(),
                 severity: Severity::Error,
             });
         }

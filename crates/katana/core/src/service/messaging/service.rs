@@ -85,7 +85,7 @@ impl<EF: ExecutorFactory> MessagingService<EF> {
         match messenger.as_ref() {
             MessengerMode::Ethereum(inner) => {
                 let (block_num, txs) =
-                    inner.gather_messages(from_block, max_block, backend.chain_spec.id).await?;
+                    inner.gather_messages(from_block, max_block, backend.chain_spec.id()).await?;
                 let txs_count = txs.len();
 
                 txs.into_iter().for_each(|tx| {
@@ -100,10 +100,9 @@ impl<EF: ExecutorFactory> MessagingService<EF> {
                 Ok((block_num, txs_count))
             }
 
-            #[cfg(feature = "starknet-messaging")]
             MessengerMode::Starknet(inner) => {
                 let (block_num, txs) =
-                    inner.gather_messages(from_block, max_block, backend.chain_spec.id).await?;
+                    inner.gather_messages(from_block, max_block, backend.chain_spec.id()).await?;
                 let txs_count = txs.len();
 
                 txs.into_iter().for_each(|tx| {
@@ -146,7 +145,6 @@ impl<EF: ExecutorFactory> MessagingService<EF> {
                     Ok(Some((block_num, hashes.len())))
                 }
 
-                #[cfg(feature = "starknet-messaging")]
                 MessengerMode::Starknet(inner) => {
                     let hashes = inner.send_messages(&messages).await.map(|hashes| {
                         hashes.iter().map(|h| format!("{h:#x}")).collect::<Vec<_>>()

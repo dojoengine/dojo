@@ -1,21 +1,28 @@
-mod error;
 mod executor;
 
-pub use error::*;
 pub use executor::*;
-use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, ContractClass};
-use katana_primitives::contract::{ContractAddress, Nonce, StorageKey, StorageValue};
 use katana_primitives::receipt::Receipt;
 use katana_primitives::state::{StateUpdates, StateUpdatesWithClasses};
 use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::TxWithHash;
-use katana_primitives::Felt;
-use katana_provider::traits::contract::ContractClassProvider;
-use katana_provider::traits::state::{StateProofProvider, StateProvider, StateRootProvider};
-use katana_provider::ProviderResult;
-use katana_trie::MultiProof;
+use katana_primitives::{ContractAddress, Felt};
 
-pub type ExecutorResult<T> = Result<T, error::ExecutorError>;
+pub use crate::error::*;
+
+pub type ExecutorResult<T> = Result<T, crate::error::ExecutorError>;
+
+/// See <https://docs.starknet.io/chain-info/#current_limits>.
+#[derive(Debug, Clone, Default)]
+pub struct BlockLimits {
+    /// The maximum number of Cairo steps that can be completed within each block.
+    pub cairo_steps: u64,
+}
+
+impl BlockLimits {
+    pub fn max() -> Self {
+        Self { cairo_steps: u64::MAX }
+    }
+}
 
 /// Transaction execution simulation flags.
 ///
@@ -155,89 +162,4 @@ impl ExecutionResult {
 pub struct ResultAndStates {
     pub result: ExecutionResult,
     pub states: StateUpdates,
-}
-
-/// A wrapper around a boxed [StateProvider] for implementing the executor's own state reader
-/// traits.
-#[derive(Debug)]
-pub struct StateProviderDb<'a>(Box<dyn StateProvider + 'a>);
-
-impl<'a> StateProviderDb<'a> {
-    pub fn new(provider: Box<dyn StateProvider + 'a>) -> Self {
-        Self(provider)
-    }
-}
-
-impl<'a> ContractClassProvider for StateProviderDb<'a> {
-    fn class(&self, hash: ClassHash) -> ProviderResult<Option<ContractClass>> {
-        self.0.class(hash)
-    }
-
-    fn compiled_class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledClass>> {
-        self.0.compiled_class(hash)
-    }
-
-    fn compiled_class_hash_of_class_hash(
-        &self,
-        hash: ClassHash,
-    ) -> ProviderResult<Option<CompiledClassHash>> {
-        self.0.compiled_class_hash_of_class_hash(hash)
-    }
-}
-
-impl<'a> StateProvider for StateProviderDb<'a> {
-    fn class_hash_of_contract(
-        &self,
-        address: ContractAddress,
-    ) -> ProviderResult<Option<ClassHash>> {
-        self.0.class_hash_of_contract(address)
-    }
-
-    fn nonce(&self, address: ContractAddress) -> ProviderResult<Option<Nonce>> {
-        self.0.nonce(address)
-    }
-
-    fn storage(
-        &self,
-        address: ContractAddress,
-        storage_key: StorageKey,
-    ) -> ProviderResult<Option<StorageValue>> {
-        self.0.storage(address, storage_key)
-    }
-}
-
-impl<'a> StateProofProvider for StateProviderDb<'a> {
-    fn class_multiproof(&self, classes: Vec<ClassHash>) -> ProviderResult<MultiProof> {
-        self.0.class_multiproof(classes)
-    }
-
-    fn contract_multiproof(&self, addresses: Vec<ContractAddress>) -> ProviderResult<MultiProof> {
-        self.0.contract_multiproof(addresses)
-    }
-
-    fn storage_multiproof(
-        &self,
-        address: ContractAddress,
-        key: Vec<StorageKey>,
-    ) -> ProviderResult<MultiProof> {
-        self.0.storage_multiproof(address, key)
-    }
-}
-
-impl<'a> StateRootProvider for StateProviderDb<'a> {
-    fn classes_root(&self) -> ProviderResult<Felt> {
-        self.0.classes_root()
-    }
-
-    fn contracts_root(&self) -> ProviderResult<Felt> {
-        self.0.contracts_root()
-    }
-
-    fn storage_root(&self, contract: ContractAddress) -> ProviderResult<Option<Felt>> {
-        self.0.storage_root(contract)
-    }
-
-    fn state_root(&self) -> ProviderResult<Felt> {
-        self.0.state_root()
-    }
 }

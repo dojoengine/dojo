@@ -8,6 +8,8 @@ use alloy_primitives::U256;
 use anyhow::bail;
 use anyhow::{Context, Result};
 use clap::Parser;
+use katana_chain_spec::rollup::ChainConfigDir;
+use katana_chain_spec::ChainSpec;
 use katana_core::constants::DEFAULT_SEQUENCER_ADDRESS;
 use katana_core::service::messaging::MessagingConfig;
 use katana_node::config::db::DbConfig;
@@ -18,8 +20,8 @@ use katana_node::config::metrics::MetricsConfig;
 use katana_node::config::rpc::RpcConfig;
 #[cfg(feature = "server")]
 use katana_node::config::rpc::{RpcModuleKind, RpcModulesList};
-use katana_node::config::{Config, SequencingConfig};
-use katana_primitives::chain_spec::{self, ChainSpec};
+use katana_node::config::sequencing::SequencingConfig;
+use katana_node::config::Config;
 use katana_primitives::genesis::allocation::DevAllocationsGenerator;
 use katana_primitives::genesis::constant::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;
 use serde::{Deserialize, Serialize};
@@ -30,8 +32,7 @@ use url::Url;
 
 use crate::file::NodeArgsConfig;
 use crate::options::*;
-use crate::utils;
-use crate::utils::{parse_seed, LogFormat};
+use crate::utils::{self, parse_chain_config_dir, parse_seed, LogFormat};
 
 pub(crate) const LOG_TARGET: &str = "katana::cli";
 
@@ -42,6 +43,11 @@ pub struct NodeArgs {
     #[arg(long)]
     pub silent: bool,
 
+    /// Path to the chain configuration file.
+    #[arg(long, hide = true)]
+    #[arg(value_parser = parse_chain_config_dir)]
+    pub chain: Option<ChainConfigDir>,
+
     /// Disable auto and interval mining, and mine on demand instead via an endpoint.
     #[arg(long)]
     #[arg(conflicts_with = "block_time")]
@@ -51,6 +57,10 @@ pub struct NodeArgs {
     #[arg(short, long)]
     #[arg(value_name = "MILLISECONDS")]
     pub block_time: Option<u64>,
+
+    #[arg(long = "sequencing.block-max-cairo-steps")]
+    #[arg(value_name = "TOTAL")]
+    pub block_cairo_steps_limit: Option<u64>,
 
     /// Directory path of the database to initialize from.
     ///
@@ -107,13 +117,9 @@ pub struct NodeArgs {
 }
 
 impl NodeArgs {
-    pub fn execute(&self) -> Result<()> {
+    pub async fn execute(&self) -> Result<()> {
         self.init_logging()?;
-        tokio::runtime::Builder::new_multi_thread()
-            .enable_all()
-            .build()
-            .context("failed to build tokio runtime")?
-            .block_on(self.start_node())
+        self.start_node().await
     }
 
     async fn start_node(&self) -> Result<()> {
@@ -180,24 +186,16 @@ impl NodeArgs {
         let execution = self.execution_config();
         let sequencing = self.sequencer_config();
         let messaging = self.messaging.clone();
-        let l1_provider_url = self.gpo_config();
 
-        Ok(Config {
-            metrics,
-            db,
-            dev,
-            rpc,
-            chain,
-            execution,
-            sequencing,
-            messaging,
-            forking,
-            l1_provider_url,
-        })
+        Ok(Config { metrics, db, dev, rpc, chain, execution, sequencing, messaging, forking })
     }
 
     fn sequencer_config(&self) -> SequencingConfig {
-        SequencingConfig { block_time: self.block_time, no_mining: self.no_mining }
+        SequencingConfig {
+            block_time: self.block_time,
+            no_mining: self.no_mining,
+            block_cairo_steps_limit: self.block_cairo_steps_limit,
+        }
     }
 
     fn rpc_config(&self) -> Result<RpcConfig> {
@@ -225,12 +223,13 @@ impl NodeArgs {
 
                 modules
             };
-
             Ok(RpcConfig {
                 apis: modules,
                 port: self.server.http_port,
                 addr: self.server.http_addr,
                 max_connections: self.server.max_connections,
+                max_request_body_size: None,
+                max_response_body_size: None,
                 cors_origins: self.server.http_cors_origins.clone(),
                 max_event_page_size: Some(self.server.max_event_page_size),
                 max_proof_keys: Some(self.server.max_proof_keys),
@@ -244,32 +243,40 @@ impl NodeArgs {
     }
 
     fn chain_spec(&self) -> Result<Arc<ChainSpec>> {
-        let mut chain_spec = chain_spec::DEV_UNALLOCATED.clone();
-
-        if let Some(id) = self.starknet.environment.chain_id {
-            chain_spec.id = id;
+        if let Some(path) = &self.chain {
+            let mut cs = katana_chain_spec::rollup::read(path)?;
+            cs.genesis.sequencer_address = *DEFAULT_SEQUENCER_ADDRESS;
+            Ok(Arc::new(ChainSpec::Rollup(cs)))
         }
+        // exclusively for development mode
+        else {
+            let mut chain_spec = katana_chain_spec::dev::DEV_UNALLOCATED.clone();
 
-        if let Some(genesis) = self.starknet.genesis.clone() {
-            chain_spec.genesis = genesis;
-        } else {
-            chain_spec.genesis.sequencer_address = *DEFAULT_SEQUENCER_ADDRESS;
+            if let Some(id) = self.starknet.environment.chain_id {
+                chain_spec.id = id;
+            }
+
+            if let Some(genesis) = &self.starknet.genesis {
+                chain_spec.genesis = genesis.clone();
+            } else {
+                chain_spec.genesis.sequencer_address = *DEFAULT_SEQUENCER_ADDRESS;
+            }
+
+            // generate dev accounts
+            let accounts = DevAllocationsGenerator::new(self.development.total_accounts)
+                .with_seed(parse_seed(&self.development.seed))
+                .with_balance(U256::from(DEFAULT_PREFUNDED_ACCOUNT_BALANCE))
+                .generate();
+
+            chain_spec.genesis.extend_allocations(accounts.into_iter().map(|(k, v)| (k, v.into())));
+
+            #[cfg(feature = "slot")]
+            if self.slot.controller {
+                katana_slot_controller::add_controller_account(&mut chain_spec.genesis)?;
+            }
+
+            Ok(Arc::new(ChainSpec::Dev(chain_spec)))
         }
-
-        // generate dev accounts
-        let accounts = DevAllocationsGenerator::new(self.development.total_accounts)
-            .with_seed(parse_seed(&self.development.seed))
-            .with_balance(U256::from(DEFAULT_PREFUNDED_ACCOUNT_BALANCE))
-            .generate();
-
-        chain_spec.genesis.extend_allocations(accounts.into_iter().map(|(k, v)| (k, v.into())));
-
-        #[cfg(feature = "slot")]
-        if self.slot.controller {
-            katana_slot_controller::add_controller_account(&mut chain_spec.genesis)?;
-        }
-
-        Ok(Arc::new(chain_spec))
     }
 
     fn dev_config(&self) -> DevConfig {
@@ -335,10 +342,6 @@ impl NodeArgs {
         None
     }
 
-    fn gpo_config(&self) -> Option<Url> {
-        self.l1_provider_url.clone()
-    }
-
     /// Parse the node config from the command line arguments and the config file,
     /// and merge them together prioritizing the command line arguments.
     pub fn with_config_file(mut self) -> Result<Self> {
@@ -368,6 +371,10 @@ impl NodeArgs {
             if let Some(logging) = config.logging {
                 self.logging = logging;
             }
+        }
+
+        if self.messaging.is_none() {
+            self.messaging = config.messaging;
         }
 
         #[cfg(feature = "server")]
@@ -433,8 +440,8 @@ mod test {
         assert_eq!(config.execution.invocation_max_steps, DEFAULT_INVOCATION_MAX_STEPS);
         assert_eq!(config.execution.validation_max_steps, DEFAULT_VALIDATION_MAX_STEPS);
         assert_eq!(config.db.dir, None);
-        assert_eq!(config.chain.id, ChainId::parse("KATANA").unwrap());
-        assert_eq!(config.chain.genesis.sequencer_address, *DEFAULT_SEQUENCER_ADDRESS);
+        assert_eq!(config.chain.id(), ChainId::parse("KATANA").unwrap());
+        assert_eq!(config.chain.genesis().sequencer_address, *DEFAULT_SEQUENCER_ADDRESS);
     }
 
     #[test]
@@ -460,8 +467,8 @@ mod test {
         assert_eq!(config.execution.invocation_max_steps, 200);
         assert_eq!(config.execution.validation_max_steps, 100);
         assert_eq!(config.db.dir, Some(PathBuf::from("/path/to/db")));
-        assert_eq!(config.chain.id, ChainId::GOERLI);
-        assert_eq!(config.chain.genesis.sequencer_address, *DEFAULT_SEQUENCER_ADDRESS);
+        assert_eq!(config.chain.id(), ChainId::GOERLI);
+        assert_eq!(config.chain.genesis().sequencer_address, *DEFAULT_SEQUENCER_ADDRESS);
     }
 
     #[test]
@@ -564,13 +571,13 @@ mod test {
         .config()
         .unwrap();
 
-        assert_eq!(config.chain.genesis.number, 0);
-        assert_eq!(config.chain.genesis.parent_hash, felt!("0x999"));
-        assert_eq!(config.chain.genesis.timestamp, 5123512314);
-        assert_eq!(config.chain.genesis.state_root, felt!("0x99"));
-        assert_eq!(config.chain.genesis.sequencer_address, address!("0x100"));
-        assert_eq!(config.chain.genesis.gas_prices.eth, 9999);
-        assert_eq!(config.chain.genesis.gas_prices.strk, 8888);
+        assert_eq!(config.chain.genesis().number, 0);
+        assert_eq!(config.chain.genesis().parent_hash, felt!("0x999"));
+        assert_eq!(config.chain.genesis().timestamp, 5123512314);
+        assert_eq!(config.chain.genesis().state_root, felt!("0x99"));
+        assert_eq!(config.chain.genesis().sequencer_address, address!("0x100"));
+        assert_eq!(config.chain.genesis().gas_prices.eth, 9999);
+        assert_eq!(config.chain.genesis().gas_prices.strk, 8888);
         assert_matches!(config.dev.fixed_gas_prices, Some(prices) => {
             assert_eq!(prices.gas_price.eth, 100);
             assert_eq!(prices.gas_price.strk, 200);
@@ -628,14 +635,14 @@ chain_id.Named = "Mainnet"
             assert_eq!(prices.data_gas_price.eth, 111);
             assert_eq!(prices.data_gas_price.strk, 222);
         });
-        assert_eq!(config.chain.genesis.number, 0);
-        assert_eq!(config.chain.genesis.parent_hash, felt!("0x999"));
-        assert_eq!(config.chain.genesis.timestamp, 5123512314);
-        assert_eq!(config.chain.genesis.state_root, felt!("0x99"));
-        assert_eq!(config.chain.genesis.sequencer_address, address!("0x100"));
-        assert_eq!(config.chain.genesis.gas_prices.eth, 9999);
-        assert_eq!(config.chain.genesis.gas_prices.strk, 8888);
-        assert_eq!(config.chain.id, ChainId::Id(Felt::from_str("0x123").unwrap()));
+        assert_eq!(config.chain.genesis().number, 0);
+        assert_eq!(config.chain.genesis().parent_hash, felt!("0x999"));
+        assert_eq!(config.chain.genesis().timestamp, 5123512314);
+        assert_eq!(config.chain.genesis().state_root, felt!("0x99"));
+        assert_eq!(config.chain.genesis().sequencer_address, address!("0x100"));
+        assert_eq!(config.chain.genesis().gas_prices.eth, 9999);
+        assert_eq!(config.chain.genesis().gas_prices.strk, 8888);
+        assert_eq!(config.chain.id(), ChainId::Id(Felt::from_str("0x123").unwrap()));
     }
 
     #[test]

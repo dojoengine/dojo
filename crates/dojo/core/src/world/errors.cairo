@@ -90,6 +90,10 @@ pub fn invalid_resource_schema_upgrade(namespace: @ByteArray, name: @ByteArray) 
     format!("Invalid new schema to upgrade the resource `{}-{}`", namespace, name)
 }
 
+pub fn packed_layout_cannot_be_upgraded(namespace: @ByteArray, name: @ByteArray) -> ByteArray {
+    format!("Packed layout cannot be upgraded `{}-{}`", namespace, name)
+}
+
 pub fn invalid_resource_layout_upgrade(namespace: @ByteArray, name: @ByteArray) -> ByteArray {
     format!("Invalid new layout to upgrade the resource `{}-{}`", namespace, name)
 }

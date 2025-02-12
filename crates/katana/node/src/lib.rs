@@ -10,14 +10,15 @@ pub mod version;
 use std::future::IntoFuture;
 use std::sync::Arc;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use config::rpc::RpcModuleKind;
 use config::Config;
 use dojo_metrics::exporters::prometheus::PrometheusRecorder;
 use dojo_metrics::{Report, Server as MetricsServer};
 use hyper::Method;
 use jsonrpsee::RpcModule;
-use katana_core::backend::gas_oracle::L1GasOracle;
+use katana_chain_spec::{ChainSpec, SettlementLayer};
+use katana_core::backend::gas_oracle::GasOracle;
 use katana_core::backend::storage::Blockchain;
 use katana_core::backend::Backend;
 use katana_core::constants::{
@@ -95,7 +96,7 @@ impl Node {
     ///
     /// This method will start all the node process, running them until the node is stopped.
     pub async fn launch(self) -> Result<LaunchedNode> {
-        let chain = self.backend.chain_spec.id;
+        let chain = self.backend.chain_spec.id();
         info!(%chain, "Starting node.");
 
         // TODO: maybe move this to the build stage
@@ -140,11 +141,8 @@ impl Node {
         let rpc_handle = self.rpc_server.start(self.config.rpc.socket_addr()).await?;
 
         // --- start the gas oracle worker task
-
-        if let Some(ref url) = self.config.l1_provider_url {
-            self.backend.gas_oracle.run_worker(self.task_manager.task_spawner());
-            info!(%url, "Gas Price Oracle started.");
-        };
+        self.backend.gas_oracle.run_worker(self.task_manager.task_spawner());
+        info!(target: "node", "Gas price oracle worker started.");
 
         Ok(LaunchedNode { node: self, rpc: rpc_handle })
     }
@@ -163,27 +161,42 @@ pub async fn build(mut config: Config) -> Result<Node> {
 
     // --- build executor factory
 
+    let fee_token_addresses = match config.chain.as_ref() {
+        ChainSpec::Dev(cs) => {
+            FeeTokenAddressses { eth: cs.fee_contracts.eth, strk: cs.fee_contracts.strk }
+        }
+        ChainSpec::Rollup(cs) => {
+            FeeTokenAddressses { eth: cs.fee_contract.strk, strk: cs.fee_contract.strk }
+        }
+    };
+
     let cfg_env = CfgEnv {
-        chain_id: config.chain.id,
+        fee_token_addresses,
+        chain_id: config.chain.id(),
         invoke_tx_max_n_steps: config.execution.invocation_max_steps,
         validate_max_n_steps: config.execution.validation_max_steps,
         max_recursion_depth: config.execution.max_recursion_depth,
-        fee_token_addresses: FeeTokenAddressses {
-            eth: config.chain.fee_contracts.eth,
-            strk: config.chain.fee_contracts.strk,
-        },
     };
 
     let execution_flags = ExecutionFlags::new()
         .with_account_validation(config.dev.account_validation)
         .with_fee(config.dev.fee);
 
-    let executor_factory = Arc::new(BlockifierFactory::new(cfg_env, execution_flags));
+    let executor_factory = Arc::new(BlockifierFactory::new(
+        cfg_env,
+        execution_flags,
+        config.sequencing.block_limits(),
+    ));
 
     // --- build backend
 
     let (blockchain, db, forked_client) = if let Some(cfg) = &config.forking {
         let chain_spec = Arc::get_mut(&mut config.chain).expect("get mut Arc");
+
+        let ChainSpec::Dev(chain_spec) = chain_spec else {
+            return Err(anyhow::anyhow!("Forking is only supported in dev mode for now"));
+        };
+
         let (bc, block_num) =
             Blockchain::new_from_forked(cfg.url.clone(), cfg.block, chain_spec).await?;
 
@@ -193,10 +206,10 @@ pub async fn build(mut config: Config) -> Result<Node> {
         (bc, None, Some(forked_client))
     } else if let Some(db_path) = &config.db.dir {
         let db = katana_db::init_db(db_path)?;
-        (Blockchain::new_with_db(db.clone(), &config.chain)?, Some(db), None)
+        (Blockchain::new_with_db(db.clone()), Some(db), None)
     } else {
         let db = katana_db::init_ephemeral_db()?;
-        (Blockchain::new_with_db(db.clone(), &config.chain)?, Some(db), None)
+        (Blockchain::new_with_db(db.clone()), Some(db), None)
     };
 
     // --- build l1 gas oracle
@@ -204,13 +217,17 @@ pub async fn build(mut config: Config) -> Result<Node> {
     // Check if the user specify a fixed gas price in the dev config.
     let gas_oracle = if let Some(fixed_prices) = &config.dev.fixed_gas_prices {
         // Use fixed gas prices if provided in the configuration
-        L1GasOracle::fixed(fixed_prices.gas_price.clone(), fixed_prices.data_gas_price.clone())
-    } else if let Some(url) = &config.l1_provider_url {
-        // Default to a sampled gas oracle using the given provider
-        L1GasOracle::sampled(url.clone())
+        GasOracle::fixed(fixed_prices.gas_price.clone(), fixed_prices.data_gas_price.clone())
+    } else if let Some(settlement) = config.chain.settlement() {
+        match settlement {
+            SettlementLayer::Starknet { .. } => GasOracle::sampled_starknet(),
+            SettlementLayer::Ethereum { rpc_url, .. } => {
+                GasOracle::sampled_ethereum(rpc_url.clone())
+            }
+        }
     } else {
         // Use default fixed gas prices if no url and if no fixed prices are provided
-        L1GasOracle::fixed(
+        GasOracle::fixed(
             GasPrices { eth: DEFAULT_ETH_L1_GAS_PRICE, strk: DEFAULT_STRK_L1_GAS_PRICE },
             GasPrices { eth: DEFAULT_ETH_L1_DATA_GAS_PRICE, strk: DEFAULT_STRK_L1_DATA_GAS_PRICE },
         )
@@ -224,6 +241,8 @@ pub async fn build(mut config: Config) -> Result<Node> {
         block_context_generator,
         chain_spec: config.chain.clone(),
     });
+
+    backend.init_genesis().context("failed to initialize genesis")?;
 
     // --- build block producer
 

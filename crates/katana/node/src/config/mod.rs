@@ -6,16 +6,17 @@ pub mod execution;
 pub mod fork;
 pub mod metrics;
 pub mod rpc;
+pub mod sequencing;
 
 use db::DbConfig;
 use dev::DevConfig;
 use execution::ExecutionConfig;
 use fork::ForkingConfig;
+use katana_chain_spec::ChainSpec;
 use katana_core::service::messaging::MessagingConfig;
-use katana_primitives::chain_spec::ChainSpec;
 use metrics::MetricsConfig;
 use rpc::RpcConfig;
-use url::Url;
+use sequencing::SequencingConfig;
 
 /// Node configurations.
 ///
@@ -48,19 +49,4 @@ pub struct Config {
 
     /// Development options.
     pub dev: DevConfig,
-
-    /// Provider url for gas price oracle
-    pub l1_provider_url: Option<Url>,
-}
-
-/// Configurations related to block production.
-#[derive(Debug, Clone, Default)]
-pub struct SequencingConfig {
-    /// The time in milliseconds for a block to be produced.
-    pub block_time: Option<u64>,
-
-    /// Disable automatic block production.
-    ///
-    /// Allowing block to only be produced manually.
-    pub no_mining: bool,
 }

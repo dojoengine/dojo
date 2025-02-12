@@ -25,7 +25,7 @@ use super::StarknetApi;
 #[async_trait]
 impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
     async fn chain_id(&self) -> RpcResult<FeltAsHex> {
-        Ok(self.inner.backend.chain_spec.id.id().into())
+        Ok(self.inner.backend.chain_spec.id().id().into())
     }
 
     async fn get_nonce(
@@ -171,7 +171,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
         block_id: BlockIdOrTag,
     ) -> RpcResult<Vec<FeeEstimate>> {
         self.on_cpu_blocking_task(move |this| {
-            let chain_id = this.inner.backend.chain_spec.id;
+            let chain_id = this.inner.backend.chain_spec.id();
 
             let transactions = request
                 .into_iter()
@@ -234,7 +234,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
         block_id: BlockIdOrTag,
     ) -> RpcResult<FeeEstimate> {
         self.on_cpu_blocking_task(move |this| {
-            let chain_id = this.inner.backend.chain_spec.id;
+            let chain_id = this.inner.backend.chain_spec.id();
 
             let tx = message.into_tx_with_chain_id(chain_id);
             let hash = tx.calculate_hash();

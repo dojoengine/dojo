@@ -9,7 +9,7 @@ use common::split_felt;
 use dojo_test_utils::sequencer::{get_default_test_config, TestSequencer};
 use indexmap::IndexSet;
 use jsonrpsee::http_client::HttpClientBuilder;
-use katana_node::config::SequencingConfig;
+use katana_node::config::sequencing::SequencingConfig;
 use katana_primitives::event::ContinuationToken;
 use katana_primitives::genesis::constant::{
     DEFAULT_ACCOUNT_CLASS_HASH, DEFAULT_ETH_FEE_TOKEN_ADDRESS, DEFAULT_PREFUNDED_ACCOUNT_BALANCE,

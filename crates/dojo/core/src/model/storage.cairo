@@ -1,4 +1,4 @@
-use dojo::{model::{ModelPtr, model_value::ModelValueKey}};
+use dojo::{model::{ModelPtr, model_value::ModelValueKey}, meta::Introspect};
 
 // TODO: define the right interface for member accesses.
 
@@ -35,13 +35,31 @@ pub trait ModelStorage<S, M> {
     /// The ptr is mostly used for type inferrence.
     fn erase_models_ptrs(ref self: S, ptrs: Span<ModelPtr<M>>);
 
-    /// Retrieves a model of type `M` using the provided entity idref .
+    /// Retrieves a model of type `M` using the provided entity id.
     fn read_member<T, +Serde<T>>(self: @S, ptr: ModelPtr<M>, field_selector: felt252) -> T;
 
-    /// Retrieves a model of type `M` using the provided entity id.
+    /// Retrieves a single member from multiple models.
+    fn read_member_of_models<T, +Serde<T>, +Drop<T>>(
+        self: @S, ptrs: Span<ModelPtr<M>>, field_selector: felt252,
+    ) -> Array<T>;
+
+    /// Updates a member of a model.
     fn write_member<T, +Serde<T>, +Drop<T>>(
         ref self: S, ptr: ModelPtr<M>, field_selector: felt252, value: T,
     );
+
+    /// Updates a member of multiple models.
+    fn write_member_of_models<T, +Serde<T>, +Drop<T>>(
+        ref self: S, ptrs: Span<ModelPtr<M>>, field_selector: felt252, values: Span<T>,
+    );
+
+    /// Retrieves a subset of members in a model, matching a defined schema <T>.
+    fn read_schema<T, +Serde<T>, +Introspect<T>>(self: @S, ptr: ModelPtr<M>) -> T;
+
+    /// Retrieves part of multiple models, matching a schema.
+    fn read_schemas<T, +Drop<T>, +Serde<T>, +Introspect<T>>(
+        self: @S, ptrs: Span<ModelPtr<M>>,
+    ) -> Array<T>;
 
     /// Returns the current namespace hash.
     fn namespace_hash(self: @S) -> felt252;

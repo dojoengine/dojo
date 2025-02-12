@@ -10,7 +10,7 @@ use ipfs_api_backend_hyper::{IpfsApi, IpfsClient, TryFromUri};
 use starknet::core::types::U256;
 use starknet_crypto::Felt;
 use tokio_util::bytes::Bytes;
-use tracing::warn;
+use tracing::debug;
 
 use crate::constants::{
     IPFS_CLIENT_MAX_RETRY, IPFS_CLIENT_PASSWORD, IPFS_CLIENT_URL, IPFS_CLIENT_USERNAME,
@@ -53,6 +53,58 @@ pub fn sql_string_to_felts(sql_string: &str) -> Vec<Felt> {
     sql_string.split(SQL_FELT_DELIMITER).map(|felt| Felt::from_str(felt).unwrap()).collect()
 }
 
+/// Sanitizes a JSON string by escaping unescaped double quotes within string values.
+pub fn sanitize_json_string(s: &str) -> String {
+    let mut result = String::new();
+    let mut chars = s.chars().peekable();
+    let mut in_string = false;
+
+    while let Some(c) = chars.next() {
+        match c {
+            '"' => {
+                if !in_string {
+                    // Starting a string
+                    result.push('"');
+                    in_string = true;
+                } else {
+                    // Check next char to see if this is the end of the string
+                    match chars.peek() {
+                        Some(&':') | Some(&',') | Some(&'}') => {
+                            // This is end of a JSON string
+                            result.push('"');
+                            in_string = false;
+                        }
+                        _ => {
+                            // This is an internal quote that needs escaping
+                            result.push_str("\\\"");
+                        }
+                    }
+                }
+            }
+            '\\' => {
+                if let Some(&next) = chars.peek() {
+                    if next == '"' {
+                        // Already escaped quote, preserve it without adding extra escapes
+                        result.push('\\');
+                        result.push('"');
+                        chars.next(); // Consume the quote
+                    } else {
+                        // Regular backslash
+                        result.push('\\');
+                    }
+                } else {
+                    result.push('\\');
+                }
+            }
+            _ => {
+                result.push(c);
+            }
+        }
+    }
+
+    result
+}
+
 pub async fn fetch_content_from_ipfs(cid: &str) -> Result<Bytes> {
     let mut retries = IPFS_CLIENT_MAX_RETRY;
     let client = IpfsClient::from_str(IPFS_CLIENT_URL)?
@@ -64,7 +116,7 @@ pub async fn fetch_content_from_ipfs(cid: &str) -> Result<Bytes> {
             Ok(stream) => return Ok(Bytes::from(stream)),
             Err(e) => {
                 retries -= 1;
-                warn!(
+                debug!(
                     error = %e,
                     remaining_attempts = retries,
                     cid = cid,
@@ -165,6 +217,19 @@ mod tests {
     use chrono::{DateTime, NaiveDate, NaiveTime, Utc};
 
     use super::*;
+
+    #[test]
+    fn test_sanitize_json_string() {
+        let input = r#"{"name":""Rage Shout" DireWolf"}"#;
+        let expected = r#"{"name":"\"Rage Shout\" DireWolf"}"#;
+        let sanitized = sanitize_json_string(input);
+        assert_eq!(sanitized, expected);
+
+        let input_escaped = r#"{"name":"\"Properly Escaped\" Wolf"}"#;
+        let expected_escaped = r#"{"name":"\"Properly Escaped\" Wolf"}"#;
+        let sanitized_escaped = sanitize_json_string(input_escaped);
+        assert_eq!(sanitized_escaped, expected_escaped);
+    }
 
     #[test]
     fn test_must_utc_datetime_from_timestamp() {

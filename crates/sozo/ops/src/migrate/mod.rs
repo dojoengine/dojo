@@ -28,7 +28,9 @@ use dojo_world::config::{metadata_config, ProfileConfig, ResourceConfig, WorldMe
 use dojo_world::constants::WORLD;
 use dojo_world::contracts::abigen::world::ResourceMetadata;
 use dojo_world::contracts::WorldContract;
-use dojo_world::diff::{Manifest, ResourceDiff, WorldDiff, WorldStatus};
+use dojo_world::diff::{
+    ExternalContractClassDiff, ExternalContractDiff, Manifest, ResourceDiff, WorldDiff, WorldStatus,
+};
 use dojo_world::local::ResourceLocal;
 use dojo_world::metadata::MetadataStorage;
 use dojo_world::remote::ResourceRemote;
@@ -101,10 +103,13 @@ where
 
         let contracts_have_changed = self.initialize_contracts(ui).await?;
 
+        let external_contracts_have_changed = self.sync_external_contracts(ui).await?;
+
         Ok(MigrationResult {
             has_changes: world_has_changed
                 || resources_have_changed
                 || permissions_have_changed
+                || external_contracts_have_changed
                 || contracts_have_changed,
             manifest: Manifest::new(&self.diff),
         })
@@ -400,6 +405,65 @@ where
         Ok(has_changed)
     }
 
+    /// Declare classes.
+    async fn declare_classes(
+        &self,
+        ui: &mut MigrationUi,
+        classes: HashMap<Felt, LabeledClass>,
+    ) -> Result<(), MigrationError<A::SignError>> {
+        // Declaration can be slow, and can be speed up by using multiple accounts.
+        // Since migrator account from `self.world.account` is under the [`ConnectedAccount`] trait,
+        // we can group it with the predeployed accounts which are concrete types.
+        let accounts = self.get_accounts().await;
+        let n_classes = classes.len();
+
+        if accounts.is_empty() {
+            trace!("Declaring classes with migrator account.");
+            let mut declarer = Declarer::new(&self.world.account, self.txn_config);
+            declarer.extend_classes(classes.into_values().collect());
+
+            let ui_text = format!("Declaring {} classes...", n_classes);
+            ui.update_text_boxed(ui_text);
+
+            declarer.declare_all().await?;
+        } else {
+            trace!("Declaring classes with {} accounts.", accounts.len());
+            let mut declarers = vec![];
+            for account in accounts {
+                declarers.push(Declarer::new(account, self.txn_config));
+            }
+
+            for (idx, (_, labeled_class)) in classes.into_iter().enumerate() {
+                let declarer_idx = idx % declarers.len();
+                declarers[declarer_idx].add_class(labeled_class.clone());
+            }
+
+            let ui_text =
+                format!("Declaring {} classes with {} accounts...", n_classes, declarers.len());
+            ui.update_text_boxed(ui_text);
+
+            let declarers_futures =
+                futures::future::join_all(declarers.into_iter().map(|d| d.declare_all())).await;
+
+            for declarer_results in declarers_futures {
+                if let Err(e) = declarer_results {
+                    // The issue is that `e` is bound to concrete type `SingleOwnerAccount`.
+                    // Thus, we can't return `e` directly.
+                    // Might have a better solution by addind a new variant?
+                    if e.to_string().contains("Class already declared") {
+                        // If the class is already declared, it might be because it was already
+                        // declared in a previous run or an other declarer.
+                        continue;
+                    }
+
+                    return Err(MigrationError::DeclareClassError(e.to_string()));
+                }
+            }
+        }
+
+        Ok(())
+    }
+
     /// Syncs the resources by declaring the classes and registering/upgrading the resources.
     ///
     /// Returns true if at least one resource has changed, false otherwise.
@@ -475,55 +539,7 @@ where
         let has_calls = !invoker.calls.is_empty();
         let has_changed = has_classes || has_calls;
 
-        // Declaration can be slow, and can be speed up by using multiple accounts.
-        // Since migrator account from `self.world.account` is under the [`ConnectedAccount`] trait,
-        // we can group it with the predeployed accounts which are concrete types.
-        let accounts = self.get_accounts().await;
-        let n_classes = classes.len();
-
-        if accounts.is_empty() {
-            trace!("Declaring classes with migrator account.");
-            let mut declarer = Declarer::new(&self.world.account, self.txn_config);
-            declarer.extend_classes(classes.into_values().collect());
-
-            let ui_text = format!("Declaring {} classes...", n_classes);
-            ui.update_text_boxed(ui_text);
-
-            declarer.declare_all().await?;
-        } else {
-            trace!("Declaring classes with {} accounts.", accounts.len());
-            let mut declarers = vec![];
-            for account in accounts {
-                declarers.push(Declarer::new(account, self.txn_config));
-            }
-
-            for (idx, (_, labeled_class)) in classes.into_iter().enumerate() {
-                let declarer_idx = idx % declarers.len();
-                declarers[declarer_idx].add_class(labeled_class);
-            }
-
-            let ui_text =
-                format!("Declaring {} classes with {} accounts...", n_classes, declarers.len());
-            ui.update_text_boxed(ui_text);
-
-            let declarers_futures =
-                futures::future::join_all(declarers.into_iter().map(|d| d.declare_all())).await;
-
-            for declarer_results in declarers_futures {
-                if let Err(e) = declarer_results {
-                    // The issue is that `e` is bound to concrete type `SingleOwnerAccount`.
-                    // Thus, we can't return `e` directly.
-                    // Might have a better solution by addind a new variant?
-                    if e.to_string().contains("Class already declared") {
-                        // If the class is already declared, it might be because it was already
-                        // declared in a previous run or an other declarer.
-                        continue;
-                    }
-
-                    return Err(MigrationError::DeclareClassError(e.to_string()));
-                }
-            }
-        }
+        self.declare_classes(ui, classes).await?;
 
         if self.do_multicall() {
             let ui_text = format!("Registering {} resources...", n_resources);
@@ -532,6 +548,70 @@ where
             invoker.multicall().await?;
         } else {
             let ui_text = format!("Registering {} resources (sequentially)...", n_resources);
+            ui.update_text_boxed(ui_text);
+
+            invoker.invoke_all_sequentially().await?;
+        }
+
+        Ok(has_changed)
+    }
+
+    /// Syncs the external contracts by declaring their classes and deploying them with
+    /// configured constructor data.
+    ///
+    /// Returns true if at least one external contract has changed, false otherwise.
+    async fn sync_external_contracts(
+        &self,
+        ui: &mut MigrationUi,
+    ) -> Result<bool, MigrationError<A::SignError>> {
+        let ui_text =
+            format!("Syncing {} external contracts...", self.diff.external_contracts.len());
+        ui.update_text_boxed(ui_text);
+
+        let mut invoker = Invoker::new(&self.world.account, self.txn_config);
+
+        // declaring external contract classes
+        let classes: HashMap<_, _> = self
+            .diff
+            .external_contract_classes
+            .iter()
+            .filter_map(|(_, c)| self.external_contract_classes(c))
+            .collect();
+
+        let ui_text = format!("Declaring {} external contract classes...", classes.len());
+        ui.update_text_boxed(ui_text);
+
+        self.declare_classes(ui, classes).await?;
+
+        // then deploying new external contracts
+        let deployer = Deployer::new(&self.world.account, self.txn_config);
+
+        for contract in self.diff.external_contracts.values() {
+            if let ExternalContractDiff::Created(contract) = contract {
+                if let Some((_, call)) = deployer
+                    .deploy_via_udc_getcall(
+                        contract.class_hash,
+                        contract.salt,
+                        &contract.raw_constructor_data,
+                        Felt::ZERO,
+                    )
+                    .await?
+                {
+                    invoker.add_call(call);
+                }
+            }
+        }
+
+        let has_changed = !invoker.calls.is_empty();
+
+        if self.do_multicall() {
+            let ui_text = format!("Deploying {} external contracts...", invoker.calls.len());
+            ui.update_text_boxed(ui_text);
+
+            invoker.multicall().await?;
+        } else {
+            let ui_text =
+                format!("Deploying {} external contracts (sequentially)...", invoker.calls.len());
             ui.update_text_boxed(ui_text);
 
             invoker.invoke_all_sequentially().await?;
@@ -817,6 +897,27 @@ where
         }
 
         Ok((calls, classes))
+    }
+
+    /// Get the external contract class info to be declared.
+    ///
+    /// Returns a tuple with the CASM class hash and class info.
+    /// If the class is already declared, returns None.
+    fn external_contract_classes(
+        &self,
+        contract_class: &ExternalContractClassDiff,
+    ) -> Option<(Felt, LabeledClass)> {
+        match contract_class {
+            ExternalContractClassDiff::Created(c) => Some((
+                c.casm_class_hash,
+                LabeledClass {
+                    label: c.contract_name.clone(),
+                    casm_class_hash: c.casm_class_hash,
+                    class: c.class.clone().flatten().unwrap(),
+                },
+            )),
+            _ => None,
+        }
     }
 
     /// Ensures the world is declared and deployed if necessary.

@@ -1,22 +1,27 @@
 use std::sync::Arc;
 
-use gas_oracle::L1GasOracle;
+use anyhow::{anyhow, Context};
+use gas_oracle::GasOracle;
+use katana_chain_spec::ChainSpec;
 use katana_executor::{ExecutionOutput, ExecutionResult, ExecutorFactory};
 use katana_primitives::block::{
     BlockHash, BlockNumber, FinalityStatus, Header, PartialHeader, SealedBlock,
     SealedBlockWithStatus,
 };
-use katana_primitives::chain_spec::ChainSpec;
 use katana_primitives::da::L1DataAvailabilityMode;
 use katana_primitives::env::BlockEnv;
-use katana_primitives::receipt::{Event, ReceiptWithTxHash};
-use katana_primitives::state::{compute_state_diff_hash, StateUpdates};
+use katana_primitives::receipt::{Event, Receipt, ReceiptWithTxHash};
+use katana_primitives::state::{compute_state_diff_hash, StateUpdates, StateUpdatesWithClasses};
+use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::{TxHash, TxWithHash};
+use katana_primitives::version::CURRENT_STARKNET_VERSION;
 use katana_primitives::{address, ContractAddress, Felt};
+use katana_provider::providers::in_memory::state::EmptyStateProvider;
 use katana_provider::traits::block::{BlockHashProvider, BlockWriter};
 use katana_provider::traits::trie::TrieWriter;
 use katana_trie::compute_merkle_root;
 use parking_lot::RwLock;
+use rayon::prelude::*;
 use starknet::macros::short_string;
 use starknet_types_core::hash::{self, StarkHash};
 use tracing::info;
@@ -33,7 +38,7 @@ use crate::utils::get_current_timestamp;
 pub(crate) const LOG_TARGET: &str = "katana::core::backend";
 
 #[derive(Debug)]
-pub struct Backend<EF: ExecutorFactory> {
+pub struct Backend<EF> {
     pub chain_spec: Arc<ChainSpec>,
     /// stores all block related data in memory
     pub blockchain: Blockchain,
@@ -42,45 +47,73 @@ pub struct Backend<EF: ExecutorFactory> {
 
     pub executor_factory: Arc<EF>,
 
-    pub gas_oracle: L1GasOracle,
+    pub gas_oracle: GasOracle,
+}
+
+impl<EF> Backend<EF> {
+    pub fn new(
+        chain_spec: Arc<ChainSpec>,
+        blockchain: Blockchain,
+        gas_oracle: GasOracle,
+        executor_factory: EF,
+    ) -> Self {
+        Self {
+            blockchain,
+            chain_spec,
+            gas_oracle,
+            executor_factory: Arc::new(executor_factory),
+            block_context_generator: RwLock::new(BlockContextGenerator::default()),
+        }
+    }
 }
 
 impl<EF: ExecutorFactory> Backend<EF> {
+    pub fn init_genesis(&self) -> anyhow::Result<()> {
+        match self.chain_spec.as_ref() {
+            ChainSpec::Dev(cs) => self.init_dev_genesis(cs),
+            ChainSpec::Rollup(cs) => self.init_rollup_genesis(cs),
+        }
+    }
+
     // TODO: add test for this function
     pub fn do_mine_block(
         &self,
         block_env: &BlockEnv,
         mut execution_output: ExecutionOutput,
     ) -> Result<MinedBlockOutcome, BlockProductionError> {
-        // we optimistically allocate the maximum amount possible
-        let mut txs = Vec::with_capacity(execution_output.transactions.len());
         let mut traces = Vec::with_capacity(execution_output.transactions.len());
         let mut receipts = Vec::with_capacity(execution_output.transactions.len());
+        let mut transactions = Vec::with_capacity(execution_output.transactions.len());
 
         // only include successful transactions in the block
         for (tx, res) in execution_output.transactions {
             if let ExecutionResult::Success { receipt, trace, .. } = res {
                 receipts.push(ReceiptWithTxHash::new(tx.hash, receipt));
+                transactions.push(tx);
                 traces.push(trace);
-                txs.push(tx);
             }
         }
 
-        let tx_count = txs.len() as u32;
-        let tx_hashes = txs.iter().map(|tx| tx.hash).collect::<Vec<TxHash>>();
-
-        // Update special contract address 0x1
-        self.update_block_hash_registry_contract(
-            &mut execution_output.states.state_updates,
-            block_env.number,
-        )?;
+        let tx_count = transactions.len();
+        let tx_hashes = transactions.iter().map(|tx| tx.hash).collect::<Vec<_>>();
 
         // create a new block and compute its commitment
+        let partial_header = PartialHeader {
+            number: block_env.number,
+            timestamp: block_env.timestamp,
+            protocol_version: CURRENT_STARKNET_VERSION,
+            l1_da_mode: L1DataAvailabilityMode::Calldata,
+            sequencer_address: block_env.sequencer_address,
+            l1_gas_prices: block_env.l1_gas_prices.clone(),
+            parent_hash: self.blockchain.provider().latest_hash()?,
+            l1_data_gas_prices: block_env.l1_data_gas_prices.clone(),
+        };
+
         let block = self.commit_block(
-            block_env.clone(),
-            execution_output.states.state_updates.clone(),
-            txs,
+            partial_header,
+            transactions,
             &receipts,
+            &mut execution_output.states.state_updates,
         )?;
 
         let block = SealedBlockWithStatus { block, status: FinalityStatus::AcceptedOnL2 };
@@ -89,15 +122,23 @@ impl<EF: ExecutorFactory> Backend<EF> {
         // TODO: maybe should change the arguments for insert_block_with_states_and_receipts to
         // accept ReceiptWithTxHash instead to avoid this conversion.
         let receipts = receipts.into_iter().map(|r| r.receipt).collect::<Vec<_>>();
-        self.blockchain.provider().insert_block_with_states_and_receipts(
-            block,
-            execution_output.states,
-            receipts,
-            traces,
-        )?;
+        self.store_block(block, execution_output.states, receipts, traces)?;
 
         info!(target: LOG_TARGET, %block_number, %tx_count, "Block mined.");
         Ok(MinedBlockOutcome { block_number, txs: tx_hashes, stats: execution_output.stats })
+    }
+
+    fn store_block(
+        &self,
+        block: SealedBlockWithStatus,
+        states: StateUpdatesWithClasses,
+        receipts: Vec<Receipt>,
+        traces: Vec<TxExecInfo>,
+    ) -> Result<(), BlockProductionError> {
+        self.blockchain
+            .provider()
+            .insert_block_with_states_and_receipts(block, states, receipts, traces)?;
+        Ok(())
     }
 
     // TODO: create a dedicated struct for this contract.
@@ -164,32 +205,135 @@ impl<EF: ExecutorFactory> Backend<EF> {
 
     fn commit_block(
         &self,
-        block_env: BlockEnv,
-        state_updates: StateUpdates,
+        header: PartialHeader,
         transactions: Vec<TxWithHash>,
         receipts: &[ReceiptWithTxHash],
+        state_updates: &mut StateUpdates,
     ) -> Result<SealedBlock, BlockProductionError> {
-        let parent_hash = self.blockchain.provider().latest_hash()?;
-        let partial_header = PartialHeader {
-            parent_hash,
-            number: block_env.number,
-            timestamp: block_env.timestamp,
-            protocol_version: self.chain_spec.version.clone(),
-            sequencer_address: block_env.sequencer_address,
-            l1_gas_prices: block_env.l1_gas_prices,
-            l1_data_gas_prices: block_env.l1_data_gas_prices,
-            l1_da_mode: L1DataAvailabilityMode::Calldata,
-        };
+        // Update special contract address 0x1
+        self.update_block_hash_registry_contract(state_updates, header.number)?;
 
         let block = UncommittedBlock::new(
-            partial_header,
+            header,
             transactions,
             receipts,
-            &state_updates,
+            state_updates,
             &self.blockchain.provider(),
         )
         .commit();
+
         Ok(block)
+    }
+
+    fn init_dev_genesis(
+        &self,
+        chain_spec: &katana_chain_spec::dev::ChainSpec,
+    ) -> anyhow::Result<()> {
+        let provider = self.blockchain.provider();
+
+        // check whether the genesis block has been initialized
+        let local_hash = provider.block_hash_by_num(chain_spec.genesis.number)?;
+
+        if let Some(local_hash) = local_hash {
+            let genesis_hash = chain_spec.block().header.compute_hash();
+            // check genesis should be the same
+            if local_hash != genesis_hash {
+                return Err(anyhow!(
+                    "Genesis block hash mismatch: expected {genesis_hash:#x}, got {local_hash:#x}",
+                ));
+            }
+
+            info!("Genesis has already been initialized");
+        } else {
+            // Initialize the dev genesis block
+
+            let block = chain_spec.block().seal();
+            let block = SealedBlockWithStatus { block, status: FinalityStatus::AcceptedOnL1 };
+            let states = chain_spec.state_updates();
+
+            let mut block = block;
+            let block_number = block.block.header.number;
+
+            let class_trie_root = provider
+                .trie_insert_declared_classes(block_number, &states.state_updates.declared_classes)
+                .context("failed to update class trie")?;
+
+            let contract_trie_root = provider
+                .trie_insert_contract_updates(block_number, &states.state_updates)
+                .context("failed to update contract trie")?;
+
+            let genesis_state_root = hash::Poseidon::hash_array(&[
+                short_string!("STARKNET_STATE_V0"),
+                contract_trie_root,
+                class_trie_root,
+            ]);
+
+            block.block.header.state_root = genesis_state_root;
+            provider.insert_block_with_states_and_receipts(block, states, vec![], vec![])?;
+
+            info!("Genesis initialized");
+        }
+
+        Ok(())
+    }
+
+    fn init_rollup_genesis(
+        &self,
+        chain_spec: &katana_chain_spec::rollup::ChainSpec,
+    ) -> anyhow::Result<()> {
+        let provider = self.blockchain.provider();
+
+        let block = chain_spec.block();
+        let header = block.header.clone();
+
+        let mut executor = self.executor_factory.with_state(EmptyStateProvider);
+        executor.execute_block(block).context("failed to execute genesis block")?;
+
+        let mut output =
+            executor.take_execution_output().context("failed to get execution output")?;
+
+        let mut traces = Vec::with_capacity(output.transactions.len());
+        let mut receipts = Vec::with_capacity(output.transactions.len());
+        let mut transactions = Vec::with_capacity(output.transactions.len());
+
+        // only include successful transactions in the block
+        for (tx, res) in output.transactions {
+            if let ExecutionResult::Success { receipt, trace, .. } = res {
+                receipts.push(ReceiptWithTxHash::new(tx.hash, receipt));
+                transactions.push(tx);
+                traces.push(trace);
+            }
+        }
+
+        let block =
+            self.commit_block(header, transactions, &receipts, &mut output.states.state_updates)?;
+
+        // Check whether the genesis block has been initialized or not.
+        let local_hash = provider.block_hash_by_num(block.header.number)?;
+
+        if let Some(local_hash) = local_hash {
+            let expected_genesis_hash = block.hash;
+
+            if expected_genesis_hash != local_hash {
+                return Err(anyhow!(
+                    "Genesis block hash mismatch: expected {expected_genesis_hash:#x}, got \
+                     {local_hash:#x}",
+                ));
+            }
+
+            info!("Genesis has already been initialized");
+        } else {
+            let block = SealedBlockWithStatus { block, status: FinalityStatus::AcceptedOnL2 };
+
+            // TODO: maybe should change the arguments for insert_block_with_states_and_receipts to
+            // accept ReceiptWithTxHash instead to avoid this conversion.
+            let receipts = receipts.into_iter().map(|r| r.receipt).collect::<Vec<_>>();
+            self.store_block(block, output.states, receipts, traces)?;
+
+            info!("Genesis initialized");
+        }
+
+        Ok(())
     }
 }
 
@@ -220,11 +364,57 @@ impl<'a, P: TrieWriter> UncommittedBlock<'a, P> {
         let transaction_count = self.transactions.len() as u32;
         let state_diff_length = self.state_updates.len() as u32;
 
+        // optimisation 1
         let state_root = self.compute_new_state_root();
         let transactions_commitment = self.compute_transaction_commitment();
         let events_commitment = self.compute_event_commitment();
         let receipts_commitment = self.compute_receipt_commitment();
         let state_diff_commitment = self.compute_state_diff_commitment();
+
+        let header = Header {
+            state_root,
+            parent_hash,
+            events_count,
+            state_diff_length,
+            transaction_count,
+            events_commitment,
+            receipts_commitment,
+            state_diff_commitment,
+            transactions_commitment,
+            number: self.header.number,
+            timestamp: self.header.timestamp,
+            l1_da_mode: self.header.l1_da_mode,
+            l1_gas_prices: self.header.l1_gas_prices,
+            l1_data_gas_prices: self.header.l1_data_gas_prices,
+            sequencer_address: self.header.sequencer_address,
+            protocol_version: self.header.protocol_version,
+        };
+
+        let hash = header.compute_hash();
+
+        SealedBlock { hash, header, body: self.transactions }
+    }
+
+    pub fn commit_parallel(self) -> SealedBlock {
+        // get the hash of the latest committed block
+        let parent_hash = self.header.parent_hash;
+        let events_count = self.receipts.iter().map(|r| r.events().len() as u32).sum::<u32>();
+        let transaction_count = self.transactions.len() as u32;
+        let state_diff_length = self.state_updates.len() as u32;
+
+        let mut state_root = Felt::default();
+        let mut transactions_commitment = Felt::default();
+        let mut events_commitment = Felt::default();
+        let mut receipts_commitment = Felt::default();
+        let mut state_diff_commitment = Felt::default();
+
+        rayon::scope(|s| {
+            s.spawn(|_| state_root = self.compute_new_state_root());
+            s.spawn(|_| transactions_commitment = self.compute_transaction_commitment());
+            s.spawn(|_| events_commitment = self.compute_event_commitment_parallel());
+            s.spawn(|_| receipts_commitment = self.compute_receipt_commitment_parallel());
+            s.spawn(|_| state_diff_commitment = self.compute_state_diff_commitment());
+        });
 
         let header = Header {
             state_root,
@@ -260,6 +450,12 @@ impl<'a, P: TrieWriter> UncommittedBlock<'a, P> {
         compute_merkle_root::<hash::Poseidon>(&receipt_hashes).unwrap()
     }
 
+    fn compute_receipt_commitment_parallel(&self) -> Felt {
+        let receipt_hashes =
+            self.receipts.par_iter().map(|r| r.compute_hash()).collect::<Vec<Felt>>();
+        compute_merkle_root::<hash::Poseidon>(&receipt_hashes).unwrap()
+    }
+
     fn compute_state_diff_commitment(&self) -> Felt {
         compute_state_diff_hash(self.state_updates.clone())
     }
@@ -275,12 +471,32 @@ impl<'a, P: TrieWriter> UncommittedBlock<'a, P> {
         // the iterator will yield all events from all the receipts, each one paired with the
         // transaction hash that emitted it: (tx hash, event).
         let events = self.receipts.iter().flat_map(|r| r.events().iter().map(|e| (r.tx_hash, e)));
-
         let mut hashes = Vec::new();
         for (tx, event) in events {
             let event_hash = event_hash(tx, event);
             hashes.push(event_hash);
         }
+
+        // compute events commitment
+        compute_merkle_root::<hash::Poseidon>(&hashes).unwrap()
+    }
+
+    fn compute_event_commitment_parallel(&self) -> Felt {
+        // h(emitter_address, tx_hash, h(keys), h(data))
+        fn event_hash(tx: TxHash, event: &Event) -> Felt {
+            let keys_hash = hash::Poseidon::hash_array(&event.keys);
+            let data_hash = hash::Poseidon::hash_array(&event.data);
+            hash::Poseidon::hash_array(&[tx, event.from_address.into(), keys_hash, data_hash])
+        }
+
+        // the iterator will yield all events from all the receipts, each one paired with the
+        // transaction hash that emitted it: (tx hash, event).
+        let events = self.receipts.iter().flat_map(|r| r.events().iter().map(|e| (r.tx_hash, e)));
+        let hashes = events
+            .par_bridge()
+            .into_par_iter()
+            .map(|(tx, event)| event_hash(tx, event))
+            .collect::<Vec<_>>();
 
         // compute events commitment
         compute_merkle_root::<hash::Poseidon>(&hashes).unwrap()

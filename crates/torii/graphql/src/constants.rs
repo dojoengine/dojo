@@ -9,6 +9,7 @@ pub const EVENT_MESSAGE_TABLE: &str = "event_messages";
 pub const MODEL_TABLE: &str = "models";
 pub const TRANSACTION_TABLE: &str = "transactions";
 pub const METADATA_TABLE: &str = "metadata";
+pub const CONTROLLER_TABLE: &str = "controllers";
 
 pub const ID_COLUMN: &str = "id";
 pub const EVENT_ID_COLUMN: &str = "event_id";
@@ -35,7 +36,7 @@ pub const MODEL_ORDER_TYPE_NAME: &str = "World__ModelOrder";
 pub const MODEL_ORDER_FIELD_TYPE_NAME: &str = "World__ModelOrderField";
 pub const TOKEN_BALANCE_TYPE_NAME: &str = "Token__Balance";
 pub const TOKEN_TRANSFER_TYPE_NAME: &str = "Token__Transfer";
-pub const TOKEN_TYPE_NAME: &str = "ERC__Token";
+pub const TOKEN_UNION_TYPE_NAME: &str = "ERC__Token";
 // pub const ERC721_METADATA_TYPE_NAME: &str = "ERC721__Metadata";
 
 pub const ERC20_TYPE_NAME: &str = "ERC20__Token";
@@ -64,3 +65,7 @@ pub const TOKEN_TRANSFER_NAME: (&str, &str) = ("", "tokenTransfers");
 pub const ORDER_DIR_TYPE_NAME: &str = "OrderDirection";
 pub const ORDER_ASC: &str = "ASC";
 pub const ORDER_DESC: &str = "DESC";
+pub const EMPTY_TYPE_NAME: &str = "World__Empty";
+pub const EMPTY_NAMES: (&str, &str) = ("empty", "");
+pub const CONTROLLER_TYPE_NAME: &str = "World__Controller";
+pub const CONTROLLER_NAMES: (&str, &str) = ("controller", "controllers");

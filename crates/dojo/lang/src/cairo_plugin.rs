@@ -13,7 +13,7 @@ use super::attribute_macros::{
     DOJO_MODEL_ATTR,
 };
 use super::derive_macros::{dojo_derive_all, DOJO_INTROSPECT_DERIVE, DOJO_PACKED_DERIVE};
-use super::inline_macros::SelectorFromTagMacro;
+use super::inline_macros::{BytearrayHashMacro, SelectorFromTagMacro};
 use crate::attribute_macros::DojoLibrary;
 
 // #[cfg(test)]
@@ -27,7 +27,10 @@ pub struct BuiltinDojoPlugin;
 pub fn dojo_plugin_suite() -> PluginSuite {
     let mut suite = PluginSuite::default();
 
-    suite.add_plugin::<BuiltinDojoPlugin>().add_inline_macro_plugin::<SelectorFromTagMacro>();
+    suite
+        .add_plugin::<BuiltinDojoPlugin>()
+        .add_inline_macro_plugin::<SelectorFromTagMacro>()
+        .add_inline_macro_plugin::<BytearrayHashMacro>();
 
     suite
 }

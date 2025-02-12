@@ -6,7 +6,7 @@ use crate::world::{spawn_test_world, NamespaceDef, TestResource};
 
 /// This file contains some partial event contracts written without the dojo::event
 /// attribute, to avoid having several contracts with a same name/classhash,
-/// as the test runner does not differenciate them.
+/// as the test runner does not differentiate them.
 /// These event contracts are used to test event upgrades in tests/event.cairo.
 
 // This event is used as a base to create the "previous" version of an event to be upgraded.
@@ -63,6 +63,34 @@ struct FooEventMemberAdded {
     pub b: u128,
 }
 
+#[derive(Introspect, Copy, Drop, Serde)]
+enum MyEnum {
+    X: u8,
+}
+
+#[derive(Introspect, Copy, Drop, Serde)]
+#[dojo::event]
+struct FooEventMemberChanged {
+    #[key]
+    pub caller: ContractAddress,
+    pub a: (MyEnum, u8),
+    pub b: u128,
+}
+
+#[derive(Introspect, Copy, Drop, Serde)]
+enum AnotherEnum {
+    X: u8,
+}
+
+#[derive(Introspect, Copy, Drop, Serde)]
+#[dojo::event]
+struct FooEventMemberIllegalChange {
+    #[key]
+    pub caller: ContractAddress,
+    pub a: AnotherEnum,
+    pub b: u128,
+}
+
 pub fn deploy_world_for_event_upgrades() -> IWorldDispatcher {
     let namespace_def = NamespaceDef {
         namespace: "dojo",
@@ -74,6 +102,8 @@ pub fn deploy_world_for_event_upgrades() -> IWorldDispatcher {
             ),
             TestResource::Event(e_FooEventMemberAddedButMoved::TEST_CLASS_HASH.try_into().unwrap()),
             TestResource::Event(e_FooEventMemberAdded::TEST_CLASS_HASH.try_into().unwrap()),
+            TestResource::Event(e_FooEventMemberChanged::TEST_CLASS_HASH.try_into().unwrap()),
+            TestResource::Event(e_FooEventMemberIllegalChange::TEST_CLASS_HASH.try_into().unwrap()),
         ]
             .span(),
     };

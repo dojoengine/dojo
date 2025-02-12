@@ -170,6 +170,25 @@ pub struct IndexingOptions {
     )]
     #[serde(default)]
     pub world_block: u64,
+
+    /// Whether or not to index Cartridge controllers.
+    #[arg(
+        long = "indexing.controllers",
+        default_value_t = false,
+        help = "Whether or not to index Cartridge controllers."
+    )]
+    #[serde(default)]
+    pub controllers: bool,
+
+    /// Whether or not to read models from the block number they were registered in.
+    /// If false, models will be read from the latest block.
+    #[arg(
+        long = "indexing.strict_model_reader",
+        default_value_t = false,
+        help = "Whether or not to read models from the block number they were registered in."
+    )]
+    #[serde(default)]
+    pub strict_model_reader: bool,
 }
 
 impl Default for IndexingOptions {
@@ -184,6 +203,8 @@ impl Default for IndexingOptions {
             max_concurrent_tasks: DEFAULT_MAX_CONCURRENT_TASKS,
             namespaces: vec![],
             world_block: 0,
+            controllers: false,
+            strict_model_reader: false,
         }
     }
 }
@@ -225,6 +246,14 @@ impl IndexingOptions {
 
             if self.world_block == 0 {
                 self.world_block = other.world_block;
+            }
+
+            if !self.controllers {
+                self.controllers = other.controllers;
+            }
+
+            if !self.strict_model_reader {
+                self.strict_model_reader = other.strict_model_reader;
             }
         }
     }

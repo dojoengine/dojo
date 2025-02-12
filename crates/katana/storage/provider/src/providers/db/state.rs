@@ -118,10 +118,6 @@ where
         Ok(self.0.get::<tables::Classes>(hash)?)
     }
 
-    fn compiled_class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledClass>> {
-        Ok(self.0.get::<tables::CompiledClasses>(hash)?)
-    }
-
     fn compiled_class_hash_of_class_hash(
         &self,
         hash: ClassHash,
@@ -241,14 +237,6 @@ where
     fn class(&self, hash: ClassHash) -> ProviderResult<Option<ContractClass>> {
         if self.is_class_declared_before_block(hash)? {
             Ok(self.tx.get::<tables::Classes>(hash)?)
-        } else {
-            Ok(None)
-        }
-    }
-
-    fn compiled_class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledClass>> {
-        if self.is_class_declared_before_block(hash)? {
-            Ok(self.tx.get::<tables::CompiledClasses>(hash)?)
         } else {
             Ok(None)
         }

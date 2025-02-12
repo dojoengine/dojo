@@ -29,6 +29,10 @@ pub struct WorldRemote {
     pub class_hashes: Vec<Felt>,
     /// The resources of the world, by dojo selector.
     pub resources: HashMap<DojoSelector, ResourceRemote>,
+    /// The deployed external contracts.
+    pub deployed_external_contracts: Vec<String>,
+    /// The declared external contract classes.
+    pub declared_external_contract_classes: Vec<String>,
     /// Writers to resources that are not managed by the local project.
     pub external_writers: HashMap<DojoSelector, HashSet<ContractAddress>>,
     /// Owners of resources that are not managed by the local project.

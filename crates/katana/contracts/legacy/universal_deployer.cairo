@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts for Cairo v0.6.1 (utils/presets/UniversalDeployer.cairo)
+// OpenZeppelin Contracts for Cairo v0.5.1 (utils/presets/UniversalDeployer.cairo)
 
 %lang starknet
 
@@ -16,13 +16,21 @@ func ContractDeployed(
     classHash: felt,
     calldata_len: felt,
     calldata: felt*,
-    salt: felt,
+    salt: felt
 ) {
 }
 
 @external
-func deployContract{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
-    classHash: felt, salt: felt, unique: felt, calldata_len: felt, calldata: felt*
+func deployContract{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+}(
+    classHash: felt,
+    salt: felt,
+    unique: felt,
+    calldata_len: felt,
+    calldata: felt*
 ) -> (address: felt) {
     alloc_locals;
     let (deployer) = get_caller_address();
@@ -57,7 +65,7 @@ func deployContract{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_
         classHash=classHash,
         calldata_len=calldata_len,
         calldata=calldata,
-        salt=salt,
+        salt=salt
     );
 
     return (address=address);

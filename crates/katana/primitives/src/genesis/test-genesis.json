@@ -13,7 +13,7 @@
       "publicKey": "0x1",
       "balance": "0xD3C21BCECCEDA1000000",
       "nonce": "0x1",
-      "class": "0x80085",
+      "class": "Foo",
       "storage": {
         "0x1": "0x1",
         "0x2": "0x2"
@@ -46,7 +46,7 @@
       "balance": "0xD3C21BCECCEDA1000000"
     },
     "0x05400e90f7e0ae78bd02c77cd75527280470e2fe19c54970dd79dc37a9d3645c": {
-      "class": "0x80085",
+      "class": "Foo",
       "storage": {
         "0x1": "0x1"
       }
@@ -55,12 +55,11 @@
   "classes": [
     {
       "class": "../../../contracts/build/erc20.json",
-      "classHash": "0x8",
       "name": "MyErc20"
     },
     {
       "class": "../../../contracts/build/universal_deployer.json",
-      "classHash": "0x80085"
+      "name": "Foo"
     },
     {
       "class": "../../../contracts/build/default_account.json",

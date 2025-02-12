@@ -88,19 +88,10 @@ where
         account: &A,
         txn_config: &TxnConfig,
     ) -> Result<TransactionResult, TransactionError<A::SignError>> {
-        let class_hash = &labeled_class.class.class_hash();
+        let class_hash = labeled_class.class.class_hash();
 
-        match account.provider().get_class(BlockId::Tag(BlockTag::Pending), class_hash).await {
-            Err(ProviderError::StarknetError(StarknetError::ClassHashNotFound)) => {}
-            Ok(_) => {
-                trace!(
-                    label = labeled_class.label,
-                    class_hash = format!("{:#066x}", class_hash),
-                    "Class already declared."
-                );
-                return Ok(TransactionResult::Noop);
-            }
-            Err(e) => return Err(TransactionError::Provider(e)),
+        if is_declared(&labeled_class.label, class_hash, account.provider()).await? {
+            return Ok(TransactionResult::Noop);
         }
 
         let casm_class_hash = labeled_class.casm_class_hash;
@@ -145,5 +136,28 @@ where
         }
 
         Ok(TransactionResult::Hash(transaction_hash))
+    }
+}
+
+/// Check if the provided class is already declared.
+pub async fn is_declared<P>(
+    class_name: &String,
+    class_hash: Felt,
+    provider: &P,
+) -> Result<bool, ProviderError>
+where
+    P: Provider,
+{
+    match provider.get_class(BlockId::Tag(BlockTag::Pending), class_hash).await {
+        Err(ProviderError::StarknetError(StarknetError::ClassHashNotFound)) => Ok(false),
+        Ok(_) => {
+            trace!(
+                label = class_name,
+                class_hash = format!("{:#066x}", class_hash),
+                "Class already declared."
+            );
+            Ok(true)
+        }
+        Err(e) => Err(e),
     }
 }

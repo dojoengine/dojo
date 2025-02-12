@@ -1,3 +1,14 @@
+//! **********************************************************************************************
+//!
+//!     "We are all in the gutter, but some of us are looking at the stars."
+//!                                                       — Oscar Wilde, Lady Windermere's Fan
+//!
+//!     Within this imperfect realm lies a spark of aspiration. What you find may be tangled
+//!     and weathered, but in its heart beats the rhythm of possibility. Tread gently, dear
+//!     wanderer, and perhaps together we can guide it toward those distant stars.
+//!
+//! **********************************************************************************************
+
 use std::collections::VecDeque;
 use std::future::Future;
 use std::pin::Pin;
@@ -15,6 +26,7 @@ use katana_primitives::da::L1DataAvailabilityMode;
 use katana_primitives::receipt::Receipt;
 use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::{ExecutableTxWithHash, TxHash, TxWithHash};
+use katana_primitives::version::CURRENT_STARKNET_VERSION;
 use katana_provider::error::ProviderError;
 use katana_provider::traits::block::{BlockHashProvider, BlockNumberProvider};
 use katana_provider::traits::env::BlockEnvProvider;
@@ -26,6 +38,10 @@ use tokio::time::{interval_at, Instant, Interval};
 use tracing::{error, info, trace, warn};
 
 use crate::backend::Backend;
+
+#[cfg(test)]
+#[path = "block_producer_tests.rs"]
+mod tests;
 
 pub(crate) const LOG_TARGET: &str = "miner";
 
@@ -39,6 +55,16 @@ pub enum BlockProductionError {
 
     #[error("transaction execution error: {0}")]
     TransactionExecutionError(#[from] katana_executor::ExecutorError),
+}
+
+impl BlockProductionError {
+    /// Returns `true` if the error is caused by block limit being exhausted.
+    pub fn is_block_limit_exhausted(&self) -> bool {
+        matches!(
+            self,
+            Self::TransactionExecutionError(katana_executor::ExecutorError::LimitsExhausted)
+        )
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -60,7 +86,8 @@ type ServiceFuture<T> = Pin<Box<dyn Future<Output = BlockingTaskResult<T>> + Sen
 type BlockProductionResult = Result<MinedBlockOutcome, BlockProductionError>;
 type BlockProductionFuture = ServiceFuture<Result<MinedBlockOutcome, BlockProductionError>>;
 
-type TxExecutionResult = Result<Vec<TxWithOutcome>, BlockProductionError>;
+type TxExecutionResult =
+    Result<(Vec<TxWithOutcome>, Option<Vec<ExecutableTxWithHash>>), BlockProductionError>;
 type TxExecutionFuture = ServiceFuture<TxExecutionResult>;
 
 type BlockProductionWithTxnsFuture =
@@ -180,8 +207,12 @@ impl PendingExecutor {
 
 #[allow(missing_debug_implementations)]
 pub struct IntervalBlockProducer<EF: ExecutorFactory> {
-    /// The interval at which new blocks are mined.
-    interval: Option<Interval>,
+    /// How long until the block is closed.
+    ///
+    /// In this mining mode, a new block is only opened upon receiving a new transaction. The block
+    /// is closed after the interval is over. The interval is reset after every block.
+    block_time: Option<u64>,
+
     backend: Arc<Backend<EF>>,
     /// Single active future that mines a new block
     ongoing_mining: Option<BlockProductionFuture>,
@@ -193,23 +224,23 @@ pub struct IntervalBlockProducer<EF: ExecutorFactory> {
     /// Listeners notified when a new executed tx is added.
     tx_execution_listeners: RwLock<Vec<Sender<Vec<TxWithOutcome>>>>,
 
+    // Usage with `validator`
     permit: Arc<Mutex<()>>,
-
     /// validator used in the tx pool
     // the validator needs to always be built against the state of the block producer, so
     // im putting here for now until we find a better way to handle this.
     validator: TxValidator,
+
+    /// The timer should only be `Some` if:
+    /// - `block_time` is `Some`,
+    /// - and, at least one transaction has been executed and thus a new block is opened.
+    timer: Option<Interval>,
+
+    is_block_full: bool,
 }
 
 impl<EF: ExecutorFactory> IntervalBlockProducer<EF> {
-    pub fn new(backend: Arc<Backend<EF>>, interval: Option<u64>) -> Self {
-        let interval = interval.map(|time| {
-            let duration = Duration::from_millis(time);
-            let mut interval = interval_at(Instant::now() + duration, duration);
-            interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
-            interval
-        });
-
+    pub fn new(backend: Arc<Backend<EF>>, block_time: Option<u64>) -> Self {
         let provider = backend.blockchain.provider();
 
         let latest_num = provider.latest_number().unwrap();
@@ -229,10 +260,12 @@ impl<EF: ExecutorFactory> IntervalBlockProducer<EF> {
             TxValidator::new(state, flags.clone(), cfg.clone(), block_env, permit.clone());
 
         Self {
+            is_block_full: false,
             validator,
             permit,
             backend,
-            interval,
+            block_time,
+            timer: None,
             ongoing_mining: None,
             ongoing_execution: None,
             queued: VecDeque::default(),
@@ -301,12 +334,11 @@ impl<EF: ExecutorFactory> IntervalBlockProducer<EF> {
 
     fn execute_transactions(
         executor: PendingExecutor,
-        transactions: Vec<ExecutableTxWithHash>,
+        mut transactions: Vec<ExecutableTxWithHash>,
     ) -> TxExecutionResult {
         let executor = &mut executor.write();
 
-        let new_txs_count = transactions.len();
-        executor.execute_transactions(transactions)?;
+        let (total_executed, is_full) = executor.execute_transactions(transactions.clone())?;
 
         let txs = executor.transactions();
         let total_txs = txs.len();
@@ -314,7 +346,7 @@ impl<EF: ExecutorFactory> IntervalBlockProducer<EF> {
         // Take only the results of the newly executed transactions
         let results = txs
             .iter()
-            .skip(total_txs - new_txs_count)
+            .skip(total_txs.saturating_sub(total_executed))
             .filter_map(|(tx, res)| match res {
                 ExecutionResult::Failed { .. } => None,
                 ExecutionResult::Success { receipt, trace, .. } => Some(TxWithOutcome {
@@ -325,7 +357,10 @@ impl<EF: ExecutorFactory> IntervalBlockProducer<EF> {
             })
             .collect::<Vec<TxWithOutcome>>();
 
-        Ok(results)
+        let non_executed_txs =
+            if is_full.is_some() { Some(transactions.split_off(total_executed)) } else { None };
+
+        Ok((results, non_executed_txs))
     }
 
     fn create_new_executor_for_next_block(&self) -> Result<PendingExecutor, BlockProductionError> {
@@ -383,9 +418,19 @@ impl<EF: ExecutorFactory> Stream for IntervalBlockProducer<EF> {
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let pin = self.get_mut();
 
-        if let Some(interval) = &mut pin.interval {
-            // mine block if the interval is over
-            if interval.poll_tick(cx).is_ready() && pin.ongoing_mining.is_none() {
+        if let Some(mut timer) = pin.timer.take() {
+            // Mine block if the interval is over
+            //
+            // if block is already full but the timer hasn't ready yet, we will still mine but we
+            // don't have to do anything to the timer as it will be dropped and reset once new
+            // transaction is executed.
+            if (timer.poll_tick(cx).is_ready() || pin.is_block_full) && pin.ongoing_mining.is_none()
+            {
+                if pin.is_block_full {
+                    info!("Block has reached capacity! Closing block...");
+                    pin.is_block_full = false;
+                }
+
                 pin.ongoing_mining = Some(Box::pin({
                     let executor = pin.executor.clone();
                     let backend = pin.backend.clone();
@@ -393,7 +438,22 @@ impl<EF: ExecutorFactory> Stream for IntervalBlockProducer<EF> {
 
                     pin.blocking_task_spawner.spawn(|| Self::do_mine(permit, executor, backend))
                 }));
+            } else {
+                pin.timer = Some(timer);
             }
+        } else if pin.is_block_full && pin.ongoing_mining.is_none() {
+            info!("Block has reached capacity! Closing block...");
+
+            pin.ongoing_mining = Some(Box::pin({
+                let executor = pin.executor.clone();
+                let backend = pin.backend.clone();
+                let permit = pin.permit.clone();
+
+                pin.blocking_task_spawner.spawn(|| Self::do_mine(permit, executor, backend))
+            }));
+
+            pin.is_block_full = false;
+            pin.timer = None;
         }
 
         loop {
@@ -411,13 +471,34 @@ impl<EF: ExecutorFactory> Stream for IntervalBlockProducer<EF> {
                     .spawn(|| Self::execute_transactions(executor, transactions));
 
                 pin.ongoing_execution = Some(Box::pin(fut));
+
+                if pin.timer.is_none() {
+                    // Start the interval timer if it's not already started
+                    pin.timer = pin.block_time.map(|time| {
+                        let duration = Duration::from_millis(time);
+                        let mut interval = interval_at(Instant::now() + duration, duration);
+                        interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+                        interval
+                    });
+                }
             }
 
             // poll the ongoing execution if any
             if let Some(mut execution) = pin.ongoing_execution.take() {
                 if let Poll::Ready(executor) = execution.poll_unpin(cx) {
                     match executor {
-                        Ok(Ok(txs)) => {
+                        Ok(Ok((txs, leftovers))) => {
+                            if let Some(leftovers) = leftovers {
+                                pin.is_block_full = true;
+
+                                // Push leftover transactions back to front of queue
+                                pin.queued.push_front(leftovers);
+
+                                // Schedule future poll if block is full
+                                cx.waker().wake_by_ref();
+                                break;
+                            }
+
                             pin.notify_listener(txs);
                             continue;
                         }
@@ -464,6 +545,8 @@ impl<EF: ExecutorFactory> Stream for IntervalBlockProducer<EF> {
 
                             Err(e) => return Poll::Ready(Some(Err(e))),
                         }
+
+                        pin.is_block_full = false;
 
                         return Poll::Ready(Some(outcome));
                     }
@@ -578,7 +661,7 @@ impl<EF: ExecutorFactory> InstantBlockProducer<EF> {
                 parent_hash,
                 number: block_env.number,
                 timestamp: block_env.timestamp,
-                protocol_version: backend.chain_spec.version.clone(),
+                protocol_version: CURRENT_STARKNET_VERSION,
                 sequencer_address: block_env.sequencer_address,
                 l1_da_mode: L1DataAvailabilityMode::Calldata,
                 l1_gas_prices: block_env.l1_gas_prices.clone(),

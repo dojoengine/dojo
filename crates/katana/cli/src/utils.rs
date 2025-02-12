@@ -1,12 +1,14 @@
 use std::fmt::Display;
 use std::path::PathBuf;
 
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use clap::builder::PossibleValue;
 use clap::ValueEnum;
 use console::Style;
+use katana_chain_spec::rollup::ChainConfigDir;
+use katana_chain_spec::ChainSpec;
 use katana_primitives::block::{BlockHash, BlockHashOrNumber, BlockNumber};
-use katana_primitives::chain_spec::ChainSpec;
+use katana_primitives::chain::ChainId;
 use katana_primitives::class::ClassHash;
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::genesis::allocation::GenesisAccountAlloc;
@@ -81,7 +83,7 @@ impl Display for LogFormat {
 }
 
 pub fn print_intro(args: &NodeArgs, chain: &ChainSpec) {
-    let mut accounts = chain.genesis.accounts().peekable();
+    let mut accounts = chain.genesis().accounts().peekable();
     let account_class_hash = accounts.peek().map(|e| e.1.class_hash());
     let seed = &args.development.seed;
 
@@ -126,8 +128,10 @@ ACCOUNTS SEED
 }
 
 fn print_genesis_contracts(chain: &ChainSpec, account_class_hash: Option<ClassHash>) {
-    println!(
-        r"
+    match chain {
+        ChainSpec::Dev(cs) => {
+            println!(
+                r"
 PREDEPLOYED CONTRACTS
 ==================
 
@@ -138,11 +142,26 @@ PREDEPLOYED CONTRACTS
 | Contract        | STRK Fee Token
 | Address         | {}
 | Class Hash      | {:#064x}",
-        chain.fee_contracts.eth,
-        DEFAULT_LEGACY_ERC20_CLASS_HASH,
-        chain.fee_contracts.strk,
-        DEFAULT_LEGACY_ERC20_CLASS_HASH
-    );
+                cs.fee_contracts.eth,
+                DEFAULT_LEGACY_ERC20_CLASS_HASH,
+                cs.fee_contracts.strk,
+                DEFAULT_LEGACY_ERC20_CLASS_HASH
+            );
+        }
+
+        ChainSpec::Rollup(cs) => {
+            println!(
+                r"
+PREDEPLOYED CONTRACTS
+==================
+
+| Contract        | STRK Fee Token
+| Address         | {}
+| Class Hash      | {:#064x}",
+                cs.fee_contract.strk, DEFAULT_LEGACY_ERC20_CLASS_HASH,
+            );
+        }
+    }
 
     println!(
         r"
@@ -217,6 +236,26 @@ where
         .map(HeaderValue::from_str)
         .collect::<Result<Vec<HeaderValue>, _>>()
         .map_err(serde::de::Error::custom)
+}
+
+// Chain IDs can be arbitrary ASCII strings, making them indistinguishable from filesystem paths.
+// To handle this ambiguity, we first try parsing single-component inputs as paths, then as chain
+// IDs. Multi-component inputs are always treated as paths.
+pub fn parse_chain_config_dir(value: &str) -> Result<ChainConfigDir> {
+    let path = PathBuf::from(value);
+
+    if path.components().count() == 1 {
+        if path.exists() {
+            Ok(ChainConfigDir::open(path)?)
+        } else if let Ok(id) = ChainId::parse(value) {
+            Ok(ChainConfigDir::open_local(&id)?)
+        } else {
+            Err(anyhow!("Invalid path or chain id"))
+        }
+    } else {
+        let path = PathBuf::from(shellexpand::tilde(value).as_ref());
+        Ok(ChainConfigDir::open(path)?)
+    }
 }
 
 #[cfg(test)]

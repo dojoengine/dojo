@@ -16,8 +16,10 @@ use starknet::core::types::Felt;
 use starknet::core::utils::CairoShortStringToFeltError;
 
 mod artifact_to_local;
+mod external_contract;
 mod resource;
 
+pub use external_contract::*;
 pub use resource::*;
 
 use crate::config::ProfileConfig;
@@ -36,6 +38,10 @@ pub struct WorldLocal {
     pub casm_class_hash: Felt,
     /// The resources of the world.
     pub resources: HashMap<DojoSelector, ResourceLocal>,
+    /// The external contract classes used in the world.
+    pub external_contract_classes: HashMap<String, ExternalContractClassLocal>,
+    /// The external contracts used in the world.
+    pub external_contracts: Vec<ExternalContractLocal>,
     /// The profile configuration of the local world.
     pub profile_config: ProfileConfig,
     /// All the entrypoints that are exposed by the world
@@ -69,6 +75,8 @@ impl Default for WorldLocal {
             class_hash: Felt::ZERO,
             casm_class_hash: Felt::ZERO,
             resources: HashMap::new(),
+            external_contract_classes: HashMap::new(),
+            external_contracts: vec![],
             profile_config: ProfileConfig::default(),
             entrypoints: vec![],
         }

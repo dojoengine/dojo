@@ -259,10 +259,10 @@ pub async fn contracts_from_manifest_or_diff(
     let contracts: HashMap<String, ContractInfo> = if force_diff || local_manifest.is_none() {
         let (world_diff, _, _) =
             get_world_diff_and_account(account, starknet, world, ws, &mut None).await?;
-
         (&world_diff).into()
     } else {
-        (&local_manifest.unwrap()).into()
+        let local_manifest = local_manifest.unwrap();
+        (&local_manifest).into()
     };
 
     Ok(contracts)
