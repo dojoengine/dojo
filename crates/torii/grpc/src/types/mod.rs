@@ -38,6 +38,7 @@ impl TryFrom<proto::types::Controller> for Controller {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub struct Token {
+    pub id: String,
     pub contract_address: Felt,
     pub name: String,
     pub symbol: String,
@@ -49,6 +50,7 @@ impl TryFrom<proto::types::Token> for Token {
     type Error = SchemaError;
     fn try_from(value: proto::types::Token) -> Result<Self, Self::Error> {
         Ok(Self {
+            id: value.token_id,
             contract_address: Felt::from_str(&value.contract_address)?,
             name: value.name,
             symbol: value.symbol,
@@ -70,7 +72,8 @@ impl TryFrom<proto::types::TokenBalance> for TokenBalance {
     type Error = SchemaError;
     fn try_from(value: proto::types::TokenBalance) -> Result<Self, Self::Error> {
         Ok(Self {
-            balance: U256::from_be_hex(&value.balance),
+            // Remove the "0x" prefix from the balance to be compatible with U256::from_be_hex.
+            balance: U256::from_be_hex(value.balance.trim_start_matches("0x")),
             account_address: Felt::from_str(&value.account_address)?,
             contract_address: Felt::from_str(&value.contract_address)?,
             token_id: value.token_id,

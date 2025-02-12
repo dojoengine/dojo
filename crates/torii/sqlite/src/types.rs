@@ -126,6 +126,17 @@ pub struct Event {
 
 #[derive(FromRow, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
+pub struct OptimisticToken {
+    pub id: String,
+    pub contract_address: String,
+    pub name: String,
+    pub symbol: String,
+    pub decimals: u8,
+    pub metadata: String,
+}
+
+#[derive(FromRow, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct Token {
     pub id: String,
     pub contract_address: String,
@@ -133,6 +144,16 @@ pub struct Token {
     pub symbol: String,
     pub decimals: u8,
     pub metadata: String,
+}
+
+#[derive(FromRow, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct OptimisticTokenBalance {
+    pub id: String,
+    pub balance: String,
+    pub account_address: String,
+    pub contract_address: String,
+    pub token_id: String,
 }
 
 #[derive(FromRow, Deserialize, Debug, Clone)]

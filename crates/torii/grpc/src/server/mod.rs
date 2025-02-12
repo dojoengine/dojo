@@ -63,7 +63,8 @@ use crate::proto::world::{
     SubscribeEntityResponse, SubscribeEventMessagesRequest, SubscribeEventsResponse,
     SubscribeIndexerRequest, SubscribeIndexerResponse, SubscribeTokenBalancesResponse,
     SubscribeTokensResponse, UpdateEventMessagesSubscriptionRequest,
-    UpdateTokenBalancesSubscriptionRequest, WorldMetadataRequest, WorldMetadataResponse,
+    UpdateTokenBalancesSubscriptionRequest, UpdateTokenSubscriptionRequest, WorldMetadataRequest,
+    WorldMetadataResponse,
 };
 use crate::proto::{self};
 use crate::types::schema::SchemaError;
@@ -1404,6 +1405,20 @@ impl proto::world::world_server::World for DojoWorld {
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
         Ok(Response::new(Box::pin(ReceiverStream::new(rx)) as Self::SubscribeTokensStream))
+    }
+
+    async fn update_tokens_subscription(
+        &self,
+        request: Request<UpdateTokenSubscriptionRequest>,
+    ) -> ServiceResult<()> {
+        let UpdateTokenSubscriptionRequest { subscription_id, contract_addresses } =
+            request.into_inner();
+        let contract_addresses = contract_addresses
+            .iter()
+            .map(|address| Felt::from_bytes_be_slice(address))
+            .collect::<Vec<_>>();
+        self.token_manager.update_subscriber(subscription_id, contract_addresses).await;
+        Ok(Response::new(()))
     }
 
     async fn retrieve_token_balances(

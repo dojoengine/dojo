@@ -12,6 +12,7 @@ use starknet::providers::JsonRpcClient;
 use tokio::sync::RwLock as AsyncRwLock;
 use torii_grpc::client::{
     EntityUpdateStreaming, EventUpdateStreaming, IndexerUpdateStreaming, TokenBalanceStreaming,
+    TokenUpdateStreaming,
 };
 use torii_grpc::proto::world::{
     RetrieveControllersResponse, RetrieveEntitiesResponse, RetrieveEventsResponse,
@@ -112,6 +113,16 @@ impl Client {
         let RetrieveTokensResponse { tokens } =
             grpc_client.retrieve_tokens(contract_addresses).await?;
         Ok(tokens.into_iter().map(TryInto::try_into).collect::<Result<Vec<Token>, _>>()?)
+    }
+
+    /// A direct stream to grpc subscribe tokens
+    pub async fn on_token_updated(
+        &self,
+        contract_addresses: Vec<Felt>,
+    ) -> Result<TokenUpdateStreaming, Error> {
+        let mut grpc_client = self.inner.write().await;
+        let stream = grpc_client.subscribe_tokens(contract_addresses).await?;
+        Ok(stream)
     }
 
     /// Retrieves token balances for account addresses and contract addresses.
