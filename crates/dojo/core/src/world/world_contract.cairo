@@ -811,9 +811,9 @@ pub mod world {
 
             let namespace_hash = bytearray_hash(@namespace);
 
-            self.assert_name(@name);
-
             let contract_name = format!("{}_v{}", name, version);
+            self.assert_name(@contract_name);
+
             let contract_selector = selector_from_namespace_and_name(
                 namespace_hash, @contract_name,
             );
