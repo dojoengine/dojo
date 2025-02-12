@@ -4,8 +4,6 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use katana_rpc::cors::HeaderValue;
 use serde::{Deserialize, Serialize};
 
-/// The default maximum number of concurrent RPC connections.
-pub const DEFAULT_RPC_MAX_CONNECTIONS: u32 = 100;
 pub const DEFAULT_RPC_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::LOCALHOST);
 pub const DEFAULT_RPC_PORT: u16 = 5050;
 
@@ -40,11 +38,13 @@ pub enum RpcModuleKind {
 pub struct RpcConfig {
     pub addr: IpAddr,
     pub port: u16,
-    pub max_connections: u32,
     pub apis: RpcModulesList,
     pub cors_origins: Vec<HeaderValue>,
-    pub max_event_page_size: Option<u64>,
+    pub max_connections: Option<u32>,
+    pub max_request_body_size: Option<u32>,
+    pub max_response_body_size: Option<u32>,
     pub max_proof_keys: Option<u64>,
+    pub max_event_page_size: Option<u64>,
 }
 
 impl RpcConfig {
@@ -60,8 +60,10 @@ impl Default for RpcConfig {
             cors_origins: Vec::new(),
             addr: DEFAULT_RPC_ADDR,
             port: DEFAULT_RPC_PORT,
+            max_connections: None,
+            max_request_body_size: None,
+            max_response_body_size: None,
             apis: RpcModulesList::default(),
-            max_connections: DEFAULT_RPC_MAX_CONNECTIONS,
             max_event_page_size: Some(DEFAULT_RPC_MAX_EVENT_PAGE_SIZE),
             max_proof_keys: Some(DEFAULT_RPC_MAX_PROOF_KEYS),
         }

@@ -39,7 +39,7 @@ impl Cli {
 #[derive(Subcommand)]
 enum Commands {
     #[command(about = "Initialize chain")]
-    Init(init::InitArgs),
+    Init(Box<init::InitArgs>),
 
     #[command(about = "Chain configuration utilities")]
     Config(config::ConfigArgs),

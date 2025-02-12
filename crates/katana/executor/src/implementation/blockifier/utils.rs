@@ -3,7 +3,7 @@ use std::num::NonZeroU128;
 use std::sync::Arc;
 
 use blockifier::blockifier::block::{BlockInfo, GasPrices};
-use blockifier::bouncer::BouncerConfig;
+use blockifier::bouncer::{Bouncer, BouncerConfig};
 use blockifier::context::{BlockContext, ChainInfo, FeeTokenAddresses, TransactionContext};
 use blockifier::execution::call_info::{
     CallExecution, CallInfo, OrderedEvent, OrderedL2ToL1Message,
@@ -14,8 +14,8 @@ use blockifier::execution::contract_class::{
 };
 use blockifier::execution::entry_point::{CallEntryPoint, CallType, EntryPointExecutionContext};
 use blockifier::fee::fee_utils::get_fee_by_gas_vector;
-use blockifier::state::cached_state;
-use blockifier::state::state_api::StateReader;
+use blockifier::state::cached_state::{self, TransactionalState};
+use blockifier::state::state_api::{StateReader, UpdatableState};
 use blockifier::transaction::account_transaction::AccountTransaction;
 use blockifier::transaction::objects::{
     DeprecatedTransactionInfo, FeeType, HasRelatedFeeType, TransactionExecutionInfo,
@@ -55,19 +55,20 @@ use katana_primitives::{class, event, message, trace, Felt};
 use katana_provider::traits::contract::ContractClassProvider;
 use starknet::core::utils::parse_cairo_short_string;
 
-use super::state::{CachedState, StateDb};
+use super::state::CachedState;
 use crate::abstraction::{EntryPointCall, ExecutionFlags};
 use crate::utils::build_receipt;
-use crate::{ExecutionError, ExecutionResult};
+use crate::{ExecutionError, ExecutionResult, ExecutorResult};
 
 pub fn transact<S: StateReader>(
     state: &mut cached_state::CachedState<S>,
     block_context: &BlockContext,
     simulation_flags: &ExecutionFlags,
     tx: ExecutableTxWithHash,
-) -> ExecutionResult {
-    fn transact_inner<S: StateReader>(
-        state: &mut cached_state::CachedState<S>,
+    bouncer: Option<&mut Bouncer>,
+) -> ExecutorResult<ExecutionResult> {
+    fn transact_inner<U: UpdatableState>(
+        state: &mut U,
         block_context: &BlockContext,
         simulation_flags: &ExecutionFlags,
         tx: Transaction,
@@ -122,15 +123,36 @@ pub fn transact<S: StateReader>(
         Ok((info, fee_info))
     }
 
-    match transact_inner(state, block_context, simulation_flags, to_executor_tx(tx.clone())) {
+    let transaction = to_executor_tx(tx.clone());
+    let mut tx_state = TransactionalState::create_transactional(state);
+    let result = transact_inner(&mut tx_state, block_context, simulation_flags, transaction);
+
+    match result {
         Ok((info, fee)) => {
+            if let Some(bouncer) = bouncer {
+                let tx_state_changes_keys =
+                    tx_state.get_actual_state_changes().unwrap().into_keys();
+
+                bouncer.try_update(
+                    &tx_state,
+                    &tx_state_changes_keys,
+                    &info.summarize(),
+                    &info.transaction_receipt.resources,
+                )?;
+            }
+
+            tx_state.commit();
+
             // get the trace and receipt from the execution info
             let trace = to_exec_info(info, tx.r#type());
             let receipt = build_receipt(tx.tx_ref(), fee, &trace);
-            ExecutionResult::new_success(receipt, trace)
+            Ok(ExecutionResult::new_success(receipt, trace))
         }
 
-        Err(e) => ExecutionResult::new_failed(e),
+        Err(e) => {
+            tx_state.commit();
+            Ok(ExecutionResult::new_failed(e))
+        }
     }
 }
 
@@ -365,7 +387,7 @@ pub fn to_executor_tx(tx: ExecutableTxWithHash) -> Transaction {
             };
 
             let hash = TransactionHash(hash);
-            let class = to_class(compiled).unwrap();
+            let class = to_class_info(compiled).unwrap();
             let tx = DeclareTransaction::new(tx, hash, class).expect("class mismatch");
             Transaction::AccountTransaction(AccountTransaction::Declare(tx))
         }
@@ -395,13 +417,16 @@ pub fn block_context_from_envs(block_env: &BlockEnv, cfg_env: &CfgEnv) -> BlockC
         NonZeroU128::new(block_env.l1_gas_prices.eth).unwrap_or(NonZeroU128::new(1).unwrap());
     let strk_l1_gas_price =
         NonZeroU128::new(block_env.l1_gas_prices.strk).unwrap_or(NonZeroU128::new(1).unwrap());
+    let strk_l1_data_gas_price =
+        NonZeroU128::new(block_env.l1_data_gas_prices.strk).unwrap_or(NonZeroU128::new(1).unwrap());
+    let eth_l1_data_gas_price =
+        NonZeroU128::new(block_env.l1_data_gas_prices.eth).unwrap_or(NonZeroU128::new(1).unwrap());
 
     let gas_prices = GasPrices {
         eth_l1_gas_price,
         strk_l1_gas_price,
-        // TODO: should those be the same value?
-        eth_l1_data_gas_price: eth_l1_gas_price,
-        strk_l1_data_gas_price: strk_l1_gas_price,
+        eth_l1_data_gas_price,
+        strk_l1_data_gas_price,
     };
 
     let block_info = BlockInfo {
@@ -433,10 +458,8 @@ pub fn block_context_from_envs(block_env: &BlockEnv, cfg_env: &CfgEnv) -> BlockC
     BlockContext::new(block_info, chain_info, versioned_constants, BouncerConfig::max())
 }
 
-pub(super) fn state_update_from_cached_state<S: StateDb>(
-    state: &CachedState<S>,
-) -> StateUpdatesWithClasses {
-    let state_diff = state.0.lock().inner.to_state_diff().unwrap();
+pub(super) fn state_update_from_cached_state(state: &CachedState<'_>) -> StateUpdatesWithClasses {
+    let state_diff = state.inner.lock().cached_state.to_state_diff().unwrap();
 
     let mut declared_contract_classes: BTreeMap<
         katana_primitives::class::ClassHash,
@@ -558,16 +581,16 @@ pub fn to_blk_chain_id(chain_id: katana_primitives::chain::ChainId) -> ChainId {
     }
 }
 
-pub fn to_class(class: class::CompiledClass) -> Result<ClassInfo, ProgramError> {
+pub fn to_class_info(class: class::CompiledClass) -> Result<ClassInfo, ProgramError> {
     // TODO: @kariy not sure of the variant that must be used in this case. Should we change the
     // return type to include this case of error for contract class conversions?
     match class {
-        class::CompiledClass::Legacy(class) => {
+        class::CompiledClass::Legacy(..) => {
             // For cairo 0, the sierra_program_length must be 0.
-            Ok(ClassInfo::new(&ContractClass::V0(ContractClassV0::try_from(class)?), 0, 0).unwrap())
+            Ok(ClassInfo::new(&to_class(class)?, 0, 0).unwrap())
         }
 
-        class::CompiledClass::Class(casm) => {
+        class::CompiledClass::Class(..) => {
             // NOTE:
             //
             // Right now, we're using dummy values for the sierra class info (ie
@@ -577,12 +600,24 @@ pub fn to_class(class: class::CompiledClass) -> Result<ClassInfo, ProgramError> 
             // Make sure these values are the same over on `snos` when it re-executes the
             // transactions as otherwise the fees would be different.
 
-            let class = ContractClass::V1(ContractClassV1::try_from(casm)?);
+            let class = to_class(class)?;
             let sierra_program_length = 1;
             let abi_length = 0;
 
             let class = ClassInfo::new(&class, sierra_program_length, abi_length).unwrap();
             Ok(class)
+        }
+    }
+}
+
+/// Convert katana-primitives compiled class to blockfiier's contract class.
+pub fn to_class(class: class::CompiledClass) -> Result<ContractClass, ProgramError> {
+    match class {
+        class::CompiledClass::Legacy(class) => {
+            Ok(ContractClass::V0(ContractClassV0::try_from(class)?))
+        }
+        class::CompiledClass::Class(casm) => {
+            Ok(ContractClass::V1(ContractClassV1::try_from(casm)?))
         }
     }
 }

@@ -10,7 +10,6 @@ version.workspace = true
 anyhow.workspace = true
 async-trait.workspace = true
 cairo-lang-starknet-classes.workspace = true
-#dojo-utils.workspace = true
 regex.workspace = true
 serde.workspace = true
 serde_json.workspace = true

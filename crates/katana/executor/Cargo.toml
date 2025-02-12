@@ -10,7 +10,6 @@ version.workspace = true
 katana-cairo = { workspace = true, optional = true }
 katana-primitives.workspace = true
 katana-provider.workspace = true
-katana-trie.workspace = true
 
 thiserror.workspace = true
 tracing.workspace = true
@@ -36,7 +35,7 @@ tokio.workspace = true
 
 criterion.workspace = true
 oneshot = { version = "0.1.8", default-features = false, features = [ "std" ] }
-pprof = { version = "0.13.0", features = [ "criterion", "flamegraph" ] }
+pprof.workspace = true
 rayon.workspace = true
 
 [features]

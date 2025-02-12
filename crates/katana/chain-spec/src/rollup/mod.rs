@@ -6,9 +6,10 @@ use katana_primitives::genesis::Genesis;
 use katana_primitives::version::CURRENT_STARKNET_VERSION;
 use serde::{Deserialize, Serialize};
 
-pub mod file;
+mod file;
 mod utils;
 
+pub use file::*;
 pub use utils::DEFAULT_APPCHAIN_FEE_TOKEN_ADDRESS;
 
 use crate::SettlementLayer;

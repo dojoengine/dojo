@@ -1,5 +1,6 @@
 //! Client implementation for the gRPC service.
 use std::num::ParseIntError;
+#[cfg(not(target_arch = "wasm32"))]
 use std::time::Duration;
 
 use futures_util::stream::MapOk;
@@ -10,15 +11,15 @@ use tonic::codec::CompressionEncoding;
 use tonic::transport::Endpoint;
 
 use crate::proto::world::{
-    world_client, RetrieveEntitiesRequest, RetrieveEntitiesResponse, RetrieveEventMessagesRequest,
-    RetrieveEventsRequest, RetrieveEventsResponse, RetrieveTokenBalancesRequest,
-    RetrieveTokenBalancesResponse, RetrieveTokensRequest, RetrieveTokensResponse,
-    SubscribeEntitiesRequest, SubscribeEntityResponse, SubscribeEventMessagesRequest,
-    SubscribeEventsRequest, SubscribeEventsResponse, SubscribeIndexerRequest,
-    SubscribeIndexerResponse, SubscribeModelsRequest, SubscribeModelsResponse,
-    SubscribeTokenBalancesResponse, UpdateEntitiesSubscriptionRequest,
-    UpdateEventMessagesSubscriptionRequest, UpdateTokenBalancesSubscriptionRequest,
-    WorldMetadataRequest,
+    world_client, RetrieveControllersRequest, RetrieveControllersResponse, RetrieveEntitiesRequest,
+    RetrieveEntitiesResponse, RetrieveEventMessagesRequest, RetrieveEventsRequest,
+    RetrieveEventsResponse, RetrieveTokenBalancesRequest, RetrieveTokenBalancesResponse,
+    RetrieveTokensRequest, RetrieveTokensResponse, SubscribeEntitiesRequest,
+    SubscribeEntityResponse, SubscribeEventMessagesRequest, SubscribeEventsRequest,
+    SubscribeEventsResponse, SubscribeIndexerRequest, SubscribeIndexerResponse,
+    SubscribeModelsRequest, SubscribeModelsResponse, SubscribeTokenBalancesResponse,
+    UpdateEntitiesSubscriptionRequest, UpdateEventMessagesSubscriptionRequest,
+    UpdateTokenBalancesSubscriptionRequest, WorldMetadataRequest,
 };
 use crate::types::schema::{Entity, SchemaError};
 use crate::types::{
@@ -93,6 +94,22 @@ impl WorldClient {
                     .ok_or(Error::Schema(SchemaError::MissingExpectedData("metadata".to_string())))
             })
             .and_then(|metadata| metadata.try_into().map_err(Error::ParseStr))
+    }
+
+    pub async fn retrieve_controllers(
+        &mut self,
+        contract_addresses: Vec<Felt>,
+    ) -> Result<RetrieveControllersResponse, Error> {
+        self.inner
+            .retrieve_controllers(RetrieveControllersRequest {
+                contract_addresses: contract_addresses
+                    .into_iter()
+                    .map(|c| c.to_bytes_be().to_vec())
+                    .collect(),
+            })
+            .await
+            .map_err(Error::Grpc)
+            .map(|res| res.into_inner())
     }
 
     pub async fn retrieve_tokens(

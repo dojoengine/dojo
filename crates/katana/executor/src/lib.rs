@@ -4,4 +4,5 @@ pub mod implementation;
 mod utils;
 
 mod abstraction;
+pub mod error;
 pub use abstraction::*;
