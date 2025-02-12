@@ -169,8 +169,6 @@ async fn fetch_and_process_image(
         .with_context(|| format!("Image field not a string for token_id: {}", token_id))?
         .to_string();
 
-    println!("image_uri: {}", image_uri);
-
     let image_type = match image_uri {
         uri if uri.starts_with("http") || uri.starts_with("https") => {
             debug!(image_uri = %uri, "Fetching image from http/https URL");
@@ -186,7 +184,7 @@ async fn fetch_and_process_image(
                     format!("Unknown file format for token_id: {}, data: {:?}", token_id, &response)
                 })?;
                 ErcImageType::DynamicImage((
-                    image::load_from_memory(&response)
+                    image::load_from_memory_with_format(&response, format)
                         .context("Failed to load image from bytes")?,
                     format,
                 ))
@@ -230,7 +228,7 @@ async fn fetch_and_process_image(
                 let format = image::guess_format(&decoded.0)
                     .with_context(|| format!("Unknown file format for token_id: {}", token_id))?;
                 ErcImageType::DynamicImage((
-                    image::load_from_memory(&decoded.0)
+                    image::load_from_memory_with_format(&decoded.0, format)
                         .context("Failed to load image from bytes")?,
                     format,
                 ))
@@ -240,8 +238,6 @@ async fn fetch_and_process_image(
             return Err(anyhow::anyhow!("Unsupported URI scheme: {}", uri));
         }
     };
-
-    println!("image_type: {:?}", image_type);
 
     // Extract contract_address and token_id from token_id
     let parts: Vec<&str> = token_id.split(':').collect();
