@@ -10,7 +10,7 @@ use ipfs_api_backend_hyper::{IpfsApi, IpfsClient, TryFromUri};
 use starknet::core::types::U256;
 use starknet_crypto::Felt;
 use tokio_util::bytes::Bytes;
-use tracing::warn;
+use tracing::debug;
 
 use crate::constants::{
     IPFS_CLIENT_MAX_RETRY, IPFS_CLIENT_PASSWORD, IPFS_CLIENT_URL, IPFS_CLIENT_USERNAME,
@@ -116,7 +116,7 @@ pub async fn fetch_content_from_ipfs(cid: &str) -> Result<Bytes> {
             Ok(stream) => return Ok(Bytes::from(stream)),
             Err(e) => {
                 retries -= 1;
-                warn!(
+                debug!(
                     error = %e,
                     remaining_attempts = retries,
                     cid = cid,
