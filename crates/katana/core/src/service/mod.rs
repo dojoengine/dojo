@@ -15,7 +15,6 @@ use self::block_producer::BlockProducer;
 use self::metrics::BlockProducerMetrics;
 
 pub mod block_producer;
-pub mod messaging;
 mod metrics;
 
 pub(crate) const LOG_TARGET: &str = "node";

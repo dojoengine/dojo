@@ -59,6 +59,7 @@ fn rollup_chain_spec() -> rollup::ChainSpec {
     let fee_contract = FeeContract::default();
 
     let settlement = SettlementLayer::Starknet {
+        block: 0,
         id: ChainId::default(),
         account: Default::default(),
         core_contract: Default::default(),

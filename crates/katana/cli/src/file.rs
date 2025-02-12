@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use anyhow::Result;
-use katana_core::service::messaging::MessagingConfig;
+use katana_messaging::MessagingConfig;
 use serde::{Deserialize, Serialize};
 
 use crate::options::*;

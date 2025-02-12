@@ -4,7 +4,7 @@ use std::sync::Arc;
 use anyhow::{anyhow, Result};
 use cainome::cairo_serde;
 use dojo_utils::{TransactionWaiter, TransactionWaitingError};
-use katana_primitives::block::BlockHash;
+use katana_primitives::block::{BlockHash, BlockNumber};
 use katana_primitives::class::{
     CompiledClassHash, ComputeClassHashError, ContractClass, ContractClassCompilationError,
     ContractClassFromStrError,
@@ -71,12 +71,20 @@ const BOOTLOADER_PROGRAM_HASH: Felt =
 const ATLANTIC_FACT_REGISTRY_SEPOLIA: Felt =
     felt!("0x4ce7851f00b6c3289674841fd7a1b96b6fd41ed1edc248faccd672c26371b8c");
 
+#[derive(Debug)]
+pub struct DeploymentOutcome {
+    /// The address of the deployed settlement contract.
+    pub contract_address: ContractAddress,
+    /// The block number at which the contract was deployed.
+    pub block_number: BlockNumber,
+}
+
 /// Deploys the settlement contract in the settlement layer and initializes it with the right
 /// necessary states.
 pub async fn deploy_settlement_contract(
     mut account: InitializerAccount,
     chain_id: Felt,
-) -> Result<ContractAddress, ContractInitError> {
+) -> Result<DeploymentOutcome, ContractInitError> {
     // This is important! Otherwise all the estimate fees after a transaction will be executed
     // against invalid state.
     account.set_block_id(BlockId::Tag(BlockTag::Pending));
@@ -163,7 +171,25 @@ pub async fn deploy_settlement_contract(
             })
             .map_err(ContractInitError::DeploymentError)?;
 
-        TransactionWaiter::new(res.transaction_hash, account.provider()).await?;
+        // there's a chance that when we query the block number, that there would be a mismatch
+        // between the block info returned by the receipt. so we query both at the same time
+        // to minimize the chance of a mismatch.
+        let (deployment_receipt_res, block_number_res) = tokio::join!(
+            TransactionWaiter::new(res.transaction_hash, account.provider()),
+            account.provider().block_number()
+        );
+
+        let deployment_receipt = deployment_receipt_res?;
+        let block_number = block_number_res?;
+
+        // If there's no block number in the receipt, that means it's still in the pending block.
+        let deployment_block = if let Some(block) = deployment_receipt.block.block_number() {
+            block
+        } else {
+            // we assume the block_number is the block number of the previous block (latest) so we
+            // add 1 to the block_number as the number of the pending block
+            block_number + 1
+        };
 
         // -----------------------------------------------------------------------
         // CONTRACT INITIALIZATIONS
@@ -228,14 +254,21 @@ pub async fn deploy_settlement_contract(
 
         check_program_info(chain_id, deployed_appchain_contract, account.provider()).await?;
 
-        Ok(deployed_appchain_contract.into())
+        Ok(DeploymentOutcome {
+            block_number: deployment_block,
+            contract_address: deployed_appchain_contract.into(),
+        })
     }
     .await;
 
-    match result {
-        Ok(addr) => sp.success(&format!("Deployment successful ({addr})")),
+    match &result {
+        Ok(outcome) => sp.success(&format!(
+            "Deployment successful ({}) at block #{}",
+            outcome.contract_address, outcome.block_number
+        )),
         Err(..) => sp.fail("Deployment failed"),
     }
+
     result
 }
 

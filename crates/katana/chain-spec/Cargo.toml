@@ -22,7 +22,7 @@ url.workspace = true
 
 [dev-dependencies]
 katana-executor.workspace = true
-katana-provider = { workspace = true, features = ["test-utils"] }
+katana-provider = { workspace = true, features = [ "test-utils" ] }
 rstest.workspace = true
 similar-asserts.workspace = true
 tempfile.workspace = true

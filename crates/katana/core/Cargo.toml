@@ -11,13 +11,12 @@ katana-chain-spec.workspace = true
 katana-db.workspace = true
 katana-executor = { workspace = true, features = [ "blockifier" ] }
 katana-pool.workspace = true
-katana-primitives = { workspace = true, features = [ "arbitrary" ]}
-katana-provider.workspace = true
+katana-primitives = { workspace = true, features = [ "arbitrary" ] }
+katana-provider = { workspace = true, features = [ "fork", "in-memory" ] }
 katana-tasks.workspace = true
 katana-trie.workspace = true
 
 anyhow.workspace = true
-async-trait.workspace = true
 derive_more.workspace = true
 dojo-metrics.workspace = true
 futures.workspace = true
@@ -25,10 +24,7 @@ lazy_static.workspace = true
 metrics.workspace = true
 num-traits.workspace = true
 parking_lot.workspace = true
-reqwest.workspace = true
 rayon.workspace = true
-serde.workspace = true
-serde_json.workspace = true
 starknet.workspace = true
 starknet-types-core.workspace = true
 thiserror.workspace = true
@@ -36,26 +32,20 @@ tokio.workspace = true
 tracing.workspace = true
 url.workspace = true
 
-alloy-primitives = { workspace = true, features = [ "serde" ] }
-alloy-sol-types = { workspace = true, default-features = false, features = [ "json" ] }
-starknet-crypto.workspace = true
-
-alloy-contract = { workspace = true, default-features = false }
-alloy-network = { workspace = true, default-features = false }
 alloy-provider = { workspace = true, default-features = false, features = [ "reqwest", "reqwest-rustls-tls" ] }
 alloy-rpc-types-eth = { workspace = true, default-features = false }
-alloy-transport = { workspace = true, default-features = false }
 
 [dev-dependencies]
+alloy-primitives = { workspace = true, features = [ "serde" ] }
 arbitrary.workspace = true
 assert_matches.workspace = true
 criterion.workspace = true
 hex.workspace = true
+pprof.workspace = true
 rand.workspace = true
 rstest.workspace = true
 tempfile.workspace = true
-pprof.workspace = true
 
 [[bench]]
-name = "commit"
 harness = false
+name = "commit"
