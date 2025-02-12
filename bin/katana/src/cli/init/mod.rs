@@ -122,8 +122,9 @@ impl InitArgs {
                 Arc::new(JsonRpcClient::new(HttpTransport::new(settlement_url.clone())));
             let l1_chain_id = l1_provider.chain_id().await.unwrap();
 
+            let chain_id = cairo_short_string_to_felt(&id).unwrap();
+
             let deployment_outcome = if let Some(contract) = self.settlement_contract {
-                let chain_id = cairo_short_string_to_felt(&id).unwrap();
                 deployment::check_program_info(chain_id, contract.into(), &l1_provider)
                     .await
                     .unwrap();
@@ -145,7 +146,7 @@ impl InitArgs {
                     ExecutionEncoding::New,
                 );
 
-                deployment::deploy_settlement_contract(account, l1_chain_id).await.unwrap()
+                deployment::deploy_settlement_contract(account, chain_id).await.unwrap()
             };
 
             Some(Ok(Outcome {
