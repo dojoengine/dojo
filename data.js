@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1739388991317,
+  "lastUpdate": 1739389074932,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -52129,6 +52129,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 43193755541,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a1b21bf7be64df52a63590f71770d9be410b4615",
+          "message": "refactor(katana): move messaging into its own crate (#3013)",
+          "timestamp": "2025-02-13T03:19:44+08:00",
+          "tree_id": "2871edc3464aabf6d8b9140b6608aa2f8e9dee20",
+          "url": "https://github.com/dojoengine/dojo/commit/a1b21bf7be64df52a63590f71770d9be410b4615"
+        },
+        "date": 1739389072410,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2427606,
+            "range": "± 57082",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 394266,
+            "range": "± 8994",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2798797112,
+            "range": "± 233871189",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 18068478,
+            "range": "± 392777",
             "unit": "ns/iter"
           }
         ]
