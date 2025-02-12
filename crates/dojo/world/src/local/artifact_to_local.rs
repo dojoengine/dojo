@@ -14,7 +14,7 @@ use starknet::core::types::contract::{
 use starknet::core::types::Felt;
 use starknet::core::utils as snutils;
 use starknet_crypto::poseidon_hash_many;
-use tracing::trace;
+use tracing::{trace, warn};
 
 use super::*;
 use crate::config::calldata_decoder::decode_calldata;
@@ -124,35 +124,43 @@ impl WorldLocal {
 
                                 let systems = systems_from_abi(&abi);
 
+                                let mut added_resources = false;
                                 for ns in namespaces {
-                                    trace!(
-                                        name,
-                                        namespace = ns,
-                                        "Adding local library from artifact."
-                                    );
+                                    if let Some(version) = profile_config.lib_versions.as_ref() {
+                                        if let Some(v) = version.get(&format!("{}-{}", ns, name)) {
+                                            trace!(
+                                                name,
+                                                namespace = ns,
+                                                version = v,
+                                                "Adding local library from artifact."
+                                            );
 
-                                    let version = profile_config
-                                        .lib_versions
-                                        .as_ref()
-                                        .expect("expected lib version a")
-                                        .get(&format!("{}-{}", ns, name))
-                                        .expect("expected lib version b");
+                                            let resource = ResourceLocal::Library(LibraryLocal {
+                                                common: CommonLocalInfo {
+                                                    namespace: ns,
+                                                    name: name.clone(),
+                                                    class: sierra.clone(),
+                                                    casm_class: casm_class.clone(),
+                                                    class_hash,
+                                                    casm_class_hash,
+                                                },
+                                                systems: systems.clone(),
+                                                version: v.clone(),
+                                            });
 
-                                    let resource = ResourceLocal::Library(LibraryLocal {
-                                        common: CommonLocalInfo {
-                                            namespace: ns,
-                                            name: name.clone(),
-                                            class: sierra.clone(),
-                                            casm_class: casm_class.clone(),
-                                            class_hash,
-                                            casm_class_hash,
-                                        },
-                                        systems: systems.clone(),
-                                        version: version.clone(),
-                                    });
-
-                                    resources.push(resource);
+                                            resources.push(resource);
+                                            added_resources = true;
+                                        }
+                                    }
                                 }
+
+                                if !added_resources {
+                                    warn!(
+                                        "No library version found for library `{}` in the Dojo profile config. Consider adding a `[lib_versions]` entry with the version.",
+                                        name
+                                    );
+                                }
+
                                 break;
                             }
                             ResourceType::Model(name) => {

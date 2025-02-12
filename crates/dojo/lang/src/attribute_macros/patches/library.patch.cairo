@@ -1,6 +1,6 @@
 #[starknet::contract]
 pub mod $name$ {
-    use dojo::contract::components::world_provider::{world_provider_cpt, world_provider_cpt::InternalTrait as WorldProviderInternal, IWorldProvider};
+    use dojo::contract::components::world_provider::{world_provider_cpt, IWorldProvider};
     use dojo::contract::ILibrary;
     use dojo::meta::IDeployedResource;
 
@@ -11,7 +11,6 @@ pub mod $name$ {
    
     #[abi(embed_v0)]
     pub impl $name$__LibraryImpl of ILibrary<ContractState> {}
-
 
     #[abi(embed_v0)]
     pub impl $name$__DeployedLibraryImpl of IDeployedResource<ContractState> {
