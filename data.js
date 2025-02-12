@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1739317009933,
+  "lastUpdate": 1739318680397,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -51865,6 +51865,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 16809445,
             "range": "± 155572",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "remy.baranx@gmail.com",
+            "name": "Rémy Baranx",
+            "username": "remybar"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f0c1e0bc50e7a63182896b951aaad2ce39a46c22",
+          "message": "feat(sozo): add support for external contracts management (#2995)\n\n* first version of external contract management\r\n\r\n* improve the way we get the contract name from Event enum in the ABI\r\n\r\n* fix rust fmt\r\n\r\n* some small refactoring\r\n\r\n* update policies\r\n\r\n* rebuild test artifacts\r\n\r\n* after review\r\n\r\n* fmt + rebuild artifacts\r\n\r\n* small refactor proposed by CodeRabbit\r\n\r\n* profile config: check instance name format\r\n\r\n* update sozo inspect to support external contracts\r\n\r\n* update inspect world after review\r\n\r\n* add world and external contracts support for sozo execute and sozo call\r\n\r\n* add ERC20, ERC721 and ERC1155 contracts\r\n\r\n* typo\r\n\r\n* simplify mint functions\r\n\r\n* remove dependency on dojo-utils for dojo-world\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2025-02-11T23:47:34Z",
+          "tree_id": "367963d645347a02f7a80c6cc7aff4c51bd08e1e",
+          "url": "https://github.com/dojoengine/dojo/commit/f0c1e0bc50e7a63182896b951aaad2ce39a46c22"
+        },
+        "date": 1739318677983,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 46290018221,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
