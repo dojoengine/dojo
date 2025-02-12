@@ -248,7 +248,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
         if token_uri.is_empty() {
             Ok("".to_string())
         } else {
-            let metadata = Self::fetch_metadata(&token_uri).await;
+            let metadata = Self::fetch_metadata(token_uri).await;
 
             match metadata {
                 Ok(metadata) => {
