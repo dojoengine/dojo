@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1739403572305,
+  "lastUpdate": 1739403652080,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -52207,6 +52207,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 46957574572,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "906106a0c655c087b445134d6c93391076cfc1df",
+          "message": "feat(katana): initialize `slot` paymaster account (#3014)\n\n* feat: slot paymaster init\r\n\r\n* rename arg\r\n\r\n* dont use custom value parse function\r\n\r\n* fix computation of snos config using the rollup chain id\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2025-02-12T23:22:37Z",
+          "tree_id": "10b5e0c2f6eeb240e626baa3545731d78843453a",
+          "url": "https://github.com/dojoengine/dojo/commit/906106a0c655c087b445134d6c93391076cfc1df"
+        },
+        "date": 1739403649587,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2442863,
+            "range": "± 47759",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 396390,
+            "range": "± 11621",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2886867723,
+            "range": "± 223407106",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 17695770,
+            "range": "± 536180",
             "unit": "ns/iter"
           }
         ]
