@@ -256,20 +256,22 @@ impl Sql {
         block_timestamp: u64,
         event_id: &str,
     ) -> Result<()> {
+        let id = format!("{}:{}", event_id, token_id);
         let insert_query = format!(
             "INSERT INTO {TOKEN_TRANSFER_TABLE} (id, contract_address, from_address, to_address, \
-             amount, token_id, executed_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+             amount, token_id, event_id, executed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
         );
 
         self.executor.send(QueryMessage::new(
             insert_query.to_string(),
             vec![
-                Argument::String(event_id.to_string()),
+                Argument::String(id),
                 Argument::FieldElement(contract_address),
                 Argument::FieldElement(from),
                 Argument::FieldElement(to),
                 Argument::String(u256_to_sql_string(&amount)),
                 Argument::String(token_id.to_string()),
+                Argument::String(event_id.to_string()),
                 Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
             ],
             QueryType::TokenTransfer,
