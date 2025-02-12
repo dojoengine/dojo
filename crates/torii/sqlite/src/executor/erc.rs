@@ -5,7 +5,6 @@ use anyhow::{Context, Result};
 use cainome::cairo_serde::{ByteArray, CairoSerde};
 use data_url::mime::Mime;
 use data_url::DataUrl;
-use reqwest::Client;
 use starknet::core::types::{BlockId, BlockTag, FunctionCall, U256};
 use starknet::core::utils::{get_selector_from_name, parse_cairo_short_string};
 use starknet::providers::Provider;
@@ -18,8 +17,7 @@ use crate::executor::LOG_TARGET;
 use crate::simple_broker::SimpleBroker;
 use crate::types::{ContractType, Token, TokenBalance};
 use crate::utils::{
-    felt_to_sql_string, fetch_content_from_ipfs, sanitize_json_string, sql_string_to_u256,
-    u256_to_sql_string, I256,
+    felt_to_sql_string, fetch_content_from_http, fetch_content_from_ipfs, sanitize_json_string, sql_string_to_u256, u256_to_sql_string, I256
 };
 
 #[derive(Debug, Clone)]
@@ -76,7 +74,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                         apply_balance_diff.block_id,
                     )
                     .await
-                    .with_context(|| "Failed to apply balance diff in apply_cache_diff")?;
+                    .context("Failed to apply balance diff in apply_cache_diff")?;
                 }
                 ContractType::ERC20 => {
                     // account_address/contract_address/ => ERC20
@@ -95,7 +93,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                         apply_balance_diff.block_id,
                     )
                     .await
-                    .with_context(|| "Failed to apply balance diff in apply_cache_diff")?;
+                    .context("Failed to apply balance diff in apply_cache_diff")?;
                 }
             }
         }
@@ -143,7 +141,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                         block_id,
                     )
                     .await
-                    .with_context(|| format!("Failed to fetch balance for id: {}", id))?;
+                    .context(format!("Failed to fetch balance for id: {}", id))?;
 
                 let current_balance =
                     cainome::cairo_serde::U256::cairo_deserialize(&current_balance, 0).unwrap();
@@ -255,6 +253,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                     warn!(
                         contract_address = format!("{:#x}", register_erc721_token.contract_address),
                         token_id = %register_erc721_token.actual_token_id,
+                        token_uri = %token_uri,
                         "Error fetching metadata, empty metadata will be used instead.",
                     );
                     "".to_string()
@@ -268,39 +267,25 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
     // given a uri which can be either http/https url or data uri, fetch the metadata erc721
     // metadata json schema
     pub async fn fetch_metadata(token_uri: &str) -> Result<serde_json::Value> {
-        // Parse the token_uri
-
         match token_uri {
             uri if uri.starts_with("http") || uri.starts_with("https") => {
-                // Fetch metadata from HTTP/HTTPS URL
                 debug!(token_uri = %token_uri, "Fetching metadata from http/https URL");
-                let client = Client::new();
-                let response = client
-                    .get(token_uri)
-                    .send()
+                let bytes = fetch_content_from_http(token_uri)
                     .await
-                    .context("Failed to fetch metadata from URL")?;
+                    .context(format!("Failed to fetch metadata from URL: {}", token_uri))?;
 
-                let bytes = response.bytes().await.context("Failed to read response bytes")?;
-                let json: serde_json::Value = serde_json::from_slice(&bytes)
-                    .context(format!("Failed to parse metadata JSON from response: {:?}", bytes))?;
-
-                Ok(json)
+                serde_json::from_slice(&bytes)
+                    .context(format!("Failed to parse metadata JSON from response: {:?}", bytes))
             }
             uri if uri.starts_with("ipfs") => {
                 let cid = uri.strip_prefix("ipfs://").unwrap();
                 debug!(cid = %cid, "Fetching metadata from IPFS");
-                let response = fetch_content_from_ipfs(cid)
+                let bytes = fetch_content_from_ipfs(cid)
                     .await
                     .context("Failed to fetch metadata from IPFS")?;
 
-                let json: serde_json::Value =
-                    serde_json::from_slice(&response).context(format!(
-                        "Failed to parse metadata JSON from IPFS: {:?}, data: {:?}",
-                        cid, &response
-                    ))?;
-
-                Ok(json)
+                serde_json::from_slice(&bytes)
+                    .context(format!("Failed to parse metadata JSON from IPFS: {:?}, data: {:?}", cid, bytes))
             }
             uri if uri.starts_with("data") => {
                 // Parse and decode data URI
@@ -326,9 +311,10 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 let sanitized_json = sanitize_json_string(&decoded_str);
 
                 let json: serde_json::Value =
-                    serde_json::from_str(&sanitized_json).with_context(|| {
-                        format!("Failed to parse metadata JSON from data URI: {}", &uri)
-                    })?;
+                    serde_json::from_str(&sanitized_json).context(format!(
+                        "Failed to parse metadata JSON from data URI: {}",
+                        &uri
+                    ))?;
 
                 Ok(json)
             }
@@ -354,7 +340,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
         let token = query
             .fetch_optional(&mut *self.transaction)
             .await
-            .with_context(|| format!("Failed to execute721Token query: {:?}", result))?;
+            .context(format!("Failed to execute721Token query: {:?}", result))?;
 
         if let Some(token) = token {
             self.publish_queue.push(BrokerMessage::TokenRegistered(token));
