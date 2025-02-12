@@ -692,7 +692,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
             QueryType::RegisterErc20Token(register_erc20_token) => {
                 let query = sqlx::query_as::<_, Token>(
                     "INSERT INTO tokens (id, contract_address, name, symbol, decimals) VALUES (?, \
-                     ?, ?, ?, ?)",
+                     ?, ?, ?, ?) RETURNING *",
                 )
                 .bind(&register_erc20_token.token_id)
                 .bind(felt_to_sql_string(&register_erc20_token.contract_address))
