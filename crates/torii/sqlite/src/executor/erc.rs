@@ -390,11 +390,12 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
         result: RegisterNftTokenMetadata,
     ) -> Result<()> {
         let query = sqlx::query_as::<_, Token>(
-            "INSERT INTO tokens (id, contract_address, name, symbol, decimals, metadata) VALUES \
-             (?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING RETURNING *",
+            "INSERT INTO tokens (id, contract_address, token_id, name, symbol, decimals, \
+             metadata) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING RETURNING *",
         )
         .bind(&result.query.token_id)
         .bind(felt_to_sql_string(&result.query.contract_address))
+        .bind(u256_to_sql_string(&result.query.actual_token_id))
         .bind(&result.name)
         .bind(&result.symbol)
         .bind(0)
