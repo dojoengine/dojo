@@ -103,6 +103,11 @@ jobs:
           # See: https://github.com/jemalloc/jemalloc/issues/467
           echo "JEMALLOC_SYS_WITH_LG_PAGE=16" >> $GITHUB_ENV
 
+      - name: Windows setup
+        if: ${{ matrix.job.target == 'x86_64-pc-windows-msvc' }}
+        run: |
+          vcpkg install dav1d
+
       - name: Build binaries
         run: cargo build --release --bins --target ${{ matrix.job.target }}
 
