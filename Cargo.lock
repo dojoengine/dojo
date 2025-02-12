@@ -8081,6 +8081,7 @@ dependencies = [
  "dojo-utils",
  "katana-chain-spec",
  "katana-core",
+ "katana-messaging",
  "katana-node",
  "katana-primitives",
  "katana-rpc",
@@ -8119,17 +8120,12 @@ dependencies = [
 name = "katana-core"
 version = "1.1.2"
 dependencies = [
- "alloy-contract 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "alloy-network 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "alloy-primitives",
  "alloy-provider 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "alloy-rpc-types-eth 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "alloy-sol-types",
- "alloy-transport 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "anyhow",
  "arbitrary",
  "assert_matches",
- "async-trait",
  "criterion",
  "derive_more 0.99.18",
  "dojo-metrics",
@@ -8150,12 +8146,8 @@ dependencies = [
  "pprof",
  "rand",
  "rayon",
- "reqwest 0.11.27",
  "rstest 0.18.2",
- "serde",
- "serde_json",
  "starknet",
- "starknet-crypto 0.7.2",
  "starknet-types-core",
  "tempfile",
  "thiserror 1.0.63",
@@ -8244,6 +8236,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "katana-messaging"
+version = "1.1.2"
+dependencies = [
+ "alloy-contract 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "alloy-network 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "alloy-primitives",
+ "alloy-provider 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "alloy-rpc-types-eth 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "alloy-sol-types",
+ "alloy-transport 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "anyhow",
+ "async-trait",
+ "futures",
+ "katana-chain-spec",
+ "katana-pool",
+ "katana-primitives",
+ "katana-provider",
+ "reqwest 0.11.27",
+ "serde",
+ "serde_json",
+ "starknet",
+ "starknet-crypto 0.7.2",
+ "thiserror 1.0.63",
+ "tokio",
+ "tracing",
+ "url",
+]
+
+[[package]]
 name = "katana-node"
 version = "1.1.2"
 dependencies = [
@@ -8260,6 +8281,7 @@ dependencies = [
  "katana-db",
  "katana-executor",
  "katana-feeder-gateway",
+ "katana-messaging",
  "katana-pipeline",
  "katana-pool",
  "katana-primitives",
@@ -8414,6 +8436,7 @@ dependencies = [
  "katana-chain-spec",
  "katana-core",
  "katana-executor",
+ "katana-messaging",
  "katana-node",
  "katana-pool",
  "katana-primitives",
@@ -8542,6 +8565,7 @@ dependencies = [
  "katana-core",
  "katana-executor",
  "katana-feeder-gateway",
+ "katana-messaging",
  "katana-pool",
  "katana-primitives",
  "katana-provider",

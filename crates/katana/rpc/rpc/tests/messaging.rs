@@ -10,7 +10,7 @@ use cainome::cairo_serde::EthAddress;
 use cainome::rs::abigen;
 use dojo_test_utils::sequencer::{get_default_test_config, TestSequencer};
 use dojo_utils::TransactionWaiter;
-use katana_core::service::messaging::MessagingConfig;
+use katana_messaging::MessagingConfig;
 use katana_node::config::sequencing::SequencingConfig;
 use katana_primitives::felt;
 use katana_primitives::utils::transaction::{

@@ -5,9 +5,9 @@ use anyhow::Result;
 use futures::future::{self, BoxFuture};
 use katana_core::backend::Backend;
 use katana_core::service::block_producer::{BlockProducer, BlockProductionError};
-use katana_core::service::messaging::{MessagingConfig, MessagingService, MessagingTask};
 use katana_core::service::{BlockProductionTask, TransactionMiner};
 use katana_executor::ExecutorFactory;
+use katana_messaging::{MessagingConfig, MessagingService, MessagingTask};
 use katana_pool::{TransactionPool, TxPool};
 use katana_tasks::{TaskHandle, TaskSpawner};
 use tracing::error;
@@ -39,9 +39,10 @@ impl<EF: ExecutorFactory> Sequencing<EF> {
         if let Some(config) = &self.messaging_config {
             let config = config.clone();
             let pool = self.pool.clone();
-            let backend = self.backend.clone();
+            let chain_spec = self.backend.chain_spec.clone();
+            let provider = self.backend.blockchain.provider().clone();
 
-            let service = MessagingService::new(config, pool, backend).await?;
+            let service = MessagingService::new(config, chain_spec, pool, provider).await?;
             let task = MessagingTask::new(service);
 
             let handle = self.task_spawner.build_task().name("Messaging").spawn(task);

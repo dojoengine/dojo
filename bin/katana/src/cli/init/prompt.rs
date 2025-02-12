@@ -3,6 +3,7 @@ use std::sync::Arc;
 
 use anyhow::{Context, Result};
 use inquire::{Confirm, CustomType, Select};
+use katana_primitives::block::BlockNumber;
 use katana_primitives::{ContractAddress, Felt};
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::types::{BlockId, BlockTag};
@@ -13,6 +14,7 @@ use starknet::signers::{LocalWallet, SigningKey};
 use tokio::runtime::Handle;
 
 use super::{deployment, Outcome};
+use crate::cli::init::deployment::DeploymentOutcome;
 
 pub const CARTRIDGE_SN_SEPOLIA_PROVIDER: &str = "https://api.cartridge.gg/x/starknet/sepolia";
 
@@ -97,7 +99,7 @@ pub async fn prompt() -> Result<Outcome> {
 
     // The core settlement contract on L1c.
     // Prompt the user whether to deploy the settlement contract or not.
-    let settlement_contract =
+    let deployment_outcome =
         if Confirm::new("Deploy settlement contract?").with_default(true).prompt()? {
             let chain_id = cairo_short_string_to_felt(&chain_id)?;
             deployment::deploy_settlement_contract(account, chain_id).await?
@@ -115,12 +117,17 @@ pub async fn prompt() -> Result<Outcome> {
                 "Invalid settlement contract. The contract might have been configured incorrectly.",
             )?;
 
-            address
+            let block_number =
+                CustomType::<BlockNumber>::new("Settlement contract deployment block")
+                    .with_help_message("The block at which the settlement contract was deployed")
+                    .prompt()?;
+
+            DeploymentOutcome { contract_address: address, block_number }
         };
 
     Ok(Outcome {
         id: chain_id,
-        settlement_contract,
+        deployment_outcome,
         account: account_address,
         rpc_url: settlement_url,
         settlement_id: parse_cairo_short_string(&l1_chain_id)?,

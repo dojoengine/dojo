@@ -11,7 +11,7 @@ use clap::Parser;
 use katana_chain_spec::rollup::ChainConfigDir;
 use katana_chain_spec::ChainSpec;
 use katana_core::constants::DEFAULT_SEQUENCER_ADDRESS;
-use katana_core::service::messaging::MessagingConfig;
+use katana_messaging::MessagingConfig;
 use katana_node::config::db::DbConfig;
 use katana_node::config::dev::{DevConfig, FixedL1GasPriceConfig};
 use katana_node::config::execution::ExecutionConfig;
@@ -80,7 +80,8 @@ pub struct NodeArgs {
     /// settlement chain that can be Ethereum or an other Starknet sequencer.
     #[arg(long)]
     #[arg(value_name = "PATH")]
-    #[arg(value_parser = katana_core::service::messaging::MessagingConfig::parse)]
+    #[arg(value_parser = katana_messaging::MessagingConfig::parse)]
+    #[arg(conflicts_with = "chain")]
     pub messaging: Option<MessagingConfig>,
 
     #[arg(long = "l1.provider", value_name = "URL", alias = "l1-provider")]
@@ -180,12 +181,16 @@ impl NodeArgs {
         let db = self.db_config();
         let rpc = self.rpc_config()?;
         let dev = self.dev_config();
-        let chain = self.chain_spec()?;
+        let (chain, cs_messaging) = self.chain_spec()?;
         let metrics = self.metrics_config();
         let forking = self.forking_config()?;
         let execution = self.execution_config();
         let sequencing = self.sequencer_config();
-        let messaging = self.messaging.clone();
+
+        // the `katana init` will automatically generate a messaging config. so if katana is run
+        // with `--chain` then the `--messaging` flag is not required. this is temporary and
+        // the messagign config will eventually be removed slowly.
+        let messaging = if cs_messaging.is_some() { cs_messaging } else { self.messaging.clone() };
 
         Ok(Config { metrics, db, dev, rpc, chain, execution, sequencing, messaging, forking })
     }
@@ -242,11 +247,12 @@ impl NodeArgs {
         }
     }
 
-    fn chain_spec(&self) -> Result<Arc<ChainSpec>> {
+    fn chain_spec(&self) -> Result<(Arc<ChainSpec>, Option<MessagingConfig>)> {
         if let Some(path) = &self.chain {
             let mut cs = katana_chain_spec::rollup::read(path)?;
             cs.genesis.sequencer_address = *DEFAULT_SEQUENCER_ADDRESS;
-            Ok(Arc::new(ChainSpec::Rollup(cs)))
+            let messaging_config = MessagingConfig::from_chain_spec(&cs);
+            Ok((Arc::new(ChainSpec::Rollup(cs)), Some(messaging_config)))
         }
         // exclusively for development mode
         else {
@@ -275,7 +281,7 @@ impl NodeArgs {
                 katana_slot_controller::add_controller_account(&mut chain_spec.genesis)?;
             }
 
-            Ok(Arc::new(ChainSpec::Dev(chain_spec)))
+            Ok((Arc::new(ChainSpec::Dev(chain_spec)), None))
         }
     }
 

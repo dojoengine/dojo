@@ -4,8 +4,10 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use clap::Args;
+use deployment::DeploymentOutcome;
 use katana_chain_spec::rollup::{ChainConfigDir, FeeContract};
 use katana_chain_spec::{rollup, SettlementLayer};
+use katana_primitives::block::BlockNumber;
 use katana_primitives::chain::ChainId;
 use katana_primitives::genesis::allocation::DevAllocationsGenerator;
 use katana_primitives::genesis::constant::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;
@@ -42,8 +44,12 @@ pub struct InitArgs {
     settlement_account_private_key: Option<Felt>,
 
     #[arg(long = "settlement-contract")]
-    #[arg(requires_all = ["id", "settlement_chain", "settlement_account", "settlement_account_private_key"])]
+    #[arg(requires_all = ["id", "settlement_chain", "settlement_account", "settlement_account_private_key", "settlement_contract_deployed_block"])]
     settlement_contract: Option<ContractAddress>,
+
+    #[arg(long = "settlement-contract-deployed-block")]
+    #[arg(requires_all = ["id", "settlement_chain", "settlement_account", "settlement_account_private_key", "settlement_contract"])]
+    settlement_contract_deployed_block: Option<BlockNumber>,
 
     /// Specify the path of the directory where the configuration files will be stored at.
     #[arg(long)]
@@ -64,7 +70,8 @@ impl InitArgs {
             account: output.account,
             rpc_url: output.rpc_url,
             id: ChainId::parse(&output.settlement_id)?,
-            core_contract: output.settlement_contract,
+            block: output.deployment_outcome.block_number,
+            core_contract: output.deployment_outcome.contract_address,
         };
 
         let id = ChainId::parse(&output.id)?;
@@ -105,12 +112,18 @@ impl InitArgs {
                 Arc::new(JsonRpcClient::new(HttpTransport::new(settlement_url.clone())));
             let l1_chain_id = l1_provider.chain_id().await.unwrap();
 
-            let settlement_contract = if let Some(contract) = self.settlement_contract {
+            let deployment_outcome = if let Some(contract) = self.settlement_contract {
                 let chain_id = cairo_short_string_to_felt(&id).unwrap();
                 deployment::check_program_info(chain_id, contract.into(), &l1_provider)
                     .await
                     .unwrap();
-                contract
+
+                DeploymentOutcome {
+                    contract_address: contract,
+                    block_number: self
+                        .settlement_contract_deployed_block
+                        .expect("must exist at this point"),
+                }
             }
             // If settlement contract is not provided, then we will deploy it.
             else {
@@ -127,7 +140,7 @@ impl InitArgs {
 
             Some(Ok(Outcome {
                 id,
-                settlement_contract,
+                deployment_outcome,
                 rpc_url: settlement_url,
                 account: settlement_account_address,
                 settlement_id: parse_cairo_short_string(&l1_chain_id).unwrap(),
@@ -153,7 +166,7 @@ struct Outcome {
     // the rpc url for the settlement layer.
     pub rpc_url: Url,
 
-    pub settlement_contract: ContractAddress,
+    pub deployment_outcome: DeploymentOutcome,
 }
 
 lazy_static! {
