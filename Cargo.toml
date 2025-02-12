@@ -257,22 +257,24 @@ wasm-prost = { version = "0.13", package = "prost" }
 wasm-tonic = { version = "0.12", default-features = false, features = [ "codegen", "gzip", "prost" ], package = "tonic" }
 wasm-tonic-build = { version = "0.12", default-features = false, features = [ "prost" ], package = "tonic-build" }
 
-alloy-primitives = { version = "0.8.3", default-features = false }
-alloy-sol-types = { version = "0.8.3", default-features = false }
-
 criterion = "0.5.1"
 pprof = { version = "0.13.0", features = [ "criterion", "flamegraph" ] }
 
 # Slot integration. Dojo don't need to manually include `account_sdk` as dependency as `slot` already re-exports it.
 slot = { git = "https://github.com/cartridge-gg/slot", rev = "1298a30" }
 
-alloy-contract = { version = "0.3", default-features = false }
-alloy-json-rpc = { version = "0.3", default-features = false }
-alloy-network = { version = "0.3", default-features = false }
-alloy-provider = { version = "0.3", default-features = false }
-alloy-rpc-types-eth = { version = "0.3", default-features = false }
-alloy-signer = { version = "0.3", default-features = false }
-alloy-transport = { version = "0.3", default-features = false }
+# alloy core
+alloy-primitives = { version = "0.8", default-features = false }
+alloy-sol-types = { version = "0.8", default-features = false }
+
+# alloy
+alloy-contract = { version = "0.4", default-features = false }
+alloy-json-rpc = { version = "0.4", default-features = false }
+alloy-network = { version = "0.4", default-features = false }
+alloy-provider = { version = "0.4", default-features = false }
+alloy-rpc-types-eth = { version = "0.4", default-features = false }
+alloy-signer = { version = "0.4", default-features = false }
+alloy-transport = { version = "0.4", default-features = false }
 
 starknet = "0.12.0"
 starknet-crypto = "0.7.1"
