@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest-4-cores
     needs: [fmt, cairofmt]
     container:
-      image: ghcr.io/dojoengine/dojo-dev:v1.1.1
+      image: ghcr.io/dojoengine/dojo-dev:dav1d
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -34,7 +34,7 @@ jobs:
     needs: ensure-docker
     runs-on: ubuntu-latest-32-cores
     container:
-      image: ghcr.io/dojoengine/dojo-dev:v1.1.1
+      image: ghcr.io/dojoengine/dojo-dev:dav1d
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -60,7 +60,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [fmt, cairofmt]
     container:
-      image: ghcr.io/dojoengine/dojo-dev:v1.1.1
+      image: ghcr.io/dojoengine/dojo-dev:dav1d
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -86,6 +86,7 @@ jobs:
         uses: ilammy/setup-nasm@v1
         with:
           version: "2.15.05"
+      - run: vcpkg install dav1d
       - run: cargo build --target x86_64-pc-windows-msvc --bins
 
   # This job is used to ensure the built katana image doesn't depend on any
@@ -164,7 +165,7 @@ jobs:
     runs-on: ubuntu-latest-4-cores
     needs: [fmt, cairofmt]
     container:
-      image: ghcr.io/dojoengine/dojo-dev:v1.1.1
+      image: ghcr.io/dojoengine/dojo-dev:dav1d
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -173,7 +174,7 @@ jobs:
   fmt:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:v1.1.1
+      image: ghcr.io/dojoengine/dojo-dev:dav1d
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -183,7 +184,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [fmt, cairofmt]
     container:
-      image: ghcr.io/dojoengine/dojo-dev:v1.1.1
+      image: ghcr.io/dojoengine/dojo-dev:dav1d
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
