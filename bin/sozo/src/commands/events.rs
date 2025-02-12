@@ -11,15 +11,13 @@ use sozo_ops::model;
 use sozo_scarbext::WorkspaceExt;
 use starknet::core::types::{BlockId, BlockTag, EventFilter, Felt};
 use starknet::core::utils::starknet_keccak;
+use starknet::macros::felt;
 use starknet::providers::Provider;
+use tracing::trace;
 
 use super::options::starknet::StarknetOptions;
 use super::options::world::WorldOptions;
 use crate::utils;
-
-// Maximum blocks per query
-// TODO: initial value pending benchmarking to determine optimal range
-const MAX_BLOCK_RANGE: u64 = 50_000;
 
 #[derive(Debug, Args)]
 pub struct EventsArgs {
@@ -40,9 +38,10 @@ pub struct EventsArgs {
     #[arg(default_value_t = 100)]
     pub chunk_size: u64,
 
-    #[arg(long)]
-    #[arg(help = "Continuation string to be passed for rpc request")]
-    pub continuation_token: Option<String>,
+    #[arg(short, long)]
+    #[arg(help = "Maximum number of blocks to query at once")]
+    #[arg(default_value_t = 50_000)]
+    pub max_block_range: u64,
 
     #[arg(long)]
     #[arg(help = "Print values as raw json")]
@@ -71,59 +70,86 @@ impl EventsArgs {
             {
                 world_block
             } else {
-                self.from_block.expect("from_block is required when not specified in environment")
+                self.from_block.unwrap_or(0)
             };
             let to_block = self.to_block.unwrap_or(latest_block);
 
-            let mut current_start = from_block;
-            let mut continuation_token = self.continuation_token.clone();
-            while current_start <= to_block {
-                let chunk_end = std::cmp::min(current_start + MAX_BLOCK_RANGE - 1, to_block);
+            let mut current_from = from_block;
+            let mut events = Vec::new();
 
-                let event_filter = EventFilter {
-                    from_block: Some(BlockId::Number(current_start)),
-                    to_block: Some(BlockId::Number(chunk_end)),
+            while current_from <= to_block {
+                let current_to = std::cmp::min(current_from + self.max_block_range - 1, to_block);
+
+                let filter = EventFilter {
+                    from_block: Some(BlockId::Number(current_from)),
+                    to_block: Some(BlockId::Number(current_to)),
                     address: Some(world_diff.world_info.address),
                     keys: self.events.as_ref().map(|e| {
                         vec![e.iter().map(|event| starknet_keccak(event.as_bytes())).collect()]
                     }),
                 };
 
-                let res = provider
-                    .get_events(event_filter, continuation_token.clone(), self.chunk_size)
-                    .await?;
+                trace!(
+                    world_address = format!("{:#066x}", world_diff.world_info.address),
+                    self.chunk_size,
+                    ?filter,
+                    "Fetching remote world events for block range {}-{}.",
+                    current_from,
+                    current_to
+                );
 
-                for event in &res.events {
-                    match world::Event::try_from(event) {
-                        Ok(ev) => {
-                            match_event(
-                                &ev,
-                                &world_diff,
-                                event.block_number,
-                                event.transaction_hash,
-                                &provider,
-                            )
-                            .await
-                            .unwrap_or_else(|e| {
-                                tracing::error!(?e, "Failed to process event: {:?}", ev);
-                            });
-                        }
-                        Err(e) => {
-                            tracing::error!(
-                                ?e,
-                                "Failed to parse remote world event which is supposed to be valid."
-                            );
-                        }
+                let chain_id = provider.chain_id().await?;
+                // Katana if it's not `SN_SEPOLIA` or `SN_MAIN`.
+                let is_katana = chain_id != felt!("0x534e5f5345504f4c4941")
+                    && chain_id != felt!("0x534e5f4d41494e");
+
+                let mut continuation_token = None;
+                loop {
+                    let page = provider
+                        .get_events(filter.clone(), continuation_token, self.chunk_size)
+                        .await?;
+
+                    if is_katana && page.events.is_empty() {
+                        break;
+                    }
+
+                    events.extend(page.events);
+
+                    continuation_token = page.continuation_token;
+                    if continuation_token.is_none() {
+                        break;
                     }
                 }
 
-                if let Some(token) = res.continuation_token {
-                    continuation_token = Some(token);
-                } else {
-                    break;
-                }
+                current_from = current_to + 1;
+            }
 
-                current_start = chunk_end + 1;
+            trace!(
+                events_count = events.len(),
+                world_address = format!("{:#066x}", world_diff.world_info.address),
+                "Fetched events for world."
+            );
+
+            for event in &events {
+                match world::Event::try_from(event) {
+                    Ok(ev) => {
+                        trace!(?ev, "Processing world event.");
+                        match_event(
+                            &ev,
+                            &world_diff,
+                            event.block_number,
+                            event.transaction_hash,
+                            &provider,
+                        )
+                        .await?;
+                    }
+                    Err(e) => {
+                        tracing::error!(
+                            ?e,
+                            "Failed to parse remote world event which is supposed to be valid."
+                        );
+                    }
+                }
             }
 
             Ok(())
