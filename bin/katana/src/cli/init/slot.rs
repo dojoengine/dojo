@@ -18,7 +18,7 @@ pub struct SlotArgs {
     pub slot: bool,
 
     #[arg(requires_all = ["id", "slot"])]
-    #[arg(long = "slot.paymaster-accounts")]
+    #[arg(long = "slot.paymasters")]
     #[arg(value_parser = parse_paymaster_accounts_args)]
     pub paymaster_accounts: Option<Vec<PaymasterAccountArgs>>,
 }
