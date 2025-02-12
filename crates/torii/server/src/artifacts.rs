@@ -58,9 +58,7 @@ async fn serve_static_file(
 
     let token_id = format!("{}:{}", parts[0], parts[1]);
     if !token_image_dir.exists() {
-        match fetch_and_process_image(&artifacts_dir, &token_id, pool)
-            .await
-        {
+        match fetch_and_process_image(&artifacts_dir, &token_id, pool).await {
             Ok(path) => path,
             Err(e) => {
                 error!(error = %e, "Failed to fetch and process image for token_id: {}", token_id);
@@ -177,9 +175,8 @@ async fn fetch_and_process_image(
         uri if uri.starts_with("http") || uri.starts_with("https") => {
             debug!(image_uri = %uri, "Fetching image from http/https URL");
             // Fetch image from HTTP/HTTPS URL
-            let response = fetch_content_from_http(&uri)
-                .await
-                .context("Failed to fetch image from URL")?;
+            let response =
+                fetch_content_from_http(&uri).await.context("Failed to fetch image from URL")?;
 
             // svg files typically start with <svg or <?xml
             if response.starts_with(b"<svg") || response.starts_with(b"<?xml") {

@@ -133,7 +133,10 @@ pub async fn fetch_content_from_http(url: &str) -> Result<Bytes> {
         match HTTP_CLIENT.get(url).send().await {
             Ok(response) => {
                 if !response.status().is_success() {
-                    return Err(anyhow::anyhow!("HTTP request failed with status: {}", response.status()));
+                    return Err(anyhow::anyhow!(
+                        "HTTP request failed with status: {}",
+                        response.status()
+                    ));
                 }
                 return response.bytes().await.map_err(Into::into);
             }

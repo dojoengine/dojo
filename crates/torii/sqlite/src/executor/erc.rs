@@ -17,7 +17,8 @@ use crate::executor::LOG_TARGET;
 use crate::simple_broker::SimpleBroker;
 use crate::types::{ContractType, Token, TokenBalance};
 use crate::utils::{
-    felt_to_sql_string, fetch_content_from_http, fetch_content_from_ipfs, sanitize_json_string, sql_string_to_u256, u256_to_sql_string, I256
+    felt_to_sql_string, fetch_content_from_http, fetch_content_from_ipfs, sanitize_json_string,
+    sql_string_to_u256, u256_to_sql_string, I256,
 };
 
 #[derive(Debug, Clone)]
@@ -284,8 +285,10 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                     .await
                     .context("Failed to fetch metadata from IPFS")?;
 
-                serde_json::from_slice(&bytes)
-                    .context(format!("Failed to parse metadata JSON from IPFS: {:?}, data: {:?}", cid, bytes))
+                serde_json::from_slice(&bytes).context(format!(
+                    "Failed to parse metadata JSON from IPFS: {:?}, data: {:?}",
+                    cid, bytes
+                ))
             }
             uri if uri.starts_with("data") => {
                 // Parse and decode data URI
@@ -310,11 +313,8 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                     .collect::<String>();
                 let sanitized_json = sanitize_json_string(&decoded_str);
 
-                let json: serde_json::Value =
-                    serde_json::from_str(&sanitized_json).context(format!(
-                        "Failed to parse metadata JSON from data URI: {}",
-                        &uri
-                    ))?;
+                let json: serde_json::Value = serde_json::from_str(&sanitized_json)
+                    .context(format!("Failed to parse metadata JSON from data URI: {}", &uri))?;
 
                 Ok(json)
             }
