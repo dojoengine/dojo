@@ -8,7 +8,6 @@ use camino::Utf8PathBuf;
 use data_url::mime::Mime;
 use data_url::DataUrl;
 use image::{DynamicImage, ImageFormat};
-use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use sqlx::{Pool, Sqlite};
 use tokio::fs;
@@ -16,7 +15,7 @@ use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::broadcast::Receiver;
 use torii_sqlite::constants::TOKENS_TABLE;
-use torii_sqlite::utils::fetch_content_from_ipfs;
+use torii_sqlite::utils::{fetch_content_from_http, fetch_content_from_ipfs};
 use tracing::{debug, error, trace};
 use warp::http::Response;
 use warp::path::Tail;
@@ -61,7 +60,6 @@ async fn serve_static_file(
     if !token_image_dir.exists() {
         match fetch_and_process_image(&artifacts_dir, &token_id, pool)
             .await
-            .context(format!("Failed to fetch and process image for token_id: {}", token_id))
         {
             Ok(path) => path,
             Err(e) => {
@@ -173,19 +171,15 @@ async fn fetch_and_process_image(
         .with_context(|| format!("Image field not a string for token_id: {}", token_id))?
         .to_string();
 
+    println!("image_uri: {}", image_uri);
+
     let image_type = match image_uri {
         uri if uri.starts_with("http") || uri.starts_with("https") => {
             debug!(image_uri = %uri, "Fetching image from http/https URL");
             // Fetch image from HTTP/HTTPS URL
-            let client = Client::new();
-            let response = client
-                .get(uri)
-                .send()
+            let response = fetch_content_from_http(&uri)
                 .await
-                .context("Failed to fetch image from URL")?
-                .bytes()
-                .await
-                .context("Failed to read image bytes from response")?;
+                .context("Failed to fetch image from URL")?;
 
             // svg files typically start with <svg or <?xml
             if response.starts_with(b"<svg") || response.starts_with(b"<?xml") {
@@ -218,7 +212,7 @@ async fn fetch_and_process_image(
                     )
                 })?;
                 ErcImageType::DynamicImage((
-                    image::load_from_memory(&response)
+                    image::load_from_memory_with_format(&response, format)
                         .context("Failed to load image from bytes")?,
                     format,
                 ))
@@ -249,6 +243,8 @@ async fn fetch_and_process_image(
             return Err(anyhow::anyhow!("Unsupported URI scheme: {}", uri));
         }
     };
+
+    println!("image_type: {:?}", image_type);
 
     // Extract contract_address and token_id from token_id
     let parts: Vec<&str> = token_id.split(':').collect();
