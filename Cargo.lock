@@ -8016,7 +8016,6 @@ dependencies = [
  "katana-node",
  "katana-primitives",
  "katana-rpc-types",
- "lazy_static",
  "piltover",
  "rand",
  "rstest 0.18.2",

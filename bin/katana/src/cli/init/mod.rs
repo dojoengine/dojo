@@ -13,7 +13,6 @@ use katana_primitives::genesis::allocation::DevAllocationsGenerator;
 use katana_primitives::genesis::constant::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;
 use katana_primitives::genesis::Genesis;
 use katana_primitives::{ContractAddress, Felt, U256};
-use lazy_static::lazy_static;
 use prompt::CARTRIDGE_SN_SEPOLIA_PROVIDER;
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::utils::{cairo_short_string_to_felt, parse_cairo_short_string};
@@ -24,6 +23,8 @@ use url::Url;
 
 mod deployment;
 mod prompt;
+#[cfg(feature = "init-slot")]
+mod slot;
 
 #[derive(Debug, Args)]
 pub struct InitArgs {
@@ -54,13 +55,17 @@ pub struct InitArgs {
     /// Specify the path of the directory where the configuration files will be stored at.
     #[arg(long)]
     output_path: Option<PathBuf>,
+
+    #[cfg(feature = "init-slot")]
+    #[command(flatten)]
+    slot: slot::SlotArgs,
 }
 
 impl InitArgs {
     // TODO:
     // - deploy bridge contract
     pub(crate) async fn execute(self) -> anyhow::Result<()> {
-        let output = if let Some(output) = self.process_args().await {
+        let output = if let Some(output) = self.configure_from_args().await {
             output?
         } else {
             prompt::prompt().await?
@@ -75,7 +80,12 @@ impl InitArgs {
         };
 
         let id = ChainId::parse(&output.id)?;
-        let genesis = GENESIS.clone();
+
+        #[cfg_attr(not(feature = "init-slot"), allow(unused_mut))]
+        let mut genesis = generate_genesis();
+        #[cfg(feature = "init-slot")]
+        slot::add_paymasters_to_genesis(&mut genesis, &output.slot_paymasters.unwrap_or_default());
+
         // At the moment, the fee token is limited to a predefined token.
         let fee_contract = FeeContract::default();
         let chain_spec = rollup::ChainSpec { id, genesis, settlement, fee_contract };
@@ -92,7 +102,7 @@ impl InitArgs {
         Ok(())
     }
 
-    async fn process_args(&self) -> Option<anyhow::Result<Outcome>> {
+    async fn configure_from_args(&self) -> Option<anyhow::Result<Outcome>> {
         // Here we just check that if `id` is present, then all the other required* arguments must
         // be present as well. This is guaranteed by `clap`.
         if let Some(id) = self.id.clone() {
@@ -112,8 +122,9 @@ impl InitArgs {
                 Arc::new(JsonRpcClient::new(HttpTransport::new(settlement_url.clone())));
             let l1_chain_id = l1_provider.chain_id().await.unwrap();
 
+            let chain_id = cairo_short_string_to_felt(&id).unwrap();
+
             let deployment_outcome = if let Some(contract) = self.settlement_contract {
-                let chain_id = cairo_short_string_to_felt(&id).unwrap();
                 deployment::check_program_info(chain_id, contract.into(), &l1_provider)
                     .await
                     .unwrap();
@@ -135,7 +146,7 @@ impl InitArgs {
                     ExecutionEncoding::New,
                 );
 
-                deployment::deploy_settlement_contract(account, l1_chain_id).await.unwrap()
+                deployment::deploy_settlement_contract(account, chain_id).await.unwrap()
             };
 
             Some(Ok(Outcome {
@@ -144,6 +155,8 @@ impl InitArgs {
                 rpc_url: settlement_url,
                 account: settlement_account_address,
                 settlement_id: parse_cairo_short_string(&l1_chain_id).unwrap(),
+                #[cfg(feature = "init-slot")]
+                slot_paymasters: self.slot.paymaster_accounts.clone(),
             }))
         } else {
             None
@@ -167,16 +180,18 @@ struct Outcome {
     pub rpc_url: Url,
 
     pub deployment_outcome: DeploymentOutcome,
+
+    #[cfg(feature = "init-slot")]
+    pub slot_paymasters: Option<Vec<slot::PaymasterAccountArgs>>,
 }
 
-lazy_static! {
-    static ref GENESIS: Genesis = {
-        // master account
-        let accounts = DevAllocationsGenerator::new(1).with_balance(U256::from(DEFAULT_PREFUNDED_ACCOUNT_BALANCE)).generate();
-        let mut genesis = Genesis::default();
-        genesis.extend_allocations(accounts.into_iter().map(|(k, v)| (k, v.into())));
-        genesis
-    };
+fn generate_genesis() -> Genesis {
+    let accounts = DevAllocationsGenerator::new(1)
+        .with_balance(U256::from(DEFAULT_PREFUNDED_ACCOUNT_BALANCE))
+        .generate();
+    let mut genesis = Genesis::default();
+    genesis.extend_allocations(accounts.into_iter().map(|(k, v)| (k, v.into())));
+    genesis
 }
 
 #[derive(Debug, thiserror::Error)]
