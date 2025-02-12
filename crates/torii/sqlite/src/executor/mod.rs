@@ -7,6 +7,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use anyhow::{Context, Result};
 use cainome::cairo_serde::{ByteArray, CairoSerde};
 use dojo_types::schema::{Struct, Ty};
+use erc::RegisterNftTokenMetadata;
 use sqlx::{FromRow, Pool, Sqlite, Transaction};
 use starknet::core::types::{BlockId, BlockTag, Felt, FunctionCall};
 use starknet::core::utils::{get_selector_from_name, parse_cairo_short_string};
@@ -28,7 +29,7 @@ use crate::types::{
 use crate::utils::{felt_to_sql_string, I256};
 
 pub mod erc;
-pub use erc::{RegisterErc20TokenQuery, RegisterErc721TokenMetadata, RegisterErc721TokenQuery};
+pub use erc::{RegisterErc20TokenQuery, RegisterNftTokenQuery};
 
 pub(crate) const LOG_TARGET: &str = "torii::sqlite::executor";
 
@@ -112,7 +113,7 @@ pub enum QueryType {
     DeleteEntity(DeleteEntityQuery),
     EventMessage(EventMessageQuery),
     ApplyBalanceDiff(ApplyBalanceDiffQuery),
-    RegisterErc721Token(RegisterErc721TokenQuery),
+    RegisterNftToken(RegisterNftTokenQuery),
     RegisterErc20Token(RegisterErc20TokenQuery),
     TokenTransfer,
     RegisterModel,
@@ -136,7 +137,7 @@ pub struct Executor<'c, P: Provider + Sync + Send + 'static> {
     shutdown_rx: Receiver<()>,
     // These tasks are spawned to fetch ERC721 token metadata from the chain
     // to not block the main loop
-    register_tasks: JoinSet<Result<RegisterErc721TokenMetadata>>,
+    register_tasks: JoinSet<Result<RegisterNftTokenMetadata>>,
     // Some queries depends on the metadata being registered, so we defer them
     // until the metadata is fetched
     deferred_query_messages: Vec<QueryMessage>,
@@ -276,7 +277,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 }
                 Some(result) = self.register_tasks.join_next() => {
                     let result = result??;
-                    self.handle_erc721_token_metadata(result).await?;
+                    self.handle_nft_token_metadata(result).await?;
                 }
             }
         }
@@ -602,68 +603,72 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 self.apply_balance_diff(apply_balance_diff, self.provider.clone()).await?;
                 debug!(target: LOG_TARGET, duration = ?instant.elapsed(), "Applied balance diff.");
             }
-            QueryType::RegisterErc721Token(register_erc721_token) => {
+            QueryType::RegisterNftToken(register_nft_token) => {
                 let semaphore = self.semaphore.clone();
                 let provider = self.provider.clone();
 
                 let res = sqlx::query_as::<_, (String, String)>(&format!(
                     "SELECT name, symbol FROM {TOKENS_TABLE} WHERE contract_address = ? LIMIT 1"
                 ))
-                .bind(felt_to_sql_string(&register_erc721_token.contract_address))
+                .bind(felt_to_sql_string(&register_nft_token.contract_address))
                 .fetch_one(&mut **tx)
                 .await;
 
                 // If we find a token already registered for this contract_address we dont need to
-                // refetch the data since its same for all ERC721 tokens
+                // refetch the data since its same for all tokens of this contract
                 let (name, symbol) = match res {
                     Ok((name, symbol)) => {
                         debug!(
-                            contract_address = %felt_to_sql_string(&register_erc721_token.contract_address),
+                            contract_address = %felt_to_sql_string(&register_nft_token.contract_address),
                             "Token already registered for contract_address, so reusing fetched data",
                         );
                         (name, symbol)
                     }
                     Err(_) => {
-                        // Fetch token information from the chain
-                        let name = provider
+                        // Try to fetch name, use empty string if it fails
+                        let name = match provider
                             .call(
                                 FunctionCall {
-                                    contract_address: register_erc721_token.contract_address,
+                                    contract_address: register_nft_token.contract_address,
                                     entry_point_selector: get_selector_from_name("name").unwrap(),
                                     calldata: vec![],
                                 },
                                 BlockId::Tag(BlockTag::Pending),
                             )
-                            .await?;
-
-                        // len = 1 => return value felt (i.e. legacy erc721 token)
-                        // len > 1 => return value ByteArray (i.e. new erc721 token)
-                        let name = if name.len() == 1 {
-                            parse_cairo_short_string(&name[0]).unwrap()
-                        } else {
-                            ByteArray::cairo_deserialize(&name, 0)
-                                .expect("Return value not ByteArray")
-                                .to_string()
-                                .expect("Return value not String")
+                            .await
+                        {
+                            Ok(name) => {
+                                // len = 1 => return value felt (i.e. legacy erc721 token)
+                                // len > 1 => return value ByteArray (i.e. new erc721 token)
+                                if name.len() == 1 {
+                                    parse_cairo_short_string(&name[0])?
+                                } else {
+                                    ByteArray::cairo_deserialize(&name, 0)?.to_string()?
+                                }
+                            }
+                            Err(_) => "".to_string(),
                         };
 
-                        let symbol = provider
+                        // Try to fetch symbol, use empty string if it fails
+                        let symbol = match provider
                             .call(
                                 FunctionCall {
-                                    contract_address: register_erc721_token.contract_address,
+                                    contract_address: register_nft_token.contract_address,
                                     entry_point_selector: get_selector_from_name("symbol").unwrap(),
                                     calldata: vec![],
                                 },
                                 BlockId::Tag(BlockTag::Pending),
                             )
-                            .await?;
-                        let symbol = if symbol.len() == 1 {
-                            parse_cairo_short_string(&symbol[0]).unwrap()
-                        } else {
-                            ByteArray::cairo_deserialize(&symbol, 0)
-                                .expect("Return value not ByteArray")
-                                .to_string()
-                                .expect("Return value not String")
+                            .await
+                        {
+                            Ok(symbol) => {
+                                if symbol.len() == 1 {
+                                    parse_cairo_short_string(&symbol[0])?
+                                } else {
+                                    ByteArray::cairo_deserialize(&symbol, 0)?.to_string()?
+                                }
+                            }
+                            Err(_) => "".to_string(),
                         };
 
                         (name, symbol)
@@ -673,8 +678,8 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 self.register_tasks.spawn(async move {
                     let permit = semaphore.acquire().await.unwrap();
 
-                    let result = Self::process_register_erc721_token_query(
-                        register_erc721_token,
+                    let result = Self::process_register_nft_token_query(
+                        register_nft_token,
                         provider,
                         name,
                         symbol,
@@ -777,7 +782,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
 
         while let Some(result) = self.register_tasks.join_next().await {
             let result = result??;
-            self.handle_erc721_token_metadata(result).await?;
+            self.handle_nft_token_metadata(result).await?;
         }
 
         let mut deferred_query_messages = mem::take(&mut self.deferred_query_messages);

@@ -1,6 +1,6 @@
 [
   {
-    "target": "0x780e3207b4f11b56f32cc0f19975af5b3a4df3cad6a4b0ab59a1702ba0304d8",
+    "target": "0xca72f1cd782b614fa12c8b54afa895a169a4de1792738d4e3f09d0929f7834",
     "method": "upgrade"
   },
   {
@@ -40,11 +40,11 @@
     "method": "upgrade"
   },
   {
-    "target": "0xca72f1cd782b614fa12c8b54afa895a169a4de1792738d4e3f09d0929f7834",
+    "target": "0x608ffd2e6b74a7bede256770ebe3d07bc65c79622e6a9396ea764011152102",
     "method": "upgrade"
   },
   {
-    "target": "0x608ffd2e6b74a7bede256770ebe3d07bc65c79622e6a9396ea764011152102",
+    "target": "0x780e3207b4f11b56f32cc0f19975af5b3a4df3cad6a4b0ab59a1702ba0304d8",
     "method": "upgrade"
   },
   {

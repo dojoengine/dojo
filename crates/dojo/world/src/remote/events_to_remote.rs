@@ -6,7 +6,7 @@
 //! Events are also sequential, a resource is not expected to be upgraded before
 //! being registered. We take advantage of this fact to optimize the data gathering.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use anyhow::Result;
 use starknet::core::types::{BlockId, BlockTag, EventFilter, Felt, StarknetError};
@@ -129,6 +129,49 @@ impl WorldRemote {
         }
 
         Ok(world)
+    }
+
+    /// Get the current state of external contracts and external contract
+    /// classes from the blockchain.
+    pub async fn load_external_contract_states<P: Provider>(
+        &mut self,
+        provider: &P,
+        external_contract_classes: Vec<(String, Felt)>,
+        external_contracts: HashMap<String, Felt>,
+    ) -> Result<()> {
+        // dojo.utils is not wasm compatible, and dojo-world needs to be compatible with wasm.
+        // Hence, the is_declared and is_deployed functions are implemented here.
+        for (name, hash) in external_contract_classes {
+            match provider.get_class(BlockId::Tag(BlockTag::Pending), hash).await {
+                Err(ProviderError::StarknetError(StarknetError::ClassHashNotFound)) => {}
+                Ok(_) => {
+                    trace!(
+                        name,
+                        class_hash = format!("{:#066x}", hash),
+                        "External contract class already declared."
+                    );
+                    self.declared_external_contract_classes.push(name);
+                }
+                Err(e) => return Err(e.into()),
+            };
+        }
+
+        for (name, address) in external_contracts {
+            match provider.get_class_hash_at(BlockId::Tag(BlockTag::Pending), address).await {
+                Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => {}
+                Ok(_) => {
+                    trace!(
+                        name,
+                        contract_address = format!("{:#066x}", address),
+                        "External contract already deployed."
+                    );
+                    self.deployed_external_contracts.push(name);
+                }
+                Err(e) => return Err(e.into()),
+            }
+        }
+
+        Ok(())
     }
 
     /// Matches the given event to the corresponding remote resource and inserts it into the world.

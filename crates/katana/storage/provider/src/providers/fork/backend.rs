@@ -14,7 +14,7 @@ use futures::future::BoxFuture;
 use futures::stream::Stream;
 use futures::{Future, FutureExt};
 use katana_primitives::block::BlockHashOrNumber;
-use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, ContractClass};
+use katana_primitives::class::{ClassHash, CompiledClassHash, ContractClass};
 use katana_primitives::contract::{ContractAddress, Nonce, StorageKey, StorageValue};
 use katana_primitives::conversion::rpc::{
     compiled_class_hash_from_flattened_sierra_class, legacy_rpc_to_class,
@@ -606,38 +606,6 @@ impl ContractClassProvider for SharedStateProvider {
 
         self.0.shared_contract_classes.classes.write().entry(class_hash).or_insert(class.clone());
         Ok(Some(class))
-    }
-
-    fn compiled_class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledClass>> {
-        if let compiled @ Some(..) =
-            self.0.shared_contract_classes.compiled_classes.read().get(&hash)
-        {
-            Ok(compiled.cloned())
-        }
-        // If doesn't exist in the cache, try to fetch it from the forked provider.
-        else {
-            // The Starknet RPC specs doesn't provide an endpoint for fetching the compiled class.
-            // If the uncompiled version doesn't yet exist locally, we fetch from the forked
-            // provider (from the `starknet_getClsas` method) and compile it.
-            let class = self.0.shared_contract_classes.classes.read().get(&hash).cloned();
-            let class = if class.is_some() { class } else { self.class(hash)? };
-            let compiled = class.map(|c| c.compile()).transpose().inspect_err(|error|{
-	            error!(target: LOG_TARGET, hash = %format!("{hash:#x}"), %error, "Failed to compile class.");
-            })?;
-
-            if let Some(compiled) = compiled {
-                // Store the compiled class in the cache.
-                self.0
-                    .shared_contract_classes
-                    .compiled_classes
-                    .write()
-                    .entry(hash)
-                    .or_insert(compiled.clone());
-                Ok(Some(compiled))
-            } else {
-                Ok(None)
-            }
-        }
     }
 
     fn compiled_class_hash_of_class_hash(
