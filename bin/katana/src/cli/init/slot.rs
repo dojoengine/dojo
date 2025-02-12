@@ -18,8 +18,7 @@ pub struct SlotArgs {
     pub slot: bool,
 
     #[arg(requires_all = ["id", "slot"])]
-    #[arg(long = "slot.paymasters")]
-    #[arg(value_parser = parse_paymaster_accounts_args)]
+    #[arg(long = "slot.paymasters", value_delimiter = ',')]
     pub paymaster_accounts: Option<Vec<PaymasterAccountArgs>>,
 }
 
@@ -29,12 +28,12 @@ pub struct PaymasterAccountArgs {
     pub public_key: Felt,
 }
 
-fn parse_paymaster_accounts_args(value: &str) -> Result<Vec<PaymasterAccountArgs>> {
-    let mut accounts = Vec::new();
-    for s in value.split(',') {
-        accounts.push(PaymasterAccountArgs { public_key: Felt::from_str(s)? });
+impl FromStr for PaymasterAccountArgs {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self> {
+        Ok(PaymasterAccountArgs { public_key: Felt::from_str(s)? })
     }
-    Ok(accounts)
 }
 
 pub fn add_paymasters_to_genesis(
