@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1739437728665,
+  "lastUpdate": 1739437836285,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -52909,6 +52909,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 42896356974,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "contact@luca-steeb.com",
+            "name": "steebchen",
+            "username": "steebchen"
+          },
+          "committer": {
+            "email": "contact@luca-steeb.com",
+            "name": "steebchen",
+            "username": "steebchen"
+          },
+          "distinct": true,
+          "id": "fc17c42e2f990619fc45f98de3d7f1c111c49c08",
+          "message": "ci(release): add support for preview releases\n\nAdded inputs to trigger preview releases in the workflow.\nAdjusted tag generation, release creation, and Docker tags\nhandling to accommodate preview releases.",
+          "timestamp": "2025-02-13T15:52:00+07:00",
+          "tree_id": "a7a23d33ba22f1b55e5281e8856b6aac714c8fb9",
+          "url": "https://github.com/dojoengine/dojo/commit/fc17c42e2f990619fc45f98de3d7f1c111c49c08"
+        },
+        "date": 1739437833629,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2468378,
+            "range": "± 39712",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 407479,
+            "range": "± 9034",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2871719908,
+            "range": "± 244608915",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 17139769,
+            "range": "± 573260",
             "unit": "ns/iter"
           }
         ]
