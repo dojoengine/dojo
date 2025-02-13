@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1739451210175,
+  "lastUpdate": 1739451235692,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -53329,6 +53329,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 44721998752,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "122404722+notV4l@users.noreply.github.com",
+            "name": "notV4l",
+            "username": "notV4l"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "684ccb054f787c3c5e85d2dd7ac84ed91edc9d9a",
+          "message": "[sozo] remove double library print (#3021)",
+          "timestamp": "2025-02-13T06:35:55-06:00",
+          "tree_id": "0b0b5dca9c8b4531fb3b9f62ac910b73ced7611b",
+          "url": "https://github.com/dojoengine/dojo/commit/684ccb054f787c3c5e85d2dd7ac84ed91edc9d9a"
+        },
+        "date": 1739451232804,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2460106,
+            "range": "± 44114",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 394503,
+            "range": "± 8281",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2749526023,
+            "range": "± 215991730",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 16822105,
+            "range": "± 257293",
             "unit": "ns/iter"
           }
         ]
