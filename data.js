@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1739404339810,
+  "lastUpdate": 1739409271811,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -52333,6 +52333,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 16768920,
             "range": "± 138699",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "distinct": true,
+          "id": "da8e15f8f0c5a91056b4c85cd6528b9075a9d829",
+          "message": "chore: bump scarb rev",
+          "timestamp": "2025-02-12T18:57:53-06:00",
+          "tree_id": "acd12585872d9a39783632ff4cc70e95e6fb781f",
+          "url": "https://github.com/dojoengine/dojo/commit/da8e15f8f0c5a91056b4c85cd6528b9075a9d829"
+        },
+        "date": 1739409269517,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 43729798656,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
