@@ -20,7 +20,8 @@ pub enum TestResource {
     Event: TestClassHash,
     Model: TestClassHash,
     Contract: TestClassHash,
-    Library: (TestClassHash, ByteArray, ByteArray) //test_class_hash, name, version
+    /// (test_class_hash, name, version)
+    Library: (TestClassHash, ByteArray, ByteArray)
 }
 
 #[derive(Drop, Copy)]
