@@ -21,7 +21,7 @@ pub enum TestResource {
     Model: TestClassHash,
     Contract: TestClassHash,
     /// (test_class_hash, name, version)
-    Library: (TestClassHash, ByteArray, ByteArray)
+    Library: (TestClassHash, @ByteArray, @ByteArray),
 }
 
 #[derive(Drop, Copy)]
@@ -181,8 +181,8 @@ pub fn spawn_test_world(namespaces_defs: Span<NamespaceDef>) -> WorldStorage {
                         .register_library(
                             namespace.clone(),
                             (*ch).try_into().unwrap(),
-                            name.clone(),
-                            version.clone(),
+                            (*name).clone(),
+                            (*version).clone(),
                         );
                 },
             }

@@ -340,3 +340,30 @@ fn test_register_library() {
 
     world.register_library("dojo", library_a::TEST_CLASS_HASH.try_into().unwrap(), "liba", "0_1_0");
 }
+
+#[test]
+#[should_panic(expected: ("Resource (Library) `dojo-liba_v0_1_0` is already registered. Libraries can't be updated, increment the version in the Dojo configuration file instead.", 'ENTRYPOINT_FAILED'))]
+fn test_register_library_already_registered() {
+    let world = deploy_world();
+    let world = world.dispatcher;
+
+    world.register_library("dojo", library_a::TEST_CLASS_HASH.try_into().unwrap(), "liba", "0_1_0");
+
+    world.register_library("dojo", library_a::TEST_CLASS_HASH.try_into().unwrap(), "liba", "0_1_0");
+}
+
+#[test]
+fn test_library_call() {
+    let world = deploy_world();
+    let world = world.dispatcher;
+
+    world.register_library("dojo", library_a::TEST_CLASS_HASH.try_into().unwrap(), "liba", "0_1_0");
+
+    let world = WorldStorageTrait::new(world, @"dojo");
+
+    let (_, class_hash) = world.dns(@"liba_v0_1_0").unwrap();
+
+    let liba = LibraryALibraryDispatcher { class_hash };
+    let res = liba.get_byte();
+    assert(res == 42, 'should return 42');
+}
