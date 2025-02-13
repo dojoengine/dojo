@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1739450320350,
+  "lastUpdate": 1739450406080,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -53221,6 +53221,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 43519357393,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "contact@luca-steeb.com",
+            "name": "steebchen",
+            "username": "steebchen"
+          },
+          "committer": {
+            "email": "contact@luca-steeb.com",
+            "name": "steebchen",
+            "username": "steebchen"
+          },
+          "distinct": true,
+          "id": "3f4d230cdb1681e668cde5ecd82188f85b811dfe",
+          "message": "ci: remove preview workflow in favor of main release wf\n\nDeleted the `.github/workflows/preview.yml` file to eliminate\nthe unused preview job configuration.",
+          "timestamp": "2025-02-13T19:22:00+07:00",
+          "tree_id": "b578c781b1fe6434b8082fed795c97aa1fe0f901",
+          "url": "https://github.com/dojoengine/dojo/commit/3f4d230cdb1681e668cde5ecd82188f85b811dfe"
+        },
+        "date": 1739450403499,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2403855,
+            "range": "± 35766",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 396741,
+            "range": "± 8386",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2849394954,
+            "range": "± 251787765",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 17011181,
+            "range": "± 403561",
             "unit": "ns/iter"
           }
         ]
