@@ -10,7 +10,7 @@ use blockifier::state::state_api::StateReader;
 use blockifier::transaction::objects::{DeprecatedTransactionInfo, TransactionInfo};
 use katana_cairo::cairo_vm::vm::runners::cairo_runner::{ExecutionResources, RunResources};
 use katana_cairo::starknet_api::core::EntryPointSelector;
-use katana_cairo::starknet_api::transaction::{Calldata, Fee};
+use katana_cairo::starknet_api::transaction::Calldata;
 use katana_primitives::Felt;
 
 use super::utils::to_blk_address;
