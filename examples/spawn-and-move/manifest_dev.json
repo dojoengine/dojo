@@ -1,7 +1,7 @@
 {
   "world": {
-    "class_hash": "0x4b767fda48530353c2e44e4b9433f4d75c6c9974aaff43ecc00de9455eb71b8",
-    "address": "0x5baea2d83fc19bae80dc5d4626a27b2b2d5012822cd862c56ed7007eb92eaa2",
+    "class_hash": "0x7c9469d45a9cdbab775035afb48e1fa73fb35ab059fcb9dfb0a301aa973e783",
+    "address": "0x24334e79a3c56e5374c5bdd148c22ff2f0de3b4dc6e734e22ea49795f367221",
     "seed": "dojo_examples",
     "name": "example",
     "entrypoints": [
@@ -11,6 +11,7 @@
       "register_event",
       "register_model",
       "register_contract",
+      "register_library",
       "init_contract",
       "upgrade_event",
       "upgrade_model",
@@ -78,6 +79,10 @@
           {
             "name": "Unregistered",
             "type": "()"
+          },
+          {
+            "name": "Library",
+            "type": "(core::starknet::class_hash::ClassHash, core::felt252)"
           }
         ]
       },
@@ -358,6 +363,34 @@
             "outputs": [
               {
                 "type": "core::starknet::contract_address::ContractAddress"
+              }
+            ],
+            "state_mutability": "external"
+          },
+          {
+            "type": "function",
+            "name": "register_library",
+            "inputs": [
+              {
+                "name": "namespace",
+                "type": "core::byte_array::ByteArray"
+              },
+              {
+                "name": "class_hash",
+                "type": "core::starknet::class_hash::ClassHash"
+              },
+              {
+                "name": "name",
+                "type": "core::byte_array::ByteArray"
+              },
+              {
+                "name": "version",
+                "type": "core::byte_array::ByteArray"
+              }
+            ],
+            "outputs": [
+              {
+                "type": "core::starknet::class_hash::ClassHash"
               }
             ],
             "state_mutability": "external"
@@ -967,6 +1000,28 @@
       },
       {
         "type": "event",
+        "name": "dojo::world::world_contract::world::LibraryRegistered",
+        "kind": "struct",
+        "members": [
+          {
+            "name": "name",
+            "type": "core::byte_array::ByteArray",
+            "kind": "key"
+          },
+          {
+            "name": "namespace",
+            "type": "core::byte_array::ByteArray",
+            "kind": "key"
+          },
+          {
+            "name": "class_hash",
+            "type": "core::starknet::class_hash::ClassHash",
+            "kind": "data"
+          }
+        ]
+      },
+      {
+        "type": "event",
         "name": "dojo::world::world_contract::world::EventEmitted",
         "kind": "struct",
         "members": [
@@ -1207,6 +1262,11 @@
             "kind": "nested"
           },
           {
+            "name": "LibraryRegistered",
+            "type": "dojo::world::world_contract::world::LibraryRegistered",
+            "kind": "nested"
+          },
+          {
             "name": "EventEmitted",
             "type": "dojo::world::world_contract::world::EventEmitted",
             "kind": "nested"
@@ -1252,8 +1312,8 @@
   },
   "contracts": [
     {
-      "address": "0x7447baef53fdcc376b73963aa2bd3b0894be7d5bd40f596cc44d1d54d80ea52",
-      "class_hash": "0x2267c07d691a6da353f0beaec2e15f3b79ef271953364efb143c343713a6ccd",
+      "address": "0x73011d08f54413ec16fd768a0dcf1e61a6218e196b01b6ddfad09502f47e71d",
+      "class_hash": "0x747821121b203c09f02f2568e69fa3e4f50840ec33d38546143cffe6114afce",
       "abi": [
         {
           "type": "impl",
@@ -1606,7 +1666,7 @@
       ]
     },
     {
-      "address": "0x608ffd2e6b74a7bede256770ebe3d07bc65c79622e6a9396ea764011152102",
+      "address": "0x2fbd487dc4ccae7a01c767addb192df5c285fe07fe06756b463d7b5f3b43044",
       "class_hash": "0x7b31bb137c041fbe8247724a888bb108aaf2ff6b2bb7be5ecf5c954471e30c3",
       "abi": [
         {
@@ -1800,7 +1860,7 @@
       ]
     },
     {
-      "address": "0xca72f1cd782b614fa12c8b54afa895a169a4de1792738d4e3f09d0929f7834",
+      "address": "0x64b964be7fb8d9d9161a34b39cb2709b7a36b46063e0180c93a62aabc899b52",
       "class_hash": "0x38c4b1f36acecf15ea27430f34956bdfed933271ef23bcb9444db15dce66c6b",
       "abi": [
         {
@@ -1976,7 +2036,7 @@
       ]
     },
     {
-      "address": "0x780e3207b4f11b56f32cc0f19975af5b3a4df3cad6a4b0ab59a1702ba0304d8",
+      "address": "0x6460654b134506a238bf79b73d2be078f587718521048c80b78514fe90b6336",
       "class_hash": "0x5dd5b200655bdc68fba0ec23b25a9fb2d8ea2da118d60789c2d1d6adac3afae",
       "abi": [
         {
@@ -2157,6 +2217,155 @@
       "systems": [
         "upgrade"
       ]
+    }
+  ],
+  "libraries": [
+    {
+      "class_hash": "0x18e785a7f62e106c199d15b41e756a2ba8a89f5d229f31a5b7e8971f7529a69",
+      "abi": [
+        {
+          "type": "impl",
+          "name": "simple_math__LibraryImpl",
+          "interface_name": "dojo::contract::interface::ILibrary"
+        },
+        {
+          "type": "interface",
+          "name": "dojo::contract::interface::ILibrary",
+          "items": []
+        },
+        {
+          "type": "impl",
+          "name": "simple_math__DeployedLibraryImpl",
+          "interface_name": "dojo::meta::interface::IDeployedResource"
+        },
+        {
+          "type": "struct",
+          "name": "core::byte_array::ByteArray",
+          "members": [
+            {
+              "name": "data",
+              "type": "core::array::Array::<core::bytes_31::bytes31>"
+            },
+            {
+              "name": "pending_word",
+              "type": "core::felt252"
+            },
+            {
+              "name": "pending_word_len",
+              "type": "core::integer::u32"
+            }
+          ]
+        },
+        {
+          "type": "interface",
+          "name": "dojo::meta::interface::IDeployedResource",
+          "items": [
+            {
+              "type": "function",
+              "name": "dojo_name",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "core::byte_array::ByteArray"
+                }
+              ],
+              "state_mutability": "view"
+            }
+          ]
+        },
+        {
+          "type": "impl",
+          "name": "SimpleMathImpl",
+          "interface_name": "dojo_examples::lib_math::SimpleMath"
+        },
+        {
+          "type": "interface",
+          "name": "dojo_examples::lib_math::SimpleMath",
+          "items": [
+            {
+              "type": "function",
+              "name": "decrement_saturating",
+              "inputs": [
+                {
+                  "name": "value",
+                  "type": "core::integer::u8"
+                }
+              ],
+              "outputs": [
+                {
+                  "type": "core::integer::u8"
+                }
+              ],
+              "state_mutability": "view"
+            },
+            {
+              "type": "function",
+              "name": "test",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "core::integer::u8"
+                }
+              ],
+              "state_mutability": "view"
+            }
+          ]
+        },
+        {
+          "type": "impl",
+          "name": "WorldProviderImpl",
+          "interface_name": "dojo::contract::components::world_provider::IWorldProvider"
+        },
+        {
+          "type": "struct",
+          "name": "dojo::world::iworld::IWorldDispatcher",
+          "members": [
+            {
+              "name": "contract_address",
+              "type": "core::starknet::contract_address::ContractAddress"
+            }
+          ]
+        },
+        {
+          "type": "interface",
+          "name": "dojo::contract::components::world_provider::IWorldProvider",
+          "items": [
+            {
+              "type": "function",
+              "name": "world_dispatcher",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "dojo::world::iworld::IWorldDispatcher"
+                }
+              ],
+              "state_mutability": "view"
+            }
+          ]
+        },
+        {
+          "type": "event",
+          "name": "dojo::contract::components::world_provider::world_provider_cpt::Event",
+          "kind": "enum",
+          "variants": []
+        },
+        {
+          "type": "event",
+          "name": "dojo_examples::lib_math::simple_math::Event",
+          "kind": "enum",
+          "variants": [
+            {
+              "name": "WorldProviderEvent",
+              "type": "dojo::contract::components::world_provider::world_provider_cpt::Event",
+              "kind": "flat"
+            }
+          ]
+        }
+      ],
+      "tag": "ns-simple_math_v0_1_0",
+      "selector": "0x43022cc9b4933e6509e2292bf7dfa1c4fadb9a9d0c7a864b3e6487b8502e481",
+      "systems": [],
+      "version": "0_1_0"
     }
   ],
   "models": [

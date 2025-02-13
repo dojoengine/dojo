@@ -311,7 +311,7 @@ fn test_upgrade_event_from_event_writer() {
 
 #[test]
 #[should_panic(
-    expected: ("Resource `dojo-SimpleEvent` is already registered", 'ENTRYPOINT_FAILED'),
+    expected: ("Resource (Event) `dojo-SimpleEvent` is already registered", 'ENTRYPOINT_FAILED'),
 )]
 fn test_upgrade_event_from_random_account() {
     let bob = starknet::contract_address_const::<0xb0b>();

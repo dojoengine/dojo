@@ -58,6 +58,9 @@ mod tests {
 
         mod model;
         pub use model::deploy_world_for_model_upgrades;
+
+        mod library;
+        pub use library::*;
     }
 
     mod world {

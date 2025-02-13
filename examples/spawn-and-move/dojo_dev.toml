@@ -57,6 +57,9 @@ contract_name = "Saloon"
 constructor_data = []
 salt = "1"
 
+[lib_versions]
+"ns-simple_math" = "0_1_0"
+
 [namespace]
 default = "ns"
 
@@ -65,7 +68,7 @@ rpc_url = "http://localhost:5050/"
 # Default account for katana with seed = 0
 account_address = "0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba"
 private_key = "0x1800000000300000180000000000030000000000003006001800006600"
-world_address = "0x5baea2d83fc19bae80dc5d4626a27b2b2d5012822cd862c56ed7007eb92eaa2"
+world_address = "0x24334e79a3c56e5374c5bdd148c22ff2f0de3b4dc6e734e22ea49795f367221"
 ipfs_config.url = "https://ipfs.infura.io:5001"
 ipfs_config.username = "2EBrzr7ZASQZKH32sl2xWauXPSA"
 ipfs_config.password = "12290b883db9138a8ae3363b6739d220"

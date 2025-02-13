@@ -151,6 +151,12 @@ where
             invoker.extend_calls(calls);
         }
 
+        // libraries
+        if let Some(configs) = &self.diff.profile_config.libraries {
+            let calls = self.upload_metadata_from_resource_config(service, configs).await?;
+            invoker.extend_calls(calls);
+        }
+
         // models
         if let Some(configs) = &self.diff.profile_config.models {
             let calls = self.upload_metadata_from_resource_config(service, configs).await?;
@@ -494,6 +500,17 @@ where
                     invoker.extend_calls(contract_calls);
                     classes.extend(contract_classes);
                 }
+                ResourceType::Library => {
+                    let (library_calls, library_classes) =
+                        self.libraries_calls_classes(resource).await?;
+
+                    if !library_calls.is_empty() {
+                        n_resources += 1;
+                    }
+
+                    invoker.extend_calls(library_calls);
+                    classes.extend(library_classes);
+                }
                 ResourceType::Model => {
                     let (model_calls, model_classes) = self.models_calls_classes(resource).await?;
 
@@ -692,6 +709,57 @@ where
                 &ns_bytearray,
                 &ClassHash(contract_local.common.class_hash),
             ));
+        }
+
+        Ok((calls, classes))
+    }
+
+    /// Gathers the calls required to sync the libraries' classes to be declared.
+    ///
+    /// Returns a tuple of calls and (casm_class_hash, class) to be declared.
+    async fn libraries_calls_classes(
+        &self,
+        resource: &ResourceDiff,
+    ) -> Result<(Vec<Call>, HashMap<Felt, LabeledClass>), MigrationError<A::SignError>> {
+        let mut calls = vec![];
+        let mut classes = HashMap::new();
+
+        let namespace = resource.namespace();
+        let ns_bytearray = ByteArray::from_string(&namespace)?;
+        let tag = resource.tag();
+
+        if let ResourceDiff::Created(ResourceLocal::Library(library)) = resource {
+            trace!(
+                namespace,
+                name = library.common.name,
+                class_hash = format!("{:#066x}", library.common.class_hash),
+                "Registering library."
+            );
+
+            let casm_class_hash = library.common.casm_class_hash;
+            let class = library.common.class.clone().flatten()?;
+
+            classes.insert(
+                casm_class_hash,
+                LabeledClass { label: tag.clone(), casm_class_hash, class },
+            );
+
+            let name = ByteArray::from_string(&library.common.name).unwrap();
+            let version = ByteArray::from_string(&library.version).unwrap();
+            calls.push(self.world.register_library_getcall(
+                &ns_bytearray,
+                &ClassHash(library.common.class_hash),
+                &name,
+                &version,
+            ));
+        }
+
+        if let ResourceDiff::Updated(
+            ResourceLocal::Library(_library_local),
+            ResourceRemote::Library(_library_remote),
+        ) = resource
+        {
+            panic!("libraries cannot be updated!")
         }
 
         Ok((calls, classes))

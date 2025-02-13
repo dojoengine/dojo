@@ -14,7 +14,7 @@ use starknet::core::types::contract::{
 use starknet::core::types::Felt;
 use starknet::core::utils as snutils;
 use starknet_crypto::poseidon_hash_many;
-use tracing::trace;
+use tracing::{trace, warn};
 
 use super::*;
 use crate::config::calldata_decoder::decode_calldata;
@@ -22,6 +22,7 @@ use crate::config::ProfileConfig;
 
 const WORLD_INTF: &str = "dojo::world::iworld::IWorld";
 const CONTRACT_INTF: &str = "dojo::contract::interface::IContract";
+const LIBRARY_INTF: &str = "dojo::contract::interface::ILibrary";
 const MODEL_INTF: &str = "dojo::model::interface::IModel";
 const EVENT_INTF: &str = "dojo::event::interface::IEvent";
 
@@ -116,6 +117,52 @@ impl WorldLocal {
                                 }
 
                                 dojo_resource_found = true;
+                                break;
+                            }
+                            ResourceType::Library(name) => {
+                                let namespaces = profile_config.namespace.get_namespaces(&name);
+
+                                let systems = systems_from_abi(&abi);
+
+                                let mut added_resources = false;
+                                for ns in namespaces {
+                                    if let Some(version) = profile_config.lib_versions.as_ref() {
+                                        if let Some(v) = version.get(&format!("{}-{}", ns, name)) {
+                                            trace!(
+                                                name,
+                                                namespace = ns,
+                                                version = v,
+                                                "Adding local library from artifact."
+                                            );
+
+                                            let resource = ResourceLocal::Library(LibraryLocal {
+                                                common: CommonLocalInfo {
+                                                    namespace: ns,
+                                                    name: name.clone(),
+                                                    class: sierra.clone(),
+                                                    casm_class: casm_class.clone(),
+                                                    class_hash,
+                                                    casm_class_hash,
+                                                },
+                                                systems: systems.clone(),
+                                                version: v.clone(),
+                                            });
+
+                                            resources.push(resource);
+                                            added_resources = true;
+                                        }
+                                    }
+                                }
+
+                                if !added_resources {
+                                    warn!(
+                                        "No library version found for library `{}` in the Dojo \
+                                         profile config. Consider adding a `[lib_versions]` entry \
+                                         with the version.",
+                                        name
+                                    );
+                                }
+
                                 break;
                             }
                             ResourceType::Model(name) => {
@@ -325,6 +372,7 @@ fn casm_class_hash_from_sierra_file<P: AsRef<Path>>(path: P) -> Result<Felt> {
 enum ResourceType {
     World,
     Contract(String),
+    Library(String),
     Model(String),
     Event(String),
     Other,
@@ -336,6 +384,8 @@ fn identify_resource_type(implem: &AbiImpl) -> ResourceType {
         ResourceType::World
     } else if implem.interface_name == CONTRACT_INTF {
         ResourceType::Contract(name_from_impl(&implem.name))
+    } else if implem.interface_name == LIBRARY_INTF {
+        ResourceType::Library(name_from_impl(&implem.name))
     } else if implem.interface_name == MODEL_INTF {
         ResourceType::Model(name_from_impl(&implem.name))
     } else if implem.interface_name == EVENT_INTF {
@@ -458,6 +508,7 @@ mod tests {
                 "register_event",
                 "register_model",
                 "register_contract",
+                "register_library",
                 "init_contract",
                 "upgrade_event",
                 "upgrade_model",

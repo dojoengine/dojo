@@ -83,6 +83,23 @@ pub trait IWorld<T> {
         ref self: T, salt: felt252, namespace: ByteArray, class_hash: ClassHash,
     ) -> ContractAddress;
 
+    /// Registers and declare a library associated with the world and returns the class_hash of
+    /// newly declared library.
+    ///
+    /// # Arguments
+    ///
+    /// * `namespace` - The namespace of the contract to be registered.
+    /// * `class_hash` - The class hash of the library.
+    /// * `name` - The name of the library.
+    /// * `version` - The version of the library.
+    fn register_library(
+        ref self: T,
+        namespace: ByteArray,
+        class_hash: ClassHash,
+        name: ByteArray,
+        version: ByteArray,
+    ) -> ClassHash;
+
     /// Initializes a contract associated registered in the world.
     ///
     /// As a constructor call, the initialization function can be called only once, and only

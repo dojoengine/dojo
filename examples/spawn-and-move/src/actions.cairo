@@ -23,8 +23,10 @@ pub mod actions {
         Position, Moves, MovesValue, Direction, Vec2, PlayerConfig, PlayerItem, ServerProfile,
     };
     use dojo_examples::utils::next_position;
+    use dojo_examples::lib_math::{SimpleMathLibraryDispatcher, SimpleMathDispatcherTrait};
     use dojo::model::{ModelStorage, ModelValueStorage, Model};
     use dojo::event::EventStorage;
+    use dojo::world::{WorldStorage, WorldStorageTrait};
 
     // Features can be used on modules, structs, trait and `use`. Not inside
     // a function.
@@ -108,7 +110,9 @@ pub mod actions {
             let move_id = dojo::utils::entity_id_from_serialized_keys([player_felt].span());
 
             let mut moves: MovesValue = world.read_value_from_id(move_id);
-            moves.remaining -= 1;
+
+            let simple_math = self.simple_math_dispatcher(@world);
+            moves.remaining = simple_math.decrement_saturating(moves.remaining);
             moves.last_direction = direction;
             world.write_value_from_id(move_id, @moves);
 
@@ -212,14 +216,24 @@ pub mod actions {
 
         /// Use the default namespace "ns". A function is handy since the ByteArray
         /// can't be const.
-        fn world_default(self: @ContractState) -> dojo::world::WorldStorage {
+        fn world_default(self: @ContractState) -> WorldStorage {
             self.world(@"ns")
         }
 
         /// A gas optimized version of `world_default`, where hash is computed at compile time.
         /// Can make a difference if switching between namespaces is frequent.
-        fn world_default_ns_hash(self: @ContractState) -> dojo::world::WorldStorage {
+        fn world_default_ns_hash(self: @ContractState) -> WorldStorage {
             self.world_ns_hash(bytearray_hash!("ns"))
+        }
+
+        /// Example of how to get a dispatcher from a declared dojo library.
+        /// `{library_module_name}_v{version}`.
+        fn simple_math_dispatcher(
+            self: @ContractState, world: @WorldStorage,
+        ) -> SimpleMathLibraryDispatcher {
+            let (_, class_hash) = world.dns(@"simple_math_v0_1_0").expect('simple_math not found');
+
+            SimpleMathLibraryDispatcher { class_hash }
         }
     }
 }

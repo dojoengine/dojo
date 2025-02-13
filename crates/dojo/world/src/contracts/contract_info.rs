@@ -152,7 +152,7 @@ mod tests {
     use starknet::macros::felt;
 
     use super::*;
-    use crate::diff::{DojoContract, DojoModel, WorldContract};
+    use crate::diff::{DojoContract, DojoLibrary, DojoModel, WorldContract};
     use crate::local::{CommonLocalInfo, ContractLocal, ExternalContractLocal, WorldLocal};
 
     #[test]
@@ -174,6 +174,14 @@ mod tests {
                 tag: "ns-test_contract".to_string(),
                 systems: vec!["system_1".to_string()],
                 selector: felt!("0x3333"),
+            }],
+            libraries: vec![DojoLibrary {
+                class_hash: felt!("0x9999"),
+                abi: vec![],
+                tag: "ns-test_library".to_string(),
+                systems: vec!["system_1".to_string()],
+                selector: felt!("0x999"),
+                version: "0.0.0".to_string(),
             }],
             models: vec![DojoModel {
                 tag: "ns-test_model".to_string(),

@@ -18,7 +18,9 @@ use super::permissions::PermissionsUpdateable;
 use super::{ResourceRemote, WorldRemote};
 use crate::constants::WORLD;
 use crate::contracts::abigen::world::{self, Event as WorldEvent};
-use crate::remote::{CommonRemoteInfo, ContractRemote, EventRemote, ModelRemote, NamespaceRemote};
+use crate::remote::{
+    CommonRemoteInfo, ContractRemote, EventRemote, LibraryRemote, ModelRemote, NamespaceRemote,
+};
 
 impl WorldRemote {
     /// Fetch the events from the world and convert them to remote resources.
@@ -64,6 +66,7 @@ impl WorldRemote {
             world::WriterUpdated::event_selector(),
             world::OwnerUpdated::event_selector(),
             world::MetadataUpdate::event_selector(),
+            world::LibraryRegistered::event_selector(),
         ]];
 
         let filter = EventFilter {
@@ -280,6 +283,35 @@ impl WorldRemote {
                     is_initialized: false,
                 });
                 trace!(?r, "Contract registered.");
+
+                self.add_resource(r);
+            }
+            WorldEvent::LibraryRegistered(e) => {
+                let namespace = e.namespace.to_string()?;
+
+                if !is_whitelisted(whitelisted_namespaces, &namespace) {
+                    debug!(
+                        namespace,
+                        contract = e.name.to_string()?,
+                        "Library's namespace not whitelisted."
+                    );
+
+                    return Ok(());
+                }
+
+                let full_name = e.name.to_string().unwrap();
+                let version = full_name.split(&"_v").last().expect("expected version");
+                let name = full_name.replace(&format!("_v{}", version), "");
+                let r = ResourceRemote::Library(LibraryRemote {
+                    common: CommonRemoteInfo::new(
+                        e.class_hash.into(),
+                        &namespace,
+                        &name.to_string(),
+                        Felt::ZERO,
+                    ),
+                    version: version.to_string(),
+                });
+                trace!(?r, "Library registered.");
 
                 self.add_resource(r);
             }
