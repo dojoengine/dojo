@@ -508,6 +508,7 @@ mod tests {
                 "register_event",
                 "register_model",
                 "register_contract",
+                "register_library",
                 "init_contract",
                 "upgrade_event",
                 "upgrade_model",
