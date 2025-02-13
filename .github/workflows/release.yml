@@ -178,7 +178,7 @@ jobs:
       - id: version_info
         run: |
           cargo install cargo-get
-          echo "tag_name=v$(cargo get workspace.package.version)" >> $GITHUB_OUTPUT
+          echo "version=v$(cargo get workspace.package.version)" >> $GITHUB_OUTPUT
       - name: Display structure of downloaded files
         run: ls -R artifacts
       - run: gh release create ${{ steps.version_info.outputs.version }} ./artifacts/*.gz --generate-notes --draft
