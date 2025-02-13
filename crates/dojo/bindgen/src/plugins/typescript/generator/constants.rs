@@ -30,6 +30,3 @@ pub(crate) const CAIRO_OPTION_TYPE_PATH: &str = "core::option::Option";
 pub(crate) const SN_IMPORT_SEARCH: &str = "} from 'starknet';";
 pub(crate) const CAIRO_OPTION_TOKEN: &str = "CairoOption, CairoOptionVariant,";
 pub(crate) const CAIRO_ENUM_TOKEN: &str = "CairoCustomEnum,";
-
-pub(crate) const WITH_FIELD_ORDER_TYPE_DEF: &str =
-    "type WithFieldOrder<T> = T & { fieldOrder: string[] };\n";

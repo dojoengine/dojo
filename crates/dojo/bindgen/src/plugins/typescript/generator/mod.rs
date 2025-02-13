@@ -33,8 +33,7 @@ pub(crate) fn get_namespace_and_path(token: &Composite) -> (String, String, Stri
 /// Generates default values for each fields of the struct.
 pub(crate) fn generate_type_init(token: &Composite) -> String {
     format!(
-        "{{\n\t\t\tfieldOrder: [{}],\n{}\n\t\t}}",
-        token.inners.iter().map(|i| format!("'{}'", i.name)).collect::<Vec<String>>().join(", "),
+        "{{\n{}\n\t\t}}",
         token
             .inners
             .iter()
@@ -809,7 +808,6 @@ mod tests {
         // the content of generate_type_init is wrapped in a function that adds brackets before and
         // after
         let expected = "{
-\t\t\tfieldOrder: ['field1', 'field2', 'field3'],
 \t\t\tfield1: 0,
 \t\t\tfield2: 0,
 \t\t\tfield3: 0,
