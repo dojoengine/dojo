@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1739451155738,
+  "lastUpdate": 1739451210175,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -53298,6 +53298,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 44600878621,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c60392a2839d8b077f1fa20377c26d45a86ca474",
+          "message": "feat(katana): allow specifying multiple values w/o wrapping in quotes (#3018)",
+          "timestamp": "2025-02-13T06:36:30-06:00",
+          "tree_id": "240fc207e93e853bbb29c0e2e5ce28a51671af32",
+          "url": "https://github.com/dojoengine/dojo/commit/c60392a2839d8b077f1fa20377c26d45a86ca474"
+        },
+        "date": 1739451207520,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 44721998752,
             "range": "± 0",
             "unit": "ns/iter"
           }
