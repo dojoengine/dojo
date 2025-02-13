@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1739437836285,
+  "lastUpdate": 1739437941104,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -52957,6 +52957,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 17139769,
             "range": "± 573260",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "contact@luca-steeb.com",
+            "name": "steebchen",
+            "username": "steebchen"
+          },
+          "committer": {
+            "email": "contact@luca-steeb.com",
+            "name": "steebchen",
+            "username": "steebchen"
+          },
+          "distinct": true,
+          "id": "1ebd917826fb4acd8a36c9b965d4e8afeee3fc95",
+          "message": "Revert \"Prepare release: v1.2.0 (#3015)\"\n\nThis reverts commit d54848bfca5afc423c501a359eb7fe4a858c2562.",
+          "timestamp": "2025-02-13T15:55:26+07:00",
+          "tree_id": "bdf6647f3dd1990ae220eab91a38a26b34de2bd5",
+          "url": "https://github.com/dojoengine/dojo/commit/1ebd917826fb4acd8a36c9b965d4e8afeee3fc95"
+        },
+        "date": 1739437938579,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 44135193921,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
