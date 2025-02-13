@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1739414582834,
+  "lastUpdate": 1739414775965,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -52645,6 +52645,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 16862115,
             "range": "± 295541",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "distinct": true,
+          "id": "1aa06e1cc9a060380b4d44ca2717a2ef97e1677c",
+          "message": "ci(workflows): bump artifacts actions",
+          "timestamp": "2025-02-12T20:29:19-06:00",
+          "tree_id": "db6a7b410f97fe5d38988b364ff60397c283d7bb",
+          "url": "https://github.com/dojoengine/dojo/commit/1aa06e1cc9a060380b4d44ca2717a2ef97e1677c"
+        },
+        "date": 1739414772934,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 49146256547,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
