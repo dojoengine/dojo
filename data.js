@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1739413443526,
+  "lastUpdate": 1739414546888,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -52567,6 +52567,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 18066594,
             "range": "± 789011",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "distinct": true,
+          "id": "a5e19f1a98bfe7c8866f027264340698ffb145f4",
+          "message": "Revert \"ci(workflows): add preview support in main release (#3007)\"\n\nThis reverts commit 9d0964e730a23b3368556b6d7c0961e535e3590a.",
+          "timestamp": "2025-02-12T20:25:17-06:00",
+          "tree_id": "c5fa7afd1ec96f91f2d038a97e0a87c2ab3dfde8",
+          "url": "https://github.com/dojoengine/dojo/commit/a5e19f1a98bfe7c8866f027264340698ffb145f4"
+        },
+        "date": 1739414544608,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 45594934151,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
