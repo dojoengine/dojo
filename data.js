@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1739466130314,
+  "lastUpdate": 1739469448938,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -53503,6 +53503,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 17561594,
             "range": "± 414405",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "contact@luca-steeb.com",
+            "name": "steebchen",
+            "username": "steebchen"
+          },
+          "committer": {
+            "email": "contact@luca-steeb.com",
+            "name": "steebchen",
+            "username": "steebchen"
+          },
+          "distinct": true,
+          "id": "cd50578caa7ee75195d047328f247e7548ce158d",
+          "message": "fix(ci): correct version variable in release workflow\n\nReplaced the 'version' key with 'tag_name' to properly format\nthe version string in the release workflow.",
+          "timestamp": "2025-02-14T00:40:06+07:00",
+          "tree_id": "fcd638127d2bb3a0a2f281931fddf5c3f5ccd73f",
+          "url": "https://github.com/dojoengine/dojo/commit/cd50578caa7ee75195d047328f247e7548ce158d"
+        },
+        "date": 1739469445776,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 49408340074,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
