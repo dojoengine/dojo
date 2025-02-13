@@ -2,7 +2,7 @@ use core::fmt;
 use std::collections::HashMap;
 use std::str::FromStr;
 
-use crypto_bigint::U256;
+use crypto_bigint::{Encoding, U256};
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::Ty;
 use dojo_world::contracts::naming;
@@ -38,7 +38,7 @@ impl TryFrom<proto::types::Controller> for Controller {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub struct Token {
-    pub id: String,
+    pub token_id: U256,
     pub contract_address: Felt,
     pub name: String,
     pub symbol: String,
@@ -50,12 +50,12 @@ impl TryFrom<proto::types::Token> for Token {
     type Error = SchemaError;
     fn try_from(value: proto::types::Token) -> Result<Self, Self::Error> {
         Ok(Self {
-            id: value.token_id,
-            contract_address: Felt::from_str(&value.contract_address)?,
+            token_id: U256::from_be_slice(&value.token_id),
+            contract_address: Felt::from_bytes_be_slice(&value.contract_address),
             name: value.name,
             symbol: value.symbol,
             decimals: value.decimals as u8,
-            metadata: value.metadata,
+            metadata: String::from_utf8(value.metadata)?,
         })
     }
 }
