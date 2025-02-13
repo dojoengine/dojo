@@ -357,7 +357,6 @@ fn inspect_world(world_diff: &WorldDiff) {
     print_table(&libraries_disp, Some(Color::FG_BRIGHT_BLACK), None);
     print_table(&models_disp, Some(Color::FG_BRIGHT_BLACK), None);
     print_table(&events_disp, Some(Color::FG_BRIGHT_BLACK), None);
-    print_table(&libraries_disp, Some(Color::FG_BRIGHT_BLACK), None);
     print_table(&external_contracts_disp, Some(Color::FG_BRIGHT_BLACK), None);
 }
 
