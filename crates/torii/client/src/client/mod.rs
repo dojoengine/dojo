@@ -2,6 +2,7 @@ pub mod error;
 
 use std::sync::Arc;
 
+use crypto_bigint::U256;
 use dojo_types::WorldMetadata;
 use dojo_world::contracts::WorldContractReader;
 use futures::lock::Mutex;
@@ -108,21 +109,15 @@ impl Client {
     }
 
     /// Retrieves tokens matching contract addresses.
-    pub async fn tokens(&self, contract_addresses: Vec<Felt>) -> Result<Vec<Token>, Error> {
-        let mut grpc_client = self.inner.write().await;
-        let RetrieveTokensResponse { tokens } =
-            grpc_client.retrieve_tokens(contract_addresses).await?;
-        Ok(tokens.into_iter().map(TryInto::try_into).collect::<Result<Vec<Token>, _>>()?)
-    }
-
-    /// A direct stream to grpc subscribe tokens
-    pub async fn on_token_updated(
+    pub async fn tokens(
         &self,
         contract_addresses: Vec<Felt>,
-    ) -> Result<TokenUpdateStreaming, Error> {
+        token_ids: Vec<U256>,
+    ) -> Result<Vec<Token>, Error> {
         let mut grpc_client = self.inner.write().await;
-        let stream = grpc_client.subscribe_tokens(contract_addresses).await?;
-        Ok(stream)
+        let RetrieveTokensResponse { tokens } =
+            grpc_client.retrieve_tokens(contract_addresses, token_ids).await?;
+        Ok(tokens.into_iter().map(TryInto::try_into).collect::<Result<Vec<Token>, _>>()?)
     }
 
     /// Retrieves token balances for account addresses and contract addresses.
@@ -130,10 +125,12 @@ impl Client {
         &self,
         account_addresses: Vec<Felt>,
         contract_addresses: Vec<Felt>,
+        token_ids: Vec<U256>,
     ) -> Result<Vec<TokenBalance>, Error> {
         let mut grpc_client = self.inner.write().await;
-        let RetrieveTokenBalancesResponse { balances } =
-            grpc_client.retrieve_token_balances(account_addresses, contract_addresses).await?;
+        let RetrieveTokenBalancesResponse { balances } = grpc_client
+            .retrieve_token_balances(account_addresses, contract_addresses, token_ids)
+            .await?;
         Ok(balances.into_iter().map(TryInto::try_into).collect::<Result<Vec<TokenBalance>, _>>()?)
     }
 
@@ -247,10 +244,12 @@ impl Client {
         &self,
         contract_addresses: Vec<Felt>,
         account_addresses: Vec<Felt>,
+        token_ids: Vec<U256>,
     ) -> Result<TokenBalanceStreaming, Error> {
         let mut grpc_client = self.inner.write().await;
-        let stream =
-            grpc_client.subscribe_token_balances(contract_addresses, account_addresses).await?;
+        let stream = grpc_client
+            .subscribe_token_balances(contract_addresses, account_addresses, token_ids)
+            .await?;
         Ok(stream)
     }
 
@@ -260,6 +259,7 @@ impl Client {
         subscription_id: u64,
         contract_addresses: Vec<Felt>,
         account_addresses: Vec<Felt>,
+        token_ids: Vec<U256>,
     ) -> Result<(), Error> {
         let mut grpc_client = self.inner.write().await;
         grpc_client
@@ -267,7 +267,33 @@ impl Client {
                 subscription_id,
                 contract_addresses,
                 account_addresses,
+                token_ids,
             )
+            .await?;
+        Ok(())
+    }
+
+    /// A direct stream to grpc subscribe tokens
+    pub async fn on_token_updated(
+        &self,
+        contract_addresses: Vec<Felt>,
+        token_ids: Vec<U256>,
+    ) -> Result<TokenUpdateStreaming, Error> {
+        let mut grpc_client = self.inner.write().await;
+        let stream = grpc_client.subscribe_tokens(contract_addresses, token_ids).await?;
+        Ok(stream)
+    }
+
+    /// Update the tokens subscription
+    pub async fn update_token_subscription(
+        &self,
+        subscription_id: u64,
+        contract_addresses: Vec<Felt>,
+        token_ids: Vec<U256>,
+    ) -> Result<(), Error> {
+        let mut grpc_client = self.inner.write().await;
+        grpc_client
+            .update_tokens_subscription(subscription_id, contract_addresses, token_ids)
             .await?;
         Ok(())
     }

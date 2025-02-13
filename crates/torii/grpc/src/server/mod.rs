@@ -48,6 +48,7 @@ use torii_sqlite::cache::ModelCache;
 use torii_sqlite::error::{Error, ParseError, QueryError};
 use torii_sqlite::model::{fetch_entities, map_row_to_ty};
 use torii_sqlite::types::{Token, TokenBalance};
+use torii_sqlite::utils::u256_to_sql_string;
 use tower_http::cors::{AllowOrigin, CorsLayer};
 
 use self::subscriptions::entity::EntityManager;
@@ -815,17 +816,33 @@ impl DojoWorld {
     async fn retrieve_tokens(
         &self,
         contract_addresses: Vec<Felt>,
+        token_ids: Vec<U256>,
     ) -> Result<RetrieveTokensResponse, Status> {
-        let query = if contract_addresses.is_empty() {
-            "SELECT * FROM tokens".to_string()
-        } else {
+        let mut query = "SELECT * FROM tokens".to_string();
+        let mut bind_values = Vec::new();
+        let mut conditions = Vec::new();
+
+        if !contract_addresses.is_empty() {
             let placeholders = vec!["?"; contract_addresses.len()].join(", ");
-            format!("SELECT * FROM tokens WHERE contract_address IN ({})", placeholders)
-        };
+            conditions.push(format!("contract_address IN ({})", placeholders));
+            bind_values.extend(contract_addresses.iter().map(|addr| format!("{:#x}", addr)));
+        }
+        if !token_ids.is_empty() {
+            let placeholders = vec!["?"; token_ids.len()].join(", ");
+            conditions.push(format!("token_id IN ({})", placeholders));
+            bind_values.extend(token_ids.iter().map(|id| u256_to_sql_string(&(*id).into())));
+        }
+
+        if !conditions.is_empty() {
+            query += &format!(" WHERE {}", conditions.join(" AND "));
+        }
 
         let mut query = sqlx::query_as(&query);
         for address in &contract_addresses {
             query = query.bind(format!("{:#x}", address));
+        }
+        for token_id in &token_ids {
+            query = query.bind(format!("{:#x}", token_id));
         }
 
         let tokens: Vec<Token> =
@@ -835,17 +852,11 @@ impl DojoWorld {
         Ok(RetrieveTokensResponse { tokens })
     }
 
-    async fn subscribe_tokens(
-        &self,
-        contract_addresses: Vec<Felt>,
-    ) -> Result<Receiver<Result<SubscribeTokensResponse, tonic::Status>>, Error> {
-        self.token_manager.add_subscriber(contract_addresses).await
-    }
-
     async fn retrieve_token_balances(
         &self,
         account_addresses: Vec<Felt>,
         contract_addresses: Vec<Felt>,
+        token_ids: Vec<U256>,
     ) -> Result<RetrieveTokenBalancesResponse, Status> {
         let mut query = "SELECT * FROM token_balances".to_string();
         let mut bind_values = Vec::new();
@@ -863,6 +874,12 @@ impl DojoWorld {
             bind_values.extend(contract_addresses.iter().map(|addr| format!("{:#x}", addr)));
         }
 
+        if !token_ids.is_empty() {
+            let placeholders = vec!["?"; token_ids.len()].join(", ");
+            conditions.push(format!("token_id IN ({})", placeholders));
+            bind_values.extend(token_ids.iter().map(|id| u256_to_sql_string(&(*id).into())));
+        }
+
         if !conditions.is_empty() {
             query += &format!(" WHERE {}", conditions.join(" AND "));
         }
@@ -877,23 +894,6 @@ impl DojoWorld {
 
         let balances = balances.iter().map(|balance| balance.clone().into()).collect();
         Ok(RetrieveTokenBalancesResponse { balances })
-    }
-
-    async fn subscribe_token_balances(
-        &self,
-        contract_addresses: Vec<Felt>,
-        account_addresses: Vec<Felt>,
-    ) -> Result<Receiver<Result<proto::world::SubscribeTokenBalancesResponse, tonic::Status>>, Error>
-    {
-        self.token_balance_manager.add_subscriber(contract_addresses, account_addresses).await
-    }
-
-    async fn subscribe_indexer(
-        &self,
-        contract_address: Felt,
-    ) -> Result<Receiver<Result<proto::world::SubscribeIndexerResponse, tonic::Status>>, Error>
-    {
-        self.indexer_manager.add_subscriber(&self.pool, contract_address).await
     }
 
     async fn subscribe_models(
@@ -922,13 +922,6 @@ impl DojoWorld {
         }
 
         self.state_diff_manager.add_subscriber(subs).await
-    }
-
-    async fn subscribe_entities(
-        &self,
-        keys: Vec<proto::types::EntityKeysClause>,
-    ) -> Result<Receiver<Result<proto::world::SubscribeEntityResponse, tonic::Status>>, Error> {
-        self.entity_manager.add_subscriber(keys.into_iter().map(|keys| keys.into()).collect()).await
     }
 
     async fn retrieve_entities(
@@ -1066,16 +1059,6 @@ impl DojoWorld {
         Ok(RetrieveEntitiesResponse { entities, total_count })
     }
 
-    async fn subscribe_event_messages(
-        &self,
-        clauses: Vec<proto::types::EntityKeysClause>,
-        historical: bool,
-    ) -> Result<Receiver<Result<proto::world::SubscribeEntityResponse, tonic::Status>>, Error> {
-        self.event_message_manager
-            .add_subscriber(clauses.into_iter().map(|keys| keys.into()).collect(), historical)
-            .await
-    }
-
     async fn retrieve_events(
         &self,
         query: &proto::types::EventQuery,
@@ -1085,15 +1068,6 @@ impl DojoWorld {
             Some(keys) => self.events_by_keys(keys, Some(query.limit), Some(query.offset)).await?,
         };
         Ok(RetrieveEventsResponse { events })
-    }
-
-    async fn subscribe_events(
-        &self,
-        clause: Vec<proto::types::EntityKeysClause>,
-    ) -> Result<Receiver<Result<proto::world::SubscribeEventsResponse, tonic::Status>>, Error> {
-        self.event_manager
-            .add_subscriber(clause.into_iter().map(|keys| keys.into()).collect())
-            .await
     }
 
     async fn retrieve_controllers(
@@ -1391,14 +1365,16 @@ impl proto::world::world_server::World for DojoWorld {
         &self,
         request: Request<RetrieveTokensRequest>,
     ) -> Result<Response<RetrieveTokensResponse>, Status> {
-        let RetrieveTokensRequest { contract_addresses } = request.into_inner();
+        let RetrieveTokensRequest { contract_addresses, token_ids } = request.into_inner();
         let contract_addresses = contract_addresses
             .iter()
             .map(|address| Felt::from_bytes_be_slice(address))
             .collect::<Vec<_>>();
+        let token_ids =
+            token_ids.iter().map(|id| crypto_bigint::U256::from_be_slice(id)).collect::<Vec<_>>();
 
         let tokens = self
-            .retrieve_tokens(contract_addresses)
+            .retrieve_tokens(contract_addresses, token_ids)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
         Ok(Response::new(tokens))
@@ -1408,14 +1384,18 @@ impl proto::world::world_server::World for DojoWorld {
         &self,
         request: Request<RetrieveTokensRequest>,
     ) -> ServiceResult<Self::SubscribeTokensStream> {
-        let RetrieveTokensRequest { contract_addresses } = request.into_inner();
+        let RetrieveTokensRequest { contract_addresses, token_ids } = request.into_inner();
         let contract_addresses = contract_addresses
             .iter()
             .map(|address| Felt::from_bytes_be_slice(address))
             .collect::<Vec<_>>();
+        let token_ids = token_ids
+            .iter()
+            .map(|id| U256::from_be_slice(id))
+            .collect::<Vec<_>>();
 
-        let rx = self
-            .subscribe_tokens(contract_addresses)
+        let rx = self.token_manager
+            .add_subscriber(contract_addresses, token_ids)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
         Ok(Response::new(Box::pin(ReceiverStream::new(rx)) as Self::SubscribeTokensStream))
@@ -1425,13 +1405,18 @@ impl proto::world::world_server::World for DojoWorld {
         &self,
         request: Request<UpdateTokenSubscriptionRequest>,
     ) -> ServiceResult<()> {
-        let UpdateTokenSubscriptionRequest { subscription_id, contract_addresses } =
+        let UpdateTokenSubscriptionRequest { subscription_id, contract_addresses, token_ids } =
             request.into_inner();
         let contract_addresses = contract_addresses
             .iter()
             .map(|address| Felt::from_bytes_be_slice(address))
             .collect::<Vec<_>>();
-        self.token_manager.update_subscriber(subscription_id, contract_addresses).await;
+        let token_ids = token_ids
+            .iter()
+            .map(|id| U256::from_be_slice(id))
+            .collect::<Vec<_>>();
+
+        self.token_manager.update_subscriber(subscription_id, contract_addresses, token_ids).await;
         Ok(Response::new(()))
     }
 
@@ -1439,7 +1424,7 @@ impl proto::world::world_server::World for DojoWorld {
         &self,
         request: Request<RetrieveTokenBalancesRequest>,
     ) -> Result<Response<RetrieveTokenBalancesResponse>, Status> {
-        let RetrieveTokenBalancesRequest { account_addresses, contract_addresses } =
+        let RetrieveTokenBalancesRequest { account_addresses, contract_addresses, token_ids } =
             request.into_inner();
         let account_addresses = account_addresses
             .iter()
@@ -1449,9 +1434,13 @@ impl proto::world::world_server::World for DojoWorld {
             .iter()
             .map(|address| Felt::from_bytes_be_slice(address))
             .collect::<Vec<_>>();
+        let token_ids = token_ids
+            .iter()
+            .map(|id| U256::from_be_slice(id))
+            .collect::<Vec<_>>();
 
         let balances = self
-            .retrieve_token_balances(account_addresses, contract_addresses)
+            .retrieve_token_balances(account_addresses, contract_addresses, token_ids)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
         Ok(Response::new(balances))
@@ -1462,8 +1451,8 @@ impl proto::world::world_server::World for DojoWorld {
         request: Request<SubscribeIndexerRequest>,
     ) -> ServiceResult<Self::SubscribeIndexerStream> {
         let SubscribeIndexerRequest { contract_address } = request.into_inner();
-        let rx = self
-            .subscribe_indexer(Felt::from_bytes_be_slice(&contract_address))
+        let rx = self.indexer_manager
+            .add_subscriber(&self.pool, Felt::from_bytes_be_slice(&contract_address))
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
         Ok(Response::new(Box::pin(ReceiverStream::new(rx)) as Self::SubscribeIndexerStream))
@@ -1486,8 +1475,10 @@ impl proto::world::world_server::World for DojoWorld {
         request: Request<SubscribeEntitiesRequest>,
     ) -> ServiceResult<Self::SubscribeEntitiesStream> {
         let SubscribeEntitiesRequest { clauses } = request.into_inner();
-        let rx =
-            self.subscribe_entities(clauses).await.map_err(|e| Status::internal(e.to_string()))?;
+        let rx = self.entity_manager
+            .add_subscriber(clauses.into_iter().map(|keys| keys.into()).collect())
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(Box::pin(ReceiverStream::new(rx)) as Self::SubscribeEntitiesStream))
     }
@@ -1511,7 +1502,7 @@ impl proto::world::world_server::World for DojoWorld {
         &self,
         request: Request<RetrieveTokenBalancesRequest>,
     ) -> ServiceResult<Self::SubscribeTokenBalancesStream> {
-        let RetrieveTokenBalancesRequest { contract_addresses, account_addresses } =
+        let RetrieveTokenBalancesRequest { contract_addresses, account_addresses, token_ids } =
             request.into_inner();
         let contract_addresses = contract_addresses
             .iter()
@@ -1521,9 +1512,14 @@ impl proto::world::world_server::World for DojoWorld {
             .iter()
             .map(|address| Felt::from_bytes_be_slice(address))
             .collect::<Vec<_>>();
+        let token_ids = token_ids
+            .iter()
+            .map(|id| U256::from_be_slice(id))
+            .collect::<Vec<_>>();
 
         let rx = self
-            .subscribe_token_balances(contract_addresses, account_addresses)
+            .token_balance_manager
+            .add_subscriber(contract_addresses, account_addresses, token_ids)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
         Ok(Response::new(Box::pin(ReceiverStream::new(rx)) as Self::SubscribeTokenBalancesStream))
@@ -1537,6 +1533,7 @@ impl proto::world::world_server::World for DojoWorld {
             subscription_id,
             contract_addresses,
             account_addresses,
+            token_ids
         } = request.into_inner();
         let contract_addresses = contract_addresses
             .iter()
@@ -1546,9 +1543,13 @@ impl proto::world::world_server::World for DojoWorld {
             .iter()
             .map(|address| Felt::from_bytes_be_slice(address))
             .collect::<Vec<_>>();
+        let token_ids = token_ids
+            .iter()
+            .map(|id| U256::from_be_slice(id))
+            .collect::<Vec<_>>();
 
         self.token_balance_manager
-            .update_subscriber(subscription_id, contract_addresses, account_addresses)
+            .update_subscriber(subscription_id, contract_addresses, account_addresses, token_ids)
             .await;
         Ok(Response::new(()))
     }
@@ -1618,7 +1619,8 @@ impl proto::world::world_server::World for DojoWorld {
     ) -> ServiceResult<Self::SubscribeEntitiesStream> {
         let SubscribeEventMessagesRequest { clauses, historical } = request.into_inner();
         let rx = self
-            .subscribe_event_messages(clauses, historical)
+            .event_message_manager
+            .add_subscriber(clauses.into_iter().map(|keys| keys.into()).collect(), historical)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
@@ -1682,7 +1684,10 @@ impl proto::world::world_server::World for DojoWorld {
         request: Request<proto::world::SubscribeEventsRequest>,
     ) -> ServiceResult<Self::SubscribeEventsStream> {
         let keys = request.into_inner().keys;
-        let rx = self.subscribe_events(keys).await.map_err(|e| Status::internal(e.to_string()))?;
+        let rx = self.event_manager
+            .add_subscriber(keys.into_iter().map(|keys| keys.into()).collect())
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(Box::pin(ReceiverStream::new(rx)) as Self::SubscribeEventsStream))
     }
