@@ -34,18 +34,11 @@ pub struct Client {
 
 impl Client {
     /// Returns a initialized [Client].
-    pub async fn new(
-        torii_url: String,
-        relay_url: String,
-        world: Felt,
-    ) -> Result<Self, Error> {
+    pub async fn new(torii_url: String, relay_url: String, world: Felt) -> Result<Self, Error> {
         let grpc_client = torii_grpc::client::WorldClient::new(torii_url, world).await?;
         let relay_client = torii_relay::client::RelayClient::new(relay_url)?;
 
-        Ok(Self {
-            inner: RwLock::new(grpc_client),
-            relay_client,
-        })
+        Ok(Self { inner: RwLock::new(grpc_client), relay_client })
     }
 
     /// Starts the relay client event loop.
@@ -212,9 +205,7 @@ impl Client {
         contract_address: Option<Felt>,
     ) -> Result<IndexerUpdateStreaming, Error> {
         let mut grpc_client = self.inner.write().await;
-        let stream = grpc_client
-            .subscribe_indexer(contract_address.unwrap_or(self.world_reader.address))
-            .await?;
+        let stream = grpc_client.subscribe_indexer(contract_address.unwrap_or_default()).await?;
         Ok(stream)
     }
 
