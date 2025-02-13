@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1739469772859,
+  "lastUpdate": 1739469813513,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -53611,6 +53611,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 49606829012,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "contact@luca-steeb.com",
+            "name": "steebchen",
+            "username": "steebchen"
+          },
+          "committer": {
+            "email": "contact@luca-steeb.com",
+            "name": "steebchen",
+            "username": "steebchen"
+          },
+          "distinct": true,
+          "id": "596f96d2af81ef3327bcdb7a78c323b88fe12b82",
+          "message": "fix(release): correct output variable name in workflow\n\nUpdated the release workflow to use 'version' instead of\n'tag_name' as the output variable. Ensures proper version\nhandling during releases.",
+          "timestamp": "2025-02-14T00:45:17+07:00",
+          "tree_id": "8f2f0a736bc4cfc6e2bda3a807ede933fa4a8631",
+          "url": "https://github.com/dojoengine/dojo/commit/596f96d2af81ef3327bcdb7a78c323b88fe12b82"
+        },
+        "date": 1739469810689,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2462200,
+            "range": "± 60786",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 406927,
+            "range": "± 14759",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2835878429,
+            "range": "± 246184988",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 17123885,
+            "range": "± 462550",
             "unit": "ns/iter"
           }
         ]
