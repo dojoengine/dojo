@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1739409441311,
+  "lastUpdate": 1739409498942,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -52441,6 +52441,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 44818421426,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "contact@luca-steeb.com",
+            "name": "Luca Steeb",
+            "username": "steebchen"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9d0964e730a23b3368556b6d7c0961e535e3590a",
+          "message": "ci(workflows): add preview support in main release (#3007)\n\n* ci(workflows): remove preview workflow and add preview support in release\r\n\r\nRemoved the `preview.yml` workflow as its functionality is now integrated\r\ninto the `release.yml` workflow. Added support for creating preview\r\nreleases via an input flag and adjusted related steps for tag naming and\r\nconditions in the release process.\r\n\r\n* ci(release): parameterize artifact names with job target\r\n\r\nUpdated artifact and binary names in the release workflow to include\r\nmatrix job targets for improved identification and clarity in\r\nmulti-target builds.",
+          "timestamp": "2025-02-12T19:00:32-06:00",
+          "tree_id": "73b304376ee3f38b870d059f62618672b97183cd",
+          "url": "https://github.com/dojoengine/dojo/commit/9d0964e730a23b3368556b6d7c0961e535e3590a"
+        },
+        "date": 1739409496397,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2477378,
+            "range": "± 46626",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 394496,
+            "range": "± 15186",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2663244005,
+            "range": "± 222280349",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 16723776,
+            "range": "± 618700",
             "unit": "ns/iter"
           }
         ]
