@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1739478727458,
+  "lastUpdate": 1739478841312,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -53689,6 +53689,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 45221396251,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6c74cd5768d4eba96b5820fc353e551e5de75aa7",
+          "message": "fix(katana): unbound call execution from the block context limit (#3026)",
+          "timestamp": "2025-02-14T04:15:23+08:00",
+          "tree_id": "985f16cafbdaadde6613821226345b8289335915",
+          "url": "https://github.com/dojoengine/dojo/commit/6c74cd5768d4eba96b5820fc353e551e5de75aa7"
+        },
+        "date": 1739478838683,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2446909,
+            "range": "± 49456",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 399601,
+            "range": "± 12235",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2878600793,
+            "range": "± 241449312",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 17993658,
+            "range": "± 676127",
             "unit": "ns/iter"
           }
         ]
