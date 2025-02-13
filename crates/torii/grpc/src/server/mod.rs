@@ -1389,12 +1389,10 @@ impl proto::world::world_server::World for DojoWorld {
             .iter()
             .map(|address| Felt::from_bytes_be_slice(address))
             .collect::<Vec<_>>();
-        let token_ids = token_ids
-            .iter()
-            .map(|id| U256::from_be_slice(id))
-            .collect::<Vec<_>>();
+        let token_ids = token_ids.iter().map(|id| U256::from_be_slice(id)).collect::<Vec<_>>();
 
-        let rx = self.token_manager
+        let rx = self
+            .token_manager
             .add_subscriber(contract_addresses, token_ids)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
@@ -1411,10 +1409,7 @@ impl proto::world::world_server::World for DojoWorld {
             .iter()
             .map(|address| Felt::from_bytes_be_slice(address))
             .collect::<Vec<_>>();
-        let token_ids = token_ids
-            .iter()
-            .map(|id| U256::from_be_slice(id))
-            .collect::<Vec<_>>();
+        let token_ids = token_ids.iter().map(|id| U256::from_be_slice(id)).collect::<Vec<_>>();
 
         self.token_manager.update_subscriber(subscription_id, contract_addresses, token_ids).await;
         Ok(Response::new(()))
@@ -1434,10 +1429,7 @@ impl proto::world::world_server::World for DojoWorld {
             .iter()
             .map(|address| Felt::from_bytes_be_slice(address))
             .collect::<Vec<_>>();
-        let token_ids = token_ids
-            .iter()
-            .map(|id| U256::from_be_slice(id))
-            .collect::<Vec<_>>();
+        let token_ids = token_ids.iter().map(|id| U256::from_be_slice(id)).collect::<Vec<_>>();
 
         let balances = self
             .retrieve_token_balances(account_addresses, contract_addresses, token_ids)
@@ -1451,7 +1443,8 @@ impl proto::world::world_server::World for DojoWorld {
         request: Request<SubscribeIndexerRequest>,
     ) -> ServiceResult<Self::SubscribeIndexerStream> {
         let SubscribeIndexerRequest { contract_address } = request.into_inner();
-        let rx = self.indexer_manager
+        let rx = self
+            .indexer_manager
             .add_subscriber(&self.pool, Felt::from_bytes_be_slice(&contract_address))
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
@@ -1475,7 +1468,8 @@ impl proto::world::world_server::World for DojoWorld {
         request: Request<SubscribeEntitiesRequest>,
     ) -> ServiceResult<Self::SubscribeEntitiesStream> {
         let SubscribeEntitiesRequest { clauses } = request.into_inner();
-        let rx = self.entity_manager
+        let rx = self
+            .entity_manager
             .add_subscriber(clauses.into_iter().map(|keys| keys.into()).collect())
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
@@ -1512,10 +1506,7 @@ impl proto::world::world_server::World for DojoWorld {
             .iter()
             .map(|address| Felt::from_bytes_be_slice(address))
             .collect::<Vec<_>>();
-        let token_ids = token_ids
-            .iter()
-            .map(|id| U256::from_be_slice(id))
-            .collect::<Vec<_>>();
+        let token_ids = token_ids.iter().map(|id| U256::from_be_slice(id)).collect::<Vec<_>>();
 
         let rx = self
             .token_balance_manager
@@ -1533,7 +1524,7 @@ impl proto::world::world_server::World for DojoWorld {
             subscription_id,
             contract_addresses,
             account_addresses,
-            token_ids
+            token_ids,
         } = request.into_inner();
         let contract_addresses = contract_addresses
             .iter()
@@ -1543,10 +1534,7 @@ impl proto::world::world_server::World for DojoWorld {
             .iter()
             .map(|address| Felt::from_bytes_be_slice(address))
             .collect::<Vec<_>>();
-        let token_ids = token_ids
-            .iter()
-            .map(|id| U256::from_be_slice(id))
-            .collect::<Vec<_>>();
+        let token_ids = token_ids.iter().map(|id| U256::from_be_slice(id)).collect::<Vec<_>>();
 
         self.token_balance_manager
             .update_subscriber(subscription_id, contract_addresses, account_addresses, token_ids)
@@ -1684,7 +1672,8 @@ impl proto::world::world_server::World for DojoWorld {
         request: Request<proto::world::SubscribeEventsRequest>,
     ) -> ServiceResult<Self::SubscribeEventsStream> {
         let keys = request.into_inner().keys;
-        let rx = self.event_manager
+        let rx = self
+            .event_manager
             .add_subscriber(keys.into_iter().map(|keys| keys.into()).collect())
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
