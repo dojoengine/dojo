@@ -4,23 +4,19 @@ use std::sync::Arc;
 
 use blockifier::blockifier::block::{BlockInfo, GasPrices};
 use blockifier::bouncer::{Bouncer, BouncerConfig};
-use blockifier::context::{BlockContext, ChainInfo, FeeTokenAddresses, TransactionContext};
+use blockifier::context::{BlockContext, ChainInfo, FeeTokenAddresses};
 use blockifier::execution::call_info::{
     CallExecution, CallInfo, OrderedEvent, OrderedL2ToL1Message,
 };
-use blockifier::execution::common_hints::ExecutionMode;
 use blockifier::execution::contract_class::{
     ClassInfo, ContractClass, ContractClassV0, ContractClassV1,
 };
-use blockifier::execution::entry_point::{CallEntryPoint, CallType, EntryPointExecutionContext};
+use blockifier::execution::entry_point::CallType;
 use blockifier::fee::fee_utils::get_fee_by_gas_vector;
 use blockifier::state::cached_state::{self, TransactionalState};
 use blockifier::state::state_api::{StateReader, UpdatableState};
 use blockifier::transaction::account_transaction::AccountTransaction;
-use blockifier::transaction::objects::{
-    DeprecatedTransactionInfo, FeeType, HasRelatedFeeType, TransactionExecutionInfo,
-    TransactionInfo,
-};
+use blockifier::transaction::objects::{FeeType, HasRelatedFeeType, TransactionExecutionInfo};
 use blockifier::transaction::transaction_execution::Transaction;
 use blockifier::transaction::transactions::{
     DeclareTransaction, DeployAccountTransaction, ExecutableTransaction, InvokeTransaction,
@@ -56,7 +52,7 @@ use katana_provider::traits::contract::ContractClassProvider;
 use starknet::core::utils::parse_cairo_short_string;
 
 use super::state::CachedState;
-use crate::abstraction::{EntryPointCall, ExecutionFlags};
+use crate::abstraction::ExecutionFlags;
 use crate::utils::build_receipt;
 use crate::{ExecutionError, ExecutionResult, ExecutorResult};
 
@@ -154,51 +150,6 @@ pub fn transact<S: StateReader>(
             Ok(ExecutionResult::new_failed(e))
         }
     }
-}
-
-/// Perform a function call on a contract and retrieve the return values.
-pub fn call<S: StateReader>(
-    request: EntryPointCall,
-    state: S,
-    block_context: &BlockContext,
-    initial_gas: u128,
-) -> Result<Vec<Felt>, ExecutionError> {
-    let mut state = cached_state::CachedState::new(state);
-
-    let call = CallEntryPoint {
-        initial_gas: initial_gas as u64,
-        storage_address: to_blk_address(request.contract_address),
-        entry_point_selector: core::EntryPointSelector(request.entry_point_selector),
-        calldata: Calldata(Arc::new(request.calldata)),
-        ..Default::default()
-    };
-
-    // TODO: this must be false if fees are disabled I assume.
-    let limit_steps_by_resources = true;
-
-    // Now, the max step is not given directly to this function.
-    // It's computed by a new function max_steps, and it tooks the values
-    // from the block context itself instead of the input give. The dojoengine
-    // fork of the blockifier ensures we're not limited by the min function applied
-    // by starkware.
-    // https://github.com/starkware-libs/blockifier/blob/4fd71645b45fd1deb6b8e44802414774ec2a2ec1/crates/blockifier/src/execution/entry_point.rs#L159
-    // https://github.com/dojoengine/blockifier/blob/5f58be8961ddf84022dd739a8ab254e32c435075/crates/blockifier/src/execution/entry_point.rs#L188
-
-    let res = call.execute(
-        &mut state,
-        &mut ExecutionResources::default(),
-        &mut EntryPointExecutionContext::new(
-            Arc::new(TransactionContext {
-                block_context: block_context.clone(),
-                tx_info: TransactionInfo::Deprecated(DeprecatedTransactionInfo::default()),
-            }),
-            ExecutionMode::Execute,
-            limit_steps_by_resources,
-        )
-        .expect("shouldn't fail"),
-    )?;
-
-    Ok(res.execution.retdata.0)
 }
 
 pub fn to_executor_tx(tx: ExecutableTxWithHash) -> Transaction {
@@ -739,6 +690,7 @@ mod tests {
 
     use std::collections::{HashMap, HashSet};
 
+    use blockifier::execution::entry_point::CallEntryPoint;
     use katana_cairo::cairo_vm::types::builtin_name::BuiltinName;
     use katana_cairo::cairo_vm::vm::runners::cairo_runner::ExecutionResources;
     use katana_cairo::starknet_api::core::EntryPointSelector;

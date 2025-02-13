@@ -2,6 +2,7 @@
 pub use blockifier;
 use blockifier::bouncer::{Bouncer, BouncerConfig, BouncerWeights};
 
+pub mod call;
 mod error;
 pub mod state;
 pub mod utils;
@@ -328,7 +329,7 @@ impl ExecutorExt for StarknetVMProcessor<'_> {
         let block_context = &self.block_context;
         let mut state = self.state.inner.lock();
         let state = MutRefState::new(&mut state.cached_state);
-        let retdata = utils::call(call, state, block_context, 1_000_000_000)?;
+        let retdata = call::execute_call(call, state, block_context, 1_000_000_000)?;
         Ok(retdata)
     }
 }

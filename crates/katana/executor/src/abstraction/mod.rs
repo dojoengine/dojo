@@ -103,7 +103,7 @@ pub struct ExecutionOutput {
     pub transactions: Vec<(TxWithHash, ExecutionResult)>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct EntryPointCall {
     /// The address of the contract whose function you're calling.
     pub contract_address: ContractAddress,
