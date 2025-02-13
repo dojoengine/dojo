@@ -2221,7 +2221,7 @@
   ],
   "libraries": [
     {
-      "class_hash": "0x18e785a7f62e106c199d15b41e756a2ba8a89f5d229f31a5b7e8971f7529a69",
+      "class_hash": "0x5d656902fe69f699ebbe0af587d01a46ecdb166daf10c70a6cf0b27555ee7fe",
       "abi": [
         {
           "type": "impl",
@@ -2291,17 +2291,6 @@
                   "type": "core::integer::u8"
                 }
               ],
-              "outputs": [
-                {
-                  "type": "core::integer::u8"
-                }
-              ],
-              "state_mutability": "view"
-            },
-            {
-              "type": "function",
-              "name": "test",
-              "inputs": [],
               "outputs": [
                 {
                   "type": "core::integer::u8"
