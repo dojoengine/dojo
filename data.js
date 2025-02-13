@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1739466106757,
+  "lastUpdate": 1739466130314,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -53455,6 +53455,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 51417994472,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "valentin@pupucecorp.com",
+            "name": "Brother MartianGreed",
+            "username": "MartianGreed"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5e1f3b93e769d135b7a01d3c7e648cc9e0f7e7fa",
+          "message": "feat(ts-bindgen): remove fieldOrder in ts bindgen (#3024)",
+          "timestamp": "2025-02-13T16:43:37Z",
+          "tree_id": "80c0d5f3e2d602ab04ecb6b4c8b0eefd9febc079",
+          "url": "https://github.com/dojoengine/dojo/commit/5e1f3b93e769d135b7a01d3c7e648cc9e0f7e7fa"
+        },
+        "date": 1739466126805,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2572306,
+            "range": "± 36135",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 416909,
+            "range": "± 4221",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2862312478,
+            "range": "± 228506544",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 17561594,
+            "range": "± 414405",
             "unit": "ns/iter"
           }
         ]
