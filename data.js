@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1739444155612,
+  "lastUpdate": 1739447674673,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -53113,6 +53113,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 17073582,
             "range": "± 391920",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "contact@luca-steeb.com",
+            "name": "steebchen",
+            "username": "steebchen"
+          },
+          "committer": {
+            "email": "contact@luca-steeb.com",
+            "name": "steebchen",
+            "username": "steebchen"
+          },
+          "distinct": true,
+          "id": "6385faf8ee839f468ac393fe261cdd6bb160795e",
+          "message": "ci(release): enable merging of multiple artifacts\n\nAdded merge-multiple option to combine artifacts during\nrelease workflow.",
+          "timestamp": "2025-02-13T18:37:41+07:00",
+          "tree_id": "a3e28c0f83832ec44a4505b01f38b8aeee8c0340",
+          "url": "https://github.com/dojoengine/dojo/commit/6385faf8ee839f468ac393fe261cdd6bb160795e"
+        },
+        "date": 1739447672143,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 44755864095,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
