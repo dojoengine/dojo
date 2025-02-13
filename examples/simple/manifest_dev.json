@@ -1,7 +1,7 @@
 {
   "world": {
-    "class_hash": "0x7c9469d45a9cdbab775035afb48e1fa73fb35ab059fcb9dfb0a301aa973e783",
-    "address": "0x60ad048d25c5f97abf3056d86a06ee6df6e0c62ce2e8e2d84c010c37f4ce13c",
+    "class_hash": "0x2361c106e790c1d1bff8c9f73c9d84e9e3ac94b2d8df6db4ddd55e82c33a9b4",
+    "address": "0x1fdfa7a4dc649d4203d5669fb8086474a686458ea86f95027c7b9a5f10d43bb",
     "seed": "simple",
     "name": "simple",
     "entrypoints": [
@@ -11,7 +11,6 @@
       "register_event",
       "register_model",
       "register_contract",
-      "register_library",
       "init_contract",
       "upgrade_event",
       "upgrade_model",
@@ -79,10 +78,6 @@
           {
             "name": "Unregistered",
             "type": "()"
-          },
-          {
-            "name": "Library",
-            "type": "(core::starknet::class_hash::ClassHash, core::felt252)"
           }
         ]
       },
@@ -363,34 +358,6 @@
             "outputs": [
               {
                 "type": "core::starknet::contract_address::ContractAddress"
-              }
-            ],
-            "state_mutability": "external"
-          },
-          {
-            "type": "function",
-            "name": "register_library",
-            "inputs": [
-              {
-                "name": "namespace",
-                "type": "core::byte_array::ByteArray"
-              },
-              {
-                "name": "class_hash",
-                "type": "core::starknet::class_hash::ClassHash"
-              },
-              {
-                "name": "name",
-                "type": "core::byte_array::ByteArray"
-              },
-              {
-                "name": "version",
-                "type": "core::byte_array::ByteArray"
-              }
-            ],
-            "outputs": [
-              {
-                "type": "core::starknet::class_hash::ClassHash"
               }
             ],
             "state_mutability": "external"
@@ -1000,28 +967,6 @@
       },
       {
         "type": "event",
-        "name": "dojo::world::world_contract::world::LibraryRegistered",
-        "kind": "struct",
-        "members": [
-          {
-            "name": "name",
-            "type": "core::byte_array::ByteArray",
-            "kind": "key"
-          },
-          {
-            "name": "namespace",
-            "type": "core::byte_array::ByteArray",
-            "kind": "key"
-          },
-          {
-            "name": "class_hash",
-            "type": "core::starknet::class_hash::ClassHash",
-            "kind": "data"
-          }
-        ]
-      },
-      {
-        "type": "event",
         "name": "dojo::world::world_contract::world::EventEmitted",
         "kind": "struct",
         "members": [
@@ -1262,11 +1207,6 @@
             "kind": "nested"
           },
           {
-            "name": "LibraryRegistered",
-            "type": "dojo::world::world_contract::world::LibraryRegistered",
-            "kind": "nested"
-          },
-          {
             "name": "EventEmitted",
             "type": "dojo::world::world_contract::world::EventEmitted",
             "kind": "nested"
@@ -1312,7 +1252,7 @@
   },
   "contracts": [
     {
-      "address": "0x68ebbbaa05b52fca16f3094070276fbf58feaaee2c439dfc3ef81ef0efcd2ce",
+      "address": "0x6bd026832b87c2374e80a6cc81cda814d5a6438a090422ea9965d9c6f5a11b",
       "class_hash": "0x4f8b513b49ec2fdb194efa3a8d041aef0e66346a6e8a9a999b1f4eb2fb17045",
       "abi": [
         {
@@ -1570,7 +1510,7 @@
       ]
     },
     {
-      "address": "0x1bcadbe4bda190754bb85a2288471802193e54581f4bbf3edce20418027b5c2",
+      "address": "0x927d206ade2170c687f3587b2ea656b7b39e4422c75f00ae7051ba32a32b78",
       "class_hash": "0x61abffb3fd1eee27cba6298be11b8252c21eb3f69c8730ff44e9859e173cfb8",
       "abi": [
         {
@@ -1746,7 +1686,7 @@
       ]
     },
     {
-      "address": "0x323d7847eb5698860601cf6dccd1ac95c6629eb1aa057b8ef704ffb38770e6",
+      "address": "0x7c62d68fcd656d72eb64ad6375a1907f3be1afec52caac3b742e53a26d069d8",
       "class_hash": "0x4f8b513b49ec2fdb194efa3a8d041aef0e66346a6e8a9a999b1f4eb2fb17045",
       "abi": [
         {
@@ -2004,7 +1944,6 @@
       ]
     }
   ],
-  "libraries": [],
   "models": [
     {
       "members": [],
@@ -2032,6 +1971,5 @@
       "tag": "ns-EH",
       "selector": "0x4c6c7772b19b700cf97d078d02a419670d11d2b689a7a3647eac311b2817ced"
     }
-  ],
-  "external_contracts": []
+  ]
 }

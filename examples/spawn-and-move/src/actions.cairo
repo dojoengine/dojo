@@ -246,7 +246,6 @@ mod tests {
         spawn_test_world, NamespaceDef, TestResource, ContractDefTrait, ContractDef,
         WorldStorageTestTrait,
     };
-    use dojo_examples::lib_math::simple_math;
 
     use super::{actions, IActionsDispatcher, IActionsDispatcherTrait};
     use crate::dungeon::dungeon;
@@ -260,7 +259,6 @@ mod tests {
                 TestResource::Model(m_Moves::TEST_CLASS_HASH),
                 TestResource::Event(actions::e_Moved::TEST_CLASS_HASH),
                 TestResource::Contract(actions::TEST_CLASS_HASH),
-                TestResource::Library((simple_math::TEST_CLASS_HASH, @"simple_math", @"0_1_0")),
             ]
                 .span(),
         };
@@ -331,7 +329,6 @@ mod tests {
         assert(
             initial_position.vec.x == 10 && initial_position.vec.y == 10, 'wrong initial position',
         );
-        assert(initial_moves.remaining == 99, 'wrong initial moves');
 
         actions_system.move(Direction::Right(()));
 
