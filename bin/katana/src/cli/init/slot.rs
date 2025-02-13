@@ -21,22 +21,19 @@ pub struct SlotArgs {
     /// Specify the number of paymaster accounts to create.
     ///
     /// This argument accepts a list of values, where each value is a pair of public key and salt
-    /// separated by a comma. If more than one pair is provided, the double quotes are required to
-    /// prevent the shell from prematurely splitting the argument.
+    /// separated by a comma.
     ///
     /// For example:
     ///
-    /// ```
-    /// --slot.paymasters 0x1,0x2
-    /// ```
+    /// 0x1,0x2
     ///
-    /// ```
-    /// --slot.paymasters "0x1,0x2 0x3,0x4 0x5,0x6"
-    /// ```
+    /// multiple values can be provided by separating them with spaces:
+    ///
+    /// 0x1,0x2 0x3,0x4 0x5,0x6
     ///
     /// where the total number of pairs determine how many paymaster accounts will be created.
     #[arg(requires_all = ["id", "slot"])]
-    #[arg(long = "slot.paymasters", value_delimiter = ' ', num_args = 1..)]
+    #[arg(long = "slot.paymasters", num_args = 1..)]
     pub paymaster_accounts: Option<Vec<PaymasterAccountArgs>>,
 }
 
