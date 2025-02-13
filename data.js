@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1739447765002,
+  "lastUpdate": 1739450320350,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -53191,6 +53191,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 17567764,
             "range": "± 510043",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "contact@luca-steeb.com",
+            "name": "steebchen",
+            "username": "steebchen"
+          },
+          "committer": {
+            "email": "contact@luca-steeb.com",
+            "name": "steebchen",
+            "username": "steebchen"
+          },
+          "distinct": true,
+          "id": "3f4d230cdb1681e668cde5ecd82188f85b811dfe",
+          "message": "ci: remove preview workflow in favor of main release wf\n\nDeleted the `.github/workflows/preview.yml` file to eliminate\nthe unused preview job configuration.",
+          "timestamp": "2025-02-13T19:22:00+07:00",
+          "tree_id": "b578c781b1fe6434b8082fed795c97aa1fe0f901",
+          "url": "https://github.com/dojoengine/dojo/commit/3f4d230cdb1681e668cde5ecd82188f85b811dfe"
+        },
+        "date": 1739450317836,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 43519357393,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
