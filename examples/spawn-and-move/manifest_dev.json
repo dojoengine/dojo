@@ -1,7 +1,7 @@
 {
   "world": {
-    "class_hash": "0x3e90200fac243ad74a24e7a49f72fc6306558045372fa180148a7a19112e87d",
-    "address": "0x250a77dc9701a15c9d49688c2757691782718a4ad3aa1475592ae7583437148",
+    "class_hash": "0x7c9469d45a9cdbab775035afb48e1fa73fb35ab059fcb9dfb0a301aa973e783",
+    "address": "0x24334e79a3c56e5374c5bdd148c22ff2f0de3b4dc6e734e22ea49795f367221",
     "seed": "dojo_examples",
     "name": "example",
     "entrypoints": [
@@ -1312,7 +1312,7 @@
   },
   "contracts": [
     {
-      "address": "0x45e6298fe130bdc2ab5518077deeb96520e21a2e87ba25c493099d49ba9a689",
+      "address": "0x73011d08f54413ec16fd768a0dcf1e61a6218e196b01b6ddfad09502f47e71d",
       "class_hash": "0x747821121b203c09f02f2568e69fa3e4f50840ec33d38546143cffe6114afce",
       "abi": [
         {
@@ -1666,7 +1666,7 @@
       ]
     },
     {
-      "address": "0x78dc9017a9f9c046cee69a06beb8557817e3fcbe0d15996ef1cbc4ae936e39d",
+      "address": "0x2fbd487dc4ccae7a01c767addb192df5c285fe07fe06756b463d7b5f3b43044",
       "class_hash": "0x7b31bb137c041fbe8247724a888bb108aaf2ff6b2bb7be5ecf5c954471e30c3",
       "abi": [
         {
@@ -1860,7 +1860,7 @@
       ]
     },
     {
-      "address": "0x3d5da258fc44fb2968c2eb46c1e6d7e8ebce0a989381256e05e42f82cd575ac",
+      "address": "0x64b964be7fb8d9d9161a34b39cb2709b7a36b46063e0180c93a62aabc899b52",
       "class_hash": "0x38c4b1f36acecf15ea27430f34956bdfed933271ef23bcb9444db15dce66c6b",
       "abi": [
         {
@@ -2036,7 +2036,7 @@
       ]
     },
     {
-      "address": "0x2ce58d3f4372a3892ff4fc12ff530b1b36b8072728386404e53727a970c5e03",
+      "address": "0x6460654b134506a238bf79b73d2be078f587718521048c80b78514fe90b6336",
       "class_hash": "0x5dd5b200655bdc68fba0ec23b25a9fb2d8ea2da118d60789c2d1d6adac3afae",
       "abi": [
         {
@@ -2221,7 +2221,7 @@
   ],
   "libraries": [
     {
-      "class_hash": "0x3b47785f6e538d6ea1ef13b5c2dfb41eabbbc67fb9997780668a31e3b3ccc6d",
+      "class_hash": "0x18e785a7f62e106c199d15b41e756a2ba8a89f5d229f31a5b7e8971f7529a69",
       "abi": [
         {
           "type": "impl",
@@ -2291,6 +2291,17 @@
                   "type": "core::integer::u8"
                 }
               ],
+              "outputs": [
+                {
+                  "type": "core::integer::u8"
+                }
+              ],
+              "state_mutability": "view"
+            },
+            {
+              "type": "function",
+              "name": "test",
+              "inputs": [],
               "outputs": [
                 {
                   "type": "core::integer::u8"

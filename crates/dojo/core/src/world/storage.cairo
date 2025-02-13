@@ -87,14 +87,14 @@ pub impl WorldStorageInternalImpl of WorldStorageTrait {
     fn dns_address(self: @WorldStorage, contract_name: @ByteArray) -> Option<ContractAddress> {
         match self.dns(contract_name) {
             Option::Some((address, _)) => Option::Some(address),
-            Option::None => Option::None
+            Option::None => Option::None,
         }
     }
 
     fn dns_class_hash(self: @WorldStorage, contract_name: @ByteArray) -> Option<ClassHash> {
         match self.dns(contract_name) {
             Option::Some((_, class_hash)) => Option::Some(class_hash),
-            Option::None => Option::None
+            Option::None => Option::None,
         }
     }
 

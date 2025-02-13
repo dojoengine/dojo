@@ -156,7 +156,9 @@ impl WorldLocal {
 
                                 if !added_resources {
                                     warn!(
-                                        "No library version found for library `{}` in the Dojo profile config. Consider adding a `[lib_versions]` entry with the version.",
+                                        "No library version found for library `{}` in the Dojo \
+                                         profile config. Consider adding a `[lib_versions]` entry \
+                                         with the version.",
                                         name
                                     );
                                 }

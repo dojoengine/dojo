@@ -10,8 +10,8 @@ use dojo::event::{Event, EventStorage};
 
 use crate::tests::helpers::{
     bar, IbarDispatcherTrait, drop_all_events, deploy_world_and_bar, Foo, m_Foo, test_contract,
-    test_contract_with_dojo_init_args, SimpleEvent, e_SimpleEvent, deploy_world,
-    library_a, LibraryALibraryDispatcher, LibraryADispatcherTrait,
+    test_contract_with_dojo_init_args, SimpleEvent, e_SimpleEvent, deploy_world, library_a,
+    LibraryALibraryDispatcher, LibraryADispatcherTrait,
 };
 use crate::{spawn_test_world, ContractDefTrait, NamespaceDef, TestResource, WorldStorageTestTrait};
 
@@ -342,7 +342,12 @@ fn test_register_library() {
 }
 
 #[test]
-#[should_panic(expected: ("Resource (Library) `dojo-liba_v0_1_0` is already registered. Libraries can't be updated, increment the version in the Dojo configuration file instead.", 'ENTRYPOINT_FAILED'))]
+#[should_panic(
+    expected: (
+        "Resource (Library) `dojo-liba_v0_1_0` is already registered. Libraries can't be updated, increment the version in the Dojo configuration file instead.",
+        'ENTRYPOINT_FAILED',
+    ),
+)]
 fn test_register_library_already_registered() {
     let world = deploy_world();
     let world = world.dispatcher;

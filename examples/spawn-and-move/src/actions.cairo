@@ -231,9 +231,7 @@ pub mod actions {
         fn simple_math_dispatcher(
             self: @ContractState, world: @WorldStorage,
         ) -> SimpleMathLibraryDispatcher {
-            let (_, class_hash) = world
-                .dns(@"simple_math_v0_1_0")
-                .expect('simple_math not found');
+            let (_, class_hash) = world.dns(@"simple_math_v0_1_0").expect('simple_math not found');
 
             SimpleMathLibraryDispatcher { class_hash }
         }

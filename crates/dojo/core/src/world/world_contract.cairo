@@ -42,8 +42,7 @@ pub mod world {
     use dojo::meta::{
         Layout, IStoredResourceDispatcher, IStoredResourceDispatcherTrait,
         IDeployedResourceDispatcher, IDeployedResourceDispatcherTrait, LayoutCompareTrait,
-        IDeployedResourceLibraryDispatcher,
-        TyCompareTrait,
+        IDeployedResourceLibraryDispatcher, TyCompareTrait,
     };
     use dojo::model::{Model, ResourceMetadata, metadata, ModelIndex};
     use dojo::storage;
@@ -766,7 +765,8 @@ pub mod world {
                     ),
                 ),
             }
-            // class_hash will be retrieved with get_class_hash_at_syscall, so no need to update resource.
+            // class_hash will be retrieved with get_class_hash_at_syscall, so no need to update
+        // resource.
         }
 
         fn init_contract(ref self: ContractState, selector: felt252, init_calldata: Span<felt252>) {
