@@ -43,7 +43,7 @@ pub struct Token {
     pub name: String,
     pub symbol: String,
     pub decimals: u8,
-    pub metadata: String
+    pub metadata: String,
 }
 
 impl TryFrom<proto::types::Token> for Token {

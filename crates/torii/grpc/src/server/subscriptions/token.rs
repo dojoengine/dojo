@@ -119,7 +119,8 @@ impl Service {
         token: &OptimisticToken,
     ) -> Result<(), Error> {
         let mut closed_stream = Vec::new();
-        let contract_address = Felt::from_str(&token.contract_address).map_err(ParseError::FromStr)?;
+        let contract_address =
+            Felt::from_str(&token.contract_address).map_err(ParseError::FromStr)?;
         let token_id = U256::from_be_hex(&token.token_id.trim_start_matches("0x")).to_be_bytes();
 
         for (idx, sub) in subs.subscribers.read().await.iter() {

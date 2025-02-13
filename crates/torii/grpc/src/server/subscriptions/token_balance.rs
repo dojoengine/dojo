@@ -132,8 +132,10 @@ impl Service {
         balance: &OptimisticTokenBalance,
     ) -> Result<(), Error> {
         let mut closed_stream = Vec::new();
-        let contract_address = Felt::from_str(&balance.contract_address).map_err(ParseError::FromStr)?;
-        let account_address = Felt::from_str(&balance.account_address).map_err(ParseError::FromStr)?;
+        let contract_address =
+            Felt::from_str(&balance.contract_address).map_err(ParseError::FromStr)?;
+        let account_address =
+            Felt::from_str(&balance.account_address).map_err(ParseError::FromStr)?;
         let token_id = U256::from_be_hex(&balance.token_id.trim_start_matches("0x")).to_be_bytes();
         let balance = U256::from_be_hex(&balance.balance.trim_start_matches("0x")).to_be_bytes();
 

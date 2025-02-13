@@ -100,8 +100,13 @@ impl From<SchemaError> for Error {
 impl From<Token> for proto::types::Token {
     fn from(value: Token) -> Self {
         Self {
-            token_id: U256::from_be_hex(&value.token_id.trim_start_matches("0x")).to_be_bytes().to_vec(),
-            contract_address: Felt::from_str(&value.contract_address).unwrap().to_bytes_be().to_vec(),
+            token_id: U256::from_be_hex(&value.token_id.trim_start_matches("0x"))
+                .to_be_bytes()
+                .to_vec(),
+            contract_address: Felt::from_str(&value.contract_address)
+                .unwrap()
+                .to_bytes_be()
+                .to_vec(),
             name: value.name,
             symbol: value.symbol,
             decimals: value.decimals as u32,
@@ -113,10 +118,17 @@ impl From<Token> for proto::types::Token {
 impl From<TokenBalance> for proto::types::TokenBalance {
     fn from(value: TokenBalance) -> Self {
         Self {
-            balance: U256::from_be_hex(&value.balance.trim_start_matches("0x")).to_be_bytes().to_vec(),
+            balance: U256::from_be_hex(&value.balance.trim_start_matches("0x"))
+                .to_be_bytes()
+                .to_vec(),
             account_address: Felt::from_str(&value.account_address).unwrap().to_bytes_be().to_vec(),
-            contract_address: Felt::from_str(&value.contract_address).unwrap().to_bytes_be().to_vec(),
-            token_id: U256::from_be_hex(&value.token_id.trim_start_matches("0x")).to_be_bytes().to_vec(),
+            contract_address: Felt::from_str(&value.contract_address)
+                .unwrap()
+                .to_bytes_be()
+                .to_vec(),
+            token_id: U256::from_be_hex(&value.token_id.trim_start_matches("0x"))
+                .to_be_bytes()
+                .to_vec(),
         }
     }
 }
