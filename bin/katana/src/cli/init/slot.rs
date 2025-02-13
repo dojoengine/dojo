@@ -36,7 +36,7 @@ pub struct SlotArgs {
     ///
     /// where the total number of pairs determine how many paymaster accounts will be created.
     #[arg(requires_all = ["id", "slot"])]
-    #[arg(long = "slot.paymasters", value_delimiter = ' ')]
+    #[arg(long = "slot.paymasters", value_delimiter = ' ', num_args = 1..)]
     pub paymaster_accounts: Option<Vec<PaymasterAccountArgs>>,
 }
 
@@ -188,8 +188,9 @@ mod tests {
             "--id",
             "--slot",
             "--slot.paymasters",
-            // Must be in one argument because the shell splits the argument otherwise.
-            "0x1,0x2 0x1,0x3 0x1,0x4",
+            "0x1,0x2",
+            "0x1,0x3",
+            "0x1,0x4",
         ]);
 
         let paymasters = slot.paymaster_accounts.unwrap();
