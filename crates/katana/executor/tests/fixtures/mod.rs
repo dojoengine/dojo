@@ -238,9 +238,9 @@ pub fn cfg() -> CfgEnv {
 
     CfgEnv {
         fee_token_addresses,
-        max_recursion_depth: 100,
-        validate_max_n_steps: 1_000_000,
-        invoke_tx_max_n_steps: 1_000_000,
+        max_recursion_depth: usize::MAX,
+        validate_max_n_steps: u32::MAX,
+        invoke_tx_max_n_steps: u32::MAX,
         chain_id: ChainId::parse("KATANA").unwrap(),
     }
 }
