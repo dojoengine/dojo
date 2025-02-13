@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1739414775965,
+  "lastUpdate": 1739414830114,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -52675,6 +52675,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 49146256547,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "distinct": true,
+          "id": "1aa06e1cc9a060380b4d44ca2717a2ef97e1677c",
+          "message": "ci(workflows): bump artifacts actions",
+          "timestamp": "2025-02-12T20:29:19-06:00",
+          "tree_id": "db6a7b410f97fe5d38988b364ff60397c283d7bb",
+          "url": "https://github.com/dojoengine/dojo/commit/1aa06e1cc9a060380b4d44ca2717a2ef97e1677c"
+        },
+        "date": 1739414827433,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2465353,
+            "range": "± 38835",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 396466,
+            "range": "± 13664",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2693428491,
+            "range": "± 279176825",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 16940981,
+            "range": "± 89007",
             "unit": "ns/iter"
           }
         ]
