@@ -21,12 +21,17 @@ pub struct SlotArgs {
     /// Specify the number of paymaster accounts to create.
     ///
     /// This argument accepts a list of values, where each value is a pair of public key and salt
-    /// separated by a comma.
+    /// separated by a comma. If more than one pair is provided, the double quotes are required to
+    /// prevent the shell from prematurely splitting the argument.
     ///
     /// For example:
     ///
     /// ```
-    /// --slot.paymasters 0x1,0x2 0x3,0x4 0x5,0x6
+    /// --slot.paymasters 0x1,0x2
+    /// ```
+    ///
+    /// ```
+    /// --slot.paymasters "0x1,0x2 0x3,0x4 0x5,0x6"
     /// ```
     ///
     /// where the total number of pairs determine how many paymaster accounts will be created.
@@ -183,9 +188,8 @@ mod tests {
             "--id",
             "--slot",
             "--slot.paymasters",
-            "0x1,0x2",
-            "0x1,0x3",
-            "0x1,0x4",
+            // Must be in one argument because the shell splits the argument otherwise.
+            "0x1,0x2 0x1,0x3 0x1,0x4",
         ]);
 
         let paymasters = slot.paymaster_accounts.unwrap();
