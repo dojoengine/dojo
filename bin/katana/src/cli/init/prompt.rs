@@ -1,7 +1,10 @@
+use std::cell::RefCell;
+use std::rc::Rc;
 use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::{Context, Result};
+use inquire::validator::{ErrorMessage, Validation};
 use inquire::{Confirm, CustomType, Select};
 use katana_primitives::block::BlockNumber;
 use katana_primitives::{ContractAddress, Felt};
@@ -15,6 +18,7 @@ use tokio::runtime::Handle;
 
 use super::{deployment, Outcome};
 use crate::cli::init::deployment::DeploymentOutcome;
+use crate::cli::init::slot::{self, PaymasterAccountArgs};
 
 pub const CARTRIDGE_SN_SEPOLIA_PROVIDER: &str = "https://api.cartridge.gg/x/starknet/sepolia";
 
@@ -125,15 +129,46 @@ pub async fn prompt() -> Result<Outcome> {
             DeploymentOutcome { contract_address: address, block_number }
         };
 
-    // Prompt for slot paymaster accounts
-    let mut slot_paymasters = Vec::new();
+    // It's wrapped like this because the prompt validator requires captured variables to have
+    // 'static lifetime.
+    let slot_paymasters: Rc<RefCell<Vec<PaymasterAccountArgs>>> = Default::default();
+    let mut paymaster_count = 1;
 
-    while Confirm::new("Add slot paymaster account?").with_default(true).prompt()? {
-        let public_key = CustomType::<Felt>::new("Paymaster public key")
+    // Prompt for slot paymaster accounts
+    while Confirm::new("Add Slot paymaster account?").with_default(true).prompt()? {
+        let pubkey_prompt_text = format!("Paymaster #{} public key", paymaster_count);
+        let public_key = CustomType::<Felt>::new(&pubkey_prompt_text)
             .with_formatter(&|input: Felt| format!("{input:#x}"))
             .prompt()?;
 
-        slot_paymasters.push(super::slot::PaymasterAccountArgs { public_key });
+        // Check if this public_key + salt combo already exists
+        // This check is necessary to ensure that each paymaster account has a unique addresses
+        // because the contract address is derived from the public key and salt. So, if
+        // there multiple paymasters with the same public key and salt pair, then
+        // the resultant contract address will be the same.
+        let slot_paymasters_clone = slot_paymasters.clone();
+        let unique_salt_validator = move |salt: &Felt| {
+            let pred = |pm: &PaymasterAccountArgs| pm.public_key == public_key && pm.salt == *salt;
+            let duplicate = slot_paymasters_clone.borrow().iter().any(pred);
+
+            if !duplicate {
+                Ok(Validation::Valid)
+            } else {
+                Ok(Validation::Invalid(ErrorMessage::Custom(
+                    "Public key and salt combination already exists!".to_string(),
+                )))
+            }
+        };
+
+        let salt_prompt_text = format!("Paymaster #{} salt", paymaster_count);
+        let salt = CustomType::<Felt>::new(&salt_prompt_text)
+            .with_formatter(&|input: Felt| format!("{input:#x}"))
+            .with_validator(unique_salt_validator)
+            .with_default(Felt::ONE)
+            .prompt()?;
+
+        slot_paymasters.borrow_mut().push(slot::PaymasterAccountArgs { public_key, salt });
+        paymaster_count += 1;
     }
 
     Ok(Outcome {
@@ -143,6 +178,6 @@ pub async fn prompt() -> Result<Outcome> {
         account: account_address,
         settlement_id: parse_cairo_short_string(&l1_chain_id)?,
         #[cfg(feature = "init-slot")]
-        slot_paymasters: Some(slot_paymasters),
+        slot_paymasters: Some(Rc::unwrap_or_clone(slot_paymasters).take()),
     })
 }

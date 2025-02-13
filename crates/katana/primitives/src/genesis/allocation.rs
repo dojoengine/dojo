@@ -210,6 +210,21 @@ impl GenesisAccount {
         let (address, account) = Self::new(public_key, class_hash);
         (address, Self { balance: Some(balance), ..account })
     }
+
+    pub fn new_with_salt_and_balance(
+        public_key: Felt,
+        class_hash: ClassHash,
+        salt: Felt,
+        balance: U256,
+    ) -> (ContractAddress, Self) {
+        let (address, account) = Self::new_inner(public_key, class_hash, salt);
+        (address, Self { balance: Some(balance), ..account })
+    }
+
+    fn new_inner(public_key: Felt, class_hash: ClassHash, salt: Felt) -> (ContractAddress, Self) {
+        let address = get_contract_address(salt, class_hash, &[public_key], Felt::ZERO);
+        (ContractAddress::from(address), Self { public_key, class_hash, ..Default::default() })
+    }
 }
 
 impl From<DevGenesisAccount> for GenesisAllocation {
