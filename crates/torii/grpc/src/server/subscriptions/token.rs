@@ -5,6 +5,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::task::{Context, Poll};
 
+use crypto_bigint::{Encoding, U256};
 use futures::{Stream, StreamExt};
 use rand::Rng;
 use starknet_crypto::Felt;
@@ -118,11 +119,10 @@ impl Service {
         token: &OptimisticToken,
     ) -> Result<(), Error> {
         let mut closed_stream = Vec::new();
+        let contract_address = Felt::from_str(&token.contract_address).map_err(ParseError::FromStr)?;
+        let token_id = U256::from_be_hex(&token.token_id.trim_start_matches("0x")).to_be_bytes();
 
         for (idx, sub) in subs.subscribers.read().await.iter() {
-            let contract_address =
-                Felt::from_str(&token.contract_address).map_err(ParseError::FromStr)?;
-
             // Skip if contract address filter doesn't match
             if !sub.contract_addresses.is_empty()
                 && !sub.contract_addresses.contains(&contract_address)
@@ -133,12 +133,12 @@ impl Service {
             let resp = SubscribeTokensResponse {
                 subscription_id: *idx,
                 token: Some(proto::types::Token {
-                    token_id: token.id.clone(),
-                    contract_address: token.contract_address.clone(),
+                    token_id: token_id.to_vec(),
+                    contract_address: contract_address.to_bytes_be().to_vec(),
                     name: token.name.clone(),
                     symbol: token.symbol.clone(),
                     decimals: token.decimals as u32,
-                    metadata: token.metadata.clone(),
+                    metadata: token.metadata.as_bytes().to_vec(),
                 }),
             };
 

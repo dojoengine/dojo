@@ -152,7 +152,7 @@ impl WorldClient {
                 match res.token {
                     Some(token) => token.try_into().expect("must able to serialize"),
                     None => Token {
-                        id: "".to_string(),
+                        token_id: U256::ZERO,
                         contract_address: Felt::ZERO,
                         name: "".to_string(),
                         symbol: "".to_string(),
@@ -398,7 +398,7 @@ impl WorldClient {
                         balance: U256::ZERO,
                         account_address: Felt::ZERO,
                         contract_address: Felt::ZERO,
-                        token_id: "".to_string(),
+                        token_id: U256::ZERO,
                     },
                 },
             )

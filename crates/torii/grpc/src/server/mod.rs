@@ -13,6 +13,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 
+use crypto_bigint::{Encoding, U256};
 use dojo_types::naming::compute_selector_from_tag;
 use dojo_types::primitive::{Primitive, PrimitiveError};
 use dojo_types::schema::Ty;
@@ -91,6 +92,7 @@ impl From<SchemaError> for Error {
             SchemaError::ParseIntError(err) => ParseError::ParseIntError(err).into(),
             SchemaError::FromSlice(err) => ParseError::FromSlice(err).into(),
             SchemaError::FromStr(err) => ParseError::FromStr(err).into(),
+            SchemaError::FromUtf8(err) => ParseError::FromUtf8(err).into(),
         }
     }
 }
@@ -98,12 +100,12 @@ impl From<SchemaError> for Error {
 impl From<Token> for proto::types::Token {
     fn from(value: Token) -> Self {
         Self {
-            token_id: value.id,
-            contract_address: value.contract_address,
+            token_id: U256::from_be_hex(&value.token_id.trim_start_matches("0x")).to_be_bytes().to_vec(),
+            contract_address: Felt::from_str(&value.contract_address).unwrap().to_bytes_be().to_vec(),
             name: value.name,
             symbol: value.symbol,
             decimals: value.decimals as u32,
-            metadata: value.metadata,
+            metadata: value.metadata.as_bytes().to_vec(),
         }
     }
 }
@@ -111,10 +113,10 @@ impl From<Token> for proto::types::Token {
 impl From<TokenBalance> for proto::types::TokenBalance {
     fn from(value: TokenBalance) -> Self {
         Self {
-            balance: value.balance,
-            account_address: value.account_address,
-            contract_address: value.contract_address,
-            token_id: value.token_id,
+            balance: U256::from_be_hex(&value.balance.trim_start_matches("0x")).to_be_bytes().to_vec(),
+            account_address: Felt::from_str(&value.account_address).unwrap().to_bytes_be().to_vec(),
+            contract_address: Felt::from_str(&value.contract_address).unwrap().to_bytes_be().to_vec(),
+            token_id: U256::from_be_hex(&value.token_id.trim_start_matches("0x")).to_be_bytes().to_vec(),
         }
     }
 }
