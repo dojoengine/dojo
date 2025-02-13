@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1739423380856,
+  "lastUpdate": 1739423399541,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -52831,6 +52831,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 45362584778,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ac52ea67f7881a44b06260660bb86a77e2c0ec54",
+          "message": "fix(katana): ensure paymaster accounts are unique (#3017)\n\n* prevent paymaster to have similar pubkey and salt combo\r\n\r\n* adjust tests and doc for multiple paymasters\r\n\r\n---------\r\n\r\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2025-02-13T04:52:19Z",
+          "tree_id": "31220580b2cfbc8c59cf006936bfa4fdd283ca51",
+          "url": "https://github.com/dojoengine/dojo/commit/ac52ea67f7881a44b06260660bb86a77e2c0ec54"
+        },
+        "date": 1739423396868,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2531411,
+            "range": "± 52109",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 392777,
+            "range": "± 11309",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2684764268,
+            "range": "± 240344389",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 16945485,
+            "range": "± 318772",
             "unit": "ns/iter"
           }
         ]
