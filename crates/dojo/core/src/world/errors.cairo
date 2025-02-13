@@ -40,7 +40,7 @@ pub fn contract_already_registered(namespace: @ByteArray, name: @ByteArray) -> B
 
 pub fn library_already_registered(namespace: @ByteArray, name: @ByteArray) -> ByteArray {
     format!(
-        "Resource (Library) `{}-{}` is already registered. Forgot to update library version?",
+        "Resource (Library) `{}-{}` is already registered. Libraries can't be updated, increment the version in the Dojo configuration file instead.",
         namespace,
         name,
     )
