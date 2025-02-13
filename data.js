@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1739451382700,
+  "lastUpdate": 1739466106757,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -53425,6 +53425,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 19372082,
             "range": "± 330030",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "valentin@pupucecorp.com",
+            "name": "Brother MartianGreed",
+            "username": "MartianGreed"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5e1f3b93e769d135b7a01d3c7e648cc9e0f7e7fa",
+          "message": "feat(ts-bindgen): remove fieldOrder in ts bindgen (#3024)",
+          "timestamp": "2025-02-13T16:43:37Z",
+          "tree_id": "80c0d5f3e2d602ab04ecb6b4c8b0eefd9febc079",
+          "url": "https://github.com/dojoengine/dojo/commit/5e1f3b93e769d135b7a01d3c7e648cc9e0f7e7fa"
+        },
+        "date": 1739466103482,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 51417994472,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
