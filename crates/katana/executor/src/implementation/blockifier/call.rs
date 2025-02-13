@@ -42,16 +42,19 @@ fn execute_call_inner<S: StateReader>(
         ..Default::default()
     };
 
-    // Now, the max step is not given directly to this function.
-    // It's computed by a new function max_steps, and it tooks the values
-    // from the block context itself instead of the input given. The dojoengine
-    // fork of the blockifier ensures we're not limited by the min function applied
-    // by starkware.
-    // https://github.com/starkware-libs/blockifier/blob/4fd71645b45fd1deb6b8e44802414774ec2a2ec1/crates/blockifier/src/execution/entry_point.rs#L159
-    // https://github.com/dojoengine/blockifier/blob/5f58be8961ddf84022dd739a8ab254e32c435075/crates/blockifier/src/execution/entry_point.rs#L188
+    // The run resources for a call execution will either be constraint ONLY by the block context
+    // limits OR based on the tx fee and gas prices. As can be seen here, the upper bound will
+    // always be limited the block max invoke steps https://github.com/dojoengine/blockifier/blob/5f58be8961ddf84022dd739a8ab254e32c435075/crates/blockifier/src/execution/entry_point.rs#L253
+    // even if the it's max steps is derived from the tx fees.
+    //
+    // This if statement here determines how execution will be constraint to <https://github.com/dojoengine/blockifier/blob/5f58be8961ddf84022dd739a8ab254e32c435075/crates/blockifier/src/execution/entry_point.rs#L206-L208>.
+    // This basically means, we can not set an arbitrary gas limit for this call without modifying
+    // the block context. So, we just set the run resources here manually to bypass that.
 
+    // The values for these parameters are essentially useless as we manually set the run resources
+    // later anyway.
     let limit_steps_by_resources = true;
-    let tx_info = DeprecatedTransactionInfo { max_fee: Fee(1), ..Default::default() };
+    let tx_info = DeprecatedTransactionInfo::default();
 
     let mut ctx = EntryPointExecutionContext::new_invoke(
         Arc::new(TransactionContext {
