@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1739469813513,
+  "lastUpdate": 1739478727458,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -53659,6 +53659,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 17123885,
             "range": "± 462550",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6c74cd5768d4eba96b5820fc353e551e5de75aa7",
+          "message": "fix(katana): unbound call execution from the block context limit (#3026)",
+          "timestamp": "2025-02-14T04:15:23+08:00",
+          "tree_id": "985f16cafbdaadde6613821226345b8289335915",
+          "url": "https://github.com/dojoengine/dojo/commit/6c74cd5768d4eba96b5820fc353e551e5de75aa7"
+        },
+        "date": 1739478724894,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 45221396251,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
