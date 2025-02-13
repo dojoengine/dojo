@@ -335,6 +335,7 @@ mod tests {
             genesis: Genesis::default(),
             fee_contract: FeeContract { strk: ContractAddress::default() },
             settlement: SettlementLayer::Starknet {
+                block: 0,
                 id: ChainId::default(),
                 account: ContractAddress::default(),
                 core_contract: ContractAddress::default(),

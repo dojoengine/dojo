@@ -30,18 +30,15 @@ sol! {
 }
 
 sol! {
-    #[sol(rpc)]
-    contract LogMessageToL2 {
-        #[derive(Debug, PartialEq)]
-        event LogMessageToL2Event(
-            address indexed from_address,
-            uint256 indexed to_address,
-            uint256 indexed selector,
-            uint256[] payload,
-            uint256 nonce,
-            uint256 fee
-        );
-    }
+    #[derive(Debug, PartialEq)]
+    event LogMessageToL2(
+        address indexed from_address,
+        uint256 indexed to_address,
+        uint256 indexed selector,
+        uint256[] payload,
+        uint256 nonce,
+        uint256 fee
+    );
 }
 
 #[derive(Debug)]
@@ -189,7 +186,7 @@ impl Messenger for EthereumMessaging {
 
 // TODO: refactor this as a method of the message log struct
 fn l1_handler_tx_from_log(log: Log, chain_id: ChainId) -> MessengerResult<L1HandlerTx> {
-    let log = LogMessageToL2::LogMessageToL2Event::decode_log(log.as_ref(), false).unwrap();
+    let log = LogMessageToL2::decode_log(log.as_ref(), false).unwrap();
 
     let from_address = EthAddress::try_from(log.from_address.as_slice()).expect("valid address");
     let contract_address = felt_from_u256(log.to_address);
@@ -264,7 +261,7 @@ mod tests {
         let expected_tx_hash =
             felt!("0x6182c63599a9638272f1ce5b5cadabece9c81c2d2b8f88ab7a294472b8fce8b");
 
-        let event = LogMessageToL2::LogMessageToL2Event::new(
+        let event = LogMessageToL2::new(
             (
                 b256!("db80dd488acf86d17c747445b0eabb5d57c541d3bd7b6b87af987858e5066b2b"),
                 address!("be3C44c09bc1a3566F3e1CA12e5AbA0fA4Ca72Be"),

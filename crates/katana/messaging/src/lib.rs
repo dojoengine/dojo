@@ -1,3 +1,5 @@
+#![cfg_attr(not(test), warn(unused_crate_dependencies))]
+
 //! Messaging module.
 //!
 //! Messaging is the capability of a sequencer to gather/send messages from/to a settlement chain.
@@ -47,10 +49,12 @@ use anyhow::Result;
 use async_trait::async_trait;
 use ethereum::EthereumMessaging;
 use futures::StreamExt;
-use katana_executor::ExecutorFactory;
 use katana_primitives::chain::ChainId;
 use katana_primitives::receipt::MessageToL1;
+use katana_provider::traits::block::BlockNumberProvider;
+use katana_provider::traits::transaction::ReceiptProvider;
 use serde::{Deserialize, Serialize};
+use starknet_crypto::Felt;
 use tracing::{error, info, trace};
 
 pub use self::service::{MessagingOutcome, MessagingService};
@@ -121,6 +125,41 @@ impl MessagingConfig {
     /// This is used as the clap `value_parser` implementation
     pub fn parse(path: &str) -> Result<Self, String> {
         Self::load(path).map_err(|e| e.to_string())
+    }
+
+    pub fn from_chain_spec(spec: &katana_chain_spec::rollup::ChainSpec) -> Self {
+        match &spec.settlement {
+            katana_chain_spec::SettlementLayer::Ethereum {
+                rpc_url,
+                core_contract,
+                account,
+                block,
+                ..
+            } => Self {
+                chain: CONFIG_CHAIN_ETHEREUM.to_string(),
+                rpc_url: rpc_url.to_string(),
+                contract_address: core_contract.to_string(),
+                sender_address: account.to_string(),
+                private_key: Felt::ZERO.to_string(),
+                from_block: *block,
+                interval: 2,
+            },
+            katana_chain_spec::SettlementLayer::Starknet {
+                rpc_url,
+                core_contract,
+                account,
+                block,
+                ..
+            } => Self {
+                chain: CONFIG_CHAIN_STARKNET.to_string(),
+                rpc_url: rpc_url.to_string(),
+                contract_address: core_contract.to_string(),
+                sender_address: account.to_string(),
+                private_key: Felt::ZERO.to_string(),
+                from_block: *block,
+                interval: 2,
+            },
+        }
     }
 }
 
@@ -205,17 +244,26 @@ impl MessengerMode {
 
 #[allow(missing_debug_implementations)]
 #[must_use = "MessagingTask does nothing unless polled"]
-pub struct MessagingTask<EF: ExecutorFactory> {
-    messaging: MessagingService<EF>,
+pub struct MessagingTask<P>
+where
+    P: BlockNumberProvider + ReceiptProvider + Clone,
+{
+    messaging: MessagingService<P>,
 }
 
-impl<EF: ExecutorFactory> MessagingTask<EF> {
-    pub fn new(messaging: MessagingService<EF>) -> Self {
+impl<P> MessagingTask<P>
+where
+    P: BlockNumberProvider + ReceiptProvider + Clone,
+{
+    pub fn new(messaging: MessagingService<P>) -> Self {
         Self { messaging }
     }
 }
 
-impl<EF: ExecutorFactory> Future for MessagingTask<EF> {
+impl<P> Future for MessagingTask<P>
+where
+    P: BlockNumberProvider + ReceiptProvider + Clone + Unpin + 'static,
+{
     type Output = ();
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {

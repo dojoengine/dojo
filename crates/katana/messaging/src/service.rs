@@ -4,9 +4,9 @@ use std::task::{Context, Poll};
 use std::time::Duration;
 
 use futures::{Future, FutureExt, Stream};
-use katana_executor::ExecutorFactory;
-use katana_pool::TransactionPool;
-use katana_primitives::block::BlockHashOrNumber;
+use katana_chain_spec::ChainSpec;
+use katana_pool::{TransactionPool, TxPool};
+use katana_primitives::chain::ChainId;
 use katana_primitives::receipt::MessageToL1;
 use katana_primitives::transaction::{ExecutableTxWithHash, L1HandlerTx, TxHash};
 use katana_provider::traits::block::BlockNumberProvider;
@@ -15,18 +15,21 @@ use tokio::time::{interval_at, Instant, Interval};
 use tracing::{error, info};
 
 use super::{MessagingConfig, Messenger, MessengerMode, MessengerResult, LOG_TARGET};
-use crate::backend::Backend;
-use crate::service::TxPool;
+// use crate::backend::Backend;
 
 type MessagingFuture<T> = Pin<Box<dyn Future<Output = T> + Send>>;
 type MessageGatheringFuture = MessagingFuture<MessengerResult<(u64, usize)>>;
 type MessageSettlingFuture = MessagingFuture<MessengerResult<Option<(u64, usize)>>>;
 
 #[allow(missing_debug_implementations)]
-pub struct MessagingService<EF: ExecutorFactory> {
+pub struct MessagingService<P>
+where
+    P: BlockNumberProvider + ReceiptProvider + Clone,
+{
     /// The interval at which the service will perform the messaging operations.
     interval: Interval,
-    backend: Arc<Backend<EF>>,
+    provider: P,
+    chain_spec: Arc<ChainSpec>,
     pool: TxPool,
     /// The messenger mode the service is running in.
     messenger: Arc<MessengerMode>,
@@ -40,13 +43,17 @@ pub struct MessagingService<EF: ExecutorFactory> {
     msg_send_fut: Option<MessageSettlingFuture>,
 }
 
-impl<EF: ExecutorFactory> MessagingService<EF> {
+impl<P> MessagingService<P>
+where
+    P: BlockNumberProvider + ReceiptProvider + Clone,
+{
     /// Initializes a new instance from a configuration file's path.
     /// Will panic on failure to avoid continuing with invalid configuration.
     pub async fn new(
         config: MessagingConfig,
+        chain_spec: Arc<ChainSpec>,
         pool: TxPool,
-        backend: Arc<Backend<EF>>,
+        provider: P,
     ) -> anyhow::Result<Self> {
         let gather_from_block = config.from_block;
         let interval = interval_from_seconds(config.interval);
@@ -62,9 +69,10 @@ impl<EF: ExecutorFactory> MessagingService<EF> {
 
         Ok(Self {
             pool,
-            backend,
+            provider,
             interval,
             messenger,
+            chain_spec,
             gather_from_block,
             send_from_block: 0,
             msg_gather_fut: None,
@@ -75,7 +83,7 @@ impl<EF: ExecutorFactory> MessagingService<EF> {
     async fn gather_messages(
         messenger: Arc<MessengerMode>,
         pool: TxPool,
-        backend: Arc<Backend<EF>>,
+        chain_id: ChainId,
         from_block: u64,
     ) -> MessengerResult<(u64, usize)> {
         // 200 avoids any possible rejection from RPC with possibly lot's of messages.
@@ -85,7 +93,7 @@ impl<EF: ExecutorFactory> MessagingService<EF> {
         match messenger.as_ref() {
             MessengerMode::Ethereum(inner) => {
                 let (block_num, txs) =
-                    inner.gather_messages(from_block, max_block, backend.chain_spec.id()).await?;
+                    inner.gather_messages(from_block, max_block, chain_id).await?;
                 let txs_count = txs.len();
 
                 txs.into_iter().for_each(|tx| {
@@ -102,7 +110,7 @@ impl<EF: ExecutorFactory> MessagingService<EF> {
 
             MessengerMode::Starknet(inner) => {
                 let (block_num, txs) =
-                    inner.gather_messages(from_block, max_block, backend.chain_spec.id()).await?;
+                    inner.gather_messages(from_block, max_block, chain_id).await?;
                 let txs_count = txs.len();
 
                 txs.into_iter().for_each(|tx| {
@@ -121,15 +129,12 @@ impl<EF: ExecutorFactory> MessagingService<EF> {
 
     async fn send_messages(
         block_num: u64,
-        backend: Arc<Backend<EF>>,
+        provider: P,
         messenger: Arc<MessengerMode>,
     ) -> MessengerResult<Option<(u64, usize)>> {
-        let Some(messages) = ReceiptProvider::receipts_by_block(
-            backend.blockchain.provider(),
-            BlockHashOrNumber::Num(block_num),
-        )
-        .unwrap()
-        .map(|r| r.iter().flat_map(|r| r.messages_sent().to_vec()).collect::<Vec<MessageToL1>>()) else {
+        let Some(messages) = provider.receipts_by_block(block_num.into()).unwrap().map(|r| {
+            r.iter().flat_map(|r| r.messages_sent().to_vec()).collect::<Vec<MessageToL1>>()
+        }) else {
             return Ok(None);
         };
 
@@ -173,7 +178,10 @@ pub enum MessagingOutcome {
     },
 }
 
-impl<EF: ExecutorFactory> Stream for MessagingService<EF> {
+impl<P> Stream for MessagingService<P>
+where
+    P: BlockNumberProvider + ReceiptProvider + Clone + Unpin + 'static,
+{
     type Item = MessagingOutcome;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
@@ -184,18 +192,17 @@ impl<EF: ExecutorFactory> Stream for MessagingService<EF> {
                 pin.msg_gather_fut = Some(Box::pin(Self::gather_messages(
                     pin.messenger.clone(),
                     pin.pool.clone(),
-                    pin.backend.clone(),
+                    pin.chain_spec.id(),
                     pin.gather_from_block,
                 )));
             }
 
             if pin.msg_send_fut.is_none() {
-                let local_latest_block_num =
-                    BlockNumberProvider::latest_number(pin.backend.blockchain.provider()).unwrap();
+                let local_latest_block_num = pin.provider.latest_number().unwrap();
                 if pin.send_from_block <= local_latest_block_num {
                     pin.msg_send_fut = Some(Box::pin(Self::send_messages(
                         pin.send_from_block,
-                        pin.backend.clone(),
+                        pin.provider.clone(),
                         pin.messenger.clone(),
                     )))
                 }
