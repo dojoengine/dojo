@@ -422,7 +422,8 @@ impl ResolvableObject for TokenObject {
                                                     v.to_string().trim_matches('"').to_string()
                                                 });
 
-                                            let image_path = format!("{}/image", id.replace(":", "/"));
+                                            let image_path =
+                                                format!("{}/image", id.replace(":", "/"));
                                             (
                                                 metadata_str,
                                                 metadata_name,
