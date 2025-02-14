@@ -24,6 +24,7 @@ use tokio::sync::broadcast;
 use torii_sqlite::cache::ModelCache;
 use torii_sqlite::executor::Executor;
 use torii_sqlite::types::{Contract, ContractType, Token};
+use torii_sqlite::utils::u256_to_sql_string;
 use torii_sqlite::Sql;
 
 use crate::engine::{Engine, EngineConfig, Processors};
@@ -358,7 +359,7 @@ async fn test_load_from_remote_erc721(sequencer: &RunnerCtx) {
             .execute_v1(vec![Call {
                 to: badge_address,
                 selector: get_selector_from_name("mint").unwrap(),
-                calldata: vec![Felt::ZERO, Felt::from(token_id)],
+                calldata: vec![Felt::from(token_id), Felt::ZERO],
             }])
             .send()
             .await
@@ -372,8 +373,8 @@ async fn test_load_from_remote_erc721(sequencer: &RunnerCtx) {
         let tx = &account
             .execute_v1(vec![Call {
                 to: badge_address,
-                selector: get_selector_from_name("transfer").unwrap(),
-                calldata: vec![Felt::ONE, Felt::ZERO, Felt::from(token_id)],
+                selector: get_selector_from_name("transfer_from").unwrap(),
+                calldata: vec![account.address(), Felt::ONE, Felt::from(token_id), Felt::ZERO],
             }])
             .send()
             .await
@@ -426,7 +427,7 @@ async fn test_load_from_remote_erc721(sequencer: &RunnerCtx) {
 
     for (i, token) in tokens.iter().enumerate() {
         assert_eq!(token.name, "Badge");
-        assert_eq!(token.symbol, "BADGE");
+        assert_eq!(token.symbol, "BDG");
         assert_eq!(token.decimals, 0);
         let token_id = crypto_bigint::U256::from_be_hex(token.token_id.trim_start_matches("0x"));
         assert_eq!(
@@ -441,10 +442,11 @@ async fn test_load_from_remote_erc721(sequencer: &RunnerCtx) {
         let balance = sqlx::query_scalar::<_, String>(
             format!(
                 "SELECT balance FROM token_balances WHERE account_address = '{:#x}' AND \
-                 contract_address = '{:#x}' AND token_id = '{:#x}'",
-                Felt::ZERO,
+                 contract_address = '{:#x}' AND token_id = '{:#x}:{}'",
+                account.address(),
                 badge_address,
-                Felt::from(token_id)
+                badge_address,
+                u256_to_sql_string(&U256::from(token_id as u32))
             )
             .as_str(),
         )
@@ -455,8 +457,8 @@ async fn test_load_from_remote_erc721(sequencer: &RunnerCtx) {
         let balance = crypto_bigint::U256::from_be_hex(balance.trim_start_matches("0x"));
         assert_eq!(
             U256::from(balance),
-            U256::from(1u8),
-            "Recipient should have balance of 1 for transferred tokens"
+            U256::from(0u8),
+            "Sender should have balance of 0 for transferred tokens"
         );
     }
 
@@ -465,10 +467,11 @@ async fn test_load_from_remote_erc721(sequencer: &RunnerCtx) {
         let balance = sqlx::query_scalar::<_, String>(
             format!(
                 "SELECT balance FROM token_balances WHERE account_address = '{:#x}' AND \
-                 contract_address = '{:#x}' AND token_id = '{:#x}'",
+                 contract_address = '{:#x}' AND token_id = '{:#x}:{}'",
                 account.address(),
                 badge_address,
-                Felt::from(token_id)
+                badge_address,
+                u256_to_sql_string(&U256::from(token_id as u32))
             )
             .as_str(),
         )
@@ -544,13 +547,14 @@ async fn test_load_from_remote_erc1155(sequencer: &RunnerCtx) {
         let tx = &account
             .execute_v1(vec![Call {
                 to: rewards_address,
-                selector: get_selector_from_name("transfer").unwrap(),
+                selector: get_selector_from_name("transfer_from").unwrap(),
                 calldata: vec![
+                    account.address(),
                     Felt::ONE,
-                    Felt::ZERO,
                     Felt::from(*token_id),
                     Felt::ZERO,
                     Felt::from(amount / 2),
+                    Felt::ZERO,
                 ],
             }])
             .send()
@@ -614,10 +618,11 @@ async fn test_load_from_remote_erc1155(sequencer: &RunnerCtx) {
         let recipient_balance = sqlx::query_scalar::<_, String>(
             format!(
                 "SELECT balance FROM token_balances WHERE account_address = '{:#x}' AND \
-                 contract_address = '{:#x}' AND token_id = '{:#x}'",
-                Felt::ZERO,
+                 contract_address = '{:#x}' AND token_id = '{:#x}:{}'",
+                Felt::ONE,
                 rewards_address,
-                Felt::from(token_id)
+                rewards_address,
+                u256_to_sql_string(&U256::from(token_id as u32))
             )
             .as_str(),
         )
@@ -638,10 +643,11 @@ async fn test_load_from_remote_erc1155(sequencer: &RunnerCtx) {
         let sender_balance = sqlx::query_scalar::<_, String>(
             format!(
                 "SELECT balance FROM token_balances WHERE account_address = '{:#x}' AND \
-                 contract_address = '{:#x}' AND token_id = '{:#x}'",
+                 contract_address = '{:#x}' AND token_id = '{:#x}:{}'",
                 account.address(),
                 rewards_address,
-                Felt::from(token_id)
+                rewards_address,
+                u256_to_sql_string(&U256::from(token_id as u32))
             )
             .as_str(),
         )
