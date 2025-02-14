@@ -303,10 +303,18 @@ async fn test_load_from_remote_erc20(sequencer: &RunnerCtx) {
     assert_eq!(token.decimals, 18);
 
     // check the balance
-    let remote_balance = sqlx::query_scalar::<_, String>(format!("SELECT balance FROM token_balances WHERE account_address = '{:#x}' AND contract_address = '{:#x}'", account.address(), actions_address).as_str())
-        .fetch_one(&pool)
-        .await
-        .unwrap();
+    let remote_balance = sqlx::query_scalar::<_, String>(
+        format!(
+            "SELECT balance FROM token_balances WHERE account_address = '{:#x}' AND \
+             contract_address = '{:#x}'",
+            account.address(),
+            actions_address
+        )
+        .as_str(),
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
     let remote_balance = crypto_bigint::U256::from_be_hex(&remote_balance.trim_start_matches("0x"));
     assert_eq!(balance, remote_balance.into());
 }
