@@ -422,10 +422,7 @@ impl ResolvableObject for TokenObject {
                                                     v.to_string().trim_matches('"').to_string()
                                                 });
 
-                                            let contract_address: String =
-                                                row.get("contract_address");
-                                            let image_path = format!("{}/image", contract_address);
-
+                                            let image_path = format!("{}/image", id.replace(":", "/"));
                                             (
                                                 metadata_str,
                                                 metadata_name,
@@ -501,9 +498,7 @@ fn create_token_metadata_from_row(row: &SqliteRow) -> sqlx::Result<ErcTokenType>
                 let metadata_attributes =
                     metadata.get("attributes").map(|v| v.to_string().trim_matches('"').to_string());
 
-                let contract_address: String = row.get("contract_address");
-                let image_path = format!("{}/image", contract_address);
-
+                let image_path = format!("{}/image", id.replace(":", "/"));
                 (metadata_str, metadata_name, metadata_description, metadata_attributes, image_path)
             };
 
