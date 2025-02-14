@@ -71,13 +71,14 @@ pub fn add_paymasters_to_genesis(
         let class_hash = DEFAULT_ACCOUNT_CLASS_HASH;
         let balance = U256::from(DEFAULT_PREFUNDED_ACCOUNT_BALANCE);
 
-        let (addr, account) = GenesisAccount::new_with_salt_and_balance(
+        let account = GenesisAccount::new_with_salt_and_balance(
             paymaster.public_key,
             class_hash,
             paymaster.salt,
             balance,
         );
 
+        let addr = account.address();
         let account = GenesisAllocation::Account(GenesisAccountAlloc::Account(account));
         accounts.push((addr, account));
     }
