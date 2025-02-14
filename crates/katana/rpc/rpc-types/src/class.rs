@@ -213,14 +213,35 @@ impl TryFrom<RpcLegacyContractClass> for CompressedLegacyContractClass {
         Ok(class)
     }
 }
+
+impl TryFrom<starknet::core::types::ContractClass> for RpcContractClass {
+    type Error = ConversionError;
+
+    fn try_from(value: starknet::core::types::ContractClass) -> Result<Self, Self::Error> {
+        match value {
+            starknet::core::types::ContractClass::Legacy(class) => {
+                Ok(Self::Legacy(RpcLegacyContractClass::try_from(class)?))
+            }
+            starknet::core::types::ContractClass::Sierra(class) => {
+                Ok(Self::Class(RpcSierraContractClass::try_from(class)?))
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use jsonrpsee::client_transport::ws::Uri;
+    use katana_cairo::starknet_api::felt;
+    use katana_primitives::block::BlockIdOrTag;
     use katana_primitives::class::{ContractClass, LegacyContractClass, SierraContractClass};
     use starknet::core::types::contract::legacy::LegacyContractClass as StarknetRsLegacyContractClass;
     use starknet::core::types::contract::SierraClass;
+    use starknet::providers::jsonrpc::HttpTransport;
+    use starknet::providers::{JsonRpcClient, Provider, Url};
 
     use super::RpcLegacyContractClass;
-    use crate::class::RpcSierraContractClass;
+    use crate::class::{RpcContractClass, RpcSierraContractClass};
 
     #[test]
     fn rt() {
@@ -319,5 +340,28 @@ mod tests {
         assert_eq!(expected_class.program.reference_manager, class.program.reference_manager);
         // The debug info is stripped when converting to RPC format.
         assert_eq!(serde_json::to_value::<Option<()>>(None).unwrap(), class.program.debug_info);
+    }
+
+    #[tokio::test]
+    async fn get_now() {
+        let class_hash =
+            felt!("0x0699053487675242dc0958e192c17fe4dd57d22238ad78e2e1807fa7919ffde0");
+        let provider = JsonRpcClient::new(HttpTransport::new(
+            Url::parse("https://api.cartridge.gg/x/starknet/mainnet").unwrap(),
+        ));
+
+        let rpc_class: RpcContractClass = provider
+            .get_class(BlockIdOrTag::Number(389009), class_hash)
+            .await
+            .expect("faield to fetch")
+            .try_into()
+            .expect("failed to convert");
+
+        let ContractClass::Legacy(class) = ContractClass::try_from(rpc_class).unwrap() else {
+            panic!("ivnalid class")
+        };
+
+        std::fs::write("path/to/file.json", serde_json::to_string_pretty(&class).unwrap())
+            .expect("failed to write");
     }
 }

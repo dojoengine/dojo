@@ -8426,6 +8426,7 @@ dependencies = [
  "similar-asserts",
  "starknet",
  "thiserror 1.0.63",
+ "tokio",
 ]
 
 [[package]]
