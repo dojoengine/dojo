@@ -443,7 +443,7 @@ async fn test_load_from_remote_erc721(sequencer: &RunnerCtx) {
             format!(
                 "SELECT balance FROM token_balances WHERE account_address = '{:#x}' AND \
                  contract_address = '{:#x}' AND token_id = '{:#x}:{}'",
-                account.address(),
+                Felt::ONE,
                 badge_address,
                 badge_address,
                 u256_to_sql_string(&U256::from(token_id as u32))
@@ -457,8 +457,8 @@ async fn test_load_from_remote_erc721(sequencer: &RunnerCtx) {
         let balance = crypto_bigint::U256::from_be_hex(balance.trim_start_matches("0x"));
         assert_eq!(
             U256::from(balance),
-            U256::from(0u8),
-            "Sender should have balance of 0 for transferred tokens"
+            U256::from(1u8),
+            "Sender should have balance of 1 for transferred tokens"
         );
     }
 
@@ -497,6 +497,7 @@ async fn test_load_from_remote_erc1155(sequencer: &RunnerCtx) {
     let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
 
     let account = sequencer.account(0);
+    let other_account = sequencer.account(1);
     let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(sequencer.url())));
 
     let world_local = ws.load_world_local().unwrap();
@@ -533,7 +534,7 @@ async fn test_load_from_remote_erc1155(sequencer: &RunnerCtx) {
             .execute_v1(vec![Call {
                 to: rewards_address,
                 selector: get_selector_from_name("mint").unwrap(),
-                calldata: vec![Felt::ZERO, Felt::from(*token_id), Felt::ZERO, Felt::from(*amount)],
+                calldata: vec![Felt::from(*token_id), Felt::ZERO, Felt::from(*amount), Felt::ZERO],
             }])
             .send()
             .await
@@ -550,10 +551,11 @@ async fn test_load_from_remote_erc1155(sequencer: &RunnerCtx) {
                 selector: get_selector_from_name("transfer_from").unwrap(),
                 calldata: vec![
                     account.address(),
-                    Felt::ONE,
+                    other_account.address(),
                     Felt::from(*token_id),
                     Felt::ZERO,
                     Felt::from(amount / 2),
+                    Felt::ZERO,
                     Felt::ZERO,
                 ],
             }])
@@ -619,7 +621,7 @@ async fn test_load_from_remote_erc1155(sequencer: &RunnerCtx) {
             format!(
                 "SELECT balance FROM token_balances WHERE account_address = '{:#x}' AND \
                  contract_address = '{:#x}' AND token_id = '{:#x}:{}'",
-                Felt::ONE,
+                other_account.address(),
                 rewards_address,
                 rewards_address,
                 u256_to_sql_string(&U256::from(token_id as u32))
