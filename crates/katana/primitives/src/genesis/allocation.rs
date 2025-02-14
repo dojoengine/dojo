@@ -242,7 +242,7 @@ impl From<DevGenesisAccount> for GenesisAllocation {
 pub struct DevAllocationsGenerator {
     total: u16,
     seed: [u8; 32],
-    balance: U256,
+    balance: Option<U256>,
     class_hash: Felt,
 }
 
@@ -251,7 +251,7 @@ impl DevAllocationsGenerator {
     ///
     /// This will return a [DevAllocationsGenerator] with the default parameters.
     pub fn new(total: u16) -> Self {
-        Self { total, seed: [0u8; 32], balance: U256::ZERO, class_hash: DEFAULT_ACCOUNT_CLASS_HASH }
+        Self { total, seed: [0u8; 32], balance: None, class_hash: DEFAULT_ACCOUNT_CLASS_HASH }
     }
 
     pub fn with_class(self, class_hash: ClassHash) -> Self {
@@ -263,7 +263,7 @@ impl DevAllocationsGenerator {
     }
 
     pub fn with_balance<T: Into<U256>>(self, balance: T) -> Self {
-        Self { balance: balance.into(), ..self }
+        Self { balance: Some(balance.into()), ..self }
     }
 
     /// Generate `total` number of accounts based on the `seed`.
@@ -280,11 +280,14 @@ impl DevAllocationsGenerator {
                 seed = private_key_bytes;
 
                 let private_key = Felt::from_bytes_be(&private_key_bytes);
-                let account =
-                    DevGenesisAccount::new_with_balance(private_key, self.class_hash, self.balance);
-                let address = account.address();
 
-                (address, account)
+                let account = if let Some(amount) = self.balance {
+                    DevGenesisAccount::new_with_balance(private_key, self.class_hash, amount)
+                } else {
+                    DevGenesisAccount::new(private_key, self.class_hash)
+                };
+
+                (account.address(), account)
             })
             .collect()
     }

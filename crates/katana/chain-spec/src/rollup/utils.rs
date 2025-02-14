@@ -288,7 +288,7 @@ impl<'c> GenesisTransactionsBuilder<'c> {
         self.fee_token.set(fee_token_address).expect("must be uninitialized");
     }
 
-    fn build_allocated_dev_accounts(&mut self) {
+    fn build_allocated_accounts(&mut self) {
         let default_account_class_hash = self.declare(DEFAULT_ACCOUNT_CLASS.clone());
 
         for (expected_addr, account) in self.chain_spec.genesis.accounts() {
@@ -330,7 +330,7 @@ impl<'c> GenesisTransactionsBuilder<'c> {
     pub fn build(mut self) -> Vec<ExecutableTxWithHash> {
         self.build_master_account();
         self.build_core_contracts();
-        self.build_allocated_dev_accounts();
+        self.build_allocated_accounts();
         self.transactions.into_inner()
     }
 }
@@ -342,15 +342,19 @@ mod tests {
     use katana_executor::implementation::blockifier::BlockifierFactory;
     use katana_executor::{BlockLimits, ExecutorFactory};
     use katana_primitives::chain::ChainId;
+    use katana_primitives::class::ClassHash;
     use katana_primitives::contract::Nonce;
     use katana_primitives::env::CfgEnv;
-    use katana_primitives::genesis::allocation::DevAllocationsGenerator;
+    use katana_primitives::genesis::allocation::{
+        DevAllocationsGenerator, GenesisAccount, GenesisAccountAlloc, GenesisAllocation,
+    };
     use katana_primitives::genesis::constant::{
-        DEFAULT_LEGACY_ERC20_CLASS, DEFAULT_LEGACY_UDC_CLASS, DEFAULT_PREFUNDED_ACCOUNT_BALANCE,
-        DEFAULT_UDC_ADDRESS,
+        DEFAULT_ACCOUNT_CLASS_HASH, DEFAULT_LEGACY_ERC20_CLASS, DEFAULT_LEGACY_UDC_CLASS,
+        DEFAULT_PREFUNDED_ACCOUNT_BALANCE, DEFAULT_UDC_ADDRESS,
     };
     use katana_primitives::genesis::Genesis;
     use katana_primitives::transaction::TxType;
+    use katana_primitives::Felt;
     use katana_provider::providers::db::DbProvider;
     use katana_provider::traits::state::StateFactoryProvider;
     use url::Url;
@@ -359,10 +363,14 @@ mod tests {
     use crate::rollup::{ChainSpec, FeeContract, DEFAULT_APPCHAIN_FEE_TOKEN_ADDRESS};
     use crate::SettlementLayer;
 
-    fn chain_spec(n_accounts: u16) -> ChainSpec {
-        let accounts = DevAllocationsGenerator::new(n_accounts)
-            .with_balance(U256::from(DEFAULT_PREFUNDED_ACCOUNT_BALANCE))
-            .generate();
+    fn chain_spec(n_dev_accounts: u16, with_balance: bool) -> ChainSpec {
+        let accounts = if with_balance {
+            DevAllocationsGenerator::new(n_dev_accounts)
+                .with_balance(U256::from(DEFAULT_PREFUNDED_ACCOUNT_BALANCE))
+                .generate()
+        } else {
+            DevAllocationsGenerator::new(n_dev_accounts).generate()
+        };
 
         let mut genesis = Genesis::default();
         genesis.extend_allocations(accounts.into_iter().map(|(k, v)| (k, v.into())));
@@ -397,7 +405,7 @@ mod tests {
 
     #[test]
     fn valid_transactions() {
-        let chain_spec = chain_spec(1);
+        let chain_spec = chain_spec(1, true);
 
         let provider = DbProvider::new_ephemeral();
         let ef = executor(&chain_spec);
@@ -414,7 +422,7 @@ mod tests {
 
     #[test]
     fn genesis_states() {
-        let chain_spec = chain_spec(1);
+        let chain_spec = chain_spec(1, true);
 
         let provider = DbProvider::new_ephemeral();
         let ef = executor(&chain_spec);
@@ -457,7 +465,7 @@ mod tests {
 
     #[test]
     fn transaction_order() {
-        let chain_spec = chain_spec(1);
+        let chain_spec = chain_spec(1, true);
         let transactions = GenesisTransactionsBuilder::new(&chain_spec).build();
 
         let expected_order = vec![
@@ -478,10 +486,31 @@ mod tests {
         }
     }
 
-    #[test]
-    fn dev_predeployed_acccounts() {
-        fn inner(n_accounts: u16) {
-            let chain_spec = chain_spec(n_accounts);
+    #[rstest::rstest]
+    #[case::with_balance(true)]
+    #[case::no_balance(false)]
+    fn predeployed_acccounts(#[case] with_balance: bool) {
+        fn inner(n_accounts: usize, with_balance: bool) {
+            let mut chain_spec = chain_spec(0, with_balance);
+
+            // add non-dev allocations
+            for i in 0..n_accounts {
+                const CLASS_HASH: ClassHash = DEFAULT_ACCOUNT_CLASS_HASH;
+                let salt = Felt::from(i);
+                let pk = Felt::from(1337);
+
+                let mut account = GenesisAccount::new_with_salt(pk, CLASS_HASH, salt);
+
+                if with_balance {
+                    account.balance = Some(U256::from(DEFAULT_PREFUNDED_ACCOUNT_BALANCE));
+                }
+
+                chain_spec.genesis.extend_allocations([(
+                    account.address(),
+                    GenesisAllocation::Account(GenesisAccountAlloc::Account(account)),
+                )]);
+            }
+
             let mut transactions = GenesisTransactionsBuilder::new(&chain_spec).build();
 
             // We only want to check that for each predeployed accounts, there should be a deploy
@@ -489,16 +518,54 @@ mod tests {
             // transactions (master account, UDC, ERC20, etc).
             let account_transactions = &transactions.split_off(7);
 
-            assert_eq!(account_transactions.len(), n_accounts as usize * 2);
-
-            for txs in account_transactions.chunks(2) {
-                assert_eq!(txs[0].transaction.r#type(), TxType::DeployAccount);
-                assert_eq!(txs[1].transaction.r#type(), TxType::Invoke);
+            if with_balance {
+                assert_eq!(account_transactions.len(), n_accounts * 2);
+                for txs in account_transactions.chunks(2) {
+                    assert_eq!(txs[0].transaction.r#type(), TxType::Invoke); // deploy
+                    assert_eq!(txs[1].transaction.r#type(), TxType::Invoke); // transfer
+                }
+            } else {
+                assert_eq!(account_transactions.len(), n_accounts);
+                for txs in account_transactions.chunks(2) {
+                    assert_eq!(txs[0].transaction.r#type(), TxType::Invoke); // deploy
+                }
             }
         }
 
         for i in 0..10 {
-            inner(i);
+            inner(i, with_balance);
+        }
+    }
+
+    #[rstest::rstest]
+    #[case::with_balance(true)]
+    #[case::no_balance(false)]
+    fn dev_predeployed_acccounts(#[case] with_balance: bool) {
+        fn inner(n_accounts: u16, with_balance: bool) {
+            let chain_spec = chain_spec(n_accounts, with_balance);
+            let mut transactions = GenesisTransactionsBuilder::new(&chain_spec).build();
+
+            // We only want to check that for each predeployed accounts, there should be a deploy
+            // account and transfer balance (invoke) transactions. So we skip the first 7
+            // transactions (master account, UDC, ERC20, etc).
+            let account_transactions = &transactions.split_off(7);
+
+            if with_balance {
+                assert_eq!(account_transactions.len(), n_accounts as usize * 2);
+                for txs in account_transactions.chunks(2) {
+                    assert_eq!(txs[0].transaction.r#type(), TxType::DeployAccount);
+                    assert_eq!(txs[1].transaction.r#type(), TxType::Invoke); // transfer
+                }
+            } else {
+                assert_eq!(account_transactions.len(), n_accounts as usize);
+                for txs in account_transactions.chunks(2) {
+                    assert_eq!(txs[0].transaction.r#type(), TxType::DeployAccount);
+                }
+            }
+        }
+
+        for i in 0..10 {
+            inner(i, with_balance);
         }
     }
 }
