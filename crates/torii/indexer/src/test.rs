@@ -588,7 +588,7 @@ async fn test_load_from_remote_erc1155(sequencer: &RunnerCtx) {
                 other_account.address(),
                 rewards_address,
                 rewards_address,
-                u256_to_sql_string(&U256::from(token_id as u32))
+                u256_to_sql_string(&U256::from(token_id))
             )
             .as_str(),
         )
@@ -613,7 +613,7 @@ async fn test_load_from_remote_erc1155(sequencer: &RunnerCtx) {
                 account.address(),
                 rewards_address,
                 rewards_address,
-                u256_to_sql_string(&U256::from(token_id as u32))
+                u256_to_sql_string(&U256::from(token_id))
             )
             .as_str(),
         )
