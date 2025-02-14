@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1739507088800,
+  "lastUpdate": 1739551447023,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -53971,6 +53971,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 17413331,
             "range": "± 741147",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b7a4414e57e7c7385dbdcbc3cad2af7ef74f07db",
+          "message": "fix(katana): include salt in genesis accounts (#3031)",
+          "timestamp": "2025-02-15T00:27:27+08:00",
+          "tree_id": "0ccc8ec6b2fe9ecfeb714108498b011c8dea1865",
+          "url": "https://github.com/dojoengine/dojo/commit/b7a4414e57e7c7385dbdcbc3cad2af7ef74f07db"
+        },
+        "date": 1739551444498,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 43682685475,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
