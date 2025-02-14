@@ -260,7 +260,7 @@ async fn test_load_from_remote_erc20(sequencer: &RunnerCtx) {
         .execute_v1(vec![Call {
             to: actions_address,
             selector: get_selector_from_name("transfer").unwrap(),
-            calldata: vec![Felt::ZERO, Felt::ZERO, Felt::from(12345)],
+            calldata: vec![Felt::ONE, Felt::ZERO, Felt::from(12345)],
         }])
         .send()
         .await
@@ -675,7 +675,7 @@ async fn test_load_from_remote_erc721(sequencer: &RunnerCtx) {
             .execute_v1(vec![Call {
                 to: badge_address,
                 selector: get_selector_from_name("mint").unwrap(),
-                calldata: vec![Felt::from(token_id)],
+                calldata: vec![Felt::ZERO, Felt::from(token_id)],
             }])
             .send()
             .await
@@ -690,7 +690,7 @@ async fn test_load_from_remote_erc721(sequencer: &RunnerCtx) {
             .execute_v1(vec![Call {
                 to: badge_address,
                 selector: get_selector_from_name("transfer").unwrap(),
-                calldata: vec![Felt::ZERO, Felt::from(token_id)],
+                calldata: vec![Felt::ONE, Felt::ZERO, Felt::from(token_id)],
             }])
             .send()
             .await
@@ -844,7 +844,7 @@ async fn test_load_from_remote_erc1155(sequencer: &RunnerCtx) {
             .execute_v1(vec![Call {
                 to: rewards_address,
                 selector: get_selector_from_name("mint").unwrap(),
-                calldata: vec![Felt::from(*token_id), Felt::from(*amount)],
+                calldata: vec![Felt::ZERO, Felt::from(*token_id), Felt::ZERO, Felt::from(*amount)],
             }])
             .send()
             .await
@@ -859,7 +859,7 @@ async fn test_load_from_remote_erc1155(sequencer: &RunnerCtx) {
             .execute_v1(vec![Call {
                 to: rewards_address,
                 selector: get_selector_from_name("transfer").unwrap(),
-                calldata: vec![Felt::ZERO, Felt::from(*token_id), Felt::from(amount / 2)],
+                calldata: vec![Felt::ONE, Felt::ZERO, Felt::from(*token_id), Felt::ZERO, Felt::from(amount / 2)],
             }])
             .send()
             .await
