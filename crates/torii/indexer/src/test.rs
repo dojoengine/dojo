@@ -14,7 +14,7 @@ use scarb::compiler::Profile;
 use sozo_scarbext::WorkspaceExt;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use starknet::accounts::Account;
-use starknet::core::types::{Call, Felt, U256};
+use starknet::core::types::{BlockId, Call, Felt, U256};
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
@@ -30,7 +30,7 @@ use crate::engine::{Engine, EngineConfig, Processors};
 
 pub async fn bootstrap_engine<P>(
     world: WorldContractReader<P>,
-    db: Sql,
+    mut db: Sql,
     provider: P,
     contracts: &[Contract],
 ) -> Result<Engine<P>, Box<dyn std::error::Error>>
@@ -52,7 +52,9 @@ where
 
     let data = engine.fetch_range(0, to, &HashMap::new()).await.unwrap();
     engine.process_range(data).await.unwrap();
-
+    
+    db.flush().await.unwrap();
+    db.apply_cache_diff(BlockId::Number(to)).await.unwrap();
     db.execute().await.unwrap();
 
     Ok(engine)
@@ -232,24 +234,14 @@ async fn test_load_from_remote_erc20(sequencer: &RunnerCtx) {
         .unwrap()
         .address;
 
-    let world = WorldContract::new(world_address, &account);
-
-    let res = world
-        .grant_writer(&compute_bytearray_hash("ns"), &ContractAddress(actions_address))
-        .send_with_cfg(&TxnConfig::init_wait())
-        .await
-        .unwrap();
-
-    TransactionWaiter::new(res.transaction_hash, &provider).await.unwrap();
-
-    let mut balance = U256::from(1000000000000000000u64);
+    let mut balance = U256::from(0u64);
 
     // mint 123456789 wei tokens
     let tx = &account
         .execute_v1(vec![Call {
             to: actions_address,
             selector: get_selector_from_name("mint").unwrap(),
-            calldata: vec![Felt::ZERO, Felt::from(123456789)],
+            calldata: vec![Felt::from(123456789), Felt::ZERO],
         }])
         .send()
         .await
@@ -263,7 +255,7 @@ async fn test_load_from_remote_erc20(sequencer: &RunnerCtx) {
         .execute_v1(vec![Call {
             to: actions_address,
             selector: get_selector_from_name("transfer").unwrap(),
-            calldata: vec![Felt::ONE, Felt::ZERO, Felt::from(12345)],
+            calldata: vec![Felt::ONE, Felt::from(12345), Felt::ZERO],
         }])
         .send()
         .await
@@ -313,16 +305,6 @@ async fn test_load_from_remote_erc20(sequencer: &RunnerCtx) {
     assert_eq!(token.symbol, "WOOD");
     assert_eq!(token.decimals, 18);
 
-    // print all balances
-    let balances: Vec<String> = sqlx::query_scalar(
-        format!("SELECT balance FROM token_balances").as_str(),
-    )
-    .fetch_all(&pool)
-    .await
-    .unwrap();
-
-    println!("balances: {:?}", balances);
-
     // check the balance
     let remote_balance = sqlx::query_scalar::<_, String>(
         format!(
@@ -336,6 +318,7 @@ async fn test_load_from_remote_erc20(sequencer: &RunnerCtx) {
     .fetch_one(&pool)
     .await
     .unwrap();
+
     let remote_balance = crypto_bigint::U256::from_be_hex(remote_balance.trim_start_matches("0x"));
     assert_eq!(balance, remote_balance.into());
 }

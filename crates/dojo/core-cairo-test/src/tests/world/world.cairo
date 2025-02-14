@@ -316,12 +316,10 @@ fn test_can_call_init_only_world_args() {
 #[test]
 pub fn dns_valid_class_hash() {
     let namespace_def = NamespaceDef {
-        namespace: "dojo",
-        resources: [
+        namespace: "dojo", resources: [
             TestResource::Model(m_Foo::TEST_CLASS_HASH),
             TestResource::Contract(bar::TEST_CLASS_HASH),
-        ]
-            .span(),
+        ].span(),
     };
 
     let mut world = spawn_test_world([namespace_def].span());

@@ -163,30 +163,32 @@ pub fn spawn_test_world(namespaces_defs: Span<NamespaceDef>) -> WorldStorage {
             first_namespace = Option::Some(namespace.clone());
         }
 
-        for r in ns.resources.clone() {
-            match r {
-                TestResource::Event(ch) => {
-                    world.register_event(namespace.clone(), (*ch).try_into().unwrap());
-                },
-                TestResource::Model(ch) => {
-                    world.register_model(namespace.clone(), (*ch).try_into().unwrap());
-                },
-                TestResource::Contract(ch) => {
-                    world.register_contract(*ch, namespace.clone(), (*ch).try_into().unwrap());
-                },
-                TestResource::Library((
-                    ch, name, version,
-                )) => {
-                    world
-                        .register_library(
-                            namespace.clone(),
-                            (*ch).try_into().unwrap(),
-                            (*name).clone(),
-                            (*version).clone(),
-                        );
-                },
+        for r in ns
+            .resources
+            .clone() {
+                match r {
+                    TestResource::Event(ch) => {
+                        world.register_event(namespace.clone(), (*ch).try_into().unwrap());
+                    },
+                    TestResource::Model(ch) => {
+                        world.register_model(namespace.clone(), (*ch).try_into().unwrap());
+                    },
+                    TestResource::Contract(ch) => {
+                        world.register_contract(*ch, namespace.clone(), (*ch).try_into().unwrap());
+                    },
+                    TestResource::Library((
+                        ch, name, version,
+                    )) => {
+                        world
+                            .register_library(
+                                namespace.clone(),
+                                (*ch).try_into().unwrap(),
+                                (*name).clone(),
+                                (*version).clone(),
+                            );
+                    },
+                }
             }
-        }
     };
 
     WorldStorageTrait::new(world, @first_namespace.unwrap())

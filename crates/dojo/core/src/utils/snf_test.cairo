@@ -37,23 +37,34 @@ pub fn spawn_test_world(namespaces_defs: Span<NamespaceDef>) -> IWorldDispatcher
         let namespace = ns.namespace.clone();
         world.register_namespace(namespace.clone());
 
-        for r in ns.resources.clone() {
-            match r {
-                TestResource::Event(name) => {
-                    let ch: ClassHash = *declare(name.clone()).unwrap().contract_class().class_hash;
-                    world.register_event(namespace.clone(), ch);
-                },
-                TestResource::Model(name) => {
-                    let ch: ClassHash = *declare(name.clone()).unwrap().contract_class().class_hash;
-                    world.register_model(namespace.clone(), ch);
-                },
-                TestResource::Contract(name) => {
-                    let ch: ClassHash = *declare(name.clone()).unwrap().contract_class().class_hash;
-                    let salt = dojo::utils::bytearray_hash(name);
-                    world.register_contract(salt, namespace.clone(), ch);
-                },
+        for r in ns
+            .resources
+            .clone() {
+                match r {
+                    TestResource::Event(name) => {
+                        let ch: ClassHash = *declare(name.clone())
+                            .unwrap()
+                            .contract_class()
+                            .class_hash;
+                        world.register_event(namespace.clone(), ch);
+                    },
+                    TestResource::Model(name) => {
+                        let ch: ClassHash = *declare(name.clone())
+                            .unwrap()
+                            .contract_class()
+                            .class_hash;
+                        world.register_model(namespace.clone(), ch);
+                    },
+                    TestResource::Contract(name) => {
+                        let ch: ClassHash = *declare(name.clone())
+                            .unwrap()
+                            .contract_class()
+                            .class_hash;
+                        let salt = dojo::utils::bytearray_hash(name);
+                        world.register_contract(salt, namespace.clone(), ch);
+                    },
+                }
             }
-        }
     };
 
     world

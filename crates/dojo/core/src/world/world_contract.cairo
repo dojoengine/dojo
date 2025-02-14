@@ -726,8 +726,7 @@ pub mod world {
                 [
                     starknet::get_tx_info().unbox().transaction_hash,
                     dojo::utils::bytearray_hash(@namespace),
-                ]
-                    .span(),
+                ].span(),
             );
 
             let (new_contract_address, _) = deploy_syscall(class_hash, salt, [].span(), false)

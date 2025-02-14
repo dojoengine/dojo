@@ -21,86 +21,297 @@ use core::panics::panic_with_byte_array;
 // 'ClassHash': 13
 // 'ContractAddress': 14
 // 'EthAddress': 15
-const ALLOWED_PRIMITIVE_UPGRADES: [[bool; 16]; 16] = [
+const ALLOWED_PRIMITIVE_UPGRADES: [
+    [bool; 16]
+    ; 16] = [
     // bool
     [
-        true, false, false, false, false, false, false, false, false, false, false, false, true,
-        false, false, false,
-    ],
-    // u8
-    [
-        false, true, true, true, true, true, false, false, false, false, false, false, true, false,
-        false, false,
-    ],
-    // u16
-    [
-        false, false, true, true, true, true, false, false, false, false, false, false, true, false,
-        false, false,
-    ],
-    // u32
-    [
-        false, false, false, true, true, true, false, false, false, false, false, false, true,
-        false, false, false,
-    ],
-    // u64
-    [
-        false, false, false, false, true, true, false, false, false, false, false, false, true,
-        false, false, false,
-    ],
-    // u128
-    [
-        false, false, false, false, false, true, false, false, false, false, false, false, true,
-        false, false, false,
-    ],
-    // u256
-    [
-        false, false, false, false, false, false, true, false, false, false, false, false, false,
-        false, false, false,
-    ],
-    // i8
-    [
-        false, false, false, false, false, false, false, true, true, true, true, true, true, false,
-        false, false,
-    ],
-    // i16
-    [
-        false, false, false, false, false, false, false, false, true, true, true, true, true, false,
-        false, false,
-    ],
-    // i32
-    [
-        false, false, false, false, false, false, false, false, false, true, true, true, true,
-        false, false, false,
-    ],
-    // i64
-    [
-        false, false, false, false, false, false, false, false, false, false, true, true, true,
-        false, false, false,
-    ],
-    // i128
-    [
-        false, false, false, false, false, false, false, false, false, false, false, true, true,
-        false, false, false,
-    ],
-    // felt252
-    [
-        false, false, false, false, false, false, false, false, false, false, false, false, true,
-        true, true, false,
-    ],
-    // ClassHash
-    [
-        false, false, false, false, false, false, false, false, false, false, false, false, true,
-        true, true, false,
-    ],
-    // ContractAddress
-    [
-        false, false, false, false, false, false, false, false, false, false, false, false, true,
-        true, true, false,
-    ],
-    // EthAddress
-    [
-        false, false, false, false, false, false, false, false, false, false, false, false, true,
-        true, true, true,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        false,
+        false,
+        false,
+        ], // u8
+        [
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        false,
+        false,
+        false,
+        ], // u16
+        [
+        false,
+        false,
+        true,
+        true,
+        true,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        false,
+        false,
+        false,
+        ], // u32
+        [
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        false,
+        false,
+        false,
+        ], // u64
+        [
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        false,
+        false,
+        false,
+        ], // u128
+        [
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        false,
+        false,
+        false,
+        ], // u256
+        [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        ], // i8
+        [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false,
+        false,
+        false,
+        ], // i16
+        [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false,
+        false,
+        false,
+        ], // i32
+        [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        true,
+        false,
+        false,
+        false,
+        ], // i64
+        [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        false,
+        false,
+        false,
+        ], // i128
+        [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        false,
+        false,
+        false,
+        ], // felt252
+        [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        false,
+        ], // ClassHash
+        [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        false,
+        ], // ContractAddress
+        [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        false,
+        ], // EthAddress
+        [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        true,
     ],
 ];
 
@@ -597,21 +808,19 @@ pub impl Introspect_option<T, +Introspect<T>> of Introspect<Option<T>> {
         Layout::Enum(
             [
                 dojo::meta::FieldLayout { // Some
-                selector: 0, layout: Introspect::<T>::layout() },
+                 selector: 0, layout: Introspect::<T>::layout() },
                 dojo::meta::FieldLayout { // None
-                selector: 1, layout: Layout::Fixed([].span()) },
-            ]
-                .span(),
+                 selector: 1, layout: Layout::Fixed([].span()) },
+            ].span(),
         )
     }
 
     fn ty() -> Ty {
         Ty::Enum(
             Enum {
-                name: 'Option<T>',
-                attrs: [].span(),
-                children: [('Some(T)', Introspect::<T>::ty()), ('None', Ty::Tuple([].span()))]
-                    .span(),
+                name: 'Option<T>', attrs: [].span(), children: [
+                    ('Some(T)', Introspect::<T>::ty()), ('None', Ty::Tuple([].span()))
+                ].span(),
             },
         )
     }

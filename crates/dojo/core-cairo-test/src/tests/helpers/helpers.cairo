@@ -214,12 +214,10 @@ pub fn deploy_world() -> WorldStorage {
 /// No permissions are granted.
 pub fn deploy_world_and_foo() -> (WorldStorage, felt252) {
     let namespace_def = NamespaceDef {
-        namespace: "dojo",
-        resources: [
+        namespace: "dojo", resources: [
             TestResource::Model(m_Foo::TEST_CLASS_HASH),
             TestResource::Model(m_NotCopiable::TEST_CLASS_HASH),
-        ]
-            .span(),
+        ].span(),
     };
 
     (spawn_test_world([namespace_def].span()), Model::<Foo>::selector(DOJO_NSH))
@@ -229,12 +227,10 @@ pub fn deploy_world_and_foo() -> (WorldStorage, felt252) {
 /// Grants the `bar` contract writer permissions to the `foo` model.
 pub fn deploy_world_and_bar() -> (WorldStorage, IbarDispatcher) {
     let namespace_def = NamespaceDef {
-        namespace: "dojo",
-        resources: [
+        namespace: "dojo", resources: [
             TestResource::Model(m_Foo::TEST_CLASS_HASH),
             TestResource::Contract(bar::TEST_CLASS_HASH),
-        ]
-            .span(),
+        ].span(),
     };
 
     let bar_def = ContractDefTrait::new(@"dojo", @"bar")

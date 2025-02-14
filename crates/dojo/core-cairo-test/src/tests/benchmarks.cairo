@@ -44,13 +44,11 @@ struct ComplexModel {
 
 fn deploy_world() -> IWorldDispatcher {
     let namespace_def = NamespaceDef {
-        namespace: "dojo",
-        resources: [
+        namespace: "dojo", resources: [
             TestResource::Model(case::TEST_CLASS_HASH.try_into().unwrap()),
             TestResource::Model(case_not_packed::TEST_CLASS_HASH.try_into().unwrap()),
             TestResource::Model(complex_model::TEST_CLASS_HASH.try_into().unwrap()),
-        ]
-            .span(),
+        ].span(),
     };
 
     spawn_test_world([namespace_def].span())
