@@ -40,9 +40,8 @@ impl<EF: ExecutorFactory> Sequencing<EF> {
             let config = config.clone();
             let pool = self.pool.clone();
             let chain_spec = self.backend.chain_spec.clone();
-            let provider = self.backend.blockchain.provider().clone();
 
-            let service = MessagingService::new(config, chain_spec, pool, provider).await?;
+            let service = MessagingService::new(config, chain_spec, pool).await?;
             let task = MessagingTask::new(service);
 
             let handle = self.task_spawner.build_task().name("Messaging").spawn(task);

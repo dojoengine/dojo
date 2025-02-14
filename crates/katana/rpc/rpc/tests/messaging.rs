@@ -3,7 +3,7 @@ use std::str::FromStr;
 use std::time::Duration;
 
 use alloy::primitives::{Uint, U256};
-use alloy::providers::{ProviderBuilder, WalletProvider};
+use alloy::providers::ProviderBuilder;
 use alloy::sol;
 use anyhow::Result;
 use cainome::cairo_serde::EthAddress;
@@ -68,8 +68,6 @@ async fn test_messaging() {
         chain: "ethereum".to_string(),
         rpc_url: format!("http://localhost:{}", port),
         contract_address: core_contract.address().to_string(),
-        sender_address: l1_provider.default_signer_address().to_string(),
-        private_key: "".to_string(),
         interval: 2,
         from_block: 0,
     };

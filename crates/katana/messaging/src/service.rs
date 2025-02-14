@@ -7,28 +7,19 @@ use futures::{Future, FutureExt, Stream};
 use katana_chain_spec::ChainSpec;
 use katana_pool::{TransactionPool, TxPool};
 use katana_primitives::chain::ChainId;
-use katana_primitives::receipt::MessageToL1;
 use katana_primitives::transaction::{ExecutableTxWithHash, L1HandlerTx, TxHash};
-use katana_provider::traits::block::BlockNumberProvider;
-use katana_provider::traits::transaction::ReceiptProvider;
 use tokio::time::{interval_at, Instant, Interval};
 use tracing::{error, info};
 
 use super::{MessagingConfig, Messenger, MessengerMode, MessengerResult, LOG_TARGET};
-// use crate::backend::Backend;
 
 type MessagingFuture<T> = Pin<Box<dyn Future<Output = T> + Send>>;
 type MessageGatheringFuture = MessagingFuture<MessengerResult<(u64, usize)>>;
-type MessageSettlingFuture = MessagingFuture<MessengerResult<Option<(u64, usize)>>>;
 
 #[allow(missing_debug_implementations)]
-pub struct MessagingService<P>
-where
-    P: BlockNumberProvider + ReceiptProvider + Clone,
-{
+pub struct MessagingService {
     /// The interval at which the service will perform the messaging operations.
     interval: Interval,
-    provider: P,
     chain_spec: Arc<ChainSpec>,
     pool: TxPool,
     /// The messenger mode the service is running in.
@@ -37,23 +28,15 @@ where
     gather_from_block: u64,
     /// The message gathering future.
     msg_gather_fut: Option<MessageGatheringFuture>,
-    /// The block number of the local blockchain from which messages will be sent.
-    send_from_block: u64,
-    /// The message sending future.
-    msg_send_fut: Option<MessageSettlingFuture>,
 }
 
-impl<P> MessagingService<P>
-where
-    P: BlockNumberProvider + ReceiptProvider + Clone,
-{
+impl MessagingService {
     /// Initializes a new instance from a configuration file's path.
     /// Will panic on failure to avoid continuing with invalid configuration.
     pub async fn new(
         config: MessagingConfig,
         chain_spec: Arc<ChainSpec>,
         pool: TxPool,
-        provider: P,
     ) -> anyhow::Result<Self> {
         let gather_from_block = config.from_block;
         let interval = interval_from_seconds(config.interval);
@@ -67,17 +50,7 @@ where
             }
         };
 
-        Ok(Self {
-            pool,
-            provider,
-            interval,
-            messenger,
-            chain_spec,
-            gather_from_block,
-            send_from_block: 0,
-            msg_gather_fut: None,
-            msg_send_fut: None,
-        })
+        Ok(Self { pool, interval, messenger, chain_spec, gather_from_block, msg_gather_fut: None })
     }
 
     async fn gather_messages(
@@ -126,87 +99,29 @@ where
             }
         }
     }
-
-    async fn send_messages(
-        block_num: u64,
-        provider: P,
-        messenger: Arc<MessengerMode>,
-    ) -> MessengerResult<Option<(u64, usize)>> {
-        let Some(messages) = provider.receipts_by_block(block_num.into()).unwrap().map(|r| {
-            r.iter().flat_map(|r| r.messages_sent().to_vec()).collect::<Vec<MessageToL1>>()
-        }) else {
-            return Ok(None);
-        };
-
-        if messages.is_empty() {
-            Ok(Some((block_num, 0)))
-        } else {
-            match messenger.as_ref() {
-                MessengerMode::Ethereum(inner) => {
-                    let hashes = inner.send_messages(&messages).await.map(|hashes| {
-                        hashes.iter().map(|h| format!("{h:#x}")).collect::<Vec<_>>()
-                    })?;
-                    trace_msg_to_l1_sent(&messages, &hashes);
-                    Ok(Some((block_num, hashes.len())))
-                }
-
-                MessengerMode::Starknet(inner) => {
-                    let hashes = inner.send_messages(&messages).await.map(|hashes| {
-                        hashes.iter().map(|h| format!("{h:#x}")).collect::<Vec<_>>()
-                    })?;
-                    trace_msg_to_l1_sent(&messages, &hashes);
-                    Ok(Some((block_num, hashes.len())))
-                }
-            }
-        }
-    }
 }
 
 #[derive(Debug)]
-pub enum MessagingOutcome {
-    Gather {
-        /// The latest block number of the settlement chain from which messages were gathered.
-        lastest_block: u64,
-        /// The number of settlement chain messages gathered up until `latest_block`.
-        msg_count: usize,
-    },
-    Send {
-        /// The current local block number from which messages were sent.
-        block_num: u64,
-        /// The number of messages sent on `block_num`.
-        msg_count: usize,
-    },
+pub struct MessagingOutcome {
+    /// The latest block number of the settlement chain from which messages were gathered.
+    pub lastest_block: u64,
+    /// The number of settlement chain messages gathered up until `latest_block`.
+    pub msg_count: usize,
 }
 
-impl<P> Stream for MessagingService<P>
-where
-    P: BlockNumberProvider + ReceiptProvider + Clone + Unpin + 'static,
-{
+impl Stream for MessagingService {
     type Item = MessagingOutcome;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let pin = self.get_mut();
 
-        if pin.interval.poll_tick(cx).is_ready() {
-            if pin.msg_gather_fut.is_none() {
-                pin.msg_gather_fut = Some(Box::pin(Self::gather_messages(
-                    pin.messenger.clone(),
-                    pin.pool.clone(),
-                    pin.chain_spec.id(),
-                    pin.gather_from_block,
-                )));
-            }
-
-            if pin.msg_send_fut.is_none() {
-                let local_latest_block_num = pin.provider.latest_number().unwrap();
-                if pin.send_from_block <= local_latest_block_num {
-                    pin.msg_send_fut = Some(Box::pin(Self::send_messages(
-                        pin.send_from_block,
-                        pin.provider.clone(),
-                        pin.messenger.clone(),
-                    )))
-                }
-            }
+        if pin.interval.poll_tick(cx).is_ready() && pin.msg_gather_fut.is_none() {
+            pin.msg_gather_fut = Some(Box::pin(Self::gather_messages(
+                pin.messenger.clone(),
+                pin.pool.clone(),
+                pin.chain_spec.id(),
+                pin.gather_from_block,
+            )));
         }
 
         // Poll the gathering future.
@@ -214,7 +129,7 @@ where
             match gather_fut.poll_unpin(cx) {
                 Poll::Ready(Ok((last_block, msg_count))) => {
                     pin.gather_from_block = last_block + 1;
-                    return Poll::Ready(Some(MessagingOutcome::Gather {
+                    return Poll::Ready(Some(MessagingOutcome {
                         lastest_block: last_block,
                         msg_count,
                     }));
@@ -232,29 +147,6 @@ where
             }
         }
 
-        // Poll the message sending future.
-        if let Some(mut send_fut) = pin.msg_send_fut.take() {
-            match send_fut.poll_unpin(cx) {
-                Poll::Ready(Ok(Some((block_num, msg_count)))) => {
-                    // +1 to move to the next local block to check messages to be
-                    // sent on the settlement chain.
-                    pin.send_from_block += 1;
-                    return Poll::Ready(Some(MessagingOutcome::Send { block_num, msg_count }));
-                }
-                Poll::Ready(Err(e)) => {
-                    error!(
-                        target: LOG_TARGET,
-                        block = %pin.send_from_block,
-                        error = %e,
-                        "Settling messages for block."
-                    );
-                    return Poll::Pending;
-                }
-                Poll::Ready(_) => return Poll::Pending,
-                Poll::Pending => pin.msg_send_fut = Some(send_fut),
-            }
-        }
-
         Poll::Pending
     }
 }
@@ -265,33 +157,6 @@ fn interval_from_seconds(secs: u64) -> Interval {
     let mut interval = interval_at(Instant::now() + duration, duration);
     interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
     interval
-}
-
-fn trace_msg_to_l1_sent(messages: &[MessageToL1], hashes: &[String]) {
-    assert_eq!(messages.len(), hashes.len());
-
-    for (i, m) in messages.iter().enumerate() {
-        let payload_str: Vec<String> = m.payload.iter().map(|f| format!("{:#x}", *f)).collect();
-
-        let hash = &hashes[i];
-
-        // We check for magic value 'MSG' used only when we are doing L3-L2 messaging.
-        let (to_address, payload_str) = if format!("{}", m.to_address) == "0x4d5347" {
-            (payload_str[0].clone(), &payload_str[1..])
-        } else {
-            (format!("{:#64x}", m.to_address), &payload_str[..])
-        };
-
-        #[rustfmt::skip]
-            info!(
-                target: LOG_TARGET,
-                hash = %hash.as_str(),
-                from_address = %m.from_address,
-                to_address = %to_address,
-                payload = %payload_str.join(", "),
-                "Message sent to settlement layer.",
-            );
-    }
 }
 
 fn trace_l1_handler_tx_exec(hash: TxHash, tx: &L1HandlerTx) {
