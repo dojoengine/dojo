@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1739506989942,
+  "lastUpdate": 1739507008742,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -53844,6 +53844,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 43128675060,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "574719390eb6b85691aa1e5b5d1076205062c816",
+          "message": "refactor(torii-grpc): filter by token id & refactor token protos (#3016)\n\n* refactor(torii-grpc): actual token id & less error prone types\n\n* grpc proto types refctor\n\n* fmt\n\n* feat: token ids filtering for subscriptions and fetches\n\n* fmt\n\n* git reset lock file\n\n* clippy ref",
+          "timestamp": "2025-02-13T22:06:12-06:00",
+          "tree_id": "837d6b3f101e29a3b97e3311cff4335011a106ff",
+          "url": "https://github.com/dojoengine/dojo/commit/574719390eb6b85691aa1e5b5d1076205062c816"
+        },
+        "date": 1739507005616,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 48750748353,
             "range": "± 0",
             "unit": "ns/iter"
           }
