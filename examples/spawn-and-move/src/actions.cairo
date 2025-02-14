@@ -254,13 +254,15 @@ mod tests {
 
     fn namespace_def() -> NamespaceDef {
         let ndef = NamespaceDef {
-            namespace: "ns", resources: [
+            namespace: "ns",
+            resources: [
                 TestResource::Model(m_Position::TEST_CLASS_HASH),
                 TestResource::Model(m_Moves::TEST_CLASS_HASH),
                 TestResource::Event(actions::e_Moved::TEST_CLASS_HASH),
                 TestResource::Contract(actions::TEST_CLASS_HASH),
                 TestResource::Library((simple_math::TEST_CLASS_HASH, @"simple_math", @"0_1_0")),
-            ].span(),
+            ]
+                .span(),
         };
 
         ndef
@@ -270,7 +272,8 @@ mod tests {
         [
             ContractDefTrait::new(@"ns", @"actions")
                 .with_writer_of([dojo::utils::bytearray_hash(@"ns")].span())
-        ].span()
+        ]
+            .span()
     }
 
     #[test]
@@ -360,12 +363,14 @@ mod tests {
     #[cfg(feature: 'dungeon')]
     fn test_feature_dungeon() {
         let ndef = NamespaceDef {
-            namespace: "ns", resources: [
+            namespace: "ns",
+            resources: [
                 TestResource::Model(armory::m_Flatbow::TEST_CLASS_HASH),
                 TestResource::Model(bestiary::m_RiverSkale::TEST_CLASS_HASH),
                 TestResource::Contract(actions::TEST_CLASS_HASH),
                 TestResource::Contract(dungeon::TEST_CLASS_HASH),
-            ].span(),
+            ]
+                .span(),
         };
 
         let contract_defs = [
@@ -373,7 +378,8 @@ mod tests {
                 .with_writer_of([dojo::utils::bytearray_hash(@"ns")].span()),
             ContractDefTrait::new(@"ns", @"dungeon")
                 .with_writer_of([dojo::utils::bytearray_hash(@"ns")].span()),
-        ].span();
+        ]
+            .span();
 
         let mut world = spawn_test_world([ndef].span());
         world.sync_perms_and_inits(contract_defs);
