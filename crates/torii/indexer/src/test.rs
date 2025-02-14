@@ -653,9 +653,8 @@ async fn test_load_from_remote_erc721(sequencer: &RunnerCtx) {
 
     let world_reader = WorldContractReader::new(world_address, Arc::clone(&provider));
 
-    let badge_address = world_local
-        .get_contract_address_local(compute_selector_from_names("ns", "Badge"))
-        .unwrap();
+    let badge_address =
+        world_local.get_contract_address_local(compute_selector_from_names("ns", "Badge")).unwrap();
 
     let world = WorldContract::new(world_address, &account);
 
@@ -724,20 +723,28 @@ async fn test_load_from_remote_erc721(sequencer: &RunnerCtx) {
 
     // Check if we indexed all tokens
     let tokens = sqlx::query_as::<_, Token>(
-        format!("SELECT * from tokens where contract_address = '{:#x}' ORDER BY token_id", badge_address).as_str(),
+        format!(
+            "SELECT * from tokens where contract_address = '{:#x}' ORDER BY token_id",
+            badge_address
+        )
+        .as_str(),
     )
     .fetch_all(&pool)
     .await
     .unwrap();
 
     assert_eq!(tokens.len(), 5, "Should have indexed 5 different tokens");
-    
+
     for (i, token) in tokens.iter().enumerate() {
         assert_eq!(token.name, "Badge");
         assert_eq!(token.symbol, "BADGE");
         assert_eq!(token.decimals, 0);
         let token_id = crypto_bigint::U256::from_be_hex(token.token_id.trim_start_matches("0x"));
-        assert_eq!(U256::from(token_id), U256::from(i.to_u32().unwrap() + 1), "Token IDs should be sequential");
+        assert_eq!(
+            U256::from(token_id),
+            U256::from(i.to_u32().unwrap() + 1),
+            "Token IDs should be sequential"
+        );
     }
 
     // Check balances for transferred tokens
@@ -757,7 +764,11 @@ async fn test_load_from_remote_erc721(sequencer: &RunnerCtx) {
         .unwrap();
 
         let balance = crypto_bigint::U256::from_be_hex(balance.trim_start_matches("0x"));
-        assert_eq!(U256::from(balance), U256::from(1u8), "Recipient should have balance of 1 for transferred tokens");
+        assert_eq!(
+            U256::from(balance),
+            U256::from(1u8),
+            "Recipient should have balance of 1 for transferred tokens"
+        );
     }
 
     // Check balances for non-transferred tokens
@@ -777,7 +788,11 @@ async fn test_load_from_remote_erc721(sequencer: &RunnerCtx) {
         .unwrap();
 
         let balance = crypto_bigint::U256::from_be_hex(balance.trim_start_matches("0x"));
-        assert_eq!(U256::from(balance), U256::from(1u8), "Original owner should have balance of 1 for non-transferred tokens");
+        assert_eq!(
+            U256::from(balance),
+            U256::from(1u8),
+            "Original owner should have balance of 1 for non-transferred tokens"
+        );
     }
 }
 
@@ -874,14 +889,18 @@ async fn test_load_from_remote_erc1155(sequencer: &RunnerCtx) {
 
     // Check if we indexed all tokens
     let tokens = sqlx::query_as::<_, Token>(
-        format!("SELECT * from tokens where contract_address = '{:#x}' ORDER BY token_id", rewards_address).as_str(),
+        format!(
+            "SELECT * from tokens where contract_address = '{:#x}' ORDER BY token_id",
+            rewards_address
+        )
+        .as_str(),
     )
     .fetch_all(&pool)
     .await
     .unwrap();
 
     assert_eq!(tokens.len(), token_amounts.len(), "Should have indexed all token types");
-    
+
     for token in &tokens {
         assert_eq!(token.name, "Rewards");
         assert_eq!(token.symbol, "RWD");
@@ -905,11 +924,12 @@ async fn test_load_from_remote_erc1155(sequencer: &RunnerCtx) {
         .await
         .unwrap();
 
-        let recipient_balance = crypto_bigint::U256::from_be_hex(recipient_balance.trim_start_matches("0x"));
+        let recipient_balance =
+            crypto_bigint::U256::from_be_hex(recipient_balance.trim_start_matches("0x"));
         assert_eq!(
-            U256::from(recipient_balance), 
+            U256::from(recipient_balance),
             U256::from(original_amount / 2),
-            "Recipient should have half of original amount for token {}", 
+            "Recipient should have half of original amount for token {}",
             token_id
         );
 
@@ -928,11 +948,12 @@ async fn test_load_from_remote_erc1155(sequencer: &RunnerCtx) {
         .await
         .unwrap();
 
-        let sender_balance = crypto_bigint::U256::from_be_hex(sender_balance.trim_start_matches("0x"));
+        let sender_balance =
+            crypto_bigint::U256::from_be_hex(sender_balance.trim_start_matches("0x"));
         assert_eq!(
-            U256::from(sender_balance), 
+            U256::from(sender_balance),
             U256::from(original_amount / 2),
-            "Sender should have half of original amount for token {}", 
+            "Sender should have half of original amount for token {}",
             token_id
         );
     }
