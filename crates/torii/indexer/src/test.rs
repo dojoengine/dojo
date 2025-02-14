@@ -32,13 +32,13 @@ pub async fn bootstrap_engine<P>(
     world: WorldContractReader<P>,
     db: Sql,
     provider: P,
+    contracts: &[Contract],
 ) -> Result<Engine<P>, Box<dyn std::error::Error>>
 where
     P: Provider + Send + Sync + core::fmt::Debug + Clone + 'static,
 {
     let (shutdown_tx, _) = broadcast::channel(1);
     let to = provider.block_hash_and_number().await?.block_number;
-    let world_address = world.address;
     let mut engine = Engine::new(
         world,
         db.clone(),
@@ -47,7 +47,7 @@ where
         EngineConfig::default(),
         shutdown_tx,
         None,
-        &[Contract { address: world_address, r#type: ContractType::WORLD }],
+        contracts,
     );
 
     let data = engine.fetch_range(0, to, &HashMap::new()).await.unwrap();
@@ -127,17 +127,20 @@ async fn test_load_from_remote(sequencer: &RunnerCtx) {
         executor.run().await.unwrap();
     });
 
+    let contracts = vec![
+        Contract { address: world_reader.address, r#type: ContractType::WORLD },
+    ];
     let model_cache = Arc::new(ModelCache::new(pool.clone()));
     let db = Sql::new(
         pool.clone(),
         sender.clone(),
-        &[Contract { address: world_reader.address, r#type: ContractType::WORLD }],
+        &contracts,
         model_cache.clone(),
     )
     .await
     .unwrap();
 
-    let _ = bootstrap_engine(world_reader, db.clone(), provider).await.unwrap();
+    let _ = bootstrap_engine(world_reader, db.clone(), provider, &contracts).await.unwrap();
 
     let _block_timestamp = 1710754478_u64;
     let models = sqlx::query("SELECT * FROM models").fetch_all(&pool).await.unwrap();
@@ -282,17 +285,21 @@ async fn test_load_from_remote_erc20(sequencer: &RunnerCtx) {
         executor.run().await.unwrap();
     });
 
+    let contracts = vec![
+        Contract { address: actions_address, r#type: ContractType::ERC20 },
+    ];
+
     let model_cache = Arc::new(ModelCache::new(pool.clone()));
     let db = Sql::new(
         pool.clone(),
         sender.clone(),
-        &[Contract { address: actions_address, r#type: ContractType::ERC20 }],
+        &contracts,
         model_cache.clone(),
     )
     .await
     .unwrap();
 
-    let _ = bootstrap_engine(world_reader, db.clone(), provider).await.unwrap();
+    let _ = bootstrap_engine(world_reader, db.clone(), provider, &contracts).await.unwrap();
 
     // first check if we indexed the token
     let token = sqlx::query_as::<_, Token>(
@@ -305,6 +312,16 @@ async fn test_load_from_remote_erc20(sequencer: &RunnerCtx) {
     assert_eq!(token.name, "Wood");
     assert_eq!(token.symbol, "WOOD");
     assert_eq!(token.decimals, 18);
+
+    // print all balances
+    let balances: Vec<String> = sqlx::query_scalar(
+        format!("SELECT balance FROM token_balances").as_str(),
+    )
+    .fetch_all(&pool)
+    .await
+    .unwrap();
+
+    println!("balances: {:?}", balances);
 
     // check the balance
     let remote_balance = sqlx::query_scalar::<_, String>(
@@ -321,323 +338,6 @@ async fn test_load_from_remote_erc20(sequencer: &RunnerCtx) {
     .unwrap();
     let remote_balance = crypto_bigint::U256::from_be_hex(remote_balance.trim_start_matches("0x"));
     assert_eq!(balance, remote_balance.into());
-}
-
-#[tokio::test(flavor = "multi_thread")]
-#[katana_runner::test(accounts = 10, db_dir = copy_spawn_and_move_db().as_str())]
-async fn test_load_from_remote_del(sequencer: &RunnerCtx) {
-    let setup = CompilerTestSetup::from_examples("../../dojo/core", "../../../examples/");
-    let config = setup.build_test_config("spawn-and-move", Profile::DEV);
-
-    let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
-
-    let account = sequencer.account(0);
-    let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(sequencer.url())));
-
-    let world_local = ws.load_world_local().unwrap();
-    let world_address = world_local.deterministic_world_address().unwrap();
-    let actions_address = world_local
-        .get_contract_address_local(compute_selector_from_names("ns", "actions"))
-        .unwrap();
-
-    let world = WorldContract::new(world_address, &account);
-
-    let res = world
-        .grant_writer(&compute_bytearray_hash("ns"), &ContractAddress(actions_address))
-        .send_with_cfg(&TxnConfig::init_wait())
-        .await
-        .unwrap();
-
-    TransactionWaiter::new(res.transaction_hash, &provider).await.unwrap();
-
-    // spawn
-    let res = account
-        .execute_v1(vec![Call {
-            to: actions_address,
-            selector: get_selector_from_name("spawn").unwrap(),
-            calldata: vec![],
-        }])
-        .send_with_cfg(&TxnConfig::init_wait())
-        .await
-        .unwrap();
-
-    TransactionWaiter::new(res.transaction_hash, &provider).await.unwrap();
-
-    // Set player config.
-    let res = account
-        .execute_v1(vec![Call {
-            to: actions_address,
-            selector: get_selector_from_name("set_player_config").unwrap(),
-            // Empty ByteArray.
-            calldata: vec![Felt::ZERO, Felt::ZERO, Felt::ZERO],
-        }])
-        .send_with_cfg(&TxnConfig::init_wait())
-        .await
-        .unwrap();
-
-    TransactionWaiter::new(res.transaction_hash, &provider).await.unwrap();
-
-    let res = account
-        .execute_v1(vec![Call {
-            to: actions_address,
-            selector: get_selector_from_name("reset_player_config").unwrap(),
-            calldata: vec![],
-        }])
-        .send_with_cfg(&TxnConfig::init_wait())
-        .await
-        .unwrap();
-
-    TransactionWaiter::new(res.transaction_hash, &provider).await.unwrap();
-
-    let world_reader = WorldContractReader::new(world_address, Arc::clone(&provider));
-
-    let tempfile = NamedTempFile::new().unwrap();
-    let path = tempfile.path().to_string_lossy();
-    let options = SqliteConnectOptions::from_str(&path).unwrap().create_if_missing(true);
-    let pool = SqlitePoolOptions::new().connect_with(options).await.unwrap();
-    sqlx::migrate!("../migrations").run(&pool).await.unwrap();
-
-    let (shutdown_tx, _) = broadcast::channel(1);
-    let (mut executor, sender) =
-        Executor::new(pool.clone(), shutdown_tx.clone(), Arc::clone(&provider), 100).await.unwrap();
-    tokio::spawn(async move {
-        executor.run().await.unwrap();
-    });
-
-    let model_cache = Arc::new(ModelCache::new(pool.clone()));
-    let db = Sql::new(
-        pool.clone(),
-        sender.clone(),
-        &[Contract { address: world_reader.address, r#type: ContractType::WORLD }],
-        model_cache.clone(),
-    )
-    .await
-    .unwrap();
-
-    let _ = bootstrap_engine(world_reader, db.clone(), Arc::clone(&provider)).await.unwrap();
-
-    assert_eq!(count_table("ns-PlayerConfig", &pool).await, 0);
-    assert_eq!(count_table("ns-Position", &pool).await, 0);
-    assert_eq!(count_table("ns-Moves", &pool).await, 0);
-
-    // our entity model relations should be deleted for our player entity
-    let entity_model_count: i64 = sqlx::query_scalar(
-        format!(
-            "SELECT COUNT(*) FROM entity_model WHERE entity_id = '{:#x}'",
-            poseidon_hash_many(&[account.address()])
-        )
-        .as_str(),
-    )
-    .fetch_one(&pool)
-    .await
-    .unwrap();
-    assert_eq!(entity_model_count, 0);
-    // our player entity should be deleted
-    let entity_count: i64 = sqlx::query_scalar(
-        format!(
-            "SELECT COUNT(*) FROM entities WHERE id = '{:#x}'",
-            poseidon_hash_many(&[account.address()])
-        )
-        .as_str(),
-    )
-    .fetch_one(&pool)
-    .await
-    .unwrap();
-    assert_eq!(entity_count, 0);
-
-    // TODO: check how we can have a test that is more chronological with Torii re-syncing
-    // to ensure we can test intermediate states.
-}
-
-#[tokio::test(flavor = "multi_thread")]
-#[katana_runner::test(accounts = 10, db_dir = copy_spawn_and_move_db().as_str())]
-async fn test_update_with_set_record(sequencer: &RunnerCtx) {
-    let setup = CompilerTestSetup::from_examples("../../dojo/core", "../../../examples/");
-    let config = setup.build_test_config("spawn-and-move", Profile::DEV);
-
-    let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
-
-    let world_local = ws.load_world_local().unwrap();
-    let world_address = world_local.deterministic_world_address().unwrap();
-    let actions_address = world_local
-        .get_contract_address_local(compute_selector_from_names("ns", "actions"))
-        .unwrap();
-
-    let account = sequencer.account(0);
-    let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(sequencer.url())));
-
-    let world = WorldContract::new(world_address, &account);
-
-    let res = world
-        .grant_writer(&compute_bytearray_hash("ns"), &ContractAddress(actions_address))
-        .send_with_cfg(&TxnConfig::init_wait())
-        .await
-        .unwrap();
-
-    TransactionWaiter::new(res.transaction_hash, &provider).await.unwrap();
-
-    // Send spawn transaction
-    let spawn_res = account
-        .execute_v1(vec![Call {
-            to: actions_address,
-            selector: get_selector_from_name("spawn").unwrap(),
-            calldata: vec![],
-        }])
-        .send_with_cfg(&TxnConfig::init_wait())
-        .await
-        .unwrap();
-
-    TransactionWaiter::new(spawn_res.transaction_hash, &provider).await.unwrap();
-
-    // Send move transaction
-    let move_res = account
-        .execute_v1(vec![Call {
-            to: actions_address,
-            selector: get_selector_from_name("move").unwrap(),
-            calldata: vec![Felt::ZERO],
-        }])
-        .send_with_cfg(&TxnConfig::init_wait())
-        .await
-        .unwrap();
-
-    TransactionWaiter::new(move_res.transaction_hash, &provider).await.unwrap();
-
-    let world_reader = WorldContractReader::new(world_address, Arc::clone(&provider));
-
-    let tempfile = NamedTempFile::new().unwrap();
-    let path = tempfile.path().to_string_lossy();
-    let options = SqliteConnectOptions::from_str(&path).unwrap().create_if_missing(true);
-    let pool = SqlitePoolOptions::new().connect_with(options).await.unwrap();
-    sqlx::migrate!("../migrations").run(&pool).await.unwrap();
-
-    let (shutdown_tx, _) = broadcast::channel(1);
-
-    let (mut executor, sender) =
-        Executor::new(pool.clone(), shutdown_tx.clone(), Arc::clone(&provider), 100).await.unwrap();
-    tokio::spawn(async move {
-        executor.run().await.unwrap();
-    });
-
-    let model_cache = Arc::new(ModelCache::new(pool.clone()));
-    let db = Sql::new(
-        pool.clone(),
-        sender.clone(),
-        &[Contract { address: world_reader.address, r#type: ContractType::WORLD }],
-        model_cache.clone(),
-    )
-    .await
-    .unwrap();
-
-    let _ = bootstrap_engine(world_reader, db.clone(), Arc::clone(&provider)).await.unwrap();
-}
-
-#[ignore = "This test is being flaky and need to find why. Sometimes it fails, sometimes it passes."]
-#[tokio::test(flavor = "multi_thread")]
-#[katana_runner::test(accounts = 10, db_dir = copy_spawn_and_move_db().as_str())]
-async fn test_load_from_remote_update(sequencer: &RunnerCtx) {
-    let setup = CompilerTestSetup::from_examples("../../dojo/core", "../../../examples/");
-    let config = setup.build_test_config("spawn-and-move", Profile::DEV);
-
-    let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
-
-    let account = sequencer.account(0);
-    let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(sequencer.url())));
-
-    let world_local = ws.load_world_local().unwrap();
-    let world_address = world_local.deterministic_world_address().unwrap();
-    let actions_address = world_local
-        .get_contract_address_local(compute_selector_from_names("ns", "actions"))
-        .unwrap();
-
-    let world = WorldContract::new(world_address, &account);
-
-    let res = world
-        .grant_writer(&compute_bytearray_hash("ns"), &ContractAddress(actions_address))
-        .send_with_cfg(&TxnConfig::init_wait())
-        .await
-        .unwrap();
-
-    TransactionWaiter::new(res.transaction_hash, &provider).await.unwrap();
-
-    // spawn
-    let res = account
-        .execute_v1(vec![Call {
-            to: actions_address,
-            selector: get_selector_from_name("spawn").unwrap(),
-            calldata: vec![],
-        }])
-        .send_with_cfg(&TxnConfig::init_wait())
-        .await
-        .unwrap();
-
-    TransactionWaiter::new(res.transaction_hash, &provider).await.unwrap();
-
-    // Set player config.
-    let res = account
-        .execute_v1(vec![Call {
-            to: actions_address,
-            selector: get_selector_from_name("set_player_config").unwrap(),
-            // Empty ByteArray.
-            calldata: vec![Felt::ZERO, Felt::ZERO, Felt::ZERO],
-        }])
-        .send_with_cfg(&TxnConfig::init_wait())
-        .await
-        .unwrap();
-
-    TransactionWaiter::new(res.transaction_hash, &provider).await.unwrap();
-
-    let name = ByteArray::from_string("mimi").unwrap();
-    let res = account
-        .execute_v1(vec![Call {
-            to: actions_address,
-            selector: get_selector_from_name("update_player_config_name").unwrap(),
-            calldata: ByteArray::cairo_serialize(&name),
-        }])
-        .send_with_cfg(&TxnConfig::init_wait())
-        .await
-        .unwrap();
-
-    TransactionWaiter::new(res.transaction_hash, &provider).await.unwrap();
-
-    let world_reader = WorldContractReader::new(world_address, Arc::clone(&provider));
-
-    let tempfile = NamedTempFile::new().unwrap();
-    let path = tempfile.path().to_string_lossy();
-    let options = SqliteConnectOptions::from_str(&path).unwrap().create_if_missing(true);
-    let pool = SqlitePoolOptions::new().connect_with(options).await.unwrap();
-    sqlx::migrate!("../migrations").run(&pool).await.unwrap();
-
-    let (shutdown_tx, _) = broadcast::channel(1);
-    let (mut executor, sender) =
-        Executor::new(pool.clone(), shutdown_tx.clone(), Arc::clone(&provider), 100).await.unwrap();
-    tokio::spawn(async move {
-        executor.run().await.unwrap();
-    });
-
-    let model_cache = Arc::new(ModelCache::new(pool.clone()));
-    let db = Sql::new(
-        pool.clone(),
-        sender.clone(),
-        &[Contract { address: world_reader.address, r#type: ContractType::WORLD }],
-        model_cache.clone(),
-    )
-    .await
-    .unwrap();
-
-    let _ = bootstrap_engine(world_reader, db.clone(), Arc::clone(&provider)).await.unwrap();
-
-    let name: String = sqlx::query_scalar(
-        format!(
-            "SELECT name FROM [ns-PlayerConfig] WHERE internal_id = '{:#x}'",
-            poseidon_hash_many(&[account.address()])
-        )
-        .as_str(),
-    )
-    .fetch_one(&pool)
-    .await
-    .unwrap();
-
-    assert_eq!(name, "mimi");
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -712,17 +412,20 @@ async fn test_load_from_remote_erc721(sequencer: &RunnerCtx) {
         executor.run().await.unwrap();
     });
 
+    let contracts = vec![
+        Contract { address: badge_address, r#type: ContractType::ERC721 },
+    ];
     let model_cache = Arc::new(ModelCache::new(pool.clone()));
     let db = Sql::new(
         pool.clone(),
         sender.clone(),
-        &[Contract { address: badge_address, r#type: ContractType::ERC721 }],
+        &contracts,
         model_cache.clone(),
     )
     .await
     .unwrap();
 
-    let _ = bootstrap_engine(world_reader, db.clone(), provider).await.unwrap();
+    let _ = bootstrap_engine(world_reader, db.clone(), provider, &contracts).await.unwrap();
 
     // Check if we indexed all tokens
     let tokens = sqlx::query_as::<_, Token>(
@@ -887,17 +590,20 @@ async fn test_load_from_remote_erc1155(sequencer: &RunnerCtx) {
         executor.run().await.unwrap();
     });
 
+    let contracts = vec![
+        Contract { address: rewards_address, r#type: ContractType::ERC1155 },
+    ];
     let model_cache = Arc::new(ModelCache::new(pool.clone()));
     let db = Sql::new(
         pool.clone(),
         sender.clone(),
-        &[Contract { address: rewards_address, r#type: ContractType::ERC1155 }],
+        &contracts,
         model_cache.clone(),
     )
     .await
     .unwrap();
 
-    let _ = bootstrap_engine(world_reader, db.clone(), provider).await.unwrap();
+    let _ = bootstrap_engine(world_reader, db.clone(), provider, &contracts).await.unwrap();
 
     // Check if we indexed all tokens
     let tokens = sqlx::query_as::<_, Token>(
@@ -969,6 +675,332 @@ async fn test_load_from_remote_erc1155(sequencer: &RunnerCtx) {
             token_id
         );
     }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+#[katana_runner::test(accounts = 10, db_dir = copy_spawn_and_move_db().as_str())]
+async fn test_load_from_remote_del(sequencer: &RunnerCtx) {
+    let setup = CompilerTestSetup::from_examples("../../dojo/core", "../../../examples/");
+    let config = setup.build_test_config("spawn-and-move", Profile::DEV);
+
+    let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
+
+    let account = sequencer.account(0);
+    let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(sequencer.url())));
+
+    let world_local = ws.load_world_local().unwrap();
+    let world_address = world_local.deterministic_world_address().unwrap();
+    let actions_address = world_local
+        .get_contract_address_local(compute_selector_from_names("ns", "actions"))
+        .unwrap();
+
+    let world = WorldContract::new(world_address, &account);
+
+    let res = world
+        .grant_writer(&compute_bytearray_hash("ns"), &ContractAddress(actions_address))
+        .send_with_cfg(&TxnConfig::init_wait())
+        .await
+        .unwrap();
+
+    TransactionWaiter::new(res.transaction_hash, &provider).await.unwrap();
+
+    // spawn
+    let res = account
+        .execute_v1(vec![Call {
+            to: actions_address,
+            selector: get_selector_from_name("spawn").unwrap(),
+            calldata: vec![],
+        }])
+        .send_with_cfg(&TxnConfig::init_wait())
+        .await
+        .unwrap();
+
+    TransactionWaiter::new(res.transaction_hash, &provider).await.unwrap();
+
+    // Set player config.
+    let res = account
+        .execute_v1(vec![Call {
+            to: actions_address,
+            selector: get_selector_from_name("set_player_config").unwrap(),
+            // Empty ByteArray.
+            calldata: vec![Felt::ZERO, Felt::ZERO, Felt::ZERO],
+        }])
+        .send_with_cfg(&TxnConfig::init_wait())
+        .await
+        .unwrap();
+
+    TransactionWaiter::new(res.transaction_hash, &provider).await.unwrap();
+
+    let res = account
+        .execute_v1(vec![Call {
+            to: actions_address,
+            selector: get_selector_from_name("reset_player_config").unwrap(),
+            calldata: vec![],
+        }])
+        .send_with_cfg(&TxnConfig::init_wait())
+        .await
+        .unwrap();
+
+    TransactionWaiter::new(res.transaction_hash, &provider).await.unwrap();
+
+    let world_reader = WorldContractReader::new(world_address, Arc::clone(&provider));
+
+    let tempfile = NamedTempFile::new().unwrap();
+    let path = tempfile.path().to_string_lossy();
+    let options = SqliteConnectOptions::from_str(&path).unwrap().create_if_missing(true);
+    let pool = SqlitePoolOptions::new().connect_with(options).await.unwrap();
+    sqlx::migrate!("../migrations").run(&pool).await.unwrap();
+
+    let (shutdown_tx, _) = broadcast::channel(1);
+    let (mut executor, sender) =
+        Executor::new(pool.clone(), shutdown_tx.clone(), Arc::clone(&provider), 100).await.unwrap();
+    tokio::spawn(async move {
+        executor.run().await.unwrap();
+    });
+
+    let contracts = vec![
+        Contract { address: world_reader.address, r#type: ContractType::WORLD },
+    ];
+    let model_cache = Arc::new(ModelCache::new(pool.clone()));
+    let db = Sql::new(
+        pool.clone(),
+        sender.clone(),
+        &contracts,
+        model_cache.clone(),
+    )
+    .await
+    .unwrap();
+
+    let _ = bootstrap_engine(world_reader, db.clone(), provider, &contracts).await.unwrap();
+
+    assert_eq!(count_table("ns-PlayerConfig", &pool).await, 0);
+    assert_eq!(count_table("ns-Position", &pool).await, 0);
+    assert_eq!(count_table("ns-Moves", &pool).await, 0);
+
+    // our entity model relations should be deleted for our player entity
+    let entity_model_count: i64 = sqlx::query_scalar(
+        format!(
+            "SELECT COUNT(*) FROM entity_model WHERE entity_id = '{:#x}'",
+            poseidon_hash_many(&[account.address()])
+        )
+        .as_str(),
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(entity_model_count, 0);
+    // our player entity should be deleted
+    let entity_count: i64 = sqlx::query_scalar(
+        format!(
+            "SELECT COUNT(*) FROM entities WHERE id = '{:#x}'",
+            poseidon_hash_many(&[account.address()])
+        )
+        .as_str(),
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(entity_count, 0);
+
+    // TODO: check how we can have a test that is more chronological with Torii re-syncing
+    // to ensure we can test intermediate states.
+}
+
+#[tokio::test(flavor = "multi_thread")]
+#[katana_runner::test(accounts = 10, db_dir = copy_spawn_and_move_db().as_str())]
+async fn test_update_with_set_record(sequencer: &RunnerCtx) {
+    let setup = CompilerTestSetup::from_examples("../../dojo/core", "../../../examples/");
+    let config = setup.build_test_config("spawn-and-move", Profile::DEV);
+
+    let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
+
+    let world_local = ws.load_world_local().unwrap();
+    let world_address = world_local.deterministic_world_address().unwrap();
+    let actions_address = world_local
+        .get_contract_address_local(compute_selector_from_names("ns", "actions"))
+        .unwrap();
+
+    let account = sequencer.account(0);
+    let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(sequencer.url())));
+
+    let world = WorldContract::new(world_address, &account);
+
+    let res = world
+        .grant_writer(&compute_bytearray_hash("ns"), &ContractAddress(actions_address))
+        .send_with_cfg(&TxnConfig::init_wait())
+        .await
+        .unwrap();
+
+    TransactionWaiter::new(res.transaction_hash, &provider).await.unwrap();
+
+    // Send spawn transaction
+    let spawn_res = account
+        .execute_v1(vec![Call {
+            to: actions_address,
+            selector: get_selector_from_name("spawn").unwrap(),
+            calldata: vec![],
+        }])
+        .send_with_cfg(&TxnConfig::init_wait())
+        .await
+        .unwrap();
+
+    TransactionWaiter::new(spawn_res.transaction_hash, &provider).await.unwrap();
+
+    // Send move transaction
+    let move_res = account
+        .execute_v1(vec![Call {
+            to: actions_address,
+            selector: get_selector_from_name("move").unwrap(),
+            calldata: vec![Felt::ZERO],
+        }])
+        .send_with_cfg(&TxnConfig::init_wait())
+        .await
+        .unwrap();
+
+    TransactionWaiter::new(move_res.transaction_hash, &provider).await.unwrap();
+
+    let world_reader = WorldContractReader::new(world_address, Arc::clone(&provider));
+
+    let tempfile = NamedTempFile::new().unwrap();
+    let path = tempfile.path().to_string_lossy();
+    let options = SqliteConnectOptions::from_str(&path).unwrap().create_if_missing(true);
+    let pool = SqlitePoolOptions::new().connect_with(options).await.unwrap();
+    sqlx::migrate!("../migrations").run(&pool).await.unwrap();
+
+    let (shutdown_tx, _) = broadcast::channel(1);
+
+    let (mut executor, sender) =
+        Executor::new(pool.clone(), shutdown_tx.clone(), Arc::clone(&provider), 100).await.unwrap();
+    tokio::spawn(async move {
+        executor.run().await.unwrap();
+    });
+
+    let contracts = vec![
+        Contract { address: world_reader.address, r#type: ContractType::WORLD },
+    ];
+    let model_cache = Arc::new(ModelCache::new(pool.clone()));
+    let db = Sql::new(
+        pool.clone(),
+        sender.clone(),
+        &contracts,
+        model_cache.clone(),
+    )
+    .await
+    .unwrap();
+
+    let _ = bootstrap_engine(world_reader, db.clone(), provider, &contracts).await.unwrap();
+}
+
+#[ignore = "This test is being flaky and need to find why. Sometimes it fails, sometimes it passes."]
+#[tokio::test(flavor = "multi_thread")]
+#[katana_runner::test(accounts = 10, db_dir = copy_spawn_and_move_db().as_str())]
+async fn test_load_from_remote_update(sequencer: &RunnerCtx) {
+    let setup = CompilerTestSetup::from_examples("../../dojo/core", "../../../examples/");
+    let config = setup.build_test_config("spawn-and-move", Profile::DEV);
+
+    let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
+
+    let account = sequencer.account(0);
+    let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(sequencer.url())));
+
+    let world_local = ws.load_world_local().unwrap();
+    let world_address = world_local.deterministic_world_address().unwrap();
+    let actions_address = world_local
+        .get_contract_address_local(compute_selector_from_names("ns", "actions"))
+        .unwrap();
+
+    let world = WorldContract::new(world_address, &account);
+
+    let res = world
+        .grant_writer(&compute_bytearray_hash("ns"), &ContractAddress(actions_address))
+        .send_with_cfg(&TxnConfig::init_wait())
+        .await
+        .unwrap();
+
+    TransactionWaiter::new(res.transaction_hash, &provider).await.unwrap();
+
+    // spawn
+    let res = account
+        .execute_v1(vec![Call {
+            to: actions_address,
+            selector: get_selector_from_name("spawn").unwrap(),
+            calldata: vec![],
+        }])
+        .send_with_cfg(&TxnConfig::init_wait())
+        .await
+        .unwrap();
+
+    TransactionWaiter::new(res.transaction_hash, &provider).await.unwrap();
+
+    // Set player config.
+    let res = account
+        .execute_v1(vec![Call {
+            to: actions_address,
+            selector: get_selector_from_name("set_player_config").unwrap(),
+            // Empty ByteArray.
+            calldata: vec![Felt::ZERO, Felt::ZERO, Felt::ZERO],
+        }])
+        .send_with_cfg(&TxnConfig::init_wait())
+        .await
+        .unwrap();
+
+    TransactionWaiter::new(res.transaction_hash, &provider).await.unwrap();
+
+    let name = ByteArray::from_string("mimi").unwrap();
+    let res = account
+        .execute_v1(vec![Call {
+            to: actions_address,
+            selector: get_selector_from_name("update_player_config_name").unwrap(),
+            calldata: ByteArray::cairo_serialize(&name),
+        }])
+        .send_with_cfg(&TxnConfig::init_wait())
+        .await
+        .unwrap();
+
+    TransactionWaiter::new(res.transaction_hash, &provider).await.unwrap();
+
+    let world_reader = WorldContractReader::new(world_address, Arc::clone(&provider));
+
+    let tempfile = NamedTempFile::new().unwrap();
+    let path = tempfile.path().to_string_lossy();
+    let options = SqliteConnectOptions::from_str(&path).unwrap().create_if_missing(true);
+    let pool = SqlitePoolOptions::new().connect_with(options).await.unwrap();
+    sqlx::migrate!("../migrations").run(&pool).await.unwrap();
+
+    let (shutdown_tx, _) = broadcast::channel(1);
+    let (mut executor, sender) =
+        Executor::new(pool.clone(), shutdown_tx.clone(), Arc::clone(&provider), 100).await.unwrap();
+    tokio::spawn(async move {
+        executor.run().await.unwrap();
+    });
+
+    let contracts = vec![
+        Contract { address: world_reader.address, r#type: ContractType::WORLD },
+    ];
+    let model_cache = Arc::new(ModelCache::new(pool.clone()));
+    let db = Sql::new(
+        pool.clone(),
+        sender.clone(),
+        &contracts,
+        model_cache.clone(),
+    )
+    .await
+    .unwrap();
+
+    let _ = bootstrap_engine(world_reader, db.clone(), provider, &contracts).await.unwrap();
+
+    let name: String = sqlx::query_scalar(
+        format!(
+            "SELECT name FROM [ns-PlayerConfig] WHERE internal_id = '{:#x}'",
+            poseidon_hash_many(&[account.address()])
+        )
+        .as_str(),
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+
+    assert_eq!(name, "mimi");
 }
 
 /// Count the number of rows in a table.
