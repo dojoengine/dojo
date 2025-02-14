@@ -13,7 +13,7 @@ use scarb::compiler::Profile;
 use sozo_scarbext::WorkspaceExt;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use starknet::accounts::Account;
-use starknet::core::types::{Call, Felt};
+use starknet::core::types::{Call, Felt, U256};
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
@@ -22,7 +22,7 @@ use tempfile::NamedTempFile;
 use tokio::sync::broadcast;
 use torii_sqlite::cache::ModelCache;
 use torii_sqlite::executor::Executor;
-use torii_sqlite::types::{Contract, ContractType};
+use torii_sqlite::types::{Contract, ContractType, Token};
 use torii_sqlite::Sql;
 
 use crate::engine::{Engine, EngineConfig, Processors};
@@ -203,6 +203,112 @@ async fn test_load_from_remote(sequencer: &RunnerCtx) {
 
     assert_eq!(id, format!("{:#x}", poseidon_hash_many(&[account.address()])));
     assert_eq!(keys, format!("{:#x}/", account.address()));
+}
+
+#[tokio::test(flavor = "multi_thread")]
+#[katana_runner::test(accounts = 10, db_dir = copy_spawn_and_move_db().as_str())]
+async fn test_load_from_remote_erc20(sequencer: &RunnerCtx) {
+    let setup = CompilerTestSetup::from_examples("../../dojo/core", "../../../examples/");
+    let config = setup.build_test_config("spawn-and-move", Profile::DEV);
+
+    let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
+
+    let account = sequencer.account(0);
+    let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(sequencer.url())));
+
+    let world_local = ws.load_world_local().unwrap();
+    let world_address = world_local.deterministic_world_address().unwrap();
+
+    let world_reader = WorldContractReader::new(world_address, Arc::clone(&provider));
+
+    let actions_address = world_local
+        .get_contract_address_local(compute_selector_from_names("ns", "WoodToken"))
+        .unwrap();
+
+    let world = WorldContract::new(world_address, &account);
+
+    let res = world
+        .grant_writer(&compute_bytearray_hash("ns"), &ContractAddress(actions_address))
+        .send_with_cfg(&TxnConfig::init_wait())
+        .await
+        .unwrap();
+
+    TransactionWaiter::new(res.transaction_hash, &provider).await.unwrap();
+
+    let mut balance = U256::from(1000000000000000000u64);
+
+    // mint 123456789 wei tokens
+    let tx = &account
+        .execute_v1(vec![Call {
+            to: actions_address,
+            selector: get_selector_from_name("mint").unwrap(),
+            calldata: vec![Felt::ZERO, Felt::from(123456789)],
+        }])
+        .send()
+        .await
+        .unwrap();
+
+    TransactionWaiter::new(tx.transaction_hash, &provider).await.unwrap();
+    balance += U256::from(123456789u32);
+
+    // transfer 12345 tokens to some other address
+    let tx = &account
+        .execute_v1(vec![Call {
+            to: actions_address,
+            selector: get_selector_from_name("transfer").unwrap(),
+            calldata: vec![Felt::ZERO, Felt::ZERO, Felt::from(12345)],
+        }])
+        .send()
+        .await
+        .unwrap();
+
+    TransactionWaiter::new(tx.transaction_hash, &provider).await.unwrap();
+    balance -= U256::from(12345u32);
+
+    let tempfile = NamedTempFile::new().unwrap();
+    let path = tempfile.path().to_string_lossy();
+    let options = SqliteConnectOptions::from_str(&path).unwrap().create_if_missing(true);
+    let pool = SqlitePoolOptions::new().connect_with(options).await.unwrap();
+    sqlx::migrate!("../migrations").run(&pool).await.unwrap();
+
+    let (shutdown_tx, _) = broadcast::channel(1);
+    let (mut executor, sender) =
+        Executor::new(pool.clone(), shutdown_tx.clone(), Arc::clone(&provider), 100).await.unwrap();
+    tokio::spawn(async move {
+        executor.run().await.unwrap();
+    });
+
+    let model_cache = Arc::new(ModelCache::new(pool.clone()));
+    let db = Sql::new(
+        pool.clone(),
+        sender.clone(),
+        &[Contract { address: actions_address, r#type: ContractType::ERC20 }],
+        model_cache.clone(),
+    )
+    .await
+    .unwrap();
+
+    let _ = bootstrap_engine(world_reader, db.clone(), provider).await.unwrap();
+
+    // first check if we indexed the token
+    let token = sqlx::query_as::<_, Token>(
+        format!("SELECT * from tokens where contract_address = '{:#x}'", actions_address).as_str(),
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+
+    assert_eq!(token.name, "Wood");
+    assert_eq!(token.symbol, "WOOD");
+    assert_eq!(token.decimals, 18);
+
+    // check the balance
+    let remote_balance = sqlx::query_scalar::<_, String>(format!("SELECT balance FROM token_balances WHERE account_address = '{:#x}' AND contract_address = '{:#x}'", account.address(), actions_address).as_str())
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    let remote_balance = crypto_bigint::U256::from_be_hex(&remote_balance.trim_start_matches("0x"));
+    assert_eq!(balance, remote_balance.into());
 }
 
 #[tokio::test(flavor = "multi_thread")]
