@@ -123,10 +123,12 @@ mod tests {
     #[test]
     fn test_1() {
         let ndef = NamespaceDef {
-            namespace: "ns", resources: [
+            namespace: "ns",
+            resources: [
                 TestResource::Model(m_M::TEST_CLASS_HASH),
                 TestResource::Contract(c1::TEST_CLASS_HASH),
-            ].span(),
+            ]
+                .span(),
         };
 
         let world = spawn_test_world([ndef].span());
