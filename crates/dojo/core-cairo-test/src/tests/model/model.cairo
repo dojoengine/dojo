@@ -63,12 +63,14 @@ struct FooSchema {
 
 fn namespace_def() -> NamespaceDef {
     NamespaceDef {
-        namespace: "dojo_cairo_test", resources: [
+        namespace: "dojo_cairo_test",
+        resources: [
             TestResource::Model(m_Foo::TEST_CLASS_HASH.try_into().unwrap()),
             TestResource::Model(m_Foo2::TEST_CLASS_HASH.try_into().unwrap()),
             TestResource::Model(m_Foo3::TEST_CLASS_HASH.try_into().unwrap()),
             TestResource::Model(m_Foo4::TEST_CLASS_HASH.try_into().unwrap()),
-        ].span(),
+        ]
+            .span(),
     }
 }
 
@@ -282,9 +284,8 @@ fn test_ptr_from() {
 fn test_ptrs_from() {
     let foo = Foo { k1: 1, k2: 2, v1: 3, v2: 4 };
     let foo2 = Foo { k1: 3, k2: 4, v1: 5, v2: 6 };
-    let ptrs_a = [
-        ModelPtr::<Foo> { id: foo.entity_id() }, ModelPtr::<Foo> { id: foo2.entity_id() }
-    ].span();
+    let ptrs_a = [ModelPtr::<Foo> { id: foo.entity_id() }, ModelPtr::<Foo> { id: foo2.entity_id() }]
+        .span();
     let ptrs_b = Model::<Foo>::ptrs_from_keys([foo.keys(), foo2.keys()].span());
     let ptrs_c = Model::<
         Foo,

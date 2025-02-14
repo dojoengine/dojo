@@ -7,7 +7,8 @@ fn test_find_layout_when_exists() {
         FieldLayout { selector: 'one', layout: Layout::Fixed([1].span()) },
         FieldLayout { selector: 'two', layout: Layout::Fixed([2].span()) },
         FieldLayout { selector: 'three', layout: Layout::Fixed([3].span()) },
-    ].span();
+    ]
+        .span();
 
     let res = find_field_layout('two', layouts);
     assert(res.is_some(), 'layout not found');
@@ -21,7 +22,8 @@ fn test_find_layout_fails_when_not_exists() {
         FieldLayout { selector: 'one', layout: Layout::Fixed([1].span()) },
         FieldLayout { selector: 'two', layout: Layout::Fixed([2].span()) },
         FieldLayout { selector: 'three', layout: Layout::Fixed([3].span()) },
-    ].span();
+    ]
+        .span();
 
     let res = find_field_layout('four', layouts);
     assert(res.is_none(), 'layout found');
@@ -34,7 +36,8 @@ fn test_find_model_layout_when_exists() {
             FieldLayout { selector: 'one', layout: Layout::Fixed([1].span()) },
             FieldLayout { selector: 'two', layout: Layout::Fixed([2].span()) },
             FieldLayout { selector: 'three', layout: Layout::Fixed([3].span()) },
-        ].span(),
+        ]
+            .span(),
     );
 
     let res = find_model_field_layout(model_layout, 'two');
@@ -50,7 +53,8 @@ fn test_find_model_layout_fails_when_not_exists() {
             FieldLayout { selector: 'one', layout: Layout::Fixed([1].span()) },
             FieldLayout { selector: 'two', layout: Layout::Fixed([2].span()) },
             FieldLayout { selector: 'three', layout: Layout::Fixed([3].span()) },
-        ].span(),
+        ]
+            .span(),
     );
 
     let res = find_model_field_layout(model_layout, 'four');
