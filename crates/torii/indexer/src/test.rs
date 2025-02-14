@@ -223,8 +223,7 @@ async fn test_load_from_remote_erc20(sequencer: &RunnerCtx) {
     let world_reader = WorldContractReader::new(world_address, Arc::clone(&provider));
 
     let actions_address = world_local
-        .get_contract_address_local(compute_selector_from_names("ns", "WoodToken"))
-        .unwrap();
+        .external_contracts.iter().find(|c| c.instance_name == "WoodToken").unwrap().address;
 
     let world = WorldContract::new(world_address, &account);
 
@@ -654,7 +653,7 @@ async fn test_load_from_remote_erc721(sequencer: &RunnerCtx) {
     let world_reader = WorldContractReader::new(world_address, Arc::clone(&provider));
 
     let badge_address =
-        world_local.get_contract_address_local(compute_selector_from_names("ns", "Badge")).unwrap();
+        world_local.external_contracts.iter().find(|c| c.instance_name == "Badge").unwrap().address;
 
     let world = WorldContract::new(world_address, &account);
 
@@ -813,8 +812,7 @@ async fn test_load_from_remote_erc1155(sequencer: &RunnerCtx) {
     let world_reader = WorldContractReader::new(world_address, Arc::clone(&provider));
 
     let rewards_address = world_local
-        .get_contract_address_local(compute_selector_from_names("ns", "Rewards"))
-        .unwrap();
+        .external_contracts.iter().find(|c| c.instance_name == "Rewards").unwrap().address;
 
     let world = WorldContract::new(world_address, &account);
 
