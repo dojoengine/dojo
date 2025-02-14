@@ -3,7 +3,7 @@ use std::num::ParseIntError;
 #[cfg(not(target_arch = "wasm32"))]
 use std::time::Duration;
 
-use crypto_bigint::U256;
+use crypto_bigint::{Encoding, U256};
 use futures_util::stream::MapOk;
 use futures_util::{Stream, StreamExt, TryStreamExt};
 use starknet::core::types::{Felt, FromStrError, StateDiff, StateUpdate};
@@ -117,6 +117,7 @@ impl WorldClient {
     pub async fn retrieve_tokens(
         &mut self,
         contract_addresses: Vec<Felt>,
+        token_ids: Vec<U256>,
     ) -> Result<RetrieveTokensResponse, Error> {
         self.inner
             .retrieve_tokens(RetrieveTokensRequest {
@@ -124,6 +125,7 @@ impl WorldClient {
                     .into_iter()
                     .map(|c| c.to_bytes_be().to_vec())
                     .collect(),
+                token_ids: token_ids.into_iter().map(|id| id.to_be_bytes().to_vec()).collect(),
             })
             .await
             .map_err(Error::Grpc)
@@ -133,12 +135,14 @@ impl WorldClient {
     pub async fn subscribe_tokens(
         &mut self,
         contract_addresses: Vec<Felt>,
+        token_ids: Vec<U256>,
     ) -> Result<TokenUpdateStreaming, Error> {
         let request = RetrieveTokensRequest {
             contract_addresses: contract_addresses
                 .into_iter()
                 .map(|c| c.to_bytes_be().to_vec())
                 .collect(),
+            token_ids: token_ids.into_iter().map(|id| id.to_be_bytes().to_vec()).collect(),
         };
         let stream = self
             .inner
@@ -152,7 +156,7 @@ impl WorldClient {
                 match res.token {
                     Some(token) => token.try_into().expect("must able to serialize"),
                     None => Token {
-                        id: "".to_string(),
+                        token_id: U256::ZERO,
                         contract_address: Felt::ZERO,
                         name: "".to_string(),
                         symbol: "".to_string(),
@@ -168,10 +172,15 @@ impl WorldClient {
         &mut self,
         subscription_id: u64,
         contract_addresses: Vec<Felt>,
+        token_ids: Vec<U256>,
     ) -> Result<(), Error> {
         let contract_addresses =
             contract_addresses.into_iter().map(|c| c.to_bytes_be().to_vec()).collect();
-        let request = UpdateTokenSubscriptionRequest { subscription_id, contract_addresses };
+        let request = UpdateTokenSubscriptionRequest {
+            subscription_id,
+            contract_addresses,
+            token_ids: token_ids.into_iter().map(|id| id.to_be_bytes().to_vec()).collect(),
+        };
         self.inner
             .update_tokens_subscription(request)
             .await
@@ -183,6 +192,7 @@ impl WorldClient {
         &mut self,
         account_addresses: Vec<Felt>,
         contract_addresses: Vec<Felt>,
+        token_ids: Vec<U256>,
     ) -> Result<RetrieveTokenBalancesResponse, Error> {
         self.inner
             .retrieve_token_balances(RetrieveTokenBalancesRequest {
@@ -194,6 +204,7 @@ impl WorldClient {
                     .into_iter()
                     .map(|c| c.to_bytes_be().to_vec())
                     .collect(),
+                token_ids: token_ids.into_iter().map(|id| id.to_be_bytes().to_vec()).collect(),
             })
             .await
             .map_err(Error::Grpc)
@@ -372,6 +383,7 @@ impl WorldClient {
         &mut self,
         contract_addresses: Vec<Felt>,
         account_addresses: Vec<Felt>,
+        token_ids: Vec<U256>,
     ) -> Result<TokenBalanceStreaming, Error> {
         let request = RetrieveTokenBalancesRequest {
             contract_addresses: contract_addresses
@@ -382,6 +394,7 @@ impl WorldClient {
                 .into_iter()
                 .map(|a| a.to_bytes_be().to_vec())
                 .collect(),
+            token_ids: token_ids.into_iter().map(|id| id.to_be_bytes().to_vec()).collect(),
         };
         let stream = self
             .inner
@@ -398,7 +411,7 @@ impl WorldClient {
                         balance: U256::ZERO,
                         account_address: Felt::ZERO,
                         contract_address: Felt::ZERO,
-                        token_id: "".to_string(),
+                        token_id: U256::ZERO,
                     },
                 },
             )
@@ -411,6 +424,7 @@ impl WorldClient {
         subscription_id: u64,
         contract_addresses: Vec<Felt>,
         account_addresses: Vec<Felt>,
+        token_ids: Vec<U256>,
     ) -> Result<(), Error> {
         let request = UpdateTokenBalancesSubscriptionRequest {
             subscription_id,
@@ -422,6 +436,7 @@ impl WorldClient {
                 .into_iter()
                 .map(|a| a.to_bytes_be().to_vec())
                 .collect(),
+            token_ids: token_ids.into_iter().map(|id| id.to_be_bytes().to_vec()).collect(),
         };
         self.inner
             .update_token_balances_subscription(request)

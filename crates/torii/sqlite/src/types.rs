@@ -129,6 +129,7 @@ pub struct Event {
 pub struct OptimisticToken {
     pub id: String,
     pub contract_address: String,
+    pub token_id: String,
     pub name: String,
     pub symbol: String,
     pub decimals: u8,
@@ -140,6 +141,7 @@ pub struct OptimisticToken {
 pub struct Token {
     pub id: String,
     pub contract_address: String,
+    pub token_id: String,
     pub name: String,
     pub symbol: String,
     pub decimals: u8,

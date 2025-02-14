@@ -5,6 +5,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::task::{Context, Poll};
 
+use crypto_bigint::{Encoding, U256};
 use futures::{Stream, StreamExt};
 use rand::Rng;
 use starknet_crypto::Felt;
@@ -30,6 +31,9 @@ pub struct TokenBalanceSubscriber {
     /// Account addresses that the subscriber is interested in
     /// If empty, subscriber receives updates for all accounts
     pub account_addresses: HashSet<Felt>,
+    /// Token IDs that the subscriber is interested in
+    /// If empty, subscriber receives updates for all tokens
+    pub token_ids: HashSet<U256>,
     /// The channel to send the response back to the subscriber.
     pub sender: Sender<Result<SubscribeTokenBalancesResponse, tonic::Status>>,
 }
@@ -44,6 +48,7 @@ impl TokenBalanceManager {
         &self,
         contract_addresses: Vec<Felt>,
         account_addresses: Vec<Felt>,
+        token_ids: Vec<U256>,
     ) -> Result<Receiver<Result<SubscribeTokenBalancesResponse, tonic::Status>>, Error> {
         let subscription_id = rand::thread_rng().gen::<u64>();
         let (sender, receiver) = channel(1);
@@ -58,6 +63,7 @@ impl TokenBalanceManager {
             TokenBalanceSubscriber {
                 contract_addresses: contract_addresses.into_iter().collect(),
                 account_addresses: account_addresses.into_iter().collect(),
+                token_ids: token_ids.into_iter().collect(),
                 sender,
             },
         );
@@ -70,6 +76,7 @@ impl TokenBalanceManager {
         id: u64,
         contract_addresses: Vec<Felt>,
         account_addresses: Vec<Felt>,
+        token_ids: Vec<U256>,
     ) {
         let sender = {
             let subscribers = self.subscribers.read().await;
@@ -85,6 +92,7 @@ impl TokenBalanceManager {
             TokenBalanceSubscriber {
                 contract_addresses: contract_addresses.into_iter().collect(),
                 account_addresses: account_addresses.into_iter().collect(),
+                token_ids: token_ids.into_iter().collect(),
                 sender,
             },
         );
@@ -131,13 +139,14 @@ impl Service {
         balance: &OptimisticTokenBalance,
     ) -> Result<(), Error> {
         let mut closed_stream = Vec::new();
+        let contract_address =
+            Felt::from_str(&balance.contract_address).map_err(ParseError::FromStr)?;
+        let account_address =
+            Felt::from_str(&balance.account_address).map_err(ParseError::FromStr)?;
+        let token_id = U256::from_be_hex(balance.token_id.trim_start_matches("0x"));
+        let balance = U256::from_be_hex(balance.balance.trim_start_matches("0x"));
 
         for (idx, sub) in subs.subscribers.read().await.iter() {
-            let contract_address =
-                Felt::from_str(&balance.contract_address).map_err(ParseError::FromStr)?;
-            let account_address =
-                Felt::from_str(&balance.account_address).map_err(ParseError::FromStr)?;
-
             // Skip if contract address filter doesn't match
             if !sub.contract_addresses.is_empty()
                 && !sub.contract_addresses.contains(&contract_address)
@@ -152,13 +161,18 @@ impl Service {
                 continue;
             }
 
+            // Skip if token ID filter doesn't match
+            if !sub.token_ids.is_empty() && !sub.token_ids.contains(&token_id) {
+                continue;
+            }
+
             let resp = SubscribeTokenBalancesResponse {
                 subscription_id: *idx,
                 balance: Some(proto::types::TokenBalance {
-                    contract_address: balance.contract_address.clone(),
-                    account_address: balance.account_address.clone(),
-                    token_id: balance.token_id.clone(),
-                    balance: balance.balance.clone(),
+                    balance: balance.to_be_bytes().to_vec(),
+                    account_address: account_address.to_bytes_be().to_vec(),
+                    contract_address: contract_address.to_bytes_be().to_vec(),
+                    token_id: token_id.to_be_bytes().to_vec(),
                 }),
             };
 

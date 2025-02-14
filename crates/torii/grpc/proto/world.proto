@@ -81,6 +81,8 @@ message UpdateTokenBalancesSubscriptionRequest {
     repeated bytes contract_addresses = 2;
     // The list of account addresses to subscribe to
     repeated bytes account_addresses = 3;
+    // The list of token IDs to subscribe to
+    repeated bytes token_ids = 4;
 }
 
 // A response containing token balances
@@ -95,6 +97,8 @@ message SubscribeTokenBalancesResponse {
 message RetrieveTokensRequest {
     // The list of contract addresses to retrieve tokens for
     repeated bytes contract_addresses = 1;
+    // The list of token IDs to retrieve tokens for
+    repeated bytes token_ids = 2;
 }
 
 // A response containing tokens
@@ -116,6 +120,8 @@ message UpdateTokenSubscriptionRequest {
     uint64 subscription_id = 1;
     // The list of contract addresses to subscribe to
     repeated bytes contract_addresses = 2;
+    // The list of token IDs to subscribe to
+    repeated bytes token_ids = 3;
 }
 
 // A request to retrieve token balances
@@ -124,6 +130,8 @@ message RetrieveTokenBalancesRequest {
     repeated bytes account_addresses = 1;
     // The list of token contract addresses to retrieve balances for
     repeated bytes contract_addresses = 2;
+    // The list of token IDs to retrieve balances for
+    repeated bytes token_ids = 3;
 }
 
 // A response containing token balances

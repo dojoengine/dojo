@@ -162,19 +162,19 @@ enum ComparisonOperator {
 }
 
 message Token {
-    string token_id = 1;
-    string contract_address = 2;
+    bytes token_id = 1;
+    bytes contract_address = 2;
     string name = 3;
     string symbol = 4;
     uint32 decimals = 5;
-    string metadata = 6;
+    bytes metadata = 6;
 }
 
 message TokenBalance {
-    string balance = 1;
-    string account_address = 2;
-    string contract_address = 3;
-    string token_id = 4;
+    bytes balance = 1;
+    bytes account_address = 2;
+    bytes contract_address = 3;
+    bytes token_id = 4;
 }
 
 message OrderBy {
