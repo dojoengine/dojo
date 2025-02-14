@@ -9,6 +9,7 @@ use dojo_utils::{TransactionExt, TransactionWaiter, TxnConfig};
 use dojo_world::contracts::naming::{compute_bytearray_hash, compute_selector_from_names};
 use dojo_world::contracts::world::{WorldContract, WorldContractReader};
 use katana_runner::RunnerCtx;
+use num_traits::ToPrimitive;
 use scarb::compiler::Profile;
 use sozo_scarbext::WorkspaceExt;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
@@ -315,7 +316,7 @@ async fn test_load_from_remote_erc20(sequencer: &RunnerCtx) {
     .fetch_one(&pool)
     .await
     .unwrap();
-    let remote_balance = crypto_bigint::U256::from_be_hex(&remote_balance.trim_start_matches("0x"));
+    let remote_balance = crypto_bigint::U256::from_be_hex(remote_balance.trim_start_matches("0x"));
     assert_eq!(balance, remote_balance.into());
 }
 
@@ -634,6 +635,307 @@ async fn test_load_from_remote_update(sequencer: &RunnerCtx) {
     .unwrap();
 
     assert_eq!(name, "mimi");
+}
+
+#[tokio::test(flavor = "multi_thread")]
+#[katana_runner::test(accounts = 10, db_dir = copy_spawn_and_move_db().as_str())]
+async fn test_load_from_remote_erc721(sequencer: &RunnerCtx) {
+    let setup = CompilerTestSetup::from_examples("../../dojo/core", "../../../examples/");
+    let config = setup.build_test_config("spawn-and-move", Profile::DEV);
+
+    let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
+
+    let account = sequencer.account(0);
+    let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(sequencer.url())));
+
+    let world_local = ws.load_world_local().unwrap();
+    let world_address = world_local.deterministic_world_address().unwrap();
+
+    let world_reader = WorldContractReader::new(world_address, Arc::clone(&provider));
+
+    let badge_address = world_local
+        .get_contract_address_local(compute_selector_from_names("ns", "Badge"))
+        .unwrap();
+
+    let world = WorldContract::new(world_address, &account);
+
+    let res = world
+        .grant_writer(&compute_bytearray_hash("ns"), &ContractAddress(badge_address))
+        .send_with_cfg(&TxnConfig::init_wait())
+        .await
+        .unwrap();
+
+    TransactionWaiter::new(res.transaction_hash, &provider).await.unwrap();
+
+    // Mint multiple NFTs with different IDs
+    for token_id in 1..=5 {
+        let tx = &account
+            .execute_v1(vec![Call {
+                to: badge_address,
+                selector: get_selector_from_name("mint").unwrap(),
+                calldata: vec![Felt::from(token_id)],
+            }])
+            .send()
+            .await
+            .unwrap();
+
+        TransactionWaiter::new(tx.transaction_hash, &provider).await.unwrap();
+    }
+
+    // Transfer NFT ID 1 and 2 to another address
+    for token_id in 1..=2 {
+        let tx = &account
+            .execute_v1(vec![Call {
+                to: badge_address,
+                selector: get_selector_from_name("transfer").unwrap(),
+                calldata: vec![Felt::ZERO, Felt::from(token_id)],
+            }])
+            .send()
+            .await
+            .unwrap();
+
+        TransactionWaiter::new(tx.transaction_hash, &provider).await.unwrap();
+    }
+
+    let tempfile = NamedTempFile::new().unwrap();
+    let path = tempfile.path().to_string_lossy();
+    let options = SqliteConnectOptions::from_str(&path).unwrap().create_if_missing(true);
+    let pool = SqlitePoolOptions::new().connect_with(options).await.unwrap();
+    sqlx::migrate!("../migrations").run(&pool).await.unwrap();
+
+    let (shutdown_tx, _) = broadcast::channel(1);
+    let (mut executor, sender) =
+        Executor::new(pool.clone(), shutdown_tx.clone(), Arc::clone(&provider), 100).await.unwrap();
+    tokio::spawn(async move {
+        executor.run().await.unwrap();
+    });
+
+    let model_cache = Arc::new(ModelCache::new(pool.clone()));
+    let db = Sql::new(
+        pool.clone(),
+        sender.clone(),
+        &[Contract { address: badge_address, r#type: ContractType::ERC721 }],
+        model_cache.clone(),
+    )
+    .await
+    .unwrap();
+
+    let _ = bootstrap_engine(world_reader, db.clone(), provider).await.unwrap();
+
+    // Check if we indexed all tokens
+    let tokens = sqlx::query_as::<_, Token>(
+        format!("SELECT * from tokens where contract_address = '{:#x}' ORDER BY token_id", badge_address).as_str(),
+    )
+    .fetch_all(&pool)
+    .await
+    .unwrap();
+
+    assert_eq!(tokens.len(), 5, "Should have indexed 5 different tokens");
+    
+    for (i, token) in tokens.iter().enumerate() {
+        assert_eq!(token.name, "Badge");
+        assert_eq!(token.symbol, "BADGE");
+        assert_eq!(token.decimals, 0);
+        let token_id = crypto_bigint::U256::from_be_hex(token.token_id.trim_start_matches("0x"));
+        assert_eq!(U256::from(token_id), U256::from(i.to_u32().unwrap() + 1), "Token IDs should be sequential");
+    }
+
+    // Check balances for transferred tokens
+    for token_id in 1..=2 {
+        let balance = sqlx::query_scalar::<_, String>(
+            format!(
+                "SELECT balance FROM token_balances WHERE account_address = '{:#x}' AND \
+                 contract_address = '{:#x}' AND token_id = '{:#x}'",
+                Felt::ZERO,
+                badge_address,
+                Felt::from(token_id)
+            )
+            .as_str(),
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+
+        let balance = crypto_bigint::U256::from_be_hex(balance.trim_start_matches("0x"));
+        assert_eq!(U256::from(balance), U256::from(1u8), "Recipient should have balance of 1 for transferred tokens");
+    }
+
+    // Check balances for non-transferred tokens
+    for token_id in 3..=5 {
+        let balance = sqlx::query_scalar::<_, String>(
+            format!(
+                "SELECT balance FROM token_balances WHERE account_address = '{:#x}' AND \
+                 contract_address = '{:#x}' AND token_id = '{:#x}'",
+                account.address(),
+                badge_address,
+                Felt::from(token_id)
+            )
+            .as_str(),
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+
+        let balance = crypto_bigint::U256::from_be_hex(balance.trim_start_matches("0x"));
+        assert_eq!(U256::from(balance), U256::from(1u8), "Original owner should have balance of 1 for non-transferred tokens");
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+#[katana_runner::test(accounts = 10, db_dir = copy_spawn_and_move_db().as_str())]
+async fn test_load_from_remote_erc1155(sequencer: &RunnerCtx) {
+    let setup = CompilerTestSetup::from_examples("../../dojo/core", "../../../examples/");
+    let config = setup.build_test_config("spawn-and-move", Profile::DEV);
+
+    let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
+
+    let account = sequencer.account(0);
+    let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(sequencer.url())));
+
+    let world_local = ws.load_world_local().unwrap();
+    let world_address = world_local.deterministic_world_address().unwrap();
+
+    let world_reader = WorldContractReader::new(world_address, Arc::clone(&provider));
+
+    let rewards_address = world_local
+        .get_contract_address_local(compute_selector_from_names("ns", "Rewards"))
+        .unwrap();
+
+    let world = WorldContract::new(world_address, &account);
+
+    let res = world
+        .grant_writer(&compute_bytearray_hash("ns"), &ContractAddress(rewards_address))
+        .send_with_cfg(&TxnConfig::init_wait())
+        .await
+        .unwrap();
+
+    TransactionWaiter::new(res.transaction_hash, &provider).await.unwrap();
+
+    // Mint different amounts for different token IDs
+    let token_amounts: Vec<(u32, u32)> = vec![
+        (1, 100),  // Token ID 1, amount 100
+        (2, 500),  // Token ID 2, amount 500
+        (3, 1000), // Token ID 3, amount 1000
+    ];
+
+    for (token_id, amount) in &token_amounts {
+        let tx = &account
+            .execute_v1(vec![Call {
+                to: rewards_address,
+                selector: get_selector_from_name("mint").unwrap(),
+                calldata: vec![Felt::from(*token_id), Felt::from(*amount)],
+            }])
+            .send()
+            .await
+            .unwrap();
+
+        TransactionWaiter::new(tx.transaction_hash, &provider).await.unwrap();
+    }
+
+    // Transfer half of each token amount to another address
+    for (token_id, amount) in &token_amounts {
+        let tx = &account
+            .execute_v1(vec![Call {
+                to: rewards_address,
+                selector: get_selector_from_name("transfer").unwrap(),
+                calldata: vec![Felt::ZERO, Felt::from(*token_id), Felt::from(amount / 2)],
+            }])
+            .send()
+            .await
+            .unwrap();
+
+        TransactionWaiter::new(tx.transaction_hash, &provider).await.unwrap();
+    }
+
+    let tempfile = NamedTempFile::new().unwrap();
+    let path = tempfile.path().to_string_lossy();
+    let options = SqliteConnectOptions::from_str(&path).unwrap().create_if_missing(true);
+    let pool = SqlitePoolOptions::new().connect_with(options).await.unwrap();
+    sqlx::migrate!("../migrations").run(&pool).await.unwrap();
+
+    let (shutdown_tx, _) = broadcast::channel(1);
+    let (mut executor, sender) =
+        Executor::new(pool.clone(), shutdown_tx.clone(), Arc::clone(&provider), 100).await.unwrap();
+    tokio::spawn(async move {
+        executor.run().await.unwrap();
+    });
+
+    let model_cache = Arc::new(ModelCache::new(pool.clone()));
+    let db = Sql::new(
+        pool.clone(),
+        sender.clone(),
+        &[Contract { address: rewards_address, r#type: ContractType::ERC1155 }],
+        model_cache.clone(),
+    )
+    .await
+    .unwrap();
+
+    let _ = bootstrap_engine(world_reader, db.clone(), provider).await.unwrap();
+
+    // Check if we indexed all tokens
+    let tokens = sqlx::query_as::<_, Token>(
+        format!("SELECT * from tokens where contract_address = '{:#x}' ORDER BY token_id", rewards_address).as_str(),
+    )
+    .fetch_all(&pool)
+    .await
+    .unwrap();
+
+    assert_eq!(tokens.len(), token_amounts.len(), "Should have indexed all token types");
+    
+    for token in &tokens {
+        assert_eq!(token.name, "Rewards");
+        assert_eq!(token.symbol, "RWD");
+        assert_eq!(token.decimals, 0);
+    }
+
+    // Check balances for all tokens
+    for (token_id, original_amount) in token_amounts {
+        // Check recipient balance
+        let recipient_balance = sqlx::query_scalar::<_, String>(
+            format!(
+                "SELECT balance FROM token_balances WHERE account_address = '{:#x}' AND \
+                 contract_address = '{:#x}' AND token_id = '{:#x}'",
+                Felt::ZERO,
+                rewards_address,
+                Felt::from(token_id)
+            )
+            .as_str(),
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+
+        let recipient_balance = crypto_bigint::U256::from_be_hex(recipient_balance.trim_start_matches("0x"));
+        assert_eq!(
+            U256::from(recipient_balance), 
+            U256::from(original_amount / 2),
+            "Recipient should have half of original amount for token {}", 
+            token_id
+        );
+
+        // Check sender remaining balance
+        let sender_balance = sqlx::query_scalar::<_, String>(
+            format!(
+                "SELECT balance FROM token_balances WHERE account_address = '{:#x}' AND \
+                 contract_address = '{:#x}' AND token_id = '{:#x}'",
+                account.address(),
+                rewards_address,
+                Felt::from(token_id)
+            )
+            .as_str(),
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+
+        let sender_balance = crypto_bigint::U256::from_be_hex(sender_balance.trim_start_matches("0x"));
+        assert_eq!(
+            U256::from(sender_balance), 
+            U256::from(original_amount / 2),
+            "Sender should have half of original amount for token {}", 
+            token_id
+        );
+    }
 }
 
 /// Count the number of rows in a table.
