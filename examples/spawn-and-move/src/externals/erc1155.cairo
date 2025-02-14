@@ -68,9 +68,16 @@ mod ERC1155Token {
         }
 
         #[external(v0)]
-        fn transfer_from(ref self: ContractState, from: ContractAddress, to: ContractAddress, token_id: u256, value: u256) {
+        fn transfer_from(
+            ref self: ContractState,
+            from: ContractAddress,
+            to: ContractAddress,
+            token_id: u256,
+            value: u256
+        ) {
             self.erc1155.update(from, to, array![token_id].span(), array![value].span());
-            // safe transfer from does not support default account since they dont implement receiver.
+            // safe transfer from does not support default account since they dont implement
+        // receiver.
         }
 
         #[external(v0)]
