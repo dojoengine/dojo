@@ -7,8 +7,8 @@ use katana_primitives::class::{ClassHash, ContractClass};
 use katana_primitives::contract::{ContractAddress, Nonce};
 use katana_primitives::genesis::allocation::{DevGenesisAccount, GenesisAccountAlloc};
 use katana_primitives::genesis::constant::{
-    DEFAULT_ACCOUNT_CLASS, DEFAULT_LEGACY_ERC20_CLASS, DEFAULT_LEGACY_UDC_CLASS,
-    GENESIS_ACCOUNT_CLASS,
+    DEFAULT_ACCOUNT_CLASS, DEFAULT_ACCOUNT_CLASS_HASH, DEFAULT_LEGACY_ERC20_CLASS,
+    DEFAULT_LEGACY_UDC_CLASS, GENESIS_ACCOUNT_CLASS,
 };
 use katana_primitives::transaction::{
     DeclareTx, DeclareTxV0, DeclareTxV2, DeclareTxWithClass, DeployAccountTx, DeployAccountTxV1,
@@ -129,13 +129,12 @@ impl<'c> GenesisTransactionsBuilder<'c> {
         class_hash
     }
 
-    fn deploy(&self, class: ClassHash, ctor_args: Vec<Felt>) -> ContractAddress {
+    fn deploy(&self, class: ClassHash, ctor_args: Vec<Felt>, salt: Felt) -> ContractAddress {
         use std::iter;
 
         const DEPLOY_CONTRACT_SELECTOR: &str = "deploy_contract";
         let master_address = *self.master_address.get().expect("must be initialized first");
 
-        let salt = Felt::ZERO;
         let contract_address = get_contract_address(salt, class, &ctor_args, Felt::ZERO);
 
         let ctor_args_len = Felt::from_usize(ctor_args.len()).unwrap();
@@ -187,25 +186,19 @@ impl<'c> GenesisTransactionsBuilder<'c> {
         });
     }
 
-    fn deploy_predeployed_account(&self, account: &DevGenesisAccount) -> ContractAddress {
-        // The salt used in `GenesisAccount::new()` to compute the contract address
-        //
-        // The only reason we use this value is to make sure the generated account addresses are the
-        // same with the previous implementation.
-        const SALT: Felt = felt!("666");
-
+    fn deploy_predeployed_dev_account(&self, account: &DevGenesisAccount) -> ContractAddress {
         let signer = SigningKey::from_secret_scalar(account.private_key);
         let pubkey = signer.verifying_key().scalar();
 
         let class_hash = account.class_hash;
         let calldata = vec![pubkey];
-        let account_address = get_contract_address(SALT, class_hash, &calldata, Felt::ZERO);
+        let account_address = get_contract_address(account.salt, class_hash, &calldata, Felt::ZERO);
 
         let tx_hash = compute_deploy_account_v1_tx_hash(
             account_address,
             &calldata,
             class_hash,
-            SALT,
+            account.salt,
             0,
             self.chain_spec.id.into(),
             Felt::ZERO,
@@ -219,7 +212,7 @@ impl<'c> GenesisTransactionsBuilder<'c> {
             contract_address: account_address.into(),
             constructor_calldata: calldata,
             chain_id: self.chain_spec.id,
-            contract_address_salt: SALT,
+            contract_address_salt: account.salt,
             nonce: Felt::ZERO,
             max_fee: 0,
             class_hash,
@@ -229,6 +222,10 @@ impl<'c> GenesisTransactionsBuilder<'c> {
         self.transactions.borrow_mut().push(ExecutableTxWithHash { hash: tx_hash, transaction });
 
         account_address.into()
+    }
+
+    fn deploy_predeployed_account(&self, salt: Felt, public_key: Felt) -> ContractAddress {
+        self.deploy(DEFAULT_ACCOUNT_CLASS_HASH, vec![public_key], salt)
     }
 
     fn build_master_account(&self) {
@@ -272,7 +269,7 @@ impl<'c> GenesisTransactionsBuilder<'c> {
 
     fn build_core_contracts(&mut self) {
         let udc_class_hash = self.legacy_declare(DEFAULT_LEGACY_UDC_CLASS.clone());
-        self.deploy(udc_class_hash, Vec::new());
+        self.deploy(udc_class_hash, Vec::new(), Felt::ZERO);
 
         let master_address = *self.master_address.get().expect("must be initialized first");
 
@@ -286,7 +283,7 @@ impl<'c> GenesisTransactionsBuilder<'c> {
         ];
 
         let erc20_class_hash = self.legacy_declare(DEFAULT_LEGACY_ERC20_CLASS.clone());
-        let fee_token_address = self.deploy(erc20_class_hash, ctor_args);
+        let fee_token_address = self.deploy(erc20_class_hash, ctor_args, Felt::ZERO);
 
         self.fee_token.set(fee_token_address).expect("must be uninitialized");
     }
@@ -303,12 +300,19 @@ impl<'c> GenesisTransactionsBuilder<'c> {
                 )
             }
 
-            if let GenesisAccountAlloc::DevAccount(account) = account {
-                let account_address = self.deploy_predeployed_account(account);
-                debug_assert_eq!(&account_address, expected_addr);
-                if let Some(amount) = account.balance {
-                    self.transfer_balance(account_address, amount);
+            let address = match account {
+                GenesisAccountAlloc::DevAccount(account) => {
+                    self.deploy_predeployed_dev_account(account)
                 }
+                GenesisAccountAlloc::Account(account) => {
+                    self.deploy_predeployed_account(account.salt, account.public_key)
+                }
+            };
+
+            debug_assert_eq!(&address, expected_addr);
+
+            if let Some(amount) = account.balance() {
+                self.transfer_balance(address, amount)
             }
         }
     }

@@ -13,7 +13,7 @@ use starknet::signers::SigningKey;
 use super::constant::DEFAULT_ACCOUNT_CLASS_HASH;
 use crate::class::ClassHash;
 use crate::contract::{ContractAddress, StorageKey, StorageValue};
-use crate::Felt;
+use crate::{felt, Felt};
 
 /// Represents a contract allocation in the genesis block.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -156,21 +156,20 @@ pub struct DevGenesisAccount {
 
 impl DevGenesisAccount {
     /// Creates a new dev account with the given `private_key` and `class_hash`.
-    pub fn new(private_key: Felt, class_hash: ClassHash) -> (ContractAddress, Self) {
+    pub fn new(private_key: Felt, class_hash: ClassHash) -> Self {
         let public_key = public_key_from_private_key(private_key);
-        let (addr, inner) = GenesisAccount::new(public_key, class_hash);
-        (addr, Self { private_key, inner })
+        Self { private_key, inner: GenesisAccount::new(public_key, class_hash) }
     }
 
     /// Creates a new dev account with the allocated `balance`.
-    pub fn new_with_balance(
-        private_key: Felt,
-        class_hash: ClassHash,
-        balance: U256,
-    ) -> (ContractAddress, Self) {
-        let (addr, mut account) = Self::new(private_key, class_hash);
+    pub fn new_with_balance(private_key: Felt, class_hash: ClassHash, balance: U256) -> Self {
+        let mut account = Self::new(private_key, class_hash);
         account.balance = Some(balance);
-        (addr, account)
+        account
+    }
+
+    pub fn address(&self) -> ContractAddress {
+        self.inner.address()
     }
 }
 
@@ -192,23 +191,26 @@ pub struct GenesisAccount {
     /// The initial storage values of the account.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub storage: Option<BTreeMap<StorageKey, StorageValue>>,
+    /// The salt that will be used to deploy this account.
+    pub salt: Felt,
 }
 
 impl GenesisAccount {
-    pub fn new(public_key: Felt, class_hash: ClassHash) -> (ContractAddress, Self) {
-        let address =
-            get_contract_address(Felt::from(666u32), class_hash, &[public_key], Felt::ZERO);
+    // Backward compatible reason
+    pub const DEFAULT_SALT: Felt = felt!("666");
 
-        (ContractAddress::from(address), Self { public_key, class_hash, ..Default::default() })
+    pub fn new(public_key: Felt, class_hash: ClassHash) -> Self {
+        Self::new_with_salt(public_key, class_hash, Self::DEFAULT_SALT)
     }
 
-    pub fn new_with_balance(
-        public_key: Felt,
-        class_hash: ClassHash,
-        balance: U256,
-    ) -> (ContractAddress, Self) {
-        let (address, account) = Self::new(public_key, class_hash);
-        (address, Self { balance: Some(balance), ..account })
+    pub fn new_with_salt(public_key: Felt, class_hash: ClassHash, salt: Felt) -> Self {
+        Self { public_key, class_hash, salt, balance: None, nonce: None, storage: None }
+    }
+
+    pub fn new_with_balance(public_key: Felt, class_hash: ClassHash, balance: U256) -> Self {
+        let mut account = Self::new(public_key, class_hash);
+        account.balance = Some(balance);
+        account
     }
 
     pub fn new_with_salt_and_balance(
@@ -216,14 +218,15 @@ impl GenesisAccount {
         class_hash: ClassHash,
         salt: Felt,
         balance: U256,
-    ) -> (ContractAddress, Self) {
-        let (address, account) = Self::new_inner(public_key, class_hash, salt);
-        (address, Self { balance: Some(balance), ..account })
+    ) -> Self {
+        let mut account = Self::new_with_salt(public_key, class_hash, salt);
+        account.balance = Some(balance);
+        account
     }
 
-    fn new_inner(public_key: Felt, class_hash: ClassHash, salt: Felt) -> (ContractAddress, Self) {
-        let address = get_contract_address(salt, class_hash, &[public_key], Felt::ZERO);
-        (ContractAddress::from(address), Self { public_key, class_hash, ..Default::default() })
+    /// Returns the address of this account.
+    pub fn address(&self) -> ContractAddress {
+        get_contract_address(self.salt, self.class_hash, &[self.public_key], Felt::ZERO).into()
     }
 }
 
@@ -277,7 +280,11 @@ impl DevAllocationsGenerator {
                 seed = private_key_bytes;
 
                 let private_key = Felt::from_bytes_be(&private_key_bytes);
-                DevGenesisAccount::new_with_balance(private_key, self.class_hash, self.balance)
+                let account =
+                    DevGenesisAccount::new_with_balance(private_key, self.class_hash, self.balance);
+                let address = account.address();
+
+                (address, account)
             })
             .collect()
     }
