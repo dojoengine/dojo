@@ -73,7 +73,7 @@ mod ERC1155Token {
             from: ContractAddress,
             to: ContractAddress,
             token_id: u256,
-            value: u256
+            value: u256,
         ) {
             self.erc1155.update(from, to, array![token_id].span(), array![value].span());
             // safe transfer from does not support default account since they dont implement
