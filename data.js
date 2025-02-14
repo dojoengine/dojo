@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1739507056889,
+  "lastUpdate": 1739507088800,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -53923,6 +53923,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 17504469,
             "range": "± 573507",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "574719390eb6b85691aa1e5b5d1076205062c816",
+          "message": "refactor(torii-grpc): filter by token id & refactor token protos (#3016)\n\n* refactor(torii-grpc): actual token id & less error prone types\n\n* grpc proto types refctor\n\n* fmt\n\n* feat: token ids filtering for subscriptions and fetches\n\n* fmt\n\n* git reset lock file\n\n* clippy ref",
+          "timestamp": "2025-02-13T22:06:12-06:00",
+          "tree_id": "837d6b3f101e29a3b97e3311cff4335011a106ff",
+          "url": "https://github.com/dojoengine/dojo/commit/574719390eb6b85691aa1e5b5d1076205062c816"
+        },
+        "date": 1739507086006,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2491209,
+            "range": "± 77422",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 407378,
+            "range": "± 24422",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2857671185,
+            "range": "± 213527670",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 17413331,
+            "range": "± 741147",
             "unit": "ns/iter"
           }
         ]
