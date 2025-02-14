@@ -859,7 +859,13 @@ async fn test_load_from_remote_erc1155(sequencer: &RunnerCtx) {
             .execute_v1(vec![Call {
                 to: rewards_address,
                 selector: get_selector_from_name("transfer").unwrap(),
-                calldata: vec![Felt::ONE, Felt::ZERO, Felt::from(*token_id), Felt::ZERO, Felt::from(amount / 2)],
+                calldata: vec![
+                    Felt::ONE,
+                    Felt::ZERO,
+                    Felt::from(*token_id),
+                    Felt::ZERO,
+                    Felt::from(amount / 2),
+                ],
             }])
             .send()
             .await
