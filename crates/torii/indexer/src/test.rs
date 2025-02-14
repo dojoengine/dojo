@@ -223,7 +223,11 @@ async fn test_load_from_remote_erc20(sequencer: &RunnerCtx) {
     let world_reader = WorldContractReader::new(world_address, Arc::clone(&provider));
 
     let actions_address = world_local
-        .external_contracts.iter().find(|c| c.instance_name == "WoodToken").unwrap().address;
+        .external_contracts
+        .iter()
+        .find(|c| c.instance_name == "WoodToken")
+        .unwrap()
+        .address;
 
     let world = WorldContract::new(world_address, &account);
 
@@ -812,7 +816,11 @@ async fn test_load_from_remote_erc1155(sequencer: &RunnerCtx) {
     let world_reader = WorldContractReader::new(world_address, Arc::clone(&provider));
 
     let rewards_address = world_local
-        .external_contracts.iter().find(|c| c.instance_name == "Rewards").unwrap().address;
+        .external_contracts
+        .iter()
+        .find(|c| c.instance_name == "Rewards")
+        .unwrap()
+        .address;
 
     let world = WorldContract::new(world_address, &account);
 
