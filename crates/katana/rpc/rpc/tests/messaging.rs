@@ -6,7 +6,6 @@ use alloy::primitives::{Uint, U256};
 use alloy::providers::ProviderBuilder;
 use alloy::sol;
 use anyhow::Result;
-use cainome::cairo_serde::EthAddress;
 use cainome::rs::abigen;
 use dojo_test_utils::sequencer::{get_default_test_config, TestSequencer};
 use dojo_utils::TransactionWaiter;
@@ -14,15 +13,14 @@ use katana_messaging::MessagingConfig;
 use katana_node::config::sequencing::SequencingConfig;
 use katana_primitives::felt;
 use katana_primitives::utils::transaction::{
-    compute_l1_handler_tx_hash, compute_l1_to_l2_message_hash, compute_l2_to_l1_message_hash,
+    compute_l1_handler_tx_hash, compute_l1_to_l2_message_hash,
 };
 use katana_rpc_types::receipt::ReceiptBlock;
 use rand::Rng;
 use starknet::accounts::{Account, ConnectedAccount};
 use starknet::contract::ContractFactory;
 use starknet::core::types::{
-    BlockId, BlockTag, ContractClass, Felt, Hash256, MsgFromL1, Transaction,
-    TransactionFinalityStatus, TransactionReceipt,
+    BlockId, BlockTag, ContractClass, Felt, Hash256, MsgFromL1, Transaction, TransactionReceipt,
 };
 use starknet::core::utils::get_contract_address;
 use starknet::macros::selector;
