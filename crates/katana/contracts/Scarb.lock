@@ -9,6 +9,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "katana_appchain_fee_token"
+version = "0.1.0"
+dependencies = [
+ "openzeppelin",
+]
+
+[[package]]
 name = "katana_messaging"
 version = "0.1.0"
 

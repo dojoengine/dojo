@@ -7977,6 +7977,7 @@ version = "1.2.0"
 dependencies = [
  "alloy-primitives",
  "anyhow",
+ "cainome 0.4.11",
  "dirs 6.0.0",
  "katana-executor",
  "katana-primitives",
