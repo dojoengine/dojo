@@ -43,13 +43,7 @@ mod tests {
 
     mod helpers {
         mod helpers;
-        pub use helpers::{
-            DOJO_NSH, SimpleEvent, e_SimpleEvent, Foo, m_Foo, foo_invalid_name, foo_setter,
-            test_contract, test_contract_with_dojo_init_args, Sword, Case, Character, Abilities,
-            Stats, Weapon, Ibar, IbarDispatcher, IbarDispatcherTrait, bar, deploy_world,
-            deploy_world_and_bar, deploy_world_and_foo, drop_all_events, IFooSetter,
-            IFooSetterDispatcher, IFooSetterDispatcherTrait, NotCopiable,
-        };
+        pub use helpers::*;
 
         mod event;
         pub use event::{
