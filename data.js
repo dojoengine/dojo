@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1739586753077,
+  "lastUpdate": 1739720928864,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -54205,6 +54205,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 18043870,
             "range": "± 476479",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "48be01411487658cbf185a99960a7304389c882c",
+          "message": "feat(katana): conversion function from/to `starknet-rs` types (#3037)",
+          "timestamp": "2025-02-16T23:31:51+08:00",
+          "tree_id": "a2d803a8770b9b9dc8672682b4a7a1b59dab28c3",
+          "url": "https://github.com/dojoengine/dojo/commit/48be01411487658cbf185a99960a7304389c882c"
+        },
+        "date": 1739720926240,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 45288019261,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
