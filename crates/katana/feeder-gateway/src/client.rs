@@ -290,10 +290,4 @@ mod tests {
 
         assert_eq!(url.query(), Some("blockNumber=pending"));
     }
-
-    // #[tokio::test]
-    // async fn get_now_6500() {
-    //     let client = SequencerGateway::sn_mainnet();
-    //     client.get_block(BlockIdOrTag::Number(6500)).await.unwrap();
-    // }
 }
