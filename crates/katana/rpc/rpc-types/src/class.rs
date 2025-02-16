@@ -174,6 +174,36 @@ fn decompress_legacy_program(compressed_data: &[u8]) -> Result<LegacyProgram, Co
 // mainly for utility purposes, these conversions should be avoided from being used in a program
 // hot path.
 
+impl TryFrom<starknet::core::types::ContractClass> for RpcContractClass {
+    type Error = ConversionError;
+
+    fn try_from(value: starknet::core::types::ContractClass) -> Result<Self, Self::Error> {
+        match value {
+            starknet::core::types::ContractClass::Legacy(class) => {
+                Ok(Self::Legacy(RpcLegacyContractClass::try_from(class)?))
+            }
+            starknet::core::types::ContractClass::Sierra(class) => {
+                Ok(Self::Class(RpcSierraContractClass::try_from(class)?))
+            }
+        }
+    }
+}
+
+impl TryFrom<RpcContractClass> for starknet::core::types::ContractClass {
+    type Error = ConversionError;
+
+    fn try_from(value: RpcContractClass) -> Result<Self, Self::Error> {
+        match value {
+            RpcContractClass::Legacy(class) => {
+                Ok(Self::Legacy(CompressedLegacyContractClass::try_from(class)?))
+            }
+            RpcContractClass::Class(class) => {
+                Ok(Self::Sierra(FlattenedSierraClass::try_from(class)?))
+            }
+        }
+    }
+}
+
 impl TryFrom<FlattenedSierraClass> for RpcSierraContractClass {
     type Error = ConversionError;
 
@@ -213,6 +243,7 @@ impl TryFrom<RpcLegacyContractClass> for CompressedLegacyContractClass {
         Ok(class)
     }
 }
+
 #[cfg(test)]
 mod tests {
     use katana_primitives::class::{ContractClass, LegacyContractClass, SierraContractClass};
@@ -267,13 +298,11 @@ mod tests {
 
         let starknet_rs_class = serde_json::from_str::<SierraClass>(json).unwrap();
         let starknet_rs_hash = starknet_rs_class.class_hash().unwrap();
-        let rpc = starknet_rs_class.flatten().unwrap();
-
-        let json = serde_json::to_string(&rpc).unwrap();
+        let starknet_rpc = starknet_rs_class.flatten().unwrap();
 
         // -- katana
 
-        let rpc = serde_json::from_str::<RpcSierraContractClass>(&json).unwrap();
+        let rpc = RpcSierraContractClass::try_from(starknet_rpc).unwrap();
         let class = SierraContractClass::try_from(rpc).unwrap();
         let hash = ContractClass::Class(class.clone()).class_hash().unwrap();
 
