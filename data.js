@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1739722267906,
+  "lastUpdate": 1739722335248,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -54313,6 +54313,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 43651977952,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "dfe963290831bfb1f574d2a8ce1e0ae163b72f41",
+          "message": "feat(katana-messaging): remove sending messages to settlement layer (#3035)\n\n* remove sending messages to settlement layer\r\n\r\n* remove test for L2->L1 to be used with real SNOS data\r\n\r\n* fix fmt",
+          "timestamp": "2025-02-16T09:54:38-06:00",
+          "tree_id": "393fd748940a643451b10ca3b2644a0e02accded",
+          "url": "https://github.com/dojoengine/dojo/commit/dfe963290831bfb1f574d2a8ce1e0ae163b72f41"
+        },
+        "date": 1739722332442,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2597936,
+            "range": "± 55316",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 397360,
+            "range": "± 5491",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2646705712,
+            "range": "± 214285184",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 16873549,
+            "range": "± 302623",
             "unit": "ns/iter"
           }
         ]
