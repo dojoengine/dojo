@@ -12,7 +12,7 @@ use super::serde_utils::{
     deserialize_optional_u128, deserialize_optional_u64, deserialize_u128, deserialize_u64,
 };
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Deserialize)]
 pub struct ConfirmedTransaction {
     #[serde(rename = "transaction_hash")]
     pub hash: TxHash,
@@ -20,7 +20,7 @@ pub struct ConfirmedTransaction {
     pub tx: TypedTransaction,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Deserialize)]
 #[serde(tag = "type", rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum TypedTransaction {
     Deploy(DeployTx),
@@ -34,7 +34,7 @@ pub enum TypedTransaction {
 // different from the one in the `katana_primitives` crate. And changing the serde implementation in
 // the `katana_primitives` crate would break the database format. So, we have to define the type
 // again. But see if we can remove it once we're okay with breaking the database format.
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum DataAvailabilityMode {
     L1,
     L2,
@@ -58,7 +58,7 @@ impl<'de> Deserialize<'de> for DataAvailabilityMode {
 
 // Same reason as `DataAvailabilityMode` above, this struct is also defined because the serde
 // implementation of its primitive counterpart is different.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Deserialize)]
 pub struct ResourceBounds {
     #[serde(deserialize_with = "deserialize_u64")]
     pub max_amount: u64,
@@ -66,14 +66,14 @@ pub struct ResourceBounds {
     pub max_price_per_unit: u128,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub struct ResourceBoundsMapping {
     pub l1_gas: ResourceBounds,
     pub l2_gas: ResourceBounds,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Deserialize)]
 pub struct RawL1HandlerTx {
     /// The L1 to L2 message nonce.
     pub nonce: Option<Nonce>,
@@ -87,7 +87,7 @@ pub struct RawL1HandlerTx {
     pub entry_point_selector: Felt,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Deserialize)]
 pub struct RawInvokeTx {
     // Alias for v0 transaction
     #[serde(alias = "contract_address")]
@@ -118,7 +118,7 @@ pub struct RawInvokeTx {
     pub version: Felt,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Deserialize)]
 pub struct RawDeclareTx {
     pub sender_address: ContractAddress,
     pub nonce: Felt,
@@ -144,7 +144,7 @@ pub struct RawDeclareTx {
     pub version: Felt,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Deserialize)]
 pub struct RawDeployAccountTx {
     pub nonce: Nonce,
     pub signature: Vec<Felt>,

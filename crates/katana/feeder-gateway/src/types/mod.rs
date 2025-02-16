@@ -23,7 +23,7 @@ pub use receipt::*;
 pub use transaction::*;
 
 /// The contract class type returns by `/get_class_by_hash` endpoint.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Deserialize)]
 #[serde(untagged)]
 pub enum ContractClass {
     Class(RpcSierraContractClass),
@@ -31,7 +31,7 @@ pub enum ContractClass {
 }
 
 /// The state update type returns by `/get_state_update` endpoint.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Deserialize)]
 pub struct StateUpdate {
     pub block_hash: Option<Felt>,
     pub new_root: Option<Felt>,
@@ -39,7 +39,7 @@ pub struct StateUpdate {
     pub state_diff: StateDiff,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Deserialize)]
 pub struct StateDiff {
     pub storage_diffs: BTreeMap<ContractAddress, Vec<StorageDiff>>,
     pub deployed_contracts: Vec<DeployedContract>,
@@ -49,26 +49,26 @@ pub struct StateDiff {
     pub replaced_classes: Vec<DeployedContract>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Deserialize)]
 pub struct StorageDiff {
     pub key: StorageKey,
     pub value: StorageValue,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Deserialize)]
 pub struct DeployedContract {
     pub address: ContractAddress,
     pub class_hash: Felt,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Deserialize)]
 pub struct DeclaredContract {
     pub class_hash: ClassHash,
     pub compiled_class_hash: CompiledClassHash,
 }
 
 /// The state update type returns by `/get_state_update` endpoint, with `includeBlock=true`.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Deserialize)]
 pub struct StateUpdateWithBlock {
     pub state_update: StateUpdate,
     pub block: Block,
@@ -78,7 +78,7 @@ pub struct StateUpdateWithBlock {
 // the serde impl is different. So for now, lets just use starknet-rs types. The type isn't
 // that complex anyway so the conversion is simple. But if we can use the primitive types, we
 // should.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Deserialize)]
 pub struct Block {
     #[serde(default)]
     pub block_hash: Option<BlockHash>,
