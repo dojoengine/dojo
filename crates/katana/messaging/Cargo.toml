@@ -9,7 +9,6 @@ version.workspace = true
 katana-chain-spec.workspace = true
 katana-pool.workspace = true
 katana-primitives = { workspace = true, features = [ "arbitrary" ] }
-katana-provider = { workspace = true, default-features = false }
 
 anyhow.workspace = true
 async-trait.workspace = true

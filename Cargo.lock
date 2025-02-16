@@ -8178,7 +8178,6 @@ dependencies = [
  "katana-chain-spec",
  "katana-pool",
  "katana-primitives",
- "katana-provider",
  "reqwest 0.11.27",
  "serde",
  "serde_json",

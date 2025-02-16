@@ -18,9 +18,9 @@ use katana_primitives::utils::transaction::{
 };
 use katana_primitives::Felt;
 use starknet::core::types::EthAddress;
-use tracing::{debug, trace, warn};
+use tracing::{debug, trace};
 
-use super::{Error, MessagingConfig, Messenger, MessengerResult, LOG_TARGET};
+use super::{MessagingConfig, Messenger, MessengerResult, LOG_TARGET};
 
 sol! {
     #[sol(rpc, rename_all = "snakecase")]
@@ -144,43 +144,6 @@ impl Messenger for EthereumMessaging {
         });
 
         Ok((to_block, l1_handler_txs))
-    }
-
-    async fn send_messages(
-        &self,
-        messages: &[MessageToL1],
-    ) -> MessengerResult<Vec<Self::MessageHash>> {
-        if messages.is_empty() {
-            return Ok(vec![]);
-        }
-
-        let starknet_messaging =
-            StarknetMessagingLocal::new(self.messaging_contract_address, self.provider.clone());
-
-        let hashes = parse_messages(messages);
-
-        debug!("Sending transaction on L1 to register messages...");
-
-        let receipt = starknet_messaging
-            .addMessageHashesFromL2(hashes.clone())
-            .send()
-            .await
-            .map_err(|_| Error::SendError)?
-            .get_receipt()
-            .await
-            .map_err(|_| {
-                warn!(target: LOG_TARGET, "No receipt for L1 transaction.");
-                Error::SendError
-            })?;
-
-        trace!(
-            target: LOG_TARGET,
-            "Transaction sent on L1 to register {} messages: {:#x}",
-            hashes.len(),
-            receipt.transaction_hash,
-        );
-
-        Ok(hashes)
     }
 }
 
