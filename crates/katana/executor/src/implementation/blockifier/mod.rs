@@ -44,12 +44,17 @@ pub struct BlockifierFactory {
     cfg: CfgEnv,
     flags: ExecutionFlags,
     limits: BlockLimits,
+    max_call_gas: u64,
 }
 
 impl BlockifierFactory {
     /// Create a new factory with the given configuration and simulation flags.
     pub fn new(cfg: CfgEnv, flags: ExecutionFlags, limits: BlockLimits) -> Self {
-        Self { cfg, flags, limits }
+        Self { cfg, flags, limits, max_call_gas: 1_000_000_000 }
+    }
+
+    pub fn set_max_call_gas(&mut self, max_call_gas: u64) {
+        self.max_call_gas = max_call_gas;
     }
 }
 
@@ -72,7 +77,14 @@ impl ExecutorFactory for BlockifierFactory {
         let cfg_env = self.cfg.clone();
         let flags = self.flags.clone();
         let limits = self.limits.clone();
-        Box::new(StarknetVMProcessor::new(Box::new(state), block_env, cfg_env, flags, limits))
+        Box::new(StarknetVMProcessor::new(
+            Box::new(state),
+            block_env,
+            cfg_env,
+            flags,
+            limits,
+            self.max_call_gas,
+        ))
     }
 
     fn cfg(&self) -> &CfgEnv {
@@ -93,6 +105,7 @@ pub struct StarknetVMProcessor<'a> {
     simulation_flags: ExecutionFlags,
     stats: ExecutionStats,
     bouncer: Bouncer,
+    max_call_gas: u64,
 }
 
 impl<'a> StarknetVMProcessor<'a> {
@@ -102,6 +115,7 @@ impl<'a> StarknetVMProcessor<'a> {
         cfg_env: CfgEnv,
         simulation_flags: ExecutionFlags,
         limits: BlockLimits,
+        max_call_gas: u64,
     ) -> Self {
         let transactions = Vec::new();
         let block_context = utils::block_context_from_envs(&block_env, &cfg_env);
@@ -118,6 +132,7 @@ impl<'a> StarknetVMProcessor<'a> {
             simulation_flags,
             stats: Default::default(),
             bouncer,
+            max_call_gas,
         }
     }
 
@@ -329,7 +344,7 @@ impl ExecutorExt for StarknetVMProcessor<'_> {
         let block_context = &self.block_context;
         let mut state = self.state.inner.lock();
         let state = MutRefState::new(&mut state.cached_state);
-        let retdata = call::execute_call(call, state, block_context, 1_000_000_000)?;
+        let retdata = call::execute_call(call, state, block_context, self.max_call_gas)?;
         Ok(retdata)
     }
 }

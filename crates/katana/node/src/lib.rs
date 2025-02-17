@@ -182,11 +182,16 @@ pub async fn build(mut config: Config) -> Result<Node> {
         .with_account_validation(config.dev.account_validation)
         .with_fee(config.dev.fee);
 
-    let executor_factory = Arc::new(BlockifierFactory::new(
-        cfg_env,
-        execution_flags,
-        config.sequencing.block_limits(),
-    ));
+    let executor_factory = {
+        let mut factory =
+            BlockifierFactory::new(cfg_env, execution_flags, config.sequencing.block_limits());
+
+        if let Some(max_call_gas) = config.rpc.max_call_gas {
+            factory.set_max_call_gas(max_call_gas);
+        }
+
+        Arc::new(factory)
+    };
 
     // --- build backend
 

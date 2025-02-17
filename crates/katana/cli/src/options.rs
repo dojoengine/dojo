@@ -18,7 +18,7 @@ use katana_node::config::metrics::{DEFAULT_METRICS_ADDR, DEFAULT_METRICS_PORT};
 use katana_node::config::rpc::{RpcModulesList, DEFAULT_RPC_MAX_PROOF_KEYS};
 #[cfg(feature = "server")]
 use katana_node::config::rpc::{
-    DEFAULT_RPC_ADDR, DEFAULT_RPC_MAX_EVENT_PAGE_SIZE, DEFAULT_RPC_PORT,
+    DEFAULT_RPC_ADDR, DEFAULT_RPC_MAX_CALL_GAS, DEFAULT_RPC_MAX_EVENT_PAGE_SIZE, DEFAULT_RPC_PORT,
 };
 use katana_primitives::block::BlockHashOrNumber;
 use katana_primitives::chain::ChainId;
@@ -128,6 +128,12 @@ pub struct ServerOptions {
     #[arg(default_value_t = DEFAULT_RPC_MAX_PROOF_KEYS)]
     #[serde(default = "default_proof_keys")]
     pub max_proof_keys: u64,
+
+    /// Maximum gas for the `starknet_call` RPC method.
+    #[arg(long = "rpc.max-call-gas", value_name = "GAS")]
+    #[arg(default_value_t = DEFAULT_RPC_MAX_CALL_GAS)]
+    #[serde(default = "default_max_call_gas")]
+    pub max_call_gas: u64,
 }
 
 #[cfg(feature = "server")]
@@ -143,6 +149,7 @@ impl Default for ServerOptions {
             max_connections: None,
             max_request_body_size: None,
             max_response_body_size: None,
+            max_call_gas: DEFAULT_RPC_MAX_CALL_GAS,
         }
     }
 }
@@ -409,4 +416,9 @@ fn default_metrics_addr() -> IpAddr {
 #[cfg(feature = "server")]
 fn default_metrics_port() -> u16 {
     DEFAULT_METRICS_PORT
+}
+
+#[cfg(feature = "server")]
+fn default_max_call_gas() -> u64 {
+    DEFAULT_RPC_MAX_CALL_GAS
 }
