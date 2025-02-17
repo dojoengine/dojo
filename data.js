@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1739806085331,
+  "lastUpdate": 1739806176710,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -54595,6 +54595,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 18346746,
             "range": "± 589159",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e724b0a31297eb399ee50b9cfd512012405a71fa",
+          "message": "fix(torii-grpc): handle case token id for erc20 (#3041)\n\n* fix(torii-grpc): handle case token id for erc20\n\n* fix retrieve token balance token id\n\n* fmt",
+          "timestamp": "2025-02-17T09:12:50-06:00",
+          "tree_id": "45dcae46f3c6b01b977c7e6feb9ae09d172e6d73",
+          "url": "https://github.com/dojoengine/dojo/commit/e724b0a31297eb399ee50b9cfd512012405a71fa"
+        },
+        "date": 1739806173411,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 46959306218,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
