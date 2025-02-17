@@ -130,9 +130,7 @@ impl From<TokenBalance> for proto::types::TokenBalance {
                 .to_bytes_be()
                 .to_vec(),
             token_id: if id.len() == 2 {
-                U256::from_be_hex(id[1].trim_start_matches("0x"))
-                    .to_be_bytes()
-                    .to_vec()
+                U256::from_be_hex(id[1].trim_start_matches("0x")).to_be_bytes().to_vec()
             } else {
                 U256::ZERO.to_be_bytes().to_vec()
             },
