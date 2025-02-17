@@ -45,3 +45,10 @@ where
         self.trie.commit(block.into())
     }
 }
+
+#[derive(Debug, Default)]
+pub struct ContractLeaf {
+    pub class_hash: Option<Felt>,
+    pub storage_root: Option<Felt>,
+    pub nonce: Option<Felt>,
+}

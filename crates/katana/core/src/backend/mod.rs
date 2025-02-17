@@ -1,3 +1,4 @@
+use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
 
 use anyhow::{anyhow, Context};
@@ -8,6 +9,7 @@ use katana_primitives::block::{
     BlockHash, BlockNumber, FinalityStatus, Header, PartialHeader, SealedBlock,
     SealedBlockWithStatus,
 };
+use katana_primitives::class::{ClassHash, CompiledClassHash};
 use katana_primitives::da::L1DataAvailabilityMode;
 use katana_primitives::env::BlockEnv;
 use katana_primitives::receipt::{Event, Receipt, ReceiptWithTxHash};
@@ -19,7 +21,11 @@ use katana_primitives::{address, ContractAddress, Felt};
 use katana_provider::providers::in_memory::state::EmptyStateProvider;
 use katana_provider::traits::block::{BlockHashProvider, BlockWriter};
 use katana_provider::traits::trie::TrieWriter;
-use katana_trie::compute_merkle_root;
+use katana_trie::bonsai::databases::HashMapDb;
+use katana_trie::{
+    compute_contract_state_hash, compute_merkle_root, ClassesTrie, CommitId, ContractLeaf,
+    ContractsTrie, StoragesTrie,
+};
 use parking_lot::RwLock;
 use rayon::prelude::*;
 use starknet::macros::short_string;
@@ -109,7 +115,9 @@ impl<EF: ExecutorFactory> Backend<EF> {
             l1_data_gas_prices: block_env.l1_data_gas_prices.clone(),
         };
 
-        let block = self.commit_block(
+        let provider = self.blockchain.provider();
+        let block = commit_block(
+            provider,
             partial_header,
             transactions,
             &receipts,
@@ -138,35 +146,6 @@ impl<EF: ExecutorFactory> Backend<EF> {
         self.blockchain
             .provider()
             .insert_block_with_states_and_receipts(block, states, receipts, traces)?;
-        Ok(())
-    }
-
-    // TODO: create a dedicated struct for this contract.
-    // https://docs.starknet.io/architecture-and-concepts/network-architecture/starknet-state/#address_0x1
-    fn update_block_hash_registry_contract(
-        &self,
-        state_updates: &mut StateUpdates,
-        block_number: BlockNumber,
-    ) -> Result<(), BlockProductionError> {
-        const STORED_BLOCK_HASH_BUFFER: u64 = 10;
-
-        if block_number >= STORED_BLOCK_HASH_BUFFER {
-            let block_number = block_number - STORED_BLOCK_HASH_BUFFER;
-            let block_hash = self.blockchain.provider().block_hash_by_num(block_number)?;
-
-            // When in forked mode, we might not have the older block hash in the database. This
-            // could be the case where the `block_number - STORED_BLOCK_HASH_BUFFER` is
-            // earlier than the forked block, which right now, Katana doesn't
-            // yet have the ability to fetch older blocks on the database level. So, we default to
-            // `BlockHash::ZERO` in this case.
-            //
-            // TODO: Fix quick!
-            let block_hash = block_hash.unwrap_or(BlockHash::ZERO);
-
-            let storages = state_updates.storage_updates.entry(address!("0x1")).or_default();
-            storages.insert(block_number.into(), block_hash);
-        }
-
         Ok(())
     }
 
@@ -201,28 +180,6 @@ impl<EF: ExecutorFactory> Backend<EF> {
         block_env: &BlockEnv,
     ) -> Result<MinedBlockOutcome, BlockProductionError> {
         self.do_mine_block(block_env, Default::default())
-    }
-
-    fn commit_block(
-        &self,
-        header: PartialHeader,
-        transactions: Vec<TxWithHash>,
-        receipts: &[ReceiptWithTxHash],
-        state_updates: &mut StateUpdates,
-    ) -> Result<SealedBlock, BlockProductionError> {
-        // Update special contract address 0x1
-        self.update_block_hash_registry_contract(state_updates, header.number)?;
-
-        let block = UncommittedBlock::new(
-            header,
-            transactions,
-            receipts,
-            state_updates,
-            &self.blockchain.provider(),
-        )
-        .commit();
-
-        Ok(block)
     }
 
     fn init_dev_genesis(
@@ -305,24 +262,37 @@ impl<EF: ExecutorFactory> Backend<EF> {
             }
         }
 
-        let block =
-            self.commit_block(header, transactions, &receipts, &mut output.states.state_updates)?;
-
         // Check whether the genesis block has been initialized or not.
-        let local_hash = provider.block_hash_by_num(block.header.number)?;
+        if let Some(local_hash) = provider.block_hash_by_num(header.number)? {
+            // commit the block but compute the trie using volatile storage so that it won't
+            // overwrite the existing trie this is very hacky and we should find for a
+            // much elegant solution.
+            let block = commit_genesis_block(
+                GenesisTrieWriter,
+                header.clone(),
+                transactions.clone(),
+                &receipts,
+                &mut output.states.state_updates,
+            )?;
 
-        if let Some(local_hash) = local_hash {
-            let expected_genesis_hash = block.hash;
-
-            if expected_genesis_hash != local_hash {
+            let provided_genesis_hash = block.hash;
+            if provided_genesis_hash != local_hash {
                 return Err(anyhow!(
-                    "Genesis block hash mismatch: expected {expected_genesis_hash:#x}, got \
-                     {local_hash:#x}",
+                    "Genesis block hash mismatch: local hash {local_hash:#x} is different than \
+                     the provided genesis hash {provided_genesis_hash:#x}",
                 ));
             }
 
             info!("Genesis has already been initialized");
         } else {
+            let block = commit_genesis_block(
+                self.blockchain.provider(),
+                header,
+                transactions,
+                &receipts,
+                &mut output.states.state_updates,
+            )?;
+
             let block = SealedBlockWithStatus { block, status: FinalityStatus::AcceptedOnL2 };
 
             // TODO: maybe should change the arguments for insert_block_with_states_and_receipts to
@@ -519,5 +489,137 @@ impl<'a, P: TrieWriter> UncommittedBlock<'a, P> {
             contract_trie_root,
             class_trie_root,
         ])
+    }
+}
+
+// TODO: create a dedicated struct for this contract.
+// https://docs.starknet.io/architecture-and-concepts/network-architecture/starknet-state/#address_0x1
+fn update_block_hash_registry_contract(
+    provider: impl BlockHashProvider,
+    state_updates: &mut StateUpdates,
+    block_number: BlockNumber,
+) -> Result<(), BlockProductionError> {
+    const STORED_BLOCK_HASH_BUFFER: u64 = 10;
+
+    if block_number >= STORED_BLOCK_HASH_BUFFER {
+        let block_number = block_number - STORED_BLOCK_HASH_BUFFER;
+        let block_hash = provider.block_hash_by_num(block_number)?;
+
+        // When in forked mode, we might not have the older block hash in the database. This
+        // could be the case where the `block_number - STORED_BLOCK_HASH_BUFFER` is
+        // earlier than the forked block, which right now, Katana doesn't
+        // yet have the ability to fetch older blocks on the database level. So, we default to
+        // `BlockHash::ZERO` in this case.
+        //
+        // TODO: Fix quick!
+        let block_hash = block_hash.unwrap_or(BlockHash::ZERO);
+
+        let storages = state_updates.storage_updates.entry(address!("0x1")).or_default();
+        storages.insert(block_number.into(), block_hash);
+    }
+
+    Ok(())
+}
+
+fn commit_block<P>(
+    provider: P,
+    header: PartialHeader,
+    transactions: Vec<TxWithHash>,
+    receipts: &[ReceiptWithTxHash],
+    state_updates: &mut StateUpdates,
+) -> Result<SealedBlock, BlockProductionError>
+where
+    P: BlockHashProvider + TrieWriter,
+{
+    // Update special contract address 0x1
+    update_block_hash_registry_contract(&provider, state_updates, header.number)?;
+    Ok(UncommittedBlock::new(header, transactions, receipts, state_updates, &provider).commit())
+}
+
+fn commit_genesis_block(
+    provider: impl TrieWriter,
+    header: PartialHeader,
+    transactions: Vec<TxWithHash>,
+    receipts: &[ReceiptWithTxHash],
+    state_updates: &mut StateUpdates,
+) -> Result<SealedBlock, BlockProductionError> {
+    Ok(UncommittedBlock::new(header, transactions, receipts, state_updates, &provider).commit())
+}
+
+#[derive(Debug)]
+struct GenesisTrieWriter;
+
+impl TrieWriter for GenesisTrieWriter {
+    fn trie_insert_contract_updates(
+        &self,
+        block_number: BlockNumber,
+        state_updates: &StateUpdates,
+    ) -> katana_provider::ProviderResult<Felt> {
+        let mut contract_trie_db = ContractsTrie::new(HashMapDb::<CommitId>::default());
+        let mut contract_leafs: HashMap<ContractAddress, ContractLeaf> = HashMap::new();
+
+        let leaf_hashes = {
+            for (address, nonce) in &state_updates.nonce_updates {
+                contract_leafs.entry(*address).or_default().nonce = Some(*nonce);
+            }
+
+            for (address, class_hash) in &state_updates.deployed_contracts {
+                contract_leafs.entry(*address).or_default().class_hash = Some(*class_hash);
+            }
+
+            for (address, class_hash) in &state_updates.replaced_classes {
+                contract_leafs.entry(*address).or_default().class_hash = Some(*class_hash);
+            }
+
+            for (address, storage_entries) in &state_updates.storage_updates {
+                let mut storage_trie_db =
+                    StoragesTrie::new(HashMapDb::<CommitId>::default(), *address);
+
+                for (key, value) in storage_entries {
+                    storage_trie_db.insert(*key, *value);
+                }
+
+                // Then we commit them
+                storage_trie_db.commit(block_number);
+                let storage_root = storage_trie_db.root();
+
+                // insert the contract address in the contract_leafs to put the storage root
+                // later
+                contract_leafs.entry(*address).or_default().storage_root = Some(storage_root);
+            }
+
+            contract_leafs
+                .into_iter()
+                .map(|(address, leaf)| {
+                    let class_hash = leaf.class_hash.unwrap();
+                    let nonce = leaf.nonce.unwrap_or_default();
+                    let storage_root = leaf.storage_root.unwrap_or_default();
+                    let leaf_hash = compute_contract_state_hash(&class_hash, &storage_root, &nonce);
+                    (address, leaf_hash)
+                })
+                .collect::<Vec<_>>()
+        };
+
+        for (k, v) in leaf_hashes {
+            contract_trie_db.insert(k, v);
+        }
+
+        contract_trie_db.commit(block_number);
+        Ok(contract_trie_db.root())
+    }
+
+    fn trie_insert_declared_classes(
+        &self,
+        block_number: BlockNumber,
+        updates: &BTreeMap<ClassHash, CompiledClassHash>,
+    ) -> katana_provider::ProviderResult<Felt> {
+        let mut trie = ClassesTrie::new(HashMapDb::default());
+
+        for (class_hash, compiled_hash) in updates {
+            trie.insert(*class_hash, *compiled_hash);
+        }
+
+        trie.commit(block_number);
+        Ok(trie.root())
     }
 }
