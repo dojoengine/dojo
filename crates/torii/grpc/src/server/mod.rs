@@ -844,11 +844,8 @@ impl DojoWorld {
         }
 
         let mut query = sqlx::query_as(&query);
-        for address in &contract_addresses {
-            query = query.bind(format!("{:#x}", address));
-        }
-        for token_id in &token_ids {
-            query = query.bind(format!("{:#x}", token_id));
+        for value in bind_values {
+            query = query.bind(value);
         }
 
         let tokens: Vec<Token> =
