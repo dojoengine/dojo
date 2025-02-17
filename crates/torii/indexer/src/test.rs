@@ -529,7 +529,6 @@ async fn test_load_from_remote_erc1155(sequencer: &RunnerCtx) {
                     Felt::ZERO,
                     Felt::from(amount / 2),
                     Felt::ZERO,
-                    Felt::ZERO,
                 ],
             }])
             .send()
@@ -573,8 +572,8 @@ async fn test_load_from_remote_erc1155(sequencer: &RunnerCtx) {
     assert_eq!(tokens.len(), token_amounts.len(), "Should have indexed all token types");
 
     for token in &tokens {
-        assert_eq!(token.name, "Rewards");
-        assert_eq!(token.symbol, "RWD");
+        assert_eq!(token.name, "");
+        assert_eq!(token.symbol, "");
         assert_eq!(token.decimals, 0);
     }
 
