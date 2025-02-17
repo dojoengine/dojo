@@ -47,3 +47,4 @@ scarb.workspace = true
 sozo-scarbext.workspace = true
 tempfile.workspace = true
 sqlx.workspace = true
+mockall = "0.11"

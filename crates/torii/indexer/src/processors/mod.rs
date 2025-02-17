@@ -26,6 +26,9 @@ pub mod store_update_record;
 pub mod upgrade_event;
 pub mod upgrade_model;
 
+#[cfg(test)]
+mod tests;
+
 #[derive(Clone, Debug, Default)]
 pub struct EventProcessorConfig {
     pub historical_events: HashSet<String>,
