@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1739805884795,
+  "lastUpdate": 1739805914554,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -54469,6 +54469,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 47871794480,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e2052402d104d362bd5403435f5e57eded018197",
+          "message": "feat(torii-indexer): add tests for erc tokens  (#3033)\n\n* feat(torii-indexer): add tests for erc20\n\n* fmt\n\n* erc721 and 1155 tests\n\n* fmt\n\n* fix address\n\n* fmt\n\n* fixz\n\n* fmt\n\n* fixing up test\n\n* fix: erc20\n\n* fix: grpc\n\n* fix: erc721 test\n\n* fix erc1155 test\n\n* f\n\n* artifacts rm\n\n* fmt\n\n* actions\n\n* fmt\n\n* f\n\n* f\n\n* fix shitty fmt for the 20th time\n\n* kms\n\n* clippy\n\n* erc1155 test",
+          "timestamp": "2025-02-17T09:07:36-06:00",
+          "tree_id": "bfb84d21d731efee7eb00bb3fe91c9c5d18adb80",
+          "url": "https://github.com/dojoengine/dojo/commit/e2052402d104d362bd5403435f5e57eded018197"
+        },
+        "date": 1739805911697,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2599749,
+            "range": "± 49701",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 390642,
+            "range": "± 4816",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2590329405,
+            "range": "± 224298224",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 16676005,
+            "range": "± 948475",
             "unit": "ns/iter"
           }
         ]
