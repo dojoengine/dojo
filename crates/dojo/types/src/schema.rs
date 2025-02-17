@@ -303,11 +303,7 @@ impl Ty {
                     let diff_elements: Vec<Ty> =
                         t1.iter().zip(t2.iter()).filter_map(|(ty1, ty2)| ty1.diff(ty2)).collect();
 
-                    if diff_elements.is_empty() {
-                        None
-                    } else {
-                        Some(Ty::Tuple(diff_elements))
-                    }
+                    if diff_elements.is_empty() { None } else { Some(Ty::Tuple(diff_elements)) }
                 }
             }
             (Ty::Array(a1), Ty::Array(a2)) => {
