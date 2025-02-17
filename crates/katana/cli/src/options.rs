@@ -143,7 +143,7 @@ impl Default for ServerOptions {
             http_addr: DEFAULT_RPC_ADDR,
             http_port: DEFAULT_RPC_PORT,
             http_cors_origins: Vec::new(),
-            http_modules: Some(RpcModulesList::default()),
+            http_modules: None,
             max_event_page_size: DEFAULT_RPC_MAX_EVENT_PAGE_SIZE,
             max_proof_keys: DEFAULT_RPC_MAX_PROOF_KEYS,
             max_connections: None,
