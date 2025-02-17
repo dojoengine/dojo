@@ -93,6 +93,7 @@ pub struct StarknetVMProcessor<'a> {
     simulation_flags: ExecutionFlags,
     stats: ExecutionStats,
     bouncer: Bouncer,
+    max_call_gas: u64,
 }
 
 impl<'a> StarknetVMProcessor<'a> {
@@ -118,6 +119,7 @@ impl<'a> StarknetVMProcessor<'a> {
             simulation_flags,
             stats: Default::default(),
             bouncer,
+            max_call_gas: cfg_env.max_call_gas,
         }
     }
 
@@ -329,7 +331,7 @@ impl ExecutorExt for StarknetVMProcessor<'_> {
         let block_context = &self.block_context;
         let mut state = self.state.inner.lock();
         let state = MutRefState::new(&mut state.cached_state);
-        let retdata = call::execute_call(call, state, block_context, 1_000_000_000)?;
+        let retdata = call::execute_call(call, state, block_context, self.max_call_gas)?;
         Ok(retdata)
     }
 }

@@ -30,6 +30,8 @@ pub struct CfgEnv {
     pub validate_max_n_steps: u32,
     /// The maximum recursion depth allowed.
     pub max_recursion_depth: usize,
+    /// The maximum gas allowed for the `starknet_call` RPC method.
+    pub max_call_gas: u64,
 }
 
 /// The contract addresses of the tokens used for the fees.

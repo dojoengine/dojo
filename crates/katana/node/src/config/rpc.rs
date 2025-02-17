@@ -11,7 +11,8 @@ pub const DEFAULT_RPC_PORT: u16 = 5050;
 pub const DEFAULT_RPC_MAX_EVENT_PAGE_SIZE: u64 = 1024;
 /// Default maximmum number of keys for the `starknet_getStorageProof` RPC method.
 pub const DEFAULT_RPC_MAX_PROOF_KEYS: u64 = 100;
-
+/// Default maximum gas for the `starknet_call` RPC method.
+pub const DEFAULT_RPC_MAX_CALL_GAS: u64 = 1_000_000_000;
 /// List of RPC modules supported by Katana.
 #[derive(
     Debug,
@@ -45,6 +46,7 @@ pub struct RpcConfig {
     pub max_response_body_size: Option<u32>,
     pub max_proof_keys: Option<u64>,
     pub max_event_page_size: Option<u64>,
+    pub max_call_gas: Option<u64>,
 }
 
 impl RpcConfig {
@@ -66,6 +68,7 @@ impl Default for RpcConfig {
             apis: RpcModulesList::default(),
             max_event_page_size: Some(DEFAULT_RPC_MAX_EVENT_PAGE_SIZE),
             max_proof_keys: Some(DEFAULT_RPC_MAX_PROOF_KEYS),
+            max_call_gas: Some(DEFAULT_RPC_MAX_CALL_GAS),
         }
     }
 }
