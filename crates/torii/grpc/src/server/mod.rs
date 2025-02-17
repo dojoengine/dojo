@@ -118,6 +118,8 @@ impl From<Token> for proto::types::Token {
 
 impl From<TokenBalance> for proto::types::TokenBalance {
     fn from(value: TokenBalance) -> Self {
+        let id = value.token_id.split(':').collect::<Vec<&str>>();
+
         Self {
             balance: U256::from_be_hex(value.balance.trim_start_matches("0x"))
                 .to_be_bytes()
@@ -127,9 +129,11 @@ impl From<TokenBalance> for proto::types::TokenBalance {
                 .unwrap()
                 .to_bytes_be()
                 .to_vec(),
-            token_id: U256::from_be_hex(value.token_id.trim_start_matches("0x"))
-                .to_be_bytes()
-                .to_vec(),
+            token_id: if id.len() == 2 {
+                U256::from_be_hex(id[1].trim_start_matches("0x")).to_be_bytes().to_vec()
+            } else {
+                U256::ZERO.to_be_bytes().to_vec()
+            },
         }
     }
 }
@@ -873,7 +877,8 @@ impl DojoWorld {
 
         if !token_ids.is_empty() {
             let placeholders = vec!["?"; token_ids.len()].join(", ");
-            conditions.push(format!("token_id IN ({})", placeholders));
+            conditions
+                .push(format!("SUBSTR(token_id, INSTR(token_id, ':') + 1) IN ({})", placeholders));
             bind_values.extend(token_ids.iter().map(|id| u256_to_sql_string(&(*id).into())));
         }
 

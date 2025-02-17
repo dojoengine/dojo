@@ -143,7 +143,12 @@ impl Service {
             Felt::from_str(&balance.contract_address).map_err(ParseError::FromStr)?;
         let account_address =
             Felt::from_str(&balance.account_address).map_err(ParseError::FromStr)?;
-        let token_id = U256::from_be_hex(balance.token_id.trim_start_matches("0x"));
+        let id: Vec<&str> = balance.token_id.split(':').collect();
+        let token_id: Option<U256> = if id.len() == 2 {
+            Some(U256::from_be_hex(id[1].trim_start_matches("0x")))
+        } else {
+            None
+        };
         let balance = U256::from_be_hex(balance.balance.trim_start_matches("0x"));
 
         for (idx, sub) in subs.subscribers.read().await.iter() {
@@ -162,8 +167,10 @@ impl Service {
             }
 
             // Skip if token ID filter doesn't match
-            if !sub.token_ids.is_empty() && !sub.token_ids.contains(&token_id) {
-                continue;
+            if let Some(token_id) = token_id {
+                if !sub.token_ids.is_empty() && !sub.token_ids.contains(&token_id) {
+                    continue;
+                }
             }
 
             let resp = SubscribeTokenBalancesResponse {
@@ -172,7 +179,7 @@ impl Service {
                     balance: balance.to_be_bytes().to_vec(),
                     account_address: account_address.to_bytes_be().to_vec(),
                     contract_address: contract_address.to_bytes_be().to_vec(),
-                    token_id: token_id.to_be_bytes().to_vec(),
+                    token_id: token_id.map(|id| id.to_be_bytes().to_vec()).unwrap_or_default(),
                 }),
             };
 
