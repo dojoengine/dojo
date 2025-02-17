@@ -418,3 +418,8 @@ fn default_metrics_addr() -> IpAddr {
 fn default_metrics_port() -> u16 {
     DEFAULT_METRICS_PORT
 }
+
+#[cfg(feature = "server")]
+fn default_max_call_gas() -> u64 {
+    DEFAULT_RPC_MAX_CALL_GAS
+}

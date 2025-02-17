@@ -13,6 +13,7 @@ pub const DEFAULT_RPC_MAX_EVENT_PAGE_SIZE: u64 = 1024;
 pub const DEFAULT_RPC_MAX_PROOF_KEYS: u64 = 100;
 /// Default maximum gas for the `starknet_call` RPC method.
 pub const DEFAULT_RPC_MAX_CALL_GAS: u64 = 1_000_000_000;
+
 /// List of RPC modules supported by Katana.
 #[derive(
     Debug,
