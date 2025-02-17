@@ -2,7 +2,7 @@ use std::any::type_name;
 use std::str::FromStr;
 
 use cainome::cairo_serde::{ByteArray, CairoSerde};
-use crypto_bigint::{Encoding, U256};
+use crypto_bigint::U256;
 use indexmap::IndexMap;
 use itertools::Itertools;
 use num_traits::ToPrimitive;
@@ -303,7 +303,11 @@ impl Ty {
                     let diff_elements: Vec<Ty> =
                         t1.iter().zip(t2.iter()).filter_map(|(ty1, ty2)| ty1.diff(ty2)).collect();
 
-                    if diff_elements.is_empty() { None } else { Some(Ty::Tuple(diff_elements)) }
+                    if diff_elements.is_empty() {
+                        None
+                    } else {
+                        Some(Ty::Tuple(diff_elements))
+                    }
                 }
             }
             (Ty::Array(a1), Ty::Array(a2)) => {
