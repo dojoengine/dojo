@@ -876,10 +876,8 @@ impl DojoWorld {
 
         if !token_ids.is_empty() {
             let placeholders = vec!["?"; token_ids.len()].join(", ");
-            conditions.push(format!(
-                "SUBSTR(token_id, INSTR(token_id, ':') + 1) IN ({})",
-                placeholders
-            ));
+            conditions
+                .push(format!("SUBSTR(token_id, INSTR(token_id, ':') + 1) IN ({})", placeholders));
             bind_values.extend(token_ids.iter().map(|id| u256_to_sql_string(&(*id).into())));
         }
 
