@@ -71,7 +71,7 @@ impl TryFrom<RpcContractClass> for ContractClass {
 
 // -- SIERRA CLASS
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub struct RpcSierraContractClass {
     pub sierra_program: Vec<Felt>,
     pub contract_class_version: String,

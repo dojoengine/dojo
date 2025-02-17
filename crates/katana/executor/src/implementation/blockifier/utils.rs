@@ -681,7 +681,7 @@ fn to_execution_resources(
     katana_primitives::trace::ExecutionResources {
         n_steps: resources.n_steps,
         n_memory_holes: resources.n_memory_holes,
-        builtin_instance_counter: resources.builtin_instance_counter,
+        builtin_instance_counter: resources.builtin_instance_counter.into(),
     }
 }
 
