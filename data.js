@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1739806236080,
+  "lastUpdate": 1739812968357,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -54673,6 +54673,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 16863385,
             "range": "± 289976",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "040c1d6d0cb90b7bbc879cbc71607c13e990cd03",
+          "message": "feat(katana): configurable max gas for rpc call (#3043)\n\n* feat(katana): configurable max gas for rpc call\r\n\r\n* remove from `CfgEnv`\r\n\r\n* update\r\n\r\n---------\r\n\r\nCo-authored-by: Ammar Arif <evergreenkary@gmail.com>",
+          "timestamp": "2025-02-18T01:05:48+08:00",
+          "tree_id": "5769da65ef28c5553fc7e8e4d0b08805d3d7d0dd",
+          "url": "https://github.com/dojoengine/dojo/commit/040c1d6d0cb90b7bbc879cbc71607c13e990cd03"
+        },
+        "date": 1739812965885,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 44213085459,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
