@@ -349,15 +349,7 @@ impl Ty {
                 Primitive::U32(Some(v)) => Ok(json!(*v)),
                 Primitive::U64(Some(v)) => Ok(json!(v.to_string())),
                 Primitive::U128(Some(v)) => Ok(json!(v.to_string())),
-                Primitive::U256(Some(v)) => {
-                    let bytes = v.to_be_bytes();
-                    let high = u128::from_be_bytes(bytes[..16].try_into().unwrap());
-                    let low = u128::from_be_bytes(bytes[16..].try_into().unwrap());
-                    Ok(json!({
-                        "high": high.to_string(),
-                        "low": low.to_string()
-                    }))
-                }
+                Primitive::U256(Some(v)) => Ok(json!(format!("0x{:x}", v))),
                 Primitive::Felt252(Some(v)) => Ok(json!(format!("{:#x}", v))),
                 Primitive::ClassHash(Some(v)) => Ok(json!(format!("{:#x}", v))),
                 Primitive::ContractAddress(Some(v)) => Ok(json!(format!("{:#x}", v))),
@@ -449,18 +441,8 @@ impl Ty {
                     }
                 }
                 Primitive::U256(v) => {
-                    if let JsonValue::Object(obj) = value {
-                        if let (Some(JsonValue::String(high)), Some(JsonValue::String(low))) =
-                            (obj.get("high"), obj.get("low"))
-                        {
-                            if let (Ok(high), Ok(low)) = (high.parse::<u128>(), low.parse::<u128>())
-                            {
-                                let mut bytes = [0u8; 32];
-                                bytes[..16].copy_from_slice(&high.to_be_bytes());
-                                bytes[16..].copy_from_slice(&low.to_be_bytes());
-                                *v = Some(U256::from_be_slice(&bytes));
-                            }
-                        }
+                    if let JsonValue::String(s) = value {
+                        *v = Some(U256::from_be_hex(s.trim_start_matches("0x")));
                     }
                 }
                 Primitive::Felt252(v) => {
