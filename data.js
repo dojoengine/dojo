@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1739917880360,
+  "lastUpdate": 1739917963437,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -55171,6 +55171,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 47435522222,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e9f7e18f97ec380a31ed85d94a8cb30c83dfdc2c",
+          "message": "fix(katana): ensure `block_cairo_steps_limit` is exposed in `NodeArgsConfig` (#3049)\n\n* ensure block_cairo_steps_limit is exposed in NodeArgsConfig\r\n\r\n* Update crates/katana/cli/src/file.rs\r\n\r\nCo-authored-by: Ammar Arif <evergreenkary@gmail.com>\r\n\r\n---------\r\n\r\nCo-authored-by: Ammar Arif <evergreenkary@gmail.com>",
+          "timestamp": "2025-02-18T16:14:32-06:00",
+          "tree_id": "d02d529fb839177cb80f24150da38623b65fb76b",
+          "url": "https://github.com/dojoengine/dojo/commit/e9f7e18f97ec380a31ed85d94a8cb30c83dfdc2c"
+        },
+        "date": 1739917960461,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2415163,
+            "range": "± 48034",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 399384,
+            "range": "± 8039",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2807893779,
+            "range": "± 249524889",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 17560278,
+            "range": "± 664710",
             "unit": "ns/iter"
           }
         ]
