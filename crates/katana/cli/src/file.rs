@@ -12,6 +12,7 @@ use crate::NodeArgs;
 pub struct NodeArgsConfig {
     pub no_mining: Option<bool>,
     pub block_time: Option<u64>,
+    pub block_cairo_steps_limit: Option<u64>,
     pub db_dir: Option<PathBuf>,
     pub messaging: Option<MessagingConfig>,
     pub logging: Option<LoggingOptions>,
@@ -42,7 +43,16 @@ impl TryFrom<NodeArgs> for NodeArgsConfig {
 
         let mut node_config = NodeArgsConfig {
             no_mining: if args.no_mining { Some(true) } else { None },
-            block_time: args.block_time,
+            block_time: if args.block_time.is_some() {
+                Some(args.block_time.unwrap())
+            } else {
+                None
+            },
+            block_cairo_steps_limit: if args.block_cairo_steps_limit.is_some() {
+                Some(args.block_cairo_steps_limit.unwrap())
+            } else {
+                None
+            },
             db_dir: args.db_dir,
             messaging: args.messaging,
             ..Default::default()
