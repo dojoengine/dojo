@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1739845581753,
+  "lastUpdate": 1739845632023,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -54781,6 +54781,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 47521584199,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "10654681fcb5fce4f822e22539f8c76ce73a2109",
+          "message": "fix(katana): compute genesis state root in a separate provider (#3045)",
+          "timestamp": "2025-02-18T10:09:30+08:00",
+          "tree_id": "65f718f83bcef4c05a7adc67d1c3723a25f40329",
+          "url": "https://github.com/dojoengine/dojo/commit/10654681fcb5fce4f822e22539f8c76ce73a2109"
+        },
+        "date": 1739845628965,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2546696,
+            "range": "± 146096",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 397084,
+            "range": "± 14436",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2719150712,
+            "range": "± 240556761",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 16774054,
+            "range": "± 53420",
             "unit": "ns/iter"
           }
         ]
