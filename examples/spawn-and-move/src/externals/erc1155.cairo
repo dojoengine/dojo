@@ -7,16 +7,20 @@ mod ERC1155Token {
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc1155::{ERC1155Component, ERC1155HooksEmptyImpl};
     use starknet::ContractAddress;
+    use crate::externals::components::erc4906::ERC4906Component;
 
     component!(path: ERC1155Component, storage: erc1155, event: ERC1155Event);
     component!(path: SRC5Component, storage: src5, event: SRC5Event);
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
+    component!(path: ERC4906Component, storage: erc4906, event: ERC4906Event);
 
     // External
     #[abi(embed_v0)]
     impl ERC1155MixinImpl = ERC1155Component::ERC1155MixinImpl<ContractState>;
     #[abi(embed_v0)]
     impl OwnableMixinImpl = OwnableComponent::OwnableMixinImpl<ContractState>;
+    #[abi(embed_v0)]
+    impl ERC4906MixinImpl = ERC4906Component::ERC4906Implementation<ContractState>;
 
     // Internal
     impl ERC1155InternalImpl = ERC1155Component::InternalImpl<ContractState>;
@@ -30,6 +34,8 @@ mod ERC1155Token {
         src5: SRC5Component::Storage,
         #[substorage(v0)]
         ownable: OwnableComponent::Storage,
+        #[substorage(v0)]
+        erc4906: ERC4906Component::Storage,
     }
 
     #[event]
@@ -41,6 +47,8 @@ mod ERC1155Token {
         SRC5Event: SRC5Component::Event,
         #[flat]
         OwnableEvent: OwnableComponent::Event,
+        #[flat]
+        ERC4906Event: ERC4906Component::Event,
     }
 
     #[constructor]
@@ -92,6 +100,45 @@ mod ERC1155Token {
                 );
             // Seems to not be supported by default dojo account.
         // self.erc1155.batch_mint_with_acceptance_check(account, token_ids, values, data);
+        }
+
+        #[external(v0)]
+        fn update_token_metadata(ref self: ContractState, token_id: u256) {
+            // Only owner can update metadata
+            self.ownable.assert_only_owner();
+            
+            // Emit metadata update event
+            self.erc4906.emit_metadata_update(token_id);
+        }
+
+        #[external(v0)]
+        fn update_batch_token_metadata(
+            ref self: ContractState,
+            from_token_id: u256,
+            to_token_id: u256
+        ) {
+            // Only owner can update metadata
+            self.ownable.assert_only_owner();
+            
+            // Emit batch metadata update event
+            self.erc4906.emit_batch_metadata_update(from_token_id, to_token_id);
+        }
+
+        // Optional: Batch update specific token IDs
+        #[external(v0)]
+        fn update_tokens_metadata(ref self: ContractState, token_ids: Span<u256>) {
+            // Only owner can update metadata
+            self.ownable.assert_only_owner();
+            
+            // Emit metadata update event for each token
+            let mut i: usize = 0;
+            loop {
+                if i >= token_ids.len() {
+                    break;
+                }
+                self.erc4906.emit_metadata_update(*token_ids.at(i));
+                i += 1;
+            }
         }
     }
 }
