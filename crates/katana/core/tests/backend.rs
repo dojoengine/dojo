@@ -77,6 +77,19 @@ fn can_initialize_genesis(#[case] chain: ChainSpec) {
     backend.init_genesis().expect("failed to initialize genesis");
 }
 
+#[rstest]
+#[case::dev(ChainSpec::Dev(dev_chain_spec()))]
+#[case::rollup(ChainSpec::Rollup(rollup_chain_spec()))]
+fn can_reinitialize_genesis(#[case] chain: ChainSpec) {
+    let db = DbProvider::new_ephemeral();
+
+    let backend = backend_with_db(&chain, db.clone());
+    backend.init_genesis().expect("failed to initialize genesis");
+
+    let backend = backend_with_db(&chain, db);
+    backend.init_genesis().unwrap();
+}
+
 #[test]
 fn reinitialize_with_different_rollup_chain_spec() {
     let db = DbProvider::new_ephemeral();
