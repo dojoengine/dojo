@@ -143,13 +143,51 @@ impl Default for ServerOptions {
             http_addr: DEFAULT_RPC_ADDR,
             http_port: DEFAULT_RPC_PORT,
             http_cors_origins: Vec::new(),
-            http_modules: Some(RpcModulesList::default()),
+            http_modules: None,
             max_event_page_size: DEFAULT_RPC_MAX_EVENT_PAGE_SIZE,
             max_proof_keys: DEFAULT_RPC_MAX_PROOF_KEYS,
             max_connections: None,
             max_request_body_size: None,
             max_response_body_size: None,
             max_call_gas: DEFAULT_RPC_MAX_CALL_GAS,
+        }
+    }
+}
+
+#[cfg(feature = "server")]
+impl ServerOptions {
+    pub fn merge(&mut self, other: Option<&Self>) {
+        if let Some(other) = other {
+            if self.http_addr == DEFAULT_RPC_ADDR {
+                self.http_addr = other.http_addr;
+            }
+            if self.http_port == DEFAULT_RPC_PORT {
+                self.http_port = other.http_port;
+            }
+            if self.http_cors_origins.is_empty() {
+                self.http_cors_origins = other.http_cors_origins.clone();
+            }
+            if self.http_modules.is_none() {
+                self.http_modules = other.http_modules.clone();
+            }
+            if self.max_connections.is_none() {
+                self.max_connections = other.max_connections;
+            }
+            if self.max_request_body_size.is_none() {
+                self.max_request_body_size = other.max_request_body_size;
+            }
+            if self.max_response_body_size.is_none() {
+                self.max_response_body_size = other.max_response_body_size;
+            }
+            if self.max_event_page_size == DEFAULT_RPC_MAX_EVENT_PAGE_SIZE {
+                self.max_event_page_size = other.max_event_page_size;
+            }
+            if self.max_proof_keys == DEFAULT_RPC_MAX_PROOF_KEYS {
+                self.max_proof_keys = other.max_proof_keys;
+            }
+            if self.max_call_gas == DEFAULT_RPC_MAX_CALL_GAS {
+                self.max_call_gas = other.max_call_gas;
+            }
         }
     }
 }
