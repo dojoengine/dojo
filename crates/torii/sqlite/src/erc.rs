@@ -112,11 +112,8 @@ impl Sql {
         {
             let mut erc_cache = self.local_cache.erc_cache.write().await;
             if from_address != Felt::ZERO {
-                let from_balance_id = format!(
-                    "{}{SQL_FELT_DELIMITER}{}",
-                    felt_to_sql_string(&from_address),
-                    &id
-                );
+                let from_balance_id =
+                    format!("{}{SQL_FELT_DELIMITER}{}", felt_to_sql_string(&from_address), &id);
                 let from_balance =
                     erc_cache.entry((ContractType::ERC721, from_balance_id)).or_default();
                 *from_balance -= I256::from(amount);
