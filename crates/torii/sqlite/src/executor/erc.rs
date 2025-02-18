@@ -24,9 +24,9 @@ use crate::utils::{
 
 #[derive(Debug, Clone)]
 pub struct RegisterNftTokenQuery {
-    pub token_id: String,
+    pub id: String,
     pub contract_address: Felt,
-    pub actual_token_id: U256,
+    pub token_id: U256,
 }
 
 #[derive(Debug, Clone)]
@@ -216,13 +216,13 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
         let token_uri = Self::fetch_token_uri(
             &provider,
             register_nft_token.contract_address,
-            register_nft_token.actual_token_id,
+            register_nft_token.token_id,
         )
         .await?;
 
         let metadata = Self::fetch_token_metadata(
             register_nft_token.contract_address,
-            register_nft_token.actual_token_id,
+            register_nft_token.token_id,
             &token_uri,
         )
         .await?;
@@ -309,9 +309,9 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
             "INSERT INTO tokens (id, contract_address, token_id, name, symbol, decimals, \
              metadata) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING RETURNING *",
         )
-        .bind(&result.query.token_id)
+        .bind(&result.query.id)
         .bind(felt_to_sql_string(&result.query.contract_address))
-        .bind(u256_to_sql_string(&result.query.actual_token_id))
+        .bind(u256_to_sql_string(&result.query.token_id))
         .bind(&result.name)
         .bind(&result.symbol)
         .bind(0)
@@ -434,19 +434,20 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
         }
     }
 
-    pub async fn update_erc721_metadata(
+    pub async fn update_nft_metadata(
         &mut self,
         contract_address: Felt,
         token_id: U256,
         provider: Arc<P>,
     ) -> Result<()> {
+        let id = felt_and_u256_to_sql_string(&contract_address, &token_id);
         let token_uri = Self::fetch_token_uri(&provider, contract_address, token_id).await?;
         let metadata = Self::fetch_token_metadata(contract_address, token_id, &token_uri).await?;
 
         // Update metadata in database
         sqlx::query("UPDATE tokens SET metadata = ? WHERE id = ?")
             .bind(&metadata)
-            .bind(felt_and_u256_to_sql_string(&contract_address, &token_id))
+            .bind(id)
             .execute(&mut *self.transaction)
             .await?;
 

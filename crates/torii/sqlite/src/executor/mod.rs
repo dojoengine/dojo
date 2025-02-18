@@ -755,15 +755,15 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 }
             }
             QueryType::UpdateNftMetadata(update_metadata) => {
-                debug!(target: LOG_TARGET, "Updating ERC721 metadata.");
+                debug!(target: LOG_TARGET, "Updating NFT metadata.");
                 let instant = Instant::now();
-                self.update_erc721_metadata(
+                self.update_nft_metadata(
                     update_metadata.contract_address,
                     update_metadata.token_id,
                     self.provider.clone(),
                 )
                 .await?;
-                debug!(target: LOG_TARGET, duration = ?instant.elapsed(), "Updated ERC721 metadata.");
+                debug!(target: LOG_TARGET, duration = ?instant.elapsed(), "Updated NFT metadata.");
             }
             QueryType::Other => {
                 query.execute(&mut **tx).await.map_err(|e| {

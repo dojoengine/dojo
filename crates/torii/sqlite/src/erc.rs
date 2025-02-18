@@ -115,7 +115,7 @@ impl Sql {
                 let from_balance_id = format!(
                     "{}{SQL_FELT_DELIMITER}{}",
                     felt_to_sql_string(&from_address),
-                    &token_id
+                    &id
                 );
                 let from_balance =
                     erc_cache.entry((ContractType::ERC721, from_balance_id)).or_default();
@@ -124,7 +124,7 @@ impl Sql {
 
             if to_address != Felt::ZERO {
                 let to_balance_id =
-                    format!("{}{SQL_FELT_DELIMITER}{}", felt_to_sql_string(&to_address), &token_id);
+                    format!("{}{SQL_FELT_DELIMITER}{}", felt_to_sql_string(&to_address), &id);
                 let to_balance =
                     erc_cache.entry((ContractType::ERC721, to_balance_id)).or_default();
                 *to_balance += I256::from(amount);
@@ -243,9 +243,9 @@ impl Sql {
             "".to_string(),
             vec![],
             QueryType::RegisterNftToken(RegisterNftTokenQuery {
-                token_id: id.to_string(),
+                id: id.to_string(),
                 contract_address,
-                actual_token_id,
+                token_id: actual_token_id,
             }),
         ))?;
 
