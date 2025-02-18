@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1739872292922,
+  "lastUpdate": 1739872351679,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -54859,6 +54859,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 48587243915,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e5b93acc80e5c7bee388cda8c839b04164905c39",
+          "message": "feat(torii-indexer): eip 4906 update metadata processor (#2984)\n\n* feat(torii-indexer): eip 4906 update metadata processor\n\n* batch metadata update\n\n* fix race condition batch update\n\n* fmt\n\n* f\n\n* fmt\n\n* fix fetch token metadta\n\n* clippy\n\n* add processor for erc721 and 1155\n\n* fmt\n\n* add erc4906 component and implement in 721 and 1155\n\n* update emetadata batch and single\n\n* fix token id\n\n* fmt\n\n* add batch processor\n\n* fmt\n\n* fmt\n\n* update test db",
+          "timestamp": "2025-02-18T09:34:35Z",
+          "tree_id": "0d2745312a9afc4ee69219e0b92a4bab285f0c82",
+          "url": "https://github.com/dojoengine/dojo/commit/e5b93acc80e5c7bee388cda8c839b04164905c39"
+        },
+        "date": 1739872348826,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2564808,
+            "range": "± 37472",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 394823,
+            "range": "± 2559",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2672391834,
+            "range": "± 192407267",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 16832313,
+            "range": "± 455788",
             "unit": "ns/iter"
           }
         ]
