@@ -34,25 +34,20 @@ pub mod ERC4906Component {
 
     #[embeddable_as(ERC4906Implementation)]
     impl ERC4906<
-        TContractState,
-        +HasComponent<TContractState>,
-        +Drop<TContractState>
+        TContractState, +HasComponent<TContractState>, +Drop<TContractState>,
     > of IERC4906<ComponentState<TContractState>> {
         fn emit_metadata_update(ref self: ComponentState<TContractState>, token_id: u256) {
             self.emit(Event::MetadataUpdate(MetadataUpdate { token_id }));
         }
 
         fn emit_batch_metadata_update(
-            ref self: ComponentState<TContractState>,
-            from_token_id: u256,
-            to_token_id: u256
+            ref self: ComponentState<TContractState>, from_token_id: u256, to_token_id: u256,
         ) {
             assert(from_token_id <= to_token_id, 'Invalid token range');
-            self.emit(
-                Event::BatchMetadataUpdate(
-                    BatchMetadataUpdate { from_token_id, to_token_id }
-                )
-            );
+            self
+                .emit(
+                    Event::BatchMetadataUpdate(BatchMetadataUpdate { from_token_id, to_token_id }),
+                );
         }
     }
 }

@@ -106,20 +106,18 @@ mod ERC1155Token {
         fn update_token_metadata(ref self: ContractState, token_id: u256) {
             // Only owner can update metadata
             self.ownable.assert_only_owner();
-            
+
             // Emit metadata update event
             self.erc4906.emit_metadata_update(token_id);
         }
 
         #[external(v0)]
         fn update_batch_token_metadata(
-            ref self: ContractState,
-            from_token_id: u256,
-            to_token_id: u256
+            ref self: ContractState, from_token_id: u256, to_token_id: u256,
         ) {
             // Only owner can update metadata
             self.ownable.assert_only_owner();
-            
+
             // Emit batch metadata update event
             self.erc4906.emit_batch_metadata_update(from_token_id, to_token_id);
         }
@@ -129,7 +127,7 @@ mod ERC1155Token {
         fn update_tokens_metadata(ref self: ContractState, token_ids: Span<u256>) {
             // Only owner can update metadata
             self.ownable.assert_only_owner();
-            
+
             // Emit metadata update event for each token
             let mut i: usize = 0;
             loop {
