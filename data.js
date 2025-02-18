@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1739887829136,
+  "lastUpdate": 1739887902036,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -55015,6 +55015,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 17088709,
             "range": "± 516504",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tarrencev@users.noreply.github.com",
+            "name": "Tarrence van As",
+            "username": "tarrencev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3d4b1a3e662f70679813f9fb65c0b5c7fa5d6f0a",
+          "message": "Prepare release: v1.2.1 (#3046)\n\nCo-authored-by: glihm <glihm@users.noreply.github.com>",
+          "timestamp": "2025-02-18T07:52:53-06:00",
+          "tree_id": "d8993e4073185360d248d1c01076470db03be7af",
+          "url": "https://github.com/dojoengine/dojo/commit/3d4b1a3e662f70679813f9fb65c0b5c7fa5d6f0a"
+        },
+        "date": 1739887899197,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2449296,
+            "range": "± 35014",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 400791,
+            "range": "± 11109",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 3007415856,
+            "range": "± 275426382",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 17956805,
+            "range": "± 512270",
             "unit": "ns/iter"
           }
         ]
