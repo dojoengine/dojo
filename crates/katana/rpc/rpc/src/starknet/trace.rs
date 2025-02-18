@@ -2,7 +2,7 @@ use jsonrpsee::core::{async_trait, RpcResult};
 use katana_executor::{ExecutionResult, ExecutorFactory, ResultAndStates};
 use katana_primitives::block::{BlockHashOrNumber, BlockIdOrTag};
 use katana_primitives::fee::TxFeeInfo;
-use katana_primitives::trace::{BuiltinCounters, TxExecInfo};
+use katana_primitives::trace::TxExecInfo;
 use katana_primitives::transaction::{ExecutableTx, ExecutableTxWithHash, TxHash, TxType};
 use katana_provider::traits::block::{BlockNumberProvider, BlockProvider};
 use katana_provider::traits::transaction::{TransactionTraceProvider, TransactionsProviderExt};
@@ -273,7 +273,7 @@ fn to_rpc_trace(trace: TxExecInfo) -> TransactionTrace {
 fn to_rpc_resources(resources: katana_primitives::trace::ExecutionResources) -> ExecutionResources {
     let steps = resources.n_steps as u64;
     let memory_holes = resources.n_memory_holes as u64;
-    let builtins = BuiltinCounters::from(resources.builtin_instance_counter);
+    let builtins = resources.builtin_instance_counter;
 
     let data_availability = DataAvailabilityResources { l1_gas: 0, l1_data_gas: 0 };
     let data_resources = DataResources { data_availability };

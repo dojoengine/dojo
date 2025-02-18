@@ -10,6 +10,8 @@ use torii_sqlite::Sql;
 use crate::task_manager::{TaskId, TaskPriority};
 
 pub mod controller;
+pub mod erc1155_transfer_batch;
+pub mod erc1155_transfer_single;
 pub mod erc20_legacy_transfer;
 pub mod erc20_transfer;
 pub mod erc4906_metadata_update;

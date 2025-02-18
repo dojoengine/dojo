@@ -59,6 +59,7 @@ fn rollup_chain_spec() -> rollup::ChainSpec {
     let fee_contract = FeeContract::default();
 
     let settlement = SettlementLayer::Starknet {
+        block: 0,
         id: ChainId::default(),
         account: Default::default(),
         core_contract: Default::default(),
@@ -74,6 +75,19 @@ fn rollup_chain_spec() -> rollup::ChainSpec {
 fn can_initialize_genesis(#[case] chain: ChainSpec) {
     let backend = backend(&chain);
     backend.init_genesis().expect("failed to initialize genesis");
+}
+
+#[rstest]
+#[case::dev(ChainSpec::Dev(dev_chain_spec()))]
+#[case::rollup(ChainSpec::Rollup(rollup_chain_spec()))]
+fn can_reinitialize_genesis(#[case] chain: ChainSpec) {
+    let db = DbProvider::new_ephemeral();
+
+    let backend = backend_with_db(&chain, db.clone());
+    backend.init_genesis().expect("failed to initialize genesis");
+
+    let backend = backend_with_db(&chain, db);
+    backend.init_genesis().unwrap();
 }
 
 #[test]

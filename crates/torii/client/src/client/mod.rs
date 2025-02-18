@@ -2,16 +2,14 @@ pub mod error;
 
 use std::sync::Arc;
 
+use crypto_bigint::U256;
 use dojo_types::WorldMetadata;
-use dojo_world::contracts::WorldContractReader;
 use futures::lock::Mutex;
-use parking_lot::{RwLock, RwLockReadGuard};
 use starknet::core::types::Felt;
-use starknet::providers::jsonrpc::HttpTransport;
-use starknet::providers::JsonRpcClient;
-use tokio::sync::RwLock as AsyncRwLock;
+use tokio::sync::RwLock;
 use torii_grpc::client::{
     EntityUpdateStreaming, EventUpdateStreaming, IndexerUpdateStreaming, TokenBalanceStreaming,
+    TokenUpdateStreaming,
 };
 use torii_grpc::proto::world::{
     RetrieveControllersResponse, RetrieveEntitiesResponse, RetrieveEventsResponse,
@@ -24,50 +22,24 @@ use torii_grpc::types::{
 use torii_relay::client::EventLoop;
 use torii_relay::types::Message;
 
-use crate::client::error::{Error, ParseError};
+use crate::client::error::Error;
 
-// TODO: remove reliance on RPC
 #[allow(unused)]
 #[derive(Debug)]
 pub struct Client {
-    /// Metadata of the World that the client is connected to.
-    metadata: Arc<RwLock<WorldMetadata>>,
     /// The grpc client.
-    inner: AsyncRwLock<torii_grpc::client::WorldClient>,
+    inner: RwLock<torii_grpc::client::WorldClient>,
     /// Relay client.
     relay_client: torii_relay::client::RelayClient,
-    /// The subscription client handle.
-    /// World contract reader.
-    world_reader: WorldContractReader<JsonRpcClient<HttpTransport>>,
 }
 
 impl Client {
     /// Returns a initialized [Client].
-    pub async fn new(
-        torii_url: String,
-        rpc_url: String,
-        relay_url: String,
-        world: Felt,
-    ) -> Result<Self, Error> {
-        let mut grpc_client = torii_grpc::client::WorldClient::new(torii_url, world).await?;
-
+    pub async fn new(torii_url: String, relay_url: String, world: Felt) -> Result<Self, Error> {
+        let grpc_client = torii_grpc::client::WorldClient::new(torii_url, world).await?;
         let relay_client = torii_relay::client::RelayClient::new(relay_url)?;
 
-        let metadata = grpc_client.metadata().await?;
-
-        let shared_metadata: Arc<_> = RwLock::new(metadata).into();
-
-        // initialize the entities to be synced with the latest values
-        let rpc_url = url::Url::parse(&rpc_url).map_err(ParseError::Url)?;
-        let provider = JsonRpcClient::new(HttpTransport::new(rpc_url));
-        let world_reader = WorldContractReader::new(world, provider);
-
-        Ok(Self {
-            world_reader,
-            metadata: shared_metadata,
-            inner: AsyncRwLock::new(grpc_client),
-            relay_client,
-        })
+        Ok(Self { inner: RwLock::new(grpc_client), relay_client })
     }
 
     /// Starts the relay client event loop.
@@ -88,8 +60,10 @@ impl Client {
     }
 
     /// Returns a read lock on the World metadata that the client is connected to.
-    pub fn metadata(&self) -> RwLockReadGuard<'_, WorldMetadata> {
-        self.metadata.read()
+    pub async fn metadata(&self) -> Result<WorldMetadata, Error> {
+        let mut grpc_client = self.inner.write().await;
+        let metadata = grpc_client.metadata().await?;
+        Ok(metadata)
     }
 
     /// Retrieves controllers matching contract addresses.
@@ -107,10 +81,14 @@ impl Client {
     }
 
     /// Retrieves tokens matching contract addresses.
-    pub async fn tokens(&self, contract_addresses: Vec<Felt>) -> Result<Vec<Token>, Error> {
+    pub async fn tokens(
+        &self,
+        contract_addresses: Vec<Felt>,
+        token_ids: Vec<U256>,
+    ) -> Result<Vec<Token>, Error> {
         let mut grpc_client = self.inner.write().await;
         let RetrieveTokensResponse { tokens } =
-            grpc_client.retrieve_tokens(contract_addresses).await?;
+            grpc_client.retrieve_tokens(contract_addresses, token_ids).await?;
         Ok(tokens.into_iter().map(TryInto::try_into).collect::<Result<Vec<Token>, _>>()?)
     }
 
@@ -119,10 +97,12 @@ impl Client {
         &self,
         account_addresses: Vec<Felt>,
         contract_addresses: Vec<Felt>,
+        token_ids: Vec<U256>,
     ) -> Result<Vec<TokenBalance>, Error> {
         let mut grpc_client = self.inner.write().await;
-        let RetrieveTokenBalancesResponse { balances } =
-            grpc_client.retrieve_token_balances(account_addresses, contract_addresses).await?;
+        let RetrieveTokenBalancesResponse { balances } = grpc_client
+            .retrieve_token_balances(account_addresses, contract_addresses, token_ids)
+            .await?;
         Ok(balances.into_iter().map(TryInto::try_into).collect::<Result<Vec<TokenBalance>, _>>()?)
     }
 
@@ -222,9 +202,7 @@ impl Client {
         contract_address: Option<Felt>,
     ) -> Result<IndexerUpdateStreaming, Error> {
         let mut grpc_client = self.inner.write().await;
-        let stream = grpc_client
-            .subscribe_indexer(contract_address.unwrap_or(self.world_reader.address))
-            .await?;
+        let stream = grpc_client.subscribe_indexer(contract_address.unwrap_or_default()).await?;
         Ok(stream)
     }
 
@@ -236,10 +214,12 @@ impl Client {
         &self,
         contract_addresses: Vec<Felt>,
         account_addresses: Vec<Felt>,
+        token_ids: Vec<U256>,
     ) -> Result<TokenBalanceStreaming, Error> {
         let mut grpc_client = self.inner.write().await;
-        let stream =
-            grpc_client.subscribe_token_balances(contract_addresses, account_addresses).await?;
+        let stream = grpc_client
+            .subscribe_token_balances(contract_addresses, account_addresses, token_ids)
+            .await?;
         Ok(stream)
     }
 
@@ -249,6 +229,7 @@ impl Client {
         subscription_id: u64,
         contract_addresses: Vec<Felt>,
         account_addresses: Vec<Felt>,
+        token_ids: Vec<U256>,
     ) -> Result<(), Error> {
         let mut grpc_client = self.inner.write().await;
         grpc_client
@@ -256,7 +237,33 @@ impl Client {
                 subscription_id,
                 contract_addresses,
                 account_addresses,
+                token_ids,
             )
+            .await?;
+        Ok(())
+    }
+
+    /// A direct stream to grpc subscribe tokens
+    pub async fn on_token_updated(
+        &self,
+        contract_addresses: Vec<Felt>,
+        token_ids: Vec<U256>,
+    ) -> Result<TokenUpdateStreaming, Error> {
+        let mut grpc_client = self.inner.write().await;
+        let stream = grpc_client.subscribe_tokens(contract_addresses, token_ids).await?;
+        Ok(stream)
+    }
+
+    /// Update the tokens subscription
+    pub async fn update_token_subscription(
+        &self,
+        subscription_id: u64,
+        contract_addresses: Vec<Felt>,
+        token_ids: Vec<U256>,
+    ) -> Result<(), Error> {
+        let mut grpc_client = self.inner.write().await;
+        grpc_client
+            .update_tokens_subscription(subscription_id, contract_addresses, token_ids)
             .await?;
         Ok(())
     }

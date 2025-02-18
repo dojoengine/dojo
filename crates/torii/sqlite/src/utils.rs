@@ -7,13 +7,15 @@ use anyhow::Result;
 use chrono::{DateTime, Utc};
 use futures_util::TryStreamExt;
 use ipfs_api_backend_hyper::{IpfsApi, IpfsClient, TryFromUri};
+use once_cell::sync::Lazy;
+use reqwest::Client;
 use starknet::core::types::U256;
 use starknet_crypto::Felt;
 use tokio_util::bytes::Bytes;
-use tracing::warn;
+use tracing::debug;
 
 use crate::constants::{
-    IPFS_CLIENT_MAX_RETRY, IPFS_CLIENT_PASSWORD, IPFS_CLIENT_URL, IPFS_CLIENT_USERNAME,
+    IPFS_CLIENT_PASSWORD, IPFS_CLIENT_URL, IPFS_CLIENT_USERNAME, REQ_MAX_RETRIES,
     SQL_FELT_DELIMITER,
 };
 
@@ -105,32 +107,71 @@ pub fn sanitize_json_string(s: &str) -> String {
     result
 }
 
-pub async fn fetch_content_from_ipfs(cid: &str) -> Result<Bytes> {
-    let mut retries = IPFS_CLIENT_MAX_RETRY;
-    let client = IpfsClient::from_str(IPFS_CLIENT_URL)?
-        .with_credentials(IPFS_CLIENT_USERNAME, IPFS_CLIENT_PASSWORD);
+// Global clients
+static HTTP_CLIENT: Lazy<Client> = Lazy::new(|| {
+    Client::builder()
+        .timeout(Duration::from_secs(10))
+        .pool_idle_timeout(Duration::from_secs(90))
+        .build()
+        .expect("Failed to create HTTP client")
+});
 
-    while retries > 0 {
-        let response = client.cat(cid).map_ok(|chunk| chunk.to_vec()).try_concat().await;
-        match response {
-            Ok(stream) => return Ok(Bytes::from(stream)),
+static IPFS_CLIENT: Lazy<IpfsClient> = Lazy::new(|| {
+    IpfsClient::from_str(IPFS_CLIENT_URL)
+        .expect("Failed to create IPFS client")
+        .with_credentials(IPFS_CLIENT_USERNAME, IPFS_CLIENT_PASSWORD)
+});
+
+const INITIAL_BACKOFF: Duration = Duration::from_millis(100);
+
+/// Fetch content from HTTP URL with retries
+pub async fn fetch_content_from_http(url: &str) -> Result<Bytes> {
+    let mut retries = 0;
+    let mut backoff = INITIAL_BACKOFF;
+
+    loop {
+        match HTTP_CLIENT.get(url).send().await {
+            Ok(response) => {
+                if !response.status().is_success() {
+                    return Err(anyhow::anyhow!(
+                        "HTTP request failed with status: {}",
+                        response.status()
+                    ));
+                }
+                return response.bytes().await.map_err(Into::into);
+            }
             Err(e) => {
-                retries -= 1;
-                warn!(
-                    error = %e,
-                    remaining_attempts = retries,
-                    cid = cid,
-                    "Failed to fetch content from IPFS, retrying after delay"
-                );
-                tokio::time::sleep(Duration::from_secs(3)).await;
+                if retries >= REQ_MAX_RETRIES {
+                    return Err(anyhow::anyhow!("HTTP request failed: {}", e));
+                }
+                debug!(error = %e, retry = retries, "Request failed, retrying after backoff");
+                tokio::time::sleep(backoff).await;
+                retries += 1;
+                backoff *= 2;
             }
         }
     }
+}
 
-    Err(anyhow::anyhow!(format!(
-        "Failed to pull data from IPFS after {} attempts, cid: {}",
-        IPFS_CLIENT_MAX_RETRY, cid
-    )))
+/// Fetch content from IPFS with retries
+pub async fn fetch_content_from_ipfs(cid: &str) -> Result<Bytes> {
+    let mut retries = 0;
+    let mut backoff = INITIAL_BACKOFF;
+
+    loop {
+        match IPFS_CLIENT.cat(cid).map_ok(|chunk| chunk.to_vec()).try_concat().await {
+            Ok(stream) => return Ok(Bytes::from(stream)),
+            Err(e) => {
+                if retries >= REQ_MAX_RETRIES {
+                    return Err(anyhow::anyhow!("IPFS request failed: {}", e));
+                }
+                debug!(error = %e, retry = retries, "Request failed, retrying after backoff");
+                tokio::time::sleep(backoff).await;
+                retries += 1;
+                backoff *= 2;
+            }
+        }
+    }
 }
 
 // type used to do calculation on inmemory balances

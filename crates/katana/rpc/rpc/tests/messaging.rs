@@ -3,26 +3,24 @@ use std::str::FromStr;
 use std::time::Duration;
 
 use alloy::primitives::{Uint, U256};
-use alloy::providers::{ProviderBuilder, WalletProvider};
+use alloy::providers::ProviderBuilder;
 use alloy::sol;
 use anyhow::Result;
-use cainome::cairo_serde::EthAddress;
 use cainome::rs::abigen;
 use dojo_test_utils::sequencer::{get_default_test_config, TestSequencer};
 use dojo_utils::TransactionWaiter;
-use katana_core::service::messaging::MessagingConfig;
+use katana_messaging::MessagingConfig;
 use katana_node::config::sequencing::SequencingConfig;
 use katana_primitives::felt;
 use katana_primitives::utils::transaction::{
-    compute_l1_handler_tx_hash, compute_l1_to_l2_message_hash, compute_l2_to_l1_message_hash,
+    compute_l1_handler_tx_hash, compute_l1_to_l2_message_hash,
 };
 use katana_rpc_types::receipt::ReceiptBlock;
 use rand::Rng;
 use starknet::accounts::{Account, ConnectedAccount};
 use starknet::contract::ContractFactory;
 use starknet::core::types::{
-    BlockId, BlockTag, ContractClass, Felt, Hash256, MsgFromL1, Transaction,
-    TransactionFinalityStatus, TransactionReceipt,
+    BlockId, BlockTag, ContractClass, Felt, Hash256, MsgFromL1, Transaction, TransactionReceipt,
 };
 use starknet::core::utils::get_contract_address;
 use starknet::macros::selector;
@@ -68,8 +66,6 @@ async fn test_messaging() {
         chain: "ethereum".to_string(),
         rpc_url: format!("http://localhost:{}", port),
         contract_address: core_contract.address().to_string(),
-        sender_address: l1_provider.default_signer_address().to_string(),
-        private_key: "".to_string(),
         interval: 2,
         from_block: 0,
     };
@@ -233,74 +229,8 @@ async fn test_messaging() {
         }
     }
 
-    // Send message from L2 to L1
-    {
-        // The L1 contract address to send the message to
-        let l1_contract_address = l1_test_contract.address();
-        let l1_contract_address = Felt::from_str(&l1_contract_address.to_string()).unwrap();
-
-        let l2_contract = CairoMessagingContract::new(l2_test_contract, &katana_account);
-
-        // Send message to L1
-        let res = l2_contract
-            .send_message_value(&EthAddress::from(l1_contract_address), &Felt::TWO)
-            .send()
-            .await
-            .expect("Call to send_message_value failed");
-
-        TransactionWaiter::new(res.transaction_hash, katana_account.provider())
-            .with_tx_status(TransactionFinalityStatus::AcceptedOnL2)
-            .await
-            .expect("send message to l1 tx failed");
-
-        // Wait for the tx to be mined on L1 (Anvil)
-        tokio::time::sleep(Duration::from_secs(3)).await;
-
-        // Query the core messaging contract to check that the l2 -> l1 message hash have been
-        // registered. If the message is registered, calling `l2ToL1Messages` of the L1 core
-        // contract with the message hash should return a non-zero value.
-
-        let l2_l1_msg_hash =
-            compute_l2_to_l1_message_hash(l2_test_contract, l1_contract_address, &[Felt::TWO]);
-
-        let msg_fee = core_contract
-            .l2ToL1Messages(l2_l1_msg_hash)
-            .call()
-            .await
-            .expect("failed to get msg fee");
-
-        assert_ne!(msg_fee._0, U256::ZERO, "msg fee must be non-zero if exist");
-
-        // We then consume the message.
-        // Upon consuming the message, the value returned by `l2ToL1Messages` should be zeroed.
-
-        // The L2 contract address that sent the message
-        let from_address = U256::from_str(&l2_test_contract.to_string()).unwrap();
-        // The message payload
-        let payload = vec![U256::from(2)];
-
-        let receipt = l1_test_contract
-            .consumeMessage(from_address, payload)
-            .gas(12000000)
-            .nonce(4)
-            .send()
-            .await
-            .expect("failed to send tx")
-            .get_receipt()
-            .await
-            .expect("error getting transaction receipt");
-
-        assert!(receipt.status(), "failed to consume L2 message from L1");
-
-        // Check that the message fee is zero after consuming the message.
-        let msg_fee = core_contract
-            .l2ToL1Messages(l2_l1_msg_hash)
-            .call()
-            .await
-            .expect("failed to get msg fee");
-
-        assert_eq!(msg_fee._0, U256::ZERO, "msg fee must be zero after consuming");
-    }
+    // Send message from L2 to L1 testing must be done using Saya or part of
+    // it to ensure the settlement contract is test on piltover and its `update_state` method.
 }
 
 #[tokio::test]

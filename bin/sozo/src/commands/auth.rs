@@ -748,7 +748,7 @@ mod tests {
         contracts.insert(
             "actions".to_string(),
             ContractInfo {
-                tag: "actions".to_string(),
+                tag_or_name: "actions".to_string(),
                 address: Felt::from_str("0x456").unwrap(),
                 entrypoints: vec![],
             },

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, bail, Result};
 use clap::Args;
 use dojo_world::config::calldata_decoder;
 use dojo_world::contracts::ContractInfo;
@@ -19,7 +19,9 @@ use crate::utils::{self, CALLDATA_DOC};
 #[derive(Debug, Args)]
 #[command(about = "Call a system with the given calldata.")]
 pub struct CallArgs {
-    #[arg(help = "The tag or address of the contract to call.")]
+    #[arg(help = "* The tag or address of the Dojo contract to call OR,
+* The address or the instance name of the Starknet contract to call OR,
+* 'world' to call the Dojo world.")]
     pub tag_or_address: ResourceDescriptor,
 
     #[arg(help = "The name of the entrypoint to call.")]
@@ -54,37 +56,57 @@ impl CallArgs {
 
         let profile_config = ws.load_profile_config()?;
 
-        let descriptor = self.tag_or_address.ensure_namespace(&profile_config.namespace.default);
+        let CallArgs { tag_or_address, .. } = self;
 
         config.tokio_handle().block_on(async {
+            let descriptor =
+                tag_or_address.clone().ensure_namespace(&profile_config.namespace.default);
+
             let local_manifest = ws.read_manifest_profile()?;
 
             let calldata = calldata_decoder::decode_calldata(&self.calldata)?;
 
-            let contract_address = match &descriptor {
+            let contracts: HashMap<String, ContractInfo> = if self.diff || local_manifest.is_none()
+            {
+                let (world_diff, _, _) =
+                    utils::get_world_diff_and_provider(self.starknet.clone(), self.world, &ws)
+                        .await?;
+
+                (&world_diff).into()
+            } else {
+                match &local_manifest {
+                    Some(manifest) => manifest.into(),
+                    _ => bail!(
+                        "Unable to get the list of contracts, either from the world or from the \
+                         local manifest."
+                    ),
+                }
+            };
+
+            let mut contract_address = match &descriptor {
                 ResourceDescriptor::Address(address) => Some(*address),
                 ResourceDescriptor::Tag(tag) => {
-                    let contracts: HashMap<String, ContractInfo> =
-                        if self.diff || local_manifest.is_none() {
-                            let (world_diff, _, _) = utils::get_world_diff_and_provider(
-                                self.starknet.clone(),
-                                self.world,
-                                &ws,
-                            )
-                            .await?;
-
-                            (&world_diff).into()
-                        } else {
-                            (&local_manifest.unwrap()).into()
-                        };
-
+                    // Try to find the contract to call among Dojo contracts
                     contracts.get(tag).map(|c| c.address)
                 }
                 ResourceDescriptor::Name(_) => {
                     unimplemented!("Expected to be a resolved tag with default namespace.")
                 }
+            };
+
+            if contract_address.is_none() {
+                contract_address = match &tag_or_address {
+                    ResourceDescriptor::Name(name) => contracts.get(name).map(|c| c.address),
+                    ResourceDescriptor::Address(_) | ResourceDescriptor::Tag(_) => {
+                        // A contract should have already been found while searching for a Dojo
+                        // contract.
+                        None
+                    }
+                }
             }
-            .ok_or_else(|| anyhow!("Contract {descriptor} not found in the world diff."))?;
+
+            let contract_address = contract_address
+                .ok_or_else(|| anyhow!("Contract {descriptor} not found in the world diff."))?;
 
             let block_id = if let Some(block_id) = self.block_id {
                 dojo_utils::parse_block_id(block_id)?

@@ -10,10 +10,10 @@ use starknet::providers::Provider;
 use super::utils::{u256_to_sql_string, I256};
 use super::{Sql, SQL_FELT_DELIMITER};
 use crate::constants::TOKEN_TRANSFER_TABLE;
-use crate::executor::erc::UpdateErc721MetadataQuery;
+use crate::executor::erc::UpdateNftMetadataQuery;
+use crate::executor::erc::RegisterNftTokenQuery;
 use crate::executor::{
     ApplyBalanceDiffQuery, Argument, QueryMessage, QueryType, RegisterErc20TokenQuery,
-    RegisterErc721TokenQuery,
 };
 use crate::types::ContractType;
 use crate::utils::{
@@ -80,12 +80,13 @@ impl Sql {
     }
 
     #[allow(clippy::too_many_arguments)]
-    pub async fn handle_erc721_transfer(
+    pub async fn handle_nft_transfer(
         &mut self,
         contract_address: Felt,
         from_address: Felt,
         to_address: Felt,
         token_id: U256,
+        amount: U256,
         block_timestamp: u64,
         event_id: &str,
         block_number: u64,
@@ -95,14 +96,14 @@ impl Sql {
         let token_exists: bool = self.local_cache.contains_token_id(&id).await;
 
         if !token_exists {
-            self.register_erc721_token_metadata(&id, contract_address, token_id).await?;
+            self.register_nft_token_metadata(&id, contract_address, token_id).await?;
         }
 
         self.store_erc_transfer_event(
             contract_address,
             from_address,
             to_address,
-            U256::from(1u8),
+            amount,
             &id,
             block_timestamp,
             event_id,
@@ -119,7 +120,7 @@ impl Sql {
                 );
                 let from_balance =
                     erc_cache.entry((ContractType::ERC721, from_balance_id)).or_default();
-                *from_balance -= I256::from(1u8);
+                *from_balance -= I256::from(amount);
             }
 
             if to_address != Felt::ZERO {
@@ -127,7 +128,7 @@ impl Sql {
                     format!("{}{SQL_FELT_DELIMITER}{}", felt_to_sql_string(&to_address), &token_id);
                 let to_balance =
                     erc_cache.entry((ContractType::ERC721, to_balance_id)).or_default();
-                *to_balance += I256::from(1u8);
+                *to_balance += I256::from(amount);
             }
         }
 
@@ -141,7 +142,7 @@ impl Sql {
         Ok(())
     }
 
-    pub async fn update_erc721_metadata(
+    pub async fn update_nft_metadata(
         &mut self,
         contract_address: Felt,
         token_id: U256,
@@ -149,7 +150,7 @@ impl Sql {
         self.executor.send(QueryMessage::new(
             "".to_string(),
             vec![],
-            QueryType::UpdateErc721Metadata(UpdateErc721MetadataQuery {
+            QueryType::UpdateNftMetadata(UpdateNftMetadataQuery {
                 contract_address,
                 token_id,
             }),
@@ -236,7 +237,7 @@ impl Sql {
         Ok(())
     }
 
-    async fn register_erc721_token_metadata(
+    async fn register_nft_token_metadata(
         &mut self,
         id: &str,
         contract_address: Felt,
@@ -245,10 +246,10 @@ impl Sql {
         self.executor.send(QueryMessage::new(
             "".to_string(),
             vec![],
-            QueryType::RegisterErc721Token(RegisterErc721TokenQuery {
-                id: id.to_string(),
+            QueryType::RegisterNftToken(RegisterNftTokenQuery {
+                token_id: id.to_string(),
                 contract_address,
-                token_id: actual_token_id,
+                actual_token_id,
             }),
         ))?;
 
@@ -272,20 +273,22 @@ impl Sql {
         block_timestamp: u64,
         event_id: &str,
     ) -> Result<()> {
+        let id = format!("{}:{}", event_id, token_id);
         let insert_query = format!(
             "INSERT INTO {TOKEN_TRANSFER_TABLE} (id, contract_address, from_address, to_address, \
-             amount, token_id, executed_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+             amount, token_id, event_id, executed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
         );
 
         self.executor.send(QueryMessage::new(
             insert_query.to_string(),
             vec![
-                Argument::String(event_id.to_string()),
+                Argument::String(id),
                 Argument::FieldElement(contract_address),
                 Argument::FieldElement(from),
                 Argument::FieldElement(to),
                 Argument::String(u256_to_sql_string(&amount)),
                 Argument::String(token_id.to_string()),
+                Argument::String(event_id.to_string()),
                 Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
             ],
             QueryType::TokenTransfer,

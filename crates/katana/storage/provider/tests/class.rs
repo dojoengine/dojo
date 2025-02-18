@@ -8,6 +8,7 @@ use katana_primitives::block::{BlockHashOrNumber, BlockNumber};
 use katana_primitives::class::{ClassHash, CompiledClassHash, ContractClass};
 use katana_primitives::genesis::constant::{DEFAULT_LEGACY_ERC20_CLASS, DEFAULT_LEGACY_UDC_CLASS};
 use katana_provider::providers::fork::ForkedProvider;
+use katana_provider::traits::contract::ContractClassProviderExt;
 use katana_provider::traits::state::{StateFactoryProvider, StateProvider};
 use katana_provider::BlockchainProvider;
 use rstest_reuse::{self, *};

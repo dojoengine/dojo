@@ -20,6 +20,8 @@ pub enum SchemaError {
     FromSlice(#[from] std::array::TryFromSliceError),
     #[error(transparent)]
     FromStr(#[from] FromStrError),
+    #[error(transparent)]
+    FromUtf8(#[from] std::string::FromUtf8Error),
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]

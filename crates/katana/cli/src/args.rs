@@ -8,9 +8,10 @@ use alloy_primitives::U256;
 use anyhow::bail;
 use anyhow::{Context, Result};
 use clap::Parser;
+use katana_chain_spec::rollup::ChainConfigDir;
 use katana_chain_spec::ChainSpec;
 use katana_core::constants::DEFAULT_SEQUENCER_ADDRESS;
-use katana_core::service::messaging::MessagingConfig;
+use katana_messaging::MessagingConfig;
 use katana_node::config::db::DbConfig;
 use katana_node::config::dev::{DevConfig, FixedL1GasPriceConfig};
 use katana_node::config::execution::ExecutionConfig;
@@ -21,7 +22,6 @@ use katana_node::config::rpc::RpcConfig;
 use katana_node::config::rpc::{RpcModuleKind, RpcModulesList};
 use katana_node::config::sequencing::SequencingConfig;
 use katana_node::config::Config;
-use katana_primitives::chain::ChainId;
 use katana_primitives::genesis::allocation::DevAllocationsGenerator;
 use katana_primitives::genesis::constant::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;
 use serde::{Deserialize, Serialize};
@@ -32,8 +32,7 @@ use url::Url;
 
 use crate::file::NodeArgsConfig;
 use crate::options::*;
-use crate::utils;
-use crate::utils::{parse_seed, LogFormat};
+use crate::utils::{self, parse_chain_config_dir, parse_seed, LogFormat};
 
 pub(crate) const LOG_TARGET: &str = "katana::cli";
 
@@ -46,8 +45,8 @@ pub struct NodeArgs {
 
     /// Path to the chain configuration file.
     #[arg(long, hide = true)]
-    #[arg(value_parser = ChainId::parse)]
-    pub chain: Option<ChainId>,
+    #[arg(value_parser = parse_chain_config_dir)]
+    pub chain: Option<ChainConfigDir>,
 
     /// Disable auto and interval mining, and mine on demand instead via an endpoint.
     #[arg(long)]
@@ -81,7 +80,8 @@ pub struct NodeArgs {
     /// settlement chain that can be Ethereum or an other Starknet sequencer.
     #[arg(long)]
     #[arg(value_name = "PATH")]
-    #[arg(value_parser = katana_core::service::messaging::MessagingConfig::parse)]
+    #[arg(value_parser = katana_messaging::MessagingConfig::parse)]
+    #[arg(conflicts_with = "chain")]
     pub messaging: Option<MessagingConfig>,
 
     #[arg(long = "l1.provider", value_name = "URL", alias = "l1-provider")]
@@ -181,12 +181,16 @@ impl NodeArgs {
         let db = self.db_config();
         let rpc = self.rpc_config()?;
         let dev = self.dev_config();
-        let chain = self.chain_spec()?;
+        let (chain, cs_messaging) = self.chain_spec()?;
         let metrics = self.metrics_config();
         let forking = self.forking_config()?;
         let execution = self.execution_config();
         let sequencing = self.sequencer_config();
-        let messaging = self.messaging.clone();
+
+        // the `katana init` will automatically generate a messaging config. so if katana is run
+        // with `--chain` then the `--messaging` flag is not required. this is temporary and
+        // the messagign config will eventually be removed slowly.
+        let messaging = if cs_messaging.is_some() { cs_messaging } else { self.messaging.clone() };
 
         Ok(Config { metrics, db, dev, rpc, chain, execution, sequencing, messaging, forking })
     }
@@ -234,6 +238,7 @@ impl NodeArgs {
                 cors_origins: self.server.http_cors_origins.clone(),
                 max_event_page_size: Some(self.server.max_event_page_size),
                 max_proof_keys: Some(self.server.max_proof_keys),
+                max_call_gas: Some(self.server.max_call_gas),
             })
         }
 
@@ -243,12 +248,12 @@ impl NodeArgs {
         }
     }
 
-    fn chain_spec(&self) -> Result<Arc<ChainSpec>> {
-        if let Some(id) = &self.chain {
-            let mut cs =
-                katana_chain_spec::rollup::file::read(id).context("failed to load chain spec")?;
+    fn chain_spec(&self) -> Result<(Arc<ChainSpec>, Option<MessagingConfig>)> {
+        if let Some(path) = &self.chain {
+            let mut cs = katana_chain_spec::rollup::read(path)?;
             cs.genesis.sequencer_address = *DEFAULT_SEQUENCER_ADDRESS;
-            Ok(Arc::new(ChainSpec::Rollup(cs)))
+            let messaging_config = MessagingConfig::from_chain_spec(&cs);
+            Ok((Arc::new(ChainSpec::Rollup(cs)), Some(messaging_config)))
         }
         // exclusively for development mode
         else {
@@ -277,7 +282,7 @@ impl NodeArgs {
                 katana_slot_controller::add_controller_account(&mut chain_spec.genesis)?;
             }
 
-            Ok(Arc::new(ChainSpec::Dev(chain_spec)))
+            Ok((Arc::new(ChainSpec::Dev(chain_spec)), None))
         }
     }
 

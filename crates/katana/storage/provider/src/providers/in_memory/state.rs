@@ -2,7 +2,7 @@ use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
 
 use katana_primitives::block::BlockNumber;
-use katana_primitives::class::{ClassHash, CompiledClass, CompiledClassHash, ContractClass};
+use katana_primitives::class::{ClassHash, CompiledClassHash, ContractClass};
 use katana_primitives::contract::{Nonce, StorageKey, StorageValue};
 use katana_primitives::{ContractAddress, Felt};
 use katana_trie::MultiProof;
@@ -140,11 +140,6 @@ impl StateProvider for EmptyStateProvider {
 
 impl ContractClassProvider for EmptyStateProvider {
     fn class(&self, hash: ClassHash) -> ProviderResult<Option<ContractClass>> {
-        let _ = hash;
-        Ok(None)
-    }
-
-    fn compiled_class(&self, hash: ClassHash) -> ProviderResult<Option<CompiledClass>> {
         let _ = hash;
         Ok(None)
     }

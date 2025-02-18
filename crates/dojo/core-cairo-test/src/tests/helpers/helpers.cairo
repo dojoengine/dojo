@@ -35,6 +35,22 @@ pub struct NotCopiable {
     pub b: ByteArray,
 }
 
+#[derive(Drop, Serde, Debug, PartialEq, Introspect)]
+pub enum EnumOne {
+    One,
+    Two: u32,
+    Three: (felt252, u32),
+}
+
+#[derive(Drop, Serde, Debug)]
+#[dojo::model]
+pub struct WithOptionAndEnums {
+    #[key]
+    pub id: u32,
+    pub a: EnumOne,
+    pub b: Option<u32>,
+}
+
 #[starknet::contract]
 pub mod foo_invalid_name {
     use dojo::model::IModel;

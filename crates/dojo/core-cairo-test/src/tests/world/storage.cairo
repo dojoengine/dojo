@@ -1,6 +1,6 @@
 use dojo::model::ModelStorage;
 
-use crate::tests::helpers::{deploy_world_and_foo, Foo, NotCopiable};
+use crate::tests::helpers::{deploy_world_and_foo, Foo, NotCopiable, EnumOne, WithOptionAndEnums};
 
 #[test]
 fn write_simple() {
@@ -121,4 +121,17 @@ fn write_multiple_not_copiable() {
         assert_eq!(m.a, array![]);
         assert_eq!(m.b, "");
     };
+}
+
+#[test]
+fn write_read_option_enums() {
+    let (mut world, _) = deploy_world_and_foo();
+
+    let key: u32 = 1;
+
+    let wo: WithOptionAndEnums = world.read_model(key);
+    assert_eq!(wo.a, EnumOne::One);
+    // Should have been `Option::None`. Need to find a way to mitigate this issue
+    // using a `DojoOption` converter or customizing the serialization.
+    assert_eq!(wo.b, Option::Some(0));
 }

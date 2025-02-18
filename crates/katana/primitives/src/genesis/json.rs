@@ -156,6 +156,7 @@ pub struct GenesisAccountJson {
     pub class: Option<ClassNameOrHash>,
     pub storage: Option<BTreeMap<StorageKey, StorageValue>>,
     pub private_key: Option<Felt>,
+    pub salt: Option<Felt>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -374,31 +375,41 @@ impl TryFrom<GenesisJson> for Genesis {
             };
 
             match account.private_key {
-                Some(private_key) => allocations.insert(
-                    address,
-                    GenesisAllocation::Account(GenesisAccountAlloc::DevAccount(
-                        DevGenesisAccount {
-                            private_key,
-                            inner: GenesisAccount {
-                                balance: account.balance,
-                                class_hash,
-                                nonce: account.nonce,
-                                storage: account.storage,
-                                public_key: account.public_key,
-                            },
-                        },
-                    )),
-                ),
-                None => allocations.insert(
-                    address,
-                    GenesisAllocation::Account(GenesisAccountAlloc::Account(GenesisAccount {
-                        balance: account.balance,
-                        class_hash,
-                        nonce: account.nonce,
-                        storage: account.storage,
-                        public_key: account.public_key,
-                    })),
-                ),
+                Some(private_key) => {
+                    let mut inner = if let Some(salt) = account.salt {
+                        GenesisAccount::new_with_salt(account.public_key, class_hash, salt)
+                    } else {
+                        GenesisAccount::new(account.public_key, class_hash)
+                    };
+
+                    inner.nonce = account.nonce;
+                    inner.storage = account.storage;
+                    inner.balance = account.balance;
+
+                    allocations.insert(
+                        address,
+                        GenesisAllocation::Account(GenesisAccountAlloc::DevAccount(
+                            DevGenesisAccount { private_key, inner },
+                        )),
+                    )
+                }
+
+                None => {
+                    let mut inner = if let Some(salt) = account.salt {
+                        GenesisAccount::new_with_salt(account.public_key, class_hash, salt)
+                    } else {
+                        GenesisAccount::new(account.public_key, class_hash)
+                    };
+
+                    inner.nonce = account.nonce;
+                    inner.storage = account.storage;
+                    inner.balance = account.balance;
+
+                    allocations.insert(
+                        address,
+                        GenesisAllocation::Account(GenesisAccountAlloc::Account(inner)),
+                    )
+                }
             };
         }
 
@@ -480,6 +491,7 @@ impl TryFrom<Genesis> for GenesisJson {
                             GenesisAccountJson {
                                 nonce: acc.nonce,
                                 private_key: None,
+                                salt: Some(acc.salt),
                                 storage: acc.storage,
                                 balance: acc.balance,
                                 public_key: acc.public_key,
@@ -491,6 +503,7 @@ impl TryFrom<Genesis> for GenesisJson {
                         accounts.insert(
                             address,
                             GenesisAccountJson {
+                                salt: Some(dev_acc.salt),
                                 nonce: dev_acc.inner.nonce,
                                 balance: dev_acc.inner.balance,
                                 storage: dev_acc.inner.storage,
@@ -777,6 +790,7 @@ mod tests {
                         (felt!("0x1"), felt!("0x1")),
                         (felt!("0x2"), felt!("0x2")),
                     ])),
+                    salt: GenesisAccount::DEFAULT_SALT,
                 })),
             ),
             (
@@ -787,6 +801,7 @@ mod tests {
                     class_hash: DEFAULT_ACCOUNT_CLASS_HASH,
                     nonce: None,
                     storage: None,
+                    salt: GenesisAccount::DEFAULT_SALT,
                 })),
             ),
             (
@@ -797,6 +812,7 @@ mod tests {
                     class_hash: DEFAULT_ACCOUNT_CLASS_HASH,
                     nonce: None,
                     storage: None,
+                    salt: GenesisAccount::DEFAULT_SALT,
                 })),
             ),
             (
@@ -809,6 +825,7 @@ mod tests {
                         class_hash: DEFAULT_ACCOUNT_CLASS_HASH,
                         nonce: None,
                         storage: None,
+                        salt: GenesisAccount::DEFAULT_SALT,
                     },
                 })),
             ),
@@ -939,6 +956,7 @@ mod tests {
                 class_hash: DEFAULT_ACCOUNT_CLASS_HASH,
                 nonce: None,
                 storage: None,
+                salt: GenesisAccount::DEFAULT_SALT,
             })),
         )]);
 
@@ -999,6 +1017,7 @@ mod tests {
         let name = "MyClass";
 
         let account = GenesisAccountJson {
+            salt: None,
             nonce: None,
             storage: None,
             balance: None,

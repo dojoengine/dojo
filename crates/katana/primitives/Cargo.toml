@@ -38,6 +38,9 @@ postcard.workspace = true
 rstest.workspace = true
 similar-asserts.workspace = true
 
+criterion.workspace = true
+pprof.workspace = true
+
 [features]
 default = [ "serde" ]
 
@@ -50,3 +53,7 @@ arbitrary = [
 controller = [  ]
 serde = [ "alloy-primitives/serde" ]
 slot = [ "controller" ]
+
+[[bench]]
+harness = false
+name = "class"

@@ -1,12 +1,9 @@
-use katana_cairo::cairo_vm::types::builtin_name::BuiltinName;
 use katana_primitives::trace::{CallInfo, TxExecInfo};
 use katana_primitives::transaction::TxHash;
 use serde::{Deserialize, Serialize};
 use starknet::core::types::{
     CallType, ComputationResources, EntryPointType, OrderedEvent, OrderedMessage,
 };
-
-use crate::utils::get_builtin_instance_count;
 
 #[derive(Debug)]
 pub struct FunctionInvocation(pub starknet::core::types::FunctionInvocation);
@@ -50,32 +47,14 @@ impl From<CallInfo> for FunctionInvocation {
         let execution_resources = ComputationResources {
             steps: resources.n_steps as u64,
             memory_holes: Some(resources.n_memory_holes as u64),
-            range_check_builtin_applications: get_builtin_instance_count(
-                &resources,
-                BuiltinName::range_check,
-            ),
-            pedersen_builtin_applications: get_builtin_instance_count(
-                &resources,
-                BuiltinName::pedersen,
-            ),
-            poseidon_builtin_applications: get_builtin_instance_count(
-                &resources,
-                BuiltinName::poseidon,
-            ),
-            ec_op_builtin_applications: get_builtin_instance_count(&resources, BuiltinName::ec_op),
-            ecdsa_builtin_applications: get_builtin_instance_count(&resources, BuiltinName::ecdsa),
-            bitwise_builtin_applications: get_builtin_instance_count(
-                &resources,
-                BuiltinName::bitwise,
-            ),
-            keccak_builtin_applications: get_builtin_instance_count(
-                &resources,
-                BuiltinName::keccak,
-            ),
-            segment_arena_builtin: get_builtin_instance_count(
-                &resources,
-                BuiltinName::segment_arena,
-            ),
+            range_check_builtin_applications: resources.builtin_instance_counter.range_check(),
+            pedersen_builtin_applications: resources.builtin_instance_counter.pedersen(),
+            poseidon_builtin_applications: resources.builtin_instance_counter.poseidon(),
+            ec_op_builtin_applications: resources.builtin_instance_counter.ec_op(),
+            ecdsa_builtin_applications: resources.builtin_instance_counter.ecdsa(),
+            bitwise_builtin_applications: resources.builtin_instance_counter.bitwise(),
+            keccak_builtin_applications: resources.builtin_instance_counter.keccak(),
+            segment_arena_builtin: resources.builtin_instance_counter.segment_arena(),
         };
 
         Self(starknet::core::types::FunctionInvocation {
