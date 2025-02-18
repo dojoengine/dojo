@@ -10,8 +10,7 @@ use starknet::providers::Provider;
 use super::utils::{u256_to_sql_string, I256};
 use super::{Sql, SQL_FELT_DELIMITER};
 use crate::constants::TOKEN_TRANSFER_TABLE;
-use crate::executor::erc::UpdateNftMetadataQuery;
-use crate::executor::erc::RegisterNftTokenQuery;
+use crate::executor::erc::{RegisterNftTokenQuery, UpdateNftMetadataQuery};
 use crate::executor::{
     ApplyBalanceDiffQuery, Argument, QueryMessage, QueryType, RegisterErc20TokenQuery,
 };
@@ -150,10 +149,7 @@ impl Sql {
         self.executor.send(QueryMessage::new(
             "".to_string(),
             vec![],
-            QueryType::UpdateNftMetadata(UpdateNftMetadataQuery {
-                contract_address,
-                token_id,
-            }),
+            QueryType::UpdateNftMetadata(UpdateNftMetadataQuery { contract_address, token_id }),
         ))?;
 
         Ok(())
