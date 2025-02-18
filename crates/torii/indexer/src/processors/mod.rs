@@ -14,6 +14,8 @@ pub mod erc1155_transfer_batch;
 pub mod erc1155_transfer_single;
 pub mod erc20_legacy_transfer;
 pub mod erc20_transfer;
+pub mod erc4906_batch_metadata_update;
+pub mod erc4906_metadata_update;
 pub mod erc721_legacy_transfer;
 pub mod erc721_transfer;
 pub mod event_message;
@@ -28,6 +30,7 @@ pub mod store_update_member;
 pub mod store_update_record;
 pub mod upgrade_event;
 pub mod upgrade_model;
+
 #[derive(Clone, Debug, Default)]
 pub struct EventProcessorConfig {
     pub historical_events: HashSet<String>,

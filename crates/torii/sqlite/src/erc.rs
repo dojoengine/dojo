@@ -10,7 +10,7 @@ use starknet::providers::Provider;
 use super::utils::{u256_to_sql_string, I256};
 use super::{Sql, SQL_FELT_DELIMITER};
 use crate::constants::TOKEN_TRANSFER_TABLE;
-use crate::executor::erc::RegisterNftTokenQuery;
+use crate::executor::erc::{RegisterNftTokenQuery, UpdateNftMetadataQuery};
 use crate::executor::{
     ApplyBalanceDiffQuery, Argument, QueryMessage, QueryType, RegisterErc20TokenQuery,
 };
@@ -91,12 +91,11 @@ impl Sql {
         block_number: u64,
     ) -> Result<()> {
         // contract_address:id
-        let actual_token_id = token_id;
-        let token_id = felt_and_u256_to_sql_string(&contract_address, &token_id);
-        let token_exists: bool = self.local_cache.contains_token_id(&token_id).await;
+        let id = felt_and_u256_to_sql_string(&contract_address, &token_id);
+        let token_exists: bool = self.local_cache.contains_token_id(&id).await;
 
         if !token_exists {
-            self.register_nft_token_metadata(contract_address, &token_id, actual_token_id).await?;
+            self.register_nft_token_metadata(&id, contract_address, token_id).await?;
         }
 
         self.store_erc_transfer_event(
@@ -104,7 +103,7 @@ impl Sql {
             from_address,
             to_address,
             amount,
-            &token_id,
+            &id,
             block_timestamp,
             event_id,
         )?;
@@ -113,11 +112,8 @@ impl Sql {
         {
             let mut erc_cache = self.local_cache.erc_cache.write().await;
             if from_address != Felt::ZERO {
-                let from_balance_id = format!(
-                    "{}{SQL_FELT_DELIMITER}{}",
-                    felt_to_sql_string(&from_address),
-                    &token_id
-                );
+                let from_balance_id =
+                    format!("{}{SQL_FELT_DELIMITER}{}", felt_to_sql_string(&from_address), &id);
                 let from_balance =
                     erc_cache.entry((ContractType::ERC721, from_balance_id)).or_default();
                 *from_balance -= I256::from(amount);
@@ -125,7 +121,7 @@ impl Sql {
 
             if to_address != Felt::ZERO {
                 let to_balance_id =
-                    format!("{}{SQL_FELT_DELIMITER}{}", felt_to_sql_string(&to_address), &token_id);
+                    format!("{}{SQL_FELT_DELIMITER}{}", felt_to_sql_string(&to_address), &id);
                 let to_balance =
                     erc_cache.entry((ContractType::ERC721, to_balance_id)).or_default();
                 *to_balance += I256::from(amount);
@@ -138,6 +134,20 @@ impl Sql {
             self.flush().await.with_context(|| "Failed to flush in handle_erc721_transfer")?;
             self.apply_cache_diff(block_id).await?;
         }
+
+        Ok(())
+    }
+
+    pub async fn update_nft_metadata(
+        &mut self,
+        contract_address: Felt,
+        token_id: U256,
+    ) -> Result<()> {
+        self.executor.send(QueryMessage::new(
+            "".to_string(),
+            vec![],
+            QueryType::UpdateNftMetadata(UpdateNftMetadataQuery { contract_address, token_id }),
+        ))?;
 
         Ok(())
     }
@@ -222,17 +232,17 @@ impl Sql {
 
     async fn register_nft_token_metadata(
         &mut self,
+        id: &str,
         contract_address: Felt,
-        token_id: &str,
         actual_token_id: U256,
     ) -> Result<()> {
         self.executor.send(QueryMessage::new(
             "".to_string(),
             vec![],
             QueryType::RegisterNftToken(RegisterNftTokenQuery {
-                token_id: token_id.to_string(),
+                id: id.to_string(),
                 contract_address,
-                actual_token_id,
+                token_id: actual_token_id,
             }),
         ))?;
 
@@ -240,7 +250,7 @@ impl Sql {
         // this cache is used while applying the cache diff
         // so we need to make sure that all RegisterErc*Token queries
         // are applied before the cache diff is applied
-        self.local_cache.register_token_id(token_id.to_string()).await;
+        self.local_cache.register_token_id(id.to_string()).await;
 
         Ok(())
     }

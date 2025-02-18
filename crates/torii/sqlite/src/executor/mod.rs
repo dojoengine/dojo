@@ -7,7 +7,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use anyhow::{Context, Result};
 use cainome::cairo_serde::{ByteArray, CairoSerde};
 use dojo_types::schema::{Struct, Ty};
-use erc::RegisterNftTokenMetadata;
+use erc::{RegisterNftTokenMetadata, UpdateNftMetadataQuery};
 use sqlx::{FromRow, Pool, Sqlite, Transaction};
 use starknet::core::types::{BlockId, BlockTag, Felt, FunctionCall};
 use starknet::core::utils::{get_selector_from_name, parse_cairo_short_string};
@@ -118,10 +118,9 @@ pub enum QueryType {
     TokenTransfer,
     RegisterModel,
     StoreEvent,
-    // similar to execute but doesn't create a new transaction
+    UpdateNftMetadata(UpdateNftMetadataQuery),
     Flush,
     Execute,
-    // rollback's the current transaction and starts a new one
     Rollback,
     Other,
 }
@@ -754,6 +753,17 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 } else {
                     res?;
                 }
+            }
+            QueryType::UpdateNftMetadata(update_metadata) => {
+                debug!(target: LOG_TARGET, "Updating NFT metadata.");
+                let instant = Instant::now();
+                self.update_nft_metadata(
+                    update_metadata.contract_address,
+                    update_metadata.token_id,
+                    self.provider.clone(),
+                )
+                .await?;
+                debug!(target: LOG_TARGET, duration = ?instant.elapsed(), "Updated NFT metadata.");
             }
             QueryType::Other => {
                 query.execute(&mut **tx).await.map_err(|e| {

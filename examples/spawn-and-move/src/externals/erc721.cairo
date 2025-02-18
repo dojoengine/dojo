@@ -7,16 +7,20 @@ mod ERC721Token {
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc721::{ERC721Component, ERC721HooksEmptyImpl};
     use starknet::ContractAddress;
+    use crate::externals::components::erc4906::ERC4906Component;
 
     component!(path: ERC721Component, storage: erc721, event: ERC721Event);
     component!(path: SRC5Component, storage: src5, event: SRC5Event);
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
+    component!(path: ERC4906Component, storage: erc4906, event: ERC4906Event);
 
     // External
     #[abi(embed_v0)]
     impl ERC721MixinImpl = ERC721Component::ERC721MixinImpl<ContractState>;
     #[abi(embed_v0)]
     impl OwnableMixinImpl = OwnableComponent::OwnableMixinImpl<ContractState>;
+    #[abi(embed_v0)]
+    impl ERC4906MixinImpl = ERC4906Component::ERC4906Implementation<ContractState>;
 
     // Internal
     impl ERC721InternalImpl = ERC721Component::InternalImpl<ContractState>;
@@ -30,6 +34,8 @@ mod ERC721Token {
         src5: SRC5Component::Storage,
         #[substorage(v0)]
         ownable: OwnableComponent::Storage,
+        #[substorage(v0)]
+        erc4906: ERC4906Component::Storage,
     }
 
     #[event]
@@ -41,6 +47,8 @@ mod ERC721Token {
         SRC5Event: SRC5Component::Event,
         #[flat]
         OwnableEvent: OwnableComponent::Event,
+        #[flat]
+        ERC4906Event: ERC4906Component::Event,
     }
 
     #[constructor]
@@ -62,6 +70,42 @@ mod ERC721Token {
         #[external(v0)]
         fn mint(ref self: ContractState, token_id: u256) {
             self.erc721.mint(starknet::get_caller_address(), token_id);
+        }
+
+        #[external(v0)]
+        fn update_token_metadata(ref self: ContractState, token_id: u256) {
+            // Only owner can update metadata
+            self.ownable.assert_only_owner();
+
+            // Emit metadata update event
+            self.erc4906.emit_metadata_update(token_id);
+        }
+
+        #[external(v0)]
+        fn update_batch_token_metadata(
+            ref self: ContractState, from_token_id: u256, to_token_id: u256,
+        ) {
+            // Only owner can update metadata
+            self.ownable.assert_only_owner();
+
+            // Emit batch metadata update event
+            self.erc4906.emit_batch_metadata_update(from_token_id, to_token_id);
+        }
+
+        #[external(v0)]
+        fn update_tokens_metadata(ref self: ContractState, token_ids: Span<u256>) {
+            // Only owner can update metadata
+            self.ownable.assert_only_owner();
+
+            // Emit metadata update event for each token
+            let mut i: usize = 0;
+            loop {
+                if i >= token_ids.len() {
+                    break;
+                }
+                self.erc4906.emit_metadata_update(*token_ids.at(i));
+                i += 1;
+            }
         }
     }
 }
