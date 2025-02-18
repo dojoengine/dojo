@@ -81,8 +81,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                         Arc::clone(&provider),
                         apply_balance_diff.block_id,
                     )
-                    .await
-                    .with_context(|| "Failed to apply balance diff in apply_cache_diff")?;
+                    .await?;
                 }
                 ContractType::ERC20 => {
                     // account_address/contract_address/ => ERC20
@@ -100,8 +99,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                         Arc::clone(&provider),
                         apply_balance_diff.block_id,
                     )
-                    .await
-                    .with_context(|| "Failed to apply balance diff in apply_cache_diff")?;
+                    .await?;
                 }
                 ContractType::ERC1155 => {
                     // account_address/contract_address:id => ERC1155
@@ -120,8 +118,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                         Arc::clone(&provider),
                         apply_balance_diff.block_id,
                     )
-                    .await
-                    .with_context(|| "Failed to apply balance diff in apply_cache_diff")?;
+                    .await?;
                 }
             }
         }

@@ -10,22 +10,24 @@ use tracing::debug;
 use super::{EventProcessor, EventProcessorConfig};
 use crate::task_manager::{self, TaskId, TaskPriority};
 
-pub(crate) const LOG_TARGET: &str = "torii_indexer::processors::erc4906_metadata_update";
+pub(crate) const LOG_TARGET: &str = "torii_indexer::processors::erc4906_metadata_update_batch";
+
 #[derive(Default, Debug)]
-pub struct Erc4906MetadataUpdateProcessor;
+pub struct Erc4906BatchMetadataUpdateProcessor;
 
 #[async_trait]
-impl<P> EventProcessor<P> for Erc4906MetadataUpdateProcessor
+impl<P> EventProcessor<P> for Erc4906BatchMetadataUpdateProcessor
 where
     P: Provider + Send + Sync + std::fmt::Debug,
 {
     fn event_key(&self) -> String {
-        "MetadataUpdate".to_string()
+        "BatchMetadataUpdate".to_string()
     }
 
     fn validate(&self, event: &Event) -> bool {
-        // Single token metadata update: [hash(MetadataUpdate), token_id.low, token_id.high]
-        event.keys.len() == 3 && event.data.is_empty()
+        // Batch metadata update: [hash(BatchMetadataUpdate), from_token_id.low, from_token_id.high,
+        // to_token_id.low, to_token_id.high]
+        event.keys.len() == 5 && event.data.is_empty()
     }
 
     fn task_priority(&self) -> TaskPriority {
@@ -47,16 +49,24 @@ where
         _config: &EventProcessorConfig,
     ) -> Result<(), Error> {
         let token_address = event.from_address;
-        let token_id = U256Cainome::cairo_deserialize(&event.keys, 1)?;
-        let token_id = U256::from_words(token_id.low, token_id.high);
+        let from_token_id = U256Cainome::cairo_deserialize(&event.keys, 1)?;
+        let from_token_id = U256::from_words(from_token_id.low, from_token_id.high);
 
-        db.update_nft_metadata(token_address, token_id).await?;
+        let to_token_id = U256Cainome::cairo_deserialize(&event.keys, 3)?;
+        let to_token_id = U256::from_words(to_token_id.low, to_token_id.high);
+
+        let mut token_id = from_token_id;
+        while token_id <= to_token_id {
+            db.update_nft_metadata(token_address, token_id).await?;
+            token_id += U256::from(1u8);
+        }
 
         debug!(
             target: LOG_TARGET,
             token_address = ?token_address,
-            token_id = ?token_id,
-            "NFT metadata updated for single token"
+            from_token_id = ?from_token_id,
+            to_token_id = ?to_token_id,
+            "NFT metadata updated for token range"
         );
 
         Ok(())
