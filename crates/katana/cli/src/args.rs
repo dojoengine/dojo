@@ -386,11 +386,7 @@ impl NodeArgs {
 
         #[cfg(feature = "server")]
         {
-            if self.server == ServerOptions::default() {
-                if let Some(server) = config.server {
-                    self.server = server;
-                }
-            }
+            self.server.merge(config.server.as_ref());
 
             if self.metrics == MetricsOptions::default() {
                 if let Some(metrics) = config.metrics {
