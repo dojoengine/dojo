@@ -43,16 +43,8 @@ impl TryFrom<NodeArgs> for NodeArgsConfig {
 
         let mut node_config = NodeArgsConfig {
             no_mining: if args.no_mining { Some(true) } else { None },
-            block_time: if args.block_time.is_some() {
-                Some(args.block_time.unwrap())
-            } else {
-                None
-            },
-            block_cairo_steps_limit: if args.block_cairo_steps_limit.is_some() {
-                Some(args.block_cairo_steps_limit.unwrap())
-            } else {
-                None
-            },
+            block_time: args.block_time,
+            block_cairo_steps_limit: args.block_cairo_steps_limit,
             db_dir: args.db_dir,
             messaging: args.messaging,
             ..Default::default()
