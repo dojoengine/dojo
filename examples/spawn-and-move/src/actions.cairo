@@ -110,9 +110,8 @@ pub mod actions {
             let move_id = dojo::utils::entity_id_from_serialized_keys([player_felt].span());
 
             let mut moves: MovesValue = world.read_value_from_id(move_id);
-
-            let simple_math = self.simple_math_dispatcher(@world);
-            moves.remaining = simple_math.decrement_saturating(moves.remaining);
+            // let simple_math = self.simple_math_dispatcher(@world);
+            // moves.remaining = simple_math.decrement_saturating(moves.remaining);
             moves.last_direction = direction;
             world.write_value_from_id(move_id, @moves);
 

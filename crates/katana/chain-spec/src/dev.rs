@@ -135,11 +135,14 @@ lazy_static! {
     pub static ref DEV: ChainSpec = {
         let mut chain_spec = DEV_UNALLOCATED.clone();
 
+        // TODO: really need to change how we handle dev accounts creatios
         let accounts = DevAllocationsGenerator::new(10)
+            .with_seed(parse_seed("0")) // same as in the cli
             .with_balance(U256::from(DEFAULT_PREFUNDED_ACCOUNT_BALANCE))
             .generate();
 
         chain_spec.genesis.extend_allocations(accounts.into_iter().map(|(k, v)| (k, v.into())));
+        chain_spec.genesis.sequencer_address = DEFAULT_SEQUENCER_ADDRESS;
         chain_spec
     };
 
@@ -158,6 +161,20 @@ lazy_static! {
             settlement: None,
         }
     };
+}
+
+pub const DEFAULT_SEQUENCER_ADDRESS: ContractAddress = ContractAddress::ONE;
+
+fn parse_seed(seed: &str) -> [u8; 32] {
+    let seed = seed.as_bytes();
+
+    if seed.len() >= 32 {
+        unsafe { *(seed[..32].as_ptr() as *const [u8; 32]) }
+    } else {
+        let mut actual_seed = [0u8; 32];
+        seed.iter().enumerate().for_each(|(i, b)| actual_seed[i] = *b);
+        actual_seed
+    }
 }
 
 fn add_default_fee_tokens(states: &mut StateUpdatesWithClasses, genesis: &Genesis) {

@@ -208,24 +208,6 @@ impl<EF: ExecutorFactory> Backend<EF> {
             let block = SealedBlockWithStatus { block, status: FinalityStatus::AcceptedOnL1 };
             let states = chain_spec.state_updates();
 
-            let mut block = block;
-            let block_number = block.block.header.number;
-
-            let class_trie_root = provider
-                .trie_insert_declared_classes(block_number, &states.state_updates.declared_classes)
-                .context("failed to update class trie")?;
-
-            let contract_trie_root = provider
-                .trie_insert_contract_updates(block_number, &states.state_updates)
-                .context("failed to update contract trie")?;
-
-            let genesis_state_root = hash::Poseidon::hash_array(&[
-                short_string!("STARKNET_STATE_V0"),
-                contract_trie_root,
-                class_trie_root,
-            ]);
-
-            block.block.header.state_root = genesis_state_root;
             provider.insert_block_with_states_and_receipts(block, states, vec![], vec![])?;
 
             info!("Genesis initialized");

@@ -301,7 +301,6 @@ pub fn build_test_config(path: &str, profile: Profile) -> anyhow::Result<Config>
     let cache_dir = TempDir::new().unwrap();
 
     let path = Utf8PathBuf::from_path_buf(path.into()).unwrap();
-    println!("path: {:?}", path);
     Config::builder(path.canonicalize_utf8().unwrap())
         .global_cache_dir_override(Some(Utf8Path::from_path(cache_dir.path()).unwrap()))
         .ui_verbosity(Verbosity::Verbose)

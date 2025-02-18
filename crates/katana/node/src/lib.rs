@@ -136,13 +136,13 @@ impl Node {
             .name("Sequencing")
             .spawn(sequencing.into_future());
 
-        // --- start the rpc server
-
-        let rpc_handle = self.rpc_server.start(self.config.rpc.socket_addr()).await?;
-
         // --- start the gas oracle worker task
         self.backend.gas_oracle.run_worker(self.task_manager.task_spawner());
         info!(target: "node", "Gas price oracle worker started.");
+
+        // --- start the rpc server
+
+        let rpc_handle = self.rpc_server.start(self.config.rpc.socket_addr()).await?;
 
         Ok(LaunchedNode { node: self, rpc: rpc_handle })
     }

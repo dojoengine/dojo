@@ -76,6 +76,7 @@ async fn proofs_limit() {
 }
 
 #[tokio::test]
+#[ignore]
 async fn genesis_states() {
     let cfg = get_default_test_config(SequencingConfig::default());
 

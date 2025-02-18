@@ -1,58 +1,82 @@
+use std::sync::Arc;
 use std::time::Duration;
 
-use blockifier::state::cached_state::CachedState;
-use criterion::measurement::WallTime;
-use criterion::{criterion_group, criterion_main, BatchSize, BenchmarkGroup, Criterion};
-use katana_executor::implementation::blockifier::state::StateProviderDb;
-use katana_executor::ExecutionFlags;
-use katana_primitives::env::{BlockEnv, CfgEnv};
-use katana_primitives::transaction::ExecutableTxWithHash;
+use criterion::{criterion_group, criterion_main, BatchSize, Criterion};
+use katana_executor::implementation::blockifier::BlockifierFactory;
+use katana_executor::{BlockLimits, ExecutionFlags, ExecutorFactory};
 use katana_provider::test_utils;
+use katana_provider::traits::block::BlockNumberProvider;
+use katana_provider::traits::env::BlockEnvProvider;
 use katana_provider::traits::state::StateFactoryProvider;
 use pprof::criterion::{Output, PProfProfiler};
 
-use crate::utils::{envs, tx};
+use crate::utils::{envs, setup, tx};
 
 mod utils;
 
-fn executor_transact(c: &mut Criterion) {
-    let mut group = c.benchmark_group("Invoke.ERC20.transfer");
+fn move_transactions(c: &mut Criterion) {
+    let mut group = c.benchmark_group("SpawnAndMove");
     group.warm_up_time(Duration::from_millis(200));
+    group.sample_size(10);
 
-    let provider = test_utils::test_provider();
-    let flags = ExecutionFlags::new();
+    let (node, tx_generator) = setup();
+    let provider = node.backend.blockchain.provider();
 
-    let tx = tx();
-    let envs = envs();
+    let state = Arc::new(provider.latest().unwrap());
+    let latest_num = provider.latest_number().unwrap();
+    let block_env = provider.block_env_at(latest_num.into()).unwrap().unwrap();
 
-    blockifier(&mut group, &provider, &flags, &envs, tx);
+    group.bench_function("Blockifier.Move.1", |b| {
+        b.iter_batched(
+            || {
+                let state = state.clone();
+                let env = block_env.clone();
+                let mut tx_generator = tx_generator.clone();
+
+                let executor = node.backend.executor_factory.with_state_and_block_env(state, env);
+                let txs = vec![tx_generator.move_tx()];
+
+                (executor, txs)
+            },
+            |(mut executor, txs)| executor.execute_transactions(txs).expect("execution failed"),
+            BatchSize::SmallInput,
+        )
+    });
+
+    group.bench_function("Blockifier.Move.100", |b| {
+        b.iter_batched(
+            || {
+                let state = state.clone();
+                let env = block_env.clone();
+                let mut tx_generator = tx_generator.clone();
+
+                let executor = node.backend.executor_factory.with_state_and_block_env(state, env);
+                let txs = (0..100).map(|_| tx_generator.move_tx()).collect::<Vec<_>>();
+
+                (executor, txs)
+            },
+            |(mut executor, txs)| executor.execute_transactions(txs).expect("execution failed"),
+            BatchSize::SmallInput,
+        )
+    });
 }
 
-fn blockifier(
-    group: &mut BenchmarkGroup<'_, WallTime>,
-    provider: impl StateFactoryProvider,
-    execution_flags: &ExecutionFlags,
-    block_envs: &(BlockEnv, CfgEnv),
-    tx: ExecutableTxWithHash,
-) {
-    use katana_executor::implementation::blockifier::utils::{block_context_from_envs, transact};
+fn erc20_transfer(c: &mut Criterion) {
+    let txs = vec![tx()];
+    let (block_env, cfg_env) = envs();
+    let provider = test_utils::test_provider();
 
-    // convert to blockifier block context
-    let block_context = block_context_from_envs(&block_envs.0, &block_envs.1);
+    let factory = BlockifierFactory::new(cfg_env, ExecutionFlags::default(), BlockLimits::max());
 
-    group.bench_function("Blockifier.Cold", |b| {
+    c.bench_function("Invoke.ERC20.transfer", |b| {
         // we need to set up the cached state for each iteration as it's not cloneable
         b.iter_batched(
             || {
-                // setup state
                 let state = provider.latest().expect("failed to get latest state");
-                let state = CachedState::new(StateProviderDb::new(state, Default::default()));
-
-                (state, &block_context, execution_flags, tx.clone())
+                let executor = factory.with_state_and_block_env(state, block_env.clone());
+                (executor, txs.clone())
             },
-            |(mut state, block_context, flags, tx)| {
-                transact(&mut state, block_context, flags, tx, None)
-            },
+            |(mut executor, txs)| executor.execute_transactions(txs).expect("execution failed"),
             BatchSize::SmallInput,
         )
     });
@@ -60,8 +84,8 @@ fn blockifier(
 
 criterion_group! {
     name = benches;
-    config = Criterion::default().with_profiler(PProfProfiler::new(100, Output::Flamegraph(None)));
-    targets = executor_transact
+    config = Criterion::default().warm_up_time(Duration::from_millis(200)).with_profiler(PProfProfiler::new(100, Output::Flamegraph(None)));
+    targets = erc20_transfer, move_transactions
 }
 
 criterion_main!(benches);

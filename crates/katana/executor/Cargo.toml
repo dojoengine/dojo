@@ -21,16 +21,23 @@ starknet = { workspace = true, optional = true }
 [dev-dependencies]
 katana-cairo.workspace = true
 katana-chain-spec.workspace = true
+katana-node.workspace = true
 katana-provider = { workspace = true, features = [ "test-utils" ] }
 katana-rpc-types.workspace = true
 
 alloy-primitives.workspace = true
 anyhow.workspace = true
+cainome.workspace = true
+dojo-test-utils.workspace = true
+dojo-utils.workspace = true
+dojo-world.workspace = true
 num-traits.workspace = true
 rstest.workspace = true
 rstest_reuse.workspace = true
+scarb.workspace = true
 serde_json.workspace = true
 similar-asserts.workspace = true
+sozo-scarbext.workspace = true
 tokio.workspace = true
 
 criterion.workspace = true

@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
+use katana_chain_spec::dev::DEFAULT_SEQUENCER_ADDRESS;
 use katana_chain_spec::ChainSpec;
 use katana_core::backend::Backend;
-use katana_core::constants::DEFAULT_SEQUENCER_ADDRESS;
 use katana_executor::implementation::blockifier::BlockifierFactory;
 use katana_node::config::dev::DevConfig;
 use katana_node::config::rpc::{RpcConfig, DEFAULT_RPC_ADDR};
@@ -118,7 +118,7 @@ pub fn get_default_test_config(sequencing: SequencingConfig) -> Config {
     let dev = DevConfig { fee: false, account_validation: true, fixed_gas_prices: None };
     let mut chain =
         katana_chain_spec::dev::ChainSpec { id: ChainId::SEPOLIA, ..Default::default() };
-    chain.genesis.sequencer_address = *DEFAULT_SEQUENCER_ADDRESS;
+    chain.genesis.sequencer_address = DEFAULT_SEQUENCER_ADDRESS;
 
     let rpc = RpcConfig {
         cors_origins: Vec::new(),

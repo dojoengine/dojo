@@ -8,9 +8,9 @@ use alloy_primitives::U256;
 use anyhow::bail;
 use anyhow::{Context, Result};
 use clap::Parser;
+use katana_chain_spec::dev::DEFAULT_SEQUENCER_ADDRESS;
 use katana_chain_spec::rollup::ChainConfigDir;
 use katana_chain_spec::ChainSpec;
-use katana_core::constants::DEFAULT_SEQUENCER_ADDRESS;
 use katana_messaging::MessagingConfig;
 use katana_node::config::db::DbConfig;
 use katana_node::config::dev::{DevConfig, FixedL1GasPriceConfig};
@@ -251,7 +251,7 @@ impl NodeArgs {
     fn chain_spec(&self) -> Result<(Arc<ChainSpec>, Option<MessagingConfig>)> {
         if let Some(path) = &self.chain {
             let mut cs = katana_chain_spec::rollup::read(path)?;
-            cs.genesis.sequencer_address = *DEFAULT_SEQUENCER_ADDRESS;
+            cs.genesis.sequencer_address = DEFAULT_SEQUENCER_ADDRESS;
             let messaging_config = MessagingConfig::from_chain_spec(&cs);
             Ok((Arc::new(ChainSpec::Rollup(cs)), Some(messaging_config)))
         }
@@ -266,7 +266,7 @@ impl NodeArgs {
             if let Some(genesis) = &self.starknet.genesis {
                 chain_spec.genesis = genesis.clone();
             } else {
-                chain_spec.genesis.sequencer_address = *DEFAULT_SEQUENCER_ADDRESS;
+                chain_spec.genesis.sequencer_address = DEFAULT_SEQUENCER_ADDRESS;
             }
 
             // generate dev accounts
@@ -448,7 +448,7 @@ mod test {
         assert_eq!(config.execution.validation_max_steps, DEFAULT_VALIDATION_MAX_STEPS);
         assert_eq!(config.db.dir, None);
         assert_eq!(config.chain.id(), ChainId::parse("KATANA").unwrap());
-        assert_eq!(config.chain.genesis().sequencer_address, *DEFAULT_SEQUENCER_ADDRESS);
+        assert_eq!(config.chain.genesis().sequencer_address, DEFAULT_SEQUENCER_ADDRESS);
     }
 
     #[test]
@@ -475,7 +475,7 @@ mod test {
         assert_eq!(config.execution.validation_max_steps, 100);
         assert_eq!(config.db.dir, Some(PathBuf::from("/path/to/db")));
         assert_eq!(config.chain.id(), ChainId::GOERLI);
-        assert_eq!(config.chain.genesis().sequencer_address, *DEFAULT_SEQUENCER_ADDRESS);
+        assert_eq!(config.chain.genesis().sequencer_address, DEFAULT_SEQUENCER_ADDRESS);
     }
 
     #[test]
