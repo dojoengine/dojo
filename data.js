@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1739887784815,
+  "lastUpdate": 1739887829136,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -54967,6 +54967,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 49933235887,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "20e05521adc0e8e6c931c64dc368c4c10551eb73",
+          "message": "fix(katana): merging server args from file (#3044)\n\n* update default\r\n\r\n* merge function",
+          "timestamp": "2025-02-18T07:52:24-06:00",
+          "tree_id": "6fa1eeb7ff173ae5125323cd826da131ba9a7067",
+          "url": "https://github.com/dojoengine/dojo/commit/20e05521adc0e8e6c931c64dc368c4c10551eb73"
+        },
+        "date": 1739887826236,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2520824,
+            "range": "± 46392",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 397241,
+            "range": "± 9766",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2797997915,
+            "range": "± 268407330",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 17088709,
+            "range": "± 516504",
             "unit": "ns/iter"
           }
         ]
