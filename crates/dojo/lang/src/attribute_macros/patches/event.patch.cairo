@@ -15,6 +15,10 @@ pub impl $type_name$Definition of dojo::event::EventDefinition<$type_name$>{
 }
 
 pub impl $type_name$ModelParser of dojo::model::model::ModelParser<$type_name$>{
+    fn deserialize(ref values: Span<felt252>) -> Option<$type_name$> {
+        // always use Serde as event data are never stored in the world storage.
+        core::serde::Serde::<$type_name$>::deserialize(ref values)
+    }
     fn serialize_keys(self: @$type_name$) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         $serialized_keys$

@@ -1280,12 +1280,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "eab1c04a571841102f5345a8fc0f6bb3d31c315dec879b5c6e42e40ce7ffa34e"
 
 [[package]]
-name = "ascii"
-version = "1.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d92bec98840b8f03a5ff5413de5293bfcd8bf96467cf5452609f939ec6f5de16"
-
-[[package]]
 name = "ascii-canvas"
 version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3584,12 +3578,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "chunked_transfer"
-version = "1.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6e4de3bc4ea267985becf712dc6d9eed8b04c953b3fcfb339ebc87acd9804901"
-
-[[package]]
 name = "ciborium"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3758,7 +3746,7 @@ version = "3.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "da3da6baa321ec19e1cc41d31bf599f00c783d0517095cdaf0332e3fe8d20680"
 dependencies = [
- "ascii 0.9.3",
+ "ascii",
  "byteorder",
  "either",
  "memchr",
@@ -3991,7 +3979,6 @@ dependencies = [
 [[package]]
 name = "create-output-dir"
 version = "1.0.0"
-source = "git+https://github.com/dojoengine/scarb?rev=22aa38f53de205af25bf73b3ffc2c5334999d480#22aa38f53de205af25bf73b3ffc2c5334999d480"
 dependencies = [
  "anyhow",
  "core-foundation 0.10.0",
@@ -4694,8 +4681,7 @@ version = "1.3.1"
 
 [[package]]
 name = "dojo-lang"
-version = "1.1.2"
-source = "git+https://github.com/dojoengine/dojo?rev=86bb5ae#86bb5aea7c2210d31ba16ecdfd45146aa665cd5e"
+version = "1.2.0"
 dependencies = [
  "anyhow",
  "cairo-lang-defs",
@@ -8175,7 +8161,6 @@ dependencies = [
  "dojo-utils",
  "katana-chain-spec",
  "katana-core",
- "katana-explorer",
  "katana-messaging",
  "katana-node",
  "katana-primitives",
@@ -12360,40 +12345,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rust-embed"
-version = "6.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a36224c3276f8c4ebc8c20f158eca7ca4359c8db89991c4925132aaaf6702661"
-dependencies = [
- "rust-embed-impl",
- "rust-embed-utils",
- "walkdir",
-]
-
-[[package]]
-name = "rust-embed-impl"
-version = "6.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "49b94b81e5b2c284684141a2fb9e2a31be90638caf040bf9afbc5a0416afe1ac"
-dependencies = [
- "proc-macro2",
- "quote",
- "rust-embed-utils",
- "syn 2.0.90",
- "walkdir",
-]
-
-[[package]]
-name = "rust-embed-utils"
-version = "7.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9d38ff6bf570dc3bb7100fce9f7b60c33fa71d80e88da3f2580df4ff2bdded74"
-dependencies = [
- "sha2",
- "walkdir",
-]
-
-[[package]]
 name = "rust_decimal"
 version = "1.36.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -12681,7 +12632,6 @@ dependencies = [
 [[package]]
 name = "scarb"
 version = "2.9.2"
-source = "git+https://github.com/dojoengine/scarb?rev=22aa38f53de205af25bf73b3ffc2c5334999d480#22aa38f53de205af25bf73b3ffc2c5334999d480"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -12713,7 +12663,7 @@ dependencies = [
  "derive_builder",
  "dialoguer",
  "directories",
- "dojo-lang 1.1.2",
+ "dojo-lang",
  "dunce",
  "flate2",
  "fs4",
@@ -12734,9 +12684,9 @@ dependencies = [
  "redb",
  "reqwest 0.11.27",
  "scarb-build-metadata",
- "scarb-metadata 1.13.0 (git+https://github.com/dojoengine/scarb?rev=22aa38f53de205af25bf73b3ffc2c5334999d480)",
- "scarb-proc-macro-server-types 0.1.0 (git+https://github.com/dojoengine/scarb?rev=22aa38f53de205af25bf73b3ffc2c5334999d480)",
- "scarb-stable-hash 1.0.0 (git+https://github.com/dojoengine/scarb?rev=22aa38f53de205af25bf73b3ffc2c5334999d480)",
+ "scarb-metadata 1.13.0",
+ "scarb-proc-macro-server-types 0.1.0",
+ "scarb-stable-hash 1.0.0",
  "scarb-ui",
  "semver 1.0.23",
  "serde",
@@ -12757,7 +12707,7 @@ dependencies = [
  "typed-builder",
  "url",
  "walkdir",
- "which 7.0.1",
+ "which 7.0.2",
  "windows-sys 0.59.0",
  "zip",
  "zstd 0.13.2",
@@ -12766,9 +12716,20 @@ dependencies = [
 [[package]]
 name = "scarb-build-metadata"
 version = "2.9.2"
-source = "git+https://github.com/dojoengine/scarb?rev=22aa38f53de205af25bf73b3ffc2c5334999d480#22aa38f53de205af25bf73b3ffc2c5334999d480"
 dependencies = [
  "cargo_metadata",
+]
+
+[[package]]
+name = "scarb-metadata"
+version = "1.13.0"
+dependencies = [
+ "camino",
+ "derive_builder",
+ "semver 1.0.23",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.11",
 ]
 
 [[package]]
@@ -12785,16 +12746,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "scarb-metadata"
-version = "1.13.0"
-source = "git+https://github.com/dojoengine/scarb?rev=22aa38f53de205af25bf73b3ffc2c5334999d480#22aa38f53de205af25bf73b3ffc2c5334999d480"
+name = "scarb-proc-macro-server-types"
+version = "0.1.0"
 dependencies = [
- "camino",
- "derive_builder",
- "semver 1.0.23",
+ "cairo-lang-macro",
  "serde",
  "serde_json",
- "thiserror 2.0.11",
 ]
 
 [[package]]
@@ -12809,13 +12766,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "scarb-proc-macro-server-types"
-version = "0.1.0"
-source = "git+https://github.com/dojoengine/scarb?rev=22aa38f53de205af25bf73b3ffc2c5334999d480#22aa38f53de205af25bf73b3ffc2c5334999d480"
+name = "scarb-stable-hash"
+version = "1.0.0"
 dependencies = [
- "cairo-lang-macro",
- "serde",
- "serde_json",
+ "data-encoding",
+ "xxhash-rust",
 ]
 
 [[package]]
@@ -12829,25 +12784,15 @@ dependencies = [
 ]
 
 [[package]]
-name = "scarb-stable-hash"
-version = "1.0.0"
-source = "git+https://github.com/dojoengine/scarb?rev=22aa38f53de205af25bf73b3ffc2c5334999d480#22aa38f53de205af25bf73b3ffc2c5334999d480"
-dependencies = [
- "data-encoding",
- "xxhash-rust",
-]
-
-[[package]]
 name = "scarb-ui"
 version = "0.1.5"
-source = "git+https://github.com/dojoengine/scarb?rev=22aa38f53de205af25bf73b3ffc2c5334999d480#22aa38f53de205af25bf73b3ffc2c5334999d480"
 dependencies = [
  "anyhow",
  "camino",
  "clap",
  "console",
  "indicatif",
- "scarb-metadata 1.13.0 (git+https://github.com/dojoengine/scarb?rev=22aa38f53de205af25bf73b3ffc2c5334999d480)",
+ "scarb-metadata 1.13.0",
  "serde",
  "serde_json",
  "tracing-core",
@@ -13560,7 +13505,7 @@ dependencies = [
  "reqwest 0.11.27",
  "resolve-path",
  "scarb",
- "scarb-metadata 1.13.0 (git+https://github.com/dojoengine/scarb?rev=22aa38f53de205af25bf73b3ffc2c5334999d480)",
+ "scarb-metadata 1.13.0",
  "scarb-ui",
  "semver 1.0.23",
  "serde",
@@ -14786,18 +14731,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2c9d3793400a45f954c52e73d068316d76b6f4e36977e3fcebb13a2721e80237"
 dependencies = [
  "crunchy",
-]
-
-[[package]]
-name = "tiny_http"
-version = "0.12.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "389915df6413a2e74fb181895f933386023c71110878cd0825588928e64cdc82"
-dependencies = [
- "ascii 1.1.0",
- "chunked_transfer",
- "httpdate",
- "log",
 ]
 
 [[package]]
@@ -16758,9 +16691,9 @@ dependencies = [
 
 [[package]]
 name = "which"
-version = "7.0.1"
+version = "7.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fb4a9e33648339dc1642b0e36e21b3385e6148e289226f657c809dee59df5028"
+checksum = "2774c861e1f072b3aadc02f8ba886c26ad6321567ecc294c935434cad06f1283"
 dependencies = [
  "either",
  "env_home",
