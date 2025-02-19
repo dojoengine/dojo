@@ -51,7 +51,7 @@ pub trait KeyParser<M, K> {
 /// Defines a trait for parsing models, providing methods to serialize keys and values.
 pub trait ModelParser<M> {
     /// Deserializes raw data into a model struct.
-    fn deserialize(ref values: Span<felt252>) -> Option<M>;    
+    fn deserialize(ref values: Span<felt252>) -> Option<M>;
     /// Serializes the keys of the model.
     fn serialize_keys(self: @M) -> Span<felt252>;
     /// Serializes the values of the model.

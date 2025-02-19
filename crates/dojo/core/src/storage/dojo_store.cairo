@@ -1,9 +1,11 @@
 /// Handle data (de)serialization to be stored into
 /// the world storage.
-/// 
+///
 /// The default implementation of this trait uses Serde.
 pub trait DojoStore<T, +Serde<T>> {
-    fn serialize(self: @T, ref serialized: Array<felt252>) {
+    fn serialize(
+        self: @T, ref serialized: Array<felt252>,
+    ) {
         Serde::<T>::serialize(self, ref serialized);
     }
     fn deserialize(ref values: Span<felt252>) -> Option<T> {
@@ -29,7 +31,7 @@ impl DojoStore_EthAddress of DojoStore<starknet::EthAddress>;
 impl DojoStore_ByteArray of DojoStore<ByteArray>;
 
 /// Specific implementation of DojoStore for Option<T>.
-/// 
+///
 /// 'None' is stored as the first variant (instead of 'Some').
 /// The variant index is incremented by 1 to be able to detect
 /// unitialized variant.
@@ -40,9 +42,7 @@ impl DojoStore_option<T, +Serde<T>, +DojoStore<T>, +Serde<Option<T>>> of DojoSto
                 serialized.append(2);
                 DojoStore::serialize(x, ref serialized);
             },
-            Option::None => {
-                serialized.append(1);
-            }
+            Option::None => { serialized.append(1); },
         }
     }
 
@@ -51,7 +51,7 @@ impl DojoStore_option<T, +Serde<T>, +DojoStore<T>, +Serde<Option<T>>> of DojoSto
             return match *x {
                 0 | 1 => Option::Some(Option::None),
                 2 => Option::Some(DojoStore::<T>::deserialize(ref values)),
-                _ => Option::None
+                _ => Option::None,
             };
         }
 
@@ -59,7 +59,9 @@ impl DojoStore_option<T, +Serde<T>, +DojoStore<T>, +Serde<Option<T>>> of DojoSto
     }
 }
 
-fn serialize_array_helper<T, +Serde<T>, +DojoStore<T>, +Drop<T>>(mut input: Span<T>, ref output: Array<felt252>) {
+fn serialize_array_helper<T, +Serde<T>, +DojoStore<T>, +Drop<T>>(
+    mut input: Span<T>, ref output: Array<felt252>,
+) {
     match input.pop_front() {
         Option::Some(value) => {
             DojoStore::serialize(value, ref output);
@@ -94,7 +96,6 @@ impl DojoStore_array<T, +Drop<T>, +Serde<T>, +DojoStore<T>> of DojoStore<Array<T
         deserialize_array_helper(ref values, arr, length)
     }
 }
-
 // TODO RBA: specific implementation for tuples.
 
 /// Specific implementation of DojoStore for Span<T>,
@@ -111,4 +112,5 @@ impl DojoStore_array<T, +Drop<T>, +Serde<T>, +DojoStore<T>> of DojoStore<Array<T
 //        Some(deserialize_array_helper(ref values, arr, length)?.span())
 //    }
 //}
+
 

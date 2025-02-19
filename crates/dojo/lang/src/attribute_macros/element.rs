@@ -83,13 +83,21 @@ pub fn serialize_keys_and_values(
     members: &[Member],
     serialized_keys: &mut Vec<RewriteNode>,
     serialized_values: &mut Vec<RewriteNode>,
-    use_serde: bool
+    use_serde: bool,
 ) {
     members.iter().for_each(|member| {
         if member.key {
-            serialized_keys.push(RewriteNode::Text(serialize_member_ty(&member.name, true, use_serde)));
+            serialized_keys.push(RewriteNode::Text(serialize_member_ty(
+                &member.name,
+                true,
+                use_serde,
+            )));
         } else {
-            serialized_values.push(RewriteNode::Text(serialize_member_ty(&member.name, true, use_serde)));
+            serialized_values.push(RewriteNode::Text(serialize_member_ty(
+                &member.name,
+                true,
+                use_serde,
+            )));
         }
     });
 }
@@ -98,17 +106,24 @@ pub fn deserialize_keys_and_values(
     members: &[Member],
     deserialized_keys: &mut Vec<RewriteNode>,
     deserialized_values: &mut Vec<RewriteNode>,
-    use_serde: bool
+    use_serde: bool,
 ) {
     members.iter().for_each(|member| {
         if member.key {
-            deserialized_keys.push(RewriteNode::Text(deserialize_member_ty(&member.name, &member.ty, use_serde)));
+            deserialized_keys.push(RewriteNode::Text(deserialize_member_ty(
+                &member.name,
+                &member.ty,
+                use_serde,
+            )));
         } else {
-            deserialized_values.push(RewriteNode::Text(deserialize_member_ty(&member.name, &member.ty, use_serde)));
+            deserialized_values.push(RewriteNode::Text(deserialize_member_ty(
+                &member.name,
+                &member.ty,
+                use_serde,
+            )));
         }
     });
 }
-
 
 /// Creates a [`RewriteNode`] for the member type serialization.
 ///
@@ -116,11 +131,7 @@ pub fn deserialize_keys_and_values(
 ///
 /// * member: The member to serialize.
 pub fn serialize_member_ty(member_name: &String, with_self: bool, use_serde: bool) -> String {
-    let serialize_path = if use_serde {
-        "core::serde::Serde"
-    } else {
-        "dojo::storage::DojoStore"
-    };
+    let serialize_path = if use_serde { "core::serde::Serde" } else { "dojo::storage::DojoStore" };
 
     format!(
         "{serialize_path}::serialize({}{member_name}, ref serialized);\n",
@@ -129,11 +140,8 @@ pub fn serialize_member_ty(member_name: &String, with_self: bool, use_serde: boo
 }
 
 pub fn deserialize_member_ty(member_name: &String, member_ty: &String, use_serde: bool) -> String {
-    let deserialize_path = if use_serde {
-        "core::serde::Serde"
-    } else {
-        "dojo::storage::DojoStore"
-    };
+    let deserialize_path =
+        if use_serde { "core::serde::Serde" } else { "dojo::storage::DojoStore" };
 
     format!("let {member_name} = {deserialize_path}::<{member_ty}>::deserialize(ref values)?;\n")
 }

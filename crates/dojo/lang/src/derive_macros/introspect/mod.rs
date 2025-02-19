@@ -41,7 +41,15 @@ pub fn handle_introspect_struct(
     let (gen_types, gen_impls) = build_generic_types_and_impls(db, struct_ast.generic_params(db));
     let dojo_store = dojo_store::build_struct_dojo_store(db, &struct_name, &struct_ast);
 
-    generate_introspect(&struct_name, &struct_size, &gen_types, gen_impls, &layout, &ty, &dojo_store)
+    generate_introspect(
+        &struct_name,
+        &struct_size,
+        &gen_types,
+        gen_impls,
+        &layout,
+        &ty,
+        &dojo_store,
+    )
 }
 
 /// Generate the introspect of a Enum
@@ -94,9 +102,8 @@ fn generate_introspect(
     generic_impls: String,
     layout: &String,
     ty: &String,
-    dojo_store: &String
+    dojo_store: &String,
 ) -> RewriteNode {
-
     RewriteNode::interpolate_patched(
         "
 impl $name$Introspect<$generics$> of dojo::meta::introspect::Introspect<$name$<$generics_types$>> \
