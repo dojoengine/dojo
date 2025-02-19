@@ -63,7 +63,7 @@ impl DojoEvent {
         let mut serialized_keys: Vec<RewriteNode> = vec![];
         let mut serialized_values: Vec<RewriteNode> = vec![];
 
-        serialize_keys_and_values(&members, &mut serialized_keys, &mut serialized_values);
+        serialize_keys_and_values(&members, &mut serialized_keys, &mut serialized_values, true);
 
         if serialized_keys.is_empty() {
             diagnostics.push(PluginDiagnostic {

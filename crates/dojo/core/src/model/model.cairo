@@ -50,6 +50,8 @@ pub trait KeyParser<M, K> {
 
 /// Defines a trait for parsing models, providing methods to serialize keys and values.
 pub trait ModelParser<M> {
+    /// Deserializes raw data into a model struct.
+    fn deserialize(ref values: Span<felt252>) -> Option<M>;    
     /// Serializes the keys of the model.
     fn serialize_keys(self: @M) -> Span<felt252>;
     /// Serializes the values of the model.
@@ -127,7 +129,7 @@ pub impl ModelImpl<M, +ModelParser<M>, +ModelDefinition<M>, +Serde<M>, +Drop<M>>
         serialized.append_span(values);
         let mut span = serialized.span();
 
-        Serde::<M>::deserialize(ref span)
+        ModelParser::<M>::deserialize(ref span)
     }
 
     fn name() -> ByteArray {

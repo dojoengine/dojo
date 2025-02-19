@@ -8,6 +8,7 @@ use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{Terminal, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 
+mod dojo_store;
 mod layout;
 mod size;
 mod ty;
@@ -38,8 +39,9 @@ pub fn handle_introspect_struct(
     };
 
     let (gen_types, gen_impls) = build_generic_types_and_impls(db, struct_ast.generic_params(db));
+    let dojo_store = dojo_store::build_struct_dojo_store(db, &struct_name, &struct_ast);
 
-    generate_introspect(&struct_name, &struct_size, &gen_types, gen_impls, &layout, &ty)
+    generate_introspect(&struct_name, &struct_size, &gen_types, gen_impls, &layout, &ty, &dojo_store)
 }
 
 /// Generate the introspect of a Enum
@@ -78,8 +80,9 @@ pub fn handle_introspect_enum(
     let (gen_types, gen_impls) = build_generic_types_and_impls(db, enum_ast.generic_params(db));
     let enum_size = size::compute_enum_layout_size(&variant_sizes, packed);
     let ty = ty::build_enum_ty(db, &enum_name, &enum_ast);
+    let dojo_store = dojo_store::build_enum_dojo_store(db, &enum_name, &enum_ast);
 
-    generate_introspect(&enum_name, &enum_size, &gen_types, gen_impls, &layout, &ty)
+    generate_introspect(&enum_name, &enum_size, &gen_types, gen_impls, &layout, &ty, &dojo_store)
 }
 
 /// Generate the introspect impl for a Struct or an Enum,
@@ -91,7 +94,9 @@ fn generate_introspect(
     generic_impls: String,
     layout: &String,
     ty: &String,
+    dojo_store: &String
 ) -> RewriteNode {
+
     RewriteNode::interpolate_patched(
         "
 impl $name$Introspect<$generics$> of dojo::meta::introspect::Introspect<$name$<$generics_types$>> \
@@ -110,6 +115,8 @@ impl $name$Introspect<$generics$> of dojo::meta::introspect::Introspect<$name$<$
         $ty$
     }
 }
+
+$dojo_store$
         ",
         &UnorderedHashMap::from([
             ("name".to_string(), RewriteNode::Text(name.to_string())),
@@ -118,6 +125,7 @@ impl $name$Introspect<$generics$> of dojo::meta::introspect::Introspect<$name$<$
             ("size".to_string(), RewriteNode::Text(size.to_string())),
             ("layout".to_string(), RewriteNode::Text(layout.to_string())),
             ("ty".to_string(), RewriteNode::Text(ty.to_string())),
+            ("dojo_store".to_string(), RewriteNode::Text(dojo_store.to_string())),
         ]),
     )
 }

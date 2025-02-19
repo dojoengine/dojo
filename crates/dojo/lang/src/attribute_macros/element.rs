@@ -83,48 +83,57 @@ pub fn serialize_keys_and_values(
     members: &[Member],
     serialized_keys: &mut Vec<RewriteNode>,
     serialized_values: &mut Vec<RewriteNode>,
+    use_serde: bool
 ) {
     members.iter().for_each(|member| {
         if member.key {
-            serialized_keys.push(serialize_member_ty(member, true));
+            serialized_keys.push(RewriteNode::Text(serialize_member_ty(&member.name, true, use_serde)));
         } else {
-            serialized_values.push(serialize_member_ty(member, true));
+            serialized_values.push(RewriteNode::Text(serialize_member_ty(&member.name, true, use_serde)));
         }
     });
 }
 
 pub fn deserialize_keys_and_values(
     members: &[Member],
-    keys_input_name: &str,
     deserialized_keys: &mut Vec<RewriteNode>,
-    values_input_name: &str,
     deserialized_values: &mut Vec<RewriteNode>,
+    use_serde: bool
 ) {
     members.iter().for_each(|member| {
         if member.key {
-            deserialized_keys.push(deserialize_member_ty(member, keys_input_name));
+            deserialized_keys.push(RewriteNode::Text(deserialize_member_ty(&member.name, &member.ty, use_serde)));
         } else {
-            deserialized_values.push(deserialize_member_ty(member, values_input_name));
+            deserialized_values.push(RewriteNode::Text(deserialize_member_ty(&member.name, &member.ty, use_serde)));
         }
     });
 }
+
 
 /// Creates a [`RewriteNode`] for the member type serialization.
 ///
 /// # Arguments
 ///
 /// * member: The member to serialize.
-pub fn serialize_member_ty(member: &Member, with_self: bool) -> RewriteNode {
-    RewriteNode::Text(format!(
-        "core::serde::Serde::serialize({}{}, ref serialized);\n",
+pub fn serialize_member_ty(member_name: &String, with_self: bool, use_serde: bool) -> String {
+    let serialize_path = if use_serde {
+        "core::serde::Serde"
+    } else {
+        "dojo::storage::DojoStore"
+    };
+
+    format!(
+        "{serialize_path}::serialize({}{member_name}, ref serialized);\n",
         if with_self { "self." } else { "@" },
-        member.name
-    ))
+    )
 }
 
-pub fn deserialize_member_ty(member: &Member, input_name: &str) -> RewriteNode {
-    RewriteNode::Text(format!(
-        "let {} = core::serde::Serde::<{}>::deserialize(ref {input_name})?;\n",
-        member.name, member.ty
-    ))
+pub fn deserialize_member_ty(member_name: &String, member_ty: &String, use_serde: bool) -> String {
+    let deserialize_path = if use_serde {
+        "core::serde::Serde"
+    } else {
+        "dojo::storage::DojoStore"
+    };
+
+    format!("let {member_name} = {deserialize_path}::<{member_ty}>::deserialize(ref values)?;\n")
 }
