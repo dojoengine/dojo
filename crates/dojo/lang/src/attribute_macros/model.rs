@@ -15,10 +15,13 @@ use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use dojo_types::naming;
 use starknet::core::utils::get_selector_from_name;
 
-use super::element::{compute_unique_hash, parse_members, serialize_member_ty, deserialize_member_ty};
+use super::element::{
+    compute_unique_hash, deserialize_member_ty, parse_members, serialize_member_ty,
+};
 use crate::aux_data::{Member, ModelAuxData};
 use crate::derive_macros::{
-    extract_derive_attr_names, handle_derive_attrs, DOJO_INTROSPECT_DERIVE, DOJO_PACKED_DERIVE, DOJO_LEGACY_STORAGE,
+    extract_derive_attr_names, handle_derive_attrs, DOJO_INTROSPECT_DERIVE, DOJO_LEGACY_STORAGE,
+    DOJO_PACKED_DERIVE,
 };
 
 const MODEL_CODE_PATCH: &str = include_str!("./patches/model.patch.cairo");
@@ -74,7 +77,7 @@ impl DojoModel {
         let mut serialized_keys: Vec<RewriteNode> = vec![];
         let mut serialized_values: Vec<RewriteNode> = vec![];
         let mut deserialized_values: Vec<RewriteNode> = vec![];
-    
+
         let mut field_accessors: Vec<RewriteNode> = vec![];
 
         // The impl constraint for a model `MemberStore` must be defined for each member type.
@@ -89,11 +92,23 @@ impl DojoModel {
                 keys.push(member.clone());
                 key_types.push(member.ty.clone());
                 key_attrs.push(format!("*self.{}", member.name.clone()));
-                serialized_keys.push(RewriteNode::Text(serialize_member_ty(&member.name, true, use_legacy_storage)));
+                serialized_keys.push(RewriteNode::Text(serialize_member_ty(
+                    &member.name,
+                    true,
+                    use_legacy_storage,
+                )));
             } else {
                 values.push(member.clone());
-                serialized_values.push(RewriteNode::Text(serialize_member_ty(&member.name, true, use_legacy_storage)));
-                deserialized_values.push(RewriteNode::Text(deserialize_member_ty(&member.name, &member.ty, use_legacy_storage)));
+                serialized_values.push(RewriteNode::Text(serialize_member_ty(
+                    &member.name,
+                    true,
+                    use_legacy_storage,
+                )));
+                deserialized_values.push(RewriteNode::Text(deserialize_member_ty(
+                    &member.name,
+                    &member.ty,
+                    use_legacy_storage,
+                )));
 
                 members_values
                     .push(RewriteNode::Text(format!("pub {}: {},\n", member.name, member.ty)));
@@ -172,12 +187,12 @@ impl DojoModel {
         let deserialized_modelvalue = format!(
             "Option::Some({model_type}Value {{
                 {value_names}
-            }})");
+            }})"
+        );
 
         let model_deserialize_path = if use_legacy_storage {
             "core::serde::Serde".to_string()
-        }
-        else {
+        } else {
             "dojo::storage::DojoStore".to_string()
         };
 

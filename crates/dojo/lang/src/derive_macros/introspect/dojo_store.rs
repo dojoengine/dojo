@@ -1,24 +1,22 @@
-use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::ast::{ItemEnum, ItemStruct, OptionTypeClause};
-use cairo_lang_syntax::node::Terminal;
-use cairo_lang_syntax::node::TypedSyntaxNode;
+use cairo_lang_syntax::node::db::SyntaxGroup;
+use cairo_lang_syntax::node::{Terminal, TypedSyntaxNode};
 
-use crate::attribute_macros::element::{serialize_member_ty, deserialize_member_ty};
+use crate::attribute_macros::element::{deserialize_member_ty, serialize_member_ty};
 
-pub fn build_struct_dojo_store(db: &dyn SyntaxGroup, name: &String, struct_ast: &ItemStruct) -> String {
+pub fn build_struct_dojo_store(
+    db: &dyn SyntaxGroup,
+    name: &String,
+    struct_ast: &ItemStruct,
+) -> String {
     let mut serialized_members = vec![];
     let mut deserialized_members = vec![];
     let mut member_names = vec![];
 
     for member in struct_ast.members(db).elements(db).iter() {
         let member_name = member.name(db).text(db).to_string();
-        let member_ty = member
-                    .type_clause(db)
-                    .ty(db)
-                    .as_syntax_node()
-                    .get_text(db)
-                    .trim()
-                    .to_string();
+        let member_ty =
+            member.type_clause(db).ty(db).as_syntax_node().get_text(db).trim().to_string();
 
         serialized_members.push(serialize_member_ty(&member_name, true, false));
         deserialized_members.push(deserialize_member_ty(&member_name, &member_ty, false));
@@ -28,9 +26,9 @@ pub fn build_struct_dojo_store(db: &dyn SyntaxGroup, name: &String, struct_ast: 
     let serialized_members = serialized_members.join("");
     let deserialized_members = deserialized_members.join("");
     let member_names = member_names.join(",\n");
-    
+
     format!(
-    "impl {name}DojoStore of dojo::storage::DojoStore<{name}> {{
+        "impl {name}DojoStore of dojo::storage::DojoStore<{name}> {{
         fn serialize(self: @{name}, ref serialized: Array<felt252>) {{
             {serialized_members}
         }}
@@ -52,7 +50,7 @@ pub fn build_enum_dojo_store(db: &dyn SyntaxGroup, name: &String, enum_ast: &Ite
         let variant_name = variant.name(db).text(db).to_string();
         let full_variant_name = format!("{name}::{variant_name}");
         let variant_index = index + 1;
-        
+
         let serialized_variant = match variant.type_clause(db) {
             OptionTypeClause::TypeClause(_) => {
                 format!(
@@ -61,7 +59,7 @@ pub fn build_enum_dojo_store(db: &dyn SyntaxGroup, name: &String, enum_ast: &Ite
                         dojo::storage::DojoStore::serialize(d, ref serialized);
                     }},"
                 )
-            },
+            }
             OptionTypeClause::Empty(_) => {
                 format!("{full_variant_name} => {{ serialized.append({variant_index}); }},")
             }
@@ -69,21 +67,17 @@ pub fn build_enum_dojo_store(db: &dyn SyntaxGroup, name: &String, enum_ast: &Ite
 
         let deserialized_variant = match variant.type_clause(db) {
             OptionTypeClause::TypeClause(ty) => {
-                let ty = ty.ty(db).as_syntax_node()
-                    .get_text(db)
-                    .trim()
-                    .to_string();
+                let ty = ty.ty(db).as_syntax_node().get_text(db).trim().to_string();
                 format!(
                     "{variant_index} => {{
-                        let variant_data = dojo::storage::DojoStore::<{ty}>::deserialize(ref values)?;
+                        let variant_data = dojo::storage::DojoStore::<{ty}>::deserialize(ref \
+                     values)?;
                         Option::Some({full_variant_name}(variant_data))
                     }},",
                 )
-            },
+            }
             OptionTypeClause::Empty(_) => {
-                format!(
-                    "{variant_index} => Option::Some({full_variant_name}),",
-                )
+                format!("{variant_index} => Option::Some({full_variant_name}),",)
             }
         };
 
@@ -95,7 +89,7 @@ pub fn build_enum_dojo_store(db: &dyn SyntaxGroup, name: &String, enum_ast: &Ite
     let deserialized_variants = deserialized_variants.join("\n");
 
     format!(
-    "impl {name}DojoStore of dojo::storage::DojoStore<{name}> {{
+        "impl {name}DojoStore of dojo::storage::DojoStore<{name}> {{
         fn serialize(self: @{name}, ref serialized: Array<felt252>) {{
             match self {{
                 {serialized_variants}
