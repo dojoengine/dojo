@@ -85,12 +85,33 @@ where
     pub async fn new(
         namespace: &str,
         name: &str,
+        address: Felt,
+        class_hash: Felt,
         world: &'a WorldContractReader<P>,
     ) -> Result<ModelRPCReader<'a, P>, ModelError> {
-        Self::new_with_block(namespace, name, world, world.block_id).await
+        let selector = naming::compute_selector_from_names(namespace, name);
+        let contract_reader = ModelContractReader::new(address, world.provider());
+
+        Ok(Self {
+            namespace: namespace.into(),
+            name: name.into(),
+            selector,
+            class_hash,
+            contract_address: address,
+            world_reader: world,
+            model_reader: contract_reader,
+        })
     }
 
-    pub async fn new_with_block(
+    pub async fn new_from_world(
+        namespace: &str,
+        name: &str,
+        world: &'a WorldContractReader<P>,
+    ) -> Result<ModelRPCReader<'a, P>, ModelError> {
+        Self::new_from_world_with_block(namespace, name, world, world.block_id).await
+    }
+
+    pub async fn new_from_world_with_block(
         namespace: &str,
         name: &str,
         world: &'a WorldContractReader<P>,
@@ -113,18 +134,7 @@ where
             return Err(ModelError::ModelNotFound);
         }
 
-        let mut model_reader = ModelContractReader::new(contract_address.into(), world.provider());
-        model_reader.set_block(block_id);
-
-        Ok(Self {
-            namespace: namespace.into(),
-            name: name.into(),
-            world_reader: world,
-            class_hash,
-            contract_address: contract_address.into(),
-            selector: model_selector,
-            model_reader,
-        })
+        Ok(Self::new(namespace, name, contract_address.0, class_hash, world).await?)
     }
 
     pub async fn entity_storage(&self, keys: &[Felt]) -> Result<Vec<Felt>, ModelError> {

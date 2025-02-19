@@ -77,7 +77,7 @@ where
             return Ok(());
         }
 
-        let model = if config.strict_model_reader {
+        let model = if config.strict_model_reader {s
             world.model_reader_with_block(&namespace, &name, BlockId::Number(block_number)).await?
         } else {
             world.model_reader(&namespace, &name).await?

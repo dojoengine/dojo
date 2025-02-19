@@ -24,7 +24,7 @@ where
     ) -> Result<ModelRPCReader<'_, P>, ModelError> {
         let (namespace, name) =
             naming::split_tag(tag).map_err(|e| ModelError::TagError(e.to_string()))?;
-        ModelRPCReader::new(&namespace, &name, self).await
+        ModelRPCReader::new_from_world(&namespace, &name, self).await
     }
 
     pub async fn model_reader(
@@ -32,15 +32,8 @@ where
         namespace: &str,
         name: &str,
     ) -> Result<ModelRPCReader<'_, P>, ModelError> {
-        ModelRPCReader::new(namespace, name, self).await
+        ModelRPCReader::new_from_world(namespace, name, self).await
     }
 
-    pub async fn model_reader_with_block(
-        &self,
-        namespace: &str,
-        name: &str,
-        block_id: BlockId,
-    ) -> Result<ModelRPCReader<'_, P>, ModelError> {
-        ModelRPCReader::new_with_block(namespace, name, self, block_id).await
-    }
+    pub async fn model_reader_with
 }
