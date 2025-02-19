@@ -23,12 +23,23 @@ pub fn is_tuple(ty: &str) -> bool {
     ty.starts_with(TUPLE_PREFIX)
 }
 
+pub fn is_option(ty: &str) -> bool {
+    ty.starts_with("Option<")
+}
+
 pub fn get_array_item_type(ty: &str) -> String {
     if ty.starts_with(ARRAY_PREFIX) {
         extract_composite_inner_type(ty, ARRAY_PREFIX, ARRAY_SUFFIX)
     } else {
         extract_composite_inner_type(ty, SPAN_PREFIX, SPAN_SUFFIX)
     }
+}
+
+/// Due to some bugs in cairo_lang_* crates (at least until Cairo 2.11),
+/// we have to clean the parsed ty of the last element of a struct/enum,
+/// as it could ends without a comma and with a comment (see extract_composite_inner_type).
+pub fn clean_ty(ty: &str) -> String {
+    ty.split("//").next().unwrap().trim().to_string()
 }
 
 /// Extracts the inner type of a composite type such as tuple, array or span.

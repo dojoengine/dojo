@@ -1182,8 +1182,13 @@ pub mod world {
                 panic_with_byte_array(@errors::invalid_resource_layout_upgrade(namespace, name));
             }
 
+            // The layout of a resource using packed layout must remain the same.
             if let Layout::Fixed(_) = new_layout {
-                panic_with_byte_array(@errors::packed_layout_cannot_be_upgraded(namespace, name));
+                if new_layout != old_layout {
+                    panic_with_byte_array(
+                        @errors::packed_layout_cannot_be_upgraded(namespace, name),
+                    );
+                }
             }
 
             if !new_schema.is_an_upgrade_of(@old_schema) {

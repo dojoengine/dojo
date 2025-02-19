@@ -4,7 +4,6 @@
 //! module or trait.
 
 pub mod contract;
-pub mod element;
 pub mod event;
 pub mod interface;
 pub mod library;

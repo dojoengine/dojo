@@ -670,9 +670,9 @@ pub impl Introspect_option<T, +Introspect<T>> of Introspect<Option<T>> {
         Layout::Enum(
             [
                 dojo::meta::FieldLayout { // Some
-                selector: 0, layout: Introspect::<T>::layout() },
+                selector: 1, layout: Introspect::<T>::layout() },
                 dojo::meta::FieldLayout { // None
-                selector: 1, layout: Layout::Fixed([].span()) },
+                selector: 2, layout: Layout::Fixed([].span()) },
             ]
                 .span(),
         )

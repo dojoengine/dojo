@@ -12,16 +12,16 @@ use cairo_lang_defs::plugin::{
 use cairo_lang_diagnostics::Severity;
 use cairo_lang_syntax::node::ast::ModuleItem;
 use cairo_lang_syntax::node::db::SyntaxGroup;
-use cairo_lang_syntax::node::helpers::QueryAttrs;
+use cairo_lang_syntax::node::helpers::{OptionWrappedGenericParamListHelper, QueryAttrs};
 use cairo_lang_syntax::node::{ast, TypedStablePtr, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use dojo_types::naming;
 
-use super::element::{compute_unique_hash, parse_members, serialize_keys_and_values};
 use crate::aux_data::EventAuxData;
 use crate::derive_macros::{
     extract_derive_attr_names, handle_derive_attrs, DOJO_INTROSPECT_DERIVE, DOJO_PACKED_DERIVE,
 };
+use crate::utils::{compute_unique_hash, parse_members, serialize_keys_and_values};
 
 const EVENT_PATCH: &str = include_str!("./patches/event.patch.cairo");
 
@@ -58,12 +58,31 @@ impl DojoEvent {
             }
         }
 
+        // generic events are not allowed
+        if !struct_ast.generic_params(db).is_empty(db) {
+            return PluginResult {
+                code: None,
+                diagnostics: vec![PluginDiagnostic {
+                    stable_ptr: struct_ast.name(db).stable_ptr().0,
+                    message: format!("The event '{event_name}' cannot be generic"),
+                    severity: Severity::Error,
+                }],
+                remove_original_item: false,
+            };
+        }
+
         let members = parse_members(db, &struct_ast.members(db).elements(db), &mut diagnostics);
 
         let mut serialized_keys: Vec<RewriteNode> = vec![];
         let mut serialized_values: Vec<RewriteNode> = vec![];
 
-        serialize_keys_and_values(&members, &mut serialized_keys, &mut serialized_values);
+        serialize_keys_and_values(
+            db,
+            &struct_ast.members(db).elements(db),
+            &mut serialized_keys,
+            &mut serialized_values,
+            true,
+        );
 
         if serialized_keys.is_empty() {
             diagnostics.push(PluginDiagnostic {

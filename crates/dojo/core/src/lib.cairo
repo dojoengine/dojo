@@ -67,6 +67,9 @@ pub mod storage {
     pub mod layout;
     pub mod storage;
     pub mod entity_model;
+
+    pub mod dojo_store;
+    pub use dojo_store::{ContractAddressDefault, DojoStore};
 }
 
 pub mod utils {

@@ -10,7 +10,7 @@ use crate::world::{spawn_test_world, NamespaceDef, TestResource};
 /// These event contracts are used to test event upgrades in tests/event.cairo.
 
 // This event is used as a base to create the "previous" version of an event to be upgraded.
-#[derive(Introspect)]
+#[derive(Introspect, Serde)]
 struct FooBaseEvent {
     #[key]
     pub caller: ContractAddress,
@@ -63,8 +63,9 @@ struct FooEventMemberAdded {
     pub b: u128,
 }
 
-#[derive(Introspect, Copy, Drop, Serde)]
+#[derive(Introspect, Copy, Drop, Serde, Default)]
 enum MyEnum {
+    #[default]
     X: u8,
 }
 
@@ -77,8 +78,9 @@ struct FooEventMemberChanged {
     pub b: u128,
 }
 
-#[derive(Introspect, Copy, Drop, Serde)]
+#[derive(Introspect, Copy, Drop, Serde, Default)]
 enum AnotherEnum {
+    #[default]
     X: u8,
 }
 

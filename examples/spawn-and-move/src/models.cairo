@@ -1,7 +1,8 @@
 use starknet::ContractAddress;
 
-#[derive(Serde, Copy, Drop, Introspect, PartialEq, Debug)]
+#[derive(Serde, Copy, Drop, Introspect, PartialEq, Debug, Default)]
 pub enum Direction {
+    #[default]
     None,
     Left,
     Right,
