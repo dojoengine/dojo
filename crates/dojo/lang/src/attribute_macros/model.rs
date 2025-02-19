@@ -15,10 +15,10 @@ use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use dojo_types::naming;
 use starknet::core::utils::get_selector_from_name;
 
-use super::element::{compute_unique_hash, parse_members, serialize_member_ty};
+use super::element::{compute_unique_hash, parse_members, serialize_member_ty, deserialize_member_ty};
 use crate::aux_data::{Member, ModelAuxData};
 use crate::derive_macros::{
-    extract_derive_attr_names, handle_derive_attrs, DOJO_INTROSPECT_DERIVE, DOJO_PACKED_DERIVE,
+    extract_derive_attr_names, handle_derive_attrs, DOJO_INTROSPECT_DERIVE, DOJO_PACKED_DERIVE, DOJO_LEGACY_STORAGE,
 };
 
 const MODEL_CODE_PATCH: &str = include_str!("./patches/model.patch.cairo");
@@ -57,6 +57,14 @@ impl DojoModel {
             }
         }
 
+        let mut derive_attr_names = extract_derive_attr_names(
+            db,
+            &mut diagnostics,
+            struct_ast.attributes(db).query_attr(db, "derive"),
+        );
+
+        let use_legacy_storage = derive_attr_names.contains(&DOJO_LEGACY_STORAGE.to_string());
+
         let mut values: Vec<Member> = vec![];
         let mut keys: Vec<Member> = vec![];
         let mut members_values: Vec<RewriteNode> = vec![];
@@ -65,6 +73,8 @@ impl DojoModel {
 
         let mut serialized_keys: Vec<RewriteNode> = vec![];
         let mut serialized_values: Vec<RewriteNode> = vec![];
+        let mut deserialized_values: Vec<RewriteNode> = vec![];
+    
         let mut field_accessors: Vec<RewriteNode> = vec![];
 
         // The impl constraint for a model `MemberStore` must be defined for each member type.
@@ -79,10 +89,12 @@ impl DojoModel {
                 keys.push(member.clone());
                 key_types.push(member.ty.clone());
                 key_attrs.push(format!("*self.{}", member.name.clone()));
-                serialized_keys.push(serialize_member_ty(member, true));
+                serialized_keys.push(RewriteNode::Text(serialize_member_ty(&member.name, true, use_legacy_storage)));
             } else {
                 values.push(member.clone());
-                serialized_values.push(serialize_member_ty(member, true));
+                serialized_values.push(RewriteNode::Text(serialize_member_ty(&member.name, true, use_legacy_storage)));
+                deserialized_values.push(RewriteNode::Text(deserialize_member_ty(&member.name, &member.ty, use_legacy_storage)));
+
                 members_values
                     .push(RewriteNode::Text(format!("pub {}: {},\n", member.name, member.ty)));
                 field_accessors.push(generate_field_accessors(model_type.clone(), member));
@@ -131,12 +143,6 @@ impl DojoModel {
             (key_attrs.first().unwrap().to_string(), key_types.first().unwrap().to_string())
         };
 
-        let mut derive_attr_names = extract_derive_attr_names(
-            db,
-            &mut diagnostics,
-            struct_ast.attributes(db).query_attr(db, "derive"),
-        );
-
         // Ensures models always derive Introspect if not already derived.
         let model_value_derive_attr_names = derive_attr_names
             .iter()
@@ -161,6 +167,20 @@ impl DojoModel {
             compute_unique_hash(db, &model_type, is_packed, &struct_ast.members(db).elements(db))
                 .to_string();
 
+        let value_names = values.iter().map(|v| v.name.clone()).collect::<Vec<_>>().join(",\n");
+
+        let deserialized_modelvalue = format!(
+            "Option::Some({model_type}Value {{
+                {value_names}
+            }})");
+
+        let model_deserialize_path = if use_legacy_storage {
+            "core::serde::Serde".to_string()
+        }
+        else {
+            "dojo::storage::DojoStore".to_string()
+        };
+
         diagnostics.extend(derive_diagnostics);
 
         let node = RewriteNode::interpolate_patched(
@@ -169,6 +189,9 @@ impl DojoModel {
                 ("model_type".to_string(), RewriteNode::Text(model_type.clone())),
                 ("serialized_keys".to_string(), RewriteNode::new_modified(serialized_keys)),
                 ("serialized_values".to_string(), RewriteNode::new_modified(serialized_values)),
+                ("deserialized_values".to_string(), RewriteNode::new_modified(deserialized_values)),
+                ("deserialized_modelvalue".to_string(), RewriteNode::Text(deserialized_modelvalue)),
+                ("model_deserialize_path".to_string(), RewriteNode::Text(model_deserialize_path)),
                 ("keys_to_tuple".to_string(), RewriteNode::Text(keys_to_tuple)),
                 ("key_type".to_string(), RewriteNode::Text(key_type)),
                 ("members_values".to_string(), RewriteNode::new_modified(members_values)),
