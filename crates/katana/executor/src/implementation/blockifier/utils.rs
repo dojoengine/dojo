@@ -47,7 +47,7 @@ use katana_primitives::trace::{L1Gas, TxExecInfo, TxResources};
 use katana_primitives::transaction::{
     DeclareTx, DeployAccountTx, ExecutableTx, ExecutableTxWithHash, InvokeTx, TxType,
 };
-use katana_primitives::{class, event, message, trace, Felt};
+use katana_primitives::{class, event, message, trace};
 use katana_provider::traits::contract::ContractClassProvider;
 use starknet::core::utils::parse_cairo_short_string;
 
@@ -573,14 +573,6 @@ pub fn to_class(class: class::CompiledClass) -> Result<ContractClass, ProgramErr
     }
 }
 
-/// TODO: remove this function once starknet api 0.8.0 is supported.
-fn starknet_api_ethaddr_to_felt(value: katana_cairo::starknet_api::core::EthAddress) -> Felt {
-    let mut bytes = [0u8; 32];
-    // Padding H160 with zeros to 32 bytes (big endian)
-    bytes[12..32].copy_from_slice(value.0.as_bytes());
-    Felt::from_bytes_be(&bytes)
-}
-
 pub fn to_exec_info(exec_info: TransactionExecutionInfo, r#type: TxType) -> TxExecInfo {
     TxExecInfo {
         r#type,
@@ -671,7 +663,7 @@ fn to_l2_l1_messages(
 ) -> message::OrderedL2ToL1Message {
     let order = m.order as u64;
     let payload = m.message.payload.0;
-    let to_address = starknet_api_ethaddr_to_felt(m.message.to_address);
+    let to_address = m.message.to_address;
     message::OrderedL2ToL1Message { order, from_address, to_address, payload }
 }
 

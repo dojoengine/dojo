@@ -2100,7 +2100,7 @@ dependencies = [
 [[package]]
 name = "blockifier"
 version = "0.8.0-rc.3"
-source = "git+https://github.com/dojoengine/sequencer?rev=adae779#adae779dd758fb3cdedec0af61651f80ec463279"
+source = "git+https://github.com/dojoengine/sequencer?rev=d860f498#d860f498d25ad1699007286be031aef35a9692e5"
 dependencies = [
  "anyhow",
  "ark-ec",
@@ -13925,7 +13925,7 @@ dependencies = [
 [[package]]
 name = "starknet_api"
 version = "0.13.0-rc.1"
-source = "git+https://github.com/dojoengine/sequencer?rev=adae779#adae779dd758fb3cdedec0af61651f80ec463279"
+source = "git+https://github.com/dojoengine/sequencer?rev=d860f498#d860f498d25ad1699007286be031aef35a9692e5"
 dependencies = [
  "bitvec",
  "cairo-lang-starknet-classes",
