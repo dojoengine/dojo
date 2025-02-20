@@ -220,7 +220,7 @@ async fn fetch_and_process_image(
             debug!(image_uri = %uri, "Fetching image from http/https URL");
             // Fetch image from HTTP/HTTPS URL
             let response =
-                fetch_content_from_http(&uri).await.context("Failed to fetch image from URL")?;
+                fetch_content_from_http(uri).await.context("Failed to fetch image from URL")?;
 
             // svg files typically start with <svg or <?xml
             if response.starts_with(b"<svg") || response.starts_with(b"<?xml") {
@@ -263,7 +263,7 @@ async fn fetch_and_process_image(
             debug!("Parsing image from data URI");
             trace!(data_uri = %uri);
             // Parse and decode data URI
-            let data_url = DataUrl::process(&uri).context("Failed to parse data URI")?;
+            let data_url = DataUrl::process(uri).context("Failed to parse data URI")?;
 
             // Check if it's an SVG
             if data_url.mime_type() == &Mime::from_str("image/svg+xml").unwrap() {
