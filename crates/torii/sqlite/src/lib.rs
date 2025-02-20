@@ -576,7 +576,8 @@ impl Sql {
         for contract_address in contract_addresses {
             self.executor.send(QueryMessage::other(
                 "INSERT OR IGNORE INTO transaction_contract (transaction_hash, contract_address) \
-                 VALUES (?, ?)".to_string(),
+                 VALUES (?, ?)"
+                    .to_string(),
                 vec![transaction_hash.clone(), Argument::FieldElement(*contract_address)],
             ))?;
         }
