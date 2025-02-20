@@ -515,6 +515,7 @@ impl Sql {
         &mut self,
         transaction: &Transaction,
         transaction_id: &str,
+        contract_address: Felt,
         block_timestamp: u64,
     ) -> Result<()> {
         let id = Argument::String(transaction_id.to_string());
@@ -556,7 +557,7 @@ impl Sql {
 
         self.executor.send(QueryMessage::other(
             "INSERT OR IGNORE INTO transactions (id, transaction_hash, sender_address, calldata, \
-             max_fee, signature, nonce, transaction_type, executed_at) VALUES (?, ?, ?, ?, ?, ?, \
+             max_fee, signature, nonce, transaction_type, contract_address, executed_at) VALUES (?, ?, ?, ?, ?, ?, \
              ?, ?, ?)"
                 .to_string(),
             vec![
@@ -568,6 +569,7 @@ impl Sql {
                 signature,
                 nonce,
                 Argument::String(transaction_type.to_string()),
+                Argument::String(format!("{:#x}", contract_address)),
                 Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
             ],
         ))?;

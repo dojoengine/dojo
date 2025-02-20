@@ -721,6 +721,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                     block_number,
                     block_timestamp,
                     *transaction_hash,
+                    
                     &transaction_with_receipt.transaction,
                 )
                 .await?;
@@ -752,6 +753,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         block_number: u64,
         block_timestamp: u64,
         transaction_hash: Felt,
+        contract_address: Felt,
         transaction: &Transaction,
     ) -> Result<()> {
         for processor in &self.processors.transaction {
@@ -762,6 +764,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                     block_number,
                     block_timestamp,
                     transaction_hash,
+                    contract_address,
                     transaction,
                 )
                 .await?
