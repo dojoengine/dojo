@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use anyhow::{Error, Ok, Result};
 use async_trait::async_trait;
 use starknet::core::types::{Felt, Transaction};
@@ -18,11 +20,11 @@ impl<P: Provider + Sync + std::fmt::Debug> TransactionProcessor<P> for StoreTran
         block_number: u64,
         block_timestamp: u64,
         transaction_hash: Felt,
-        contract_address: Felt,
+        contract_addresses: &HashSet<Felt>,
         transaction: &Transaction,
     ) -> Result<(), Error> {
         let transaction_id = format!("{:#064x}:{:#x}", block_number, transaction_hash);
-        db.store_transaction(transaction, &transaction_id, contract_address, block_timestamp)?;
+        db.store_transaction(transaction, &transaction_id, contract_addresses, block_timestamp)?;
         Ok(())
     }
 }

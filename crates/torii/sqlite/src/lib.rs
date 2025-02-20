@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::convert::TryInto;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -515,7 +515,7 @@ impl Sql {
         &mut self,
         transaction: &Transaction,
         transaction_id: &str,
-        contract_address: Felt,
+        contract_addresses: &HashSet<Felt>,
         block_timestamp: u64,
     ) -> Result<()> {
         let id = Argument::String(transaction_id.to_string());
@@ -557,22 +557,29 @@ impl Sql {
 
         self.executor.send(QueryMessage::other(
             "INSERT OR IGNORE INTO transactions (id, transaction_hash, sender_address, calldata, \
-             max_fee, signature, nonce, transaction_type, contract_address, executed_at) VALUES (?, ?, ?, ?, ?, ?, \
+             max_fee, signature, nonce, transaction_type, executed_at) VALUES (?, ?, ?, ?, ?, ?, \
              ?, ?, ?)"
                 .to_string(),
             vec![
                 id,
-                transaction_hash,
+                transaction_hash.clone(),
                 sender_address,
                 calldata,
                 max_fee,
                 signature,
                 nonce,
                 Argument::String(transaction_type.to_string()),
-                Argument::String(format!("{:#x}", contract_address)),
                 Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
             ],
         ))?;
+
+        for contract_address in contract_addresses {
+            self.executor.send(QueryMessage::other(
+                "INSERT OR IGNORE INTO transaction_contract (transaction_hash, contract_address) \
+                 VALUES (?, ?)".to_string(),
+                vec![transaction_hash.clone(), Argument::FieldElement(*contract_address)],
+            ))?;
+        }
 
         Ok(())
     }
