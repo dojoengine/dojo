@@ -8,6 +8,8 @@ use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{Terminal, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 
+use crate::debug_expand;
+
 mod dojo_store;
 mod layout;
 mod size;
@@ -40,6 +42,8 @@ pub fn handle_introspect_struct(
 
     let (gen_types, gen_impls) = build_generic_types_and_impls(db, struct_ast.generic_params(db));
     let dojo_store = dojo_store::build_struct_dojo_store(db, &struct_name, &struct_ast);
+
+    debug_expand(&format!("DOJO_STORE STRUCT::{struct_name}"), &dojo_store);
 
     generate_introspect(
         &struct_name,
@@ -89,6 +93,8 @@ pub fn handle_introspect_enum(
     let enum_size = size::compute_enum_layout_size(&variant_sizes, packed);
     let ty = ty::build_enum_ty(db, &enum_name, &enum_ast);
     let dojo_store = dojo_store::build_enum_dojo_store(db, &enum_name, &enum_ast);
+
+    debug_expand(&format!("DOJO_STORE ENUM::{enum_name}"), &dojo_store);
 
     generate_introspect(&enum_name, &enum_size, &gen_types, gen_impls, &layout, &ty, &dojo_store)
 }
