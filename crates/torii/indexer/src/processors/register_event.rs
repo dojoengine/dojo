@@ -81,7 +81,7 @@ where
         // distinction.
         let mut model =
             ModelRPCReader::new(&namespace, &name, event.address.0, event.class_hash.0, world)
-                .await?;
+                .await;
         if config.strict_model_reader {
             model.set_block(BlockId::Number(block_number)).await;
         }
