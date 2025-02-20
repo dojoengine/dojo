@@ -96,9 +96,7 @@ impl DojoStore_array<T, +Drop<T>, +Serde<T>, +DojoStore<T>> of DojoStore<Array<T
         deserialize_array_helper(ref values, arr, length)
     }
 }
-// TODO RBA: specific implementation for tuples.
-
-/// Specific implementation of DojoStore for Span<T>,
+/// TODO RBA: Specific implementation of DojoStore for Span<T>,
 /// to call DojoStore for span items instead of Serde directly.
 //impl DojoStore_span<T, +Drop<T>, +Serde<T>, +DojoStore<T>> of DojoStore<Span<T>> {
 //    fn serialize(self: @Span<T>, ref serialized: Array<felt252>) {
@@ -112,5 +110,4 @@ impl DojoStore_array<T, +Drop<T>, +Serde<T>, +DojoStore<T>> of DojoStore<Array<T
 //        Some(deserialize_array_helper(ref values, arr, length)?.span())
 //    }
 //}
-
 
