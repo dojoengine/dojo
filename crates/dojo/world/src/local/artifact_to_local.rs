@@ -46,8 +46,13 @@ impl WorldLocal {
             let entry = entry?;
             let path = entry.path();
             if path.is_file() {
+                if path.to_string_lossy().ends_with(".sierra.json") {
+                    trace!("Ignored .sierra.json: {}", path.to_string_lossy().to_string());
+                    continue;
+                }
+
                 if let Ok(sierra) =
-                    serde_json::from_reader::<_, SierraClass>(std::fs::File::open(&path)?)
+                    serde_json::from_slice::<SierraClass>(std::fs::read(&path)?.as_slice())
                 {
                     let casm_path = PathBuf::from(
                         path.to_string_lossy()
@@ -56,9 +61,9 @@ impl WorldLocal {
                     );
 
                     let casm_class = if casm_path.exists() {
-                        Some(serde_json::from_reader::<_, CompiledClass>(std::fs::File::open(
-                            &casm_path,
-                        )?)?)
+                        Some(serde_json::from_slice::<CompiledClass>(
+                            std::fs::read(&casm_path)?.as_slice(),
+                        )?)
                     } else {
                         None
                     };
@@ -161,6 +166,8 @@ impl WorldLocal {
                                          with the version.",
                                         name
                                     );
+                                } else {
+                                    dojo_resource_found = true;
                                 }
 
                                 break;
@@ -361,7 +368,7 @@ build-external-contracts = ["dojo::world::world_contract::world"]
 fn casm_class_hash_from_sierra_file<P: AsRef<Path>>(path: P) -> Result<Felt> {
     let bytecode_max_size = usize::MAX;
     let sierra_class: ContractClass =
-        serde_json::from_reader::<_, ContractClass>(std::fs::File::open(path)?)?;
+        serde_json::from_slice::<ContractClass>(std::fs::read(path)?.as_slice())?;
     let casm_class =
         CasmContractClass::from_contract_class(sierra_class, false, bytecode_max_size)?;
     Ok(casm_class.compiled_class_hash())
