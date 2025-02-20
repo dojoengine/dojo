@@ -86,7 +86,9 @@ where
         let namespace = model.namespace;
         let prev_schema = model.schema;
 
-        let mut model = ModelRPCReader::new(&namespace, &name, event.address.0, event.class_hash.0, world).await?;
+        let mut model =
+            ModelRPCReader::new(&namespace, &name, event.address.0, event.class_hash.0, world)
+                .await?;
         if config.strict_model_reader {
             model.set_block(BlockId::Number(block_number)).await;
         }
