@@ -1,6 +1,4 @@
 use std::result::Result;
-
-use starknet::core::types::BlockId;
 use starknet::providers::Provider;
 
 pub use super::abigen::world::{
@@ -34,6 +32,4 @@ where
     ) -> Result<ModelRPCReader<'_, P>, ModelError> {
         ModelRPCReader::new_from_world(namespace, name, self).await
     }
-
-    pub async fn model_reader_with
 }
