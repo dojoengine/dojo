@@ -215,7 +215,7 @@ async fn fetch_and_process_image(
         .context("Image field not a string")?
         .to_string();
 
-    let image_type = match image_uri {
+    let image_type = match &image_uri {
         uri if uri.starts_with("http") || uri.starts_with("https") => {
             debug!(image_uri = %uri, "Fetching image from http/https URL");
             // Fetch image from HTTP/HTTPS URL
