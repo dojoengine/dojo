@@ -111,3 +111,4 @@ impl DojoStore_array<T, +Drop<T>, +Serde<T>, +DojoStore<T>> of DojoStore<Array<T
 //    }
 //}
 
+
