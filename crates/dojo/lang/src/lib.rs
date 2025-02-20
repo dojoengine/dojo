@@ -39,3 +39,14 @@ pub fn debug_expand(loc: &str, code: &str) {
         );
     }
 }
+
+/// Prints the given string only if the 'DOJO_STORE_EXPAND' environment variable is set.
+/// This is useful for debugging DojoStore implementation. 
+pub fn debug_store_expand(element_name: &str, code: &str) {
+    if std::env::var("DOJO_STORE_EXPAND").is_ok() {
+        println!(
+            "\n*> EXPAND {} <*\n>>>>>>>>>>>>>>>>>>>>>>>>>>>\n{}\n<<<<<<<<<<<<<<<<<<<<<<<<<<<\n",
+            element_name, code
+        );
+    }
+}
