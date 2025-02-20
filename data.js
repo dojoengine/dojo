@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1740009678028,
+  "lastUpdate": 1740009727571,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -55249,6 +55249,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 44107604568,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f2441975a5b3ef416ccb3497c6dbe2b0daa9d9ea",
+          "message": "fix(katana): bump blockifier to widen `MsgToL1.to_address` to `Felt` (#3050)\n\n* add new piltover class with MSG magic patch\r\n\r\n* bump blockifier\r\n\r\n* use piltover on main branch\r\n\r\n---------\r\n\r\nCo-authored-by: Ammar Arif <evergreenkary@gmail.com>",
+          "timestamp": "2025-02-19T17:44:27-06:00",
+          "tree_id": "617c247dc1ec960813b941544d7d45e3d5af6770",
+          "url": "https://github.com/dojoengine/dojo/commit/f2441975a5b3ef416ccb3497c6dbe2b0daa9d9ea"
+        },
+        "date": 1740009724882,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2425286,
+            "range": "± 85670",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 392971,
+            "range": "± 17674",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2683002419,
+            "range": "± 263075478",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 16953034,
+            "range": "± 231243",
             "unit": "ns/iter"
           }
         ]
