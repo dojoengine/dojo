@@ -57,7 +57,21 @@ async fn serve_static_file(
     let token_image_dir = artifacts_dir.join(parts[0]).join(parts[1]);
 
     let token_id = format!("{}:{}", parts[0], parts[1]);
-    if !token_image_dir.exists() {
+    
+    // Check if image needs to be refetched
+    let should_fetch = if token_image_dir.exists() {
+        match check_image_hash(&token_image_dir, &token_id, &pool).await {
+            Ok(needs_update) => needs_update,
+            Err(e) => {
+                error!(error = %e, "Failed to check image hash, will attempt to fetch");
+                true
+            }
+        }
+    } else {
+        true
+    };
+
+    if should_fetch {
         match fetch_and_process_image(&artifacts_dir, &token_id, pool).await {
             Ok(path) => path,
             Err(e) => {
@@ -145,6 +159,40 @@ pub async fn new(
     }))
 }
 
+async fn check_image_hash(
+    token_image_dir: &Utf8PathBuf,
+    token_id: &str,
+    pool: &Pool<Sqlite>,
+) -> Result<bool> {
+    let hash_file = token_image_dir.join("image.hash");
+    
+    // Get current image URI from metadata
+    let query = sqlx::query_as::<_, (String,)>(&format!(
+        "SELECT metadata FROM {TOKENS_TABLE} WHERE id = ?"
+    ))
+    .bind(token_id)
+    .fetch_one(pool)
+    .await
+    .context("Failed to fetch metadata from database")?;
+
+    let metadata: serde_json::Value = serde_json::from_str(&query.0).context("Failed to parse metadata")?;
+    let current_uri = metadata
+        .get("image")
+        .context("Image URL not found in metadata")?
+        .as_str()
+        .context("Image field not a string")?;
+
+    // Check if hash file exists and compare
+    if hash_file.exists() {
+        let stored_hash = fs::read_to_string(&hash_file)
+            .await
+            .context("Failed to read hash file")?;
+        Ok(stored_hash != current_uri)
+    } else {
+        Ok(true)
+    }
+}
+
 async fn fetch_and_process_image(
     artifacts_path: &Utf8PathBuf,
     token_id: &str,
@@ -156,17 +204,14 @@ async fn fetch_and_process_image(
     .bind(token_id)
     .fetch_one(&pool)
     .await
-    .with_context(|| {
-        format!("Failed to fetch metadata from database for token_id: {}", token_id)
-    })?;
+    .context("Failed to fetch metadata from database")?;
 
-    let metadata: serde_json::Value =
-        serde_json::from_str(&query.0).context("Failed to parse metadata")?;
+    let metadata: serde_json::Value = serde_json::from_str(&query.0).context("Failed to parse metadata")?;
     let image_uri = metadata
         .get("image")
-        .with_context(|| format!("Image URL not found in metadata for token_id: {}", token_id))?
+        .context("Image URL not found in metadata")?
         .as_str()
-        .with_context(|| format!("Image field not a string for token_id: {}", token_id))?
+        .context("Image field not a string")?
         .to_string();
 
     let image_type = match image_uri {
@@ -176,19 +221,19 @@ async fn fetch_and_process_image(
             let response =
                 fetch_content_from_http(&uri).await.context("Failed to fetch image from URL")?;
 
-            // svg files typically start with <svg or <?xml
-            if response.starts_with(b"<svg") || response.starts_with(b"<?xml") {
-                ErcImageType::Svg(response.to_vec())
-            } else {
-                let format = image::guess_format(&response).with_context(|| {
-                    format!("Unknown file format for token_id: {}, data: {:?}", token_id, &response)
-                })?;
-                ErcImageType::DynamicImage((
-                    image::load_from_memory_with_format(&response, format)
-                        .context("Failed to load image from bytes")?,
-                    format,
-                ))
-            }
+                // svg files typically start with <svg or <?xml
+                if response.starts_with(b"<svg") || response.starts_with(b"<?xml") {
+                    ErcImageType::Svg(response.to_vec())
+                } else {
+                    let format = image::guess_format(&response).with_context(|| {
+                        format!("Unknown file format for token_id: {}, data: {:?}", token_id, &response)
+                    })?;
+                    ErcImageType::DynamicImage((
+                        image::load_from_memory_with_format(&response, format)
+                            .context("Failed to load image from bytes")?,
+                        format,
+                    ))
+                }
         }
         uri if uri.starts_with("ipfs") => {
             debug!(image_uri = %uri, "Fetching image from IPFS");
@@ -291,6 +336,12 @@ async fn fetch_and_process_image(
                     .await
                     .with_context(|| format!("Failed to write image to file: {:?}", file_path))?;
             }
+
+            // Before returning, store the image URI hash
+            let hash_file = dir_path.join("image.hash");
+            fs::write(&hash_file, &image_uri)
+                .await
+                .context("Failed to write hash file")?;
 
             Ok(format!("{}/{}", relative_path, base_image_name))
         }
