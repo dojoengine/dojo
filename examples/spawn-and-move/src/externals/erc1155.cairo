@@ -64,7 +64,7 @@ mod ERC1155Token {
         #[external(v0)]
         fn token_uri(ref self: ContractState, token_id: u256) -> ByteArray {
             let tx_hash = starknet::get_tx_info().transaction_hash;
-            format!("{{ \"image\": \"https://api.dicebear.com/9.x/lorelei-neutral/png?seed={:x}\" }}", tx_hash)
+            format!("data:application/json,{{ \"image\": \"https://api.dicebear.com/9.x/lorelei-neutral/png?seed={}\" }}", tx_hash)
         }
 
         #[external(v0)]

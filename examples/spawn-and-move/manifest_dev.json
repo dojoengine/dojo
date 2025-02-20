@@ -2423,10 +2423,10 @@
   ],
   "external_contracts": [
     {
-      "class_hash": "0x19d35ddf3df2cd0b9fb3f9884848d617a63ea906df575f0848b13c9cb39aad1",
+      "class_hash": "0x69cb6ea3ce8a2312c70eb83f0ead12480698d9f42350332249f524dd8572244",
       "contract_name": "ERC721Token",
       "instance_name": "Badge",
-      "address": "0x1c70a08dd12c4b4af640d4c26f3c2892fa0d006451f6b6339aab9ea9256f06e",
+      "address": "0x1ddb490b72e4b62f98a2e14dde12e490ab1d6ed38e7d9159a88c7223c197b1e",
       "abi": [
         {
           "type": "struct",
@@ -2449,6 +2449,56 @@
             {
               "name": "token_id",
               "type": "core::integer::u256"
+            }
+          ],
+          "outputs": [],
+          "state_mutability": "external"
+        },
+        {
+          "type": "function",
+          "name": "update_token_metadata",
+          "inputs": [
+            {
+              "name": "token_id",
+              "type": "core::integer::u256"
+            }
+          ],
+          "outputs": [],
+          "state_mutability": "external"
+        },
+        {
+          "type": "function",
+          "name": "update_batch_token_metadata",
+          "inputs": [
+            {
+              "name": "from_token_id",
+              "type": "core::integer::u256"
+            },
+            {
+              "name": "to_token_id",
+              "type": "core::integer::u256"
+            }
+          ],
+          "outputs": [],
+          "state_mutability": "external"
+        },
+        {
+          "type": "struct",
+          "name": "core::array::Span::<core::integer::u256>",
+          "members": [
+            {
+              "name": "snapshot",
+              "type": "@core::array::Array::<core::integer::u256>"
+            }
+          ]
+        },
+        {
+          "type": "function",
+          "name": "update_tokens_metadata",
+          "inputs": [
+            {
+              "name": "token_ids",
+              "type": "core::array::Span::<core::integer::u256>"
             }
           ],
           "outputs": [],
@@ -2910,6 +2960,45 @@
           ]
         },
         {
+          "type": "impl",
+          "name": "ERC4906MixinImpl",
+          "interface_name": "dojo_examples::externals::components::erc4906::IERC4906"
+        },
+        {
+          "type": "interface",
+          "name": "dojo_examples::externals::components::erc4906::IERC4906",
+          "items": [
+            {
+              "type": "function",
+              "name": "emit_metadata_update",
+              "inputs": [
+                {
+                  "name": "token_id",
+                  "type": "core::integer::u256"
+                }
+              ],
+              "outputs": [],
+              "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "emit_batch_metadata_update",
+              "inputs": [
+                {
+                  "name": "from_token_id",
+                  "type": "core::integer::u256"
+                },
+                {
+                  "name": "to_token_id",
+                  "type": "core::integer::u256"
+                }
+              ],
+              "outputs": [],
+              "state_mutability": "external"
+            }
+          ]
+        },
+        {
           "type": "constructor",
           "name": "constructor",
           "inputs": [
@@ -3078,6 +3167,52 @@
         },
         {
           "type": "event",
+          "name": "dojo_examples::externals::components::erc4906::ERC4906Component::BatchMetadataUpdate",
+          "kind": "struct",
+          "members": [
+            {
+              "name": "from_token_id",
+              "type": "core::integer::u256",
+              "kind": "key"
+            },
+            {
+              "name": "to_token_id",
+              "type": "core::integer::u256",
+              "kind": "key"
+            }
+          ]
+        },
+        {
+          "type": "event",
+          "name": "dojo_examples::externals::components::erc4906::ERC4906Component::MetadataUpdate",
+          "kind": "struct",
+          "members": [
+            {
+              "name": "token_id",
+              "type": "core::integer::u256",
+              "kind": "key"
+            }
+          ]
+        },
+        {
+          "type": "event",
+          "name": "dojo_examples::externals::components::erc4906::ERC4906Component::Event",
+          "kind": "enum",
+          "variants": [
+            {
+              "name": "BatchMetadataUpdate",
+              "type": "dojo_examples::externals::components::erc4906::ERC4906Component::BatchMetadataUpdate",
+              "kind": "nested"
+            },
+            {
+              "name": "MetadataUpdate",
+              "type": "dojo_examples::externals::components::erc4906::ERC4906Component::MetadataUpdate",
+              "kind": "nested"
+            }
+          ]
+        },
+        {
+          "type": "event",
           "name": "dojo_examples::externals::erc721::ERC721Token::Event",
           "kind": "enum",
           "variants": [
@@ -3094,6 +3229,11 @@
             {
               "name": "OwnableEvent",
               "type": "openzeppelin_access::ownable::ownable::OwnableComponent::Event",
+              "kind": "flat"
+            },
+            {
+              "name": "ERC4906Event",
+              "type": "dojo_examples::externals::components::erc4906::ERC4906Component::Event",
               "kind": "flat"
             }
           ]
@@ -3628,10 +3768,10 @@
       ]
     },
     {
-      "class_hash": "0x231c35c4767d591a61cb18164e3430ace7787e9a51b3a6b426b80f1d465c33b",
+      "class_hash": "0x4e8954cb089c01796be8c258fc5feb55e18e256a2f73082b801736e655360de",
       "contract_name": "ERC1155Token",
       "instance_name": "Rewards",
-      "address": "0x409312ed6504099a5a86d5a5b7c84e880e6933dd8c98367b6b7a7bdcba56607",
+      "address": "0x53c9001813f66fa4095524d1d86c0036e11839067f3d4592965c8c3a83d6aec",
       "abi": [
         {
           "type": "struct",
@@ -3648,9 +3788,67 @@
           ]
         },
         {
+          "type": "struct",
+          "name": "core::byte_array::ByteArray",
+          "members": [
+            {
+              "name": "data",
+              "type": "core::array::Array::<core::bytes_31::bytes31>"
+            },
+            {
+              "name": "pending_word",
+              "type": "core::felt252"
+            },
+            {
+              "name": "pending_word_len",
+              "type": "core::integer::u32"
+            }
+          ]
+        },
+        {
+          "type": "function",
+          "name": "token_uri",
+          "inputs": [
+            {
+              "name": "token_id",
+              "type": "core::integer::u256"
+            }
+          ],
+          "outputs": [
+            {
+              "type": "core::byte_array::ByteArray"
+            }
+          ],
+          "state_mutability": "external"
+        },
+        {
           "type": "function",
           "name": "mint",
           "inputs": [
+            {
+              "name": "token_id",
+              "type": "core::integer::u256"
+            },
+            {
+              "name": "value",
+              "type": "core::integer::u256"
+            }
+          ],
+          "outputs": [],
+          "state_mutability": "external"
+        },
+        {
+          "type": "function",
+          "name": "transfer_from",
+          "inputs": [
+            {
+              "name": "from",
+              "type": "core::starknet::contract_address::ContractAddress"
+            },
+            {
+              "name": "to",
+              "type": "core::starknet::contract_address::ContractAddress"
+            },
             {
               "name": "token_id",
               "type": "core::integer::u256"
@@ -3683,6 +3881,46 @@
             },
             {
               "name": "values",
+              "type": "core::array::Span::<core::integer::u256>"
+            }
+          ],
+          "outputs": [],
+          "state_mutability": "external"
+        },
+        {
+          "type": "function",
+          "name": "update_token_metadata",
+          "inputs": [
+            {
+              "name": "token_id",
+              "type": "core::integer::u256"
+            }
+          ],
+          "outputs": [],
+          "state_mutability": "external"
+        },
+        {
+          "type": "function",
+          "name": "update_batch_token_metadata",
+          "inputs": [
+            {
+              "name": "from_token_id",
+              "type": "core::integer::u256"
+            },
+            {
+              "name": "to_token_id",
+              "type": "core::integer::u256"
+            }
+          ],
+          "outputs": [],
+          "state_mutability": "external"
+        },
+        {
+          "type": "function",
+          "name": "update_tokens_metadata",
+          "inputs": [
+            {
+              "name": "token_ids",
               "type": "core::array::Span::<core::integer::u256>"
             }
           ],
@@ -3725,24 +3963,6 @@
             {
               "name": "True",
               "type": "()"
-            }
-          ]
-        },
-        {
-          "type": "struct",
-          "name": "core::byte_array::ByteArray",
-          "members": [
-            {
-              "name": "data",
-              "type": "core::array::Array::<core::bytes_31::bytes31>"
-            },
-            {
-              "name": "pending_word",
-              "type": "core::felt252"
-            },
-            {
-              "name": "pending_word_len",
-              "type": "core::integer::u32"
             }
           ]
         },
@@ -4109,6 +4329,45 @@
           ]
         },
         {
+          "type": "impl",
+          "name": "ERC4906MixinImpl",
+          "interface_name": "dojo_examples::externals::components::erc4906::IERC4906"
+        },
+        {
+          "type": "interface",
+          "name": "dojo_examples::externals::components::erc4906::IERC4906",
+          "items": [
+            {
+              "type": "function",
+              "name": "emit_metadata_update",
+              "inputs": [
+                {
+                  "name": "token_id",
+                  "type": "core::integer::u256"
+                }
+              ],
+              "outputs": [],
+              "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "emit_batch_metadata_update",
+              "inputs": [
+                {
+                  "name": "from_token_id",
+                  "type": "core::integer::u256"
+                },
+                {
+                  "name": "to_token_id",
+                  "type": "core::integer::u256"
+                }
+              ],
+              "outputs": [],
+              "state_mutability": "external"
+            }
+          ]
+        },
+        {
           "type": "constructor",
           "name": "constructor",
           "inputs": [
@@ -4311,6 +4570,52 @@
         },
         {
           "type": "event",
+          "name": "dojo_examples::externals::components::erc4906::ERC4906Component::BatchMetadataUpdate",
+          "kind": "struct",
+          "members": [
+            {
+              "name": "from_token_id",
+              "type": "core::integer::u256",
+              "kind": "key"
+            },
+            {
+              "name": "to_token_id",
+              "type": "core::integer::u256",
+              "kind": "key"
+            }
+          ]
+        },
+        {
+          "type": "event",
+          "name": "dojo_examples::externals::components::erc4906::ERC4906Component::MetadataUpdate",
+          "kind": "struct",
+          "members": [
+            {
+              "name": "token_id",
+              "type": "core::integer::u256",
+              "kind": "key"
+            }
+          ]
+        },
+        {
+          "type": "event",
+          "name": "dojo_examples::externals::components::erc4906::ERC4906Component::Event",
+          "kind": "enum",
+          "variants": [
+            {
+              "name": "BatchMetadataUpdate",
+              "type": "dojo_examples::externals::components::erc4906::ERC4906Component::BatchMetadataUpdate",
+              "kind": "nested"
+            },
+            {
+              "name": "MetadataUpdate",
+              "type": "dojo_examples::externals::components::erc4906::ERC4906Component::MetadataUpdate",
+              "kind": "nested"
+            }
+          ]
+        },
+        {
+          "type": "event",
           "name": "dojo_examples::externals::erc1155::ERC1155Token::Event",
           "kind": "enum",
           "variants": [
@@ -4327,6 +4632,11 @@
             {
               "name": "OwnableEvent",
               "type": "openzeppelin_access::ownable::ownable::OwnableComponent::Event",
+              "kind": "flat"
+            },
+            {
+              "name": "ERC4906Event",
+              "type": "dojo_examples::externals::components::erc4906::ERC4906Component::Event",
               "kind": "flat"
             }
           ]
