@@ -71,46 +71,44 @@ pub fn sanitize_json_string(s: &str) -> String {
             } else {
                 result.push(c);
             }
-        } else {
-            if c == '\\' {
-                backslash_count += 1;
-                result.push('\\');
-            } else if c == '"' {
-                if backslash_count % 2 == 0 {
-                    // Unescaped double quote
-                    let mut temp_chars = chars.clone();
-                    // Skip whitespace
-                    while let Some(&next_c) = temp_chars.peek() {
-                        if next_c.is_whitespace() {
-                            temp_chars.next();
-                        } else {
-                            break;
-                        }
-                    }
-                    // Check next non-whitespace character
-                    if let Some(&next_c) = temp_chars.peek() {
-                        if next_c == ':' || next_c == ',' || next_c == '}' {
-                            // End of string
-                            result.push('"');
-                            in_string = false;
-                        } else {
-                            // Internal unescaped quote, escape it
-                            result.push_str("\\\"");
-                        }
+        } else if c == '\\' {
+            backslash_count += 1;
+            result.push('\\');
+        } else if c == '"' {
+            if backslash_count % 2 == 0 {
+                // Unescaped double quote
+                let mut temp_chars = chars.clone();
+                // Skip whitespace
+                while let Some(&next_c) = temp_chars.peek() {
+                    if next_c.is_whitespace() {
+                        temp_chars.next();
                     } else {
-                        // End of input, treat as end of string
+                        break;
+                    }
+                }
+                // Check next non-whitespace character
+                if let Some(&next_c) = temp_chars.peek() {
+                    if next_c == ':' || next_c == ',' || next_c == '}' {
+                        // End of string
                         result.push('"');
                         in_string = false;
+                    } else {
+                        // Internal unescaped quote, escape it
+                        result.push_str("\\\"");
                     }
                 } else {
-                    // Escaped double quote, part of string
+                    // End of input, treat as end of string
                     result.push('"');
+                    in_string = false;
                 }
-                backslash_count = 0;
             } else {
-                result.push(c);
-                backslash_count = 0;
+                // Escaped double quote, part of string
+                result.push('"');
             }
+            backslash_count = 0;
+        } else {
+            result.push(c);
+            backslash_count = 0;
         }
     }
 
