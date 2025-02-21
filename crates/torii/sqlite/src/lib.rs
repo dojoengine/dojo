@@ -561,7 +561,7 @@ impl Sql {
              ?, ?, ?)"
                 .to_string(),
             vec![
-                id,
+                id.clone(),
                 transaction_hash.clone(),
                 sender_address,
                 calldata,
@@ -578,7 +578,7 @@ impl Sql {
                 "INSERT OR IGNORE INTO transaction_contract (transaction_hash, contract_address) \
                  VALUES (?, ?)"
                     .to_string(),
-                vec![transaction_hash.clone(), Argument::FieldElement(*contract_address)],
+                vec![id.clone(), Argument::FieldElement(*contract_address)],
             ))?;
         }
 
