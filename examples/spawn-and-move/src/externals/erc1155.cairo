@@ -62,6 +62,15 @@ mod ERC1155Token {
     #[abi(per_item)]
     impl ExternalImpl of ExternalTrait {
         #[external(v0)]
+        fn token_uri(ref self: ContractState, token_id: u256) -> ByteArray {
+            let seed = starknet::get_execution_info().block_info.block_number;
+            format!(
+                "data:application/json,{{ \"image\": \"https://api.dicebear.com/9.x/lorelei-neutral/png?seed={}\" }}",
+                seed,
+            )
+        }
+
+        #[external(v0)]
         fn mint(ref self: ContractState, token_id: u256, value: u256) {
             self
                 .erc1155
