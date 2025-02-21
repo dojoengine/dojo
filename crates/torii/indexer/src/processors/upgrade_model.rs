@@ -3,7 +3,7 @@ use std::hash::{DefaultHasher, Hash, Hasher};
 use anyhow::{Error, Result};
 use async_trait::async_trait;
 use dojo_world::contracts::abigen::world::Event as WorldEvent;
-use dojo_world::contracts::model::ModelReader;
+use dojo_world::contracts::model::{ModelRPCReader, ModelReader};
 use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::{BlockId, Event};
 use starknet::providers::Provider;
@@ -86,11 +86,12 @@ where
         let namespace = model.namespace;
         let prev_schema = model.schema;
 
-        let model = if config.strict_model_reader {
-            world.model_reader_with_block(&namespace, &name, BlockId::Number(block_number)).await?
-        } else {
-            world.model_reader(&namespace, &name).await?
-        };
+        let mut model =
+            ModelRPCReader::new(&namespace, &name, event.address.0, event.class_hash.0, world)
+                .await;
+        if config.strict_model_reader {
+            model.set_block(BlockId::Number(block_number)).await;
+        }
         let new_schema = model.schema().await?;
         let schema_diff = prev_schema.diff(&new_schema);
         // No changes to the schema. This can happen if torii is re-run with a fresh database.

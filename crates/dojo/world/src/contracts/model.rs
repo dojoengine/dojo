@@ -85,23 +85,35 @@ where
     pub async fn new(
         namespace: &str,
         name: &str,
+        address: Felt,
+        class_hash: Felt,
         world: &'a WorldContractReader<P>,
-    ) -> Result<ModelRPCReader<'a, P>, ModelError> {
-        Self::new_with_block(namespace, name, world, world.block_id).await
+    ) -> ModelRPCReader<'a, P> {
+        let selector = naming::compute_selector_from_names(namespace, name);
+        let contract_reader = ModelContractReader::new(address, world.provider());
+
+        Self {
+            namespace: namespace.into(),
+            name: name.into(),
+            selector,
+            class_hash,
+            contract_address: address,
+            world_reader: world,
+            model_reader: contract_reader,
+        }
     }
 
-    pub async fn new_with_block(
+    pub async fn new_from_world(
         namespace: &str,
         name: &str,
         world: &'a WorldContractReader<P>,
-        block_id: BlockId,
     ) -> Result<ModelRPCReader<'a, P>, ModelError> {
         let model_selector = naming::compute_selector_from_names(namespace, name);
 
         // Events are also considered like models from a off-chain perspective. They both have
         // introspection and convey type information.
         let (contract_address, class_hash) =
-            match world.resource(&model_selector).block_id(block_id).call().await? {
+            match world.resource(&model_selector).block_id(world.block_id).call().await? {
                 abigen::world::Resource::Model((address, hash)) => (address, hash),
                 abigen::world::Resource::Event((address, hash)) => (address, hash),
                 _ => return Err(ModelError::ModelNotFound),
@@ -113,18 +125,7 @@ where
             return Err(ModelError::ModelNotFound);
         }
 
-        let mut model_reader = ModelContractReader::new(contract_address.into(), world.provider());
-        model_reader.set_block(block_id);
-
-        Ok(Self {
-            namespace: namespace.into(),
-            name: name.into(),
-            world_reader: world,
-            class_hash,
-            contract_address: contract_address.into(),
-            selector: model_selector,
-            model_reader,
-        })
+        Ok(Self::new(namespace, name, contract_address.0, class_hash, world).await)
     }
 
     pub async fn entity_storage(&self, keys: &[Felt]) -> Result<Vec<Felt>, ModelError> {
@@ -152,6 +153,10 @@ where
         schema.deserialize(&mut keys_and_unpacked)?;
 
         Ok(schema)
+    }
+
+    pub async fn set_block(&mut self, block_id: BlockId) {
+        self.model_reader.set_block(block_id);
     }
 }
 
