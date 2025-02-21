@@ -1024,7 +1024,7 @@ async fn test_update_token_metadata_erc1155(sequencer: &RunnerCtx) {
 
     assert!(token.metadata.contains(&format!(
         "https://api.dicebear.com/9.x/lorelei-neutral/png?seed={}",
-        block_number+1
+        block_number + 1
     )));
 }
 
