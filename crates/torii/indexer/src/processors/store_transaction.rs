@@ -19,12 +19,11 @@ impl<P: Provider + Sync + std::fmt::Debug> TransactionProcessor<P> for StoreTran
         _provider: &P,
         block_number: u64,
         block_timestamp: u64,
-        transaction_hash: Felt,
+        _transaction_hash: Felt,
         contract_addresses: &HashSet<Felt>,
         transaction: &Transaction,
     ) -> Result<(), Error> {
-        let transaction_id = format!("{:#064x}:{:#x}", block_number, transaction_hash);
-        db.store_transaction(transaction, &transaction_id, contract_addresses, block_timestamp)?;
+        db.store_transaction(transaction, block_number, contract_addresses, block_timestamp)?;
         Ok(())
     }
 }

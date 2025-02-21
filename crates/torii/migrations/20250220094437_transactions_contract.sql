@@ -1,3 +1,8 @@
+
+-- Add a new column to the transactions table
+ALTER TABLE transactions ADD COLUMN block_number BIGINT;
+
+-- Create a new table to store the transaction and contract addresses
 CREATE TABLE IF NOT EXISTS transaction_contract (
     transaction_hash TEXT NOT NULL,
     contract_address TEXT NOT NULL,
