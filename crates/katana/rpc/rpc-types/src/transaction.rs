@@ -257,6 +257,64 @@ pub struct DeclareTxResult(DeclareTransactionResult);
 #[serde(transparent)]
 pub struct InvokeTxResult(InvokeTransactionResult);
 
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub struct Call {
+    pub to: ContractAddress,
+    pub selector: Felt,
+    pub calldata: Vec<Felt>,
+
+}
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub struct OutsideExecutionV2 {
+    pub caller: cainome::cairo_serde::ContractAddress,
+    pub nonce: starknet::core::types::Felt,
+    #[serde(
+        serialize_with = "cainome::cairo_serde::serialize_as_hex",
+        deserialize_with = "cainome::cairo_serde::deserialize_from_hex"
+    )]
+    pub execute_after: u64,
+    #[serde(
+        serialize_with = "cainome::cairo_serde::serialize_as_hex",
+        deserialize_with = "cainome::cairo_serde::deserialize_from_hex"
+    )]
+    pub execute_before: u64,
+    pub calls: Vec<Call>,
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub struct OutsideExecutionV3 {
+    pub caller: cainome::cairo_serde::ContractAddress,
+    #[serde(
+        serialize_with = "cainome::cairo_serde::serialize_as_hex_t2",
+        deserialize_with = "cainome::cairo_serde::deserialize_from_hex_t2"
+    )]
+    pub nonce: (starknet::core::types::Felt, u128),
+    #[serde(
+        serialize_with = "cainome::cairo_serde::serialize_as_hex",
+        deserialize_with = "cainome::cairo_serde::deserialize_from_hex"
+    )]
+    pub execute_after: u64,
+    #[serde(
+        serialize_with = "cainome::cairo_serde::serialize_as_hex",
+        deserialize_with = "cainome::cairo_serde::deserialize_from_hex"
+    )]
+    pub execute_before: u64,
+    pub calls: Vec<Call>,
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+#[serde(untagged)]
+pub enum ExecuteOutside {
+    V2(OutsideExecutionV2),
+    V3(OutsideExecutionV3),
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AddExecuteOutsideTransaction {
+    pub address: Felt,
+    pub outside_execution: ExecuteOutside,
+    pub signature: Vec<Felt>,    
+}
+
 impl From<TxWithHash> for Tx {
     fn from(value: TxWithHash) -> Self {
         use katana_primitives::transaction::Tx as InternalTx;
