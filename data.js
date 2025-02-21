@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1740163843857,
+  "lastUpdate": 1740163847539,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -55326,6 +55326,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 49883879268,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c48484e5cace29c622f3533190cacf72f9880515",
+          "message": "test(torii): add metadata to erc1155 and update (#3054)\n\n* test(torii): add metadata to erc1155 and update\n\n* add dataurl prefix\n\n* fix erc1155 update metadata test\n\n* fix\n\n* fmt",
+          "timestamp": "2025-02-21T11:34:08-07:00",
+          "tree_id": "d1ed83a573a90cb0ee30134a4f2a980e34494f2a",
+          "url": "https://github.com/dojoengine/dojo/commit/c48484e5cace29c622f3533190cacf72f9880515"
+        },
+        "date": 1740163844800,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 45065394223,
             "range": "± 0",
             "unit": "ns/iter"
           }
