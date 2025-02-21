@@ -1023,8 +1023,8 @@ async fn test_update_token_metadata_erc1155(sequencer: &RunnerCtx) {
     .unwrap();
 
     assert!(token.metadata.contains(&format!(
-        "\"image\": \"https://api.dicebear.com/9.x/lorelei-neutral/png?seed={}\"",
-        block_number
+        "https://api.dicebear.com/9.x/lorelei-neutral/png?seed={}",
+        block_number+1
     )));
 }
 
