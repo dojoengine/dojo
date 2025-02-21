@@ -177,6 +177,19 @@ lazy_static! {
         (Name::new("imagePath"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
     ]);
 
+    pub static ref ERC1155_TOKEN_TYPE_MAPPING: TypeMapping = IndexMap::from([
+        (Name::new("name"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
+        (Name::new("symbol"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
+        (Name::new("tokenId"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
+        (Name::new("contractAddress"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
+        (Name::new("amount"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
+        (Name::new("metadata"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
+        (Name::new("metadataName"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+        (Name::new("metadataDescription"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+        (Name::new("metadataAttributes"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+        (Name::new("imagePath"), TypeData::Simple(TypeRef::named_nn(TypeRef::STRING))),
+    ]);
+
     pub static ref EMPTY_MAPPING: TypeMapping = IndexMap::from([
         (Name::new("id"), TypeData::Simple(TypeRef::named(TypeRef::ID))),
     ]);
