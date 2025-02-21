@@ -555,8 +555,8 @@ impl Sql {
 
         self.executor.send(QueryMessage::other(
             "INSERT OR IGNORE INTO transactions (id, transaction_hash, sender_address, calldata, \
-             max_fee, signature, nonce, transaction_type, executed_at, block_number) VALUES (?, ?, ?, ?, ?, ?, \
-             ?, ?, ?, ?)"
+             max_fee, signature, nonce, transaction_type, executed_at, block_number) VALUES (?, \
+             ?, ?, ?, ?, ?, ?, ?, ?, ?)"
                 .to_string(),
             vec![
                 transaction_hash.clone(),
