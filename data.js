@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1740163894950,
+  "lastUpdate": 1740163952913,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -55405,6 +55405,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 17054805,
             "range": "± 453073",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "122404722+notV4l@users.noreply.github.com",
+            "name": "notV4l",
+            "username": "notV4l"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "467cad1c3f04df019ead83eb9cf9440b0a9e3ad0",
+          "message": "sozo: make inspect faster (#3056)\n\nfaster",
+          "timestamp": "2025-02-21T11:34:36-07:00",
+          "tree_id": "f75f34acb37dde543e3561a83f2cea3fcf92827c",
+          "url": "https://github.com/dojoengine/dojo/commit/467cad1c3f04df019ead83eb9cf9440b0a9e3ad0"
+        },
+        "date": 1740163949683,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 47310487123,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
