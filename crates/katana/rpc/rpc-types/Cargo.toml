@@ -16,6 +16,7 @@ katana-provider.workspace = true
 katana-trie.workspace = true
 
 anyhow.workspace = true
+account_sdk.workspace = true
 derive_more.workspace = true
 futures.workspace = true
 jsonrpsee = { workspace = true, features = [ "server" ] }
@@ -24,12 +25,16 @@ serde.workspace = true
 serde_json.workspace = true
 serde_with.workspace = true
 starknet.workspace = true
+starknet-crypto.workspace = true
 thiserror.workspace = true
 
 alloy-primitives.workspace = true
 flate2.workspace = true
 serde_json_pythonic = "0.1.2"
 similar-asserts.workspace = true
+
+cainome-cairo-serde.workspace = true
+cainome.workspace = true
 
 [dev-dependencies]
 rstest.workspace = true

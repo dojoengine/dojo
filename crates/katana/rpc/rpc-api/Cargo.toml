@@ -12,6 +12,7 @@ katana-primitives.workspace = true
 katana-rpc-types.workspace = true
 
 jsonrpsee = { workspace = true, features = [ "macros", "server" ] }
+account_sdk.workspace = true
 starknet.workspace = true
 
 [features]

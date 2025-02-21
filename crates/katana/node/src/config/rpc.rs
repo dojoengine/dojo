@@ -33,6 +33,7 @@ pub enum RpcModuleKind {
     Torii,
     Saya,
     Dev,
+    Cartridge,
 }
 
 /// Configuration for the RPC server.
@@ -95,6 +96,7 @@ impl RpcModulesList {
             RpcModuleKind::Torii,
             RpcModuleKind::Saya,
             RpcModuleKind::Dev,
+            RpcModuleKind::Cartridge,
         ]))
     }
 
