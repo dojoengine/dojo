@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1740163967314,
+  "lastUpdate": 1740163981185,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -55483,6 +55483,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 16979063,
             "range": "± 285370",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "122404722+notV4l@users.noreply.github.com",
+            "name": "notV4l",
+            "username": "notV4l"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "467cad1c3f04df019ead83eb9cf9440b0a9e3ad0",
+          "message": "sozo: make inspect faster (#3056)\n\nfaster",
+          "timestamp": "2025-02-21T11:34:36-07:00",
+          "tree_id": "f75f34acb37dde543e3561a83f2cea3fcf92827c",
+          "url": "https://github.com/dojoengine/dojo/commit/467cad1c3f04df019ead83eb9cf9440b0a9e3ad0"
+        },
+        "date": 1740163978212,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2423736,
+            "range": "± 94414",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 391431,
+            "range": "± 12763",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2911814111,
+            "range": "± 215242493",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 17169301,
+            "range": "± 408989",
             "unit": "ns/iter"
           }
         ]
