@@ -60,46 +60,56 @@ pub fn sanitize_json_string(s: &str) -> String {
     let mut result = String::new();
     let mut chars = s.chars().peekable();
     let mut in_string = false;
+    let mut backslash_count = 0;
 
     while let Some(c) = chars.next() {
-        match c {
-            '"' => {
-                if !in_string {
-                    // Starting a string
-                    result.push('"');
-                    in_string = true;
-                } else {
-                    // Check next char to see if this is the end of the string
-                    match chars.peek() {
-                        Some(&':') | Some(&',') | Some(&'}') => {
-                            // This is end of a JSON string
+        if !in_string {
+            if c == '"' {
+                in_string = true;
+                backslash_count = 0;
+                result.push('"');
+            } else {
+                result.push(c);
+            }
+        } else {
+            if c == '\\' {
+                backslash_count += 1;
+                result.push('\\');
+            } else if c == '"' {
+                if backslash_count % 2 == 0 {
+                    // Unescaped double quote
+                    let mut temp_chars = chars.clone();
+                    // Skip whitespace
+                    while let Some(&next_c) = temp_chars.peek() {
+                        if next_c.is_whitespace() {
+                            temp_chars.next();
+                        } else {
+                            break;
+                        }
+                    }
+                    // Check next non-whitespace character
+                    if let Some(&next_c) = temp_chars.peek() {
+                        if next_c == ':' || next_c == ',' || next_c == '}' {
+                            // End of string
                             result.push('"');
                             in_string = false;
-                        }
-                        _ => {
-                            // This is an internal quote that needs escaping
+                        } else {
+                            // Internal unescaped quote, escape it
                             result.push_str("\\\"");
                         }
-                    }
-                }
-            }
-            '\\' => {
-                if let Some(&next) = chars.peek() {
-                    if next == '"' {
-                        // Already escaped quote, preserve it without adding extra escapes
-                        result.push('\\');
-                        result.push('"');
-                        chars.next(); // Consume the quote
                     } else {
-                        // Regular backslash
-                        result.push('\\');
+                        // End of input, treat as end of string
+                        result.push('"');
+                        in_string = false;
                     }
                 } else {
-                    result.push('\\');
+                    // Escaped double quote, part of string
+                    result.push('"');
                 }
-            }
-            _ => {
+                backslash_count = 0;
+            } else {
                 result.push(c);
+                backslash_count = 0;
             }
         }
     }
