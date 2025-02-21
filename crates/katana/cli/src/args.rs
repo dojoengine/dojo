@@ -224,6 +224,7 @@ impl NodeArgs {
                 // Ensures the `--dev` flag enabled the dev module.
                 if self.development.dev {
                     modules.add(RpcModuleKind::Dev);
+                    modules.add(RpcModuleKind::Cartridge);
                 }
 
                 modules
@@ -282,6 +283,16 @@ impl NodeArgs {
             if self.slot.controller {
                 katana_slot_controller::add_controller_account(&mut chain_spec.genesis)?;
             }
+
+            let paymaster_account = DevAllocationsGenerator::new(1)
+                .with_balance(U256::from(DEFAULT_PREFUNDED_ACCOUNT_BALANCE))
+                .with_class(katana_primitives::felt!(
+                    "0x024a9edbfa7082accfceabf6a92d7160086f346d622f28741bf1c651c412c9ab"
+                ))
+                .generate();
+            chain_spec
+                .genesis
+                .extend_allocations(paymaster_account.into_iter().map(|(k, v)| (k, v.into())));
 
             Ok((Arc::new(ChainSpec::Dev(chain_spec)), None))
         }
