@@ -119,10 +119,8 @@ pub struct NodeArgs {
 
 impl NodeArgs {
     pub async fn execute(&self) -> Result<()> {
-        // Initialize logging first
         self.init_logging()?;
 
-        // Finally start the node
         self.start_node().await
     }
 
@@ -145,17 +143,25 @@ impl NodeArgs {
                 .unwrap_or_else(|| {
                     PathBuf::from("crates/katana")
                         .join("explorer")
-                        .join("build")
+                        .join("dist")
                 });
 
             if !build_dir.exists() {
                 anyhow::bail!("Explorer build directory not found at {:?}. Please build the explorer first or specify a different path with --explorer-build-dir", build_dir);
             }
 
+            let rpc_url = format!("http://{}:{}", 
+                self.server.http_addr,
+                self.server.http_port
+            );
+
             let explorer = ExplorerServer::new(
                 self.explorer.explorer_port,
                 build_dir,
+                rpc_url.clone(),
             )?;
+
+            info!(target: "katana", "Starting explorer server with RPC URL: {}", rpc_url);
             
             explorer.start()?;
         }

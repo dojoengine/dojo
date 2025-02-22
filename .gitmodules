@@ -4,3 +4,7 @@
 [submodule "crates/katana/contracts/piltover"]
 	path = crates/katana/contracts/piltover
 	url = https://github.com/cartridge-gg/piltover.git
+[submodule "crates/katana/explorer"]
+	path = crates/katana/explorer
+	url = https://github.com/cartridge-gg/explorer
+	branch = dist
