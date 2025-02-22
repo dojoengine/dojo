@@ -188,6 +188,7 @@ pub struct Katana {
     http_addr: Option<SocketAddr>,
     http_port: Option<u16>,
     rpc_max_connections: Option<u64>,
+    rpc_max_call_gas: Option<u64>,
     http_cors_domain: Option<String>,
 
     // Dev options
@@ -323,6 +324,12 @@ impl Katana {
     /// Sets the maximum number of concurrent connections allowed.
     pub const fn rpc_max_connections(mut self, max_connections: u64) -> Self {
         self.rpc_max_connections = Some(max_connections);
+        self
+    }
+
+    /// Sets the maximum gas for the `starknet_call` RPC method.
+    pub const fn rpc_max_call_gas(mut self, max_call_gas: u64) -> Self {
+        self.rpc_max_call_gas = Some(max_call_gas);
         self
     }
 
@@ -523,6 +530,10 @@ impl Katana {
 
         if let Some(max_connections) = self.rpc_max_connections {
             cmd.arg("--rpc.max-connections").arg(max_connections.to_string());
+        }
+
+        if let Some(max_call_gas) = self.rpc_max_call_gas {
+            cmd.arg("--rpc.max-call-gas").arg(max_call_gas.to_string());
         }
 
         if let Some(allowed_origins) = self.http_cors_domain {

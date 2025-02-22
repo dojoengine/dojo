@@ -40,6 +40,12 @@ service World {
     // Update token balance subscription
     rpc UpdateTokenBalancesSubscription (UpdateTokenBalancesSubscriptionRequest) returns (google.protobuf.Empty);
 
+    // Subscribe to token updates.
+    rpc SubscribeTokens (RetrieveTokensRequest) returns (stream SubscribeTokensResponse);
+
+    // Update token subscription
+    rpc UpdateTokensSubscription (UpdateTokenSubscriptionRequest) returns (google.protobuf.Empty);
+
     // Retrieve entities
     rpc RetrieveEventMessages (RetrieveEventMessagesRequest) returns (RetrieveEntitiesResponse);
 
@@ -75,6 +81,8 @@ message UpdateTokenBalancesSubscriptionRequest {
     repeated bytes contract_addresses = 2;
     // The list of account addresses to subscribe to
     repeated bytes account_addresses = 3;
+    // The list of token IDs to subscribe to
+    repeated bytes token_ids = 4;
 }
 
 // A response containing token balances
@@ -89,11 +97,31 @@ message SubscribeTokenBalancesResponse {
 message RetrieveTokensRequest {
     // The list of contract addresses to retrieve tokens for
     repeated bytes contract_addresses = 1;
+    // The list of token IDs to retrieve tokens for
+    repeated bytes token_ids = 2;
 }
 
 // A response containing tokens
 message RetrieveTokensResponse {
     repeated types.Token tokens = 1;
+}
+
+// A response containing token updates
+message SubscribeTokensResponse {
+    // The subscription ID
+    uint64 subscription_id = 1;
+    // The token
+    types.Token token = 2;
+}
+
+// A request to update a token subscription
+message UpdateTokenSubscriptionRequest {
+    // The subscription ID
+    uint64 subscription_id = 1;
+    // The list of contract addresses to subscribe to
+    repeated bytes contract_addresses = 2;
+    // The list of token IDs to subscribe to
+    repeated bytes token_ids = 3;
 }
 
 // A request to retrieve token balances
@@ -102,6 +130,8 @@ message RetrieveTokenBalancesRequest {
     repeated bytes account_addresses = 1;
     // The list of token contract addresses to retrieve balances for
     repeated bytes contract_addresses = 2;
+    // The list of token IDs to retrieve balances for
+    repeated bytes token_ids = 3;
 }
 
 // A response containing token balances

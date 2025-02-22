@@ -35,6 +35,8 @@ pub enum ParseError {
     FromJsonStr(#[from] serde_json::Error),
     #[error(transparent)]
     FromSlice(#[from] std::array::TryFromSliceError),
+    #[error(transparent)]
+    FromUtf8(#[from] std::string::FromUtf8Error),
 }
 
 #[derive(Debug, thiserror::Error)]

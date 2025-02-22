@@ -13,7 +13,7 @@ mod id;
 mod storages;
 
 pub use classes::*;
-pub use contracts::ContractsTrie;
+pub use contracts::*;
 pub use id::CommitId;
 pub use storages::StoragesTrie;
 

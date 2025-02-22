@@ -238,9 +238,9 @@ pub fn cfg() -> CfgEnv {
 
     CfgEnv {
         fee_token_addresses,
-        max_recursion_depth: 100,
-        validate_max_n_steps: 1_000_000,
-        invoke_tx_max_n_steps: 1_000_000,
+        max_recursion_depth: usize::MAX,
+        validate_max_n_steps: u32::MAX,
+        invoke_tx_max_n_steps: u32::MAX,
         chain_id: ChainId::parse("KATANA").unwrap(),
     }
 }
@@ -266,12 +266,12 @@ pub fn executor_factory<EF: ExecutorFactory>(
 #[cfg(feature = "blockifier")]
 pub mod blockifier {
     use katana_executor::implementation::blockifier::BlockifierFactory;
-    use katana_executor::ExecutionFlags;
+    use katana_executor::{BlockLimits, ExecutionFlags};
 
     use super::{cfg, flags, CfgEnv};
 
     #[rstest::fixture]
     pub fn factory(cfg: CfgEnv, #[with(true)] flags: ExecutionFlags) -> BlockifierFactory {
-        BlockifierFactory::new(cfg, flags)
+        BlockifierFactory::new(cfg, flags, BlockLimits::max())
     }
 }

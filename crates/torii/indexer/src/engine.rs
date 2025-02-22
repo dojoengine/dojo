@@ -29,8 +29,12 @@ use tracing::{debug, error, info, trace, warn};
 
 use crate::constants::LOG_TARGET;
 use crate::processors::controller::ControllerProcessor;
+use crate::processors::erc1155_transfer_batch::Erc1155TransferBatchProcessor;
+use crate::processors::erc1155_transfer_single::Erc1155TransferSingleProcessor;
 use crate::processors::erc20_legacy_transfer::Erc20LegacyTransferProcessor;
 use crate::processors::erc20_transfer::Erc20TransferProcessor;
+use crate::processors::erc4906_batch_metadata_update::Erc4906BatchMetadataUpdateProcessor;
+use crate::processors::erc4906_metadata_update::Erc4906MetadataUpdateProcessor;
 use crate::processors::erc721_legacy_transfer::Erc721LegacyTransferProcessor;
 use crate::processors::erc721_transfer::Erc721TransferProcessor;
 use crate::processors::event_message::EventMessageProcessor;
@@ -105,6 +109,17 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Processors<P> {
                 vec![
                     Box::new(Erc721TransferProcessor) as Box<dyn EventProcessor<P>>,
                     Box::new(Erc721LegacyTransferProcessor) as Box<dyn EventProcessor<P>>,
+                    Box::new(Erc4906MetadataUpdateProcessor) as Box<dyn EventProcessor<P>>,
+                    Box::new(Erc4906BatchMetadataUpdateProcessor) as Box<dyn EventProcessor<P>>,
+                ],
+            ),
+            (
+                ContractType::ERC1155,
+                vec![
+                    Box::new(Erc1155TransferBatchProcessor) as Box<dyn EventProcessor<P>>,
+                    Box::new(Erc1155TransferSingleProcessor) as Box<dyn EventProcessor<P>>,
+                    Box::new(Erc4906MetadataUpdateProcessor) as Box<dyn EventProcessor<P>>,
+                    Box::new(Erc4906BatchMetadataUpdateProcessor) as Box<dyn EventProcessor<P>>,
                 ],
             ),
             (ContractType::UDC, vec![Box::new(ControllerProcessor) as Box<dyn EventProcessor<P>>]),

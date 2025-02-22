@@ -1,3 +1,4 @@
+use blockifier::blockifier::transaction_executor::TransactionExecutorError;
 use blockifier::execution::errors::{EntryPointExecutionError, PreExecutionError};
 use blockifier::execution::execution_utils::format_panic_data;
 use blockifier::state::errors::StateError;
@@ -6,7 +7,7 @@ use blockifier::transaction::errors::{
 };
 
 use crate::implementation::blockifier::utils::to_address;
-use crate::ExecutionError;
+use crate::{ExecutionError, ExecutorError};
 
 impl From<TransactionExecutionError> for ExecutionError {
     fn from(error: TransactionExecutionError) -> Self {
@@ -97,6 +98,16 @@ impl From<StateError> for ExecutionError {
         match error {
             StateError::UndeclaredClassHash(hash) => Self::UndeclaredClass(hash.0),
             e => Self::Other(e.to_string()),
+        }
+    }
+}
+
+impl From<TransactionExecutorError> for ExecutorError {
+    fn from(value: TransactionExecutorError) -> Self {
+        match value {
+            TransactionExecutorError::BlockFull => Self::LimitsExhausted,
+            TransactionExecutorError::StateError(e) => Self::Other(e.into()),
+            TransactionExecutorError::TransactionExecutionError(e) => Self::Other(e.into()),
         }
     }
 }

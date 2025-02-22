@@ -132,6 +132,10 @@ impl HashArgs {
                 ns_from_config.extend(contracts.iter().map(|c| get_namespace_from_tag(&c.tag)));
             }
 
+            if let Some(libraries) = &profile_config.libraries {
+                ns_from_config.extend(libraries.iter().map(|c| get_namespace_from_tag(&c.tag)));
+            }
+
             if let Some(events) = &profile_config.events {
                 ns_from_config.extend(events.iter().map(|e| get_namespace_from_tag(&e.tag)));
             }
@@ -161,6 +165,10 @@ impl HashArgs {
 
             if let Some(contracts) = &profile_config.contracts {
                 res_from_config.extend(contracts.iter().map(|c| get_name_from_tag(&c.tag)));
+            }
+
+            if let Some(libraries) = &profile_config.libraries {
+                res_from_config.extend(libraries.iter().map(|c| get_name_from_tag(&c.tag)));
             }
 
             if let Some(events) = &profile_config.events {

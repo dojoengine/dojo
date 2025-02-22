@@ -1,6 +1,6 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{hash_map, HashMap, HashSet};
 
-use katana_cairo::cairo_vm::types::builtin_name::BuiltinName;
+pub use katana_cairo::cairo_vm::types::builtin_name::BuiltinName;
 
 use crate::class::ClassHash;
 use crate::contract::ContractAddress;
@@ -15,7 +15,7 @@ use crate::Felt;
 pub struct ExecutionResources {
     pub n_steps: usize,
     pub n_memory_holes: usize,
-    pub builtin_instance_counter: HashMap<BuiltinName, usize>,
+    pub builtin_instance_counter: BuiltinCounters,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -125,6 +125,7 @@ pub struct CallInfo {
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[serde(transparent)]
 pub struct BuiltinCounters(HashMap<BuiltinName, usize>);
@@ -195,11 +196,35 @@ impl BuiltinCounters {
     }
 }
 
-impl From<HashMap<BuiltinName, usize>> for BuiltinCounters {
-    fn from(map: HashMap<BuiltinName, usize>) -> Self {
+impl<T: Into<usize>> From<HashMap<BuiltinName, T>> for BuiltinCounters {
+    fn from(map: HashMap<BuiltinName, T>) -> Self {
         // Filter out the builtins with 0 count.
-        let filtered = map.into_iter().filter(|(_, count)| *count != 0).collect();
-        BuiltinCounters(filtered)
+        BuiltinCounters(
+            map.into_iter()
+                .filter_map(|(builtin, count)| {
+                    let count = count.into();
+                    (count != 0).then_some((builtin, count))
+                })
+                .collect(),
+        )
+    }
+}
+
+impl IntoIterator for BuiltinCounters {
+    type Item = (BuiltinName, usize);
+    type IntoIter = hash_map::IntoIter<BuiltinName, usize>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a BuiltinCounters {
+    type Item = (&'a BuiltinName, &'a usize);
+    type IntoIter = hash_map::Iter<'a, BuiltinName, usize>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.iter()
     }
 }
 
@@ -210,7 +235,7 @@ mod tests {
     #[test]
     fn test_builtin_counters_from_hashmap_removes_zero_entries() {
         let mut map = HashMap::new();
-        map.insert(BuiltinName::output, 1);
+        map.insert(BuiltinName::output, 1usize);
         map.insert(BuiltinName::range_check, 0);
         map.insert(BuiltinName::pedersen, 2);
         map.insert(BuiltinName::ecdsa, 0);

@@ -2,6 +2,11 @@ name: release
 
 on:
   workflow_dispatch:
+    inputs:
+      preview:
+        description: 'Create a preview release'
+        type: boolean
+        default: true
   pull_request:
     types: [closed]
     branches:
@@ -23,8 +28,12 @@ jobs:
       - name: Get version
         id: release_info
         run: |
-          cargo install cargo-get
-          echo "tag_name=$(cargo get workspace.package.version)" >> $GITHUB_OUTPUT
+          if [[ "${{ github.event.inputs.preview || 'false' }}" == "true" ]]; then
+            echo "tag_name=preview--$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          else
+            cargo install cargo-get
+            echo "tag_name=v$(cargo get workspace.package.version)" >> $GITHUB_OUTPUT
+          fi
 
   release:
     name: ${{ matrix.job.target }} (${{ matrix.job.os }})
@@ -109,7 +118,7 @@ jobs:
       - name: Archive binaries
         id: artifacts
         env:
-          VERSION_NAME: v${{ needs.prepare.outputs.tag_name }}
+          VERSION_NAME: ${{ needs.prepare.outputs.tag_name }}
         run: |
           if [ "$PLATFORM_NAME" == "linux" ]; then
             tar -czvf "dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz" -C ./target/${TARGET}/release katana sozo torii dojo-language-server
@@ -139,16 +148,16 @@ jobs:
 
       # Upload these for use with the Docker build later
       - name: Upload docker binaries
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: binaries
+          name: binaries-${{ matrix.job.target }}
           path: ${{ env.PLATFORM_NAME }}
           retention-days: 1
 
       - name: Upload release artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: artifacts
+          name: artifacts-${{ matrix.job.target }}
           path: ${{ steps.artifacts.outputs.file_name }}
           retention-days: 1
 
@@ -158,20 +167,21 @@ jobs:
     env:
       GITHUB_USER: ${{ github.repository_owner }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
+    if: ${{ !startsWith(needs.prepare.outputs.tag_name, 'preview') }}
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
-          name: artifacts
+          pattern: artifacts-*
           path: artifacts
+          merge-multiple: true
       - id: version_info
         run: |
           cargo install cargo-get
-          echo "version=$(cargo get workspace.package.version)" >> $GITHUB_OUTPUT
+          echo "version=v$(cargo get workspace.package.version)" >> $GITHUB_OUTPUT
       - name: Display structure of downloaded files
         run: ls -R artifacts
-      - run: gh release create v${{ steps.version_info.outputs.version }} ./artifacts/*.gz --generate-notes --draft
+      - run: gh release create ${{ steps.version_info.outputs.version }} ./artifacts/*.gz --generate-notes --draft
 
   docker-build-and-push:
     runs-on: ubuntu-20.04-4-cores
@@ -182,10 +192,11 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Download binaries
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
-          name: binaries
+          pattern: binaries-*
           path: artifacts/linux
+          merge-multiple: true
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
@@ -201,7 +212,7 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           push: true
-          tags: ghcr.io/${{ github.repository }}:latest,ghcr.io/${{ github.repository }}:v${{ needs.prepare.outputs.tag_name }}
+          tags: ghcr.io/${{ github.repository }}:latest,ghcr.io/${{ github.repository }}:${{ needs.prepare.outputs.tag_name }}
           platforms: linux/amd64,linux/arm64
           build-contexts: |
             artifacts=artifacts

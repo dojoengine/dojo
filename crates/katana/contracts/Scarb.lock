@@ -13,6 +13,13 @@ name = "katana_messaging"
 version = "0.1.0"
 
 [[package]]
+name = "katana_misc"
+version = "0.1.0"
+dependencies = [
+ "openzeppelin",
+]
+
+[[package]]
 name = "openzeppelin"
 version = "0.17.0"
 source = "git+https://github.com/OpenZeppelin/cairo-contracts.git?tag=v0.17.0#bf5d02c25c989ccc24f3ab42ec649617d3f21289"

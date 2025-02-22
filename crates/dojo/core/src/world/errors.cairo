@@ -27,15 +27,23 @@ pub fn no_namespace_write_access(caller: ContractAddress, namespace: @ByteArray)
 }
 
 pub fn event_already_registered(namespace: @ByteArray, name: @ByteArray) -> ByteArray {
-    format!("Resource `{}-{}` is already registered", namespace, name)
+    format!("Resource (Event) `{}-{}` is already registered", namespace, name)
 }
 
 pub fn model_already_registered(namespace: @ByteArray, name: @ByteArray) -> ByteArray {
-    format!("Resource `{}-{}` is already registered", namespace, name)
+    format!("Resource (Model) `{}-{}` is already registered", namespace, name)
 }
 
 pub fn contract_already_registered(namespace: @ByteArray, name: @ByteArray) -> ByteArray {
-    format!("Resource `{}-{}` is already registered", namespace, name)
+    format!("Resource (Contract) `{}-{}` is already registered", namespace, name)
+}
+
+pub fn library_already_registered(namespace: @ByteArray, name: @ByteArray) -> ByteArray {
+    format!(
+        "Resource (Library) `{}-{}` is already registered. Libraries can't be updated, increment the version in the Dojo configuration file instead.",
+        namespace,
+        name,
+    )
 }
 
 pub fn resource_not_registered_details(namespace: @ByteArray, name: @ByteArray) -> ByteArray {

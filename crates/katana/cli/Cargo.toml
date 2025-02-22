@@ -8,6 +8,7 @@ version.workspace = true
 [dependencies]
 katana-chain-spec.workspace = true
 katana-core.workspace = true
+katana-messaging.workspace = true
 katana-node.workspace = true
 katana-primitives.workspace = true
 katana-rpc.workspace = true
@@ -38,4 +39,3 @@ starknet.workspace = true
 default = [ "server", "slot" ]
 server = [  ]
 slot = [ "dep:katana-slot-controller", "katana-chain-spec/controller" ]
-starknet-messaging = [ "katana-node/starknet-messaging" ]

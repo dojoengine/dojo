@@ -15,24 +15,22 @@ katana-trie.workspace = true
 
 anyhow.workspace = true
 auto_impl.workspace = true
+bitvec.workspace = true
 parking_lot.workspace = true
+starknet.workspace = true
+starknet-types-core.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 
-bitvec.workspace = true
-starknet-types-core.workspace = true
-
 # fork provider deps
 futures = { workspace = true, optional = true }
-starknet = { workspace = true, optional = true }
 tokio = { workspace = true, optional = true }
 
 alloy-primitives = { workspace = true, optional = true }
 serde_json.workspace = true
 
 [features]
-default = [ "fork", "in-memory" ]
-fork = [ "dep:futures", "dep:starknet", "dep:tokio", "in-memory" ]
+fork = [ "dep:futures", "dep:tokio", "in-memory" ]
 in-memory = [  ]
 test-utils = [ "dep:alloy-primitives", "dep:katana-chain-spec" ]
 

@@ -307,6 +307,7 @@ mod tests {
                         (felt!("0x1"), felt!("0x1")),
                         (felt!("0x2"), felt!("0x2")),
                     ])),
+                    salt: GenesisAccount::DEFAULT_SALT,
                 })),
             ),
             (
@@ -329,6 +330,7 @@ mod tests {
                     class_hash: DEFAULT_ACCOUNT_CLASS_HASH,
                     nonce: None,
                     storage: None,
+                    salt: GenesisAccount::DEFAULT_SALT,
                 })),
             ),
         ];

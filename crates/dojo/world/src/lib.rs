@@ -27,4 +27,5 @@ pub enum ResourceType {
     Model,
     Event,
     StarknetContract,
+    Library,
 }

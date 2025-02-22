@@ -18,8 +18,7 @@ use katana_node::config::metrics::{DEFAULT_METRICS_ADDR, DEFAULT_METRICS_PORT};
 use katana_node::config::rpc::{RpcModulesList, DEFAULT_RPC_MAX_PROOF_KEYS};
 #[cfg(feature = "server")]
 use katana_node::config::rpc::{
-    DEFAULT_RPC_ADDR, DEFAULT_RPC_MAX_CONNECTIONS, DEFAULT_RPC_MAX_EVENT_PAGE_SIZE,
-    DEFAULT_RPC_PORT,
+    DEFAULT_RPC_ADDR, DEFAULT_RPC_MAX_CALL_GAS, DEFAULT_RPC_MAX_EVENT_PAGE_SIZE, DEFAULT_RPC_PORT,
 };
 use katana_primitives::block::BlockHashOrNumber;
 use katana_primitives::chain::ChainId;
@@ -108,10 +107,16 @@ pub struct ServerOptions {
     pub http_modules: Option<RpcModulesList>,
 
     /// Maximum number of concurrent connections allowed.
-    #[arg(long = "rpc.max-connections", value_name = "COUNT")]
-    #[arg(default_value_t = DEFAULT_RPC_MAX_CONNECTIONS)]
-    #[serde(default = "default_max_connections")]
-    pub max_connections: u32,
+    #[arg(long = "rpc.max-connections", value_name = "MAX")]
+    pub max_connections: Option<u32>,
+
+    /// Maximum request body size (in bytes).
+    #[arg(long = "rpc.max-request-body-size", value_name = "SIZE")]
+    pub max_request_body_size: Option<u32>,
+
+    /// Maximum response body size (in bytes).
+    #[arg(long = "rpc.max-response-body-size", value_name = "SIZE")]
+    pub max_response_body_size: Option<u32>,
 
     /// Maximum page size for event queries.
     #[arg(long = "rpc.max-event-page-size", value_name = "SIZE")]
@@ -124,6 +129,12 @@ pub struct ServerOptions {
     #[arg(default_value_t = DEFAULT_RPC_MAX_PROOF_KEYS)]
     #[serde(default = "default_proof_keys")]
     pub max_proof_keys: u64,
+
+    /// Maximum gas for the `starknet_call` RPC method.
+    #[arg(long = "rpc.max-call-gas", value_name = "GAS")]
+    #[arg(default_value_t = DEFAULT_RPC_MAX_CALL_GAS)]
+    #[serde(default = "default_max_call_gas")]
+    pub max_call_gas: u64,
 }
 
 #[cfg(feature = "server")]
@@ -133,10 +144,51 @@ impl Default for ServerOptions {
             http_addr: DEFAULT_RPC_ADDR,
             http_port: DEFAULT_RPC_PORT,
             http_cors_origins: Vec::new(),
-            http_modules: Some(RpcModulesList::default()),
-            max_connections: DEFAULT_RPC_MAX_CONNECTIONS,
+            http_modules: None,
             max_event_page_size: DEFAULT_RPC_MAX_EVENT_PAGE_SIZE,
             max_proof_keys: DEFAULT_RPC_MAX_PROOF_KEYS,
+            max_connections: None,
+            max_request_body_size: None,
+            max_response_body_size: None,
+            max_call_gas: DEFAULT_RPC_MAX_CALL_GAS,
+        }
+    }
+}
+
+#[cfg(feature = "server")]
+impl ServerOptions {
+    pub fn merge(&mut self, other: Option<&Self>) {
+        if let Some(other) = other {
+            if self.http_addr == DEFAULT_RPC_ADDR {
+                self.http_addr = other.http_addr;
+            }
+            if self.http_port == DEFAULT_RPC_PORT {
+                self.http_port = other.http_port;
+            }
+            if self.http_cors_origins.is_empty() {
+                self.http_cors_origins = other.http_cors_origins.clone();
+            }
+            if self.http_modules.is_none() {
+                self.http_modules = other.http_modules.clone();
+            }
+            if self.max_connections.is_none() {
+                self.max_connections = other.max_connections;
+            }
+            if self.max_request_body_size.is_none() {
+                self.max_request_body_size = other.max_request_body_size;
+            }
+            if self.max_response_body_size.is_none() {
+                self.max_response_body_size = other.max_response_body_size;
+            }
+            if self.max_event_page_size == DEFAULT_RPC_MAX_EVENT_PAGE_SIZE {
+                self.max_event_page_size = other.max_event_page_size;
+            }
+            if self.max_proof_keys == DEFAULT_RPC_MAX_PROOF_KEYS {
+                self.max_proof_keys = other.max_proof_keys;
+            }
+            if self.max_call_gas == DEFAULT_RPC_MAX_CALL_GAS {
+                self.max_call_gas = other.max_call_gas;
+            }
         }
     }
 }
@@ -403,11 +455,6 @@ fn default_http_port() -> u16 {
 }
 
 #[cfg(feature = "server")]
-fn default_max_connections() -> u32 {
-    DEFAULT_RPC_MAX_CONNECTIONS
-}
-
-#[cfg(feature = "server")]
 fn default_page_size() -> u64 {
     DEFAULT_RPC_MAX_EVENT_PAGE_SIZE
 }
@@ -425,4 +472,9 @@ fn default_metrics_addr() -> IpAddr {
 #[cfg(feature = "server")]
 fn default_metrics_port() -> u16 {
     DEFAULT_METRICS_PORT
+}
+
+#[cfg(feature = "server")]
+fn default_max_call_gas() -> u64 {
+    DEFAULT_RPC_MAX_CALL_GAS
 }

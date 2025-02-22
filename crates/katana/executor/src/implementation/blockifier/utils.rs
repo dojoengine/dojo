@@ -3,24 +3,20 @@ use std::num::NonZeroU128;
 use std::sync::Arc;
 
 use blockifier::blockifier::block::{BlockInfo, GasPrices};
-use blockifier::bouncer::BouncerConfig;
-use blockifier::context::{BlockContext, ChainInfo, FeeTokenAddresses, TransactionContext};
+use blockifier::bouncer::{Bouncer, BouncerConfig};
+use blockifier::context::{BlockContext, ChainInfo, FeeTokenAddresses};
 use blockifier::execution::call_info::{
     CallExecution, CallInfo, OrderedEvent, OrderedL2ToL1Message,
 };
-use blockifier::execution::common_hints::ExecutionMode;
 use blockifier::execution::contract_class::{
     ClassInfo, ContractClass, ContractClassV0, ContractClassV1,
 };
-use blockifier::execution::entry_point::{CallEntryPoint, CallType, EntryPointExecutionContext};
+use blockifier::execution::entry_point::CallType;
 use blockifier::fee::fee_utils::get_fee_by_gas_vector;
-use blockifier::state::cached_state;
-use blockifier::state::state_api::StateReader;
+use blockifier::state::cached_state::{self, TransactionalState};
+use blockifier::state::state_api::{StateReader, UpdatableState};
 use blockifier::transaction::account_transaction::AccountTransaction;
-use blockifier::transaction::objects::{
-    DeprecatedTransactionInfo, FeeType, HasRelatedFeeType, TransactionExecutionInfo,
-    TransactionInfo,
-};
+use blockifier::transaction::objects::{FeeType, HasRelatedFeeType, TransactionExecutionInfo};
 use blockifier::transaction::transaction_execution::Transaction;
 use blockifier::transaction::transactions::{
     DeclareTransaction, DeployAccountTransaction, ExecutableTransaction, InvokeTransaction,
@@ -51,23 +47,24 @@ use katana_primitives::trace::{L1Gas, TxExecInfo, TxResources};
 use katana_primitives::transaction::{
     DeclareTx, DeployAccountTx, ExecutableTx, ExecutableTxWithHash, InvokeTx, TxType,
 };
-use katana_primitives::{class, event, message, trace, Felt};
+use katana_primitives::{class, event, message, trace};
 use katana_provider::traits::contract::ContractClassProvider;
 use starknet::core::utils::parse_cairo_short_string;
 
-use super::state::{CachedState, StateDb};
-use crate::abstraction::{EntryPointCall, ExecutionFlags};
+use super::state::CachedState;
+use crate::abstraction::ExecutionFlags;
 use crate::utils::build_receipt;
-use crate::{ExecutionError, ExecutionResult};
+use crate::{ExecutionError, ExecutionResult, ExecutorResult};
 
 pub fn transact<S: StateReader>(
     state: &mut cached_state::CachedState<S>,
     block_context: &BlockContext,
     simulation_flags: &ExecutionFlags,
     tx: ExecutableTxWithHash,
-) -> ExecutionResult {
-    fn transact_inner<S: StateReader>(
-        state: &mut cached_state::CachedState<S>,
+    bouncer: Option<&mut Bouncer>,
+) -> ExecutorResult<ExecutionResult> {
+    fn transact_inner<U: UpdatableState>(
+        state: &mut U,
         block_context: &BlockContext,
         simulation_flags: &ExecutionFlags,
         tx: Transaction,
@@ -122,61 +119,37 @@ pub fn transact<S: StateReader>(
         Ok((info, fee_info))
     }
 
-    match transact_inner(state, block_context, simulation_flags, to_executor_tx(tx.clone())) {
+    let transaction = to_executor_tx(tx.clone());
+    let mut tx_state = TransactionalState::create_transactional(state);
+    let result = transact_inner(&mut tx_state, block_context, simulation_flags, transaction);
+
+    match result {
         Ok((info, fee)) => {
+            if let Some(bouncer) = bouncer {
+                let tx_state_changes_keys =
+                    tx_state.get_actual_state_changes().unwrap().into_keys();
+
+                bouncer.try_update(
+                    &tx_state,
+                    &tx_state_changes_keys,
+                    &info.summarize(),
+                    &info.transaction_receipt.resources,
+                )?;
+            }
+
+            tx_state.commit();
+
             // get the trace and receipt from the execution info
             let trace = to_exec_info(info, tx.r#type());
             let receipt = build_receipt(tx.tx_ref(), fee, &trace);
-            ExecutionResult::new_success(receipt, trace)
+            Ok(ExecutionResult::new_success(receipt, trace))
         }
 
-        Err(e) => ExecutionResult::new_failed(e),
+        Err(e) => {
+            tx_state.commit();
+            Ok(ExecutionResult::new_failed(e))
+        }
     }
-}
-
-/// Perform a function call on a contract and retrieve the return values.
-pub fn call<S: StateReader>(
-    request: EntryPointCall,
-    state: S,
-    block_context: &BlockContext,
-    initial_gas: u128,
-) -> Result<Vec<Felt>, ExecutionError> {
-    let mut state = cached_state::CachedState::new(state);
-
-    let call = CallEntryPoint {
-        initial_gas: initial_gas as u64,
-        storage_address: to_blk_address(request.contract_address),
-        entry_point_selector: core::EntryPointSelector(request.entry_point_selector),
-        calldata: Calldata(Arc::new(request.calldata)),
-        ..Default::default()
-    };
-
-    // TODO: this must be false if fees are disabled I assume.
-    let limit_steps_by_resources = true;
-
-    // Now, the max step is not given directly to this function.
-    // It's computed by a new function max_steps, and it tooks the values
-    // from the block context itself instead of the input give. The dojoengine
-    // fork of the blockifier ensures we're not limited by the min function applied
-    // by starkware.
-    // https://github.com/starkware-libs/blockifier/blob/4fd71645b45fd1deb6b8e44802414774ec2a2ec1/crates/blockifier/src/execution/entry_point.rs#L159
-    // https://github.com/dojoengine/blockifier/blob/5f58be8961ddf84022dd739a8ab254e32c435075/crates/blockifier/src/execution/entry_point.rs#L188
-
-    let res = call.execute(
-        &mut state,
-        &mut ExecutionResources::default(),
-        &mut EntryPointExecutionContext::new(
-            Arc::new(TransactionContext {
-                block_context: block_context.clone(),
-                tx_info: TransactionInfo::Deprecated(DeprecatedTransactionInfo::default()),
-            }),
-            ExecutionMode::Execute,
-            limit_steps_by_resources,
-        )
-        .expect("shouldn't fail"),
-    )?;
-
-    Ok(res.execution.retdata.0)
 }
 
 pub fn to_executor_tx(tx: ExecutableTxWithHash) -> Transaction {
@@ -365,7 +338,7 @@ pub fn to_executor_tx(tx: ExecutableTxWithHash) -> Transaction {
             };
 
             let hash = TransactionHash(hash);
-            let class = to_class(compiled).unwrap();
+            let class = to_class_info(compiled).unwrap();
             let tx = DeclareTransaction::new(tx, hash, class).expect("class mismatch");
             Transaction::AccountTransaction(AccountTransaction::Declare(tx))
         }
@@ -395,13 +368,16 @@ pub fn block_context_from_envs(block_env: &BlockEnv, cfg_env: &CfgEnv) -> BlockC
         NonZeroU128::new(block_env.l1_gas_prices.eth).unwrap_or(NonZeroU128::new(1).unwrap());
     let strk_l1_gas_price =
         NonZeroU128::new(block_env.l1_gas_prices.strk).unwrap_or(NonZeroU128::new(1).unwrap());
+    let strk_l1_data_gas_price =
+        NonZeroU128::new(block_env.l1_data_gas_prices.strk).unwrap_or(NonZeroU128::new(1).unwrap());
+    let eth_l1_data_gas_price =
+        NonZeroU128::new(block_env.l1_data_gas_prices.eth).unwrap_or(NonZeroU128::new(1).unwrap());
 
     let gas_prices = GasPrices {
         eth_l1_gas_price,
         strk_l1_gas_price,
-        // TODO: should those be the same value?
-        eth_l1_data_gas_price: eth_l1_gas_price,
-        strk_l1_data_gas_price: strk_l1_gas_price,
+        eth_l1_data_gas_price,
+        strk_l1_data_gas_price,
     };
 
     let block_info = BlockInfo {
@@ -433,10 +409,8 @@ pub fn block_context_from_envs(block_env: &BlockEnv, cfg_env: &CfgEnv) -> BlockC
     BlockContext::new(block_info, chain_info, versioned_constants, BouncerConfig::max())
 }
 
-pub(super) fn state_update_from_cached_state<S: StateDb>(
-    state: &CachedState<S>,
-) -> StateUpdatesWithClasses {
-    let state_diff = state.0.lock().inner.to_state_diff().unwrap();
+pub(super) fn state_update_from_cached_state(state: &CachedState<'_>) -> StateUpdatesWithClasses {
+    let state_diff = state.inner.lock().cached_state.to_state_diff().unwrap();
 
     let mut declared_contract_classes: BTreeMap<
         katana_primitives::class::ClassHash,
@@ -558,16 +532,16 @@ pub fn to_blk_chain_id(chain_id: katana_primitives::chain::ChainId) -> ChainId {
     }
 }
 
-pub fn to_class(class: class::CompiledClass) -> Result<ClassInfo, ProgramError> {
+pub fn to_class_info(class: class::CompiledClass) -> Result<ClassInfo, ProgramError> {
     // TODO: @kariy not sure of the variant that must be used in this case. Should we change the
     // return type to include this case of error for contract class conversions?
     match class {
-        class::CompiledClass::Legacy(class) => {
+        class::CompiledClass::Legacy(..) => {
             // For cairo 0, the sierra_program_length must be 0.
-            Ok(ClassInfo::new(&ContractClass::V0(ContractClassV0::try_from(class)?), 0, 0).unwrap())
+            Ok(ClassInfo::new(&to_class(class)?, 0, 0).unwrap())
         }
 
-        class::CompiledClass::Class(casm) => {
+        class::CompiledClass::Class(..) => {
             // NOTE:
             //
             // Right now, we're using dummy values for the sierra class info (ie
@@ -577,7 +551,7 @@ pub fn to_class(class: class::CompiledClass) -> Result<ClassInfo, ProgramError> 
             // Make sure these values are the same over on `snos` when it re-executes the
             // transactions as otherwise the fees would be different.
 
-            let class = ContractClass::V1(ContractClassV1::try_from(casm)?);
+            let class = to_class(class)?;
             let sierra_program_length = 1;
             let abi_length = 0;
 
@@ -587,12 +561,16 @@ pub fn to_class(class: class::CompiledClass) -> Result<ClassInfo, ProgramError> 
     }
 }
 
-/// TODO: remove this function once starknet api 0.8.0 is supported.
-fn starknet_api_ethaddr_to_felt(value: katana_cairo::starknet_api::core::EthAddress) -> Felt {
-    let mut bytes = [0u8; 32];
-    // Padding H160 with zeros to 32 bytes (big endian)
-    bytes[12..32].copy_from_slice(value.0.as_bytes());
-    Felt::from_bytes_be(&bytes)
+/// Convert katana-primitives compiled class to blockfiier's contract class.
+pub fn to_class(class: class::CompiledClass) -> Result<ContractClass, ProgramError> {
+    match class {
+        class::CompiledClass::Legacy(class) => {
+            Ok(ContractClass::V0(ContractClassV0::try_from(class)?))
+        }
+        class::CompiledClass::Class(casm) => {
+            Ok(ContractClass::V1(ContractClassV1::try_from(casm)?))
+        }
+    }
 }
 
 pub fn to_exec_info(exec_info: TransactionExecutionInfo, r#type: TxType) -> TxExecInfo {
@@ -685,7 +663,7 @@ fn to_l2_l1_messages(
 ) -> message::OrderedL2ToL1Message {
     let order = m.order as u64;
     let payload = m.message.payload.0;
-    let to_address = starknet_api_ethaddr_to_felt(m.message.to_address);
+    let to_address = m.message.to_address;
     message::OrderedL2ToL1Message { order, from_address, to_address, payload }
 }
 
@@ -695,7 +673,7 @@ fn to_execution_resources(
     katana_primitives::trace::ExecutionResources {
         n_steps: resources.n_steps,
         n_memory_holes: resources.n_memory_holes,
-        builtin_instance_counter: resources.builtin_instance_counter,
+        builtin_instance_counter: resources.builtin_instance_counter.into(),
     }
 }
 
@@ -704,6 +682,7 @@ mod tests {
 
     use std::collections::{HashMap, HashSet};
 
+    use blockifier::execution::entry_point::CallEntryPoint;
     use katana_cairo::cairo_vm::types::builtin_name::BuiltinName;
     use katana_cairo::cairo_vm::vm::runners::cairo_runner::ExecutionResources;
     use katana_cairo::starknet_api::core::EntryPointSelector;

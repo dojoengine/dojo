@@ -1,8 +1,6 @@
 use cainome::parser::tokens::{Composite, CompositeType, Token};
 
-use super::constants::{
-    BIGNUMNERISH_IMPORT, CAIRO_OPTION_IMPORT, SN_IMPORT_SEARCH, WITH_FIELD_ORDER_TYPE_DEF,
-};
+use super::constants::{BIGNUMNERISH_IMPORT, CAIRO_OPTION_IMPORT, SN_IMPORT_SEARCH};
 use super::{token_is_option, JsPrimitiveType};
 use crate::error::BindgenResult;
 use crate::plugins::typescript::generator::constants::CAIRO_OPTION_TOKEN;
@@ -27,12 +25,6 @@ impl TsInterfaceGenerator {
             }
         }
     }
-
-    fn add_input_type(&self, buffer: &mut Buffer) {
-        if !buffer.has(WITH_FIELD_ORDER_TYPE_DEF) {
-            buffer.push(WITH_FIELD_ORDER_TYPE_DEF.to_owned());
-        }
-    }
 }
 
 impl BindgenModelGenerator for TsInterfaceGenerator {
@@ -47,7 +39,6 @@ impl BindgenModelGenerator for TsInterfaceGenerator {
         }
 
         self.check_import(token, buffer);
-        self.add_input_type(buffer);
 
         Ok(format!(
             "// Type definition for `{path}` struct
