@@ -99,6 +99,7 @@ pub trait TransactionProcessor<P: Provider + Sync>: Send + Sync {
         block_number: u64,
         block_timestamp: u64,
         transaction_hash: Felt,
+        contract_addresses: &HashSet<Felt>,
         transaction: &Transaction,
     ) -> Result<(), Error>;
 }

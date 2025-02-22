@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::convert::TryInto;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -514,11 +514,10 @@ impl Sql {
     pub fn store_transaction(
         &mut self,
         transaction: &Transaction,
-        transaction_id: &str,
+        block_number: u64,
+        contract_addresses: &HashSet<Felt>,
         block_timestamp: u64,
     ) -> Result<()> {
-        let id = Argument::String(transaction_id.to_string());
-
         let transaction_type = match transaction {
             Transaction::Invoke(_) => "INVOKE",
             Transaction::L1Handler(_) => "L1_HANDLER",
@@ -556,12 +555,12 @@ impl Sql {
 
         self.executor.send(QueryMessage::other(
             "INSERT OR IGNORE INTO transactions (id, transaction_hash, sender_address, calldata, \
-             max_fee, signature, nonce, transaction_type, executed_at) VALUES (?, ?, ?, ?, ?, ?, \
-             ?, ?, ?)"
+             max_fee, signature, nonce, transaction_type, executed_at, block_number) VALUES (?, \
+             ?, ?, ?, ?, ?, ?, ?, ?, ?)"
                 .to_string(),
             vec![
-                id,
-                transaction_hash,
+                transaction_hash.clone(),
+                transaction_hash.clone(),
                 sender_address,
                 calldata,
                 max_fee,
@@ -569,8 +568,18 @@ impl Sql {
                 nonce,
                 Argument::String(transaction_type.to_string()),
                 Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
+                Argument::String(block_number.to_string()),
             ],
         ))?;
+
+        for contract_address in contract_addresses {
+            self.executor.send(QueryMessage::other(
+                "INSERT OR IGNORE INTO transaction_contract (transaction_hash, contract_address) \
+                 VALUES (?, ?)"
+                    .to_string(),
+                vec![transaction_hash.clone(), Argument::FieldElement(*contract_address)],
+            ))?;
+        }
 
         Ok(())
     }

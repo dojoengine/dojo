@@ -656,8 +656,8 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
             .await?;
         }
 
-        for contract in unique_contracts {
-            let entry = cursor_map.entry(contract).or_insert((transaction_hash, 0));
+        for contract in &unique_contracts {
+            let entry = cursor_map.entry(*contract).or_insert((transaction_hash, 0));
             entry.1 += 1;
         }
 
@@ -667,6 +667,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                 block_number,
                 block_timestamp,
                 transaction_hash,
+                &unique_contracts,
                 transaction,
             )
             .await?;
@@ -721,6 +722,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                     block_number,
                     block_timestamp,
                     *transaction_hash,
+                    &unique_contracts,
                     &transaction_with_receipt.transaction,
                 )
                 .await?;
@@ -752,6 +754,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         block_number: u64,
         block_timestamp: u64,
         transaction_hash: Felt,
+        contract_addresses: &HashSet<Felt>,
         transaction: &Transaction,
     ) -> Result<()> {
         for processor in &self.processors.transaction {
@@ -762,6 +765,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                     block_number,
                     block_timestamp,
                     transaction_hash,
+                    contract_addresses,
                     transaction,
                 )
                 .await?
