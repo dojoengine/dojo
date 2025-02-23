@@ -36,13 +36,14 @@ struct Stats {
     romances: u16,
 }
 
-#[derive(Introspect, Copy, Drop, Serde)]
+#[derive(Introspect, Copy, Drop, Serde, Default)]
 enum Weapon {
+    #[default]
     DualWield: (Sword, Sword),
     Fists: (Sword, Sword),
 }
 
-#[derive(Introspect, Copy, Drop, Serde)]
+#[derive(Introspect, Copy, Drop, Serde, Default)]
 struct Sword {
     swordsmith: ContractAddress,
     damage: u32,
