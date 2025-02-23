@@ -2,6 +2,7 @@ use starknet::{ContractAddress};
 
 use dojo::world::{IWorldDispatcher, WorldStorage, WorldStorageTrait};
 use dojo::model::Model;
+use dojo::storage::ContractAddressDefault;
 
 use crate::world::{
     spawn_test_world, NamespaceDef, TestResource, ContractDefTrait, WorldStorageTestTrait,
@@ -35,9 +36,10 @@ pub struct NotCopiable {
     pub b: ByteArray,
 }
 
-#[derive(Drop, Serde, Debug, PartialEq, Introspect)]
+#[derive(Drop, Serde, Debug, PartialEq, Introspect, Default)]
 pub enum EnumOne {
     One,
+    #[default]
     Two: u32,
     Three: (felt252, u32),
 }
@@ -127,7 +129,7 @@ pub mod test_contract_with_dojo_init_args {
     }
 }
 
-#[derive(IntrospectPacked, Copy, Drop, Serde)]
+#[derive(IntrospectPacked, Copy, Drop, Serde, Default)]
 pub struct Sword {
     pub swordsmith: ContractAddress,
     pub damage: u32,
@@ -177,8 +179,9 @@ pub struct Stats {
     pub romances: u16,
 }
 
-#[derive(IntrospectPacked, Copy, Drop, Serde)]
+#[derive(IntrospectPacked, Copy, Drop, Serde, Default)]
 pub enum Weapon {
+    #[default]
     DualWield: (Sword, Sword),
     Fists: (Sword, Sword),
 }

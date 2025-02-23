@@ -55,8 +55,9 @@ struct FooModelMemberAdded {
     pub b: u128,
 }
 
-#[derive(Introspect, Copy, Drop, Serde)]
+#[derive(Introspect, Copy, Drop, Serde, Default)]
 enum MyEnum {
+    #[default]
     X: u8,
 }
 
@@ -69,8 +70,9 @@ struct FooModelMemberChanged {
     pub b: u128,
 }
 
-#[derive(Introspect, Copy, Drop, Serde)]
+#[derive(Introspect, Copy, Drop, Serde, Default)]
 enum AnotherEnum {
+    #[default]
     X: u8,
 }
 
