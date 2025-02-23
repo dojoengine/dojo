@@ -1,3 +1,11 @@
+
+
+pub impl ContractAddressDefault of Default<core::starknet::ContractAddress> {
+    fn default() -> core::starknet::ContractAddress {
+        core::starknet::contract_address_const::<0>()
+    }
+}
+
 /// Handle data (de)serialization to be stored into
 /// the world storage.
 ///
@@ -14,6 +22,7 @@ pub trait DojoStore<T, +Serde<T>> {
 }
 
 impl DojoStore_felt252 of DojoStore<felt252>;
+impl DojoStore_bool of DojoStore<bool>;
 impl DojoStore_u8 of DojoStore<u8>;
 impl DojoStore_u16 of DojoStore<u16>;
 impl DojoStore_u32 of DojoStore<u32>;

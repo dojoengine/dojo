@@ -7,6 +7,9 @@ use super::packing;
 // the minimum internal size of an empty ByteArray
 const MIN_BYTE_ARRAY_SIZE: u32 = 3;
 
+// the maximum allowed index for an enum variant
+const MAX_VARIANT_INDEX: u256 = 256;
+
 /// Write values to the world storage.
 ///
 /// # Arguments
@@ -172,7 +175,7 @@ pub fn write_enum_layout(
         // TODO: when Cairo 2.8 support is added, unboxing should be implicit.
         let variant: felt252 = *variant.unbox();
         // first, get the variant value from `values`
-        assert(variant.into() < 256_u256, 'invalid variant value');
+        assert(variant.into() < MAX_VARIANT_INDEX, 'invalid variant value');
 
         // and write it
         database::set(model, key, values, offset, [packing::PACKING_MAX_BITS].span());
@@ -185,7 +188,7 @@ pub fn write_enum_layout(
             Option::Some(layout) => write_layout(
                 model, variant_data_key, values, ref offset, layout,
             ),
-            Option::None => panic!("Unable to find the variant layout"),
+            Option::None => panic!("Unable to find the variant layout for variant {}", variant),
         };
     } else {
         panic!("offset is out of bounds for enum layout variant");
@@ -297,7 +300,7 @@ pub fn delete_enum_layout(model: felt252, key: felt252, variant_layouts: Span<Fi
     assert(res.len() == 1, 'internal database error');
 
     let variant = *res.at(0);
-    assert(variant.into() < 256_u256, 'invalid variant value');
+    assert(variant.into() < MAX_VARIANT_INDEX, 'invalid variant value');
 
     // reset the variant value
     database::delete(model, key, [packing::PACKING_MAX_BITS].span());
@@ -461,7 +464,7 @@ pub fn read_enum_layout(
     assert(res.len() == 1, 'internal database error');
 
     let variant = *res.at(0);
-    assert(variant.into() < 256_u256, 'invalid variant value');
+    assert(variant.into() < MAX_VARIANT_INDEX, 'invalid variant value');
 
     read_data.append(variant);
 
