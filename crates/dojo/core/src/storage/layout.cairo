@@ -61,6 +61,7 @@ pub fn write_array_layout(
 
     // first, read array size which is the first felt252 from values
     let array_len = *values.at(offset);
+
     assert(array_len.into() <= database::MAX_ARRAY_LENGTH, 'invalid array length');
     let array_len: u32 = array_len.try_into().unwrap();
 
@@ -460,7 +461,7 @@ pub fn read_enum_layout(
     model: felt252, key: felt252, ref read_data: Array<felt252>, variant_layouts: Span<FieldLayout>,
 ) {
     // read the variant value first
-    let res = database::get(model, key, [8].span());
+    let res = database::get(model, key, [packing::PACKING_MAX_BITS].span());
     assert(res.len() == 1, 'internal database error');
 
     let variant = *res.at(0);
