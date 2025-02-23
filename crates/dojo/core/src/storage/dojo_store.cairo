@@ -1,5 +1,3 @@
-
-
 pub impl ContractAddressDefault of Default<core::starknet::ContractAddress> {
     fn default() -> core::starknet::ContractAddress {
         core::starknet::contract_address_const::<0>()
@@ -40,26 +38,23 @@ impl DojoStore_EthAddress of DojoStore<starknet::EthAddress>;
 impl DojoStore_ByteArray of DojoStore<ByteArray>;
 
 /// Specific implementation of DojoStore for Option<T>.
-///
-/// 'None' is stored as the first variant (instead of 'Some').
-/// The variant index is incremented by 1 to be able to detect
-/// unitialized variant.
 impl DojoStore_option<T, +Serde<T>, +DojoStore<T>, +Serde<Option<T>>> of DojoStore<Option<T>> {
     fn serialize(self: @Option<T>, ref serialized: Array<felt252>) {
         match self {
             Option::Some(x) => {
-                serialized.append(2);
+                serialized.append(1);
                 DojoStore::serialize(x, ref serialized);
             },
-            Option::None => { serialized.append(1); },
+            Option::None => { serialized.append(2); },
         }
     }
 
     fn deserialize(ref values: Span<felt252>) -> Option<Option<T>> {
         if let Option::Some(x) = values.pop_front() {
             return match *x {
-                0 | 1 => Option::Some(Option::None),
-                2 => Option::Some(DojoStore::<T>::deserialize(ref values)),
+                0 => Option::Some(Default::default()),
+                1 => Option::Some(DojoStore::<T>::deserialize(ref values)),
+                2 => Option::Some(Option::None),
                 _ => Option::None,
             };
         }

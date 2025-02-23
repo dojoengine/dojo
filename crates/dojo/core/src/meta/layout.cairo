@@ -48,3 +48,30 @@ pub fn compute_packed_size(layout: Layout) -> Option<usize> {
         Option::None
     }
 }
+
+/// With the new Dojo storage management (DojoStore trait),
+/// variants start from 1, while they were started from 0 in
+/// the legacy Dojo storage system.
+/// To still support legacy Dojo models, we have to rebuild the
+/// legacy storage layout from the new storage layout, meaning that
+/// variant selectors have to be decremented by one.
+pub fn build_legacy_layout(layout: Layout) -> Layout {
+    match layout {
+        Layout::Enum(field_layouts) => {
+            let mut new_field_layouts = array![];
+
+            for field_layout in field_layouts {
+                new_field_layouts
+                    .append(
+                        FieldLayout {
+                            selector: *field_layout.selector - 1,
+                            layout: build_legacy_layout(*field_layout.layout),
+                        },
+                    );
+            };
+
+            Layout::Enum(new_field_layouts.span())
+        },
+        _ => layout,
+    }
+}
