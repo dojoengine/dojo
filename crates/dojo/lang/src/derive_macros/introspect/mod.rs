@@ -7,6 +7,7 @@ use cairo_lang_syntax::node::ast::{
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{Terminal, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
+use itertools::Itertools;
 
 use crate::debug_store_expand;
 
@@ -40,8 +41,24 @@ pub fn handle_introspect_struct(
         )
     };
 
-    let (gen_types, gen_impls) = build_generic_types_and_impls(db, struct_ast.generic_params(db));
-    let dojo_store = dojo_store::build_struct_dojo_store(db, &struct_name, &struct_ast);
+    let gen_types = build_generic_types(db, struct_ast.generic_params(db));
+    let gen_joined_types = gen_types.join(", ");
+
+    let inspect_gen_impls =
+        build_generic_impls(&gen_types, &["+dojo::meta::introspect::Introspect".to_string()], &[]);
+    let dojo_store_gen_impls = build_generic_impls(
+        &gen_types,
+        &["+dojo::storage::DojoStore".to_string(), "+core::serde::Serde".to_string()],
+        &[format!("+core::serde::Serde<{struct_name}<{gen_joined_types}>>")],
+    );
+
+    let dojo_store = dojo_store::build_struct_dojo_store(
+        db,
+        &struct_name,
+        &struct_ast,
+        &gen_types,
+        &dojo_store_gen_impls,
+    );
 
     debug_store_expand(&format!("DOJO_STORE STRUCT::{struct_name}"), &dojo_store);
 
@@ -49,7 +66,7 @@ pub fn handle_introspect_struct(
         &struct_name,
         &struct_size,
         &gen_types,
-        gen_impls,
+        inspect_gen_impls,
         &layout,
         &ty,
         &dojo_store,
@@ -89,14 +106,41 @@ pub fn handle_introspect_enum(
         )
     };
 
-    let (gen_types, gen_impls) = build_generic_types_and_impls(db, enum_ast.generic_params(db));
+    let gen_types = build_generic_types(db, enum_ast.generic_params(db));
+    let gen_joined_types = gen_types.join(", ");
+
+    let inspect_gen_impls =
+        build_generic_impls(&gen_types, &["+dojo::meta::introspect::Introspect".to_string()], &[]);
+    let dojo_store_gen_impls = build_generic_impls(
+        &gen_types,
+        &["+dojo::storage::DojoStore".to_string(), "+core::serde::Serde".to_string()],
+        &[
+            format!("+core::serde::Serde<{enum_name}<{gen_joined_types}>>"),
+            format!("+core::traits::Default<{enum_name}<{gen_joined_types}>>")
+        ],
+    );
+
     let enum_size = size::compute_enum_layout_size(&variant_sizes, packed);
     let ty = ty::build_enum_ty(db, &enum_name, &enum_ast);
-    let dojo_store = dojo_store::build_enum_dojo_store(db, &enum_name, &enum_ast);
+    let dojo_store = dojo_store::build_enum_dojo_store(
+        db,
+        &enum_name,
+        &enum_ast,
+        &gen_types,
+        &dojo_store_gen_impls,
+    );
 
     debug_store_expand(&format!("DOJO_STORE ENUM::{enum_name}"), &dojo_store);
 
-    generate_introspect(&enum_name, &enum_size, &gen_types, gen_impls, &layout, &ty, &dojo_store)
+    generate_introspect(
+        &enum_name,
+        &enum_size,
+        &gen_types,
+        inspect_gen_impls,
+        &layout,
+        &ty,
+        &dojo_store,
+    )
 }
 
 /// Generate the introspect impl for a Struct or an Enum,
@@ -145,10 +189,10 @@ $dojo_store$
 
 // Extract generic type information and build the
 // type and impl information to add to the generated introspect
-fn build_generic_types_and_impls(
+fn build_generic_types(
     db: &dyn SyntaxGroup,
     generic_params: OptionWrappedGenericParamList,
-) -> (Vec<String>, String) {
+) -> Vec<String> {
     let generic_types =
         if let OptionWrappedGenericParamList::WrappedGenericParamList(params) = generic_params {
             params
@@ -167,11 +211,27 @@ fn build_generic_types_and_impls(
             vec![]
         };
 
-    let generic_impls = generic_types
-        .iter()
-        .map(|g| format!("{g}, impl {g}Introspect: dojo::meta::introspect::Introspect<{g}>"))
-        .collect::<Vec<_>>()
-        .join(", ");
+    generic_types
+}
 
-    (generic_types, generic_impls)
+fn build_generic_impls(
+    gen_types: &[String],
+    base_impls: &[String],
+    additional_impls: &[String],
+) -> String {
+    let mut gen_impls = gen_types
+        .iter()
+        .map(|g| {
+            format!(
+                "{g}, {base_impls}",
+                base_impls = base_impls.iter().map(|i| format!("{i}<{g}>")).join(", ")
+            )
+        })
+        .collect::<Vec<_>>();
+
+    if !gen_types.is_empty() {
+        gen_impls.extend(additional_impls.to_vec());
+    }
+
+    gen_impls.join(", ")
 }
