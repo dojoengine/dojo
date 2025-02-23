@@ -71,8 +71,9 @@ pub struct Subrecord {
     pub random_u8: u8,
 }
 
-#[derive(Serde, Copy, Drop, Introspect)]
+#[derive(Serde, Copy, Drop, Introspect, Default)]
 pub enum Depth {
+    #[default]
     Zero: (),
     One: (),
     Two: (),
