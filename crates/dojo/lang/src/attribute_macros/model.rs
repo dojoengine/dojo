@@ -20,9 +20,7 @@ use crate::derive_macros::{
     extract_derive_attr_names, handle_derive_attrs, DOJO_INTROSPECT_DERIVE, DOJO_LEGACY_STORAGE,
     DOJO_PACKED_DERIVE,
 };
-use crate::utils::{
-    compute_unique_hash, deserialize_member_ty, serialize_member_ty,
-};
+use crate::utils::{compute_unique_hash, deserialize_member_ty, serialize_member_ty};
 
 const MODEL_CODE_PATCH: &str = include_str!("./patches/model.patch.cairo");
 const MODEL_FIELD_CODE_PATCH: &str = include_str!("./patches/model_field_store.patch.cairo");
@@ -124,7 +122,7 @@ impl DojoModel {
                 key_attrs.push(format!("*self.{}", member.name.clone()));
                 serialized_keys.push(RewriteNode::Text(serialize_member_ty(
                     db,
-                    &member_ast,
+                    member_ast,
                     true,
                     use_legacy_storage,
                 )));
@@ -132,13 +130,13 @@ impl DojoModel {
                 values.push(member.clone());
                 serialized_values.push(RewriteNode::Text(serialize_member_ty(
                     db,
-                    &member_ast,
+                    member_ast,
                     true,
                     use_legacy_storage,
                 )));
                 deserialized_values.push(RewriteNode::Text(deserialize_member_ty(
                     db,
-                    &member_ast,
+                    member_ast,
                     use_legacy_storage,
                 )));
 
@@ -249,6 +247,10 @@ impl DojoModel {
                     RewriteNode::Text(model_value_derive_attr_names),
                 ),
                 ("unique_hash".to_string(), RewriteNode::Text(unique_hash)),
+                (
+                    "use_legacy_storage".to_string(),
+                    RewriteNode::Text(use_legacy_storage.to_string()),
+                ),
             ]),
         );
 

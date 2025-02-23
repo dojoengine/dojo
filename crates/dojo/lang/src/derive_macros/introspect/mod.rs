@@ -116,7 +116,7 @@ pub fn handle_introspect_enum(
         &["+dojo::storage::DojoStore".to_string(), "+core::serde::Serde".to_string()],
         &[
             format!("+core::serde::Serde<{enum_name}<{gen_joined_types}>>"),
-            format!("+core::traits::Default<{enum_name}<{gen_joined_types}>>")
+            format!("+core::traits::Default<{enum_name}<{gen_joined_types}>>"),
         ],
     );
 

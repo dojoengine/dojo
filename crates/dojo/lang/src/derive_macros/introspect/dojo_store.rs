@@ -173,4 +173,3 @@ pub fn build_enum_dojo_store(
     }}"
     )
 }
-

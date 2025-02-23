@@ -75,7 +75,9 @@ pub fn build_variant_layouts(
         .iter()
         .enumerate()
         .map(|(i, v)| {
-            let selector = format!("{i}");
+            // with the new `DojoStore`` trait, variants start from 1, to be able to use
+            // 0 as uninitialized variant.
+            let selector = i + 1;
 
             let variant_layout = match v.type_clause(db) {
                 OptionTypeClause::Empty(_) => {

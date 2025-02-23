@@ -26,7 +26,14 @@ pub mod m_$model_type$_definition {
 
         #[inline(always)]
         fn layout() -> dojo::meta::Layout {
-            dojo::meta::Introspect::<$model_type$>::layout()
+            if $use_legacy_storage$ {
+                dojo::meta::layout::build_legacy_layout(
+                    dojo::meta::Introspect::<$model_type$>::layout()
+                )
+            }
+            else {
+                dojo::meta::Introspect::<$model_type$>::layout()
+            }
         }
 
         #[inline(always)]

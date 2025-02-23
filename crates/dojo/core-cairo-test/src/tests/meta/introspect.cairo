@@ -147,9 +147,13 @@ fn _enum(values: Array<Option<Layout>>) -> Layout {
         }
 
         let v = *values.at(i);
+
+        // in the new Dojo storage layout, variants start from 1.
+        let variant = i + 1;
+
         match v {
-            Option::Some(v) => { items.append(field(i.into(), v)); },
-            Option::None => { items.append(field(i.into(), fixed(array![]))) },
+            Option::Some(v) => { items.append(field(variant.into(), v)); },
+            Option::None => { items.append(field(variant.into(), fixed(array![]))) },
         }
 
         i += 1;
