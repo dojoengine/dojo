@@ -10,18 +10,18 @@ use cairo_lang_diagnostics::Severity;
 use cairo_lang_syntax::node::ast::{ItemStruct, ModuleItem};
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
-use cairo_lang_syntax::node::{TypedStablePtr, TypedSyntaxNode};
+use cairo_lang_syntax::node::{Terminal, TypedStablePtr, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
 use dojo_types::naming;
 use starknet::core::utils::get_selector_from_name;
 
-use super::element::{
-    compute_unique_hash, deserialize_member_ty, parse_members, serialize_member_ty,
-};
 use crate::aux_data::{Member, ModelAuxData};
 use crate::derive_macros::{
     extract_derive_attr_names, handle_derive_attrs, DOJO_INTROSPECT_DERIVE, DOJO_LEGACY_STORAGE,
     DOJO_PACKED_DERIVE,
+};
+use crate::utils::{
+    compute_unique_hash, deserialize_member_ty, serialize_member_ty,
 };
 
 const MODEL_CODE_PATCH: &str = include_str!("./patches/model.patch.cairo");
@@ -68,6 +68,7 @@ impl DojoModel {
 
         let use_legacy_storage = derive_attr_names.contains(&DOJO_LEGACY_STORAGE.to_string());
 
+        let mut members: Vec<Member> = vec![];
         let mut values: Vec<Member> = vec![];
         let mut keys: Vec<Member> = vec![];
         let mut members_values: Vec<RewriteNode> = vec![];
@@ -85,34 +86,65 @@ impl DojoModel {
         let mut model_member_store_impls_processed: HashSet<String> = HashSet::new();
         let mut model_member_store_impls: Vec<String> = vec![];
 
-        let members = parse_members(db, &struct_ast.members(db).elements(db), &mut diagnostics);
+        let mut parsing_keys = true;
 
-        members.iter().for_each(|member| {
+        struct_ast.members(db).elements(db).iter().for_each(|member_ast| {
+            let is_key = member_ast.has_attr(db, "key");
+            let member = Member {
+                name: member_ast.name(db).text(db).to_string(),
+                ty: member_ast
+                    .type_clause(db)
+                    .ty(db)
+                    .as_syntax_node()
+                    .get_text(db)
+                    .trim()
+                    .to_string(),
+                key: is_key,
+            };
+
+            members.push(member.clone());
+
+            // Make sure all keys are before values in the model.
+            if is_key && !parsing_keys {
+                diagnostics.push(PluginDiagnostic {
+                    message: "Key members must be defined before non-key members.".into(),
+                    stable_ptr: member_ast.name(db).stable_ptr().untyped(),
+                    severity: Severity::Error,
+                });
+                // Don't return here, since we don't want to stop processing the members after the
+                // first error to avoid diagnostics just because the field is
+                // missing.
+            }
+
+            parsing_keys &= is_key;
+
             if member.key {
                 keys.push(member.clone());
                 key_types.push(member.ty.clone());
                 key_attrs.push(format!("*self.{}", member.name.clone()));
                 serialized_keys.push(RewriteNode::Text(serialize_member_ty(
-                    &member.name,
+                    db,
+                    &member_ast,
                     true,
                     use_legacy_storage,
                 )));
             } else {
                 values.push(member.clone());
                 serialized_values.push(RewriteNode::Text(serialize_member_ty(
-                    &member.name,
+                    db,
+                    &member_ast,
                     true,
                     use_legacy_storage,
                 )));
                 deserialized_values.push(RewriteNode::Text(deserialize_member_ty(
-                    &member.name,
-                    &member.ty,
+                    db,
+                    &member_ast,
                     use_legacy_storage,
                 )));
 
                 members_values
                     .push(RewriteNode::Text(format!("pub {}: {},\n", member.name, member.ty)));
-                field_accessors.push(generate_field_accessors(model_type.clone(), member));
+                field_accessors.push(generate_field_accessors(model_type.clone(), &member));
 
                 if !model_member_store_impls_processed.contains(&member.ty.to_string()) {
                     model_member_store_impls.extend(vec![
@@ -134,6 +166,7 @@ impl DojoModel {
                 }
             }
         });
+
         if keys.is_empty() {
             diagnostics.push(PluginDiagnostic {
                 message: "Model must define at least one #[key] attribute".into(),
