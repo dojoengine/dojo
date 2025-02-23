@@ -31,6 +31,7 @@ mod tests {
         mod database;
         mod packing;
         mod storage;
+        mod layout;
     }
 
     mod contract;
