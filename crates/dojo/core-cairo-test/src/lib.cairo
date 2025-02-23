@@ -29,6 +29,7 @@ mod tests {
 
     mod storage {
         mod database;
+        mod dojo_store;
         mod packing;
         mod storage;
         mod layout;
