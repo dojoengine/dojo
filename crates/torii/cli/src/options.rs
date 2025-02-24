@@ -2,6 +2,7 @@ use std::net::{IpAddr, Ipv4Addr};
 use std::str::FromStr;
 
 use anyhow::Context;
+use camino::Utf8PathBuf;
 use serde::ser::SerializeSeq;
 use serde::{Deserialize, Serialize};
 use starknet::core::types::Felt;
@@ -15,10 +16,11 @@ pub const DEFAULT_EVENTS_CHUNK_SIZE: u64 = 1024;
 pub const DEFAULT_BLOCKS_CHUNK_SIZE: u64 = 10240;
 pub const DEFAULT_POLLING_INTERVAL: u64 = 500;
 pub const DEFAULT_MAX_CONCURRENT_TASKS: usize = 100;
-
 pub const DEFAULT_RELAY_PORT: u16 = 9090;
 pub const DEFAULT_RELAY_WEBRTC_PORT: u16 = 9091;
 pub const DEFAULT_RELAY_WEBSOCKET_PORT: u16 = 9092;
+
+pub const DEFAULT_ERC_MAX_CONCURRENT_TASKS: usize = 10;
 
 #[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq)]
 #[command(next_help_heading = "Relay options")]
@@ -342,6 +344,27 @@ impl Default for MetricsOptions {
             metrics: false,
             metrics_addr: DEFAULT_METRICS_ADDR,
             metrics_port: DEFAULT_METRICS_PORT,
+        }
+    }
+}
+
+#[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq)]
+#[command(next_help_heading = "ERC options")]
+pub struct ErcOptions {
+    /// The maximum number of concurrent tasks to use for indexing ERC721 and ERC1155 tokens.
+    #[arg(long = "erc.max_concurrent_tasks", default_value_t = DEFAULT_MAX_CONCURRENT_TASKS)]
+    pub max_concurrent_tasks: usize,
+
+    /// Path to a directory to store ERC artifacts
+    #[arg(long)]
+    pub artifacts_path: Option<Utf8PathBuf>,
+}
+
+impl Default for ErcOptions {
+    fn default() -> Self {
+        Self {
+            max_concurrent_tasks: DEFAULT_MAX_CONCURRENT_TASKS,
+            artifacts_path: None,
         }
     }
 }

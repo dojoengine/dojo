@@ -142,7 +142,7 @@ impl Runner {
             pool.clone(),
             shutdown_tx.clone(),
             provider.clone(),
-            self.args.indexing.max_concurrent_tasks,
+            self.args.erc.max_concurrent_tasks,
         )
         .await?;
         let executor_handle = tokio::spawn(async move { executor.run().await });
@@ -208,6 +208,7 @@ impl Runner {
         let temp_dir = TempDir::new()?;
         let artifacts_path = self
             .args
+            .erc
             .artifacts_path
             .unwrap_or_else(|| Utf8PathBuf::from(temp_dir.path().to_str().unwrap()));
 

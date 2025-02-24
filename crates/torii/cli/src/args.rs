@@ -1,7 +1,6 @@
 use std::path::PathBuf;
 
 use anyhow::Result;
-use camino::Utf8PathBuf;
 use clap::Parser;
 use dojo_utils::parse::parse_url;
 use serde::{Deserialize, Serialize};
@@ -43,15 +42,14 @@ pub struct ToriiArgs {
     #[arg(long, help = "Configuration file to setup Torii.")]
     pub config: Option<PathBuf>,
 
-    /// Path to a directory to store ERC artifacts
-    #[arg(long)]
-    pub artifacts_path: Option<Utf8PathBuf>,
-
     #[command(flatten)]
     pub indexing: IndexingOptions,
 
     #[command(flatten)]
     pub events: EventsOptions,
+
+    #[command(flatten)]
+    pub erc: ErcOptions,
 
     #[cfg(feature = "server")]
     #[command(flatten)]
@@ -105,6 +103,10 @@ impl ToriiArgs {
             self.events = config.events.unwrap_or_default();
         }
 
+        if self.erc == ErcOptions::default() {
+            self.erc = config.erc.unwrap_or_default();
+        }
+
         #[cfg(feature = "server")]
         {
             if self.server == ServerOptions::default() {
@@ -133,6 +135,7 @@ pub struct ToriiArgsConfig {
     pub explorer: Option<bool>,
     pub indexing: Option<IndexingOptions>,
     pub events: Option<EventsOptions>,
+    pub erc: Option<ErcOptions>,
     #[cfg(feature = "server")]
     pub metrics: Option<MetricsOptions>,
     #[cfg(feature = "server")]
@@ -163,6 +166,7 @@ impl TryFrom<ToriiArgs> for ToriiArgsConfig {
             if args.indexing == IndexingOptions::default() { None } else { Some(args.indexing) };
         config.events =
             if args.events == EventsOptions::default() { None } else { Some(args.events) };
+        config.erc = if args.erc == ErcOptions::default() { None } else { Some(args.erc) };
 
         #[cfg(feature = "server")]
         {
