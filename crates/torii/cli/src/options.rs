@@ -20,7 +20,7 @@ pub const DEFAULT_RELAY_PORT: u16 = 9090;
 pub const DEFAULT_RELAY_WEBRTC_PORT: u16 = 9091;
 pub const DEFAULT_RELAY_WEBSOCKET_PORT: u16 = 9092;
 
-pub const DEFAULT_ERC_MAX_CONCURRENT_TASKS: usize = 10;
+pub const DEFAULT_ERC_MAX_METADATA_TASKS: usize = 10;
 
 #[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq)]
 #[command(next_help_heading = "Relay options")]
@@ -354,12 +354,12 @@ pub struct ErcOptions {
     /// The maximum number of concurrent tasks to use for indexing ERC721 and ERC1155 token
     /// metadata.
     #[arg(
-        long = "erc.max_concurrent_tasks",
-        default_value_t = DEFAULT_ERC_MAX_CONCURRENT_TASKS,
+        long = "erc.max_metadata_tasks",
+        default_value_t = DEFAULT_ERC_MAX_METADATA_TASKS,
         help = "The maximum number of concurrent tasks to use for indexing ERC721 and ERC1155 token metadata."
     )]
-    #[serde(default = "default_erc_max_concurrent_tasks")]
-    pub max_concurrent_tasks: usize,
+    #[serde(default = "default_erc_max_metadata_tasks")]
+    pub max_metadata_tasks: usize,
 
     /// Path to a directory to store ERC artifacts
     #[arg(long)]
@@ -368,7 +368,7 @@ pub struct ErcOptions {
 
 impl Default for ErcOptions {
     fn default() -> Self {
-        Self { max_concurrent_tasks: DEFAULT_MAX_CONCURRENT_TASKS, artifacts_path: None }
+        Self { max_metadata_tasks: DEFAULT_ERC_MAX_METADATA_TASKS, artifacts_path: None }
     }
 }
 
@@ -460,6 +460,6 @@ fn default_relay_websocket_port() -> u16 {
     DEFAULT_RELAY_WEBSOCKET_PORT
 }
 
-fn default_erc_max_concurrent_tasks() -> usize {
-    DEFAULT_ERC_MAX_CONCURRENT_TASKS
+fn default_erc_max_metadata_tasks() -> usize {
+    DEFAULT_ERC_MAX_METADATA_TASKS
 }

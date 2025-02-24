@@ -142,7 +142,7 @@ impl Runner {
             pool.clone(),
             shutdown_tx.clone(),
             provider.clone(),
-            self.args.erc.max_concurrent_tasks,
+            self.args.erc.max_metadata_tasks,
         )
         .await?;
         let executor_handle = tokio::spawn(async move { executor.run().await });
