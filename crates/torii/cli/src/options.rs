@@ -351,7 +351,8 @@ impl Default for MetricsOptions {
 #[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq)]
 #[command(next_help_heading = "ERC options")]
 pub struct ErcOptions {
-    /// The maximum number of concurrent tasks to use for indexing ERC721 and ERC1155 token metadata.
+    /// The maximum number of concurrent tasks to use for indexing ERC721 and ERC1155 token
+    /// metadata.
     #[arg(
         long = "erc.max_concurrent_tasks",
         default_value_t = DEFAULT_ERC_MAX_CONCURRENT_TASKS,
