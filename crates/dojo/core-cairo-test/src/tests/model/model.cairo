@@ -429,10 +429,10 @@ fn test_legacy_model() {
             .span(),
     );
 
-    // TODO RBA: to confirm
     // the layout returned by Introspect::layout() is the layout of the model
     // for the new storage system, while the layout returned by ModelDefinition
-    // is the layout used to store data (so it is adapted in case of legacy storage model)
+    // is the layout used to store data (so it is adapted in case of legacy storage model).
+    // This is fine as Introspect::layout() is never used for models.
     assert_eq!(definition.layout, expected_layout, "ModelDefinition: bad layout");
     assert_ne!(layout, expected_layout, "Introspect::layout(): bad layout");
 
