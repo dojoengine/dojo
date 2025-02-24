@@ -120,11 +120,11 @@ pub struct IndexingOptions {
     #[serde(default = "default_polling_interval")]
     pub polling_interval: u64,
 
-    /// Max concurrent tasks
+    /// Maximum number of concurrent tasks used for processing parallelizable events.
     #[arg(
         long = "indexing.max_concurrent_tasks",
         default_value_t = DEFAULT_MAX_CONCURRENT_TASKS,
-        help = "Max concurrent tasks used to parallelize indexing."
+        help = "Maximum number of concurrent tasks processing parallelizable events."
     )]
     #[serde(default = "default_max_concurrent_tasks")]
     pub max_concurrent_tasks: usize,
@@ -351,8 +351,13 @@ impl Default for MetricsOptions {
 #[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq)]
 #[command(next_help_heading = "ERC options")]
 pub struct ErcOptions {
-    /// The maximum number of concurrent tasks to use for indexing ERC721 and ERC1155 tokens.
-    #[arg(long = "erc.max_concurrent_tasks", default_value_t = DEFAULT_MAX_CONCURRENT_TASKS)]
+    /// The maximum number of concurrent tasks to use for indexing ERC721 and ERC1155 token metadata.
+    #[arg(
+        long = "erc.max_concurrent_tasks",
+        default_value_t = DEFAULT_ERC_MAX_CONCURRENT_TASKS,
+        help = "The maximum number of concurrent tasks to use for indexing ERC721 and ERC1155 token metadata."
+    )]
+    #[serde(default = "default_erc_max_concurrent_tasks")]
     pub max_concurrent_tasks: usize,
 
     /// Path to a directory to store ERC artifacts
@@ -452,4 +457,8 @@ fn default_relay_webrtc_port() -> u16 {
 
 fn default_relay_websocket_port() -> u16 {
     DEFAULT_RELAY_WEBSOCKET_PORT
+}
+
+fn default_erc_max_concurrent_tasks() -> usize {
+    DEFAULT_ERC_MAX_CONCURRENT_TASKS
 }
