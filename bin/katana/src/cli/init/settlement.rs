@@ -6,6 +6,8 @@ use starknet::providers::JsonRpcClient;
 use url::Url;
 
 /// The contract address that handles fact verification.
+///
+/// Taken from <https://github.com/HerodotusDev/integrity/blob/main/deployed_contracts.md>
 const ATLANTIC_FACT_REGISTRY_MAINNET: Felt =
     felt!("0xcc63a1e8e7824642b89fa6baf996b8ed21fa4707be90ef7605570ca8e4f00b");
 
@@ -14,7 +16,7 @@ const ATLANTIC_FACT_REGISTRY_MAINNET: Felt =
 /// This address points to Herodotus' Atlantic Fact Registry contract on Starknet Sepolia as we rely
 /// on their services to generates and verifies proofs.
 ///
-/// See on [Voyager](https://sepolia.voyager.online/contract/0x04ce7851f00b6c3289674841fd7a1b96b6fd41ed1edc248faccd672c26371b8c).
+/// Taken from <https://github.com/HerodotusDev/integrity/blob/main/deployed_contracts.md>
 const ATLANTIC_FACT_REGISTRY_SEPOLIA: Felt =
     felt!("0x4ce7851f00b6c3289674841fd7a1b96b6fd41ed1edc248faccd672c26371b8c");
 
