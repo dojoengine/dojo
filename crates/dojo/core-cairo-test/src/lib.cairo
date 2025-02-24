@@ -17,6 +17,7 @@ pub use world::{
 mod tests {
     mod meta {
         mod introspect;
+        mod layout;
     }
 
     mod event {

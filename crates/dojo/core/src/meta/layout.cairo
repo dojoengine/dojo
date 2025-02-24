@@ -72,6 +72,39 @@ pub fn build_legacy_layout(layout: Layout) -> Layout {
 
             Layout::Enum(new_field_layouts.span())
         },
+        Layout::Struct(field_layouts) => {
+            let mut new_field_layouts = array![];
+
+            for field_layout in field_layouts {
+                new_field_layouts
+                    .append(
+                        FieldLayout {
+                            selector: *field_layout.selector,
+                            layout: build_legacy_layout(*field_layout.layout),
+                        },
+                    );
+            };
+
+            Layout::Struct(new_field_layouts.span())
+        },
+        Layout::Tuple(item_layouts) => {
+            let mut new_item_layouts = array![];
+
+            for item_layout in item_layouts {
+                new_item_layouts.append(build_legacy_layout(*item_layout));
+            };
+
+            Layout::Tuple(new_item_layouts.span())
+        },
+        Layout::Array(item_layouts) => {
+            let mut new_item_layouts = array![];
+
+            for item_layout in item_layouts {
+                new_item_layouts.append(build_legacy_layout(*item_layout));
+            };
+
+            Layout::Array(new_item_layouts.span())
+        },
         _ => layout,
     }
 }
