@@ -17,8 +17,8 @@ use starknet::core::utils::get_selector_from_name;
 
 use crate::aux_data::{Member, ModelAuxData};
 use crate::derive_macros::{
-    extract_derive_attr_names, handle_derive_attrs, DOJO_INTROSPECT_DERIVE, DOJO_LEGACY_STORAGE,
-    DOJO_PACKED_DERIVE,
+    extract_derive_attr_names, handle_derive_attrs, DOJO_INTROSPECT_DERIVE,
+    DOJO_LEGACY_STORAGE_DERIVE, DOJO_PACKED_DERIVE,
 };
 use crate::utils::{compute_unique_hash, deserialize_member_ty, serialize_member_ty};
 
@@ -64,7 +64,8 @@ impl DojoModel {
             struct_ast.attributes(db).query_attr(db, "derive"),
         );
 
-        let use_legacy_storage = derive_attr_names.contains(&DOJO_LEGACY_STORAGE.to_string());
+        let use_legacy_storage =
+            derive_attr_names.contains(&DOJO_LEGACY_STORAGE_DERIVE.to_string());
 
         let mut members: Vec<Member> = vec![];
         let mut values: Vec<Member> = vec![];
