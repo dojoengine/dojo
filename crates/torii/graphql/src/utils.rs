@@ -67,5 +67,5 @@ pub fn field_name_from_names(namespace: &str, model_name: &str) -> String {
 }
 
 pub fn type_name_from_names(namespace: &str, model_name: &str) -> String {
-    format!("{}_{}", namespace, model_name)
+    format!("{}_{}Model", namespace, model_name)
 }
