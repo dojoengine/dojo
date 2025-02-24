@@ -362,10 +362,7 @@ pub struct ErcOptions {
 
 impl Default for ErcOptions {
     fn default() -> Self {
-        Self {
-            max_concurrent_tasks: DEFAULT_MAX_CONCURRENT_TASKS,
-            artifacts_path: None,
-        }
+        Self { max_concurrent_tasks: DEFAULT_MAX_CONCURRENT_TASKS, artifacts_path: None }
     }
 }
 
