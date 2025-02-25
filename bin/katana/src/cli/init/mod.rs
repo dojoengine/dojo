@@ -1,6 +1,5 @@
 use std::path::PathBuf;
 use std::str::FromStr;
-use std::sync::Arc;
 
 use anyhow::Context;
 use clap::Args;
@@ -13,16 +12,16 @@ use katana_primitives::genesis::allocation::DevAllocationsGenerator;
 use katana_primitives::genesis::constant::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;
 use katana_primitives::genesis::Genesis;
 use katana_primitives::{ContractAddress, Felt, U256};
-use prompt::CARTRIDGE_SN_SEPOLIA_PROVIDER;
+use settlement::SettlementChainProvider;
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::utils::{cairo_short_string_to_felt, parse_cairo_short_string};
-use starknet::providers::jsonrpc::HttpTransport;
-use starknet::providers::{JsonRpcClient, Provider};
+use starknet::providers::Provider;
 use starknet::signers::SigningKey;
 use url::Url;
 
 mod deployment;
 mod prompt;
+mod settlement;
 #[cfg(feature = "init-slot")]
 mod slot;
 
@@ -112,20 +111,25 @@ impl InitArgs {
             let settlement_account_address = self.settlement_account.expect("must present");
             let settlement_private_key = self.settlement_account_private_key.expect("must present");
 
-            let settlement_url = match settlement_chain {
-                SettlementChain::Sepolia => Url::parse(CARTRIDGE_SN_SEPOLIA_PROVIDER).unwrap(),
+            let settlement_provider = match settlement_chain {
+                SettlementChain::Mainnet => SettlementChainProvider::sn_mainnet(),
+                SettlementChain::Sepolia => SettlementChainProvider::sn_sepolia(),
                 #[cfg(feature = "init-custom-settlement-chain")]
-                SettlementChain::Custom(url) => url,
+                SettlementChain::Custom(url) => {
+                    use katana_primitives::felt;
+
+                    // TODO: make this configurable
+                    let facts_registry_placeholder = felt!("0x1337");
+                    SettlementChainProvider::new(url, facts_registry_placeholder)
+                }
             };
 
-            let l1_provider =
-                Arc::new(JsonRpcClient::new(HttpTransport::new(settlement_url.clone())));
-            let l1_chain_id = l1_provider.chain_id().await.unwrap();
+            let l1_chain_id = settlement_provider.chain_id().await.unwrap();
 
             let chain_id = cairo_short_string_to_felt(&id).unwrap();
 
             let deployment_outcome = if let Some(contract) = self.settlement_contract {
-                deployment::check_program_info(chain_id, contract.into(), &l1_provider)
+                deployment::check_program_info(chain_id, contract.into(), &settlement_provider)
                     .await
                     .unwrap();
 
@@ -139,7 +143,7 @@ impl InitArgs {
             // If settlement contract is not provided, then we will deploy it.
             else {
                 let account = SingleOwnerAccount::new(
-                    l1_provider,
+                    settlement_provider.clone(),
                     SigningKey::from_secret_scalar(settlement_private_key).into(),
                     settlement_account_address.into(),
                     l1_chain_id,
@@ -152,7 +156,7 @@ impl InitArgs {
             Some(Ok(Outcome {
                 id,
                 deployment_outcome,
-                rpc_url: settlement_url,
+                rpc_url: settlement_provider.url().clone(),
                 account: settlement_account_address,
                 settlement_id: parse_cairo_short_string(&l1_chain_id).unwrap(),
                 #[cfg(feature = "init-slot")]
@@ -200,8 +204,9 @@ struct SettlementChainTryFromStrError {
     id: String,
 }
 
-#[derive(Debug, Clone, strum_macros::Display)]
+#[derive(Debug, Clone, strum_macros::Display, PartialEq, Eq)]
 enum SettlementChain {
+    Mainnet,
     Sepolia,
     #[cfg(feature = "init-custom-settlement-chain")]
     Custom(Url),
@@ -213,6 +218,10 @@ impl std::str::FromStr for SettlementChain {
         let id = s.to_lowercase();
         if &id == "sepolia" || &id == "sn_sepolia" {
             return Ok(SettlementChain::Sepolia);
+        }
+
+        if &id == "mainnet" || &id == "sn_mainnet" {
+            return Ok(SettlementChain::Mainnet);
         }
 
         #[cfg(feature = "init-custom-settlement-chain")]
@@ -234,26 +243,26 @@ impl TryFrom<&str> for SettlementChain {
 #[cfg(test)]
 mod tests {
     use assert_matches::assert_matches;
+    use rstest::rstest;
 
     use super::*;
 
-    #[test]
-    fn sepolia_from_str() {
-        assert_matches!(SettlementChain::from_str("sepolia"), Ok(SettlementChain::Sepolia));
-        assert_matches!(SettlementChain::from_str("SEPOLIA"), Ok(SettlementChain::Sepolia));
-        assert_matches!(SettlementChain::from_str("sn_sepolia"), Ok(SettlementChain::Sepolia));
-        assert_matches!(SettlementChain::from_str("SN_SEPOLIA"), Ok(SettlementChain::Sepolia));
+    #[rstest]
+    #[case("sepolia", SettlementChain::Sepolia)]
+    #[case("SEPOLIA", SettlementChain::Sepolia)]
+    #[case("sn_sepolia", SettlementChain::Sepolia)]
+    #[case("SN_SEPOLIA", SettlementChain::Sepolia)]
+    #[case("mainnet", SettlementChain::Mainnet)]
+    #[case("MAINNET", SettlementChain::Mainnet)]
+    #[case("sn_mainnet", SettlementChain::Mainnet)]
+    #[case("SN_MAINNET", SettlementChain::Mainnet)]
+    fn test_chain_from_str(#[case] input: &str, #[case] expected: SettlementChain) {
+        assert_matches!(SettlementChain::from_str(input), Ok(chain) if chain == expected);
     }
 
     #[test]
     fn invalid_chain() {
         assert!(SettlementChain::from_str("invalid_chain").is_err());
-    }
-
-    #[test]
-    fn try_from_str() {
-        assert!(matches!(SettlementChain::try_from("sepolia"), Ok(SettlementChain::Sepolia)));
-        assert!(SettlementChain::try_from("invalid").is_err(),);
     }
 
     #[test]
