@@ -27,7 +27,7 @@ impl ExplorerServer {
 
         info!(
             target: "katana",
-            "Starting explorer server. addr=http://{}", 
+            "Starting explorer at addr=http://{}", 
             addr
         );
 

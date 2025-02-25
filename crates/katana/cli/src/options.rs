@@ -410,7 +410,7 @@ pub struct SlotOptions {
     pub controller: bool,
 }
 
-#[derive(Debug, Args, Clone, Default,Serialize, Deserialize)]
+#[derive(Debug, Args, Clone, Default, Serialize, Deserialize, PartialEq)]
 #[command(next_help_heading = "Explorer options")]
 pub struct ExplorerOptions {
     /// Enable and launch the explorer frontend
