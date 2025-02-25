@@ -15,7 +15,7 @@ pub struct ContractStorageKeys {
     pub keys: Vec<StorageKey>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GlobalRoots {
     /// The associated block hash (needed in case the caller used a block tag for the block_id
     /// parameter).
@@ -68,7 +68,7 @@ impl MerkleNode {
 /// The requested storage proofs. Note that if a requested leaf has the default value, the path to
 /// it may end in an edge node whose path is not a prefix of the requested leaf, thus effectively
 /// proving non-membership
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GetStorageProofResponse {
     pub global_roots: GlobalRoots,
     pub classes_proof: ClassesProof,
@@ -76,13 +76,13 @@ pub struct GetStorageProofResponse {
     pub contracts_storage_proofs: ContractStorageProofs,
 }
 
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct ClassesProof {
     pub nodes: Nodes,
 }
 
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ContractsProof {
     /// The nodes in the union of the paths from the contracts tree root to the requested leaves.
     pub nodes: Nodes,
@@ -91,7 +91,7 @@ pub struct ContractsProof {
     pub contract_leaves_data: Vec<ContractLeafData>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ContractLeafData {
     // NOTE: This field is not specified in the RPC specs, but the contract storage root is
     // required to compute the contract state hash (ie the value of the contracts trie). We
@@ -101,19 +101,19 @@ pub struct ContractLeafData {
     pub class_hash: Felt,
 }
 
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct ContractStorageProofs {
     pub nodes: Vec<Nodes>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NodeWithHash {
     pub node_hash: Felt,
     pub node: MerkleNode,
 }
 
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct Nodes(pub Vec<NodeWithHash>);
 
