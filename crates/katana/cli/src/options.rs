@@ -419,11 +419,11 @@ pub struct ExplorerOptions {
     pub explorer: bool,
 
     /// The port to run the explorer frontend on
-    #[arg(long = "explorer-port", default_value_t = 3001)]
+    #[arg(long = "explorer.port", default_value_t = 3001)]
     pub explorer_port: u16,
 
     /// Path to the explorer's build directory
-    #[arg(long = "explorer-build-dir")]
+    #[arg(long = "explorer.build-dir")]
     pub explorer_build_dir: Option<PathBuf>,
 }
 

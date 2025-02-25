@@ -96,9 +96,10 @@ impl ExplorerServer {
 }
 
 fn inject_rpc_url(html: &str, rpc_url: &str) -> String {
+
     let script = format!(
         r#"<script>
-            window.VITE_RPC_URL = "{}";
+            window.RPC_URL = "{}";
         </script>"#,
         rpc_url
     );

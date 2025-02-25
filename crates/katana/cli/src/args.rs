@@ -152,7 +152,7 @@ impl NodeArgs {
                 });
 
             if !build_dir.exists() {
-                anyhow::bail!("Explorer build directory not found at {:?}. Please build the explorer first or specify a different path with --explorer-build-dir", build_dir);
+                anyhow::bail!("Explorer build directory not found at {:?}. Please build the explorer first or specify a different path with --explorer.build-dir", build_dir);
             }
 
             let rpc_url = format!("http://{}:{}", 
