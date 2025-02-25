@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1740461532456,
+  "lastUpdate": 1740461596848,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -55795,6 +55795,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 49011223694,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "76b28584c609012e608d31b91794d4ba7dfc6fef",
+          "message": "feat(katana): support Starknet mainnet rollup initialization (#3064)",
+          "timestamp": "2025-02-25T13:15:06+08:00",
+          "tree_id": "205d1a7045e850a9165a6ab495524c69a983e936",
+          "url": "https://github.com/dojoengine/dojo/commit/76b28584c609012e608d31b91794d4ba7dfc6fef"
+        },
+        "date": 1740461593867,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2406719,
+            "range": "± 38190",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 398592,
+            "range": "± 8700",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2760301405,
+            "range": "± 247455200",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 17450863,
+            "range": "± 352703",
             "unit": "ns/iter"
           }
         ]
