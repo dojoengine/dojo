@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1740477186706,
+  "lastUpdate": 1740477273051,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -55873,6 +55873,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 45576463068,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1dfd80198cbec0523f68a85e312d55252350798c",
+          "message": "feat(katana): make trie rpc types cloneable (#3065)",
+          "timestamp": "2025-02-25T17:36:21+08:00",
+          "tree_id": "42af5cf2bfda4e67c35245b6173cb02d21e52e1a",
+          "url": "https://github.com/dojoengine/dojo/commit/1dfd80198cbec0523f68a85e312d55252350798c"
+        },
+        "date": 1740477270001,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2420790,
+            "range": "± 17379",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 396784,
+            "range": "± 17449",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2862422750,
+            "range": "± 228209221",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 17077868,
+            "range": "± 242559",
             "unit": "ns/iter"
           }
         ]
