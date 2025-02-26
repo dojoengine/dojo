@@ -22,6 +22,7 @@ jobs:
       - name: Initialize submodules
         run: |
           git submodule update --init --recursive
+          ls -la crates/katana/explorer/ui
       - uses: oven-sh/setup-bun@v1
         with:
           bun-version: latest
