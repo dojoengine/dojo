@@ -189,21 +189,23 @@ pub fn value_mapping_from_row(
                         ) {
                             match value {
                                 Value::Object(obj) => {
-                                    for (field_name, field_value) in obj.iter_mut() {
-                                        populate_value(
-                                            field_value,
-                                            &type_data.type_mapping().unwrap()[field_name],
-                                            entity_id,
-                                        );
-                                    }
-
-                                    if type_data.type_mapping().map_or(false, |mapping| {
-                                        mapping.contains_key(&Name::new("option"))
-                                    }) {
-                                        obj.insert(
-                                            Name::new("option"),
-                                            Value::String(obj.keys().next().unwrap().to_string()),
-                                        );
+                                    for (field_name, field_type) in
+                                        type_data.type_mapping().unwrap().iter()
+                                    {
+                                        if let Some(field_value) = obj.get_mut(field_name) {
+                                            populate_value(field_value, field_type, entity_id);
+                                        } else {
+                                            obj.insert(
+                                                field_name.clone(),
+                                                if field_name == "option" {
+                                                    Value::String(
+                                                        obj.keys().next().unwrap().to_string(),
+                                                    )
+                                                } else {
+                                                    Value::Null
+                                                },
+                                            );
+                                        }
                                     }
 
                                     // insert $entity_id$ relation
