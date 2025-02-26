@@ -134,8 +134,8 @@ struct ExplorerAssets;
 /// for the explorer to use.
 fn inject_rpc_url(html: &str, rpc_url: &Url) -> String {
     // Escape special characters to prevent XSS
-    let url_str = rpc_url.to_string();
-    let escaped_url = url_str.replace("\"", "\\\"").replace("<", "&lt;").replace(">", "&gt;");
+    let rpc_url = rpc_url.to_string();
+    let escaped_url = rpc_url.replace("\"", "\\\"").replace("<", "&lt;").replace(">", "&gt;");
 
     let script = format!(
         r#"<script>

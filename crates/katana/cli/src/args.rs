@@ -143,7 +143,8 @@ impl NodeArgs {
 
         // Then start the explorer if enabled
         if self.explorer.explorer {
-            let rpc_url = Url::parse(&handle.rpc.addr().to_string())?;
+            let rpc_url = format!("http://{}", handle.rpc.addr().to_string());
+            let rpc_url = Url::parse(&rpc_url).context("failed to parse node url")?;
             Explorer::new(rpc_url)?.start(self.explorer.addr())?;
         }
 
