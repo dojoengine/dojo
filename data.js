@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1740592556993,
+  "lastUpdate": 1740592606146,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -55951,6 +55951,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 47475739700,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "valentin@pupucecorp.com",
+            "name": "Brother MartianGreed",
+            "username": "MartianGreed"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "48cd046a0490b1bbc048eb8853bc3f030a83e518",
+          "message": "fix: add --recs arg to sozo build (#3062)",
+          "timestamp": "2025-02-26T10:38:36-07:00",
+          "tree_id": "6a2da42d8e9e834a2c28b314f4c7a4ad2c54824a",
+          "url": "https://github.com/dojoengine/dojo/commit/48cd046a0490b1bbc048eb8853bc3f030a83e518"
+        },
+        "date": 1740592602499,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2397794,
+            "range": "± 28581",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 396870,
+            "range": "± 14953",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2828703119,
+            "range": "± 224771792",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 18046226,
+            "range": "± 392341",
             "unit": "ns/iter"
           }
         ]
