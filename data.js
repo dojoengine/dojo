@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1740592606146,
+  "lastUpdate": 1740592615910,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -55999,6 +55999,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 18046226,
             "range": "± 392341",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "fdf6ff0c9c8d100f05f0f7f467ec04a1e1cb7d20",
+          "message": "fix(torii-graphql): option enums in arrays (#3068)",
+          "timestamp": "2025-02-26T10:38:14-07:00",
+          "tree_id": "42df319d4ca3b382c6a73005219abe3d01e79ec7",
+          "url": "https://github.com/dojoengine/dojo/commit/fdf6ff0c9c8d100f05f0f7f467ec04a1e1cb7d20"
+        },
+        "date": 1740592612690,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 50028419859,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
