@@ -1,18 +1,15 @@
 [package]
-build = "build.rs"
-description = "Embedded explorer UI for Katana"
-edition.workspace = true
-include = [ "Cargo.toml", "build.rs", "dist/**/*", "src/**/*" ]
-license.workspace = true
 name = "katana-explorer"
-repository.workspace = true
 version.workspace = true
+edition.workspace = true
+repository.workspace = true
+license-file.workspace = true
 
 [dependencies]
 anyhow.workspace = true
-tracing.workspace = true
 url.workspace = true
+tiny_http.workspace = true
+tracing.workspace = true
 
-rust-embed = "6.8.1"
-tiny_http = "0.12"
-urlencoding = "2.1.2"
+[build-dependencies]
+anyhow.workspace = true

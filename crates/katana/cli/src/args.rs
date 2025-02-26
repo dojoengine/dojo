@@ -243,11 +243,16 @@ impl NodeArgs {
             };
 
             let mut cors_origins = self.server.http_cors_origins.clone();
-
+            
             // Add explorer URL to CORS origins if explorer is enabled
             if self.explorer.explorer {
+                // Add both http://127.0.0.1:PORT and http://localhost:PORT
                 cors_origins.push(
-                    HeaderValue::from_str(&format!("{}", self.explorer.addr()))
+                    HeaderValue::from_str(&format!("http://127.0.0.1:{}", self.explorer.explorer_port))
+                        .context("Failed to create CORS header")?,
+                );
+                cors_origins.push(
+                    HeaderValue::from_str(&format!("http://localhost:{}", self.explorer.explorer_port))
                         .context("Failed to create CORS header")?,
                 );
             }

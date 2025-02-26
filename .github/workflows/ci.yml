@@ -11,13 +11,39 @@ env:
   RUST_VERSION: 1.81.0
 
 jobs:
+  build-explorer:
+    runs-on: ubuntu-latest
+    needs: [fmt, cairofmt]
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+      - uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+      - name: Build Explorer UI
+        run: |
+          cd crates/katana/explorer/ui
+          bun install
+          bun run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: explorer-dist
+          path: crates/katana/explorer/ui/dist
+
   build:
     runs-on: ubuntu-latest-4-cores
-    needs: [fmt, cairofmt]
+    needs: [fmt, cairofmt, build-explorer]
     container:
       image: ghcr.io/dojoengine/dojo-dev:v1.2.1
     steps:
       - uses: actions/checkout@v3
+        with:
+          submodules: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: explorer-dist
+          path: crates/katana/explorer/ui/dist
       - uses: Swatinem/rust-cache@v2
       - run: |
           cargo build -r --bin katana

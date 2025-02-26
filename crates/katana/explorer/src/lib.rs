@@ -17,11 +17,9 @@ impl Explorer {
     pub fn new(rpc_url: Url) -> Result<Self> {
         // Validate that the embedded assets are available
         if ExplorerAssets::get("index.html").is_none() {
-            warn!(
-                target: "katana",
-                "Embedded explorer assets not found. The explorer may not work correctly. \
-                Make sure the explorer is built and the dist directory is available."
-            );
+            return Err(anyhow!(
+                "Explorer assets not found. Make sure the explorer UI is built in CI and the ui/dist directory is available."
+            ));
         }
 
         Ok(Self { rpc_url })
@@ -127,7 +125,7 @@ impl Explorer {
 
 /// Embedded explorer UI files.
 #[derive(RustEmbed)]
-#[folder = "dist"]
+#[folder = "ui/dist"]
 struct ExplorerAssets;
 
 /// This function adds a script tag to the HTML that sets the RPC URL

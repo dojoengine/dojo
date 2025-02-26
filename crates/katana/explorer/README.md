@@ -1,10 +1,50 @@
 # Katana Explorer
 
-This crate embeds the Katana Explorer UI files directly into the binary, eliminating the need for users to build the explorer themselves.
+This crate provides the Katana Explorer UI server functionality. The UI code is maintained in a separate repository and included here as a git submodule.
 
 ## Structure
 
-The explorer build files are expected to be in the `dist` directory within this crate. These files are embedded at compile time using the `rust-embed` crate.
+The explorer UI code is located in the `ui` directory as a git submodule. The built files must be present in `ui/dist` directory for the explorer to work.
+
+## Building the Explorer
+
+### In CI
+
+The explorer UI is automatically built in CI before building Katana. This ensures that the explorer UI is always available when building official releases.
+
+### Building Locally
+
+If you need to build the explorer UI locally:
+
+1. Initialize the submodule:
+
+```bash
+git submodule update --init --recursive
+```
+
+2. Build the UI:
+
+```bash
+cd ui
+bun install
+bun run build
+```
+
+The build output will be placed in `ui/dist`. This directory must exist and contain the built files for the explorer to work.
+
+## Runtime Behavior
+
+The explorer will fail to start if the UI build files are not found. This is intentional to prevent running with missing or outdated UI files.
+
+## Development
+
+For local development of the UI:
+
+1. Initialize the submodule as described above
+2. Navigate to the UI directory: `cd ui`
+3. Start the development server: `bun run dev`
+
+Note: The `ui/dist` directory is gitignored to prevent committing built files.
 
 ## Utilities
 
