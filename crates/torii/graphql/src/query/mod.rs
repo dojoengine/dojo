@@ -195,19 +195,14 @@ pub fn value_mapping_from_row(
                                         if let Some(field_value) = obj.get_mut(field_name) {
                                             populate_value(field_value, field_type, entity_id);
                                         } else {
-                                            obj.insert(field_name.clone(), Value::Null);
+                                            obj.insert(field_name.clone(), if field_name == "option" {
+                                                Value::String(obj.keys().next().unwrap().to_string())
+                                            } else {
+                                                Value::Null
+                                            });
                                         }
                                     }
-
-                                    if type_data.type_mapping().map_or(false, |mapping| {
-                                        mapping.contains_key(&Name::new("option"))
-                                    }) {
-                                        obj.insert(
-                                            Name::new("option"),
-                                            Value::String(obj.keys().next().unwrap().to_string()),
-                                        );
-                                    }
-
+                                    
                                     // insert $entity_id$ relation
                                     if let Some(entity_id) = entity_id {
                                         obj.insert(
