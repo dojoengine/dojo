@@ -190,6 +190,12 @@ pub fn value_mapping_from_row(
                             match value {
                                 Value::Object(obj) => {
                                     for (field_name, field_value) in obj.iter_mut() {
+                                        if type_data.type_mapping().unwrap().contains_key("option")
+                                            && field_value == &Value::List(vec![])
+                                        {
+                                            continue;
+                                        }
+
                                         populate_value(
                                             field_value,
                                             &type_data.type_mapping().unwrap()[field_name],
