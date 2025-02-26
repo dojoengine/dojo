@@ -65,10 +65,14 @@ impl Explorer {
                         .unwrap_or_else(|_| url_path);
 
                     let p = decoded_path.trim_start_matches('/');
-                    if p.is_empty() || p.contains("..") || p.starts_with('/') {
+                    let components: Vec<&str> = p.split('/').filter(|s| {
+                        !s.is_empty() && *s != "." && *s != ".." && !s.contains('\\')
+                    }).collect();
+
+                    if components.is_empty() {
                         "/index.html".to_string()
                     } else {
-                        format!("/{}", p)
+                        format!("/{}", components.join("/"))
                     }
                 };
 

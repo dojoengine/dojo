@@ -8,8 +8,7 @@ license-file.workspace = true
 [dependencies]
 anyhow.workspace = true
 url.workspace = true
-tiny_http.workspace = true
+tiny_http = "0.12"
 tracing.workspace = true
-
-[build-dependencies]
-anyhow.workspace = true
+urlencoding = "2.1.2"
+rust-embed = "6.8.1"
