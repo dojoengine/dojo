@@ -18,7 +18,8 @@ impl Explorer {
         // Validate that the embedded assets are available
         if ExplorerAssets::get("index.html").is_none() {
             return Err(anyhow!(
-                "Explorer assets not found. Make sure the explorer UI is built in CI and the ui/dist directory is available."
+                "Explorer assets not found. Make sure the explorer UI is built in CI and the \
+                 ui/dist directory is available."
             ));
         }
 
@@ -26,12 +27,14 @@ impl Explorer {
     }
 
     /// Start the explorer server at the given address.
-    pub fn start(&self, addr: SocketAddr) -> Result<()> {
+    pub fn start(&self, addr: SocketAddr) -> Result<ExplorerHandle> {
         let server =
             Server::http(addr).map_err(|e| anyhow!("Failed to start explorer server: {}", e))?;
 
+        let addr = server.server_addr().to_ip().expect("must be ip");
         let rpc_url = self.rpc_url.clone();
 
+        // TODO: handle cancellation
         let _handle = thread::spawn(move || {
             for request in server.incoming_requests() {
                 // Special handling for OPTIONS requests (CORS preflight)
@@ -65,9 +68,10 @@ impl Explorer {
                         .unwrap_or_else(|_| url_path);
 
                     let p = decoded_path.trim_start_matches('/');
-                    let components: Vec<&str> = p.split('/').filter(|s| {
-                        !s.is_empty() && *s != "." && *s != ".." && !s.contains('\\')
-                    }).collect();
+                    let components: Vec<&str> = p
+                        .split('/')
+                        .filter(|s| !s.is_empty() && *s != "." && *s != ".." && !s.contains('\\'))
+                        .collect();
 
                     if components.is_empty() {
                         "/index.html".to_string()
@@ -123,7 +127,20 @@ impl Explorer {
 
         info!(target: "katana", %addr, "Explorer started.");
 
-        Ok(())
+        Ok(ExplorerHandle { addr })
+    }
+}
+
+/// Handle to the explorer server.
+#[derive(Debug)]
+pub struct ExplorerHandle {
+    addr: SocketAddr,
+}
+
+impl ExplorerHandle {
+    /// Returns the socket address of the explorer.
+    pub fn addr(&self) -> &SocketAddr {
+        &self.addr
     }
 }
 

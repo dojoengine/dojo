@@ -1,5 +1,6 @@
 //! Katana node CLI options and configuration.
 
+use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -125,7 +126,6 @@ pub struct NodeArgs {
 impl NodeArgs {
     pub async fn execute(&self) -> Result<()> {
         self.init_logging()?;
-
         self.start_node().await
     }
 
@@ -143,9 +143,10 @@ impl NodeArgs {
 
         // Then start the explorer if enabled
         if self.explorer.explorer {
-            let rpc_url = format!("http://{}", handle.rpc.addr().to_string());
+            let rpc_url = format!("http://{}", handle.rpc.addr());
             let rpc_url = Url::parse(&rpc_url).context("failed to parse node url")?;
-            Explorer::new(rpc_url)?.start(self.explorer.addr())?;
+            let addr = SocketAddr::new(self.explorer.explorer_addr, self.explorer.explorer_port);
+            let _ = Explorer::new(rpc_url)?.start(addr)?;
         }
 
         // Wait until an OS signal (ie SIGINT, SIGTERM) is received or the node is shutdown.
@@ -243,17 +244,23 @@ impl NodeArgs {
             };
 
             let mut cors_origins = self.server.http_cors_origins.clone();
-            
+
             // Add explorer URL to CORS origins if explorer is enabled
             if self.explorer.explorer {
                 // Add both http://127.0.0.1:PORT and http://localhost:PORT
                 cors_origins.push(
-                    HeaderValue::from_str(&format!("http://127.0.0.1:{}", self.explorer.explorer_port))
-                        .context("Failed to create CORS header")?,
+                    HeaderValue::from_str(&format!(
+                        "http://127.0.0.1:{}",
+                        self.explorer.explorer_port
+                    ))
+                    .context("Failed to create CORS header")?,
                 );
                 cors_origins.push(
-                    HeaderValue::from_str(&format!("http://localhost:{}", self.explorer.explorer_port))
-                        .context("Failed to create CORS header")?,
+                    HeaderValue::from_str(&format!(
+                        "http://localhost:{}",
+                        self.explorer.explorer_port
+                    ))
+                    .context("Failed to create CORS header")?,
                 );
             }
 

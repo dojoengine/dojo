@@ -9,7 +9,7 @@
 
 #[cfg(feature = "server")]
 use std::net::IpAddr;
-use std::net::{Ipv4Addr, SocketAddr};
+use std::net::Ipv4Addr;
 
 use clap::Args;
 use katana_node::config::execution::{DEFAULT_INVOCATION_MAX_STEPS, DEFAULT_VALIDATION_MAX_STEPS};
@@ -429,16 +429,16 @@ pub struct ExplorerOptions {
     pub explorer_addr: IpAddr,
 
     /// The port to run the explorer frontend on.
+    ///
+    /// NOTE(@kariy):
+    // Right now we prevent the port from being 0 because that would mean the actual port would only
+    // be available after the server has been started. And due to some limitations with how the
+    // explorer requires that the node is started first (to get the actual socket address) and
+    // that we also need to pass the explorer address as CORS to the node server.
     #[arg(long = "explorer.port", value_name = "PORT")]
     #[arg(default_value_t = DEFAULT_EXPLORER_PORT)]
+    #[arg(value_parser = clap::value_parser!(u16).range(1..))]
     pub explorer_port: u16,
-}
-
-impl ExplorerOptions {
-    /// Returns the socket address for the explorer frontend.
-    pub fn addr(&self) -> SocketAddr {
-        SocketAddr::new(self.explorer_addr, self.explorer_port)
-    }
 }
 
 impl Default for ExplorerOptions {
