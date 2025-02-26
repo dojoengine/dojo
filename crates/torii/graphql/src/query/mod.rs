@@ -189,13 +189,11 @@ pub fn value_mapping_from_row(
                         ) {
                             match value {
                                 Value::Object(obj) => {
-                                    for (field_name, field_type) in type_data.type_mapping().unwrap().iter() {
+                                    for (field_name, field_type) in
+                                        type_data.type_mapping().unwrap().iter()
+                                    {
                                         if let Some(field_value) = obj.get_mut(field_name) {
-                                            populate_value(
-                                                field_value,
-                                                field_type,
-                                                entity_id,
-                                            );
+                                            populate_value(field_value, field_type, entity_id);
                                         } else {
                                             obj.insert(field_name.clone(), Value::Null);
                                         }
