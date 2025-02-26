@@ -225,9 +225,9 @@ salsa = "0.16.1"
 #scarb-metadata = { git = "https://github.com/dojoengine/scarb", rev = "22aa38f53de205af25bf73b3ffc2c5334999d480" }
 #scarb-ui = { git = "https://github.com/dojoengine/scarb", rev = "22aa38f53de205af25bf73b3ffc2c5334999d480" }
 
-scarb = { git = "https://github.com/remybar/scarb", rev = "bc88f87" }
-scarb-metadata = { git = "https://github.com/remybar/scarb", rev = "bc88f87" }
-scarb-ui = { git = "https://github.com/remybar/scarb", rev = "bc88f87" }
+scarb = { git = "https://github.com/remybar/scarb", rev = "fb905dd49264dcf5a38d09470529ef143f4a8762" }
+scarb-metadata = { git = "https://github.com/remybar/scarb", rev = "fb905dd49264dcf5a38d09470529ef143f4a8762" }
+scarb-ui = { git = "https://github.com/remybar/scarb", rev = "fb905dd49264dcf5a38d09470529ef143f4a8762" }
 
 #scarb = { path = "/Users/remybaranx/pro/projets/contribs/dojo/scarb/scarb" }
 #scarb-metadata = { path = "/Users/remybaranx/pro/projets/contribs/dojo/scarb/scarb-metadata" }
