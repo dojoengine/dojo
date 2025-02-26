@@ -228,12 +228,23 @@ impl DojoModel {
             "dojo::storage::DojoStore".to_string()
         };
 
+        let model_layout = if use_legacy_storage {
+            format!(
+                "dojo::meta::layout::build_legacy_layout(
+                    dojo::meta::Introspect::<{model_type}>::layout()
+                )"
+            )
+        } else {
+            format!("dojo::meta::Introspect::<{model_type}>::layout()")
+        };
+
         diagnostics.extend(derive_diagnostics);
 
         let node = RewriteNode::interpolate_patched(
             MODEL_CODE_PATCH,
             &UnorderedHashMap::from([
                 ("model_type".to_string(), RewriteNode::Text(model_type.clone())),
+                ("model_layout".to_string(), RewriteNode::Text(model_layout.clone())),
                 ("serialized_keys".to_string(), RewriteNode::new_modified(serialized_keys)),
                 ("serialized_values".to_string(), RewriteNode::new_modified(serialized_values)),
                 ("deserialized_values".to_string(), RewriteNode::new_modified(deserialized_values)),
