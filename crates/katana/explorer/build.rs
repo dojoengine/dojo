@@ -1,8 +1,6 @@
 use std::path::Path;
 
 fn main() {
-    println!("cargo:rerun-if-changed=dist");
-    
     // Check if the dist directory exists within the explorer crate
     let dist_dir = Path::new("dist");
     if !dist_dir.exists() {

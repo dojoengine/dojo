@@ -4,8 +4,3 @@
 [submodule "crates/katana/contracts/piltover"]
 	path = crates/katana/contracts/piltover
 	url = https://github.com/keep-starknet-strange/piltover.git
-[submodule "crates/katana/explorer"]
-	path = crates/katana/explorer
-	url = https://github.com/cartridge-gg/explorer
-	branch = dist
-	commit = e3821606fd0a0a801c0459576d3bab5e375b6829

@@ -6,8 +6,6 @@ use rust_embed::RustEmbed;
 #[folder = "dist"]
 pub struct ExplorerAssets;
 
-/// Injects the RPC URL into the HTML content.
-///
 /// This function adds a script tag to the HTML that sets the RPC URL
 /// for the explorer to use.
 pub fn inject_rpc_url(html: &str, rpc_url: &str) -> String {
