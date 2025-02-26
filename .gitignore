@@ -25,5 +25,4 @@ examples/spawn-and-move/manifests/saya/**
 
 artifacts/
 
-# Explorer build output
-crates/katana/explorer/ui/dist/
+crates/katana/explorer/ui
