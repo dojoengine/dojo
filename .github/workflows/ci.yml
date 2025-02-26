@@ -22,7 +22,8 @@ jobs:
       - name: Initialize submodules
         run: |
           git submodule update --init --recursive
-          ls -la crates/katana/explorer/ui
+          ls -la
+          ls -la crates/katana/explorer/ui || echo "Explorer dir not found"
       - uses: oven-sh/setup-bun@v1
         with:
           bun-version: latest
@@ -44,7 +45,8 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          submodules: true
+          submodules: recursive
+          fetch-depth: 0
       - uses: actions/download-artifact@v4
         with:
           name: explorer-dist
