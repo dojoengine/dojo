@@ -216,7 +216,7 @@ pub fn object(type_name: &str, type_mapping: &TypeMapping, path_array: Vec<Strin
                     // Simple types resolution
                     return match value {
                         Value::Object(value_mapping) => {
-                            Ok(Some(value_mapping.get(&field_name).unwrap_or(&Value::Null).clone()))
+                            Ok(Some(value_mapping.get(&field_name).unwrap().clone()))
                         }
                         _ => Err("Incorrect value, requires Value::Object".into()),
                     };
