@@ -189,18 +189,16 @@ pub fn value_mapping_from_row(
                         ) {
                             match value {
                                 Value::Object(obj) => {
-                                    for (field_name, field_value) in obj.iter_mut() {
-                                        if type_data.type_mapping().unwrap().contains_key("option")
-                                            && field_value == &Value::List(vec![])
-                                        {
-                                            continue;
+                                    for (field_name, field_type) in type_data.type_mapping().unwrap().iter() {
+                                        if let Some(field_value) = obj.get_mut(field_name) {
+                                            populate_value(
+                                                field_value,
+                                                field_type,
+                                                entity_id,
+                                            );
+                                        } else {
+                                            obj.insert(field_name.clone(), Value::Null);
                                         }
-
-                                        populate_value(
-                                            field_value,
-                                            &type_data.type_mapping().unwrap()[field_name],
-                                            entity_id,
-                                        );
                                     }
 
                                     if type_data.type_mapping().map_or(false, |mapping| {
