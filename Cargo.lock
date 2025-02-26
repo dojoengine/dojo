@@ -8029,14 +8029,12 @@ dependencies = [
  "serde_json",
  "shellexpand",
  "starknet",
- "tiny_http",
  "tokio",
  "toml 0.8.19",
  "tracing",
  "tracing-log 0.1.4",
  "tracing-subscriber",
  "url",
- "urlencoding",
 ]
 
 [[package]]
@@ -8156,7 +8154,12 @@ dependencies = [
 name = "katana-explorer"
 version = "1.2.1"
 dependencies = [
+ "anyhow",
  "rust-embed",
+ "tiny_http",
+ "tracing",
+ "url",
+ "urlencoding",
 ]
 
 [[package]]

@@ -9,6 +9,7 @@
 
 #[cfg(feature = "server")]
 use std::net::IpAddr;
+use std::net::{Ipv4Addr, SocketAddr};
 
 use clap::Args;
 use katana_node::config::execution::{DEFAULT_INVOCATION_MAX_STEPS, DEFAULT_VALIDATION_MAX_STEPS};
@@ -409,20 +410,45 @@ pub struct SlotOptions {
     pub controller: bool,
 }
 
-#[derive(Debug, Args, Clone, Default, Serialize, Deserialize, PartialEq)]
+const DEFAULT_EXPLORER_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::LOCALHOST);
+const DEFAULT_EXPLORER_PORT: u16 = 3001;
+
+#[derive(Debug, Args, Clone, Serialize, Deserialize, PartialEq)]
 #[command(next_help_heading = "Explorer options")]
 pub struct ExplorerOptions {
     /// Enable and launch the explorer frontend
-    /// 
+    ///
     /// This will start a web server that serves the explorer UI.
-    /// The explorer UI is embedded in the binary, so you don't need to build it yourself.
     #[arg(long)]
     #[serde(default)]
     pub explorer: bool,
 
-    /// The port to run the explorer frontend on
-    #[arg(long = "explorer.port", default_value_t = 3001)]
+    /// The address to run the explorer frontend on.
+    #[arg(long = "explorer.addr", value_name = "ADDRESS")]
+    #[arg(default_value_t = DEFAULT_EXPLORER_ADDR)]
+    pub explorer_addr: IpAddr,
+
+    /// The port to run the explorer frontend on.
+    #[arg(long = "explorer.port", value_name = "PORT")]
+    #[arg(default_value_t = DEFAULT_EXPLORER_PORT)]
     pub explorer_port: u16,
+}
+
+impl ExplorerOptions {
+    /// Returns the socket address for the explorer frontend.
+    pub fn addr(&self) -> SocketAddr {
+        SocketAddr::new(self.explorer_addr, self.explorer_port)
+    }
+}
+
+impl Default for ExplorerOptions {
+    fn default() -> Self {
+        Self {
+            explorer: false,
+            explorer_addr: DEFAULT_EXPLORER_ADDR,
+            explorer_port: DEFAULT_EXPLORER_PORT,
+        }
+    }
 }
 
 // ** Default functions to setup serde of the configuration file **

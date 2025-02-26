@@ -4,7 +4,6 @@ pub mod args;
 pub mod file;
 pub mod options;
 pub mod utils;
-pub mod explorer;
 
 pub use args::NodeArgs;
 pub use options::*;

@@ -11,6 +11,7 @@ use clap::Parser;
 use katana_chain_spec::rollup::ChainConfigDir;
 use katana_chain_spec::ChainSpec;
 use katana_core::constants::DEFAULT_SEQUENCER_ADDRESS;
+use katana_explorer::Explorer;
 use katana_messaging::MessagingConfig;
 use katana_node::config::db::DbConfig;
 use katana_node::config::dev::{DevConfig, FixedL1GasPriceConfig};
@@ -24,17 +25,16 @@ use katana_node::config::sequencing::SequencingConfig;
 use katana_node::config::Config;
 use katana_primitives::genesis::allocation::DevAllocationsGenerator;
 use katana_primitives::genesis::constant::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;
+use katana_rpc::cors::HeaderValue;
 use serde::{Deserialize, Serialize};
 use tracing::{info, Subscriber};
 use tracing_log::LogTracer;
 use tracing_subscriber::{fmt, EnvFilter};
 use url::Url;
-use katana_rpc::cors::HeaderValue;
 
 use crate::file::NodeArgsConfig;
 use crate::options::*;
 use crate::utils::{self, parse_chain_config_dir, parse_seed, LogFormat};
-use crate::explorer::ExplorerServer;
 
 pub(crate) const LOG_TARGET: &str = "katana::cli";
 
@@ -143,21 +143,9 @@ impl NodeArgs {
 
         // Then start the explorer if enabled
         if self.explorer.explorer {
-            let rpc_url = format!("http://{}:{}", 
-                self.server.http_addr,
-                self.server.http_port
-            );
-
-            let explorer = ExplorerServer::new(
-                self.explorer.explorer_port,
-                rpc_url.clone(),
-            )?;
-
-            info!(target: "katana", "Starting explorer server with RPC URL: {}", rpc_url);
-            
-            explorer.start()?;
+            let rpc_url = Url::parse(&handle.rpc.addr().to_string())?;
+            Explorer::new(rpc_url)?.start(self.explorer.addr())?;
         }
-
 
         // Wait until an OS signal (ie SIGINT, SIGTERM) is received or the node is shutdown.
         tokio::select! {
@@ -254,12 +242,12 @@ impl NodeArgs {
             };
 
             let mut cors_origins = self.server.http_cors_origins.clone();
-            
+
             // Add explorer URL to CORS origins if explorer is enabled
             if self.explorer.explorer {
                 cors_origins.push(
-                    HeaderValue::from_str(&format!("http://127.0.0.1:{}", self.explorer.explorer_port))
-                        .context("Failed to create CORS header")?
+                    HeaderValue::from_str(&format!("{}", self.explorer.addr()))
+                        .context("Failed to create CORS header")?,
                 );
             }
 
@@ -268,7 +256,7 @@ impl NodeArgs {
                 port: self.server.http_port,
                 addr: self.server.http_addr,
                 max_connections: self.server.max_connections,
-                cors_origins: cors_origins,
+                cors_origins,
                 max_request_body_size: None,
                 max_response_body_size: None,
                 max_event_page_size: Some(self.server.max_event_page_size),
