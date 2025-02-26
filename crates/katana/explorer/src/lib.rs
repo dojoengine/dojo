@@ -9,11 +9,14 @@ pub struct ExplorerAssets;
 /// This function adds a script tag to the HTML that sets the RPC URL
 /// for the explorer to use.
 pub fn inject_rpc_url(html: &str, rpc_url: &str) -> String {
+    // Escape special characters to prevent XSS
+    let escaped_url = rpc_url.replace("\"", "\\\"").replace("<", "&lt;").replace(">", "&gt;");
+
     let script = format!(
         r#"<script>
             window.RPC_URL = "{}";
         </script>"#,
-        rpc_url
+        escaped_url
     );
 
     if let Some(head_pos) = html.find("<head>") {

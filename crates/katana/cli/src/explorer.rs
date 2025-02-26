@@ -40,10 +40,45 @@ impl ExplorerServer {
 
         let rpc_url = self.rpc_url.clone();
 
-        thread::spawn(move || {
+        let _handle = thread::spawn(move || {
             for request in server.incoming_requests() {
-                let path = request.url().to_string();
-                let path = if path == "/" { "/index.html".to_string() } else { path };
+                // Special handling for OPTIONS requests (CORS preflight)
+                if request.method() == &tiny_http::Method::Options {
+                    let response = Response::empty(204)
+                        .with_header(tiny_http::Header {
+                            field: "Access-Control-Allow-Origin".parse().unwrap(),
+                            value: "*".parse().unwrap(),
+                        })
+                        .with_header(tiny_http::Header {
+                            field: "Access-Control-Allow-Methods".parse().unwrap(),
+                            value: "GET, POST, OPTIONS".parse().unwrap(),
+                        })
+                        .with_header(tiny_http::Header {
+                            field: "Access-Control-Allow-Headers".parse().unwrap(),
+                            value: "Content-Type, Authorization".parse().unwrap(),
+                        })
+                        .with_header(tiny_http::Header {
+                            field: "Access-Control-Max-Age".parse().unwrap(),
+                            value: "86400".parse().unwrap(),
+                        });
+                    let _ = request.respond(response);
+                    continue;
+                }
+
+                // Decode URL and sanitize path to prevent directory traversal
+                let path = {
+                    let url_path = request.url().to_string();
+                    let decoded_path = urlencoding::decode(&url_path)
+                        .map(|s| s.into_owned())
+                        .unwrap_or_else(|_| url_path);
+                    
+                    let p = decoded_path.trim_start_matches('/');
+                    if p.is_empty() || p.contains("..") || p.starts_with('/') {
+                        "/index.html".to_string()
+                    } else {
+                        format!("/{}", p)
+                    }
+                };
                 
                 // Try to serve from embedded assets
                 let content = if let Some(asset) = ExplorerAssets::get(&path[1..]) {
@@ -87,10 +122,11 @@ impl ExplorerServer {
                         value: "Content-Type".parse().unwrap(),
                     });
                 
-                let _ = request.respond(response);
+                if let Err(e) = request.respond(response) {
+                    warn!(target: "katana", "Error sending response: {}", e);
+                }
             }
         });
-
         Ok(())
     }
 }
