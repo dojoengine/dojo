@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1740592629513,
+  "lastUpdate": 1740592694810,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -56077,6 +56077,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 16895745,
             "range": "± 683466",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "fdf6ff0c9c8d100f05f0f7f467ec04a1e1cb7d20",
+          "message": "fix(torii-graphql): option enums in arrays (#3068)",
+          "timestamp": "2025-02-26T10:38:14-07:00",
+          "tree_id": "42df319d4ca3b382c6a73005219abe3d01e79ec7",
+          "url": "https://github.com/dojoengine/dojo/commit/fdf6ff0c9c8d100f05f0f7f467ec04a1e1cb7d20"
+        },
+        "date": 1740592691378,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2430753,
+            "range": "± 49156",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 394888,
+            "range": "± 14344",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2821481317,
+            "range": "± 232204785",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 17156939,
+            "range": "± 347319",
             "unit": "ns/iter"
           }
         ]
