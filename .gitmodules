@@ -6,5 +6,5 @@
 	url = https://github.com/keep-starknet-strange/piltover.git
 [submodule "crates/katana/explorer/ui"]
 	path = crates/katana/explorer/ui
-	url = https://github.com/ayushtom/dojo-explorer
-	branch = dist
+	url = https://github.com/cartridge-gg/explorer
+	branch = main
