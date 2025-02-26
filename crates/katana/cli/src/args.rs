@@ -143,18 +143,6 @@ impl NodeArgs {
 
         // Then start the explorer if enabled
         if self.explorer.explorer {
-            let build_dir = self.explorer.explorer_build_dir
-                .clone()
-                .unwrap_or_else(|| {
-                    PathBuf::from("crates/katana")
-                        .join("explorer")
-                        .join("dist")
-                });
-
-            if !build_dir.exists() {
-                anyhow::bail!("Explorer build directory not found at {:?}. Please build the explorer first or specify a different path with --explorer.build-dir", build_dir);
-            }
-
             let rpc_url = format!("http://{}:{}", 
                 self.server.http_addr,
                 self.server.http_port
@@ -162,7 +150,6 @@ impl NodeArgs {
 
             let explorer = ExplorerServer::new(
                 self.explorer.explorer_port,
-                build_dir,
                 rpc_url.clone(),
             )?;
 

@@ -1,0 +1,17 @@
+[package]
+edition.workspace = true
+license.workspace = true
+name = "katana-explorer"
+repository.workspace = true
+version.workspace = true
+description = "Embedded explorer UI for Katana"
+build = "build.rs"
+include = [
+    "src/**/*",
+    "build.rs",
+    "Cargo.toml",
+    "dist/**/*",
+]
+
+[dependencies]
+rust-embed = "6.8.1" 

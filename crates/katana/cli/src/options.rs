@@ -31,7 +31,6 @@ use url::Url;
 #[cfg(feature = "server")]
 use crate::utils::{deserialize_cors_origins, serialize_cors_origins};
 use crate::utils::{parse_block_hash_or_number, parse_genesis, LogFormat};
-use std::path::PathBuf;
 
 const DEFAULT_DEV_SEED: &str = "0";
 const DEFAULT_DEV_ACCOUNTS: u16 = 10;
@@ -414,6 +413,9 @@ pub struct SlotOptions {
 #[command(next_help_heading = "Explorer options")]
 pub struct ExplorerOptions {
     /// Enable and launch the explorer frontend
+    /// 
+    /// This will start a web server that serves the explorer UI.
+    /// The explorer UI is embedded in the binary, so you don't need to build it yourself.
     #[arg(long)]
     #[serde(default)]
     pub explorer: bool,
@@ -421,10 +423,6 @@ pub struct ExplorerOptions {
     /// The port to run the explorer frontend on
     #[arg(long = "explorer.port", default_value_t = 3001)]
     pub explorer_port: u16,
-
-    /// Path to the explorer's build directory
-    #[arg(long = "explorer.build-dir")]
-    pub explorer_build_dir: Option<PathBuf>,
 }
 
 // ** Default functions to setup serde of the configuration file **
