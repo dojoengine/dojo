@@ -17,7 +17,11 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          submodules: true
+          submodules: recursive
+          fetch-depth: 0
+      - name: Initialize submodules
+        run: |
+          git submodule update --init --recursive
       - uses: oven-sh/setup-bun@v1
         with:
           bun-version: latest
