@@ -612,7 +612,11 @@ impl Sql {
             "internal_event_id".to_string(),
             "internal_executed_at".to_string(),
             "internal_updated_at".to_string(),
-            "internal_entity_id".to_string(),
+            if entity_id.starts_with("event:") {
+                "internal_event_message_id".to_string()
+            } else {
+                "internal_entity_id".to_string()
+            },
         ];
 
         let mut arguments = vec![
