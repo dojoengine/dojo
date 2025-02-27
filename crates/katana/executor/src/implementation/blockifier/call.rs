@@ -3,14 +3,15 @@ use std::sync::Arc;
 use blockifier::context::{BlockContext, TransactionContext};
 use blockifier::execution::call_info::CallInfo;
 use blockifier::execution::entry_point::{
-    CallEntryPoint, EntryPointExecutionContext, EntryPointExecutionResult,
+    CallEntryPoint, EntryPointExecutionContext, EntryPointExecutionResult, SierraGasRevertTracker,
 };
 use blockifier::state::cached_state::CachedState;
 use blockifier::state::state_api::StateReader;
 use blockifier::transaction::objects::{DeprecatedTransactionInfo, TransactionInfo};
-use katana_cairo::cairo_vm::vm::runners::cairo_runner::{ExecutionResources, RunResources};
+use katana_cairo::cairo_vm::vm::runners::cairo_runner::RunResources;
 use katana_cairo::starknet_api::core::EntryPointSelector;
-use katana_cairo::starknet_api::transaction::Calldata;
+use katana_cairo::starknet_api::execution_resources::GasAmount;
+use katana_cairo::starknet_api::transaction::fields::Calldata;
 use katana_primitives::Felt;
 
 use super::utils::to_blk_address;
@@ -54,20 +55,24 @@ fn execute_call_inner<S: StateReader>(
     // The values for these parameters are essentially useless as we manually set the run resources
     // later anyway.
     let limit_steps_by_resources = true;
-    let tx_info = DeprecatedTransactionInfo::default();
 
+    let tx_context = Arc::new(TransactionContext {
+        block_context: block_context.clone(),
+        tx_info: TransactionInfo::Deprecated(DeprecatedTransactionInfo::default()),
+    });
+
+    let sierra_revert_tracker = SierraGasRevertTracker::new(GasAmount(max_gas));
     let mut ctx = EntryPointExecutionContext::new_invoke(
-        Arc::new(TransactionContext {
-            block_context: block_context.clone(),
-            tx_info: TransactionInfo::Deprecated(tx_info),
-        }),
+        tx_context,
         limit_steps_by_resources,
-    )
-    .unwrap();
+        sierra_revert_tracker,
+    );
 
     // manually override the run resources
-    ctx.vm_run_resources = RunResources::new(max_gas as usize);
-    call.execute(state, &mut ExecutionResources::default(), &mut ctx)
+    // If `initial_gas` can't fit in a usize, use the maximum.
+    ctx.vm_run_resources = RunResources::new(max_gas.try_into().unwrap_or(usize::MAX));
+    let mut remaining_gas = call.initial_gas;
+    call.execute(state, &mut ctx, &mut remaining_gas)
 }
 
 #[cfg(test)]
@@ -84,6 +89,7 @@ mod tests {
     use starknet::macros::selector;
 
     use super::execute_call_inner;
+    use crate::implementation::blockifier::cache::ClassCache;
     use crate::implementation::blockifier::state::StateProviderDb;
     use crate::EntryPointCall;
 
@@ -106,7 +112,8 @@ mod tests {
         provider.set_class_hash_of_contract(address, class_hash).unwrap();
 
         let state = provider.latest().unwrap();
-        let state = StateProviderDb::new(state, Default::default());
+        let cache = ClassCache::new().expect("failed to create ClassCache");
+        let state = StateProviderDb::new(state, cache);
 
         // ---------------------------------------------------------------
 
