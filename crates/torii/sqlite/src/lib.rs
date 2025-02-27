@@ -624,7 +624,7 @@ impl Sql {
             Argument::String(event_id.to_string()),
             Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
             Argument::String(chrono::Utc::now().to_rfc3339()),
-            Argument::String(entity_id.to_string()),
+            Argument::String(entity_id.trim_start_matches("event:").to_string()),
         ];
 
         fn collect_members(
