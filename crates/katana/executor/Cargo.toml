@@ -42,7 +42,7 @@ pprof.workspace = true
 rayon.workspace = true
 
 [features]
-default = [ "blockifier", "native" ]
+default = [ "blockifier" ]
 
 blockifier = [
 	"dep:blockifier",
