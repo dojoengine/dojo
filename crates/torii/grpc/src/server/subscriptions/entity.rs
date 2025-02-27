@@ -114,14 +114,19 @@ impl Service {
     ) -> Result<(), Error> {
         let mut closed_stream = Vec::new();
         let hashed = Felt::from_str(&entity.id).map_err(ParseError::FromStr)?;
-        // sometimes for some reason keys isxx empty. investigate the issue
-        let keys = entity
-            .keys
-            .trim_end_matches(SQL_FELT_DELIMITER)
-            .split(SQL_FELT_DELIMITER)
-            .map(Felt::from_str)
-            .collect::<Result<Vec<_>, _>>()
-            .map_err(ParseError::FromStr)?;
+        // keys is empty when an entity is updated with StoreUpdateRecord or Member but the entity has never been set before.
+        // In that case, we dont know the keys
+        let keys = if entity.keys.is_empty() {
+            vec![]
+        } else {
+            entity
+                .keys
+                .trim_end_matches(SQL_FELT_DELIMITER)
+                .split(SQL_FELT_DELIMITER)
+                .map(Felt::from_str)
+                .collect::<Result<Vec<_>, _>>()
+                .map_err(ParseError::FromStr)?
+        };
 
         for (idx, sub) in subs.subscribers.read().await.iter() {
             // Check if the subscriber is interested in this entity
