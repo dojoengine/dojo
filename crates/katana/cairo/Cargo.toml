@@ -18,7 +18,7 @@ cairo-lang-starknet = "2.7.0"
 cairo-lang-starknet-classes = "2.7.0"
 cairo-lang-utils = "2.7.0"
 cairo-vm = "1.0.1"
-starknet_api = { git = "https://github.com/dojoengine/sequencer", rev = "d860f498" }
+starknet_api = { git = "https://github.com/dojoengine/sequencer", rev = "1010caec" }
 
 [features]
 # Some types that we used from cairo-vm implements the `Arbitrary` trait,

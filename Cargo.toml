@@ -240,7 +240,6 @@ walkdir = "2.5.0"
 ipfs-api-backend-hyper = { git = "https://github.com/ferristseng/rust-ipfs-api", rev = "af2c17f7b19ef5b9898f458d97a90055c3605633", features = [ "with-hyper-rustls", "with-send-sync" ] }
 mime_guess = "2.0"
 
-
 # server
 hyper = "0.14.27"
 warp = "0.3"

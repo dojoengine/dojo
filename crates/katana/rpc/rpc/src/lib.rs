@@ -146,7 +146,7 @@ impl RpcServer {
         let middleware = ServiceBuilder::new()
             .option_layer(self.cors.clone())
             .option_layer(health_check_proxy)
-            .timeout(Duration::from_secs(20));
+            .timeout(Duration::from_secs(200));
 
         let builder = ServerBuilder::new()
             .set_middleware(middleware)

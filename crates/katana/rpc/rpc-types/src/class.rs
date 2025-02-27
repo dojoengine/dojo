@@ -6,8 +6,9 @@ use std::io::{self, Write};
 
 use katana_cairo::lang::starknet_classes::contract_class::ContractEntryPoints;
 use katana_cairo::lang::utils::bigint::BigUintAsHex;
+use katana_cairo::starknet_api::contract_class::EntryPointType;
 use katana_cairo::starknet_api::deprecated_contract_class::{
-    ContractClassAbiEntry, EntryPoint, EntryPointType, Program as LegacyProgram,
+    ContractClassAbiEntry, EntryPointV0, Program as LegacyProgram,
 };
 use katana_cairo::starknet_api::serde_utils::deserialize_optional_contract_class_abi_entry_vector;
 use katana_primitives::class::{ContractClass, LegacyContractClass, SierraContractClass};
@@ -126,7 +127,7 @@ pub struct RpcLegacyContractClass {
     #[serde(with = "base64")]
     pub program: Vec<u8>,
     /// The selector of each entry point is a unique identifier in the program.
-    pub entry_points_by_type: HashMap<EntryPointType, Vec<EntryPoint>>,
+    pub entry_points_by_type: HashMap<EntryPointType, Vec<EntryPointV0>>,
     // Starknet does not verify the abi. If we can't parse it, we set it to None.
     #[serde(default, deserialize_with = "deserialize_optional_contract_class_abi_entry_vector")]
     pub abi: Option<Vec<ContractClassAbiEntry>>,

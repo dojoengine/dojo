@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::ops::Deref;
 use std::sync::Arc;
 
-use blockifier::execution::contract_class::ContractClass as BlockifierContractClass;
+use blockifier::execution::contract_class::RunnableCompiledClass;
 use blockifier::state::cached_state;
 use blockifier::state::errors::StateError;
 use blockifier::state::state_api::{StateReader, StateResult};
@@ -11,12 +11,13 @@ use katana_cairo::starknet_api::state::StorageKey;
 use katana_primitives::class::{self, ContractClass};
 use katana_primitives::Felt;
 use katana_provider::error::ProviderError;
-use katana_provider::traits::contract::{ContractClassProvider, ContractClassProviderExt};
+use katana_provider::traits::contract::ContractClassProvider;
 use katana_provider::traits::state::{StateProofProvider, StateProvider, StateRootProvider};
 use katana_provider::ProviderResult;
 use parking_lot::Mutex;
 use tracing::trace;
 
+use super::cache::ClassCache;
 use super::utils::{self};
 
 #[derive(Debug, Clone)]
@@ -31,10 +32,7 @@ pub(crate) struct CachedStateInner<'a> {
 }
 
 impl<'a> CachedState<'a> {
-    pub(super) fn new(
-        state: impl StateProvider + 'a,
-        compiled_class_cache: Arc<Mutex<HashMap<class::ClassHash, BlockifierContractClass>>>,
-    ) -> Self {
+    pub(super) fn new(state: impl StateProvider + 'a, compiled_class_cache: ClassCache) -> Self {
         let state = StateProviderDb::new(Box::new(state), compiled_class_cache);
         let cached_state = cached_state::CachedState::new(state);
 
@@ -126,7 +124,7 @@ impl<'a> StateRootProvider for CachedState<'a> {}
 #[derive(Debug)]
 pub struct StateProviderDb<'a> {
     provider: Box<dyn StateProvider + 'a>,
-    compiled_class_cache: Arc<Mutex<HashMap<class::ClassHash, BlockifierContractClass>>>,
+    compiled_class_cache: ClassCache,
 }
 
 impl<'a> Deref for StateProviderDb<'a> {
@@ -138,10 +136,7 @@ impl<'a> Deref for StateProviderDb<'a> {
 }
 
 impl<'a> StateProviderDb<'a> {
-    pub fn new(
-        provider: Box<dyn StateProvider + 'a>,
-        compiled_class_cache: Arc<Mutex<HashMap<class::ClassHash, BlockifierContractClass>>>,
-    ) -> Self {
+    pub fn new(provider: Box<dyn StateProvider + 'a>, compiled_class_cache: ClassCache) -> Self {
         Self { provider, compiled_class_cache }
     }
 }
@@ -172,29 +167,17 @@ impl<'a> StateReader for StateProviderDb<'a> {
         }
     }
 
-    fn get_compiled_contract_class(
-        &self,
-        class_hash: ClassHash,
-    ) -> StateResult<BlockifierContractClass> {
-        let mut class_cache = self.compiled_class_cache.lock();
-
-        if let Some(class) = class_cache.get(&class_hash.0) {
+    fn get_compiled_class(&self, class_hash: ClassHash) -> StateResult<RunnableCompiledClass> {
+        if let Some(class) = self.compiled_class_cache.get(&class_hash.0) {
             trace!(target: "executor", class = format!("{}", class_hash.to_hex_string()), "Class cache hit");
-            return Ok(class.clone());
+            return Ok(class);
         }
 
-        if let Some(class) = self
-            .provider
-            .compiled_class(class_hash.0)
-            .map_err(|e| StateError::StateReadError(e.to_string()))?
+        if let Some(class) =
+            self.class(class_hash.0).map_err(|e| StateError::StateReadError(e.to_string()))?
         {
-            trace!(target: "executor", class = format!("{}", class_hash.to_hex_string()), "Class cache miss");
-
-            let class =
-                utils::to_class(class).map_err(|e| StateError::StateReadError(e.to_string()))?;
-
-            class_cache.insert(class_hash.0, class.clone());
-            return Ok(class);
+            let compiled = self.compiled_class_cache.insert(class_hash.0, class);
+            return Ok(compiled);
         }
 
         Err(StateError::UndeclaredClassHash(class_hash))

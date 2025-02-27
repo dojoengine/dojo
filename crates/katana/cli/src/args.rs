@@ -151,9 +151,10 @@ impl NodeArgs {
     }
 
     fn init_logging(&self) -> Result<()> {
-        const DEFAULT_LOG_FILTER: &str =
-            "pipeline=debug,stage=debug,info,tasks=debug,executor=trace,forking::backend=trace,\
-             blockifier=off,jsonrpsee_server=off,hyper=off,messaging=debug,node=error";
+        const DEFAULT_LOG_FILTER: &str = "cairo_native::compiler=off,pipeline=debug,stage=debug,\
+                                          info,tasks=debug,executor=trace,forking::backend=trace,\
+                                          blockifier=off,jsonrpsee_server=off,hyper=off,\
+                                          messaging=debug,node=error";
 
         let filter = if self.development.dev {
             &format!("{DEFAULT_LOG_FILTER},server=debug")
