@@ -11,15 +11,16 @@ katana-cairo = { workspace = true, optional = true }
 katana-primitives.workspace = true
 katana-provider.workspace = true
 
+blockifier = { git = "https://github.com/dojoengine/sequencer", rev = "1010caec", features = [ "testing" ], optional = true }
+quick_cache = "0.6.10"
+starknet = { workspace = true, optional = true }
 thiserror.workspace = true
 tracing.workspace = true
 
-blockifier = { git = "https://github.com/dojoengine/sequencer", rev = "1010caec", features = [ "testing" ], optional = true }
-cairo-native = "0.2.4"
+# cairo-native
+cairo-native = { version = "0.2.4", optional = true }
 parking_lot = { workspace = true, optional = true }
-quick_cache = "0.6.10"
-rayon.workspace = true
-starknet = { workspace = true, optional = true }
+rayon = { workspace = true, optional = true }
 
 [dev-dependencies]
 katana-cairo.workspace = true
@@ -50,7 +51,7 @@ blockifier = [
 	"dep:parking_lot",
 	"dep:starknet",
 ]
-native = [ "blockifier/cairo_native" ]
+native = [ "blockifier/cairo_native", "dep:cairo-native", "dep:rayon" ]
 
 [[bench]]
 harness = false

@@ -5,8 +5,6 @@ use blockifier::execution::contract_class::{CompiledClassV1, RunnableCompiledCla
 use katana_cairo::starknet_api::contract_class::SierraVersion;
 use katana_primitives::class::{ClassHash, CompiledClass, ContractClass};
 use quick_cache::sync::Cache;
-use rayon::ThreadPoolBuilder;
-use tracing::trace;
 
 use super::utils::to_class;
 
@@ -38,7 +36,7 @@ impl ClassCache {
         let cache = Cache::new(CACHE_SIZE);
 
         #[cfg(feature = "native")]
-        let pool = ThreadPoolBuilder::new()
+        let pool = rayon::ThreadPoolBuilder::new()
             .num_threads(3)
             .thread_name(|i| format!("cache-native-compiler-{i}"))
             .build()?;
@@ -65,6 +63,7 @@ impl ClassCache {
                 class
             }
 
+            #[allow(unused_variables)]
             ContractClass::Class(ref sierra) => {
                 #[cfg(feature = "native")]
                 use blockifier::execution::native::contract_class::NativeCompiledClassV1;
@@ -92,7 +91,7 @@ impl ClassCache {
 
                 #[cfg(feature = "native")]
                 self.inner.pool.spawn(move || {
-                    trace!(target: "class_cache", class = format!("{hash:#x}"), "Compiling native class");
+                    tracing::trace!(target: "class_cache", class = format!("{hash:#x}"), "Compiling native class");
 
                     let executor =
                         AotContractExecutor::new(&program, &entry_points, OptLevel::Default)
@@ -101,7 +100,7 @@ impl ClassCache {
                     let native = NativeCompiledClassV1::new(executor, compiled_clone);
                     inner.cache.insert(hash, RunnableCompiledClass::V1Native(native));
 
-                    trace!(target: "class_cache", class = format!("{hash:#x}"), "Native class compiled")
+                    tracing::trace!(target: "class_cache", class = format!("{hash:#x}"), "Native class compiled")
                 });
 
                 let class = RunnableCompiledClass::V1(compiled);
