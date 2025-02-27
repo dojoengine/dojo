@@ -452,7 +452,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 entity_updated.deleted = false;
 
                 if entity_updated.keys.is_empty() {
-                    warn!(target: LOG_TARGET, "Entity update ignored. An entity must be set with StoreSetRecord before it can be updated with StoreUpdateRecord or StoreUpdateMember.");
+                    warn!(target: LOG_TARGET, "Entity has been updated without being set before. Keys are not known and non-updated values will be NULL.");
                 }
 
                 let optimistic_entity = unsafe {
