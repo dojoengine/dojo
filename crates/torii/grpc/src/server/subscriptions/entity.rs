@@ -114,8 +114,8 @@ impl Service {
     ) -> Result<(), Error> {
         let mut closed_stream = Vec::new();
         let hashed = Felt::from_str(&entity.id).map_err(ParseError::FromStr)?;
-        // keys is empty when an entity is updated with StoreUpdateRecord or Member but the entity has never been set before.
-        // In that case, we dont know the keys
+        // keys is empty when an entity is updated with StoreUpdateRecord or Member but the entity
+        // has never been set before. In that case, we dont know the keys
         let keys = if entity.keys.is_empty() {
             vec![]
         } else {
