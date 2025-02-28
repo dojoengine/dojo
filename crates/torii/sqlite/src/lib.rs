@@ -39,7 +39,7 @@ pub mod utils;
 
 use cache::{LocalCache, Model, ModelCache};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct SqlConfig {
     pub model_indices: Vec<ModelIndices>,
 }
@@ -62,6 +62,15 @@ pub struct Cursors {
 
 impl Sql {
     pub async fn new(
+        pool: Pool<Sqlite>,
+        executor: UnboundedSender<QueryMessage>,
+        contracts: &[Contract],
+        model_cache: Arc<ModelCache>,
+    ) -> Result<Self> {
+        Self::new_with_config(pool, executor, contracts, model_cache, Default::default()).await
+    }
+
+    pub async fn new_with_config(
         pool: Pool<Sqlite>,
         executor: UnboundedSender<QueryMessage>,
         contracts: &[Contract],

@@ -148,7 +148,7 @@ impl Runner {
         let executor_handle = tokio::spawn(async move { executor.run().await });
 
         let model_cache = Arc::new(ModelCache::new(readonly_pool.clone()));
-        let db = Sql::new(
+        let db = Sql::new_with_config(
             pool.clone(),
             sender.clone(),
             &self.args.indexing.contracts,
