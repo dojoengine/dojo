@@ -38,7 +38,7 @@ use torii_sqlite::cache::ModelCache;
 use torii_sqlite::executor::Executor;
 use torii_sqlite::simple_broker::SimpleBroker;
 use torii_sqlite::types::{Contract, ContractType, Model};
-use torii_sqlite::Sql;
+use torii_sqlite::{Sql, SqlConfig};
 use tracing::{error, info};
 use tracing_subscriber::{fmt, EnvFilter};
 use url::form_urlencoded;
@@ -153,6 +153,9 @@ impl Runner {
             sender.clone(),
             &self.args.indexing.contracts,
             model_cache.clone(),
+            SqlConfig {
+                model_indices: self.args.sql.model_indices.unwrap_or_default(),
+            },
         )
         .await?;
 

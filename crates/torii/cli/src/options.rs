@@ -6,7 +6,7 @@ use camino::Utf8PathBuf;
 use serde::ser::SerializeSeq;
 use serde::{Deserialize, Serialize};
 use starknet::core::types::Felt;
-use torii_sqlite::types::{Contract, ContractType};
+use torii_sqlite::types::{Contract, ContractType, ModelIndices};
 
 pub const DEFAULT_HTTP_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::LOCALHOST);
 pub const DEFAULT_HTTP_PORT: u16 = 8080;
@@ -370,12 +370,6 @@ impl Default for ErcOptions {
     fn default() -> Self {
         Self { max_metadata_tasks: DEFAULT_ERC_MAX_METADATA_TASKS, artifacts_path: None }
     }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct ModelIndices {
-    pub model_tag: String,
-    pub fields: Vec<String>,
 }
 
 #[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq)]
