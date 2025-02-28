@@ -64,7 +64,7 @@ jobs:
           path: bins
 
   test:
-    needs: ensure-docker
+    needs: [ensure-docker, build-explorer]
     runs-on: ubuntu-latest-32-cores
     container:
       image: ghcr.io/dojoengine/dojo-dev:v1.2.1
