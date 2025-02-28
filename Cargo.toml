@@ -18,6 +18,7 @@ members = [
 	"crates/katana/cli",
 	"crates/katana/controller",
 	"crates/katana/core",
+	"crates/katana/explorer",
 	"crates/katana/executor",
 	"crates/katana/feeder-gateway",
 	"crates/katana/grpc",
@@ -98,6 +99,7 @@ katana-codecs-derive = { path = "crates/katana/storage/codecs/derive" }
 katana-core = { path = "crates/katana/core", default-features = false }
 katana-db = { path = "crates/katana/storage/db" }
 katana-executor = { path = "crates/katana/executor" }
+katana-explorer = { path = "crates/katana/explorer" }
 katana-feeder-gateway = { path = "crates/katana/feeder-gateway" }
 katana-messaging = { path = "crates/katana/messaging" }
 katana-node = { path = "crates/katana/node", default-features = false }

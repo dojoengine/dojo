@@ -24,3 +24,5 @@ examples/spawn-and-move/manifests/saya/**
 **/*.log
 
 artifacts/
+
+crates/katana/explorer/ui
