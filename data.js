@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1740627139602,
+  "lastUpdate": 1740755814758,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -56311,6 +56311,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 17045224,
             "range": "± 213858",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "valentin@pupucecorp.com",
+            "name": "Brother MartianGreed",
+            "username": "MartianGreed"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9fba0336757c1a8daefe7a9ad13c2a266e721fb5",
+          "message": "fix: sozo build --typescript now properly orders contracts.gen.ts (#3074)",
+          "timestamp": "2025-02-28T07:59:54-07:00",
+          "tree_id": "ee7896fd0fd08365ca25a8b58d8ad46ed6f6cc87",
+          "url": "https://github.com/dojoengine/dojo/commit/9fba0336757c1a8daefe7a9ad13c2a266e721fb5"
+        },
+        "date": 1740755811571,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 48984633676,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
