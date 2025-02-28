@@ -253,15 +253,19 @@ mod test {
         assert_eq!(torii_args.events.historical, vec!["a-A".to_string()]);
         assert_eq!(torii_args.server, ServerOptions::default());
         assert!(torii_args.indexing.transactions);
-        assert_eq!(torii_args.sql.model_indices, Some(vec![ModelIndices {
-            model_tag: "ns-Position".to_string(),
-                fields: vec!["vec.x".to_string(), "vec.y".to_string()],
-            },
-            ModelIndices {
-                model_tag: "ns-Moves".to_string(),
-                fields: vec!["player".to_string()],
-            },
-        ]));
+        assert_eq!(
+            torii_args.sql.model_indices,
+            Some(vec![
+                ModelIndices {
+                    model_tag: "ns-Position".to_string(),
+                    fields: vec!["vec.x".to_string(), "vec.y".to_string()],
+                },
+                ModelIndices {
+                    model_tag: "ns-Moves".to_string(),
+                    fields: vec!["player".to_string()],
+                },
+            ])
+        );
     }
 
     #[test]
