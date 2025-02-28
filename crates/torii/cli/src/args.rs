@@ -110,6 +110,10 @@ impl ToriiArgs {
             self.erc = config.erc.unwrap_or_default();
         }
 
+        if self.sql == SqlOptions::default() {
+            self.sql = config.sql.unwrap_or_default();
+        }
+
         #[cfg(feature = "server")]
         {
             if self.server == ServerOptions::default() {
@@ -139,6 +143,7 @@ pub struct ToriiArgsConfig {
     pub indexing: Option<IndexingOptions>,
     pub events: Option<EventsOptions>,
     pub erc: Option<ErcOptions>,
+    pub sql: Option<SqlOptions>,
     #[cfg(feature = "server")]
     pub metrics: Option<MetricsOptions>,
     #[cfg(feature = "server")]
