@@ -834,6 +834,7 @@ impl Sql {
         Ok(())
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn add_columns_recursive(
         &self,
         path: &[String],
