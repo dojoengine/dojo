@@ -120,9 +120,6 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v3
-        with:
-          submodules: recursive
-          fetch-depth: 0
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: ${{ env.rust_version }}
@@ -225,6 +222,13 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
+      - uses: actions/download-artifact@v4
+        with:
+          name: explorer-dist
+          path: crates/katana/explorer/ui/dist
+      - name: Verify explorer UI assets
+        run: |
+          ls -la crates/katana/explorer/ui/dist || echo "Explorer UI dist directory not found"
       - run: scripts/clippy.sh
 
   fmt:
@@ -244,8 +248,14 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
-      - run: >
-          scripts/docs.sh
+      - uses: actions/download-artifact@v4
+        with:
+          name: explorer-dist
+          path: crates/katana/explorer/ui/dist
+      - name: Verify explorer UI assets
+        run: |
+          ls -la crates/katana/explorer/ui/dist || echo "Explorer UI dist directory not found"
+      - run: scripts/docs.sh
 
   test-hurl:
     needs: build
