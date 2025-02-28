@@ -1,3 +1,6 @@
+use std::path::Path;
+use std::str::FromStr;
+
 use anyhow::{anyhow, Result};
 use clap::Args;
 use dojo_utils::env::{
@@ -5,9 +8,6 @@ use dojo_utils::env::{
 };
 use dojo_utils::keystore::prompt_password_if_needed;
 use dojo_world::config::Environment;
-use std::path::Path;
-use std::str::FromStr;
-
 use resolve_path::PathResolveExt;
 use starknet::core::types::Felt;
 use starknet::signers::{LocalWallet, SigningKey};
