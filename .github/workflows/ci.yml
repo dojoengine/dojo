@@ -21,7 +21,7 @@ jobs:
           fetch-depth: 0
       - name: Initialize submodules
         run: |
-          git submodule update --init --recursive
+          git submodule add -b main https://github.com/cartridge-gg/explorer crates/katana/explorer/ui
           ls -la
           ls -la crates/katana/explorer/ui || echo "Explorer dir not found"
       - uses: oven-sh/setup-bun@v1
