@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use anyhow::{anyhow, Result};
 use clap::Args;
 use dojo_utils::env::{
@@ -7,6 +5,10 @@ use dojo_utils::env::{
 };
 use dojo_utils::keystore::prompt_password_if_needed;
 use dojo_world::config::Environment;
+use std::path::Path;
+use std::str::FromStr;
+
+use resolve_path::PathResolveExt;
 use starknet::core::types::Felt;
 use starknet::signers::{LocalWallet, SigningKey};
 use tracing::trace;
@@ -93,7 +95,7 @@ impl SignerOptions {
 
             let password = prompt_password_if_needed(maybe_password, no_wait)?;
 
-            let private_key = SigningKey::from_keystore(path, &password)?;
+            let private_key = SigningKey::from_keystore(Path::new(path).resolve(), &password)?;
             return Ok(Some(private_key));
         }
 
@@ -116,7 +118,7 @@ impl SignerOptions {
 
             let password = prompt_password_if_needed(maybe_password, no_wait)?;
 
-            let private_key = SigningKey::from_keystore(path, &password)?;
+            let private_key = SigningKey::from_keystore(Path::new(path).resolve(), &password)?;
             return Ok(Some(private_key));
         }
 
