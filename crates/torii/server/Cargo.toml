@@ -34,3 +34,5 @@ async-trait = "0.1.83"
 tokio-tungstenite = "0.20.0"
 hyper-tungstenite = "0.11.1"
 futures-util.workspace = true
+tokio-stream = "0.1.17"
+uuid = "1.15.1"

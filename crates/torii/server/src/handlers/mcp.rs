@@ -1,8 +1,11 @@
 use std::net::IpAddr;
 use std::sync::Arc;
+use std::collections::HashMap;
+use std::sync::Mutex;
+use uuid::Uuid;
 
 use futures_util::{SinkExt, StreamExt};
-use hyper::{Body, Request, Response, StatusCode};
+use hyper::{Body, Method, Request, Response, StatusCode};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sqlx::{Row, SqlitePool};
@@ -31,9 +34,9 @@ struct JsonRpcRequest {
 
 #[derive(Debug, Deserialize)]
 struct JsonRpcNotification {
-    _jsonrpc: String,
-    _method: String,
-    _params: Option<Value>,
+    jsonrpc: String,
+    method: String,
+    params: Option<Value>,
 }
 
 #[derive(Debug, Serialize)]
@@ -79,11 +82,29 @@ struct ResourceCapabilities {
 #[derive(Debug, Clone)]
 pub struct McpHandler {
     pool: Arc<SqlitePool>,
+    // Store active SSE connections by session ID
+    active_sessions: Arc<Mutex<HashMap<String, bool>>>,
 }
 
 impl McpHandler {
     pub fn new(pool: Arc<SqlitePool>) -> Self {
-        Self { pool }
+        Self { 
+            pool,
+            active_sessions: Arc::new(Mutex::new(HashMap::new())),
+        }
+    }
+
+    fn generate_session_id(&self) -> String {
+        let session_id = Uuid::new_v4().to_string();
+        // Register the session
+        let mut sessions = self.active_sessions.lock().unwrap();
+        sessions.insert(session_id.clone(), true);
+        session_id
+    }
+
+    fn is_active_session(&self, id: &str) -> bool {
+        let sessions = self.active_sessions.lock().unwrap();
+        sessions.contains_key(id)
     }
 
     async fn handle_request(&self, request: JsonRpcRequest) -> JsonRpcResponse {
@@ -95,6 +116,11 @@ impl McpHandler {
             "initialize" => self.handle_initialize(request.id),
             "tools/list" => self.handle_tools_list(request.id),
             "tools/call" => self.handle_tools_call(request).await,
+            "resources/list" => self.handle_resources_list(request.id).await,
+            "resources/read" => self.handle_resources_read(request).await,
+            "resources/subscribe" => self.handle_resources_subscribe(request).await,
+            "resources/unsubscribe" => self.handle_resources_unsubscribe(request).await,
+            "ping" => JsonRpcResponse::ok(request.id, json!({})),
             _ => JsonRpcResponse::method_not_found(request.id),
         }
     }
@@ -175,18 +201,98 @@ impl McpHandler {
         }
     }
 
+    async fn handle_notification(&self, notification: JsonRpcNotification) {
+        match notification.method.as_str() {
+            "notifications/initialized" => {
+                // Handle initialized notification if needed
+            }
+            "notifications/cancelled" => {
+                // Handle cancellation notification if needed
+            }
+            _ => {
+                // Handle other notifications if needed
+            }
+        }
+    }
+
+    async fn handle_resources_list(&self, id: Value) -> JsonRpcResponse {
+        // For now, return an empty list
+        JsonRpcResponse::ok(
+            id,
+            json!({
+                "resources": []
+            }),
+        )
+    }
+
+    async fn handle_resources_read(&self, request: JsonRpcRequest) -> JsonRpcResponse {
+        let Some(params) = &request.params else {
+            return JsonRpcResponse::invalid_params(request.id, "Missing params");
+        };
+
+        let Some(uri) = params.get("uri").and_then(Value::as_str) else {
+            return JsonRpcResponse::invalid_params(request.id, "Missing uri parameter");
+        };
+
+        // For now, return a simple error since we don't have actual resource handling
+        JsonRpcResponse::error(
+            request.id,
+            -32602,
+            "Resource not found",
+            Some(json!({ "details": format!("Resource '{}' not found", uri) })),
+        )
+    }
+
+    async fn handle_resources_subscribe(&self, request: JsonRpcRequest) -> JsonRpcResponse {
+        let Some(params) = &request.params else {
+            return JsonRpcResponse::invalid_params(request.id, "Missing params");
+        };
+
+        let Some(uri) = params.get("uri").and_then(Value::as_str) else {
+            return JsonRpcResponse::invalid_params(request.id, "Missing uri parameter");
+        };
+
+        // For now, just acknowledge the subscription
+        JsonRpcResponse::ok(
+            request.id,
+            json!({}),
+        )
+    }
+
+    async fn handle_resources_unsubscribe(&self, request: JsonRpcRequest) -> JsonRpcResponse {
+        let Some(params) = &request.params else {
+            return JsonRpcResponse::invalid_params(request.id, "Missing params");
+        };
+
+        let Some(uri) = params.get("uri").and_then(Value::as_str) else {
+            return JsonRpcResponse::invalid_params(request.id, "Missing uri parameter");
+        };
+
+        // For now, just acknowledge the unsubscription
+        JsonRpcResponse::ok(
+            request.id,
+            json!({}),
+        )
+    }
+
     async fn handle_websocket_connection(
         &self,
         ws_stream: tokio_tungstenite::WebSocketStream<hyper::upgrade::Upgraded>,
     ) {
         let (mut write, mut read) = ws_stream.split();
+        let session_id = self.generate_session_id();
+        
+        if let Err(e) = write.send(Message::Text(format!("{{\"type\":\"connection_id\",\"id\":\"{}\"}}", session_id))).await {
+            eprintln!("Error sending session ID: {}", e);
+            return;
+        }
 
         while let Some(msg) = read.next().await {
             if let Ok(Message::Text(text)) = msg {
                 let response = match serde_json::from_str::<JsonRpcMessage>(&text) {
                     Ok(JsonRpcMessage::Request(request)) => self.handle_request(request).await,
-                    Ok(JsonRpcMessage::Notification(_notification)) => {
-                        // Handle notifications if needed
+                    Ok(JsonRpcMessage::Notification(notification)) => {
+                        self.handle_notification(notification).await;
                         continue;
                     }
                     Err(e) => JsonRpcResponse::parse_error(Value::Null, &e.to_string()),
@@ -200,6 +306,81 @@ impl McpHandler {
                 }
             }
         }
+        
+        // Clean up session when connection closes
+        let mut sessions = self.active_sessions.lock().unwrap();
+        sessions.remove(&session_id);
+    }
+
+    // Handle initial SSE connection setup
+    async fn handle_sse_setup(&self) -> Response<Body> {
+        let session_id = self.generate_session_id();
+        let message_url = format!("/mcp/message?sessionId={}", session_id);
+        
+        // Return SSE format with endpoint event
+        let sse_response = format!("event: endpoint\ndata: {}\n\n", message_url);
+        
+        Response::builder()
+            .status(StatusCode::OK)
+            .header("Content-Type", "text/event-stream")
+            .header("Cache-Control", "no-cache")
+            .header("Connection", "keep-alive")
+            .body(Body::from(sse_response))
+            .unwrap()
+    }
+
+    // Handle JSON-RPC requests to the message endpoint
+    async fn handle_message_request(&self, req: Request<Body>) -> Response<Body> {
+        // Extract session ID from query parameters
+        let session_id = req.uri().query().and_then(|q| {
+            q.split('&')
+                .find_map(|p| {
+                    let parts: Vec<&str> = p.split('=').collect();
+                    if parts.len() == 2 && parts[0] == "sessionId" {
+                        Some(parts[1])
+                    } else {
+                        None
+                    }
+                })
+        });
+        
+        // Verify this is a valid session
+        if session_id.is_none() || !self.is_active_session(session_id.unwrap()) {
+            return Response::builder()
+                .status(StatusCode::BAD_REQUEST)
+                .body(Body::from("Invalid or missing session ID"))
+                .unwrap();
+        }
+        
+        // Parse the request body
+        let body_bytes = hyper::body::to_bytes(req.into_body()).await.unwrap_or_default();
+        let body_str = String::from_utf8(body_bytes.to_vec()).unwrap_or_default();
+        
+        // Process the JSON-RPC request
+        let response = match serde_json::from_str::<JsonRpcMessage>(&body_str) {
+            Ok(JsonRpcMessage::Request(request)) => {
+                let resp = self.handle_request(request).await;
+                serde_json::to_string(&resp).unwrap_or_default()
+            },
+            Ok(JsonRpcMessage::Notification(_)) => {
+                // Notifications don't expect responses
+                return Response::builder()
+                    .status(StatusCode::NO_CONTENT)
+                    .body(Body::empty())
+                    .unwrap();
+            },
+            Err(e) => {
+                let error_resp = JsonRpcResponse::parse_error(Value::Null, &e.to_string());
+                serde_json::to_string(&error_resp).unwrap_or_default()
+            },
+        };
+        
+        // Return the JSON-RPC response
+        Response::builder()
+            .status(StatusCode::OK)
+            .header("Content-Type", "application/json")
+            .body(Body::from(response))
+            .unwrap()
     }
 
     async fn handle_schema_tool(&self, request: JsonRpcRequest) -> JsonRpcResponse {
@@ -386,32 +567,55 @@ impl JsonRpcResponse {
 impl Handler for McpHandler {
     fn should_handle(&self, req: &Request<Body>) -> bool {
         req.uri().path().starts_with("/mcp")
-            && req
-                .headers()
-                .get("upgrade")
-                .and_then(|h| h.to_str().ok())
-                .map(|h| h.eq_ignore_ascii_case("websocket"))
-                .unwrap_or(false)
     }
 
-    async fn handle(&self, req: Request<Body>, _client_addr: IpAddr) -> Response<Body> {
-        if hyper_tungstenite::is_upgrade_request(&req) {
-            let (response, websocket) = hyper_tungstenite::upgrade(req, None)
-                .expect("Failed to upgrade WebSocket connection");
+    async fn handle(&self, req: Request<Body>) -> Response<Body> {
+        // Handle WebSocket upgrade requests
+        if req.headers()
+            .get("upgrade")
+            .and_then(|h| h.to_str().ok())
+            .map(|h| h.eq_ignore_ascii_case("websocket"))
+            .unwrap_or(false) 
+        {
+            if hyper_tungstenite::is_upgrade_request(&req) {
+                let (response, websocket) = hyper_tungstenite::upgrade(req, None)
+                    .expect("Failed to upgrade WebSocket connection");
 
-            let this = self.clone();
-            tokio::spawn(async move {
-                if let Ok(ws_stream) = websocket.await {
-                    this.handle_websocket_connection(ws_stream).await;
-                }
-            });
+                let this = self.clone();
+                tokio::spawn(async move {
+                    if let Ok(ws_stream) = websocket.await {
+                        this.handle_websocket_connection(ws_stream).await;
+                    }
+                });
 
-            response
-        } else {
-            Response::builder()
-                .status(StatusCode::BAD_REQUEST)
-                .body(Body::from("Not a WebSocket upgrade request"))
-                .unwrap()
+                return response;
+            } else {
+                return Response::builder()
+                    .status(StatusCode::BAD_REQUEST)
+                    .body(Body::from("Invalid WebSocket upgrade request"))
+                    .unwrap();
+            }
+        }
+        
+        // Handle HTTP requests
+        match (req.method(), req.uri().path()) {
+            // GET /mcp - Set up SSE connection
+            (&Method::GET, "/mcp") => {
+                self.handle_sse_setup().await
+            },
+            
+            // POST /mcp/message - Handle JSON-RPC requests
+            (&Method::POST, path) if path.starts_with("/mcp/message") => {
+                self.handle_message_request(req).await
+            },
+            
+            // Other methods not allowed
+            _ => {
+                Response::builder()
+                    .status(StatusCode::METHOD_NOT_ALLOWED)
+                    .body(Body::from("Method not allowed"))
+                    .unwrap()
+            }
         }
     }
 }
