@@ -372,6 +372,56 @@ impl Default for ErcOptions {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ModelIndices {
+    pub model_tag: String,
+    pub fields: Vec<String>,
+}
+
+#[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq)]
+#[command(next_help_heading = "SQL options")]
+pub struct SqlOptions {
+    /// Whether model tables should default to having indices on all columns
+    #[arg(
+        long = "sql.model_indices_keys",
+        default_value_t = false,
+        help = "If true, creates indices on only key fields columns of model tables by default. If false, all model field columns will have indices."
+    )]
+    #[serde(default)]
+    pub model_indices_keys: bool,
+
+    /// Specify which fields should have indices for specific models
+    /// Format: "model_name:field1,field2;another_model:field3,field4"
+    #[arg(
+        long = "sql.model_indices",
+        value_delimiter = ';',
+        value_parser = parse_model_indices,
+        help = "Specify which fields should have indices for specific models. Format: \"model_name:field1,field2;another_model:field3,field4\""
+    )]
+    #[serde(default)]
+    pub model_indices: Option<Vec<ModelIndices>>,
+}
+
+impl Default for SqlOptions {
+    fn default() -> Self {
+        Self { model_indices_keys: false, model_indices: None }
+    }
+}
+
+// Parses clap cli argument which is expected to be in the format:
+// - model-tag:field1,field2;othermodel-tag:field3,field4
+fn parse_model_indices(part: &str) -> anyhow::Result<ModelIndices> {
+    let parts = part.split(':').collect::<Vec<&str>>();
+    if parts.len() != 2 {
+        return Err(anyhow::anyhow!("Invalid model indices format"));
+    }
+
+    let model_tag = parts[0].to_string();
+    let fields = parts[1].split(',').map(|s| s.to_string()).collect::<Vec<_>>();
+
+    Ok(ModelIndices { model_tag, fields })
+}
+
 // Parses clap cli argument which is expected to be in the format:
 // - erc_type:address:start_block
 // - address:start_block (erc_type defaults to ERC20)

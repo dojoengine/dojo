@@ -51,6 +51,9 @@ pub struct ToriiArgs {
     #[command(flatten)]
     pub erc: ErcOptions,
 
+    #[command(flatten)]
+    pub sql: SqlOptions,
+
     #[cfg(feature = "server")]
     #[command(flatten)]
     pub metrics: MetricsOptions,
