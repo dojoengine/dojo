@@ -153,9 +153,7 @@ impl Runner {
             sender.clone(),
             &self.args.indexing.contracts,
             model_cache.clone(),
-            SqlConfig {
-                model_indices: self.args.sql.model_indices.unwrap_or_default(),
-            },
+            SqlConfig { model_indices: self.args.sql.model_indices.unwrap_or_default() },
         )
         .await?;
 

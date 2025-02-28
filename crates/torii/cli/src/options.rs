@@ -379,7 +379,8 @@ pub struct SqlOptions {
     #[arg(
         long = "sql.model_indices_keys",
         default_value_t = false,
-        help = "If true, creates indices on only key fields columns of model tables by default. If false, all model field columns will have indices."
+        help = "If true, creates indices on only key fields columns of model tables by default. \
+                If false, all model field columns will have indices."
     )]
     #[serde(default)]
     pub model_indices_keys: bool,

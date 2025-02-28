@@ -860,7 +860,8 @@ impl Sql {
                 .any(|m| m.model_tag == table_id && m.fields.contains(&name.to_string()))
             {
                 indices.push(format!(
-                    "CREATE INDEX IF NOT EXISTS [idx_{table_id}_{name}] ON [{table_id}] ([{name}]);"
+                    "CREATE INDEX IF NOT EXISTS [idx_{table_id}_{name}] ON [{table_id}] \
+                     ([{name}]);"
                 ));
             }
         };
@@ -876,7 +877,7 @@ impl Sql {
             // 4. Copy values back & create new index
             alter_table_queries.push(format!(
                 "CREATE TEMPORARY TABLE [tmp_values_{name}] AS SELECT internal_id, [{name}] FROM \
-                     [{table_id}]"
+                 [{table_id}]"
             ));
             alter_table_queries.push(format!("DROP INDEX IF EXISTS [idx_{table_id}_{name}]"));
             alter_table_queries.push(format!("ALTER TABLE [{table_id}] DROP COLUMN [{name}]"));
@@ -884,7 +885,7 @@ impl Sql {
                 .push(format!("ALTER TABLE [{table_id}] ADD COLUMN [{name}] {sql_type}"));
             alter_table_queries.push(format!(
                 "UPDATE [{table_id}] SET [{name}] = (SELECT {sql_value} FROM [tmp_values_{name}] \
-                     WHERE [tmp_values_{name}].internal_id = [{table_id}].internal_id)"
+                 WHERE [tmp_values_{name}].internal_id = [{table_id}].internal_id)"
             ));
             alter_table_queries.push(format!("DROP TABLE [tmp_values_{name}]"));
             alter_table_queries.push(format!(
@@ -983,7 +984,8 @@ impl Sql {
                     .join(", ");
 
                 let sql_type = format!(
-                    "TEXT CONSTRAINT [{column_name}_check] CHECK([{column_name}] IN ({all_options}))"
+                    "TEXT CONSTRAINT [{column_name}_check] CHECK([{column_name}] IN \
+                     ({all_options}))"
                 );
                 if enum_diff.is_some_and(|diff| diff != e) {
                     // For upgrades, modify the existing option column to add the new options to the
