@@ -30,6 +30,12 @@ pub mod m_$model_type$_definition {
         }
 
         #[inline(always)]
+        fn use_legacy_model_storage() -> bool {
+            $use_legacy_storage$
+        }
+
+
+        #[inline(always)]
         fn schema() -> dojo::meta::introspect::Struct {
             if let dojo::meta::introspect::Ty::Struct(s) = dojo::meta::Introspect::<$model_type$>::ty() {
                 s
