@@ -30,7 +30,7 @@ pub mod m_$model_type$_definition {
         }
 
         #[inline(always)]
-        fn use_legacy_model_storage() -> bool {
+        fn use_legacy_storage() -> bool {
             $use_legacy_storage$
         }
 

@@ -114,7 +114,7 @@ impl ModelReader<Error> for ModelSQLReader {
         Ok(self.layout.clone())
     }
 
-    async fn use_legacy_model_storage(&self) -> Result<bool, Error> {
+    async fn use_legacy_storage(&self) -> Result<bool, Error> {
         // TODO: manage the new use_legacy_storage model function
         Ok(false)
     }
