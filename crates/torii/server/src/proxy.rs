@@ -64,11 +64,7 @@ lazy_static::lazy_static! {
 pub struct Proxy {
     addr: SocketAddr,
     allowed_origins: Option<Vec<String>>,
-    grpc_addr: Option<SocketAddr>,
-    artifacts_addr: Option<SocketAddr>,
-    graphql_addr: Arc<RwLock<Option<SocketAddr>>>,
-    pool: Arc<SqlitePool>,
-    handlers: Option<Vec<Box<dyn Handler>>>,
+    handlers: Arc<RwLock<Vec<Box<dyn Handler>>>>,
 }
 
 impl Proxy {
@@ -80,20 +76,20 @@ impl Proxy {
         artifacts_addr: Option<SocketAddr>,
         pool: Arc<SqlitePool>,
     ) -> Self {
-        Self {
-            addr,
-            allowed_origins,
-            grpc_addr,
-            graphql_addr: Arc::new(RwLock::new(graphql_addr)),
-            artifacts_addr,
-            pool,
-            handlers: None
-        }
+        let handlers: Arc<RwLock<Vec<Box<dyn Handler>>>> = Arc::new(RwLock::new(vec![
+            Box::new(GraphQLHandler::new(graphql_addr)),
+            Box::new(GrpcHandler::new(grpc_addr)),
+            Box::new(McpHandler::new(pool.clone())),
+            Box::new(SqlHandler::new(pool.clone())),
+            Box::new(StaticHandler::new(artifacts_addr)),
+        ]));
+
+        Self { addr, allowed_origins, handlers }
     }
 
     pub async fn set_graphql_addr(&self, addr: SocketAddr) {
-        let mut graphql_addr = self.graphql_addr.write().await;
-        *graphql_addr = Some(addr);
+        let mut handlers = self.handlers.write().await;
+        handlers[0] = Box::new(GraphQLHandler::new(Some(addr)));
     }
 
     pub async fn start(
@@ -102,14 +98,9 @@ impl Proxy {
     ) -> Result<(), hyper::Error> {
         let addr = self.addr;
         let allowed_origins = self.allowed_origins.clone();
-        let grpc_addr = self.grpc_addr;
-        let graphql_addr = self.graphql_addr.clone();
-        let artifacts_addr = self.artifacts_addr;
-        let pool = self.pool.clone();
 
         let make_svc = make_service_fn(move |conn: &AddrStream| {
             let remote_addr = conn.remote_addr().ip();
-            let handlers = self.handlers.clone().unwrap_or_default();
 
             let cors = CorsLayer::new()
                 .max_age(DEFAULT_MAX_AGE)
@@ -144,14 +135,12 @@ impl Proxy {
                     ),
                 });
 
-            let pool_clone = pool.clone();
-            let graphql_addr_clone = graphql_addr.clone();
+            let handlers = self.handlers.clone();
             let service = ServiceBuilder::new().option_layer(cors).service_fn(move |req| {
-                let pool = pool_clone.clone();
-                let graphql_addr = graphql_addr_clone.clone();
+                let handlers = handlers.clone();
                 async move {
-                    let graphql_addr = graphql_addr.read().await;
-                    handle(remote_addr, grpc_addr, artifacts_addr, *graphql_addr, pool, req).await
+                    let handlers = handlers.read().await;
+                    handle(remote_addr, req, &handlers).await
                 }
             });
 
@@ -170,15 +159,12 @@ impl Proxy {
 
 async fn handle(
     client_ip: IpAddr,
-    grpc_addr: Option<SocketAddr>,
-    artifacts_addr: Option<SocketAddr>,
-    graphql_addr: Option<SocketAddr>,
-    pool: Arc<SqlitePool>,
     req: Request<Body>,
+    handlers: &Vec<Box<dyn Handler>>,
 ) -> Result<Response<Body>, Infallible> {
-    for handler in handlers {
+    for handler in handlers.iter() {
         if handler.should_handle(&req) {
-            return Ok(handler.handle(req).await);
+            return Ok(handler.handle(req, client_ip).await);
         }
     }
 

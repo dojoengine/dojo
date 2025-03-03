@@ -9,13 +9,12 @@ pub(crate) const LOG_TARGET: &str = "torii::server::handlers::static";
 
 #[derive(Debug)]
 pub struct StaticHandler {
-    client_ip: IpAddr,
     artifacts_addr: Option<SocketAddr>,
 }
 
 impl StaticHandler {
-    pub fn new(client_ip: IpAddr, artifacts_addr: Option<SocketAddr>) -> Self {
-        Self { client_ip, artifacts_addr }
+    pub fn new(artifacts_addr: Option<SocketAddr>) -> Self {
+        Self { artifacts_addr }
     }
 }
 
@@ -25,11 +24,11 @@ impl Handler for StaticHandler {
         req.uri().path().starts_with("/static")
     }
 
-    async fn handle(&self, req: Request<Body>) -> Response<Body> {
+    async fn handle(&self, req: Request<Body>, client_addr: IpAddr) -> Response<Body> {
         if let Some(artifacts_addr) = self.artifacts_addr {
             let artifacts_addr = format!("http://{}", artifacts_addr);
             match crate::proxy::GRAPHQL_PROXY_CLIENT
-                .call(self.client_ip, &artifacts_addr, req)
+                .call(client_addr, &artifacts_addr, req)
                 .await
             {
                 Ok(response) => response,

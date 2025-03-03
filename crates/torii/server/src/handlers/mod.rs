@@ -5,6 +5,7 @@ pub mod sql;
 pub mod static_files;
 
 use hyper::{Body, Request, Response};
+use std::net::IpAddr;
 
 #[async_trait::async_trait]
 pub trait Handler: Send + Sync + std::fmt::Debug {
@@ -12,5 +13,5 @@ pub trait Handler: Send + Sync + std::fmt::Debug {
     fn should_handle(&self, req: &Request<Body>) -> bool;
 
     // Handle the request
-    async fn handle(&self, req: Request<Body>) -> Response<Body>;
+    async fn handle(&self, req: Request<Body>, client_addr: IpAddr) -> Response<Body>;
 }

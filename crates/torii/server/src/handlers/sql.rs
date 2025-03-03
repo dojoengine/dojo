@@ -6,6 +6,7 @@ use http::header::CONTENT_TYPE;
 use hyper::{Body, Method, Request, Response, StatusCode};
 use include_str;
 use sqlx::{Column, Row, SqlitePool, TypeInfo};
+use std::net::IpAddr;
 
 use super::Handler;
 
@@ -112,7 +113,7 @@ impl Handler for SqlHandler {
         req.uri().path().starts_with("/sql")
     }
 
-    async fn handle(&self, req: Request<Body>) -> Response<Body> {
+    async fn handle(&self, req: Request<Body>, _client_addr: IpAddr) -> Response<Body> {
         self.handle_request(req).await
     }
 }

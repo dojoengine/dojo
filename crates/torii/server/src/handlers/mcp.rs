@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sqlx::{Row, SqlitePool};
 use tokio_tungstenite::tungstenite::Message;
+use std::net::IpAddr;
 
 use super::sql::map_row_to_json;
 use super::Handler;
@@ -219,7 +220,7 @@ impl McpHandler {
                 AND m.name = ?
                 ORDER BY m.name, p.cid"
                 .to_string(),
-            None => "SELECT 
+            _ => "SELECT 
                     m.name as table_name,
                     p.* 
                 FROM sqlite_master m
@@ -231,7 +232,7 @@ impl McpHandler {
 
         let rows = match table_filter {
             Some(table) => sqlx::query(&schema_query).bind(table).fetch_all(&*self.pool).await,
-            None => sqlx::query(&schema_query).fetch_all(&*self.pool).await,
+            _ => sqlx::query(&schema_query).fetch_all(&*self.pool).await,
         };
 
         match rows {
@@ -393,7 +394,7 @@ impl Handler for McpHandler {
                 .unwrap_or(false)
     }
 
-    async fn handle(&self, req: Request<Body>) -> Response<Body> {
+    async fn handle(&self, req: Request<Body>, _client_addr: IpAddr) -> Response<Body> {
         if hyper_tungstenite::is_upgrade_request(&req) {
             let (response, websocket) = hyper_tungstenite::upgrade(req, None)
                 .expect("Failed to upgrade WebSocket connection");
