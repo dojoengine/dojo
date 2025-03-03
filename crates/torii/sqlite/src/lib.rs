@@ -41,6 +41,7 @@ use cache::{LocalCache, Model, ModelCache};
 
 #[derive(Debug, Clone, Default)]
 pub struct SqlConfig {
+    pub all_model_indices: bool,
     pub model_indices: Vec<ModelIndices>,
 }
 
@@ -798,6 +799,7 @@ impl Sql {
             &mut indices,
             &table_id,
             upgrade_diff,
+            false,
         )?;
 
         // Add all columns to the create table query
@@ -844,6 +846,7 @@ impl Sql {
         indices: &mut Vec<String>,
         table_id: &str,
         upgrade_diff: Option<&Ty>,
+        is_key: bool,
     ) -> Result<()> {
         let column_prefix = if path.len() > 1 { path[1..].join(".") } else { String::new() };
 
@@ -854,12 +857,14 @@ impl Sql {
             } else {
                 columns.push(format!("[{name}] {sql_type}"));
             }
-            if self
+
+            let model_indices = self
                 .config
                 .model_indices
                 .iter()
-                .any(|m| m.model_tag == table_id && m.fields.contains(&name.to_string()))
-            {
+                .find(|m| m.model_tag == table_id);
+
+            if model_indices.is_some_and(|m| m.fields.contains(&name.to_string())) || (model_indices.is_none() && (self.config.all_model_indices || is_key)) {
                 indices.push(format!(
                     "CREATE INDEX IF NOT EXISTS [idx_{table_id}_{name}] ON [{table_id}] \
                      ([{name}]);"
@@ -925,6 +930,7 @@ impl Sql {
                         indices,
                         table_id,
                         member_diff,
+                        member.key
                     )?;
                 }
             }
@@ -958,6 +964,7 @@ impl Sql {
                         indices,
                         table_id,
                         member_diff,
+                        is_key,
                     )?;
                 }
             }
@@ -1032,6 +1039,7 @@ impl Sql {
                         indices,
                         table_id,
                         variant_diff,
+                        is_key,
                     )?;
                 }
             }

@@ -377,13 +377,13 @@ impl Default for ErcOptions {
 pub struct SqlOptions {
     /// Whether model tables should default to having indices on all columns
     #[arg(
-        long = "sql.model_indices_keys",
+        long = "sql.all_model_indices",
         default_value_t = false,
-        help = "If true, creates indices on only key fields columns of model tables by default. \
-                If false, all model field columns will have indices."
+        help = "If true, creates indices on all columns of model tables by default. \
+                If false, only key fields columns of model tables will have indices."
     )]
     #[serde(default)]
-    pub model_indices_keys: bool,
+    pub all_model_indices: bool,
 
     /// Specify which fields should have indices for specific models
     /// Format: "model_name:field1,field2;another_model:field3,field4"
@@ -399,7 +399,7 @@ pub struct SqlOptions {
 
 impl Default for SqlOptions {
     fn default() -> Self {
-        Self { model_indices_keys: false, model_indices: None }
+        Self { all_model_indices: false, model_indices: None }
     }
 }
 
