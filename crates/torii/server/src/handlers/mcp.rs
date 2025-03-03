@@ -1,3 +1,4 @@
+use std::net::IpAddr;
 use std::sync::Arc;
 
 use futures_util::{SinkExt, StreamExt};
@@ -6,7 +7,6 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sqlx::{Row, SqlitePool};
 use tokio_tungstenite::tungstenite::Message;
-use std::net::IpAddr;
 
 use super::sql::map_row_to_json;
 use super::Handler;

@@ -1,3 +1,4 @@
+use std::net::IpAddr;
 use std::sync::Arc;
 
 use base64::engine::general_purpose::STANDARD;
@@ -6,7 +7,6 @@ use http::header::CONTENT_TYPE;
 use hyper::{Body, Method, Request, Response, StatusCode};
 use include_str;
 use sqlx::{Column, Row, SqlitePool, TypeInfo};
-use std::net::IpAddr;
 
 use super::Handler;
 

@@ -4,8 +4,9 @@ pub mod mcp;
 pub mod sql;
 pub mod static_files;
 
-use hyper::{Body, Request, Response};
 use std::net::IpAddr;
+
+use hyper::{Body, Request, Response};
 
 #[async_trait::async_trait]
 pub trait Handler: Send + Sync + std::fmt::Debug {
