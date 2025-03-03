@@ -670,12 +670,12 @@ impl<A: starknet::accounts::ConnectedAccount + Sync> ModelContract<A> {
     }
     #[allow(clippy::ptr_arg)]
     #[allow(clippy::too_many_arguments)]
-    pub fn use_legacy_model_storage(&self) -> cainome::cairo_serde::call::FCall<A::Provider, bool> {
+    pub fn use_legacy_storage(&self) -> cainome::cairo_serde::call::FCall<A::Provider, bool> {
         use cainome::cairo_serde::CairoSerde;
         let mut __calldata = vec![];
         let __call = starknet::core::types::FunctionCall {
             contract_address: self.address,
-            entry_point_selector: starknet::macros::selector!("use_legacy_model_storage"),
+            entry_point_selector: starknet::macros::selector!("use_legacy_storage"),
             calldata: __calldata,
         };
         cainome::cairo_serde::call::FCall::new(__call, self.provider())
@@ -799,12 +799,12 @@ impl<P: starknet::providers::Provider + Sync> ModelContractReader<P> {
     }
     #[allow(clippy::ptr_arg)]
     #[allow(clippy::too_many_arguments)]
-    pub fn use_legacy_model_storage(&self) -> cainome::cairo_serde::call::FCall<P, bool> {
+    pub fn use_legacy_storage(&self) -> cainome::cairo_serde::call::FCall<P, bool> {
         use cainome::cairo_serde::CairoSerde;
         let mut __calldata = vec![];
         let __call = starknet::core::types::FunctionCall {
             contract_address: self.address,
-            entry_point_selector: starknet::macros::selector!("use_legacy_model_storage"),
+            entry_point_selector: starknet::macros::selector!("use_legacy_storage"),
             calldata: __calldata,
         };
         cainome::cairo_serde::call::FCall::new(__call, self.provider())
