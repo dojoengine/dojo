@@ -437,12 +437,23 @@ fn format_byte_array(values: &mut Vec<Felt>, level: usize, start_indent: bool) -
     format!("{}{}", _start_indent(level, start_indent), ByteArray::to_string(&bytearray).unwrap())
 }
 
-fn format_field_value(member: &Member, use_legacy_storage: bool, values: &mut Vec<Felt>, level: usize) -> String {
+fn format_field_value(
+    member: &Member,
+    use_legacy_storage: bool,
+    values: &mut Vec<Felt>,
+    level: usize,
+) -> String {
     let field_repr = format_record_value(&member.ty, use_legacy_storage, values, level, false);
     format!("{}{:<16}: {field_repr}", INDENT.repeat(level), member.name)
 }
 
-fn format_array(item: &Ty, use_legacy_storage: bool, values: &mut Vec<Felt>, level: usize, start_indent: bool) -> String {
+fn format_array(
+    item: &Ty,
+    use_legacy_storage: bool,
+    values: &mut Vec<Felt>,
+    level: usize,
+    start_indent: bool,
+) -> String {
     let length: u32 = values.remove(0).to_u32().unwrap();
     let mut items = vec![];
 
@@ -458,7 +469,13 @@ fn format_array(item: &Ty, use_legacy_storage: bool, values: &mut Vec<Felt>, lev
     )
 }
 
-fn format_tuple(items: &[Ty], use_legacy_storage: bool, values: &mut Vec<Felt>, level: usize, start_indent: bool) -> String {
+fn format_tuple(
+    items: &[Ty],
+    use_legacy_storage: bool,
+    values: &mut Vec<Felt>,
+    level: usize,
+    start_indent: bool,
+) -> String {
     if items.is_empty() {
         return "".to_string();
     }
@@ -493,31 +510,41 @@ fn format_struct(
     )
 }
 
-fn format_enum(schema: &Enum, use_legacy_storage: bool, values: &mut Vec<Felt>, level: usize, start_indent: bool) -> String {
+fn format_enum(
+    schema: &Enum,
+    use_legacy_storage: bool,
+    values: &mut Vec<Felt>,
+    level: usize,
+    start_indent: bool,
+) -> String {
     let variant_index: u8 = values.remove(0).to_u8().unwrap();
     let mut variant_index: usize = variant_index.into();
-    
+
     if !use_legacy_storage {
         // In the new storage system, variant 0 means unset/default value.
         // Unfortunately, with the current Enum schema we are not able to build the default value.
-        // TODO: think about how to build the default enum value from schema 
+        // TODO: think about how to build the default enum value from schema
         // (at least store the index of the default variant).
         if variant_index == 0 {
-            
             // For Options, just print 'None' instead of default
             if schema.name.starts_with("Option<") {
-                return format!("{}::None", schema.name)
+                return format!("{}::None", schema.name);
             }
 
             return format!("{}::default()", schema.name);
         }
-        
+
         variant_index -= 1;
     }
 
     let variant_name = format!("{}::{}", schema.name, schema.options[variant_index].name);
-    let variant_data =
-        format_record_value(&schema.options[variant_index].ty, use_legacy_storage, values, level + 1, true);
+    let variant_data = format_record_value(
+        &schema.options[variant_index].ty,
+        use_legacy_storage,
+        values,
+        level + 1,
+        true,
+    );
 
     if variant_data.is_empty() {
         format!("{}{variant_name}", _start_indent(level, start_indent),)
@@ -549,7 +576,12 @@ fn format_record_value(
 }
 
 // print the structured record values
-fn format_deep_record(schema: &Ty, keys: &[Felt], values: &[Felt], use_legacy_storage: bool) -> String {
+fn format_deep_record(
+    schema: &Ty,
+    keys: &[Felt],
+    values: &[Felt],
+    use_legacy_storage: bool,
+) -> String {
     let mut model_values = vec![];
     model_values.extend(keys);
     model_values.extend(values);
