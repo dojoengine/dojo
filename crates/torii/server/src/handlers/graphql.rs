@@ -8,6 +8,7 @@ use super::Handler;
 
 pub(crate) const LOG_TARGET: &str = "torii::server::handlers::graphql";
 
+#[derive(Debug)]
 pub struct GraphQLHandler {
     client_ip: IpAddr,
     graphql_addr: Option<SocketAddr>,

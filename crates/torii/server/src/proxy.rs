@@ -68,6 +68,7 @@ pub struct Proxy {
     artifacts_addr: Option<SocketAddr>,
     graphql_addr: Arc<RwLock<Option<SocketAddr>>>,
     pool: Arc<SqlitePool>,
+    handlers: Option<Vec<Box<dyn Handler>>>,
 }
 
 impl Proxy {
@@ -86,6 +87,7 @@ impl Proxy {
             graphql_addr: Arc::new(RwLock::new(graphql_addr)),
             artifacts_addr,
             pool,
+            handlers: None
         }
     }
 
@@ -107,6 +109,8 @@ impl Proxy {
 
         let make_svc = make_service_fn(move |conn: &AddrStream| {
             let remote_addr = conn.remote_addr().ip();
+            let handlers = self.handlers.clone().unwrap_or_default();
+
             let cors = CorsLayer::new()
                 .max_age(DEFAULT_MAX_AGE)
                 .allow_methods([Method::GET, Method::POST])
@@ -172,14 +176,6 @@ async fn handle(
     pool: Arc<SqlitePool>,
     req: Request<Body>,
 ) -> Result<Response<Body>, Infallible> {
-    let handlers: Vec<Box<dyn Handler>> = vec![
-        Box::new(SqlHandler::new(pool.clone())),
-        Box::new(GraphQLHandler::new(client_ip, graphql_addr)),
-        Box::new(GrpcHandler::new(client_ip, grpc_addr)),
-        Box::new(StaticHandler::new(client_ip, artifacts_addr)),
-        Box::new(McpHandler::new(pool.clone())),
-    ];
-
     for handler in handlers {
         if handler.should_handle(&req) {
             return Ok(handler.handle(req).await);

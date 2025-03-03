@@ -7,6 +7,7 @@ use super::Handler;
 
 pub(crate) const LOG_TARGET: &str = "torii::server::handlers::static";
 
+#[derive(Debug)]
 pub struct StaticHandler {
     client_ip: IpAddr,
     artifacts_addr: Option<SocketAddr>,

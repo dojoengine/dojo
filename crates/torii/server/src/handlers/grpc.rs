@@ -8,6 +8,7 @@ use super::Handler;
 
 pub(crate) const LOG_TARGET: &str = "torii::server::handlers::grpc";
 
+#[derive(Debug)]
 pub struct GrpcHandler {
     client_ip: IpAddr,
     grpc_addr: Option<SocketAddr>,

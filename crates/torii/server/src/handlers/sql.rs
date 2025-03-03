@@ -9,6 +9,7 @@ use sqlx::{Column, Row, SqlitePool, TypeInfo};
 
 use super::Handler;
 
+#[derive(Debug)]
 pub struct SqlHandler {
     pool: Arc<SqlitePool>,
 }

@@ -75,7 +75,7 @@ struct ResourceCapabilities {
     list_changed: bool,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct McpHandler {
     pool: Arc<SqlitePool>,
 }

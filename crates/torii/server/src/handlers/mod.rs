@@ -7,7 +7,7 @@ pub mod static_files;
 use hyper::{Body, Request, Response};
 
 #[async_trait::async_trait]
-pub trait Handler: Send + Sync {
+pub trait Handler: Send + Sync + std::fmt::Debug {
     // Check if this handler should handle the given request
     fn should_handle(&self, req: &Request<Body>) -> bool;
 
