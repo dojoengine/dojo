@@ -255,15 +255,15 @@ impl McpHandler {
                     Ok(msg) => {
                         match serde_json::to_string(&msg) {
                             Ok(json) => {
-                                // Format SSE data with proper line breaks and flush
-                                let sse_data = format!("data: {}\n\n", json);
+                                // Format SSE data with event name and proper line breaks
+                                let sse_data = format!("event: message\ndata: {}\n\n", json);
                                 Some((Ok::<_, hyper::Error>(hyper::body::Bytes::from(sse_data)), rx))
                             },
                             Err(e) => {
                                 eprintln!("Error serializing message: {}", e);
                                 // Format error event with proper SSE format
                                 Some((Ok::<_, hyper::Error>(hyper::body::Bytes::from(
-                                    format!("data: {{\n  \"error\": \"{}\" }}\n\n", e)
+                                    format!("event: error\ndata: {{\n  \"error\": \"{}\" }}\n\n", e)
                                 )), rx))
                             }
                         }
@@ -361,6 +361,8 @@ impl McpHandler {
                         // Forward the response to the SSE channel
                         if let Err(e) = tx.send(response.clone()) {
                             eprintln!("Error forwarding response to SSE: {}", e);
+                        } else {
+                            eprintln!("Successfully sent response to SSE channel: {:?}", response.id);
                         }
                         
                         Response::builder()
@@ -397,6 +399,8 @@ impl McpHandler {
                             // Forward the response to the SSE channel
                             if let Err(e) = tx.send(response.clone()) {
                                 eprintln!("Error forwarding response to SSE: {}", e);
+                            } else {
+                                eprintln!("Successfully sent response to SSE channel: {:?}", response.id);
                             }
                             
                             Response::builder()
