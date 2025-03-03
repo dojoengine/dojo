@@ -160,7 +160,7 @@ impl Proxy {
 async fn handle(
     client_ip: IpAddr,
     req: Request<Body>,
-    handlers: &Vec<Box<dyn Handler>>,
+    handlers: &[Box<dyn Handler>],
 ) -> Result<Response<Body>, Infallible> {
     for handler in handlers.iter() {
         if handler.should_handle(&req) {
