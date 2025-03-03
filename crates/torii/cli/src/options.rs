@@ -372,7 +372,7 @@ impl Default for ErcOptions {
     }
 }
 
-#[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq, Default)]
 #[command(next_help_heading = "SQL options")]
 pub struct SqlOptions {
     /// Whether model tables should default to having indices on all columns
@@ -395,12 +395,6 @@ pub struct SqlOptions {
     )]
     #[serde(default)]
     pub model_indices: Option<Vec<ModelIndices>>,
-}
-
-impl Default for SqlOptions {
-    fn default() -> Self {
-        Self { all_model_indices: false, model_indices: None }
-    }
 }
 
 // Parses clap cli argument which is expected to be in the format:
