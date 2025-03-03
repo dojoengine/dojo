@@ -81,9 +81,9 @@ pub trait Model<M> {
     fn layout() -> Layout;
     /// Returns the layout of a field in the model.
     fn field_layout(field_selector: felt252) -> Option<Layout>;
-    /// Indicates if the model uses the legacy model storage (true), or
+    /// Indicates if the model uses the legacy storage (true), or
     /// the new one (false).
-    fn use_legacy_model_storage() -> bool;
+    fn use_legacy_storage() -> bool;
     /// Returns the unpacked size of the model. Only applicable for fixed size models.
     fn unpacked_size() -> Option<usize>;
     /// Returns the packed size of the model. Only applicable for fixed size models.
@@ -151,8 +151,8 @@ pub impl ModelImpl<M, +ModelParser<M>, +ModelDefinition<M>, +Serde<M>, +Drop<M>>
         find_model_field_layout(Self::layout(), field_selector)
     }
 
-    fn use_legacy_model_storage() -> bool {
-        ModelDefinition::<M>::use_legacy_model_storage()
+    fn use_legacy_storage() -> bool {
+        ModelDefinition::<M>::use_legacy_storage()
     }
 
     fn schema() -> Struct {
