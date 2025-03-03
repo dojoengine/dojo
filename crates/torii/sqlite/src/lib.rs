@@ -858,13 +858,11 @@ impl Sql {
                 columns.push(format!("[{name}] {sql_type}"));
             }
 
-            let model_indices = self
-                .config
-                .model_indices
-                .iter()
-                .find(|m| m.model_tag == table_id);
+            let model_indices = self.config.model_indices.iter().find(|m| m.model_tag == table_id);
 
-            if model_indices.is_some_and(|m| m.fields.contains(&name.to_string())) || (model_indices.is_none() && (self.config.all_model_indices || is_key)) {
+            if model_indices.is_some_and(|m| m.fields.contains(&name.to_string()))
+                || (model_indices.is_none() && (self.config.all_model_indices || is_key))
+            {
                 indices.push(format!(
                     "CREATE INDEX IF NOT EXISTS [idx_{table_id}_{name}] ON [{table_id}] \
                      ([{name}]);"
@@ -930,7 +928,7 @@ impl Sql {
                         indices,
                         table_id,
                         member_diff,
-                        member.key
+                        member.key,
                     )?;
                 }
             }
