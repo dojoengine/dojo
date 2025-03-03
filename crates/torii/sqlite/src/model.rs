@@ -113,6 +113,11 @@ impl ModelReader<Error> for ModelSQLReader {
     async fn layout(&self) -> Result<Layout, Error> {
         Ok(self.layout.clone())
     }
+
+    async fn use_legacy_model_storage(&self) -> Result<bool, Error> {
+        // TODO: manage the new use_legacy_storage model function
+        Ok(false)
+    }
 }
 
 /// Creates a query that fetches all models and their nested data.
