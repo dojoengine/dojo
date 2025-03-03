@@ -112,6 +112,7 @@ impl Runner {
         options = options.auto_vacuum(SqliteAutoVacuum::None);
         options = options.journal_mode(SqliteJournalMode::Wal);
         options = options.synchronous(SqliteSynchronous::Normal);
+        options = options.pragma("cache_size", "-65536"); // Set cache size to 64MB (65536 KiB)
 
         let pool = SqlitePoolOptions::new()
             .min_connections(1)
