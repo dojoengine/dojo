@@ -43,6 +43,7 @@ struct JsonRpcNotification {
 struct JsonRpcResponse {
     jsonrpc: String,
     id: Value,
+    #[serde(skip_serializing_if = "Option::is_none")]
     result: Option<Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
     error: Option<JsonRpcError>,
@@ -110,6 +111,8 @@ impl McpHandler {
             "initialize" => self.handle_initialize(request.id),
             "tools/list" => self.handle_tools_list(request.id),
             "tools/call" => self.handle_tools_call(request).await,
+            "resources/list" => self.handle_resources_list(request.id),
+            "resources/read" => self.handle_resources_read(request).await,
             _ => JsonRpcResponse::method_not_found(request.id),
         }
     }
@@ -144,7 +147,7 @@ impl McpHandler {
                 "tools": [
                     {
                         "name": "query",
-                        "description": "Execute a SQL query on the database",
+                        // "description": "Execute a SQL query on the database",
                         "inputSchema": {
                             "type": "object",
                             "properties": {
@@ -158,7 +161,7 @@ impl McpHandler {
                     },
                     {
                         "name": "schema",
-                        "description": "Retrieve the database schema including tables, columns, and their types",
+                        // "description": "Retrieve the database schema including tables, columns, and their types",
                         "inputSchema": {
                             "type": "object",
                             "properties": {
@@ -301,7 +304,7 @@ impl McpHandler {
                         .body(Body::from(
                             serde_json::to_string(&JsonRpcResponse::invalid_params(
                                 Value::Number(Into::<Number>::into(-1)),
-                                "missing sessionId query param",
+                                "session not found",
                             ))
                             .unwrap(),
                         ))
@@ -334,7 +337,7 @@ impl McpHandler {
         // First try to parse as a raw JSON value to handle any valid JSON input
         let parsed_json: Result<serde_json::Value, _> = serde_json::from_str(&body_str);
 
-        let response = match parsed_json {
+        let response = match &parsed_json {
             Ok(json_value) => {
                 // Try to parse as a JsonRpcMessage
                 match serde_json::from_value::<JsonRpcMessage>(json_value.clone()) {
@@ -570,6 +573,39 @@ impl McpHandler {
                     data: None,
                 }),
             }
+        }
+    }
+
+    // New method to handle resources/list
+    fn handle_resources_list(&self, id: Value) -> JsonRpcResponse {
+        JsonRpcResponse::ok(
+            id,
+            json!({
+                "resources": []
+            }),
+        )
+    }
+
+    // New method to handle resources/read
+    async fn handle_resources_read(&self, request: JsonRpcRequest) -> JsonRpcResponse {
+        let Some(params) = &request.params else {
+            return JsonRpcResponse::invalid_params(request.id, "Missing params");
+        };
+
+        let Some(uri) = params.get("uri").and_then(Value::as_str) else {
+            return JsonRpcResponse::invalid_params(request.id, "Missing uri parameter");
+        };
+
+        // For now, we don't have any resources to read
+        JsonRpcResponse {
+            jsonrpc: JSONRPC_VERSION.to_string(),
+            id: request.id,
+            result: None,
+            error: Some(JsonRpcError {
+                code: -32601,
+                message: "Resource not found".to_string(),
+                data: Some(json!({ "details": format!("No resource found with URI: {}", uri) })),
+            }),
         }
     }
 }
