@@ -127,7 +127,8 @@ impl McpHandler {
             },
             Tool {
                 name: "schema",
-                description: "Retrieve the database schema including tables, columns, and their types",
+                description: "Retrieve the database schema including tables, columns, and their \
+                              types",
                 input_schema: json!({
                     "type": "object",
                     "properties": {
@@ -189,18 +190,19 @@ impl McpHandler {
     }
 
     fn handle_tools_list(&self, id: Value) -> JsonRpcResponse {
-        let tools_json: Vec<Value> = self.tools.iter().map(|tool| {
-            json!({
-                "name": tool.name,
-                "description": tool.description,
-                "inputSchema": tool.input_schema
+        let tools_json: Vec<Value> = self
+            .tools
+            .iter()
+            .map(|tool| {
+                json!({
+                    "name": tool.name,
+                    "description": tool.description,
+                    "inputSchema": tool.input_schema
+                })
             })
-        }).collect();
+            .collect();
 
-        JsonRpcResponse::ok(
-            id,
-            json!({ "tools": tools_json }),
-        )
+        JsonRpcResponse::ok(id, json!({ "tools": tools_json }))
     }
 
     async fn handle_tools_call(&self, request: JsonRpcRequest) -> JsonRpcResponse {
@@ -334,7 +336,7 @@ impl McpHandler {
                             ))
                             .unwrap(),
                         ))
-                        .unwrap()
+                        .unwrap();
                 }
             }
         };
@@ -392,7 +394,8 @@ impl McpHandler {
                     }
                     Err(_) => {
                         // If not a valid JsonRpcMessage, try to interpret as a raw request
-                        // This is more permissive and handles cases where the client sends simplified JSON
+                        // This is more permissive and handles cases where the client sends
+                        // simplified JSON
                         if let Some(method) = json_value.get("method").and_then(|m| m.as_str()) {
                             let id = json_value.get("id").cloned().unwrap_or(Value::Null);
                             let params = json_value.get("params").cloned();
@@ -594,14 +597,10 @@ impl McpHandler {
 
     // New method to handle resources/list
     fn handle_resources_list(&self, id: Value) -> JsonRpcResponse {
-        let resources_json: Vec<Value> = self.resources.iter().map(|resource| {
-            json!({ "name": resource.name })
-        }).collect();
+        let resources_json: Vec<Value> =
+            self.resources.iter().map(|resource| json!({ "name": resource.name })).collect();
 
-        JsonRpcResponse::ok(
-            id,
-            json!({ "resources": resources_json }),
-        )
+        JsonRpcResponse::ok(id, json!({ "resources": resources_json }))
     }
 
     // New method to handle resources/read
