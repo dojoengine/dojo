@@ -18,7 +18,7 @@ use katana_primitives::genesis::Genesis;
 use katana_primitives::state::StateUpdatesWithClasses;
 use katana_primitives::utils::split_u256;
 use katana_primitives::version::CURRENT_STARKNET_VERSION;
-use katana_primitives::Felt;
+use katana_primitives::{felt, Felt};
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use starknet::core::utils::cairo_short_string_to_felt;
@@ -137,6 +137,7 @@ lazy_static! {
 
         let accounts = DevAllocationsGenerator::new(10)
             .with_balance(U256::from(DEFAULT_PREFUNDED_ACCOUNT_BALANCE))
+            .with_class(felt!("0x024a9edbfa7082accfceabf6a92d7160086f346d622f28741bf1c651c412c9ab"))
             .generate();
 
         chain_spec.genesis.extend_allocations(accounts.into_iter().map(|(k, v)| (k, v.into())));
