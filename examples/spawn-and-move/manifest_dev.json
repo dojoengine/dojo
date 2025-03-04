@@ -3768,10 +3768,10 @@
       ]
     },
     {
-      "class_hash": "0x7b56130dc5843f68cf1624f8a6df7c9f21c37afbc6b02a5a374c8e4578cd068",
+      "class_hash": "0x342e7234ef0066eaf28438eb8e2013a711548ee1b8f4b286f6e2dad44fc5a0b",
       "contract_name": "ERC1155Token",
       "instance_name": "Rewards",
-      "address": "0x570ef5185f133d8075af38731091bf2f986f4b6955f615579862f4a4ef79c34",
+      "address": "0x357e29a60b3c5b809695dc8b2e0d43f07be8e7654dd1b7378989dd6c51bb798",
       "abi": [
         {
           "type": "struct",

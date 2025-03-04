@@ -659,18 +659,6 @@ impl Handler for McpHandler {
     async fn handle(&self, req: Request<Body>, _: IpAddr) -> Response<Body> {
         let uri_path = req.uri().path();
 
-        // Handle CORS preflight requests
-        if req.method() == hyper::Method::OPTIONS {
-            return Response::builder()
-                .status(StatusCode::OK)
-                .header("Access-Control-Allow-Origin", "*")
-                .header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-                .header("Access-Control-Allow-Headers", "Content-Type, Authorization")
-                .header("Access-Control-Max-Age", "86400")
-                .body(Body::empty())
-                .unwrap();
-        }
-
         // Handle message endpoint (for SSE clients)
         if uri_path == "/mcp/message" {
             return self.handle_message_request(req).await;

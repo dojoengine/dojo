@@ -38,6 +38,10 @@ pub(crate) fn match_entity_keys(
 
                     if !clause.models.is_empty()
                         && !clause.models.iter().any(|clause_model| {
+                            if clause_model.is_empty() {
+                                return true;
+                            }
+
                             let (clause_namespace, clause_model) =
                                 clause_model.split_once('-').unwrap();
                             // if both namespace and model are empty, we should match all.

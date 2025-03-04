@@ -24,9 +24,6 @@ use crate::executor::{
 use crate::types::Contract;
 use crate::utils::utc_dt_string_from_timestamp;
 
-type IsEventMessage = bool;
-type IsStoreUpdate = bool;
-
 pub mod cache;
 pub mod constants;
 pub mod erc;
@@ -362,13 +359,7 @@ impl Sql {
             vec![Argument::String(entity_id.clone()), Argument::String(model_id.clone())],
         ))?;
 
-        self.set_entity_model(
-            &namespaced_name,
-            event_id,
-            (&entity_id, false),
-            (&entity, keys_str.is_none()),
-            block_timestamp,
-        )?;
+        self.set_entity_model(&namespaced_name, event_id, &entity_id, &entity, block_timestamp)?;
 
         Ok(())
     }
@@ -425,8 +416,8 @@ impl Sql {
         self.set_entity_model(
             &namespaced_name,
             event_id,
-            (&entity_id, true),
-            (&entity, false),
+            &format!("event:{}", entity_id),
+            &entity,
             block_timestamp,
         )?;
 
@@ -612,19 +603,16 @@ impl Sql {
         &mut self,
         model_name: &str,
         event_id: &str,
-        entity_id: (&str, IsEventMessage),
-        entity: (&Ty, IsStoreUpdate),
+        entity_id: &str,
+        entity: &Ty,
         block_timestamp: u64,
     ) -> Result<()> {
-        let (entity_id, is_event_message) = entity_id;
-        let (entity, is_store_update) = entity;
-
         let mut columns = vec![
             "internal_id".to_string(),
             "internal_event_id".to_string(),
             "internal_executed_at".to_string(),
             "internal_updated_at".to_string(),
-            if is_event_message {
+            if entity_id.starts_with("event:") {
                 "internal_event_message_id".to_string()
             } else {
                 "internal_entity_id".to_string()
@@ -632,15 +620,11 @@ impl Sql {
         ];
 
         let mut arguments = vec![
-            Argument::String(if is_event_message {
-                "event:".to_string() + entity_id
-            } else {
-                entity_id.to_string()
-            }),
+            Argument::String(entity_id.to_string()),
             Argument::String(event_id.to_string()),
             Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
             Argument::String(chrono::Utc::now().to_rfc3339()),
-            Argument::String(entity_id.to_string()),
+            Argument::String(entity_id.trim_start_matches("event:").to_string()),
         ];
 
         fn collect_members(
@@ -706,33 +690,15 @@ impl Sql {
         // Collect all columns and arguments recursively
         collect_members("", entity, &mut columns, &mut arguments)?;
 
-        // Build the final query
+        // Build the final query - if an entity is updated, we insert the entity and default to NULL
+        // for non updated values.
         let placeholders: Vec<&str> = arguments.iter().map(|_| "?").collect();
-        let statement = if is_store_update {
-            arguments.push(Argument::String(if is_event_message {
-                "event:".to_string() + entity_id
-            } else {
-                entity_id.to_string()
-            }));
-
-            format!(
-                "UPDATE [{}] SET {} WHERE internal_id = ?",
-                model_name,
-                columns
-                    .iter()
-                    .zip(placeholders.iter())
-                    .map(|(column, placeholder)| format!("{} = {}", column, placeholder))
-                    .collect::<Vec<String>>()
-                    .join(", ")
-            )
-        } else {
-            format!(
-                "INSERT OR REPLACE INTO [{}] ({}) VALUES ({})",
-                model_name,
-                columns.join(","),
-                placeholders.join(",")
-            )
-        };
+        let statement = format!(
+            "INSERT OR REPLACE INTO [{}] ({}) VALUES ({})",
+            model_name,
+            columns.join(","),
+            placeholders.join(",")
+        );
 
         // Execute the single query
         self.executor.send(QueryMessage::other(statement, arguments))?;
