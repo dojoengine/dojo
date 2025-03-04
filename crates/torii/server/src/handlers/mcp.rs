@@ -664,38 +664,38 @@ impl Handler for McpHandler {
             return self.handle_message_request(req).await;
         }
 
+        // Handle WebSocket upgrade requests
+        if hyper_tungstenite::is_upgrade_request(&req) {
+            let (response, websocket) = match hyper_tungstenite::upgrade(req, None) {
+                Ok(upgrade) => upgrade,
+                Err(_) => {
+                    return Response::builder()
+                        .status(StatusCode::BAD_REQUEST)
+                        .body(Body::from("Failed to upgrade WebSocket connection"))
+                        .unwrap();
+                }
+            };
+
+            let this = self.clone();
+            tokio::spawn(async move {
+                if let Ok(ws_stream) = websocket.await {
+                    this.handle_websocket_connection(ws_stream).await;
+                }
+            });
+
+            return response;
+        }
+
         match req.method() {
             // Handle GET requests for SSE connection
             &hyper::Method::GET => {
                 return self.handle_sse_connection().await;
             }
-            // Handle WebSocket upgrade requests
-            _ if hyper_tungstenite::is_upgrade_request(&req) => {
-                let (response, websocket) = match hyper_tungstenite::upgrade(req, None) {
-                    Ok(upgrade) => upgrade,
-                    Err(_) => {
-                        return Response::builder()
-                            .status(StatusCode::BAD_REQUEST)
-                            .header("Access-Control-Allow-Origin", "*")
-                            .body(Body::from("Failed to upgrade WebSocket connection"))
-                            .unwrap();
-                    }
-                };
-
-                let this = self.clone();
-                tokio::spawn(async move {
-                    if let Ok(ws_stream) = websocket.await {
-                        this.handle_websocket_connection(ws_stream).await;
-                    }
-                });
-
-                response
-            }
             // Return Method Not Allowed for other methods
             _ => Response::builder()
-                .status(StatusCode::METHOD_NOT_ALLOWED)
-                .header("Access-Control-Allow-Origin", "*")
-                .body(Body::from("Method not allowed"))
+                .body(Body::from(
+                    serde_json::to_string(&JsonRpcResponse::method_not_found(Value::Null)).unwrap(),
+                ))
                 .unwrap(),
         }
     }
