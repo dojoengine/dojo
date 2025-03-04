@@ -539,47 +539,39 @@ impl McpHandler {
     }
 
     async fn handle_query_tool(&self, request: JsonRpcRequest) -> JsonRpcResponse {
-        if let Some(params) = request.params {
-            if let Some(query) = params.get("query").and_then(Value::as_str) {
-                match sqlx::query(query).fetch_all(&*self.pool).await {
-                    Ok(rows) => {
-                        // Convert rows to JSON using shared mapping function
-                        let result = rows.iter().map(map_row_to_json).collect::<Vec<_>>();
+        let Some(params) = request.params else {
+            return JsonRpcResponse::invalid_params(request.id, "Missing params");
+        };
 
-                        JsonRpcResponse {
-                            jsonrpc: JSONRPC_VERSION.to_string(),
-                            id: request.id,
-                            result: Some(json!({
-                                "content": [{
-                                    "type": "text",
-                                    "text": serde_json::to_string(&result).unwrap()
-                                }]
-                            })),
-                            error: None,
-                        }
-                    }
-                    Err(e) => JsonRpcResponse {
+        let args = params.get("arguments").and_then(Value::as_object);
+        if let Some(query) = args.and_then(|args| args.get("query").and_then(Value::as_str)) {
+            match sqlx::query(query).fetch_all(&*self.pool).await {
+                Ok(rows) => {
+                    // Convert rows to JSON using shared mapping function
+                    let result = rows.iter().map(map_row_to_json).collect::<Vec<_>>();
+
+                    JsonRpcResponse {
                         jsonrpc: JSONRPC_VERSION.to_string(),
                         id: request.id,
-                        result: None,
-                        error: Some(JsonRpcError {
-                            code: -32603,
-                            message: "Database error".to_string(),
-                            data: Some(json!({ "details": e.to_string() })),
-                        }),
-                    },
+                        result: Some(json!({
+                            "content": [{
+                                "type": "text",
+                                "text": serde_json::to_string(&result).unwrap()
+                            }]
+                        })),
+                        error: None,
+                    }
                 }
-            } else {
-                JsonRpcResponse {
+                Err(e) => JsonRpcResponse {
                     jsonrpc: JSONRPC_VERSION.to_string(),
                     id: request.id,
                     result: None,
                     error: Some(JsonRpcError {
-                        code: -32602,
-                        message: "Invalid params".to_string(),
-                        data: Some(json!({ "details": "Missing query parameter" })),
+                        code: -32603,
+                        message: "Database error".to_string(),
+                        data: Some(json!({ "details": e.to_string() })),
                     }),
-                }
+                },
             }
         } else {
             JsonRpcResponse {
@@ -589,7 +581,7 @@ impl McpHandler {
                 error: Some(JsonRpcError {
                     code: -32602,
                     message: "Invalid params".to_string(),
-                    data: None,
+                    data: Some(json!({ "details": "Missing query parameter" })),
                 }),
             }
         }
