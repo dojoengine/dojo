@@ -3,102 +3,20 @@ use std::sync::Arc;
 
 use futures_util::{SinkExt, StreamExt};
 use hyper::{Body, Request, Response, StatusCode};
-use serde::{Deserialize, Serialize};
-use serde_json::{json, Number, Value};
-use sqlx::{Row, SqlitePool};
+use serde_json::{json, Value};
+use sqlx::SqlitePool;
 use tokio::sync::{broadcast, RwLock};
 use tokio_tungstenite::tungstenite::Message;
+use torii_mcp::{tools::{self, Tool}, resources::{self, Resource}};
 use tracing::warn;
 use uuid::Uuid;
 
-use super::sql::map_row_to_json;
+use torii_mcp::types::{
+    JsonRpcMessage, JsonRpcRequest, JsonRpcResponse, SseSession,
+    JSONRPC_VERSION, MCP_VERSION, SSE_CHANNEL_CAPACITY,
+};
+
 use super::Handler;
-
-const JSONRPC_VERSION: &str = "2.0";
-const MCP_VERSION: &str = "2024-11-05";
-const SSE_CHANNEL_CAPACITY: usize = 100;
-
-#[derive(Debug, Deserialize)]
-#[serde(untagged)]
-enum JsonRpcMessage {
-    Request(JsonRpcRequest),
-    Notification(JsonRpcNotification),
-}
-
-#[derive(Debug, Deserialize)]
-struct JsonRpcRequest {
-    jsonrpc: String,
-    id: Value,
-    method: String,
-    params: Option<Value>,
-}
-
-#[derive(Debug, Deserialize)]
-struct JsonRpcNotification {
-    _jsonrpc: String,
-    _method: String,
-    _params: Option<Value>,
-}
-
-#[derive(Debug, Serialize, Clone)]
-struct JsonRpcResponse {
-    jsonrpc: String,
-    id: Value,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    result: Option<Value>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    error: Option<JsonRpcError>,
-}
-
-#[derive(Debug, Serialize, Clone)]
-struct JsonRpcError {
-    code: i32,
-    message: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    data: Option<Value>,
-}
-
-#[derive(Debug, Serialize)]
-struct Implementation {
-    name: String,
-    version: String,
-}
-
-#[derive(Debug, Serialize)]
-struct ServerCapabilities {
-    tools: ToolCapabilities,
-    resources: ResourceCapabilities,
-}
-
-#[derive(Debug, Serialize)]
-struct ToolCapabilities {
-    list_changed: bool,
-}
-
-#[derive(Debug, Serialize)]
-struct ResourceCapabilities {
-    subscribe: bool,
-    list_changed: bool,
-}
-
-// Structure to hold SSE session information
-#[derive(Clone, Debug)]
-struct SseSession {
-    tx: broadcast::Sender<JsonRpcResponse>,
-    _session_id: String,
-}
-
-#[derive(Clone, Debug)]
-struct Tool {
-    name: &'static str,
-    description: &'static str,
-    input_schema: Value,
-}
-
-#[derive(Clone, Debug)]
-struct Resource {
-    name: &'static str,
-}
 
 #[derive(Clone, Debug)]
 pub struct McpHandler {
@@ -110,44 +28,11 @@ pub struct McpHandler {
 
 impl McpHandler {
     pub fn new(pool: Arc<SqlitePool>) -> Self {
-        let tools = vec![
-            Tool {
-                name: "query",
-                description: "Execute a SQL query on the database",
-                input_schema: json!({
-                    "type": "object",
-                    "properties": {
-                        "query": {
-                            "type": "string",
-                            "description": "SQL query to execute"
-                        }
-                    },
-                    "required": ["query"]
-                }),
-            },
-            Tool {
-                name: "schema",
-                description: "Retrieve the database schema including tables, columns, and their \
-                              types",
-                input_schema: json!({
-                    "type": "object",
-                    "properties": {
-                        "table": {
-                            "type": "string",
-                            "description": "Optional table name to get schema for. If omitted, returns schema for all tables."
-                        }
-                    }
-                }),
-            },
-        ];
-
-        let resources = vec![]; // Add resources as needed
-
         Self {
             pool,
             sse_sessions: Arc::new(tokio::sync::RwLock::new(std::collections::HashMap::new())),
-            tools,
-            resources,
+            tools: tools::get_tools(),
+            resources: resources::get_resources(),
         }
     }
 
@@ -171,17 +56,17 @@ impl McpHandler {
             id,
             json!({
                 "protocolVersion": MCP_VERSION,
-                "serverInfo": Implementation {
-                    name: "torii-mcp".to_string(),
-                    version: env!("CARGO_PKG_VERSION").to_string(),
+                "serverInfo": {
+                    "name": "torii-mcp",
+                    "version": env!("CARGO_PKG_VERSION"),
                 },
-                "capabilities": ServerCapabilities {
-                    tools: ToolCapabilities {
-                        list_changed: true,
+                "capabilities": {
+                    "tools": {
+                        "list_changed": true,
                     },
-                    resources: ResourceCapabilities {
-                        subscribe: true,
-                        list_changed: true,
+                    "resources": {
+                        "subscribe": true,
+                        "list_changed": true,
                     },
                 },
                 "instructions": include_str!("../../static/mcp-instructions.txt")
@@ -215,8 +100,8 @@ impl McpHandler {
         };
 
         match tool_name {
-            "query" => self.handle_query_tool(request).await,
-            "schema" => self.handle_schema_tool(request).await,
+            "query" => tools::query::handle(self.pool.clone(), request).await,
+            "schema" => tools::schema::handle(self.pool.clone(), request).await,
             _ => JsonRpcResponse::method_not_found(request.id),
         }
     }
@@ -248,7 +133,7 @@ impl McpHandler {
         }
     }
 
-    // New method to handle SSE connections
+    // Method to handle SSE connections
     async fn handle_sse_connection(&self) -> Response<Body> {
         // Create a new session ID
         let session_id = Uuid::new_v4().to_string();
@@ -301,293 +186,101 @@ impl McpHandler {
                             }
                         }
                     }
-                    Err(_) => None,
+                    Err(e) => {
+                        warn!("Error receiving message: {}", e);
+                        // Return error and continue
+                        Some((
+                            Ok::<_, hyper::Error>(hyper::body::Bytes::from(format!(
+                                "event: error\ndata: {{\n  \"error\": \"{}\" }}\n\n",
+                                e
+                            ))),
+                            rx,
+                        ))
+                    }
                 }
             }
         }));
 
-        // Return the SSE response
+        // Build the response with appropriate headers for SSE
         Response::builder()
+            .status(StatusCode::OK)
             .header("Content-Type", "text/event-stream")
             .header("Cache-Control", "no-cache")
             .header("Connection", "keep-alive")
-            .header("X-Session-Id", session_id)
             .body(Body::wrap_stream(stream))
             .unwrap()
     }
 
-    // New method to handle JSON-RPC messages sent via HTTP POST
     async fn handle_message_request(&self, req: Request<Body>) -> Response<Body> {
-        // Extract the session ID from the query parameters
-        let uri = req.uri();
-        let session_id = uri.query().unwrap().split("=").collect::<Vec<_>>()[1];
+        // Extract session ID from query parameters
+        let session_id = req
+            .uri()
+            .query()
+            .and_then(|q| {
+                q.split('&')
+                    .find_map(|p| {
+                        let parts: Vec<&str> = p.split('=').collect();
+                        if parts.len() == 2 && parts[0] == "sessionId" {
+                            Some(parts[1].to_string())
+                        } else {
+                            None
+                        }
+                    })
+            });
+
+        if session_id.is_none() {
+            return Response::builder()
+                .status(StatusCode::BAD_REQUEST)
+                .body(Body::from("Missing sessionId parameter"))
+                .unwrap();
+        }
+
+        let session_id = session_id.unwrap();
 
         // Check if the session exists
         let tx = {
             let sessions = self.sse_sessions.read().await;
-            match sessions.get(session_id) {
-                Some(s) => s.tx.clone(),
-                _ => {
-                    return Response::builder()
-                        .body(Body::from(
-                            serde_json::to_string(&JsonRpcResponse::invalid_params(
-                                Value::Number(Into::<Number>::into(-1)),
-                                "session not found",
-                            ))
-                            .unwrap(),
-                        ))
-                        .unwrap();
-                }
-            }
+            sessions.get(&session_id).map(|s| s.tx.clone())
         };
+
+        if tx.is_none() {
+            return Response::builder()
+                .status(StatusCode::NOT_FOUND)
+                .body(Body::from("Session not found"))
+                .unwrap();
+        }
+
+        let tx = tx.unwrap();
 
         // Read the request body
-        let body_bytes = match hyper::body::to_bytes(req.into_body()).await {
-            Ok(bytes) => bytes,
-            Err(e) => {
-                return Response::builder()
-                    .status(StatusCode::BAD_REQUEST)
-                    .body(Body::from(format!("Error reading request body: {}", e)))
-                    .unwrap();
-            }
-        };
+        let body_bytes = hyper::body::to_bytes(req.into_body()).await.unwrap();
+        let body_str = String::from_utf8(body_bytes.to_vec()).unwrap();
 
-        let body_str = match String::from_utf8(body_bytes.to_vec()) {
-            Ok(s) => s,
-            Err(e) => {
-                return Response::builder()
-                    .status(StatusCode::BAD_REQUEST)
-                    .body(Body::from(format!("Invalid UTF-8 in request body: {}", e)))
-                    .unwrap();
-            }
-        };
-
-        // First try to parse as a raw JSON value to handle any valid JSON input
-        let parsed_json: Result<serde_json::Value, _> = serde_json::from_str(&body_str);
-
-        let response = match &parsed_json {
-            Ok(json_value) => {
-                // Try to parse as a JsonRpcMessage
-                match serde_json::from_value::<JsonRpcMessage>(json_value.clone()) {
-                    Ok(JsonRpcMessage::Request(request)) => {
-                        let response = self.handle_request(request).await;
-
-                        // Forward the response to the SSE channel
-                        if let Err(e) = tx.send(response.clone()) {
-                            warn!("Error forwarding response to SSE: {}", e);
-                        }
-
-                        Response::builder()
-                            .status(StatusCode::ACCEPTED)
-                            .header("Content-Type", "application/json")
-                            .header("Access-Control-Allow-Origin", "*")
-                            .body(Body::from(serde_json::to_string(&response).unwrap()))
-                            .unwrap()
-                    }
-                    Ok(JsonRpcMessage::Notification(_)) => {
-                        // For notifications, just send 202 Accepted with no body
-                        Response::builder()
-                            .status(StatusCode::ACCEPTED)
-                            .header("Access-Control-Allow-Origin", "*")
-                            .body(Body::empty())
-                            .unwrap()
-                    }
-                    Err(_) => {
-                        // If not a valid JsonRpcMessage, try to interpret as a raw request
-                        // This is more permissive and handles cases where the client sends
-                        // simplified JSON
-                        if let Some(method) = json_value.get("method").and_then(|m| m.as_str()) {
-                            let id = json_value.get("id").cloned().unwrap_or(Value::Null);
-                            let params = json_value.get("params").cloned();
-
-                            let request = JsonRpcRequest {
-                                jsonrpc: JSONRPC_VERSION.to_string(),
-                                id,
-                                method: method.to_string(),
-                                params,
-                            };
-
-                            let response = self.handle_request(request).await;
-
-                            // Forward the response to the SSE channel
-                            if let Err(e) = tx.send(response.clone()) {
-                                warn!("Error forwarding response to SSE: {}", e);
-                            }
-
-                            Response::builder()
-                                .status(StatusCode::ACCEPTED)
-                                .header("Content-Type", "application/json")
-                                .header("Access-Control-Allow-Origin", "*")
-                                .body(Body::from(serde_json::to_string(&response).unwrap()))
-                                .unwrap()
-                        } else {
-                            // Not a valid request
-                            let error_response = JsonRpcResponse::invalid_request(Value::Null);
-                            Response::builder()
-                                .status(StatusCode::BAD_REQUEST)
-                                .header("Content-Type", "application/json")
-                                .header("Access-Control-Allow-Origin", "*")
-                                .body(Body::from(serde_json::to_string(&error_response).unwrap()))
-                                .unwrap()
-                        }
-                    }
+        // Parse the JSON-RPC request
+        let response = match serde_json::from_str::<JsonRpcMessage>(&body_str) {
+            Ok(JsonRpcMessage::Request(request)) => {
+                let response = self.handle_request(request).await;
+                // Send the response to the SSE channel
+                if let Err(e) = tx.send(response.clone()) {
+                    warn!("Error sending message to SSE channel: {}", e);
                 }
+                response
             }
-            Err(e) => {
-                let error_response = JsonRpcResponse::parse_error(Value::Null, &e.to_string());
-                Response::builder()
-                    .status(StatusCode::BAD_REQUEST)
-                    .header("Content-Type", "application/json")
-                    .header("Access-Control-Allow-Origin", "*")
-                    .body(Body::from(serde_json::to_string(&error_response).unwrap()))
-                    .unwrap()
+            Ok(JsonRpcMessage::Notification(_notification)) => {
+                // Handle notifications if needed
+                JsonRpcResponse::ok(Value::Null, json!({}))
             }
+            Err(e) => JsonRpcResponse::parse_error(Value::Null, &e.to_string()),
         };
 
-        response
+        // Return the response
+        Response::builder()
+            .status(StatusCode::OK)
+            .header("Content-Type", "application/json")
+            .body(Body::from(serde_json::to_string(&response).unwrap()))
+            .unwrap()
     }
 
-    async fn handle_schema_tool(&self, request: JsonRpcRequest) -> JsonRpcResponse {
-        let table_filter = request
-            .params
-            .as_ref()
-            .and_then(|p| p.get("arguments"))
-            .and_then(|args| args.get("table"))
-            .and_then(Value::as_str);
-
-        let schema_query = match table_filter {
-            Some(_table) => "SELECT 
-                    m.name as table_name,
-                    p.* 
-                FROM sqlite_master m
-                JOIN pragma_table_info(m.name) p
-                WHERE m.type = 'table'
-                AND m.name = ?
-                ORDER BY m.name, p.cid"
-                .to_string(),
-            _ => "SELECT 
-                    m.name as table_name,
-                    p.* 
-                FROM sqlite_master m
-                JOIN pragma_table_info(m.name) p
-                WHERE m.type = 'table'
-                ORDER BY m.name, p.cid"
-                .to_string(),
-        };
-
-        let rows = match table_filter {
-            Some(table) => sqlx::query(&schema_query).bind(table).fetch_all(&*self.pool).await,
-            _ => sqlx::query(&schema_query).fetch_all(&*self.pool).await,
-        };
-
-        match rows {
-            Ok(rows) => {
-                let mut schema = serde_json::Map::new();
-
-                for row in rows {
-                    let table_name: String = row.try_get("table_name").unwrap();
-                    let column_name: String = row.try_get("name").unwrap();
-                    let column_type: String = row.try_get("type").unwrap();
-                    let not_null: bool = row.try_get::<bool, _>("notnull").unwrap();
-                    let pk: bool = row.try_get::<bool, _>("pk").unwrap();
-                    let default_value: Option<String> = row.try_get("dflt_value").unwrap();
-
-                    let table_entry = schema.entry(table_name).or_insert_with(|| {
-                        json!({
-                            "columns": serde_json::Map::new()
-                        })
-                    });
-
-                    if let Some(columns) =
-                        table_entry.get_mut("columns").and_then(|v| v.as_object_mut())
-                    {
-                        columns.insert(
-                            column_name,
-                            json!({
-                                "type": column_type,
-                                "nullable": !not_null,
-                                "primary_key": pk,
-                                "default": default_value
-                            }),
-                        );
-                    }
-                }
-
-                JsonRpcResponse {
-                    jsonrpc: JSONRPC_VERSION.to_string(),
-                    id: request.id,
-                    result: Some(json!({
-                        "content": [{
-                            "type": "text",
-                            "text": serde_json::to_string_pretty(&schema).unwrap()
-                        }]
-                    })),
-                    error: None,
-                }
-            }
-            Err(e) => JsonRpcResponse {
-                jsonrpc: JSONRPC_VERSION.to_string(),
-                id: request.id,
-                result: None,
-                error: Some(JsonRpcError {
-                    code: -32603,
-                    message: "Database error".to_string(),
-                    data: Some(json!({ "details": e.to_string() })),
-                }),
-            },
-        }
-    }
-
-    async fn handle_query_tool(&self, request: JsonRpcRequest) -> JsonRpcResponse {
-        let Some(params) = request.params else {
-            return JsonRpcResponse::invalid_params(request.id, "Missing params");
-        };
-
-        let args = params.get("arguments").and_then(Value::as_object);
-        if let Some(query) = args.and_then(|args| args.get("query").and_then(Value::as_str)) {
-            match sqlx::query(query).fetch_all(&*self.pool).await {
-                Ok(rows) => {
-                    // Convert rows to JSON using shared mapping function
-                    let result = rows.iter().map(map_row_to_json).collect::<Vec<_>>();
-
-                    JsonRpcResponse {
-                        jsonrpc: JSONRPC_VERSION.to_string(),
-                        id: request.id,
-                        result: Some(json!({
-                            "content": [{
-                                "type": "text",
-                                "text": serde_json::to_string(&result).unwrap()
-                            }]
-                        })),
-                        error: None,
-                    }
-                }
-                Err(e) => JsonRpcResponse {
-                    jsonrpc: JSONRPC_VERSION.to_string(),
-                    id: request.id,
-                    result: None,
-                    error: Some(JsonRpcError {
-                        code: -32603,
-                        message: "Database error".to_string(),
-                        data: Some(json!({ "details": e.to_string() })),
-                    }),
-                },
-            }
-        } else {
-            JsonRpcResponse {
-                jsonrpc: JSONRPC_VERSION.to_string(),
-                id: request.id,
-                result: None,
-                error: Some(JsonRpcError {
-                    code: -32602,
-                    message: "Invalid params".to_string(),
-                    data: Some(json!({ "details": "Missing query parameter" })),
-                }),
-            }
-        }
-    }
-
-    // New method to handle resources/list
     fn handle_resources_list(&self, id: Value) -> JsonRpcResponse {
         let resources_json: Vec<Value> =
             self.resources.iter().map(|resource| json!({ "name": resource.name })).collect();
@@ -595,58 +288,18 @@ impl McpHandler {
         JsonRpcResponse::ok(id, json!({ "resources": resources_json }))
     }
 
-    // New method to handle resources/read
     async fn handle_resources_read(&self, request: JsonRpcRequest) -> JsonRpcResponse {
         let Some(params) = &request.params else {
             return JsonRpcResponse::invalid_params(request.id, "Missing params");
         };
 
-        let Some(uri) = params.get("uri").and_then(Value::as_str) else {
-            return JsonRpcResponse::invalid_params(request.id, "Missing uri parameter");
+        let Some(_resource_name) = params.get("name").and_then(Value::as_str) else {
+            return JsonRpcResponse::invalid_params(request.id, "Missing resource name");
         };
 
-        // For now, we don't have any resources to read
-        JsonRpcResponse {
-            jsonrpc: JSONRPC_VERSION.to_string(),
-            id: request.id,
-            result: None,
-            error: Some(JsonRpcError {
-                code: -32601,
-                message: "Resource not found".to_string(),
-                data: Some(json!({ "details": format!("No resource found with URI: {}", uri) })),
-            }),
-        }
-    }
-}
-
-impl JsonRpcResponse {
-    fn ok(id: Value, result: Value) -> Self {
-        Self { jsonrpc: JSONRPC_VERSION.to_string(), id, result: Some(result), error: None }
-    }
-
-    fn error(id: Value, code: i32, message: &str, data: Option<Value>) -> Self {
-        Self {
-            jsonrpc: JSONRPC_VERSION.to_string(),
-            id,
-            result: None,
-            error: Some(JsonRpcError { code, message: message.to_string(), data }),
-        }
-    }
-
-    fn invalid_request(id: Value) -> Self {
-        Self::error(id, -32600, "Invalid Request", None)
-    }
-
-    fn method_not_found(id: Value) -> Self {
-        Self::error(id, -32601, "Method not found", None)
-    }
-
-    fn invalid_params(id: Value, details: &str) -> Self {
-        Self::error(id, -32602, "Invalid params", Some(json!({ "details": details })))
-    }
-
-    fn parse_error(id: Value, details: &str) -> Self {
-        Self::error(id, -32700, "Parse error", Some(json!({ "details": details })))
+        // Implement resource reading logic here
+        // For now, return method not found
+        JsonRpcResponse::method_not_found(request.id)
     }
 }
 
@@ -657,33 +310,24 @@ impl Handler for McpHandler {
     }
 
     async fn handle(&self, req: Request<Body>, _: IpAddr) -> Response<Body> {
-        let uri_path = req.uri().path();
-
-        // Handle message endpoint (for SSE clients)
-        if uri_path == "/mcp/message" {
-            return self.handle_message_request(req).await;
-        }
-
         // Handle WebSocket upgrade requests
         if hyper_tungstenite::is_upgrade_request(&req) {
-            let (response, websocket) = match hyper_tungstenite::upgrade(req, None) {
-                Ok(upgrade) => upgrade,
-                Err(_) => {
-                    return Response::builder()
-                        .status(StatusCode::BAD_REQUEST)
-                        .body(Body::from("Failed to upgrade WebSocket connection"))
-                        .unwrap();
-                }
-            };
+            let (response, websocket) = hyper_tungstenite::upgrade(req, None).unwrap();
+            let self_clone = self.clone();
 
-            let this = self.clone();
+            // Spawn a task to handle the WebSocket connection
             tokio::spawn(async move {
                 if let Ok(ws_stream) = websocket.await {
-                    this.handle_websocket_connection(ws_stream).await;
+                    self_clone.handle_websocket_connection(ws_stream).await;
                 }
             });
 
             return response;
+        }
+
+        // Handle message requests for SSE
+        if req.uri().path() == "/mcp/message" {
+            return self.handle_message_request(req).await;
         }
 
         match req.method() {
@@ -699,4 +343,4 @@ impl Handler for McpHandler {
                 .unwrap(),
         }
     }
-}
+} 

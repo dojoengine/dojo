@@ -15111,6 +15111,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "torii-mcp"
+version = "1.2.2"
+dependencies = [
+ "serde",
+ "serde_json",
+ "sqlx",
+ "tokio",
+ "torii-sqlite",
+]
+
+[[package]]
 name = "torii-relay"
 version = "1.2.2"
 dependencies = [
@@ -15220,6 +15231,7 @@ dependencies = [
  "tokio-stream",
  "tokio-tungstenite 0.20.1",
  "tokio-util",
+ "torii-mcp",
  "torii-sqlite",
  "tower 0.4.13",
  "tower-http 0.4.4",
