@@ -17,7 +17,7 @@ use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 use tokio::sync::{oneshot, Semaphore};
 use tokio::task::JoinSet;
 use tokio::time::Instant;
-use tracing::{debug, error};
+use tracing::{debug, error, warn};
 
 use crate::constants::TOKENS_TABLE;
 use crate::simple_broker::SimpleBroker;
@@ -451,15 +451,12 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 entity_updated.updated_model = Some(entity);
                 entity_updated.deleted = false;
 
-                let optimistic_entity = OptimisticEntity {
-                    id: entity_updated.id.clone(),
-                    keys: entity_updated.keys.clone(),
-                    event_id: entity_updated.event_id.clone(),
-                    executed_at: entity_updated.executed_at,
-                    created_at: entity_updated.created_at,
-                    updated_at: entity_updated.updated_at,
-                    updated_model: entity_updated.updated_model.clone(),
-                    deleted: entity_updated.deleted,
+                if entity_updated.keys.is_empty() {
+                    warn!(target: LOG_TARGET, "Entity has been updated without being set before. Keys are not known and non-updated values will be NULL.");
+                }
+
+                let optimistic_entity = unsafe {
+                    std::mem::transmute::<EntityUpdated, OptimisticEntity>(entity_updated.clone())
                 };
                 SimpleBroker::publish(optimistic_entity);
 
