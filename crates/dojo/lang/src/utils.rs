@@ -176,7 +176,6 @@ pub fn destructure_tuple_member(
     )
 }
 
-// TODO RBA
 pub fn serialize_member_ty(
     db: &dyn SyntaxGroup,
     member_ast: &MemberAst,

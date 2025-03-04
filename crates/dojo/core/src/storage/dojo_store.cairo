@@ -100,19 +100,5 @@ impl DojoStore_array<T, +Drop<T>, +Serde<T>, +DojoStore<T>> of DojoStore<Array<T
         deserialize_array_helper(ref values, arr, length)
     }
 }
-/// TODO RBA: Specific implementation of DojoStore for Span<T>,
-/// to call DojoStore for span items instead of Serde directly.
-//impl DojoStore_span<T, +Drop<T>, +Serde<T>, +DojoStore<T>> of DojoStore<Span<T>> {
-//    fn serialize(self: @Span<T>, ref serialized: Array<felt252>) {
-//        DojoStore::serialize(@self.len(), ref serialized);
-//        serialize_array_helper(*self, ref serialized);
-//    }
-//
-//    fn deserialize(ref values: Span<felt252>) -> Option<Span<T>> {
-//        let length = *values.pop_front()?;
-//        let mut arr = ArrayTrait::new();
-//        Some(deserialize_array_helper(ref values, arr, length)?.span())
-//    }
-//}
 
 
