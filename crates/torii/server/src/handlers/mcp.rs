@@ -540,7 +540,7 @@ impl McpHandler {
 
     async fn handle_query_tool(&self, request: JsonRpcRequest) -> JsonRpcResponse {
         if let Some(params) = request.params {
-            if let Some(query) = params.get("arguments").and_then(Value::as_str) {
+            if let Some(query) = params.get("query").and_then(Value::as_str) {
                 match sqlx::query(query).fetch_all(&*self.pool).await {
                     Ok(rows) => {
                         // Convert rows to JSON using shared mapping function
