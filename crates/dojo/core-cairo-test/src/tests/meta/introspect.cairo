@@ -115,7 +115,7 @@ struct StructWithOption {
 }
 
 #[derive(Drop, Introspect, Serde)]
-struct Generic<T> {
+struct GenericStruct<T> {
     value: T,
 }
 
@@ -167,9 +167,54 @@ fn arr(item_layout: Layout) -> Layout {
 }
 
 #[test]
-#[available_gas(2000000)]
-fn test_generic_introspect() {
-    let _generic = Generic { value: Base { value: 123 } };
+fn test_generic_struct_introspect() {
+    let size = Introspect::<GenericStruct<u32>>::size();
+    assert!(size.is_some());
+    assert!(size.unwrap() == 1);
+
+    let layout = Introspect::<GenericStruct<u32>>::layout();
+    assert_eq!(layout, Layout::Struct(
+        [
+            field(selector!("value"), fixed(array![32]))
+        ].span()
+    ));
+
+    let ty = Introspect::<GenericStruct<u32>>::ty();
+    assert_eq!(ty, Ty::Struct(
+        Struct {
+            name: 'GenericStruct<T>',
+            attrs: [].span(),
+            children: [
+                Member {
+                    name: 'value',
+                    attrs: [].span(),
+                    ty: Ty::Primitive('u32')
+                }
+            ].span()
+        }
+    ));
+}
+
+
+#[test]
+fn test_generic_enum_introspect() {
+    let size = Introspect::<GenericEnum<u32>>::size();
+    assert!(size.is_some());
+    assert_eq!(size.unwrap(), 2);
+
+    let layout = Introspect::<GenericEnum<u32>>::layout();
+    assert_eq!(layout, _enum(array![Option::Some(fixed(array![32]))]));
+
+    let ty = Introspect::<GenericEnum<u32>>::ty();
+    assert_eq!(ty, Ty::Enum(
+        Enum {
+            name: 'GenericEnum<T>',
+            attrs: [].span(),
+            children: [
+                ('A', Ty::Primitive('u32'))
+            ].span()
+        }
+    ));
 }
 
 #[test]
