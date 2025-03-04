@@ -25,8 +25,22 @@ pub fn handle_introspect_struct(
     packed: bool,
 ) -> RewriteNode {
     let struct_name = struct_ast.name(db).text(db).into();
+
+    let gen_types = build_generic_types(db, struct_ast.generic_params(db));
+    let gen_joined_types = gen_types.join(", ");
+
+    let struct_name_with_generics = format!("{struct_name}<{gen_joined_types}>");
+
+    let inspect_gen_impls =
+        build_generic_impls(&gen_types, &["+dojo::meta::introspect::Introspect".to_string()], &[]);
+    let dojo_store_gen_impls = build_generic_impls(
+        &gen_types,
+        &["+dojo::storage::DojoStore".to_string(), "+core::serde::Serde".to_string()],
+        &[format!("+core::serde::Serde<{struct_name_with_generics}>")],
+    );
+
     let struct_size = size::compute_struct_layout_size(db, &struct_ast, packed);
-    let ty = ty::build_struct_ty(db, &struct_name, &struct_ast);
+    let ty = ty::build_struct_ty(db, &struct_name_with_generics, &struct_ast);
 
     let layout = if packed {
         layout::build_packed_struct_layout(db, diagnostics, &struct_ast)
@@ -40,17 +54,6 @@ pub fn handle_introspect_struct(
             layout::build_field_layouts(db, diagnostics, &struct_ast)
         )
     };
-
-    let gen_types = build_generic_types(db, struct_ast.generic_params(db));
-    let gen_joined_types = gen_types.join(", ");
-
-    let inspect_gen_impls =
-        build_generic_impls(&gen_types, &["+dojo::meta::introspect::Introspect".to_string()], &[]);
-    let dojo_store_gen_impls = build_generic_impls(
-        &gen_types,
-        &["+dojo::storage::DojoStore".to_string(), "+core::serde::Serde".to_string()],
-        &[format!("+core::serde::Serde<{struct_name}<{gen_joined_types}>>")],
-    );
 
     let dojo_store = dojo_store::build_struct_dojo_store(
         db,
@@ -81,6 +84,23 @@ pub fn handle_introspect_enum(
     packed: bool,
 ) -> RewriteNode {
     let enum_name = enum_ast.name(db).text(db).into();
+
+    let gen_types = build_generic_types(db, enum_ast.generic_params(db));
+    let gen_joined_types = gen_types.join(", ");
+
+    let enum_name_with_generics = format!("{enum_name}<{gen_joined_types}>");
+
+    let inspect_gen_impls =
+        build_generic_impls(&gen_types, &["+dojo::meta::introspect::Introspect".to_string()], &[]);
+    let dojo_store_gen_impls = build_generic_impls(
+        &gen_types,
+        &["+dojo::storage::DojoStore".to_string(), "+core::serde::Serde".to_string()],
+        &[
+            format!("+core::serde::Serde<{enum_name_with_generics}>"),
+            format!("+core::traits::Default<{enum_name_with_generics}>"),
+        ],
+    );
+
     let variant_sizes = size::compute_enum_variant_sizes(db, &enum_ast);
 
     let layout = if packed {
@@ -106,22 +126,8 @@ pub fn handle_introspect_enum(
         )
     };
 
-    let gen_types = build_generic_types(db, enum_ast.generic_params(db));
-    let gen_joined_types = gen_types.join(", ");
-
-    let inspect_gen_impls =
-        build_generic_impls(&gen_types, &["+dojo::meta::introspect::Introspect".to_string()], &[]);
-    let dojo_store_gen_impls = build_generic_impls(
-        &gen_types,
-        &["+dojo::storage::DojoStore".to_string(), "+core::serde::Serde".to_string()],
-        &[
-            format!("+core::serde::Serde<{enum_name}<{gen_joined_types}>>"),
-            format!("+core::traits::Default<{enum_name}<{gen_joined_types}>>"),
-        ],
-    );
-
     let enum_size = size::compute_enum_layout_size(&variant_sizes, packed);
-    let ty = ty::build_enum_ty(db, &enum_name, &enum_ast);
+    let ty = ty::build_enum_ty(db, &enum_name_with_generics, &enum_ast);
     let dojo_store = dojo_store::build_enum_dojo_store(
         db,
         &enum_name,
