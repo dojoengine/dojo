@@ -80,12 +80,13 @@ struct ResourceCapabilities {
 }
 
 // Structure to hold SSE session information
+#[derive(Clone, Debug)]
 struct SseSession {
     tx: broadcast::Sender<JsonRpcResponse>,
     session_id: String,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct McpHandler {
     pool: Arc<SqlitePool>,
     // Map of session IDs to SSE sessions
@@ -610,7 +611,7 @@ impl Handler for McpHandler {
         req.uri().path().starts_with("/mcp")
     }
 
-    async fn handle(&self, req: Request<Body>) -> Response<Body> {
+    async fn handle(&self, req: Request<Body>, _: IpAddr) -> Response<Body> {
         let uri_path = req.uri().path();
 
         // Handle CORS preflight requests
