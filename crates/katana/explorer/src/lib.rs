@@ -141,7 +141,7 @@ pub struct ExplorerHandle {
 }
 
 impl ExplorerHandle {
-    // Returns the socket address of the explorer.
+    /// Returns the socket address of the explorer.
     pub fn addr(&self) -> &SocketAddr {
         &self.addr
     }
