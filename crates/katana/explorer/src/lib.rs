@@ -161,8 +161,8 @@ fn setup_env(html: &str, rpc_url: &Url, chain_id: &str) -> String {
     let escaped_chain_id = chain_id.replace("\"", "\\\"").replace("<", "&lt;").replace(">", "&gt;");
 
     // We inject the RPC URL and chain ID into the HTML for the controller to use.
-    // The chain rpc and chain id are required params to initialize the controller.
-    // (ref - https://github.com/cartridge-gg/controller/blob/main/packages/controller/src/controller.ts#L32)
+    // The chain rpc and chain id are required params to initialize the controller <https://github.com/cartridge-gg/controller/blob/main/packages/controller/src/controller.ts#L32>.
+    // The parameters are consumed by the explorer here <https://github.com/cartridge-gg/explorer/blob/68ac4ea9500a90abc0d7c558440a99587cb77585/src/constants/rpc.ts#L14-L15>. 
 
     // NOTE: ENABLE_CONTROLLER feature flag is a temporary solution to handle the controller.
     // The controller expects to have a `defaultChainId` but we don't have a way
