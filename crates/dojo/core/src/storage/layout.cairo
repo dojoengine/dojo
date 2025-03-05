@@ -311,7 +311,16 @@ pub fn delete_enum_layout(model: felt252, key: felt252, variant_layouts: Span<Fi
 
     match find_field_layout(variant, variant_layouts) {
         Option::Some(layout) => delete_layout(model, variant_data_key, layout),
-        Option::None => panic!("Unable to find the variant layout for variant {}", variant),
+        Option::None => {
+            // In the legacy Dojo storage, variants start from 0, but with
+            // the new Dojo storage (DojoStore trait), variants start from 1.
+            // So, if `variant equals 0 and we cannot find the corresponding
+            // field layout, we are in the new Dojo storage case and we can just continue
+            // as the variant data are not set.
+            if variant != 0 {
+                panic!("Unable to find the variant layout for variant {}", variant);
+            }
+        },
     };
 }
 
