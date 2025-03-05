@@ -75,6 +75,16 @@ pub struct RelayOptions {
     )]
     #[serde(default)]
     pub cert_path: Option<String>,
+
+    /// A list of other torii relays to connect to and sync with.
+    /// Right now, only offchain messages broadcasted by the relay will be synced.
+    #[arg(
+        long = "relay.peers",
+        value_delimiter = ',',
+        help = "A list of other torii relays to connect to and sync with."
+    )]
+    #[serde(default)]
+    pub peers: Vec<String>,
 }
 
 impl Default for RelayOptions {
@@ -85,6 +95,7 @@ impl Default for RelayOptions {
             websocket_port: DEFAULT_RELAY_WEBSOCKET_PORT,
             local_key_path: None,
             cert_path: None,
+            peers: vec![],
         }
     }
 }
