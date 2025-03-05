@@ -69,6 +69,7 @@ impl<P: Provider + Sync> Relay<P> {
         port_websocket: u16,
         local_key_path: Option<String>,
         cert_path: Option<String>,
+        peers: Vec<String>,
     ) -> Result<Self, Error> {
         let local_key = if let Some(path) = local_key_path {
             let path = Path::new(&path);
@@ -166,6 +167,12 @@ impl<P: Provider + Sync> Relay<P> {
             .with(Protocol::Tcp(port_websocket))
             .with(Protocol::Ws("/".to_string().into()));
         swarm.listen_on(listen_addr_wss.clone())?;
+
+        // We dial all of our peers. Our server will then broadcast
+        // all incoming offchain messages to all of our peers.
+        for peer in peers {
+            swarm.dial(peer.parse::<Multiaddr>().unwrap())?;
+        }
 
         // Clients will send their messages to the "message" topic
         // with a room name as the message data.
@@ -355,6 +362,24 @@ impl<P: Provider + Sync> Relay<P> {
                                 peer_id = %peer_id,
                                 "Message verified and set."
                             );
+
+                            // Publish message to all peers
+                            if let Err(e) = self
+                                .swarm
+                                .behaviour_mut()
+                                .gossipsub
+                                .publish(
+                                    IdentTopic::new(constants::MESSAGING_TOPIC),
+                                    serde_json::to_string(&data).unwrap(),
+                                )
+                                .map_err(Error::PublishError)
+                            {
+                                info!(
+                                    target: LOG_TARGET,
+                                    error = %e,
+                                    "Publishing message to peers."
+                                );
+                            }
                         }
                         ServerEvent::Gossipsub(gossipsub::Event::Subscribed { peer_id, topic }) => {
                             info!(
