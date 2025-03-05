@@ -312,7 +312,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                                         self.db.flush().await?;
                                         self.db.apply_cache_diff(block_id).await?;
                                         self.db.execute().await?;
-                                        trace!(target: LOG_TARGET, block_number = ?block_id, "Flushed and applied cache diff.");
+                                        debug!(target: LOG_TARGET, block_number = ?block_id, "Flushed and applied cache diff.");
                                     }
                                 },
                                 Err(e) => {
