@@ -138,7 +138,7 @@ impl NodeArgs {
             utils::print_intro(self, &node.backend.chain_spec);
         }
 
-        // Get chain ID before launching the node                               
+        // Get chain ID before launching the node
         let chain_id = node.backend.chain_spec.id();
 
         // Launch the node
