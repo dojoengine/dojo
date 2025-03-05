@@ -134,7 +134,7 @@ impl Explorer {
     }
 }
 
-// Handle to the explorer server.
+/// Handle to the explorer server.
 #[derive(Debug)]
 pub struct ExplorerHandle {
     addr: SocketAddr,
