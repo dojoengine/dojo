@@ -1,12 +1,10 @@
 use std::sync::Arc;
 
 use serde_json::{json, Value};
-use sqlx::SqlitePool;
-use sqlx::Row;
-use crate::types::{JsonRpcRequest, JsonRpcResponse, JsonRpcError};
-use crate::types::JSONRPC_VERSION;
+use sqlx::{Row, SqlitePool};
 
 use super::Tool;
+use crate::types::{JsonRpcError, JsonRpcRequest, JsonRpcResponse, JSONRPC_VERSION};
 
 pub fn get_tool() -> Tool {
     Tool {
@@ -113,4 +111,4 @@ pub async fn handle(pool: Arc<SqlitePool>, request: JsonRpcRequest) -> JsonRpcRe
             }),
         },
     }
-} 
+}

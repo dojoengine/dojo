@@ -11,8 +11,5 @@ pub struct Tool {
 }
 
 pub fn get_tools() -> Vec<Tool> {
-    vec![
-        query::get_tool(),
-        schema::get_tool(),
-    ]
-} 
+    vec![query::get_tool(), schema::get_tool()]
+}

@@ -5,4 +5,4 @@ pub struct Resource {
 
 pub fn get_resources() -> Vec<Resource> {
     vec![] // Add resources as needed
-} 
+}

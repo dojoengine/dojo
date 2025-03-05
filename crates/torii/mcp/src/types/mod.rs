@@ -106,4 +106,4 @@ impl JsonRpcResponse {
     pub fn parse_error(id: Value, details: &str) -> Self {
         Self::error(id, -32700, "Parse error", Some(json!({ "details": details })))
     }
-} 
+}

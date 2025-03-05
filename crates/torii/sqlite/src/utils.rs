@@ -4,18 +4,18 @@ use std::str::FromStr;
 use std::time::Duration;
 
 use anyhow::Result;
-use base64::Engine;
 use base64::engine::general_purpose::STANDARD;
+use base64::Engine;
 use chrono::{DateTime, Utc};
 use futures_util::TryStreamExt;
 use ipfs_api_backend_hyper::{IpfsApi, IpfsClient, TryFromUri};
 use once_cell::sync::Lazy;
 use reqwest::Client;
+use sqlx::{Column, Row, TypeInfo};
 use starknet::core::types::U256;
 use starknet_crypto::Felt;
 use tokio_util::bytes::Bytes;
 use tracing::debug;
-use sqlx::{Column, Row, TypeInfo};
 
 use crate::constants::{
     IPFS_CLIENT_PASSWORD, IPFS_CLIENT_URL, IPFS_CLIENT_USERNAME, REQ_MAX_RETRIES,

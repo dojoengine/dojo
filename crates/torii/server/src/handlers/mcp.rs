@@ -7,14 +7,14 @@ use serde_json::{json, Value};
 use sqlx::SqlitePool;
 use tokio::sync::{broadcast, RwLock};
 use tokio_tungstenite::tungstenite::Message;
-use torii_mcp::{tools::{self, Tool}, resources::{self, Resource}};
+use torii_mcp::resources::{self, Resource};
+use torii_mcp::tools::{self, Tool};
+use torii_mcp::types::{
+    JsonRpcMessage, JsonRpcRequest, JsonRpcResponse, SseSession, JSONRPC_VERSION, MCP_VERSION,
+    SSE_CHANNEL_CAPACITY,
+};
 use tracing::warn;
 use uuid::Uuid;
-
-use torii_mcp::types::{
-    JsonRpcMessage, JsonRpcRequest, JsonRpcResponse, SseSession,
-    JSONRPC_VERSION, MCP_VERSION, SSE_CHANNEL_CAPACITY,
-};
 
 use super::Handler;
 
@@ -213,20 +213,16 @@ impl McpHandler {
 
     async fn handle_message_request(&self, req: Request<Body>) -> Response<Body> {
         // Extract session ID from query parameters
-        let session_id = req
-            .uri()
-            .query()
-            .and_then(|q| {
-                q.split('&')
-                    .find_map(|p| {
-                        let parts: Vec<&str> = p.split('=').collect();
-                        if parts.len() == 2 && parts[0] == "sessionId" {
-                            Some(parts[1].to_string())
-                        } else {
-                            None
-                        }
-                    })
-            });
+        let session_id = req.uri().query().and_then(|q| {
+            q.split('&').find_map(|p| {
+                let parts: Vec<&str> = p.split('=').collect();
+                if parts.len() == 2 && parts[0] == "sessionId" {
+                    Some(parts[1].to_string())
+                } else {
+                    None
+                }
+            })
+        });
 
         if session_id.is_none() {
             return Response::builder()
@@ -343,4 +339,4 @@ impl Handler for McpHandler {
                 .unwrap(),
         }
     }
-} 
+}

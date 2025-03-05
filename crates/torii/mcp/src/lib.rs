@@ -1,3 +1,3 @@
-pub mod types;
-pub mod tools;
 pub mod resources;
+pub mod tools;
+pub mod types;
