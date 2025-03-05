@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1741147222913,
+  "lastUpdate": 1741203228678,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -56545,6 +56545,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 17172420,
             "range": "± 609844",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tomar2585@gmail.com",
+            "name": "Ayush Tomar",
+            "username": "ayushtom"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a2797e2996868f89f2c51d288005ee9b6885ac4d",
+          "message": "feat(katana) : add feature flag for controller (#3080)\n\n* feat: add feature flag for controller\n\n* chore: add required comments\n\n* chore: fix ci rust fmt check\n\n* Update crates/katana/explorer/src/lib.rs\n\n* Update crates/katana/explorer/src/lib.rs\n\n* Update crates/katana/explorer/src/lib.rs\n\n* Update crates/katana/explorer/src/lib.rs\n\n* Update crates/katana/explorer/src/lib.rs\n\n* Update crates/katana/explorer/src/lib.rs\n\n* Update crates/katana/explorer/src/lib.rs\n\n* Update crates/katana/explorer/src/lib.rs\n\n* Update crates/katana/explorer/src/lib.rs\n\n* chore: fix fmt check\n\n---------\n\nCo-authored-by: Ammar Arif <evergreenkary@gmail.com>",
+          "timestamp": "2025-03-06T03:16:49+08:00",
+          "tree_id": "83079c2eb7a2c40a32d3700e73fe8348e163b2a6",
+          "url": "https://github.com/dojoengine/dojo/commit/a2797e2996868f89f2c51d288005ee9b6885ac4d"
+        },
+        "date": 1741203225371,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 47498086130,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
