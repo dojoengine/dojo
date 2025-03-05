@@ -285,7 +285,7 @@ impl<P: Provider + Sync> Relay<P> {
                                         continue;
                                     }
                                 },
-                                None => match get_identity_from_ty(&ty) {
+                                _ => match get_identity_from_ty(&ty) {
                                     Ok(identity) => identity,
                                     Err(e) => {
                                         warn!(
