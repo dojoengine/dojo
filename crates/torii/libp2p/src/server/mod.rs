@@ -184,6 +184,12 @@ impl<P: Provider + Sync> Relay<P> {
             .subscribe(&IdentTopic::new(constants::MESSAGING_TOPIC))
             .unwrap();
 
+        swarm
+            .behaviour_mut()
+            .gossipsub
+            .subscribe(&IdentTopic::new(constants::PEERS_MESSAGING_TOPIC))
+            .unwrap();
+
         Ok(Self { swarm, db: pool, provider: Box::new(provider) })
     }
 
@@ -363,13 +369,19 @@ impl<P: Provider + Sync> Relay<P> {
                                 "Message verified and set."
                             );
 
+                            // We only want to publish messages from our clients. Not from our peers
+                            // otherwise recursion hell :<
+                            if message.topic != IdentTopic::new(constants::MESSAGING_TOPIC).hash() {
+                                continue;
+                            }
+
                             // Publish message to all peers
                             if let Err(e) = self
                                 .swarm
                                 .behaviour_mut()
                                 .gossipsub
                                 .publish(
-                                    IdentTopic::new(constants::MESSAGING_TOPIC),
+                                    IdentTopic::new(constants::PEERS_MESSAGING_TOPIC),
                                     serde_json::to_string(&data).unwrap(),
                                 )
                                 .map_err(Error::PublishError)
