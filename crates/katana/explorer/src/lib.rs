@@ -147,7 +147,7 @@ impl ExplorerHandle {
     }
 }
 
-// Embedded explorer UI files.
+/// Embedded explorer UI files.
 #[derive(RustEmbed)]
 #[folder = "ui/dist"]
 struct ExplorerAssets;
