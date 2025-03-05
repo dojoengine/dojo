@@ -189,7 +189,7 @@ fn setup_env(html: &str, rpc_url: &Url, chain_id: &str) -> String {
     }
 }
 
-// Gets the content type for a file based on its extension.
+/// Gets the content type for a file based on its extension.
 fn get_content_type(path: &str) -> &'static str {
     match path.rsplit('.').next() {
         Some("html") => "text/html",
