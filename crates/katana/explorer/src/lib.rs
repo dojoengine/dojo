@@ -28,7 +28,7 @@ impl Explorer {
         Ok(Self { rpc_url, chain_id })
     }
 
-    // Start the explorer server at the given address.
+    /// Start the explorer server at the given address.
     pub fn start(&self, addr: SocketAddr) -> Result<ExplorerHandle> {
         let server =
             Server::http(addr).map_err(|e| anyhow!("Failed to start explorer server: {}", e))?;
