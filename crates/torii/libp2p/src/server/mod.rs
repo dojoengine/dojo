@@ -69,6 +69,18 @@ impl<P: Provider + Sync> Relay<P> {
         port_websocket: u16,
         local_key_path: Option<String>,
         cert_path: Option<String>,
+    ) -> Result<Self, Error> {
+        Self::new_with_peers(pool, provider, port, port_webrtc, port_websocket, local_key_path, cert_path, vec![])
+    }
+
+    pub fn new_with_peers(
+        pool: Sql,
+        provider: P,
+        port: u16,
+        port_webrtc: u16,
+        port_websocket: u16,
+        local_key_path: Option<String>,
+        cert_path: Option<String>,
         peers: Vec<String>,
     ) -> Result<Self, Error> {
         let local_key = if let Some(path) = local_key_path {
