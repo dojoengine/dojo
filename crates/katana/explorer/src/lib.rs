@@ -11,7 +11,7 @@ use url::Url;
 pub struct Explorer {
     /// The JSON-RPC url of the chain that the explorer will connect to.
     rpc_url: Url,
-    // The chain ID of the network
+    /// The chain ID of the network
     chain_id: String,
 }
 
