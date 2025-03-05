@@ -152,8 +152,8 @@ impl ExplorerHandle {
 #[folder = "ui/dist"]
 struct ExplorerAssets;
 
-// This function adds a script tag to the HTML that sets up environment variables
-// for the explorer to use.
+/// This function adds a script tag to the HTML that sets up environment variables
+/// for the explorer to use.
 fn setup_env(html: &str, rpc_url: &Url, chain_id: &str) -> String {
     // Escape special characters to prevent XSS
     let rpc_url = rpc_url.to_string();
