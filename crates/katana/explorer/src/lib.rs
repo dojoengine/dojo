@@ -9,7 +9,7 @@ use url::Url;
 
 #[derive(Debug)]
 pub struct Explorer {
-    // The JSON-RPC url of the chain that the explorer will connect to.
+    /// The JSON-RPC url of the chain that the explorer will connect to.
     rpc_url: Url,
     // The chain ID of the network
     chain_id: String,
