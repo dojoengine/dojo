@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1741203282367,
+  "lastUpdate": 1741270218128,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -56623,6 +56623,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 16921577,
             "range": "± 201350",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f971dc1b5e74649a1a21c5ef28c9cf70a5080a7a",
+          "message": "fix(torii-indexer): incoherent block ordering with multiple contracts (#3081)\n\n* fix(torii-indexer): incoherent block ordering with multiple contracts\n\n* chore",
+          "timestamp": "2025-03-06T07:52:38-06:00",
+          "tree_id": "17f33aa8106c2906f716905eff31fe538ce33151",
+          "url": "https://github.com/dojoengine/dojo/commit/f971dc1b5e74649a1a21c5ef28c9cf70a5080a7a"
+        },
+        "date": 1741270215193,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 50306846942,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
