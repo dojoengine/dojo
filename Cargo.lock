@@ -8323,6 +8323,7 @@ dependencies = [
 name = "katana-primitives"
 version = "1.2.1"
 dependencies = [
+ "account_sdk 0.1.0",
  "alloy-primitives",
  "anyhow",
  "arbitrary",
@@ -8416,6 +8417,7 @@ dependencies = [
  "metrics",
  "num-traits 0.2.19",
  "rand",
+ "reqwest 0.11.27",
  "rstest 0.18.2",
  "serde",
  "serde_json",

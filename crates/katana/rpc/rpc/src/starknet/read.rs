@@ -1,9 +1,12 @@
 use jsonrpsee::core::{async_trait, Error, RpcResult};
 use katana_executor::{EntryPointCall, ExecutorFactory};
+use katana_pool::TransactionPool;
 use katana_primitives::block::BlockIdOrTag;
 use katana_primitives::class::ClassHash;
+use katana_primitives::genesis::allocation::GenesisAccountAlloc;
 use katana_primitives::transaction::{ExecutableTx, ExecutableTxWithHash, TxHash};
 use katana_primitives::{ContractAddress, Felt};
+use katana_provider::traits::state::StateFactoryProvider;
 use katana_rpc_api::starknet::StarknetApiServer;
 use katana_rpc_types::block::{
     BlockHashAndNumber, MaybePendingBlockWithReceipts, MaybePendingBlockWithTxHashes,
@@ -170,58 +173,98 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
         simulation_flags: Vec<SimulationFlagForEstimateFee>,
         block_id: BlockIdOrTag,
     ) -> RpcResult<Vec<FeeEstimate>> {
+        let chain_id = self.inner.backend.chain_spec.id();
+
+        let transactions = request
+            .into_iter()
+            .map(|tx| {
+                let tx = match tx {
+                    BroadcastedTx::Invoke(tx) => {
+                        let is_query = tx.is_query();
+                        let tx = tx.into_tx_with_chain_id(chain_id);
+                        ExecutableTxWithHash::new_query(ExecutableTx::Invoke(tx), is_query)
+                    }
+
+                    BroadcastedTx::DeployAccount(tx) => {
+                        let is_query = tx.is_query();
+                        let tx = tx.into_tx_with_chain_id(chain_id);
+                        ExecutableTxWithHash::new_query(ExecutableTx::DeployAccount(tx), is_query)
+                    }
+
+                    BroadcastedTx::Declare(tx) => {
+                        let is_query = tx.is_query();
+                        let tx = tx
+                            .try_into_tx_with_chain_id(chain_id)
+                            .map_err(|_| StarknetApiError::InvalidContractClass)?;
+                        ExecutableTxWithHash::new_query(ExecutableTx::Declare(tx), is_query)
+                    }
+                };
+
+                Result::<ExecutableTxWithHash, StarknetApiError>::Ok(tx)
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+
+        let skip_validate = simulation_flags.contains(&SimulationFlagForEstimateFee::SkipValidate);
+
+        // If the node is run with transaction validation disabled, then we should not validate
+        // transactions when estimating the fee even if the `SKIP_VALIDATE` flag is not set.
+        let should_validate = !skip_validate
+            && self.inner.backend.executor_factory.execution_flags().account_validation();
+
+        // We don't care about the nonce when estimating the fee as the nonce value
+        // doesn't affect transaction execution.
+        //
+        // This doesn't completely disregard the nonce as nonce < account nonce will
+        // return an error. It only 'relaxes' the check for nonce >= account nonce.
+        let flags = katana_executor::ExecutionFlags::new()
+            .with_account_validation(should_validate)
+            .with_nonce_check(false);
+
+        // Hook the estimate fee to pre-deploy the controller contract
+        // and enhance UX on the client side.
+        // Refer to the `handle_cartridge_controller_deploy` function in `cartridge.rs`
+        // for more details.
+        #[cfg(feature = "cartridge")]
+        {
+            // Paymaster is the first dev account in the genesis.
+            let (paymaster_address, paymaster_alloc) = self
+                .inner
+                .backend
+                .chain_spec
+                .genesis()
+                .accounts()
+                .nth(0)
+                .expect("Paymaster not found at least one dev account expected");
+
+            let paymaster_private_key = if let GenesisAccountAlloc::DevAccount(pm) = paymaster_alloc
+            {
+                pm.private_key
+            } else {
+                panic!("Paymaster is not a dev account");
+            };
+
+            let state = self.inner.backend.blockchain.provider().latest().unwrap();
+
+            let c7e_result = crate::cartridge::handle_cartridge_controller_deploy(
+                *paymaster_address,
+                paymaster_private_key,
+                &transactions,
+                self.inner.backend.chain_spec.id(),
+                state,
+            )
+            .await;
+
+            if let Some((tx, fee_estimate)) = c7e_result {
+                let _hash = self
+                    .inner
+                    .pool
+                    .add_transaction(tx)
+                    .expect("failed to add transaction for controller");
+                return Ok(vec![fee_estimate]);
+            }
+        }
+
         self.on_cpu_blocking_task(move |this| {
-            let chain_id = this.inner.backend.chain_spec.id();
-
-            let transactions = request
-                .into_iter()
-                .map(|tx| {
-                    let tx = match tx {
-                        BroadcastedTx::Invoke(tx) => {
-                            let is_query = tx.is_query();
-                            let tx = tx.into_tx_with_chain_id(chain_id);
-                            ExecutableTxWithHash::new_query(ExecutableTx::Invoke(tx), is_query)
-                        }
-
-                        BroadcastedTx::DeployAccount(tx) => {
-                            let is_query = tx.is_query();
-                            let tx = tx.into_tx_with_chain_id(chain_id);
-                            ExecutableTxWithHash::new_query(
-                                ExecutableTx::DeployAccount(tx),
-                                is_query,
-                            )
-                        }
-
-                        BroadcastedTx::Declare(tx) => {
-                            let is_query = tx.is_query();
-                            let tx = tx
-                                .try_into_tx_with_chain_id(chain_id)
-                                .map_err(|_| StarknetApiError::InvalidContractClass)?;
-                            ExecutableTxWithHash::new_query(ExecutableTx::Declare(tx), is_query)
-                        }
-                    };
-
-                    Result::<ExecutableTxWithHash, StarknetApiError>::Ok(tx)
-                })
-                .collect::<Result<Vec<_>, _>>()?;
-
-            let skip_validate =
-                simulation_flags.contains(&SimulationFlagForEstimateFee::SkipValidate);
-
-            // If the node is run with transaction validation disabled, then we should not validate
-            // transactions when estimating the fee even if the `SKIP_VALIDATE` flag is not set.
-            let should_validate = !skip_validate
-                && this.inner.backend.executor_factory.execution_flags().account_validation();
-
-            // We don't care about the nonce when estimating the fee as the nonce value
-            // doesn't affect transaction execution.
-            //
-            // This doesn't completely disregard the nonce as nonce < account nonce will
-            // return an error. It only 'relaxes' the check for nonce >= account nonce.
-            let flags = katana_executor::ExecutionFlags::new()
-                .with_account_validation(should_validate)
-                .with_nonce_check(false);
-
             let results = this.estimate_fee_with(transactions, block_id, flags)?;
             Ok(results)
         })

@@ -33,6 +33,7 @@ pub enum RpcModuleKind {
     Torii,
     Saya,
     Dev,
+    #[cfg(feature = "cartridge")]
     Cartridge,
 }
 
@@ -96,6 +97,7 @@ impl RpcModulesList {
             RpcModuleKind::Torii,
             RpcModuleKind::Saya,
             RpcModuleKind::Dev,
+            #[cfg(feature = "cartridge")]
             RpcModuleKind::Cartridge,
         ]))
     }

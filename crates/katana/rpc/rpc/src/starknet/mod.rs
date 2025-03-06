@@ -6,9 +6,6 @@ use katana_core::backend::Backend;
 use katana_core::service::block_producer::{BlockProducer, BlockProducerMode, PendingExecutor};
 use katana_executor::{ExecutionResult, ExecutorFactory};
 use katana_pool::{TransactionPool, TxPool};
-use katana_primitives::fee::ResourceBoundsMapping;
-use katana_primitives::genesis::allocation::GenesisAccountAlloc;
-use katana_primitives::Felt;
 use katana_primitives::block::{
     BlockHash, BlockHashOrNumber, BlockIdOrTag, BlockNumber, BlockTag, FinalityStatus,
     PartialHeader,
@@ -18,10 +15,9 @@ use katana_primitives::contract::{ContractAddress, Nonce, StorageKey, StorageVal
 use katana_primitives::da::L1DataAvailabilityMode;
 use katana_primitives::env::BlockEnv;
 use katana_primitives::event::MaybeForkedContinuationToken;
-use katana_primitives::transaction::{
-    ExecutableTx, ExecutableTxWithHash, InvokeTx, InvokeTxV3, TxHash, TxWithHash
-};
+use katana_primitives::transaction::{ExecutableTxWithHash, TxHash, TxWithHash};
 use katana_primitives::version::CURRENT_STARKNET_VERSION;
+use katana_primitives::Felt;
 use katana_provider::error::ProviderError;
 use katana_provider::traits::block::{BlockHashProvider, BlockIdReader, BlockNumberProvider};
 use katana_provider::traits::contract::ContractClassProvider;
@@ -30,7 +26,6 @@ use katana_provider::traits::state::{StateFactoryProvider, StateProvider, StateR
 use katana_provider::traits::transaction::{
     ReceiptProvider, TransactionProvider, TransactionStatusProvider,
 };
-use katana_rpc_types::FeeEstimate;
 use katana_rpc_types::block::{
     MaybePendingBlockWithReceipts, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs,
     PendingBlockWithReceipts, PendingBlockWithTxHashes, PendingBlockWithTxs,
@@ -45,14 +40,12 @@ use katana_rpc_types::trie::{
     ClassesProof, ContractLeafData, ContractStorageKeys, ContractStorageProofs, ContractsProof,
     GetStorageProofResponse, GlobalRoots, Nodes,
 };
+use katana_rpc_types::FeeEstimate;
 use katana_rpc_types_builder::ReceiptBuilder;
 use katana_tasks::{BlockingTaskPool, TokioTaskSpawner};
 use starknet::core::types::{
-    Call, PriceUnit, ResultPageRequest, TransactionExecutionStatus, TransactionStatus
+    PriceUnit, ResultPageRequest, TransactionExecutionStatus, TransactionStatus,
 };
-use starknet::macros::selector;
-use starknet::signers::{LocalWallet, SigningKey, Signer};
-
 
 use crate::utils;
 use crate::utils::events::{Cursor, EventBlockId};
@@ -166,96 +159,6 @@ where
         // get the state and block env at the specified block for execution
         let state = self.state(&block_id)?;
         let env = self.block_env_at(&block_id)?;
-
-        println!("ESTIMATE FEE!");
-
-        // Call API.
-        for t in &transactions {
-            match &t.transaction {
-                ExecutableTx::Invoke(invoke) => {
-                    match invoke {
-                        InvokeTx::V3(v3) => {
-                            let maybe_controller_address: Felt = v3.sender_address.into();
-                            // Hard coded for now, but we want to check the API.
-                            if maybe_controller_address
-                                == Felt::from_hex_unchecked(
-                                    "0x048e13ef7ab79637afd38a4b022862a7e6f3fd934f194c435d7e7b17bac06715",
-                                )
-                            {
-                                let (paymaster_addr, paymaster_alloc) = self
-                                    .inner
-                                    .backend
-                                    .chain_spec
-                                    .genesis()
-                                    .accounts()
-                                    .last()
-                                    .unwrap();
-                                
-                                let private_key = if let GenesisAccountAlloc::DevAccount(pm) = paymaster_alloc {
-                                    pm.private_key
-                                } else {
-                                    panic!("Paymaster is not a dev account");
-                                };
-
-                                let state =
-                                    self.inner.backend.blockchain.provider().latest().unwrap();
-                                let nonce = state.nonce(paymaster_addr.clone()).unwrap();
-
-                                const UDC_ADDRESS: Felt =
-                                Felt::from_hex_unchecked("0x041a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf");
-
-                                let call = Call {
-                                    to: UDC_ADDRESS,
-                                    selector: selector!("deployContract"),
-                                    calldata: glihm_ctor(),
-                                };
-
-                                let mut tx = InvokeTxV3 {
-                                    chain_id: self.inner.backend.chain_spec.id(),
-                                    nonce: nonce.unwrap_or(Felt::ZERO),
-                                    calldata: encode_calls(vec![call]),
-                                    sender_address: *paymaster_addr,
-                                    resource_bounds: ResourceBoundsMapping::default(),
-                                    tip: 0_u64,
-                                    paymaster_data: vec![],
-                                    account_deployment_data: vec![],
-                                    nonce_data_availability_mode: katana_primitives::da::DataAvailabilityMode::L1,
-                                    fee_data_availability_mode: katana_primitives::da::DataAvailabilityMode::L1,
-                                    signature: vec![],
-                                };
-                                let tx_hash = InvokeTx::V3(tx.clone()).calculate_hash(false);
-                                
-                                let signer = LocalWallet::from(SigningKey::from_secret_scalar(
-                                    private_key,
-                                ));
-
-                                let signature = futures::executor::block_on(signer.sign_hash(&tx_hash)).expect("failed to sign hash with paymaster");
-                                tx.signature = vec![signature.r, signature.s];
-
-                                let tx = ExecutableTxWithHash::new(ExecutableTx::Invoke(InvokeTx::V3(tx)));
-
-                                /* let mut executor = self.inner.backend.executor_factory.with_state_and_block_env(state, env.clone());
-                                let results = executor.execute_transactions(vec![tx]); */
-
-                                let hash = self.inner.pool.add_transaction(tx)?;
-                                println!("hash: {:?}", hash);
-
-                                return Ok(vec![FeeEstimate {
-                                    gas_price: Felt::ZERO,
-                                    gas_consumed: Felt::ZERO,
-                                    overall_fee: Felt::ZERO,
-                                    data_gas_price: Default::default(),
-                                    data_gas_consumed: Default::default(),
-                                    unit: PriceUnit::Fri,
-                                }]);
-                            }
-                        }
-                        _ => {}
-                    }
-                }
-                _ => {}
-            }
-        }
 
         // create the executor
         let executor = self.inner.backend.executor_factory.with_state_and_block_env(state, env);
@@ -1334,59 +1237,4 @@ where
     fn clone(&self) -> Self {
         Self { inner: Arc::clone(&self.inner) }
     }
-}
-
-// Returns class hash, salt and constructor calldata for the Glihm contract.
-fn glihm_ctor() -> Vec<Felt> {
-    let felt_strs = vec![
-        "0x24a9edbfa7082accfceabf6a92d7160086f346d622f28741bf1c651c412c9ab",
-        "0x676c69686d",
-        "0x0",
-        "0x1e",
-        "0x0",
-        "0x4",
-        "0x16",
-        "0x68",
-        "0x74",
-        "0x74",
-        "0x70",
-        "0x73",
-        "0x3a",
-        "0x2f",
-        "0x2f",
-        "0x78",
-        "0x2e",
-        "0x63",
-        "0x61",
-        "0x72",
-        "0x74",
-        "0x72",
-        "0x69",
-        "0x64",
-        "0x67",
-        "0x65",
-        "0x2e",
-        "0x67",
-        "0x67",
-        "0x9d0aec9905466c9adf79584fa75fed3",
-        "0x20a97ec3f8efbc2aca0cf7cabb420b4a",
-        "0x30910fae3f3451a26071c3afc453425e",
-        "0xa4e54fa48a6c3f34444687c2552b157f",
-        "0x1",
-    ];
-
-    felt_strs.iter().map(|s| Felt::from_hex_unchecked(s)).collect()
-}
-
-fn encode_calls(calls: Vec<Call>) -> Vec<Felt> {
-    let mut execute_calldata: Vec<Felt> = vec![calls.len().into()];
-            for call in calls {
-                execute_calldata.push(call.to); // to
-                execute_calldata.push(call.selector); // selector
-
-                execute_calldata.push(call.calldata.len().into()); // calldata.len()
-                execute_calldata.extend_from_slice(&call.calldata);
-            }
-
-    execute_calldata
 }

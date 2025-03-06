@@ -10,6 +10,8 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::Arc;
 
+#[cfg(feature = "cartridge")]
+use account_sdk::artifacts::{Version as ControllerVersion, CONTROLLERS};
 use alloy_primitives::U256;
 use base64::prelude::*;
 use katana_cairo::cairo_vm::types::errors::program_errors::ProgramError;
@@ -32,6 +34,8 @@ use crate::class::{
     LegacyContractClass, SierraContractClass,
 };
 use crate::contract::{ContractAddress, StorageKey, StorageValue};
+#[cfg(feature = "cartridge")]
+use crate::utils::class::parse_sierra_class;
 use crate::Felt;
 
 type Object = Map<String, Value>;
@@ -285,6 +289,25 @@ impl TryFrom<GenesisJson> for Genesis {
         // Adding this by default so that we can support mounting the genesis file from k8s
         // ConfigMap when we embed the Controller class, and its capacity is only limited to 1MiB.
         classes.insert(CONTROLLER_CLASS_HASH, CONTROLLER_ACCOUNT_CLASS.clone().into());
+
+        #[cfg(feature = "cartridge")]
+        {
+            #[cfg(feature = "cartridge")]
+            classes.extend(
+                // Filter out the `1.0.4` already included and
+                // LATEST which is a duplicate of `1.0.9`.
+                CONTROLLERS
+                    .iter()
+                    .filter(|(v, _)| {
+                        **v == ControllerVersion::V1_0_5
+                            || **v == ControllerVersion::V1_0_6
+                            || **v == ControllerVersion::V1_0_7
+                            || **v == ControllerVersion::V1_0_8
+                            || **v == ControllerVersion::V1_0_9
+                    })
+                    .map(|(_, v)| (v.hash, parse_sierra_class(v.content).unwrap().into())),
+            );
+        }
 
         for entry in value.classes {
             let GenesisClassJson { class, name } = entry;

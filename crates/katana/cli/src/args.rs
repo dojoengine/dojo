@@ -224,6 +224,7 @@ impl NodeArgs {
                 // Ensures the `--dev` flag enabled the dev module.
                 if self.development.dev {
                     modules.add(RpcModuleKind::Dev);
+                    #[cfg(feature = "cartridge")]
                     modules.add(RpcModuleKind::Cartridge);
                 }
 
@@ -271,7 +272,8 @@ impl NodeArgs {
                 chain_spec.genesis.sequencer_address = *DEFAULT_SEQUENCER_ADDRESS;
             }
 
-            // generate dev accounts
+            // Generate dev accounts.
+            // If `cartridge` is enabled, the first account will be the paymaster.
             let accounts = DevAllocationsGenerator::new(self.development.total_accounts)
                 .with_seed(parse_seed(&self.development.seed))
                 .with_balance(U256::from(DEFAULT_PREFUNDED_ACCOUNT_BALANCE))
@@ -283,15 +285,6 @@ impl NodeArgs {
             if self.slot.controller {
                 katana_slot_controller::add_controller_account(&mut chain_spec.genesis)?;
             }
-
-            let paymaster_account = DevAllocationsGenerator::new(1)
-                .with_seed(parse_seed("paymaster"))
-                .with_balance(U256::from(DEFAULT_PREFUNDED_ACCOUNT_BALANCE))
-                .generate();
-
-            chain_spec
-                .genesis
-                .extend_allocations(paymaster_account.into_iter().map(|(k, v)| (k, v.into())));
 
             Ok((Arc::new(ChainSpec::Dev(chain_spec)), None))
         }

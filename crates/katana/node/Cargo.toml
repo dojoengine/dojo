@@ -51,6 +51,7 @@ vergen = { version = "9.0.0", features = [ "build", "cargo", "emit_and_set" ] }
 vergen-gitcl = { version = "1.0.0", features = [ "build", "cargo", "rustc", "si" ] }
 
 [features]
+cartridge = [ "katana-rpc-api/cartridge", "katana-primitives/cartridge" ]
 # experimental feature to test katana full node mode
 full-node = [ "dep:katana-feeder-gateway", "dep:tokio" ]
 
