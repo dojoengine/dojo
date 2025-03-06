@@ -9,6 +9,7 @@
 
 #[cfg(feature = "server")]
 use std::net::IpAddr;
+use std::net::Ipv4Addr;
 
 use clap::Args;
 use katana_node::config::execution::{DEFAULT_INVOCATION_MAX_STEPS, DEFAULT_VALIDATION_MAX_STEPS};
@@ -407,6 +408,56 @@ pub struct SlotOptions {
     #[arg(hide = true)]
     #[arg(long = "slot.controller")]
     pub controller: bool,
+}
+
+#[cfg(feature = "cartridge")]
+#[derive(Debug, Args, Clone, Serialize, Deserialize, Default, PartialEq)]
+#[command(next_help_heading = "Cartridge options")]
+pub struct CartridgeOptions {
+    #[arg(long = "cartridge.paymaster")]
+    #[arg(default_value_t = false)]
+    pub paymaster: bool,
+}
+
+const DEFAULT_EXPLORER_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::LOCALHOST);
+const DEFAULT_EXPLORER_PORT: u16 = 3001;
+
+#[derive(Debug, Args, Clone, Serialize, Deserialize, PartialEq)]
+#[command(next_help_heading = "Explorer options")]
+pub struct ExplorerOptions {
+    /// Enable and launch the explorer frontend
+    ///
+    /// This will start a web server that serves the explorer UI.
+    #[arg(long)]
+    #[serde(default)]
+    pub explorer: bool,
+
+    /// The address to run the explorer frontend on.
+    #[arg(long = "explorer.addr", value_name = "ADDRESS")]
+    #[arg(default_value_t = DEFAULT_EXPLORER_ADDR)]
+    pub explorer_addr: IpAddr,
+
+    /// The port to run the explorer frontend on.
+    ///
+    /// NOTE(@kariy):
+    // Right now we prevent the port from being 0 because that would mean the actual port would only
+    // be available after the server has been started. And due to some limitations with how the
+    // explorer requires that the node is started first (to get the actual socket address) and
+    // that we also need to pass the explorer address as CORS to the node server.
+    #[arg(long = "explorer.port", value_name = "PORT")]
+    #[arg(default_value_t = DEFAULT_EXPLORER_PORT)]
+    #[arg(value_parser = clap::value_parser!(u16).range(1..))]
+    pub explorer_port: u16,
+}
+
+impl Default for ExplorerOptions {
+    fn default() -> Self {
+        Self {
+            explorer: false,
+            explorer_addr: DEFAULT_EXPLORER_ADDR,
+            explorer_port: DEFAULT_EXPLORER_PORT,
+        }
+    }
 }
 
 // ** Default functions to setup serde of the configuration file **

@@ -1,5 +1,4 @@
 use std::str::FromStr;
-use std::sync::Arc;
 
 use anyhow::{anyhow, Result};
 use cainome::cairo_serde;
@@ -18,14 +17,14 @@ use starknet::contract::ContractFactory;
 use starknet::core::crypto::compute_hash_on_elements;
 use starknet::core::types::{BlockId, BlockTag, FlattenedSierraClass, StarknetError};
 use starknet::macros::short_string;
-use starknet::providers::jsonrpc::HttpTransport;
-use starknet::providers::{JsonRpcClient, Provider, ProviderError};
+use starknet::providers::{Provider, ProviderError};
 use starknet::signers::LocalWallet;
 use thiserror::Error;
 use tracing::trace;
 
-type RpcProvider = Arc<JsonRpcClient<HttpTransport>>;
-type InitializerAccount = SingleOwnerAccount<RpcProvider, LocalWallet>;
+use super::settlement::SettlementChainProvider;
+
+type SettlementInitializerAccount = SingleOwnerAccount<SettlementChainProvider, LocalWallet>;
 
 /// The StarknetOS program (SNOS) is the cairo program that executes the state
 /// transition of a new Katana block from the previous block.
@@ -62,15 +61,6 @@ const LAYOUT_BRIDGE_PROGRAM_HASH: Felt =
 const BOOTLOADER_PROGRAM_HASH: Felt =
     felt!("0x5ab580b04e3532b6b18f81cfa654a05e29dd8e2352d88df1e765a84072db07");
 
-/// The contract address that handles fact verification.
-///
-/// This address points to Herodotus' Atlantic Fact Registry contract on Starknet Sepolia as we rely
-/// on their services to generates and verifies proofs.
-///
-/// See on [Voyager](https://sepolia.voyager.online/contract/0x04ce7851f00b6c3289674841fd7a1b96b6fd41ed1edc248faccd672c26371b8c).
-const ATLANTIC_FACT_REGISTRY_SEPOLIA: Felt =
-    felt!("0x4ce7851f00b6c3289674841fd7a1b96b6fd41ed1edc248faccd672c26371b8c");
-
 #[derive(Debug)]
 pub struct DeploymentOutcome {
     /// The address of the deployed settlement contract.
@@ -82,7 +72,7 @@ pub struct DeploymentOutcome {
 /// Deploys the settlement contract in the settlement layer and initializes it with the right
 /// necessary states.
 pub async fn deploy_settlement_contract(
-    mut account: InitializerAccount,
+    mut account: SettlementInitializerAccount,
     chain_id: Felt,
 ) -> Result<DeploymentOutcome, ContractInitError> {
     // This is important! Otherwise all the estimate fees after a transaction will be executed
@@ -114,7 +104,7 @@ pub async fn deploy_settlement_contract(
                 let (rpc_class, casm_hash) = prepare_contract_declaration_params(class)?;
 
                 let res = account
-                    .declare_v2(rpc_class.into(), casm_hash)
+                    .declare_v3(rpc_class.into(), casm_hash)
                     .send()
                     .await
                     .inspect(|res| {
@@ -147,7 +137,7 @@ pub async fn deploy_settlement_contract(
         const INITIAL_BLOCK_HASH: BlockHash = Felt::ZERO;
 
         // appchain::constructor() https://github.com/keep-starknet-strange/piltover/blob/a7d6b17f855f2295a843bfd0ab0dcd696c6229a8/src/appchain.cairo#L122-L128
-        let request = factory.deploy_v1(
+        let request = factory.deploy_v3(
             vec![
                 // owner.
                 account.address(),
@@ -236,8 +226,9 @@ pub async fn deploy_settlement_contract(
 
         sp.update_text("Setting fact registry...");
 
+        let facts_registry = account.provider().fact_registry();
         let res = appchain
-            .set_facts_registry(&ATLANTIC_FACT_REGISTRY_SEPOLIA.into())
+            .set_facts_registry(&facts_registry.into())
             .send()
             .await
             .inspect(|res| {
@@ -281,7 +272,7 @@ pub async fn deploy_settlement_contract(
 pub async fn check_program_info(
     chain_id: Felt,
     appchain_address: Felt,
-    provider: &RpcProvider,
+    provider: &SettlementChainProvider,
 ) -> Result<(), ContractInitError> {
     let appchain = AppchainContractReader::new(appchain_address, provider);
 
@@ -330,10 +321,11 @@ pub async fn check_program_info(
         });
     }
 
-    if facts_registry != ATLANTIC_FACT_REGISTRY_SEPOLIA.into() {
+    let expected_facts_registry = provider.fact_registry();
+    if facts_registry != expected_facts_registry.into() {
         return Err(ContractInitError::InvalidFactRegistry {
             actual: facts_registry.into(),
-            expected: ATLANTIC_FACT_REGISTRY_SEPOLIA,
+            expected: expected_facts_registry,
         });
     }
 
@@ -344,13 +336,13 @@ pub async fn check_program_info(
 #[derive(Error, Debug)]
 pub enum ContractInitError {
     #[error("failed to declare contract: {0:#?}")]
-    DeclarationError(AccountError<<InitializerAccount as Account>::SignError>),
+    DeclarationError(AccountError<<SettlementInitializerAccount as Account>::SignError>),
 
     #[error("failed to deploy contract: {0:#?}")]
-    DeploymentError(AccountError<<InitializerAccount as Account>::SignError>),
+    DeploymentError(AccountError<<SettlementInitializerAccount as Account>::SignError>),
 
     #[error("failed to initialize contract: {0:#?}")]
-    Initialization(AccountError<<InitializerAccount as Account>::SignError>),
+    Initialization(AccountError<<SettlementInitializerAccount as Account>::SignError>),
 
     #[error(
         "invalid program info: layout bridge program hash mismatch - expected {expected:#x}, got \

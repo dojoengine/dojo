@@ -225,7 +225,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
         // Refer to the `handle_cartridge_controller_deploy` function in `cartridge.rs`
         // for more details.
         #[cfg(feature = "cartridge")]
-        {
+        if self.inner.config.use_cartridge_paymaster {
             // Paymaster is the first dev account in the genesis.
             let (paymaster_address, paymaster_alloc) = self
                 .inner

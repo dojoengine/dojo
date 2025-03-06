@@ -1,3 +1,4 @@
+use std::net::IpAddr;
 use std::sync::Arc;
 
 use base64::engine::general_purpose::STANDARD;
@@ -9,6 +10,7 @@ use sqlx::{Column, Row, SqlitePool, TypeInfo};
 
 use super::Handler;
 
+#[derive(Debug)]
 pub struct SqlHandler {
     pool: Arc<SqlitePool>,
 }
@@ -111,7 +113,7 @@ impl Handler for SqlHandler {
         req.uri().path().starts_with("/sql")
     }
 
-    async fn handle(&self, req: Request<Body>) -> Response<Body> {
+    async fn handle(&self, req: Request<Body>, _client_addr: IpAddr) -> Response<Body> {
         self.handle_request(req).await
     }
 }

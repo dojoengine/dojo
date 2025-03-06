@@ -27,6 +27,10 @@ pub struct BuildArgs {
     pub typescript_v2: bool,
 
     #[arg(long)]
+    #[arg(help = "Generate Recs bindings.")]
+    pub recs: bool,
+
+    #[arg(long)]
     #[arg(help = "Generate Unity bindings.")]
     pub unity: bool,
 
@@ -118,6 +122,10 @@ impl BuildArgs {
             builtin_plugins.push(BuiltinPlugins::TypeScriptV2);
         }
 
+        if self.recs {
+            builtin_plugins.push(BuiltinPlugins::Recs);
+        }
+
         if self.unity {
             builtin_plugins.push(BuiltinPlugins::Unity);
         }
@@ -204,6 +212,7 @@ impl Default for BuildArgs {
             features,
             typescript: false,
             typescript_v2: false,
+            recs: false,
             unity: false,
             bindings_output: "bindings".to_string(),
             stats: StatOptions::default(),

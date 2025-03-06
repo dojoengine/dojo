@@ -93,7 +93,7 @@ impl<EF: ExecutorFactory> CartridgeApi<EF> {
 
         // If the controller has been created during the flow, there's no fee estimation.
         // Hence, we can check if the controller is deployed, if not, deploy it.
-        if state.class_hash_of_contract(contract_address.into()).unwrap().is_none() {
+        if state.class_hash_of_contract(contract_address).unwrap().is_none() {
             let nonce = state.nonce(paymaster_address).unwrap();
 
             if let Some(tx) = craft_deploy_cartridge_controller_tx(

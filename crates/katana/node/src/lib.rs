@@ -280,12 +280,12 @@ pub async fn build(mut config: Config) -> Result<Node> {
         .allow_methods([Method::POST, Method::GET])
         .allow_headers([hyper::header::CONTENT_TYPE, "argent-client".parse().unwrap(), "argent-version".parse().unwrap()]);
 
-    dbg!(&config.rpc);
-
     if config.rpc.apis.contains(&RpcModuleKind::Starknet) {
         let cfg = StarknetApiConfig {
             max_event_page_size: config.rpc.max_event_page_size,
             max_proof_keys: config.rpc.max_proof_keys,
+            #[cfg(feature = "cartridge")]
+            use_cartridge_paymaster: config.cartridge.paymaster,
         };
 
         let api = if let Some(client) = forked_client {

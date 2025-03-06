@@ -18,6 +18,7 @@ members = [
 	"crates/katana/cli",
 	"crates/katana/controller",
 	"crates/katana/core",
+	"crates/katana/explorer",
 	"crates/katana/executor",
 	"crates/katana/feeder-gateway",
 	"crates/katana/grpc",
@@ -58,7 +59,7 @@ edition = "2021"
 license = "Apache-2.0"
 license-file = "LICENSE"
 repository = "https://github.com/dojoengine/dojo/"
-version = "1.2.1"
+version = "1.2.2"
 
 [profile.performance]
 codegen-units = 1
@@ -99,6 +100,7 @@ katana-codecs-derive = { path = "crates/katana/storage/codecs/derive" }
 katana-core = { path = "crates/katana/core", default-features = false }
 katana-db = { path = "crates/katana/storage/db" }
 katana-executor = { path = "crates/katana/executor" }
+katana-explorer = { path = "crates/katana/explorer" }
 katana-feeder-gateway = { path = "crates/katana/feeder-gateway" }
 katana-messaging = { path = "crates/katana/messaging" }
 katana-node = { path = "crates/katana/node", default-features = false }

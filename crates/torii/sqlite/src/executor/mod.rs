@@ -17,7 +17,7 @@ use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 use tokio::sync::{oneshot, Semaphore};
 use tokio::task::JoinSet;
 use tokio::time::Instant;
-use tracing::{debug, error};
+use tracing::{debug, error, warn};
 
 use crate::constants::TOKENS_TABLE;
 use crate::simple_broker::SimpleBroker;
@@ -143,7 +143,7 @@ pub struct Executor<'c, P: Provider + Sync + Send + 'static> {
     // It is used to make RPC calls to fetch token_uri data for erc721 contracts
     provider: Arc<P>,
     // Used to limit number of tasks that run in parallel to fetch metadata
-    semaphore: Arc<Semaphore>,
+    metadata_semaphore: Arc<Semaphore>,
 }
 
 #[derive(Debug)]
@@ -234,13 +234,13 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
         pool: Pool<Sqlite>,
         shutdown_tx: Sender<()>,
         provider: Arc<P>,
-        max_concurrent_tasks: usize,
+        max_metadata_tasks: usize,
     ) -> Result<(Self, UnboundedSender<QueryMessage>)> {
         let (tx, rx) = unbounded_channel();
         let transaction = pool.begin().await?;
         let publish_queue = Vec::new();
         let shutdown_rx = shutdown_tx.subscribe();
-        let semaphore = Arc::new(Semaphore::new(max_concurrent_tasks));
+        let metadata_semaphore = Arc::new(Semaphore::new(max_metadata_tasks));
 
         Ok((
             Executor {
@@ -252,7 +252,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 register_tasks: JoinSet::new(),
                 deferred_query_messages: Vec::new(),
                 provider,
-                semaphore,
+                metadata_semaphore,
             },
             tx,
         ))
@@ -451,15 +451,12 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 entity_updated.updated_model = Some(entity);
                 entity_updated.deleted = false;
 
-                let optimistic_entity = OptimisticEntity {
-                    id: entity_updated.id.clone(),
-                    keys: entity_updated.keys.clone(),
-                    event_id: entity_updated.event_id.clone(),
-                    executed_at: entity_updated.executed_at,
-                    created_at: entity_updated.created_at,
-                    updated_at: entity_updated.updated_at,
-                    updated_model: entity_updated.updated_model.clone(),
-                    deleted: entity_updated.deleted,
+                if entity_updated.keys.is_empty() {
+                    warn!(target: LOG_TARGET, "Entity has been updated without being set before. Keys are not known and non-updated values will be NULL.");
+                }
+
+                let optimistic_entity = unsafe {
+                    std::mem::transmute::<EntityUpdated, OptimisticEntity>(entity_updated.clone())
                 };
                 SimpleBroker::publish(optimistic_entity);
 
@@ -603,7 +600,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 debug!(target: LOG_TARGET, duration = ?instant.elapsed(), "Applied balance diff.");
             }
             QueryType::RegisterNftToken(register_nft_token) => {
-                let semaphore = self.semaphore.clone();
+                let metadata_semaphore = self.metadata_semaphore.clone();
                 let provider = self.provider.clone();
 
                 let res = sqlx::query_as::<_, (String, String)>(&format!(
@@ -675,7 +672,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 };
 
                 self.register_tasks.spawn(async move {
-                    let permit = semaphore.acquire().await.unwrap();
+                    let permit = metadata_semaphore.acquire().await.unwrap();
 
                     let result = Self::process_register_nft_token_query(
                         register_nft_token,

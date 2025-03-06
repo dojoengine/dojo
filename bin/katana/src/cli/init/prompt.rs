@@ -1,7 +1,6 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::str::FromStr;
-use std::sync::Arc;
 
 use anyhow::{Context, Result};
 use inquire::validator::{ErrorMessage, Validation};
@@ -11,16 +10,14 @@ use katana_primitives::{ContractAddress, Felt};
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::types::{BlockId, BlockTag};
 use starknet::core::utils::{cairo_short_string_to_felt, parse_cairo_short_string};
-use starknet::providers::jsonrpc::HttpTransport;
-use starknet::providers::{JsonRpcClient, Provider, Url};
+use starknet::providers::Provider;
 use starknet::signers::{LocalWallet, SigningKey};
 use tokio::runtime::Handle;
 
 use super::{deployment, Outcome};
 use crate::cli::init::deployment::DeploymentOutcome;
+use crate::cli::init::settlement::SettlementChainProvider;
 use crate::cli::init::slot::{self, PaymasterAccountArgs};
-
-pub const CARTRIDGE_SN_SEPOLIA_PROVIDER: &str = "https://api.cartridge.gg/x/starknet/sepolia";
 
 pub async fn prompt() -> Result<Outcome> {
     let chain_id = CustomType::<String>::new("Id")
@@ -38,6 +35,7 @@ pub async fn prompt() -> Result<Outcome> {
 
     #[derive(Debug, Clone, strum_macros::Display)]
     enum SettlementChainOpt {
+        Mainnet,
         Sepolia,
         #[cfg(feature = "init-custom-settlement-chain")]
         Custom,
@@ -48,6 +46,7 @@ pub async fn prompt() -> Result<Outcome> {
     // network here (eg local devnet) would require that the proving service we're using
     // be able to settle the proofs there.
     let network_opts = vec![
+        SettlementChainOpt::Mainnet,
         SettlementChainOpt::Sepolia,
         #[cfg(feature = "init-custom-settlement-chain")]
         SettlementChainOpt::Custom,
@@ -57,24 +56,51 @@ pub async fn prompt() -> Result<Outcome> {
         .with_help_message("This is the chain where the rollup will settle on.")
         .prompt()?;
 
-    let settlement_url = match network_type {
-        SettlementChainOpt::Sepolia => Url::parse(CARTRIDGE_SN_SEPOLIA_PROVIDER)?,
+    let settlement_provider = match network_type {
+        SettlementChainOpt::Mainnet => SettlementChainProvider::sn_mainnet(),
+        SettlementChainOpt::Sepolia => SettlementChainProvider::sn_sepolia(),
 
         // Useful for testing the program flow without having to run it against actual network.
         #[cfg(feature = "init-custom-settlement-chain")]
-        SettlementChainOpt::Custom => CustomType::<Url>::new("Settlement RPC URL")
-            .with_default(Url::parse("http://localhost:5050")?)
-            .with_error_message("Please enter a valid URL")
-            .prompt()?,
-    };
+        SettlementChainOpt::Custom => {
+            use starknet::providers::jsonrpc::HttpTransport;
+            use starknet::providers::JsonRpcClient;
+            use url::Url;
 
-    let l1_provider = Arc::new(JsonRpcClient::new(HttpTransport::new(settlement_url.clone())));
+            let url = CustomType::<Url>::new("Settlement RPC URL")
+                .with_default(Url::parse("http://localhost:5050")?)
+                .with_error_message("Please enter a valid URL")
+                .prompt()?;
+
+            let contract_exist_parser = &|input: &str| {
+                let client = JsonRpcClient::new(HttpTransport::new(url.clone()));
+                let block_id = BlockId::Tag(BlockTag::Pending);
+                let address = Felt::from_str(input).map_err(|_| ())?;
+                let result = tokio::task::block_in_place(|| {
+                    Handle::current().block_on(client.get_class_hash_at(block_id, address))
+                });
+
+                match result {
+                    Ok(..) => Ok(ContractAddress::from(address)),
+                    Err(..) => Err(()),
+                }
+            };
+
+            let facts_registry = CustomType::<ContractAddress>::new("Facts Registry")
+                .with_error_message("The facts registry contract must already be deployed!")
+                .with_parser(contract_exist_parser)
+                .prompt()?;
+
+            SettlementChainProvider::new(url, facts_registry.into())
+        }
+    };
 
     let contract_exist_parser = &|input: &str| {
         let block_id = BlockId::Tag(BlockTag::Pending);
         let address = Felt::from_str(input).map_err(|_| ())?;
         let result = tokio::task::block_in_place(|| {
-            Handle::current().block_on(l1_provider.clone().get_class_hash_at(block_id, address))
+            Handle::current()
+                .block_on(settlement_provider.clone().get_class_hash_at(block_id, address))
         });
 
         match result {
@@ -92,9 +118,9 @@ pub async fn prompt() -> Result<Outcome> {
         .with_formatter(&|input: Felt| format!("{input:#x}"))
         .prompt()?;
 
-    let l1_chain_id = l1_provider.chain_id().await?;
+    let l1_chain_id = settlement_provider.chain_id().await?;
     let account = SingleOwnerAccount::new(
-        l1_provider.clone(),
+        settlement_provider.clone(),
         LocalWallet::from_signing_key(SigningKey::from_secret_scalar(private_key)),
         account_address.into(),
         l1_chain_id,
@@ -103,31 +129,34 @@ pub async fn prompt() -> Result<Outcome> {
 
     // The core settlement contract on L1c.
     // Prompt the user whether to deploy the settlement contract or not.
-    let deployment_outcome =
-        if Confirm::new("Deploy settlement contract?").with_default(true).prompt()? {
-            let chain_id = cairo_short_string_to_felt(&chain_id)?;
-            deployment::deploy_settlement_contract(account, chain_id).await?
-        }
-        // If denied, prompt the user for an already deployed contract.
-        else {
-            let address = CustomType::<ContractAddress>::new("Settlement contract")
-                .with_parser(contract_exist_parser)
-                .prompt()?;
+    let deployment_outcome = if Confirm::new("Deploy settlement contract?")
+        .with_default(true)
+        .prompt()?
+    {
+        let chain_id = cairo_short_string_to_felt(&chain_id)?;
+        deployment::deploy_settlement_contract(account, chain_id).await?
+    }
+    // If denied, prompt the user for an already deployed contract.
+    else {
+        let address = CustomType::<ContractAddress>::new("Settlement contract")
+            .with_parser(contract_exist_parser)
+            .prompt()?;
 
-            // Check that the settlement contract has been initialized with the correct program
-            // info.
-            let chain_id = cairo_short_string_to_felt(&chain_id)?;
-            deployment::check_program_info(chain_id, address.into(), &l1_provider).await.context(
+        // Check that the settlement contract has been initialized with the correct program
+        // info.
+        let chain_id = cairo_short_string_to_felt(&chain_id)?;
+        deployment::check_program_info(chain_id, address.into(), &settlement_provider)
+            .await
+            .context(
                 "Invalid settlement contract. The contract might have been configured incorrectly.",
             )?;
 
-            let block_number =
-                CustomType::<BlockNumber>::new("Settlement contract deployment block")
-                    .with_help_message("The block at which the settlement contract was deployed")
-                    .prompt()?;
+        let block_number = CustomType::<BlockNumber>::new("Settlement contract deployment block")
+            .with_help_message("The block at which the settlement contract was deployed")
+            .prompt()?;
 
-            DeploymentOutcome { contract_address: address, block_number }
-        };
+        DeploymentOutcome { contract_address: address, block_number }
+    };
 
     // It's wrapped like this because the prompt validator requires captured variables to have
     // 'static lifetime.
@@ -174,7 +203,7 @@ pub async fn prompt() -> Result<Outcome> {
     Ok(Outcome {
         id: chain_id,
         deployment_outcome,
-        rpc_url: settlement_url,
+        rpc_url: settlement_provider.url().clone(),
         account: account_address,
         settlement_id: parse_cairo_short_string(&l1_chain_id)?,
         #[cfg(feature = "init-slot")]

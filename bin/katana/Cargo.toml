@@ -16,6 +16,7 @@ katana-primitives.workspace = true
 katana-rpc-types.workspace = true
 
 anyhow.workspace = true
+async-trait.workspace = true
 byte-unit = "5.1.4"
 cainome.workspace = true
 clap.workspace = true

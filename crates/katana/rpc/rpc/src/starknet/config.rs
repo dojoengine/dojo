@@ -9,4 +9,8 @@ pub struct StarknetApiConfig {
     ///
     /// If `None`, the maximum keys size is bounded by [`u64::MAX`].
     pub max_proof_keys: Option<u64>,
+
+    /// Enable the execution of transactions from outside with Cartridge paymaster.
+    #[cfg(feature = "cartridge")]
+    pub use_cartridge_paymaster: bool,
 }

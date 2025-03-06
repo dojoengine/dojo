@@ -1,6 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use cainome::parser::tokens::Composite;
+use dojo_world::contracts::naming;
 
 use crate::error::BindgenResult;
 use crate::plugins::{BindgenContractGenerator, BindgenModelGenerator, BindgenWriter, Buffer};
@@ -148,7 +149,15 @@ impl BindgenWriter for TsFileContractWriter {
                     .collect::<Vec<_>>()
             })
             .collect::<Vec<_>>();
-        functions.sort_by(|(_, af), (_, bf)| af.name.cmp(&bf.name));
+
+        functions.sort_by(|(ca, af), (cb, bf)| {
+            let contract_a = naming::get_name_from_tag(&ca.tag);
+            let contract_b = naming::get_name_from_tag(&cb.tag);
+            let function_a = format!("{}_{}", contract_a, af.name);
+            let function_b = format!("{}_{}", contract_b, bf.name);
+
+            function_a.cmp(&function_b)
+        });
 
         let code = self
             .generators

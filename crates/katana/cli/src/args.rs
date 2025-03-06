@@ -1,5 +1,6 @@
 //! Katana node CLI options and configuration.
 
+use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -11,6 +12,7 @@ use clap::Parser;
 use katana_chain_spec::rollup::ChainConfigDir;
 use katana_chain_spec::ChainSpec;
 use katana_core::constants::DEFAULT_SEQUENCER_ADDRESS;
+use katana_explorer::Explorer;
 use katana_messaging::MessagingConfig;
 use katana_node::config::db::DbConfig;
 use katana_node::config::dev::{DevConfig, FixedL1GasPriceConfig};
@@ -21,9 +23,12 @@ use katana_node::config::rpc::RpcConfig;
 #[cfg(feature = "server")]
 use katana_node::config::rpc::{RpcModuleKind, RpcModulesList};
 use katana_node::config::sequencing::SequencingConfig;
+#[cfg(feature = "cartridge")]
+use katana_node::config::CartridgeConfig;
 use katana_node::config::Config;
 use katana_primitives::genesis::allocation::DevAllocationsGenerator;
 use katana_primitives::genesis::constant::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;
+use katana_rpc::cors::HeaderValue;
 use serde::{Deserialize, Serialize};
 use tracing::{info, Subscriber};
 use tracing_log::LogTracer;
@@ -115,6 +120,13 @@ pub struct NodeArgs {
     #[cfg(feature = "slot")]
     #[command(flatten)]
     pub slot: SlotOptions,
+
+    #[cfg(feature = "cartridge")]
+    #[command(flatten)]
+    pub cartridge: CartridgeOptions,
+
+    #[command(flatten)]
+    pub explorer: ExplorerOptions,
 }
 
 impl NodeArgs {
@@ -132,8 +144,19 @@ impl NodeArgs {
             utils::print_intro(self, &node.backend.chain_spec);
         }
 
+        // Get chain ID before launching the node
+        let chain_id = node.backend.chain_spec.id();
+
         // Launch the node
         let handle = node.launch().await.context("failed to launch node")?;
+
+        // Then start the explorer if enabled
+        if self.explorer.explorer {
+            let rpc_url = format!("http://{}", handle.rpc.addr());
+            let rpc_url = Url::parse(&rpc_url).context("failed to parse node url")?;
+            let addr = SocketAddr::new(self.explorer.explorer_addr, self.explorer.explorer_port);
+            let _ = Explorer::new(rpc_url, chain_id.to_string())?.start(addr)?;
+        }
 
         // Wait until an OS signal (ie SIGINT, SIGTERM) is received or the node is shutdown.
         tokio::select! {
@@ -192,7 +215,26 @@ impl NodeArgs {
         // the messagign config will eventually be removed slowly.
         let messaging = if cs_messaging.is_some() { cs_messaging } else { self.messaging.clone() };
 
-        Ok(Config { metrics, db, dev, rpc, chain, execution, sequencing, messaging, forking })
+        #[cfg(feature = "cartridge")]
+        {
+            Ok(Config {
+                metrics,
+                db,
+                dev,
+                rpc,
+                chain,
+                execution,
+                sequencing,
+                messaging,
+                forking,
+                cartridge: CartridgeConfig { paymaster: self.cartridge.paymaster },
+            })
+        }
+
+        #[cfg(not(feature = "cartridge"))]
+        {
+            Ok(Config { metrics, db, dev, rpc, chain, execution, sequencing, messaging, forking })
+        }
     }
 
     fn sequencer_config(&self) -> SequencingConfig {
@@ -224,21 +266,45 @@ impl NodeArgs {
                 // Ensures the `--dev` flag enabled the dev module.
                 if self.development.dev {
                     modules.add(RpcModuleKind::Dev);
-                    #[cfg(feature = "cartridge")]
+                }
+
+                #[cfg(feature = "cartridge")]
+                if self.cartridge.paymaster {
                     modules.add(RpcModuleKind::Cartridge);
                 }
 
                 modules
             };
 
+            let mut cors_origins = self.server.http_cors_origins.clone();
+
+            // Add explorer URL to CORS origins if explorer is enabled
+            if self.explorer.explorer {
+                // Add both http://127.0.0.1:PORT and http://localhost:PORT
+                cors_origins.push(
+                    HeaderValue::from_str(&format!(
+                        "http://127.0.0.1:{}",
+                        self.explorer.explorer_port
+                    ))
+                    .context("Failed to create CORS header")?,
+                );
+                cors_origins.push(
+                    HeaderValue::from_str(&format!(
+                        "http://localhost:{}",
+                        self.explorer.explorer_port
+                    ))
+                    .context("Failed to create CORS header")?,
+                );
+            }
+
             Ok(RpcConfig {
                 apis: modules,
                 port: self.server.http_port,
                 addr: self.server.http_addr,
                 max_connections: self.server.max_connections,
+                cors_origins,
                 max_request_body_size: None,
                 max_response_body_size: None,
-                cors_origins: self.server.http_cors_origins.clone(),
                 max_event_page_size: Some(self.server.max_event_page_size),
                 max_proof_keys: Some(self.server.max_proof_keys),
                 max_call_gas: Some(self.server.max_call_gas),
