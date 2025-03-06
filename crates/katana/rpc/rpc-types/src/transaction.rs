@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use account_sdk::account::outside_execution::OutsideExecution;
-use account_sdk::hash::{MessageHashRev1, StarknetDomain, StructHashRev1};
 use anyhow::Result;
 use derive_more::Deref;
 use katana_primitives::chain::ChainId;
@@ -23,8 +22,6 @@ use starknet::core::types::{
     DeployAccountTransactionV1, DeployAccountTransactionV3, InvokeTransactionResult,
 };
 use starknet::core::utils::get_contract_address;
-use starknet::macros::{selector, short_string};
-use starknet_crypto::poseidon_hash_many;
 
 use crate::class::{RpcContractClass, RpcLegacyContractClass, RpcSierraContractClass};
 use crate::receipt::TxReceiptWithBlockInfo;

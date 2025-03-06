@@ -285,11 +285,10 @@ impl NodeArgs {
             }
 
             let paymaster_account = DevAllocationsGenerator::new(1)
+                .with_seed(parse_seed("paymaster"))
                 .with_balance(U256::from(DEFAULT_PREFUNDED_ACCOUNT_BALANCE))
-                .with_class(katana_primitives::felt!(
-                    "0x024a9edbfa7082accfceabf6a92d7160086f346d622f28741bf1c651c412c9ab"
-                ))
                 .generate();
+
             chain_spec
                 .genesis
                 .extend_allocations(paymaster_account.into_iter().map(|(k, v)| (k, v.into())));
