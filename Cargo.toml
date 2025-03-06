@@ -179,7 +179,7 @@ colored_json = "3.2.0"
 console = "0.15.7"
 # Controller PR revision until merged.
 # https://github.com/cartridge-gg/controller/pull/1454
-account_sdk = { git = "https://github.com/cartridge-gg/controller", rev = "88adafa" }
+account_sdk = { git = "https://github.com/cartridge-gg/controller", rev = "b9d37c3" }
 convert_case = "0.6.0"
 crypto-bigint = { version = "0.5.3", features = [ "serde" ] }
 data-url = "0.3"

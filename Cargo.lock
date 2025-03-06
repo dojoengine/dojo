@@ -62,7 +62,7 @@ dependencies = [
 [[package]]
 name = "account_sdk"
 version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/controller?rev=88adafa#88adafacd066b75236dafb1c6e03e26f0007b77c"
+source = "git+https://github.com/cartridge-gg/controller?rev=b9d37c3#b9d37c333fec8049c39199f027878b2e6a4c8158"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -8454,7 +8454,7 @@ dependencies = [
 name = "katana-primitives"
 version = "1.2.2"
 dependencies = [
- "account_sdk 0.1.0 (git+https://github.com/cartridge-gg/controller?rev=88adafa)",
+ "account_sdk 0.1.0 (git+https://github.com/cartridge-gg/controller?rev=b9d37c3)",
  "alloy-primitives",
  "anyhow",
  "arbitrary",
@@ -8518,7 +8518,7 @@ dependencies = [
 name = "katana-rpc"
 version = "1.2.2"
 dependencies = [
- "account_sdk 0.1.0 (git+https://github.com/cartridge-gg/controller?rev=88adafa)",
+ "account_sdk 0.1.0 (git+https://github.com/cartridge-gg/controller?rev=b9d37c3)",
  "alloy",
  "alloy-primitives",
  "anyhow",
@@ -8567,7 +8567,7 @@ dependencies = [
 name = "katana-rpc-api"
 version = "1.2.2"
 dependencies = [
- "account_sdk 0.1.0 (git+https://github.com/cartridge-gg/controller?rev=88adafa)",
+ "account_sdk 0.1.0 (git+https://github.com/cartridge-gg/controller?rev=b9d37c3)",
  "jsonrpsee",
  "katana-core",
  "katana-primitives",
