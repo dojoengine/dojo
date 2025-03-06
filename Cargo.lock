@@ -8553,7 +8553,6 @@ dependencies = [
 name = "katana-rpc-types"
 version = "1.2.1"
 dependencies = [
- "account_sdk 0.1.0 (git+https://github.com/cartridge-gg/controller?rev=88adafa)",
  "alloy-primitives",
  "anyhow",
  "cainome 0.5.0",

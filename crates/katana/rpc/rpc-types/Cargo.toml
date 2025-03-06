@@ -16,7 +16,6 @@ katana-provider.workspace = true
 katana-trie.workspace = true
 
 anyhow.workspace = true
-account_sdk.workspace = true
 derive_more.workspace = true
 futures.workspace = true
 jsonrpsee = { workspace = true, features = [ "server" ] }

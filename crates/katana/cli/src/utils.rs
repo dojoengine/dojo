@@ -196,10 +196,8 @@ PREFUNDED ACCOUNTS
             println!(
                 r"
 | Account address |  {addr}
-| Account ch      |  {:#x}
 | Private key     |  {pk:#x}
 | Public key      |  {:#x}",
-                account.class_hash(),
                 account.public_key()
             )
         } else {
