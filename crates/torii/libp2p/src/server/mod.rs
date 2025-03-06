@@ -70,7 +70,16 @@ impl<P: Provider + Sync> Relay<P> {
         local_key_path: Option<String>,
         cert_path: Option<String>,
     ) -> Result<Self, Error> {
-        Self::new_with_peers(pool, provider, port, port_webrtc, port_websocket, local_key_path, cert_path, vec![])
+        Self::new_with_peers(
+            pool,
+            provider,
+            port,
+            port_webrtc,
+            port_websocket,
+            local_key_path,
+            cert_path,
+            vec![],
+        )
     }
 
     pub fn new_with_peers(
