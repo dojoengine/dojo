@@ -7,4 +7,5 @@ pub trait IModel<T> {
     fn unpacked_size(self: @T) -> Option<usize>;
     fn packed_size(self: @T) -> Option<usize>;
     fn definition(self: @T) -> dojo::model::ModelDef;
+    fn use_legacy_storage(self: @T) -> bool;
 }
