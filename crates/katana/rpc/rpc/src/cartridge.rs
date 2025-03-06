@@ -1,3 +1,29 @@
+/// Handles management of Cartridge controller accounts.
+///
+/// When a Controller account is created, the username is used as a salt,
+/// and the latest controller class hash is used.
+/// This ensures that the controller account address is deterministic.
+///
+/// A consequence of that, is that all the controller class hashes must be
+/// known by Katana to ensure it can first deploy the controller account with the
+/// correct address, and then upgrade it to the latest version.
+///
+/// This module contains the function to work around this behavior, which also relies
+/// on the updated code into `katana-primitives` to ensure all the controller class hashes
+/// are available.
+///
+/// Two flows:
+///
+/// 1. When a Controller account is created, an execution from outside is received from the
+///    very first transaction that the user will want to achieve using the session. In this
+///    case, this module will hook the execution from outside to ensure the controller account
+///    is deployed.
+///
+/// 2. When a Controller account is already deployed, and the user logs in, the client code of
+///    controller is actually performing a `estimate_fee` to estimate the fee for the account
+///    upgrade. In this case, this module contains the code to hook the fee estimation, and
+///    return the associated transaction to be executed in order to deploy the controller
+///    account.
 use std::sync::Arc;
 
 use account_sdk::account::outside_execution::OutsideExecution;
@@ -59,12 +85,34 @@ impl<EF: ExecutorFactory> CartridgeApi<EF> {
         signature: Vec<Felt>,
     ) -> Result<InvokeTxResult, StarknetApiError> {
         let state = self.backend.blockchain.provider().latest().unwrap();
-        let nonce = state.nonce(paymaster_address).unwrap();
 
         let entrypoint = match outside_execution {
             OutsideExecution::V2(_) => selector!("execute_from_outside_v2"),
             OutsideExecution::V3(_) => selector!("execute_from_outside_v3"),
         };
+
+        // If the controller has been created during the flow, there's no fee estimation.
+        // Hence, we can check if the controller is deployed, if not, deploy it.
+        if state.class_hash_of_contract(contract_address.into()).unwrap().is_none() {
+            let nonce = state.nonce(paymaster_address).unwrap();
+
+            if let Some(tx) = craft_deploy_cartridge_controller_tx(
+                contract_address,
+                paymaster_address,
+                paymaster_private_key,
+                self.backend.chain_spec.id(),
+                nonce,
+            )
+            .await
+            {
+                self.pool.add_transaction(tx)?;
+                // TODO: we may avoid the sleep here using the executor?
+                tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+            }
+        }
+
+        let state = self.backend.blockchain.provider().latest().unwrap();
+        let nonce = state.nonce(paymaster_address).unwrap();
 
         let mut inner_calldata =
             <OutsideExecution as CairoSerde>::cairo_serialize(&outside_execution);
@@ -206,7 +254,7 @@ pub fn encode_calls(calls: Vec<Call>) -> Vec<Felt> {
 /// The controller accounts are created with a specific version of the controller.
 /// To ensure address determinism, the controller account must be deployed with the same version,
 /// which is included in the calldata retrieved from the Cartridge API.
-pub async fn handle_cartridge_controller_deploy(
+pub async fn handle_cartridge_estimate_fee(
     paymaster_address: ContractAddress,
     paymaster_private_key: Felt,
     transactions: &[ExecutableTxWithHash],
@@ -217,43 +265,21 @@ pub async fn handle_cartridge_controller_deploy(
 
     for t in transactions {
         if let ExecutableTx::Invoke(InvokeTx::V3(v3)) = &t.transaction {
-            let maybe_controller_address: Felt = v3.sender_address.into();
+            let maybe_controller_address = v3.sender_address;
 
             // Avoid deploying the controller account if it is already deployed.
-            if state.class_hash_of_contract(maybe_controller_address.into()).unwrap().is_some() {
+            if state.class_hash_of_contract(maybe_controller_address).unwrap().is_some() {
                 return None;
             }
 
-            let calldata = fetch_controller_constructor_calldata(maybe_controller_address).await?;
-
-            let call = Call {
-                to: DEFAULT_UDC_ADDRESS.into(),
-                selector: selector!("deployContract"),
-                calldata,
-            };
-
-            let mut tx = InvokeTxV3 {
+            let tx = craft_deploy_cartridge_controller_tx(
+                maybe_controller_address,
+                paymaster_address,
+                paymaster_private_key,
                 chain_id,
-                nonce: paymaster_nonce.unwrap_or(Felt::ZERO),
-                calldata: encode_calls(vec![call]),
-                sender_address: paymaster_address,
-                resource_bounds: ResourceBoundsMapping::default(),
-                tip: 0_u64,
-                paymaster_data: vec![],
-                account_deployment_data: vec![],
-                nonce_data_availability_mode: katana_primitives::da::DataAvailabilityMode::L1,
-                fee_data_availability_mode: katana_primitives::da::DataAvailabilityMode::L1,
-                signature: vec![],
-            };
-            let tx_hash = InvokeTx::V3(tx.clone()).calculate_hash(false);
-
-            let signer = LocalWallet::from(SigningKey::from_secret_scalar(paymaster_private_key));
-
-            let signature = futures::executor::block_on(signer.sign_hash(&tx_hash))
-                .expect("failed to sign hash with paymaster");
-            tx.signature = vec![signature.r, signature.s];
-
-            let tx = ExecutableTxWithHash::new(ExecutableTx::Invoke(InvokeTx::V3(tx)));
+                paymaster_nonce,
+            )
+            .await?;
 
             return Some((
                 tx,
@@ -270,4 +296,45 @@ pub async fn handle_cartridge_controller_deploy(
     }
 
     None
+}
+
+/// Crafts a deploy controller transaction for a cartridge controller.
+///
+/// Returns None if the provided `controller_address` is not registered in the Cartridge API.
+pub async fn craft_deploy_cartridge_controller_tx(
+    controller_address: ContractAddress,
+    paymaster_address: ContractAddress,
+    paymaster_private_key: Felt,
+    chain_id: ChainId,
+    paymaster_nonce: Option<Felt>,
+) -> Option<ExecutableTxWithHash> {
+    let calldata = fetch_controller_constructor_calldata(controller_address.into()).await?;
+
+    let call =
+        Call { to: DEFAULT_UDC_ADDRESS.into(), selector: selector!("deployContract"), calldata };
+
+    let mut tx = InvokeTxV3 {
+        chain_id,
+        nonce: paymaster_nonce.unwrap_or(Felt::ZERO),
+        calldata: encode_calls(vec![call]),
+        sender_address: paymaster_address,
+        resource_bounds: ResourceBoundsMapping::default(),
+        tip: 0_u64,
+        paymaster_data: vec![],
+        account_deployment_data: vec![],
+        nonce_data_availability_mode: katana_primitives::da::DataAvailabilityMode::L1,
+        fee_data_availability_mode: katana_primitives::da::DataAvailabilityMode::L1,
+        signature: vec![],
+    };
+    let tx_hash = InvokeTx::V3(tx.clone()).calculate_hash(false);
+
+    let signer = LocalWallet::from(SigningKey::from_secret_scalar(paymaster_private_key));
+
+    let signature = futures::executor::block_on(signer.sign_hash(&tx_hash))
+        .expect("failed to sign hash with paymaster");
+    tx.signature = vec![signature.r, signature.s];
+
+    let tx = ExecutableTxWithHash::new(ExecutableTx::Invoke(InvokeTx::V3(tx)));
+
+    Some(tx)
 }

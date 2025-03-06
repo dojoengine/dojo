@@ -245,7 +245,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
 
             let state = self.inner.backend.blockchain.provider().latest().unwrap();
 
-            let c7e_result = crate::cartridge::handle_cartridge_controller_deploy(
+            let c7e_result = crate::cartridge::handle_cartridge_estimate_fee(
                 *paymaster_address,
                 paymaster_private_key,
                 &transactions,
