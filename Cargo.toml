@@ -71,8 +71,11 @@ debug = true
 inherits = "release"
 
 [workspace.dependencies]
-cainome = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.4.12", features = [ "abigen-rs" ] }
-cainome-cairo-serde = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.4.12" }
+#cainome = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.4.12", features = [ "abigen-rs" ] }
+#cainome-cairo-serde = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.4.12" }
+cainome = { version = "0.5.0", features = [ "abigen-rs" ] }
+cainome-cairo-serde = { version = "0.1.0" }
+
 dojo-utils = { path = "crates/dojo/utils" }
 
 # metrics
@@ -174,7 +177,9 @@ clap_complete = "4.3"
 colored = "2.0.0"
 colored_json = "3.2.0"
 console = "0.15.7"
-account_sdk = { path = "../controller/packages/account_sdk" }
+# Controller PR revision until merged.
+# https://github.com/cartridge-gg/controller/pull/1454
+account_sdk = { git = "https://github.com/cartridge-gg/controller", rev = "88adafa" }
 convert_case = "0.6.0"
 crypto-bigint = { version = "0.5.3", features = [ "serde" ] }
 data-url = "0.3"
@@ -288,7 +293,3 @@ bitvec = "1.0.1"
 proc-macro2 = "1.0"
 quote = "1.0"
 syn = { version = "2.0", default-features = false }
-
-# [unstable]
-# # this feature is required by `account_sdk`
-# is_none_or = true
