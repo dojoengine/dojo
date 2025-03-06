@@ -4,11 +4,14 @@ use std::str::FromStr;
 use std::time::Duration;
 
 use anyhow::Result;
+use base64::engine::general_purpose::STANDARD;
+use base64::Engine;
 use chrono::{DateTime, Utc};
 use futures_util::TryStreamExt;
 use ipfs_api_backend_hyper::{IpfsApi, IpfsClient, TryFromUri};
 use once_cell::sync::Lazy;
 use reqwest::Client;
+use sqlx::{Column, Row, TypeInfo};
 use starknet::core::types::U256;
 use starknet_crypto::Felt;
 use tokio_util::bytes::Bytes;
@@ -180,6 +183,48 @@ pub async fn fetch_content_from_ipfs(cid: &str) -> Result<Bytes> {
             }
         }
     }
+}
+
+// Map a SQLite row to a JSON value
+pub fn map_row_to_json(row: &sqlx::sqlite::SqliteRow) -> serde_json::Value {
+    let mut obj = serde_json::Map::new();
+    for (i, column) in row.columns().iter().enumerate() {
+        let value: serde_json::Value = match column.type_info().name() {
+            "TEXT" => row
+                .get::<Option<String>, _>(i)
+                .map_or(serde_json::Value::Null, serde_json::Value::String),
+            "INTEGER" => row
+                .get::<Option<i64>, _>(i)
+                .map_or(serde_json::Value::Null, |n| serde_json::Value::Number(n.into())),
+            "REAL" => row.get::<Option<f64>, _>(i).map_or(serde_json::Value::Null, |f| {
+                serde_json::Number::from_f64(f)
+                    .map_or(serde_json::Value::Null, serde_json::Value::Number)
+            }),
+            "BLOB" => row.get::<Option<Vec<u8>>, _>(i).map_or(serde_json::Value::Null, |bytes| {
+                serde_json::Value::String(STANDARD.encode(bytes))
+            }),
+            _ => {
+                // Try different types in order
+                if let Ok(val) = row.try_get::<i64, _>(i) {
+                    serde_json::Value::Number(val.into())
+                } else if let Ok(val) = row.try_get::<f64, _>(i) {
+                    serde_json::json!(val)
+                } else if let Ok(val) = row.try_get::<bool, _>(i) {
+                    serde_json::Value::Bool(val)
+                } else if let Ok(val) = row.try_get::<String, _>(i) {
+                    serde_json::Value::String(val)
+                } else {
+                    // Handle or fallback to BLOB as base64
+                    let val = row.get::<Option<Vec<u8>>, _>(i);
+                    val.map_or(serde_json::Value::Null, |bytes| {
+                        serde_json::Value::String(STANDARD.encode(bytes))
+                    })
+                }
+            }
+        };
+        obj.insert(column.name().to_string(), value);
+    }
+    serde_json::Value::Object(obj)
 }
 
 // type used to do calculation on inmemory balances
