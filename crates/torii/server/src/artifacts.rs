@@ -115,7 +115,9 @@ fn file_name_from_dir_and_query(
             entry
                 .file_name()
                 .to_str()
-                .map(|name| name.starts_with("image") && !name.contains('@') && !name.ends_with(".hash"))
+                .map(|name| {
+                    name.starts_with("image") && !name.contains('@') && !name.ends_with(".hash")
+                })
                 .unwrap_or(false)
         })
         .with_context(|| "Failed to find base image")?;
