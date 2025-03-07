@@ -82,6 +82,7 @@ impl<P: Provider + Sync> Relay<P> {
         )
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn new_with_peers(
         pool: Sql,
         provider: P,
