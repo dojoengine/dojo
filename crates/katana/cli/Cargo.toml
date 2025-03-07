@@ -36,6 +36,7 @@ assert_matches.workspace = true
 starknet.workspace = true
 
 [features]
-default = [ "server", "slot" ]
+default = [ "server", "slot", "cartridge" ]
 server = [  ]
 slot = [ "dep:katana-slot-controller", "katana-chain-spec/controller" ]
+cartridge = [ "katana-rpc/cartridge", "katana-node/cartridge", "katana-primitives/controller" ]

@@ -10,6 +10,7 @@ version.workspace = true
 katana-cairo.workspace = true
 
 anyhow.workspace = true
+account_sdk = { workspace = true, optional = true }
 arbitrary = { workspace = true, optional = true }
 base64.workspace = true
 derive_more.workspace = true
@@ -50,9 +51,10 @@ arbitrary = [
 	# See the comment in katana-cairo/Cargo.toml for why this is needed.
 	"katana-cairo/cairo-vm-test-utils",
 ]
-controller = [  ]
+controller = [ ]
 serde = [ "alloy-primitives/serde" ]
 slot = [ "controller" ]
+cartridge = [ "account_sdk" ]
 
 [[bench]]
 harness = false

@@ -23,6 +23,8 @@ use katana_node::config::rpc::RpcConfig;
 #[cfg(feature = "server")]
 use katana_node::config::rpc::{RpcModuleKind, RpcModulesList};
 use katana_node::config::sequencing::SequencingConfig;
+#[cfg(feature = "cartridge")]
+use katana_node::config::CartridgeConfig;
 use katana_node::config::Config;
 use katana_primitives::genesis::allocation::DevAllocationsGenerator;
 use katana_primitives::genesis::constant::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;
@@ -119,6 +121,10 @@ pub struct NodeArgs {
     #[command(flatten)]
     pub slot: SlotOptions,
 
+    #[cfg(feature = "cartridge")]
+    #[command(flatten)]
+    pub cartridge: CartridgeOptions,
+
     #[command(flatten)]
     pub explorer: ExplorerOptions,
 }
@@ -209,7 +215,29 @@ impl NodeArgs {
         // the messagign config will eventually be removed slowly.
         let messaging = if cs_messaging.is_some() { cs_messaging } else { self.messaging.clone() };
 
-        Ok(Config { metrics, db, dev, rpc, chain, execution, sequencing, messaging, forking })
+        #[cfg(feature = "cartridge")]
+        {
+            Ok(Config {
+                metrics,
+                db,
+                dev,
+                rpc,
+                chain,
+                execution,
+                sequencing,
+                messaging,
+                forking,
+                cartridge: CartridgeConfig {
+                    paymaster: self.cartridge.paymaster,
+                    api_url: self.cartridge.api_url.clone(),
+                },
+            })
+        }
+
+        #[cfg(not(feature = "cartridge"))]
+        {
+            Ok(Config { metrics, db, dev, rpc, chain, execution, sequencing, messaging, forking })
+        }
     }
 
     fn sequencer_config(&self) -> SequencingConfig {
@@ -241,6 +269,11 @@ impl NodeArgs {
                 // Ensures the `--dev` flag enabled the dev module.
                 if self.development.dev {
                     modules.add(RpcModuleKind::Dev);
+                }
+
+                #[cfg(feature = "cartridge")]
+                if self.cartridge.paymaster {
+                    modules.add(RpcModuleKind::Cartridge);
                 }
 
                 modules
@@ -308,7 +341,8 @@ impl NodeArgs {
                 chain_spec.genesis.sequencer_address = *DEFAULT_SEQUENCER_ADDRESS;
             }
 
-            // generate dev accounts
+            // Generate dev accounts.
+            // If `cartridge` is enabled, the first account will be the paymaster.
             let accounts = DevAllocationsGenerator::new(self.development.total_accounts)
                 .with_seed(parse_seed(&self.development.seed))
                 .with_balance(U256::from(DEFAULT_PREFUNDED_ACCOUNT_BALANCE))
