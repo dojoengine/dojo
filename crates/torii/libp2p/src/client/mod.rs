@@ -5,14 +5,9 @@ use futures::channel::mpsc::{UnboundedReceiver, UnboundedSender};
 use futures::channel::oneshot;
 use futures::lock::Mutex;
 use futures::{select, StreamExt};
-#[cfg(target_arch = "wasm32")]
-use libp2p::core::{upgrade::Version, Transport};
 use libp2p::gossipsub::{self, IdentTopic, MessageId};
 use libp2p::swarm::{NetworkBehaviour, Swarm, SwarmEvent};
-#[cfg(not(target_arch = "wasm32"))]
-use libp2p::tcp;
 use libp2p::{identify, identity, noise, ping, yamux, Multiaddr, PeerId};
-use libp2p_webrtc as webrtc;
 use tracing::info;
 
 pub mod events;
@@ -55,7 +50,9 @@ impl RelayClient {
         use libp2p::core::upgrade::Version;
         use libp2p::{dns, websocket, Transport};
         use libp2p_webrtc::tokio::Certificate;
+        use libp2p_webrtc as webrtc;
         use rand::thread_rng;
+        use libp2p::tcp;
 
         let local_key = identity::Keypair::generate_ed25519();
         let peer_id = PeerId::from(local_key.public());
@@ -126,6 +123,8 @@ impl RelayClient {
 
     #[cfg(target_arch = "wasm32")]
     pub fn new(relay_addr: String) -> Result<Self, Error> {
+        use libp2p::core::{upgrade::Version, Transport};
+        
         let local_key = identity::Keypair::generate_ed25519();
         let peer_id = PeerId::from(local_key.public());
 
