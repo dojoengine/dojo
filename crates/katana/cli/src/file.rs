@@ -24,6 +24,8 @@ pub struct NodeArgsConfig {
     #[cfg(feature = "server")]
     pub server: Option<ServerOptions>,
     #[cfg(feature = "server")]
+    pub rpc: Option<RpcOptions>,
+    #[cfg(feature = "server")]
     pub metrics: Option<MetricsOptions>,
 }
 
@@ -67,6 +69,7 @@ impl TryFrom<NodeArgs> for NodeArgsConfig {
         {
             node_config.server =
                 if args.server == ServerOptions::default() { None } else { Some(args.server) };
+            node_config.rpc = if args.rpc == RpcOptions::default() { None } else { Some(args.rpc) };
             node_config.metrics =
                 if args.metrics == MetricsOptions::default() { None } else { Some(args.metrics) };
         }
