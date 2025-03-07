@@ -713,14 +713,14 @@ chain_id.Named = "Mainnet"
 
     #[test]
     fn http_modules() {
-        // If the `--http.api` isn't specified, only starknet module will be exposed.
+        // If the `--rpc.api` isn't specified, only starknet module will be exposed.
         let config = NodeArgs::parse_from(["katana"]).config().unwrap();
         let modules = config.rpc.apis;
         assert_eq!(modules.len(), 1);
         assert!(modules.contains(&RpcModuleKind::Starknet));
 
-        // If the `--http.api` is specified, only the ones in the list will be exposed.
-        let config = NodeArgs::parse_from(["katana", "--http.api", "saya,torii"]).config().unwrap();
+        // If the `--rpc.api` is specified, only the ones in the list will be exposed.
+        let config = NodeArgs::parse_from(["katana", "--rpc.api", "saya,torii"]).config().unwrap();
         let modules = config.rpc.apis;
         assert_eq!(modules.len(), 2);
         assert!(modules.contains(&RpcModuleKind::Saya));
@@ -728,7 +728,7 @@ chain_id.Named = "Mainnet"
 
         // Specifiying the dev module without enabling dev mode is forbidden.
         let err =
-            NodeArgs::parse_from(["katana", "--http.api", "starknet,dev"]).config().unwrap_err();
+            NodeArgs::parse_from(["katana", "--rpc.api", "starknet,dev"]).config().unwrap_err();
         assert!(
             err.to_string()
                 .contains("The `dev` module can only be enabled in dev mode (ie `--dev` flag)")
