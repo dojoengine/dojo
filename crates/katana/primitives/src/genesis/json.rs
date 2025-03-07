@@ -782,13 +782,35 @@ mod tests {
         let json = GenesisJson::load(path).unwrap();
         let actual_genesis = Genesis::try_from(json).unwrap();
 
-        let expected_classes = BTreeMap::from([
-            (DEFAULT_LEGACY_ERC20_CLASS_HASH, DEFAULT_LEGACY_ERC20_CLASS.clone().into()),
-            (DEFAULT_LEGACY_UDC_CLASS_HASH, DEFAULT_LEGACY_UDC_CLASS.clone().into()),
-            (DEFAULT_ACCOUNT_CLASS_HASH, DEFAULT_ACCOUNT_CLASS.clone().into()),
-            #[cfg(feature = "controller")]
-            (CONTROLLER_CLASS_HASH, CONTROLLER_ACCOUNT_CLASS.clone().into()),
-        ]);
+        let mut expected_classes = BTreeMap::new();
+
+        expected_classes
+            .insert(DEFAULT_LEGACY_ERC20_CLASS_HASH, DEFAULT_LEGACY_ERC20_CLASS.clone().into());
+        expected_classes
+            .insert(DEFAULT_LEGACY_UDC_CLASS_HASH, DEFAULT_LEGACY_UDC_CLASS.clone().into());
+        expected_classes.insert(DEFAULT_ACCOUNT_CLASS_HASH, DEFAULT_ACCOUNT_CLASS.clone().into());
+
+        #[cfg(feature = "controller")]
+        expected_classes.insert(CONTROLLER_CLASS_HASH, CONTROLLER_ACCOUNT_CLASS.clone().into());
+
+        #[cfg(feature = "cartridge")]
+        {
+            #[cfg(feature = "cartridge")]
+            expected_classes.extend(
+                // Filter out the `1.0.4` already included and
+                // LATEST which is a duplicate of `1.0.9`.
+                CONTROLLERS
+                    .iter()
+                    .filter(|(v, _)| {
+                        **v == ControllerVersion::V1_0_5
+                            || **v == ControllerVersion::V1_0_6
+                            || **v == ControllerVersion::V1_0_7
+                            || **v == ControllerVersion::V1_0_8
+                            || **v == ControllerVersion::V1_0_9
+                    })
+                    .map(|(_, v)| (v.hash, parse_sierra_class(v.content).unwrap().into())),
+            );
+        }
 
         let acc_1 = address!("0x66efb28ac62686966ae85095ff3a772e014e7fbf56d4c5f6fac5606d4dde23a");
         let acc_2 = address!("0x6b86e40118f29ebe393a75469b4d926c7a44c2e2681b6d319520b7c1156d114");

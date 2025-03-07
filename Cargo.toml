@@ -103,7 +103,7 @@ katana-executor = { path = "crates/katana/executor" }
 katana-explorer = { path = "crates/katana/explorer" }
 katana-feeder-gateway = { path = "crates/katana/feeder-gateway" }
 katana-messaging = { path = "crates/katana/messaging" }
-katana-node = { path = "crates/katana/node", default-features = false }
+katana-node = { path = "crates/katana/node", features = [ "cartridge" ] }
 katana-node-bindings = { path = "crates/katana/node-bindings" }
 katana-pipeline = { path = "crates/katana/sync/pipeline" }
 katana-pool = { path = "crates/katana/pool" }
