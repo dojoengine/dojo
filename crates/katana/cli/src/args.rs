@@ -103,6 +103,10 @@ pub struct NodeArgs {
     #[command(flatten)]
     pub server: ServerOptions,
 
+    #[cfg(feature = "server")]
+    #[command(flatten)]
+    pub rpc: RpcOptions,
+
     #[command(flatten)]
     pub starknet: StarknetOptions,
 
@@ -223,7 +227,7 @@ impl NodeArgs {
     fn rpc_config(&self) -> Result<RpcConfig> {
         #[cfg(feature = "server")]
         {
-            let modules = if let Some(modules) = &self.server.http_modules {
+            let modules = if let Some(modules) = &self.rpc.http_modules {
                 // TODO: This check should be handled in the `katana-node` level. Right now if you
                 // instantiate katana programmatically, you can still add the dev module without
                 // enabling dev mode.
@@ -271,13 +275,13 @@ impl NodeArgs {
                 apis: modules,
                 port: self.server.http_port,
                 addr: self.server.http_addr,
-                max_connections: self.server.max_connections,
+                max_connections: self.rpc.max_connections,
                 cors_origins,
                 max_request_body_size: None,
                 max_response_body_size: None,
-                max_event_page_size: Some(self.server.max_event_page_size),
-                max_proof_keys: Some(self.server.max_proof_keys),
-                max_call_gas: Some(self.server.max_call_gas),
+                max_event_page_size: Some(self.rpc.max_event_page_size),
+                max_proof_keys: Some(self.rpc.max_proof_keys),
+                max_call_gas: Some(self.rpc.max_call_gas),
             })
         }
 
@@ -426,6 +430,7 @@ impl NodeArgs {
         #[cfg(feature = "server")]
         {
             self.server.merge(config.server.as_ref());
+            self.rpc.merge(config.rpc.as_ref());
 
             if self.metrics == MetricsOptions::default() {
                 if let Some(metrics) = config.metrics {
@@ -708,14 +713,14 @@ chain_id.Named = "Mainnet"
 
     #[test]
     fn http_modules() {
-        // If the `--http.api` isn't specified, only starknet module will be exposed.
+        // If the `--rpc.api` isn't specified, only starknet module will be exposed.
         let config = NodeArgs::parse_from(["katana"]).config().unwrap();
         let modules = config.rpc.apis;
         assert_eq!(modules.len(), 1);
         assert!(modules.contains(&RpcModuleKind::Starknet));
 
-        // If the `--http.api` is specified, only the ones in the list will be exposed.
-        let config = NodeArgs::parse_from(["katana", "--http.api", "saya,torii"]).config().unwrap();
+        // If the `--rpc.api` is specified, only the ones in the list will be exposed.
+        let config = NodeArgs::parse_from(["katana", "--rpc.api", "saya,torii"]).config().unwrap();
         let modules = config.rpc.apis;
         assert_eq!(modules.len(), 2);
         assert!(modules.contains(&RpcModuleKind::Saya));
@@ -723,7 +728,7 @@ chain_id.Named = "Mainnet"
 
         // Specifiying the dev module without enabling dev mode is forbidden.
         let err =
-            NodeArgs::parse_from(["katana", "--http.api", "starknet,dev"]).config().unwrap_err();
+            NodeArgs::parse_from(["katana", "--rpc.api", "starknet,dev"]).config().unwrap_err();
         assert!(
             err.to_string()
                 .contains("The `dev` module can only be enabled in dev mode (ie `--dev` flag)")

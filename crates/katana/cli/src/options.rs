@@ -99,9 +99,42 @@ pub struct ServerOptions {
         deserialize_with = "deserialize_cors_origins"
     )]
     pub http_cors_origins: Vec<HeaderValue>,
+}
 
+#[cfg(feature = "server")]
+impl Default for ServerOptions {
+    fn default() -> Self {
+        ServerOptions {
+            http_addr: DEFAULT_RPC_ADDR,
+            http_port: DEFAULT_RPC_PORT,
+            http_cors_origins: Vec::new(),
+        }
+    }
+}
+
+#[cfg(feature = "server")]
+impl ServerOptions {
+    pub fn merge(&mut self, other: Option<&Self>) {
+        if let Some(other) = other {
+            if self.http_addr == DEFAULT_RPC_ADDR {
+                self.http_addr = other.http_addr;
+            }
+            if self.http_port == DEFAULT_RPC_PORT {
+                self.http_port = other.http_port;
+            }
+            if self.http_cors_origins.is_empty() {
+                self.http_cors_origins = other.http_cors_origins.clone();
+            }
+        }
+    }
+}
+
+#[cfg(feature = "server")]
+#[derive(Debug, Args, Clone, Serialize, Deserialize, PartialEq)]
+#[command(next_help_heading = "Rpc options")]
+pub struct RpcOptions {
     /// API's offered over the HTTP-RPC interface.
-    #[arg(long = "http.api", value_name = "MODULES")]
+    #[arg(long = "rpc.api", value_name = "MODULES")]
     #[arg(value_parser = RpcModulesList::parse)]
     #[serde(default)]
     pub http_modules: Option<RpcModulesList>,
@@ -138,12 +171,9 @@ pub struct ServerOptions {
 }
 
 #[cfg(feature = "server")]
-impl Default for ServerOptions {
+impl Default for RpcOptions {
     fn default() -> Self {
-        ServerOptions {
-            http_addr: DEFAULT_RPC_ADDR,
-            http_port: DEFAULT_RPC_PORT,
-            http_cors_origins: Vec::new(),
+        RpcOptions {
             http_modules: None,
             max_event_page_size: DEFAULT_RPC_MAX_EVENT_PAGE_SIZE,
             max_proof_keys: DEFAULT_RPC_MAX_PROOF_KEYS,
@@ -156,18 +186,9 @@ impl Default for ServerOptions {
 }
 
 #[cfg(feature = "server")]
-impl ServerOptions {
+impl RpcOptions {
     pub fn merge(&mut self, other: Option<&Self>) {
         if let Some(other) = other {
-            if self.http_addr == DEFAULT_RPC_ADDR {
-                self.http_addr = other.http_addr;
-            }
-            if self.http_port == DEFAULT_RPC_PORT {
-                self.http_port = other.http_port;
-            }
-            if self.http_cors_origins.is_empty() {
-                self.http_cors_origins = other.http_cors_origins.clone();
-            }
             if self.http_modules.is_none() {
                 self.http_modules = other.http_modules.clone();
             }
