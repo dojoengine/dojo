@@ -60,4 +60,7 @@ pub struct Config {
 pub struct CartridgeConfig {
     /// Enable the execution of transactions from outside with Cartridge paymaster.
     pub paymaster: bool,
+
+    /// The root URL for the Cartridge API.
+    pub api_url: String,
 }

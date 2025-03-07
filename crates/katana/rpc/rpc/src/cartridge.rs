@@ -56,6 +56,8 @@ pub struct CartridgeApi<EF: ExecutorFactory> {
     backend: Arc<Backend<EF>>,
     block_producer: BlockProducer<EF>,
     pool: TxPool,
+    /// The root URL for the Cartridge API for paymaster related operations.
+    api_url: String,
 }
 
 impl<EF> Clone for CartridgeApi<EF>
@@ -67,13 +69,19 @@ where
             backend: Arc::clone(&self.backend),
             block_producer: self.block_producer.clone(),
             pool: self.pool.clone(),
+            api_url: self.api_url.clone(),
         }
     }
 }
 
 impl<EF: ExecutorFactory> CartridgeApi<EF> {
-    pub fn new(backend: Arc<Backend<EF>>, block_producer: BlockProducer<EF>, pool: TxPool) -> Self {
-        Self { backend, block_producer, pool }
+    pub fn new(
+        backend: Arc<Backend<EF>>,
+        block_producer: BlockProducer<EF>,
+        pool: TxPool,
+        api_url: String,
+    ) -> Self {
+        Self { backend, block_producer, pool, api_url }
     }
 
     pub async fn execute_outside(
@@ -97,6 +105,7 @@ impl<EF: ExecutorFactory> CartridgeApi<EF> {
             let nonce = state.nonce(paymaster_address).unwrap();
 
             if let Some(tx) = craft_deploy_cartridge_controller_tx(
+                &self.api_url,
                 contract_address,
                 paymaster_address,
                 paymaster_private_key,
@@ -206,10 +215,14 @@ struct CartridgeAccountResponse {
 
 /// Calls the Cartridge API to fetch the calldata for the constructor of the given controller
 /// address.
-async fn fetch_controller_constructor_calldata(address: Felt) -> Option<Vec<Felt>> {
-    // This URL is used to fetch the calldata for the constructor of the given controller address.
-    // Will return 404 if the controller address is not found.
-    const CARTRIDGE_ACCOUNTS_CALLDATA_URL: &str = "https://api.cartridge.gg/accounts/calldata";
+///
+/// Returns None if the controller address is not found in the Cartridge API.
+async fn fetch_controller_constructor_calldata(
+    cartridge_api_url: &str,
+    address: Felt,
+) -> Option<Vec<Felt>> {
+    let cartridge_api_url = cartridge_api_url.parse::<url::Url>().unwrap();
+    let account_data_url = cartridge_api_url.join("/accounts/calldata").unwrap();
 
     let body = serde_json::json!({
         "address": format!("{:#066x}", address)
@@ -217,7 +230,7 @@ async fn fetch_controller_constructor_calldata(address: Felt) -> Option<Vec<Felt
 
     let client = reqwest::Client::new();
     let response = client
-        .post(CARTRIDGE_ACCOUNTS_CALLDATA_URL)
+        .post(account_data_url)
         .header("Content-Type", "application/json")
         .json(&body)
         .send()
@@ -260,6 +273,7 @@ pub async fn handle_cartridge_estimate_fee(
     transactions: &[ExecutableTxWithHash],
     chain_id: ChainId,
     state: Box<dyn StateProvider>,
+    cartridge_api_url: &str,
 ) -> Option<(ExecutableTxWithHash, FeeEstimate)> {
     let paymaster_nonce = state.nonce(paymaster_address).expect("failed to get paymaster nonce");
 
@@ -273,6 +287,7 @@ pub async fn handle_cartridge_estimate_fee(
             }
 
             let tx = craft_deploy_cartridge_controller_tx(
+                cartridge_api_url,
                 maybe_controller_address,
                 paymaster_address,
                 paymaster_private_key,
@@ -302,13 +317,15 @@ pub async fn handle_cartridge_estimate_fee(
 ///
 /// Returns None if the provided `controller_address` is not registered in the Cartridge API.
 pub async fn craft_deploy_cartridge_controller_tx(
+    cartridge_api_url: &str,
     controller_address: ContractAddress,
     paymaster_address: ContractAddress,
     paymaster_private_key: Felt,
     chain_id: ChainId,
     paymaster_nonce: Option<Felt>,
 ) -> Option<ExecutableTxWithHash> {
-    let calldata = fetch_controller_constructor_calldata(controller_address.into()).await?;
+    let calldata =
+        fetch_controller_constructor_calldata(cartridge_api_url, controller_address.into()).await?;
 
     let call =
         Call { to: DEFAULT_UDC_ADDRESS.into(), selector: selector!("deployContract"), calldata };

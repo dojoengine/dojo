@@ -13,4 +13,8 @@ pub struct StarknetApiConfig {
     /// Enable the execution of transactions from outside with Cartridge paymaster.
     #[cfg(feature = "cartridge")]
     pub use_cartridge_paymaster: bool,
+
+    /// The root URL for the Cartridge API.
+    #[cfg(feature = "cartridge")]
+    pub cartridge_api_url: String,
 }

@@ -227,7 +227,10 @@ impl NodeArgs {
                 sequencing,
                 messaging,
                 forking,
-                cartridge: CartridgeConfig { paymaster: self.cartridge.paymaster },
+                cartridge: CartridgeConfig {
+                    paymaster: self.cartridge.paymaster,
+                    api_url: self.cartridge.api_url.clone(),
+                },
             })
         }
 

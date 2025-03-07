@@ -251,6 +251,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
                 &transactions,
                 self.inner.backend.chain_spec.id(),
                 state,
+                &self.inner.config.cartridge_api_url,
             )
             .await;
 

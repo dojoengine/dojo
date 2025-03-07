@@ -286,6 +286,8 @@ pub async fn build(mut config: Config) -> Result<Node> {
             max_proof_keys: config.rpc.max_proof_keys,
             #[cfg(feature = "cartridge")]
             use_cartridge_paymaster: config.cartridge.paymaster,
+            #[cfg(feature = "cartridge")]
+            cartridge_api_url: config.cartridge.api_url.clone(),
         };
 
         let api = if let Some(client) = forked_client {
@@ -312,7 +314,12 @@ pub async fn build(mut config: Config) -> Result<Node> {
 
     #[cfg(feature = "cartridge")]
     if config.rpc.apis.contains(&RpcModuleKind::Cartridge) {
-        let api = CartridgeApi::new(backend.clone(), block_producer.clone(), pool.clone());
+        let api = CartridgeApi::new(
+            backend.clone(),
+            block_producer.clone(),
+            pool.clone(),
+            config.cartridge.api_url.clone(),
+        );
         rpc_modules.merge(api.into_rpc())?;
     }
 

@@ -965,11 +965,33 @@ mod tests {
         let genesis_json: GenesisJson = GenesisJson::from_str(json).unwrap();
         let actual_genesis = Genesis::try_from(genesis_json).unwrap();
 
-        let classes = BTreeMap::from([
-            (DEFAULT_ACCOUNT_CLASS_HASH, DEFAULT_ACCOUNT_CLASS.clone().into()),
-            #[cfg(feature = "controller")]
-            (CONTROLLER_CLASS_HASH, CONTROLLER_ACCOUNT_CLASS.clone().into()),
-        ]);
+        let mut classes = BTreeMap::new();
+        classes.insert(DEFAULT_ACCOUNT_CLASS_HASH, DEFAULT_ACCOUNT_CLASS.clone().into());
+
+        #[cfg(feature = "controller")]
+        // Merely a band aid fix for now.
+        // Adding this by default so that we can support mounting the genesis file from k8s
+        // ConfigMap when we embed the Controller class, and its capacity is only limited to 1MiB.
+        classes.insert(CONTROLLER_CLASS_HASH, CONTROLLER_ACCOUNT_CLASS.clone().into());
+
+        #[cfg(feature = "cartridge")]
+        {
+            #[cfg(feature = "cartridge")]
+            classes.extend(
+                // Filter out the `1.0.4` already included and
+                // LATEST which is a duplicate of `1.0.9`.
+                CONTROLLERS
+                    .iter()
+                    .filter(|(v, _)| {
+                        **v == ControllerVersion::V1_0_5
+                            || **v == ControllerVersion::V1_0_6
+                            || **v == ControllerVersion::V1_0_7
+                            || **v == ControllerVersion::V1_0_8
+                            || **v == ControllerVersion::V1_0_9
+                    })
+                    .map(|(_, v)| (v.hash, parse_sierra_class(v.content).unwrap().into())),
+            );
+        }
 
         let allocations = BTreeMap::from([(
             address!("0x66efb28ac62686966ae85095ff3a772e014e7fbf56d4c5f6fac5606d4dde23a"),

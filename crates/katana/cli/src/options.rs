@@ -414,9 +414,24 @@ pub struct SlotOptions {
 #[derive(Debug, Args, Clone, Serialize, Deserialize, Default, PartialEq)]
 #[command(next_help_heading = "Cartridge options")]
 pub struct CartridgeOptions {
+    /// Whether to use the Cartridge paymaster.
+    /// This has the cost to call the Cartridge API to check
+    /// if a controller account exists on each estimate fee call.
+    ///
+    /// Mostly used for local development using controller, and must be
+    /// disabled for slot deployments.
     #[arg(long = "cartridge.paymaster")]
     #[arg(default_value_t = false)]
     pub paymaster: bool,
+
+    /// The root URL for the Cartridge API.
+    ///
+    /// This is used to fetch the calldata for the constructor of the given controller
+    /// address (at the moment). Must be configurable for local development
+    /// with local cartridge API.
+    #[arg(long = "cartridge.api-url")]
+    #[arg(default_value = "https://api.cartridge.gg")]
+    pub api_url: String,
 }
 
 const DEFAULT_EXPLORER_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::LOCALHOST);
