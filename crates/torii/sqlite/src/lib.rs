@@ -11,7 +11,7 @@ use dojo_world::config::WorldMetadata;
 use dojo_world::contracts::abigen::model::Layout;
 use dojo_world::contracts::naming::compute_selector_from_names;
 use sqlx::{Pool, Sqlite};
-use starknet::core::types::{Event, Felt, InvokeTransaction, Transaction};
+use starknet::core::types::{Call, Event, Felt, InvokeTransaction, Transaction};
 use starknet_crypto::poseidon_hash_many;
 use tokio::sync::mpsc::UnboundedSender;
 use utils::felts_to_sql_string;
@@ -520,7 +520,7 @@ impl Sql {
                 Transaction::Invoke(InvokeTransaction::V3(invoke_v3_transaction)) => (
                     Argument::FieldElement(invoke_v3_transaction.transaction_hash),
                     Argument::FieldElement(invoke_v3_transaction.sender_address),
-                    Argument::String(felts_to_sql_string(&invoke_v3_transaction.calldata)),
+                    &invoke_v3_transaction.calldata,
                     Argument::FieldElement(Felt::ZERO), // has no max_fee
                     Argument::String(felts_to_sql_string(&invoke_v3_transaction.signature)),
                     Argument::FieldElement(invoke_v3_transaction.nonce),
@@ -528,7 +528,7 @@ impl Sql {
                 Transaction::Invoke(InvokeTransaction::V1(invoke_v1_transaction)) => (
                     Argument::FieldElement(invoke_v1_transaction.transaction_hash),
                     Argument::FieldElement(invoke_v1_transaction.sender_address),
-                    Argument::String(felts_to_sql_string(&invoke_v1_transaction.calldata)),
+                    &invoke_v1_transaction.calldata,
                     Argument::FieldElement(invoke_v1_transaction.max_fee),
                     Argument::String(felts_to_sql_string(&invoke_v1_transaction.signature)),
                     Argument::FieldElement(invoke_v1_transaction.nonce),
@@ -536,7 +536,7 @@ impl Sql {
                 Transaction::L1Handler(l1_handler_transaction) => (
                     Argument::FieldElement(l1_handler_transaction.transaction_hash),
                     Argument::FieldElement(l1_handler_transaction.contract_address),
-                    Argument::String(felts_to_sql_string(&l1_handler_transaction.calldata)),
+                    &l1_handler_transaction.calldata,
                     Argument::FieldElement(Felt::ZERO), // has no max_fee
                     Argument::String("".to_string()),   // has no signature
                     Argument::FieldElement((l1_handler_transaction.nonce).into()),
@@ -544,6 +544,9 @@ impl Sql {
                 _ => return Ok(()),
             };
 
+        let num_calls = calldata[0];
+        let mut calls: Vec<Call> = vec![];
+        
         self.executor.send(QueryMessage::other(
             "INSERT OR IGNORE INTO transactions (id, transaction_hash, sender_address, calldata, \
              max_fee, signature, nonce, transaction_type, executed_at, block_number) VALUES (?, \
@@ -553,7 +556,7 @@ impl Sql {
                 transaction_hash.clone(),
                 transaction_hash.clone(),
                 sender_address,
-                calldata,
+                Argument::String(felts_to_sql_string(&calldata)),
                 max_fee,
                 signature,
                 nonce,
