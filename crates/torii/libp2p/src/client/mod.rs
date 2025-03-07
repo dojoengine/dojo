@@ -48,11 +48,10 @@ impl RelayClient {
     pub fn new(relay_addr: String) -> Result<Self, Error> {
         use libp2p::core::muxing::StreamMuxerBox;
         use libp2p::core::upgrade::Version;
-        use libp2p::{dns, websocket, Transport};
-        use libp2p_webrtc::tokio::Certificate;
+        use libp2p::{dns, tcp, websocket, Transport};
         use libp2p_webrtc as webrtc;
+        use libp2p_webrtc::tokio::Certificate;
         use rand::thread_rng;
-        use libp2p::tcp;
 
         let local_key = identity::Keypair::generate_ed25519();
         let peer_id = PeerId::from(local_key.public());
@@ -123,8 +122,9 @@ impl RelayClient {
 
     #[cfg(target_arch = "wasm32")]
     pub fn new(relay_addr: String) -> Result<Self, Error> {
-        use libp2p::core::{upgrade::Version, Transport};
-        
+        use libp2p::core::upgrade::Version;
+        use libp2p::core::Transport;
+
         let local_key = identity::Keypair::generate_ed25519();
         let peer_id = PeerId::from(local_key.public());
 
