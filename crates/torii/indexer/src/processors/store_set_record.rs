@@ -2,6 +2,7 @@ use std::hash::{DefaultHasher, Hash, Hasher};
 
 use anyhow::{Error, Result};
 use async_trait::async_trait;
+use dojo_types::naming::get_tag;
 use dojo_world::contracts::abigen::world::Event as WorldEvent;
 use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::Event;
@@ -102,6 +103,7 @@ where
         let mut entity = model.schema;
         entity.deserialize(&mut keys_and_unpacked)?;
 
+        let historical = config.is_historical(&get_tag(&model.namespace, &model.name));
         db.set_entity(
             entity,
             event_id,
@@ -109,6 +111,7 @@ where
             event.entity_id,
             event.selector,
             Some(&keys_str),
+            historical,
         )
         .await?;
         Ok(())

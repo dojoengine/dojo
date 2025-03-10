@@ -319,6 +319,7 @@ impl Sql {
         entity_id: Felt,
         model_id: Felt,
         keys_str: Option<&str>,
+        is_historical: bool,
     ) -> Result<()> {
         let namespaced_name = entity.name();
 
@@ -335,6 +336,10 @@ impl Sql {
              UPDATE SET updated_at=CURRENT_TIMESTAMP, executed_at=EXCLUDED.executed_at, \
              event_id=EXCLUDED.event_id RETURNING *"
         };
+
+        if historical {
+
+        }
 
         let mut arguments = vec![
             Argument::String(entity_id.clone()),
