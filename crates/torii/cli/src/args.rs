@@ -74,12 +74,12 @@ impl ToriiArgs {
                 if let Some(parent) = path.parent() {
                     std::fs::create_dir_all(parent)?;
                 }
-                
+
                 // Convert current args to config and save it
                 let config = ToriiArgsConfig::try_from(self.clone())?;
                 let config_str = toml::to_string_pretty(&config)?;
                 std::fs::write(path, config_str)?;
-                
+
                 // Return the config we just created
                 config
             }
