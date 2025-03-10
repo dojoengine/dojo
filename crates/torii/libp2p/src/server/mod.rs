@@ -179,7 +179,12 @@ impl<P: Provider + Sync> Relay<P> {
             .subscribe(&IdentTopic::new(constants::MESSAGING_TOPIC))
             .unwrap();
 
-        Ok(Self { swarm, db: pool, provider: Box::new(provider), historical_models: HashSet::new() })
+        Ok(Self {
+            swarm,
+            db: pool,
+            provider: Box::new(provider),
+            historical_models: HashSet::new(),
+        })
     }
 
     pub fn new_with_historical_models(
@@ -192,7 +197,15 @@ impl<P: Provider + Sync> Relay<P> {
         cert_path: Option<String>,
         historical_models: HashSet<String>,
     ) -> Result<Self, Error> {
-        let mut relay = Relay::new(pool, provider, port, port_webrtc, port_websocket, local_key_path, cert_path)?;
+        let mut relay = Relay::new(
+            pool,
+            provider,
+            port,
+            port_webrtc,
+            port_websocket,
+            local_key_path,
+            cert_path,
+        )?;
         relay.historical_models = historical_models;
         Ok(relay)
     }
@@ -552,7 +565,8 @@ async fn set_entity(
     keys: &str,
     historical: bool,
 ) -> anyhow::Result<()> {
-    db.set_entity(ty, message_id, block_timestamp, entity_id, model_id, Some(keys), historical).await?;
+    db.set_entity(ty, message_id, block_timestamp, entity_id, model_id, Some(keys), historical)
+        .await?;
     db.executor.send(QueryMessage::execute())?;
     Ok(())
 }
