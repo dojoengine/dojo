@@ -197,7 +197,7 @@ impl Runner {
                 flags,
                 event_processor_config: EventProcessorConfig {
                     strict_model_reader: self.args.indexing.strict_model_reader,
-                    historical_events: self.args.events.historical.into_iter().collect(),
+                    historical_models: self.args.events.historical.clone().into_iter().collect(),
                     namespaces: self.args.indexing.namespaces.into_iter().collect(),
                 },
                 world_block: self.args.indexing.world_block,
@@ -235,7 +235,7 @@ impl Runner {
         )
         .await?;
 
-        let mut libp2p_relay_server = torii_relay::server::Relay::new(
+        let mut libp2p_relay_server = torii_relay::server::Relay::new_with_historical_models(
             db,
             provider.clone(),
             self.args.relay.port,
@@ -243,6 +243,7 @@ impl Runner {
             self.args.relay.websocket_port,
             self.args.relay.local_key_path,
             self.args.relay.cert_path,
+            self.args.events.historical.clone().into_iter().collect(),
         )
         .expect("Failed to start libp2p relay server");
 
