@@ -206,7 +206,7 @@ pub struct Katana {
     genesis: Option<PathBuf>,
 
     // Cartridge options
-    use_cartridge_paymaster: bool,
+    enable_cartridge_paymaster: bool,
     cartridge_api_url: Option<String>,
 
     // Others
@@ -572,8 +572,8 @@ impl Katana {
             cmd.arg("--cartridge.api-url").arg(url);
         }
 
-        if self.use_cartridge_paymaster {
-            cmd.arg("--cartridge.use-paymaster");
+        if self.enable_cartridge_paymaster {
+            cmd.arg("--cartridge.paymaster");
         }
 
         loop {
