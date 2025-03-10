@@ -48,11 +48,27 @@ pub(crate) fn generate_type_init(token: &Composite) -> String {
 pub(crate) fn token_is_option(token: &Composite) -> bool {
     token.type_path.starts_with(CAIRO_OPTION_TYPE_PATH)
 }
+/// Checks if token has inner composite
+/// * token - The token to check
+fn token_has_inner_composite(token: &Composite) -> bool {
+    token.inners.iter().any(|inner| match &inner.token {
+        Token::Array(array) => array.inner.to_composite().is_ok(),
+        Token::Tuple(tuple) => tuple.inners.iter().any(|t| matches!(t, Token::Composite(_))),
+        Token::Composite(_) => true,
+        _ => false,
+    })
+}
 
 /// Checks if Token::Composite is an custom enum (enum with nested Composite types)
 /// * token - The token to check
 pub(crate) fn token_is_enum(token: &Composite) -> bool {
     token.r#type == CompositeType::Enum
+}
+
+/// Checks if Token::Composite is an custom enum (enum with nested Composite types)
+/// * token - The token to check
+pub(crate) fn token_is_custom_enum(token: &Composite) -> bool {
+    token.r#type == CompositeType::Enum && token_has_inner_composite(token)
 }
 
 /// Type used to map cainome `Token` into javascript types in interface definition
