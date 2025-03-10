@@ -359,9 +359,7 @@ impl Sql {
              event_id=EXCLUDED.event_id RETURNING *"
         };
 
-        if historical {
-
-        }
+        if historical {}
 
         let mut arguments = vec![
             Argument::String(entity_id.clone()),

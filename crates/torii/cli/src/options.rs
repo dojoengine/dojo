@@ -273,8 +273,8 @@ pub struct EventsOptions {
     #[serde(default)]
     pub raw: bool,
 
-    /// Models that are going to be treated as historical during indexing. Applies to event messages and entities.
-    /// A list of the model tags (namespace-name)
+    /// Models that are going to be treated as historical during indexing. Applies to event
+    /// messages and entities. A list of the model tags (namespace-name)
     #[arg(
         long = "events.historical",
         value_delimiter = ',',

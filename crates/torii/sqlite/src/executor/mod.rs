@@ -468,7 +468,8 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
 
                 // Handle historical entities similar to historical event messages
                 let mut entity_counter: i64 = sqlx::query_scalar::<_, i64>(
-                    "SELECT historical_counter FROM entity_model WHERE entity_id = ? AND model_id = ?"
+                    "SELECT historical_counter FROM entity_model WHERE entity_id = ? AND model_id \
+                     = ?",
                 )
                 .bind(entity.entity_id.clone())
                 .bind(entity.model_id.clone())
@@ -481,7 +482,8 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
 
                     let data = serde_json::to_string(&entity.ty.to_json_value()?)?;
                     sqlx::query(
-                        "INSERT INTO entities_historical (id, keys, event_id, data, model_id, executed_at) VALUES (?, ?, ?, ?, ?, ?) RETURNING *"
+                        "INSERT INTO entities_historical (id, keys, event_id, data, model_id, \
+                         executed_at) VALUES (?, ?, ?, ?, ?, ?) RETURNING *",
                     )
                     .bind(entity.entity_id.clone())
                     .bind(entity.keys_str.clone())
@@ -494,7 +496,9 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 }
 
                 sqlx::query(
-                    "INSERT INTO entity_model (entity_id, model_id, historical_counter) VALUES (?, ?, ?) ON CONFLICT(entity_id, model_id) DO UPDATE SET historical_counter=EXCLUDED.historical_counter"
+                    "INSERT INTO entity_model (entity_id, model_id, historical_counter) VALUES \
+                     (?, ?, ?) ON CONFLICT(entity_id, model_id) DO UPDATE SET \
+                     historical_counter=EXCLUDED.historical_counter",
                 )
                 .bind(entity.entity_id.clone())
                 .bind(entity.model_id.clone())
