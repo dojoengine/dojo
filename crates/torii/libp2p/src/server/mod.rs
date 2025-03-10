@@ -1,4 +1,5 @@
 use std::collections::hash_map::DefaultHasher;
+use std::collections::HashSet;
 use std::hash::{Hash, Hasher};
 use std::net::Ipv4Addr;
 use std::path::Path;
@@ -58,6 +59,7 @@ pub struct Relay<P: Provider + Sync> {
     swarm: Swarm<Behaviour>,
     db: Sql,
     provider: Box<P>,
+    historical_models: HashSet<String>,
 }
 
 impl<P: Provider + Sync> Relay<P> {
@@ -177,7 +179,22 @@ impl<P: Provider + Sync> Relay<P> {
             .subscribe(&IdentTopic::new(constants::MESSAGING_TOPIC))
             .unwrap();
 
-        Ok(Self { swarm, db: pool, provider: Box::new(provider) })
+        Ok(Self { swarm, db: pool, provider: Box::new(provider), historical_models: HashSet::new() })
+    }
+
+    pub fn new_with_historical_models(
+        pool: Sql,
+        provider: P,
+        port: u16,
+        port_webrtc: u16,
+        port_websocket: u16,
+        local_key_path: Option<String>,
+        cert_path: Option<String>,
+        historical_models: HashSet<String>,
+    ) -> Result<Self, Error> {
+        let mut relay = Relay::new(pool, provider, port, port_webrtc, port_websocket, local_key_path, cert_path)?;
+        relay.historical_models = historical_models;
+        Ok(relay)
     }
 
     pub async fn run(&mut self) {
@@ -332,12 +349,13 @@ impl<P: Provider + Sync> Relay<P> {
 
                             if let Err(e) = set_entity(
                                 &mut self.db,
-                                ty,
+                                ty.clone(),
                                 &message_id.to_string(),
                                 Utc::now().timestamp() as u64,
                                 entity_id,
                                 model_id,
                                 &keys_str,
+                                self.historical_models.contains(&ty.name()),
                             )
                             .await
                             {
@@ -532,8 +550,9 @@ async fn set_entity(
     entity_id: Felt,
     model_id: Felt,
     keys: &str,
+    historical: bool,
 ) -> anyhow::Result<()> {
-    db.set_entity(ty, message_id, block_timestamp, entity_id, model_id, Some(keys)).await?;
+    db.set_entity(ty, message_id, block_timestamp, entity_id, model_id, Some(keys), historical).await?;
     db.executor.send(QueryMessage::execute())?;
     Ok(())
 }
