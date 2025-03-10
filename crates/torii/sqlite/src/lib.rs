@@ -312,6 +312,7 @@ impl Sql {
         Ok(())
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn set_entity(
         &mut self,
         entity: Ty,
