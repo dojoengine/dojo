@@ -108,7 +108,7 @@ pub struct EventMessageQuery {
 pub struct EntityQuery {
     pub entity_id: String,
     pub model_id: String,
-    pub keys_str: String,
+    pub keys_str: Option<String>,
     pub event_id: String,
     pub block_timestamp: String,
     pub is_historical: bool,
@@ -481,18 +481,32 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                     entity_counter += 1;
 
                     let data = serde_json::to_string(&entity.ty.to_json_value()?)?;
-                    sqlx::query(
-                        "INSERT INTO entities_historical (id, keys, event_id, data, model_id, \
-                         executed_at) VALUES (?, ?, ?, ?, ?, ?) RETURNING *",
-                    )
-                    .bind(entity.entity_id.clone())
-                    .bind(entity.keys_str.clone())
-                    .bind(entity.event_id.clone())
-                    .bind(data)
-                    .bind(entity.model_id.clone())
-                    .bind(entity.block_timestamp.clone())
-                    .fetch_one(&mut **tx)
-                    .await?;
+                    if let Some(keys) = entity.keys_str {
+                        sqlx::query(
+                            "INSERT INTO entities_historical (id, keys, event_id, data, model_id, \
+                             executed_at) VALUES (?, ?, ?, ?, ?, ?) RETURNING *",
+                        )
+                        .bind(entity.entity_id.clone())
+                        .bind(keys)
+                        .bind(entity.event_id.clone())
+                        .bind(data)
+                        .bind(entity.model_id.clone())
+                        .bind(entity.block_timestamp.clone())
+                        .fetch_one(&mut **tx)
+                        .await?;
+                    } else {
+                        sqlx::query(
+                            "INSERT INTO entities_historical (id, event_id, data, model_id, \
+                             executed_at) VALUES (?, ?, ?, ?, ?) RETURNING *",
+                        )
+                        .bind(entity.entity_id.clone())
+                        .bind(entity.event_id.clone())
+                        .bind(data)
+                        .bind(entity.model_id.clone())
+                        .bind(entity.block_timestamp.clone())
+                        .fetch_one(&mut **tx)
+                        .await?;
+                    }
                 }
 
                 sqlx::query(

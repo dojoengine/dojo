@@ -10,6 +10,7 @@ use dojo_types::schema::{Struct, Ty};
 use dojo_world::config::WorldMetadata;
 use dojo_world::contracts::abigen::model::Layout;
 use dojo_world::contracts::naming::compute_selector_from_names;
+use executor::EntityQuery;
 use sqlx::{Pool, Sqlite};
 use starknet::core::types::{Event, Felt, InvokeTransaction, Transaction};
 use starknet_crypto::poseidon_hash_many;
@@ -359,8 +360,6 @@ impl Sql {
              event_id=EXCLUDED.event_id RETURNING *"
         };
 
-        if historical {}
-
         let mut arguments = vec![
             Argument::String(entity_id.clone()),
             Argument::String(event_id.to_string()),
@@ -374,7 +373,15 @@ impl Sql {
         self.executor.send(QueryMessage::new(
             insert_entities.to_string(),
             arguments,
-            QueryType::SetEntity(entity.clone()),
+            QueryType::SetEntity(EntityQuery {
+                event_id: event_id.to_string(),
+                block_timestamp: utc_dt_string_from_timestamp(block_timestamp),
+                entity_id: entity_id.clone(),
+                model_id: model_id.clone(),
+                keys_str: keys_str.map(|s| s.to_string()),
+                ty: entity.clone(),
+                is_historical,
+            }),
         ))?;
 
         self.executor.send(QueryMessage::other(

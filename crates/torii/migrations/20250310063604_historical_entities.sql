@@ -4,7 +4,7 @@ CREATE TABLE entities_historical (
     -- No primary key, since we are storing 1-M relationship
     -- to retrieve all historical entities for a given entity_id.
     id TEXT NOT NULL,
-    keys TEXT NOT NULL,
+    keys TEXT,
     event_id TEXT NOT NULL,
     -- The serialized data of the entity, which contains the Ty.
     data TEXT NOT NULL,
