@@ -49,4 +49,18 @@ pub struct Config {
 
     /// Development options.
     pub dev: DevConfig,
+
+    /// Cartridge options.
+    #[cfg(feature = "cartridge")]
+    pub cartridge: CartridgeConfig,
+}
+
+#[cfg(feature = "cartridge")]
+#[derive(Debug, Clone, Default)]
+pub struct CartridgeConfig {
+    /// Enable the execution of transactions from outside with Cartridge paymaster.
+    pub paymaster: bool,
+
+    /// The root URL for the Cartridge API.
+    pub api_url: String,
 }

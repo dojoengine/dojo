@@ -34,6 +34,8 @@ use katana_pool::ordering::FiFo;
 use katana_pool::TxPool;
 use katana_primitives::block::GasPrices;
 use katana_primitives::env::{CfgEnv, FeeTokenAddressses};
+#[cfg(feature = "cartridge")]
+use katana_rpc::cartridge::CartridgeApi;
 use katana_rpc::cors::Cors;
 use katana_rpc::dev::DevApi;
 use katana_rpc::saya::SayaApi;
@@ -41,6 +43,8 @@ use katana_rpc::starknet::forking::ForkedClient;
 use katana_rpc::starknet::{StarknetApi, StarknetApiConfig};
 use katana_rpc::torii::ToriiApi;
 use katana_rpc::{RpcServer, RpcServerHandle};
+#[cfg(feature = "cartridge")]
+use katana_rpc_api::cartridge::CartridgeApiServer;
 use katana_rpc_api::dev::DevApiServer;
 use katana_rpc_api::saya::SayaApiServer;
 use katana_rpc_api::starknet::{StarknetApiServer, StarknetTraceApiServer, StarknetWriteApiServer};
@@ -280,6 +284,10 @@ pub async fn build(mut config: Config) -> Result<Node> {
         let cfg = StarknetApiConfig {
             max_event_page_size: config.rpc.max_event_page_size,
             max_proof_keys: config.rpc.max_proof_keys,
+            #[cfg(feature = "cartridge")]
+            use_cartridge_paymaster: config.cartridge.paymaster,
+            #[cfg(feature = "cartridge")]
+            cartridge_api_url: config.cartridge.api_url.clone(),
         };
 
         let api = if let Some(client) = forked_client {
@@ -301,6 +309,17 @@ pub async fn build(mut config: Config) -> Result<Node> {
 
     if config.rpc.apis.contains(&RpcModuleKind::Dev) {
         let api = DevApi::new(backend.clone(), block_producer.clone());
+        rpc_modules.merge(DevApiServer::into_rpc(api))?;
+    }
+
+    #[cfg(feature = "cartridge")]
+    if config.rpc.apis.contains(&RpcModuleKind::Cartridge) {
+        let api = CartridgeApi::new(
+            backend.clone(),
+            block_producer.clone(),
+            pool.clone(),
+            config.cartridge.api_url.clone(),
+        );
         rpc_modules.merge(api.into_rpc())?;
     }
 
