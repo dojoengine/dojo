@@ -33,14 +33,14 @@ pub mod upgrade_model;
 
 #[derive(Clone, Debug, Default)]
 pub struct EventProcessorConfig {
-    pub historical_events: HashSet<String>,
+    pub historical_models: HashSet<String>,
     pub namespaces: HashSet<String>,
     pub strict_model_reader: bool,
 }
 
 impl EventProcessorConfig {
     pub fn is_historical(&self, tag: &str) -> bool {
-        self.historical_events.contains(tag)
+        self.historical_models.contains(tag)
     }
 
     pub fn should_index(&self, namespace: &str) -> bool {
