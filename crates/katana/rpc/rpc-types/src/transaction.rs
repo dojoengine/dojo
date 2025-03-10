@@ -257,29 +257,6 @@ pub struct DeclareTxResult(DeclareTransactionResult);
 #[serde(transparent)]
 pub struct InvokeTxResult(InvokeTransactionResult);
 
-#[derive(Clone, Serialize, Deserialize, Debug)]
-pub struct Call {
-    pub to: ContractAddress,
-    pub selector: Felt,
-    pub calldata: Vec<Felt>,
-}
-#[derive(Clone, Serialize, Deserialize, Debug)]
-pub struct OutsideExecutionV2 {
-    pub caller: cainome::cairo_serde::ContractAddress,
-    pub nonce: starknet::core::types::Felt,
-    #[serde(
-        serialize_with = "cainome::cairo_serde::serialize_as_hex",
-        deserialize_with = "cainome::cairo_serde::deserialize_from_hex"
-    )]
-    pub execute_after: u64,
-    #[serde(
-        serialize_with = "cainome::cairo_serde::serialize_as_hex",
-        deserialize_with = "cainome::cairo_serde::deserialize_from_hex"
-    )]
-    pub execute_before: u64,
-    pub calls: Vec<Call>,
-}
-
 impl From<TxWithHash> for Tx {
     fn from(value: TxWithHash) -> Self {
         use katana_primitives::transaction::Tx as InternalTx;
