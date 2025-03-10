@@ -163,9 +163,6 @@ impl TryFrom<ToriiArgs> for ToriiArgsConfig {
     type Error = anyhow::Error;
 
     fn try_from(args: ToriiArgs) -> Result<Self> {
-        // Ensure the config file is merged with the CLI arguments.
-        let args = args.with_config_file()?;
-
         let mut config =
             ToriiArgsConfig { world_address: args.world_address, ..Default::default() };
 
