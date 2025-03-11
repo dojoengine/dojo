@@ -5,8 +5,6 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use alloy_primitives::U256;
-#[cfg(feature = "server")]
-use anyhow::bail;
 use anyhow::{Context, Result};
 use clap::Parser;
 use katana_chain_spec::rollup::ChainConfigDir;
@@ -19,13 +17,14 @@ use katana_node::config::dev::{DevConfig, FixedL1GasPriceConfig};
 use katana_node::config::execution::ExecutionConfig;
 use katana_node::config::fork::ForkingConfig;
 use katana_node::config::metrics::MetricsConfig;
-use katana_node::config::rpc::RpcConfig;
-#[cfg(feature = "server")]
-use katana_node::config::rpc::{RpcModuleKind, RpcModulesList};
+use katana_node::config::rpc::{RpcConfig, RpcModuleKind, RpcModulesList};
+#[cfg(not(feature = "server"))]
+use katana_node::config::rpc::{DEFAULT_RPC_ADDR, DEFAULT_RPC_PORT};
 use katana_node::config::sequencing::SequencingConfig;
 use katana_node::config::Config;
 use katana_primitives::genesis::allocation::DevAllocationsGenerator;
 use katana_primitives::genesis::constant::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;
+#[cfg(feature = "server")]
 use katana_rpc::cors::HeaderValue;
 use serde::{Deserialize, Serialize};
 use tracing::{info, Subscriber};
@@ -224,31 +223,31 @@ impl NodeArgs {
     }
 
     fn rpc_config(&self) -> Result<RpcConfig> {
+        let modules = if let Some(modules) = &self.rpc.http_modules {
+            // TODO: This check should be handled in the `katana-node` level. Right now if you
+            // instantiate katana programmatically, you can still add the dev module without
+            // enabling dev mode.
+            //
+            // We only allow the `dev` module in dev mode (ie `--dev` flag)
+            if !self.development.dev && modules.contains(&RpcModuleKind::Dev) {
+                anyhow::bail!("The `dev` module can only be enabled in dev mode (ie `--dev` flag)")
+            }
+
+            modules.clone()
+        } else {
+            // Expose the default modules if none is specified.
+            let mut modules = RpcModulesList::default();
+
+            // Ensures the `--dev` flag enabled the dev module.
+            if self.development.dev {
+                modules.add(RpcModuleKind::Dev);
+            }
+
+            modules
+        };
+
         #[cfg(feature = "server")]
-        {
-            let modules = if let Some(modules) = &self.rpc.http_modules {
-                // TODO: This check should be handled in the `katana-node` level. Right now if you
-                // instantiate katana programmatically, you can still add the dev module without
-                // enabling dev mode.
-                //
-                // We only allow the `dev` module in dev mode (ie `--dev` flag)
-                if !self.development.dev && modules.contains(&RpcModuleKind::Dev) {
-                    bail!("The `dev` module can only be enabled in dev mode (ie `--dev` flag)")
-                }
-
-                modules.clone()
-            } else {
-                // Expose the default modules if none is specified.
-                let mut modules = RpcModulesList::default();
-
-                // Ensures the `--dev` flag enabled the dev module.
-                if self.development.dev {
-                    modules.add(RpcModuleKind::Dev);
-                }
-
-                modules
-            };
-
+        let (cors_origins, http_port, http_addr) = {
             let mut cors_origins = self.server.http_cors_origins.clone();
 
             // Add explorer URL to CORS origins if explorer is enabled
@@ -270,24 +269,24 @@ impl NodeArgs {
                 );
             }
 
-            Ok(RpcConfig {
-                apis: modules,
-                port: self.server.http_port,
-                addr: self.server.http_addr,
-                max_connections: self.rpc.max_connections,
-                cors_origins,
-                max_request_body_size: None,
-                max_response_body_size: None,
-                max_event_page_size: Some(self.rpc.max_event_page_size),
-                max_proof_keys: Some(self.rpc.max_proof_keys),
-                max_call_gas: Some(self.rpc.max_call_gas),
-            })
-        }
+            (cors_origins, self.server.http_port, self.server.http_addr)
+        };
 
         #[cfg(not(feature = "server"))]
-        {
-            Ok(RpcConfig::default())
-        }
+        let (cors_origins, http_port, http_addr) = (vec![], DEFAULT_RPC_PORT, DEFAULT_RPC_ADDR);
+
+        Ok(RpcConfig {
+            apis: modules,
+            port: http_port,
+            addr: http_addr,
+            max_connections: self.rpc.max_connections,
+            cors_origins,
+            max_request_body_size: None,
+            max_response_body_size: None,
+            max_event_page_size: Some(self.rpc.max_event_page_size),
+            max_proof_keys: Some(self.rpc.max_proof_keys),
+            max_call_gas: Some(self.rpc.max_call_gas),
+        })
     }
 
     fn chain_spec(&self) -> Result<(Arc<ChainSpec>, Option<MessagingConfig>)> {

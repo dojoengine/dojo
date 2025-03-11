@@ -21,10 +21,9 @@ pub struct NodeArgsConfig {
     pub forking: Option<ForkingOptions>,
     #[serde(rename = "dev")]
     pub development: Option<DevOptions>,
+    pub rpc: Option<RpcOptions>,
     #[cfg(feature = "server")]
     pub server: Option<ServerOptions>,
-    #[cfg(feature = "server")]
-    pub rpc: Option<RpcOptions>,
     #[cfg(feature = "server")]
     pub metrics: Option<MetricsOptions>,
 }
@@ -64,12 +63,12 @@ impl TryFrom<NodeArgs> for NodeArgsConfig {
             if args.forking == ForkingOptions::default() { None } else { Some(args.forking) };
         node_config.development =
             if args.development == DevOptions::default() { None } else { Some(args.development) };
+        node_config.rpc = if args.rpc == RpcOptions::default() { None } else { Some(args.rpc) };
 
         #[cfg(feature = "server")]
         {
             node_config.server =
                 if args.server == ServerOptions::default() { None } else { Some(args.server) };
-            node_config.rpc = if args.rpc == RpcOptions::default() { None } else { Some(args.rpc) };
             node_config.metrics =
                 if args.metrics == MetricsOptions::default() { None } else { Some(args.metrics) };
         }

@@ -7,20 +7,18 @@
 //!
 //! Currently, the merge is made at the top level of the commands.
 
-#[cfg(feature = "server")]
-use std::net::IpAddr;
-use std::net::Ipv4Addr;
+use std::net::{IpAddr, Ipv4Addr};
 
 use clap::Args;
 use katana_node::config::execution::{DEFAULT_INVOCATION_MAX_STEPS, DEFAULT_VALIDATION_MAX_STEPS};
 #[cfg(feature = "server")]
 use katana_node::config::metrics::{DEFAULT_METRICS_ADDR, DEFAULT_METRICS_PORT};
-#[cfg(feature = "server")]
-use katana_node::config::rpc::{RpcModulesList, DEFAULT_RPC_MAX_PROOF_KEYS};
-#[cfg(feature = "server")]
 use katana_node::config::rpc::{
-    DEFAULT_RPC_ADDR, DEFAULT_RPC_MAX_CALL_GAS, DEFAULT_RPC_MAX_EVENT_PAGE_SIZE, DEFAULT_RPC_PORT,
+    RpcModulesList, DEFAULT_RPC_MAX_CALL_GAS, DEFAULT_RPC_MAX_EVENT_PAGE_SIZE,
+    DEFAULT_RPC_MAX_PROOF_KEYS,
 };
+#[cfg(feature = "server")]
+use katana_node::config::rpc::{DEFAULT_RPC_ADDR, DEFAULT_RPC_PORT};
 use katana_primitives::block::BlockHashOrNumber;
 use katana_primitives::chain::ChainId;
 use katana_primitives::genesis::Genesis;
@@ -129,7 +127,6 @@ impl ServerOptions {
     }
 }
 
-#[cfg(feature = "server")]
 #[derive(Debug, Args, Clone, Serialize, Deserialize, PartialEq)]
 #[command(next_help_heading = "Rpc options")]
 pub struct RpcOptions {
@@ -170,7 +167,6 @@ pub struct RpcOptions {
     pub max_call_gas: u64,
 }
 
-#[cfg(feature = "server")]
 impl Default for RpcOptions {
     fn default() -> Self {
         RpcOptions {
@@ -185,7 +181,6 @@ impl Default for RpcOptions {
     }
 }
 
-#[cfg(feature = "server")]
 impl RpcOptions {
     pub fn merge(&mut self, other: Option<&Self>) {
         if let Some(other) = other {
@@ -499,12 +494,10 @@ fn default_http_port() -> u16 {
     DEFAULT_RPC_PORT
 }
 
-#[cfg(feature = "server")]
 fn default_page_size() -> u64 {
     DEFAULT_RPC_MAX_EVENT_PAGE_SIZE
 }
 
-#[cfg(feature = "server")]
 fn default_proof_keys() -> u64 {
     katana_node::config::rpc::DEFAULT_RPC_MAX_PROOF_KEYS
 }
@@ -519,7 +512,6 @@ fn default_metrics_port() -> u16 {
     DEFAULT_METRICS_PORT
 }
 
-#[cfg(feature = "server")]
 fn default_max_call_gas() -> u64 {
     DEFAULT_RPC_MAX_CALL_GAS
 }
