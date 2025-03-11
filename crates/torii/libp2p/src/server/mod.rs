@@ -187,6 +187,7 @@ impl<P: Provider + Sync> Relay<P> {
         })
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn new_with_historical_models(
         pool: Sql,
         provider: P,
@@ -555,6 +556,7 @@ fn get_identity_from_ty(ty: &Ty) -> Result<Felt, Error> {
     Ok(identity)
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn set_entity(
     db: &mut Sql,
     ty: Ty,
