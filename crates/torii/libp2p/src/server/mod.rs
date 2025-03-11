@@ -7,6 +7,7 @@ use std::time::Duration;
 use std::{fs, io};
 
 use chrono::Utc;
+use dojo_types::naming::is_valid_tag;
 use dojo_types::schema::Ty;
 use dojo_world::contracts::naming::compute_selector_from_tag;
 use futures::StreamExt;
@@ -521,6 +522,13 @@ fn ty_keys(ty: &Ty) -> Result<Vec<Felt>, Error> {
 fn ty_model_id(ty: &Ty) -> Result<Felt, Error> {
     let namespaced_name = ty.name();
 
+    if !is_valid_tag(&namespaced_name) {
+        return Err(Error::InvalidMessageError(format!(
+            "Invalid message model (invalid tag): {}",
+            namespaced_name
+        )));
+    }
+
     let selector = compute_selector_from_tag(&namespaced_name);
     Ok(selector)
 }
@@ -528,6 +536,13 @@ fn ty_model_id(ty: &Ty) -> Result<Felt, Error> {
 // Validates the message model
 // and returns the identity and signature
 async fn validate_message(db: &Sql, message: &TypedData) -> Result<Ty, Error> {
+    if !is_valid_tag(&message.primary_type) {
+        return Err(Error::InvalidMessageError(format!(
+            "Invalid message model (invalid tag): {}",
+            message.primary_type
+        )));
+    }
+
     let selector = compute_selector_from_tag(&message.primary_type);
 
     let mut ty = db
