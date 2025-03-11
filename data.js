@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1741673644895,
+  "lastUpdate": 1741673735918,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -57043,6 +57043,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 47340625803,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ac8712c142ec0f98f15f0d82b66e6b87a624f064",
+          "message": "refactor(torii-libp2p): ignore publish for empty peers & own messages (#3092)\n\n* refactor(torii-libp2p): ignore own messages\n\n* ignore insufficientpeers error\n\n* refactor logs\n\n* fmt",
+          "timestamp": "2025-03-11T05:57:19Z",
+          "tree_id": "8588e550d81bfba3761fc4534664c1e4356f7630",
+          "url": "https://github.com/dojoengine/dojo/commit/ac8712c142ec0f98f15f0d82b66e6b87a624f064"
+        },
+        "date": 1741673732740,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2419359,
+            "range": "± 39057",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 396737,
+            "range": "± 14228",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2849944684,
+            "range": "± 268549174",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 17488612,
+            "range": "± 788874",
             "unit": "ns/iter"
           }
         ]
