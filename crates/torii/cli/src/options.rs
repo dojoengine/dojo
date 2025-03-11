@@ -110,7 +110,7 @@ pub struct RpcOptions {
     /// Whether or not to read models from the block number they were registered in.
     /// If false, models will be read from the latest block.
     #[arg(
-        long = "indexing.strict_model_reader",
+        long = "rpc.strict_model_reader",
         default_value_t = false,
         help = "Whether or not to read models from the block number they were registered in."
     )]
@@ -118,12 +118,12 @@ pub struct RpcOptions {
     pub strict_model_reader: bool,
 
     /// Chunk size of the events page when indexing using events
-    #[arg(long = "indexing.events_chunk_size", default_value_t = DEFAULT_EVENTS_CHUNK_SIZE, help = "Chunk size of the events page to fetch from the sequencer.")]
+    #[arg(long = "rpc.events_chunk_size", default_value_t = DEFAULT_EVENTS_CHUNK_SIZE, help = "Chunk size of the events page to fetch from the sequencer.")]
     #[serde(default = "default_events_chunk_size")]
     pub events_chunk_size: u64,
 
     /// The sequencer rpc endpoint to index.
-    #[arg(long, value_name = "URL", default_value = DEFAULT_RPC_URL, value_parser = parse_url)]
+    #[arg(long = "rpc", value_name = "URL", default_value = DEFAULT_RPC_URL, value_parser = parse_url)]
     pub url: Url,
 }
 
@@ -421,8 +421,8 @@ pub struct SqlOptions {
 
     /// Database filepath (ex: indexer.db). If specified file doesn't exist, it will be
     /// created. Defaults to in-memory database.
-    #[arg(long)]
     #[arg(
+        long = "sql.db_dir",
         value_name = "PATH",
         help = "Database filepath. If specified directory doesn't exist, it will be created. \
                 Defaults to in-memory database."
