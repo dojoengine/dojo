@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1741668952928,
+  "lastUpdate": 1741669031999,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -56809,6 +56809,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 44210251964,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b98a24a14f701f46544e3619345bcee50cf3cca5",
+          "message": "feat(torii-sql): granular model indices (#3073)\n\n* feat(torii-sql): granular model indices\n\n* sql config\n\n* new iwth config\n\n* fmt\n\n* allow too many arguments\n\n* add config file support\n\n* add tests\n\n* fmt\n\n* increase cache size to 64mb\n\n* default to only keys for indices\n\n* fmt\n\n* clippy\n\n* fix\n\n* fmt\n\n* warn for all model indices",
+          "timestamp": "2025-03-11T04:39:22Z",
+          "tree_id": "01a4d7208fdd46ceb6abd84b56ba9567433b0b7d",
+          "url": "https://github.com/dojoengine/dojo/commit/b98a24a14f701f46544e3619345bcee50cf3cca5"
+        },
+        "date": 1741669028940,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2425225,
+            "range": "± 208015",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 393365,
+            "range": "± 11401",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2753553559,
+            "range": "± 236841445",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 17036653,
+            "range": "± 537099",
             "unit": "ns/iter"
           }
         ]
