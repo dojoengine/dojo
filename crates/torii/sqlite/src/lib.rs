@@ -91,8 +91,13 @@ impl Sql {
         }
 
         let local_cache = LocalCache::new(pool.clone()).await;
-        let db =
-            Self { pool: pool.clone(), executor, model_cache, local_cache: Arc::new(local_cache), config };
+        let db = Self {
+            pool: pool.clone(),
+            executor,
+            model_cache,
+            local_cache: Arc::new(local_cache),
+            config,
+        };
 
         db.execute().await?;
 

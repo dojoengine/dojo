@@ -177,11 +177,7 @@ impl<P: Provider + Sync> Relay<P> {
             .subscribe(&IdentTopic::new(constants::MESSAGING_TOPIC))
             .unwrap();
 
-        Ok(Self {
-            swarm,
-            db: pool,
-            provider: Box::new(provider),
-        })
+        Ok(Self { swarm, db: pool, provider: Box::new(provider) })
     }
 
     pub async fn run(&mut self) {
@@ -538,8 +534,7 @@ async fn set_entity(
     model_id: Felt,
     keys: &str,
 ) -> anyhow::Result<()> {
-    db.set_entity(ty, message_id, block_timestamp, entity_id, model_id, Some(keys))
-        .await?;
+    db.set_entity(ty, message_id, block_timestamp, entity_id, model_id, Some(keys)).await?;
     db.executor.send(QueryMessage::execute())?;
     Ok(())
 }

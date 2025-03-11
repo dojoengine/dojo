@@ -121,15 +121,8 @@ where
 
         let wrapped_ty = Ty::Struct(Struct { name: schema.name(), children: vec![member] });
 
-        db.set_entity(
-            wrapped_ty,
-            event_id,
-            block_timestamp,
-            entity_id,
-            model_selector,
-            None,
-        )
-        .await?;
+        db.set_entity(wrapped_ty, event_id, block_timestamp, entity_id, model_selector, None)
+            .await?;
         Ok(())
     }
 }
