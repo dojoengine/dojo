@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1741670491008,
+  "lastUpdate": 1741670558253,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -56887,6 +56887,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 47099317454,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "abfc8c45853188e93000d0a2fff1506bf18b3d70",
+          "message": "feat(torii-libp2p): inter torii messaging for offchain messages (#3082)\n\n* feat(torii-libp2p): inter torii messaging for offchain messages\n\n* add to cli/config\n\n* dial and publish message to peers\n\n* topic for peers\n\n* pass peers to relay\n\n* fmt\n\n* allow too maby args\n\n* fix wasm\n\n* fmt",
+          "timestamp": "2025-03-10T23:04:49-06:00",
+          "tree_id": "14c31b4b72f41e523104a032044dd4ecceee487c",
+          "url": "https://github.com/dojoengine/dojo/commit/abfc8c45853188e93000d0a2fff1506bf18b3d70"
+        },
+        "date": 1741670554989,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2404347,
+            "range": "± 37968",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 394708,
+            "range": "± 13707",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2623459226,
+            "range": "± 215589997",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 17064950,
+            "range": "± 180114",
             "unit": "ns/iter"
           }
         ]
