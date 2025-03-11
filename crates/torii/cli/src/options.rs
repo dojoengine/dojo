@@ -1,12 +1,15 @@
 use std::net::{IpAddr, Ipv4Addr};
+use std::path::PathBuf;
 use std::str::FromStr;
 
 use anyhow::Context;
 use camino::Utf8PathBuf;
+use dojo_utils::parse::parse_url;
 use serde::ser::SerializeSeq;
 use serde::{Deserialize, Serialize};
 use starknet::core::types::Felt;
 use torii_sqlite::types::{Contract, ContractType, ModelIndices};
+use url::Url;
 
 pub const DEFAULT_HTTP_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::LOCALHOST);
 pub const DEFAULT_HTTP_PORT: u16 = 8080;
@@ -19,6 +22,7 @@ pub const DEFAULT_MAX_CONCURRENT_TASKS: usize = 100;
 pub const DEFAULT_RELAY_PORT: u16 = 9090;
 pub const DEFAULT_RELAY_WEBRTC_PORT: u16 = 9091;
 pub const DEFAULT_RELAY_WEBSOCKET_PORT: u16 = 9092;
+pub const DEFAULT_RPC_URL: &str = "http://0.0.0.0:5050";
 
 pub const DEFAULT_ERC_MAX_METADATA_TASKS: usize = 10;
 
@@ -102,12 +106,36 @@ impl Default for RelayOptions {
 
 #[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq)]
 #[command(next_help_heading = "Indexing options")]
-pub struct IndexingOptions {
+pub struct RpcOptions {
+    /// Whether or not to read models from the block number they were registered in.
+    /// If false, models will be read from the latest block.
+    #[arg(
+        long = "indexing.strict_model_reader",
+        default_value_t = false,
+        help = "Whether or not to read models from the block number they were registered in."
+    )]
+    #[serde(default)]
+    pub strict_model_reader: bool,
+
     /// Chunk size of the events page when indexing using events
     #[arg(long = "indexing.events_chunk_size", default_value_t = DEFAULT_EVENTS_CHUNK_SIZE, help = "Chunk size of the events page to fetch from the sequencer.")]
     #[serde(default = "default_events_chunk_size")]
     pub events_chunk_size: u64,
 
+    /// The sequencer rpc endpoint to index.
+    #[arg(long, value_name = "URL", default_value = DEFAULT_RPC_URL, value_parser = parse_url)]
+    pub url: Url,
+}
+
+impl Default for RpcOptions {
+    fn default() -> Self {
+        Self { strict_model_reader: false, events_chunk_size: DEFAULT_EVENTS_CHUNK_SIZE, url: Url::parse(DEFAULT_RPC_URL).unwrap() }
+    }
+}
+
+#[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq)]
+#[command(next_help_heading = "Indexing options")]
+pub struct IndexingOptions {
     /// Number of blocks to process before commiting to DB
     #[arg(long = "indexing.blocks_chunk_size", default_value_t = DEFAULT_BLOCKS_CHUNK_SIZE, help = "Number of blocks to process before commiting to DB.")]
     #[serde(default = "default_blocks_chunk_size")]
@@ -192,22 +220,11 @@ pub struct IndexingOptions {
     )]
     #[serde(default)]
     pub controllers: bool,
-
-    /// Whether or not to read models from the block number they were registered in.
-    /// If false, models will be read from the latest block.
-    #[arg(
-        long = "indexing.strict_model_reader",
-        default_value_t = false,
-        help = "Whether or not to read models from the block number they were registered in."
-    )]
-    #[serde(default)]
-    pub strict_model_reader: bool,
 }
 
 impl Default for IndexingOptions {
     fn default() -> Self {
         Self {
-            events_chunk_size: DEFAULT_EVENTS_CHUNK_SIZE,
             blocks_chunk_size: DEFAULT_BLOCKS_CHUNK_SIZE,
             pending: true,
             transactions: false,
@@ -217,7 +234,6 @@ impl Default for IndexingOptions {
             namespaces: vec![],
             world_block: 0,
             controllers: false,
-            strict_model_reader: false,
         }
     }
 }
@@ -225,10 +241,6 @@ impl Default for IndexingOptions {
 impl IndexingOptions {
     pub fn merge(&mut self, other: Option<&Self>) {
         if let Some(other) = other {
-            if self.events_chunk_size == DEFAULT_EVENTS_CHUNK_SIZE {
-                self.events_chunk_size = other.events_chunk_size;
-            }
-
             if self.blocks_chunk_size == DEFAULT_BLOCKS_CHUNK_SIZE {
                 self.blocks_chunk_size = other.blocks_chunk_size;
             }
@@ -263,10 +275,6 @@ impl IndexingOptions {
 
             if !self.controllers {
                 self.controllers = other.controllers;
-            }
-
-            if !self.strict_model_reader {
-                self.strict_model_reader = other.strict_model_reader;
             }
         }
     }
@@ -406,6 +414,16 @@ pub struct SqlOptions {
     )]
     #[serde(default)]
     pub model_indices: Option<Vec<ModelIndices>>,
+
+    /// Database filepath (ex: indexer.db). If specified file doesn't exist, it will be
+    /// created. Defaults to in-memory database.
+    #[arg(long)]
+    #[arg(
+        value_name = "PATH",
+        help = "Database filepath. If specified directory doesn't exist, it will be created. \
+                Defaults to in-memory database."
+    )]
+    pub db_dir: Option<PathBuf>,
 }
 
 // Parses clap cli argument which is expected to be in the format:

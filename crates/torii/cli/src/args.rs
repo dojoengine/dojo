@@ -9,7 +9,6 @@ use url::Url;
 
 use super::options::*;
 
-pub const DEFAULT_RPC_URL: &str = "http://0.0.0.0:5050";
 
 /// Dojo World Indexer
 #[derive(Parser, Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -19,20 +18,6 @@ pub struct ToriiArgs {
     /// The world to index
     #[arg(short, long = "world", env = "DOJO_WORLD_ADDRESS")]
     pub world_address: Option<Felt>,
-
-    /// The sequencer rpc endpoint to index.
-    #[arg(long, value_name = "URL", default_value = DEFAULT_RPC_URL, value_parser = parse_url)]
-    pub rpc: Url,
-
-    /// Database filepath (ex: indexer.db). If specified file doesn't exist, it will be
-    /// created. Defaults to in-memory database.
-    #[arg(long)]
-    #[arg(
-        value_name = "PATH",
-        help = "Database filepath. If specified directory doesn't exist, it will be created. \
-                Defaults to in-memory database."
-    )]
-    pub db_dir: Option<PathBuf>,
 
     /// Open World Explorer on the browser.
     #[arg(long, help = "Open World Explorer on the browser.")]
@@ -53,6 +38,9 @@ pub struct ToriiArgs {
 
     #[command(flatten)]
     pub sql: SqlOptions,
+
+    #[command(flatten)]
+    pub rpc: RpcOptions,
 
     #[cfg(feature = "server")]
     #[command(flatten)]
@@ -83,16 +71,6 @@ impl ToriiArgs {
             self.world_address = config.world_address;
         }
 
-        if self.rpc == Url::parse(DEFAULT_RPC_URL).unwrap() {
-            if let Some(rpc) = config.rpc {
-                self.rpc = rpc;
-            }
-        }
-
-        if self.db_dir.is_none() {
-            self.db_dir = config.db_dir;
-        }
-
         // Currently the comparison it's only at the top level.
         // Need to make it more granular.
 
@@ -112,6 +90,10 @@ impl ToriiArgs {
 
         if self.sql == SqlOptions::default() {
             self.sql = config.sql.unwrap_or_default();
+        }
+
+        if self.rpc == RpcOptions::default() {
+            self.rpc = config.rpc.unwrap_or_default();
         }
 
         #[cfg(feature = "server")]
@@ -136,14 +118,13 @@ impl ToriiArgs {
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct ToriiArgsConfig {
     pub world_address: Option<Felt>,
-    pub rpc: Option<Url>,
-    pub db_dir: Option<PathBuf>,
     pub external_url: Option<Url>,
     pub explorer: Option<bool>,
     pub indexing: Option<IndexingOptions>,
     pub events: Option<EventsOptions>,
     pub erc: Option<ErcOptions>,
     pub sql: Option<SqlOptions>,
+    pub rpc: Option<RpcOptions>,
     #[cfg(feature = "server")]
     pub metrics: Option<MetricsOptions>,
     #[cfg(feature = "server")]
@@ -163,9 +144,6 @@ impl TryFrom<ToriiArgs> for ToriiArgsConfig {
             ToriiArgsConfig { world_address: args.world_address, ..Default::default() };
 
         config.world_address = args.world_address;
-        config.rpc =
-            if args.rpc == Url::parse(DEFAULT_RPC_URL).unwrap() { None } else { Some(args.rpc) };
-        config.db_dir = args.db_dir;
         config.explorer = Some(args.explorer);
 
         // Only include the following options if they are not the default.
@@ -176,6 +154,7 @@ impl TryFrom<ToriiArgs> for ToriiArgsConfig {
             if args.events == EventsOptions::default() { None } else { Some(args.events) };
         config.erc = if args.erc == ErcOptions::default() { None } else { Some(args.erc) };
         config.sql = if args.sql == SqlOptions::default() { None } else { Some(args.sql) };
+        config.rpc = if args.rpc == RpcOptions::default() { None } else { Some(args.rpc) };
 
         #[cfg(feature = "server")]
         {
