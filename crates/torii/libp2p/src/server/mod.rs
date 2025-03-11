@@ -14,7 +14,7 @@ use libp2p::core::multiaddr::Protocol;
 use libp2p::core::muxing::StreamMuxerBox;
 use libp2p::core::upgrade::Version;
 use libp2p::core::Multiaddr;
-use libp2p::gossipsub::{self, IdentTopic};
+use libp2p::gossipsub::{self, IdentTopic, PublishError};
 use libp2p::swarm::{NetworkBehaviour, SwarmEvent};
 use libp2p::{
     dns, identify, identity, noise, ping, relay, tcp, websocket, yamux, PeerId, Swarm, Transport,
@@ -402,8 +402,8 @@ impl<P: Provider + Sync> Relay<P> {
                                 continue;
                             }
 
-                            // Publish message to all peers
-                            if let Err(e) = self
+                            // Publish message to all peers if there are any
+                            match self
                                 .swarm
                                 .behaviour_mut()
                                 .gossipsub
@@ -413,11 +413,16 @@ impl<P: Provider + Sync> Relay<P> {
                                 )
                                 .map_err(Error::PublishError)
                             {
-                                info!(
+                                Ok(_) => info!(
+                                    target: LOG_TARGET,
+                                    "Forwarded message to peers."
+                                ),
+                                Err(Error::PublishError(PublishError::InsufficientPeers)) => {},
+                                Err(e) => info!(
                                     target: LOG_TARGET,
                                     error = %e,
                                     "Publishing message to peers."
-                                );
+                                ),
                             }
                         }
                         ServerEvent::Gossipsub(gossipsub::Event::Subscribed { peer_id, topic }) => {
