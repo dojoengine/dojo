@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 
 use dojo_types::schema::Ty;
 use dojo_world::contracts::abigen::model::Layout;
@@ -7,7 +8,6 @@ use starknet::core::types::{BlockId, BlockTag, ContractClass};
 use starknet::providers::Provider;
 use starknet_crypto::Felt;
 use tokio::sync::RwLock;
-use std::sync::Arc;
 
 use crate::constants::TOKEN_BALANCE_TABLE;
 use crate::error::{Error, ParseError};
@@ -159,13 +159,14 @@ pub struct ContractClassCache<P: Provider + Send + Sync + std::fmt::Debug + 'sta
 
 impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> ContractClassCache<P> {
     pub fn new(provider: Arc<P>) -> Self {
-        Self {
-            classes: RwLock::new(HashMap::new()),
-            provider,
-        }
+        Self { classes: RwLock::new(HashMap::new()), provider }
     }
 
-    pub async fn get(&self, contract_address: Felt, block_id: BlockId) -> Result<ContractClass, Error> {
+    pub async fn get(
+        &self,
+        contract_address: Felt,
+        block_id: BlockId,
+    ) -> Result<ContractClass, Error> {
         let classes = self.classes.read().await;
         if let Some(class) = classes.get(&contract_address) {
             return Ok(class.1.clone());
