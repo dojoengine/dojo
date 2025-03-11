@@ -6,7 +6,7 @@ repository.workspace = true
 version.workspace = true
 
 [features]
-client = [ "dep:libp2p-webrtc", "dep:rand" ]
+client = [ ]
 server = [ "dep:sqlx", "dep:torii-sqlite", "dep:dojo-types", "dep:dojo-world", "dep:starknet-crypto", "dep:chrono", "dep:libp2p-webrtc", "dep:rand" ]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -43,9 +43,10 @@ wasm-bindgen-futures = "0.4.40"
 wasm-bindgen-test = "0.3.40"
 wasm-timer = "0.2.5"
 
-
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 libp2p = { git = "https://github.com/libp2p/rust-libp2p", features = [ "dns", "ed25519", "gossipsub", "identify", "macros", "noise", "ping", "quic", "relay", "tcp", "tokio", "websocket", "yamux" ], rev = "cdc9638" }
+libp2p-webrtc = { git = "https://github.com/libp2p/rust-libp2p", features = [ "pem", "tokio" ], rev = "cdc9638" }
+rand.workspace = true
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 libp2p = { git = "https://github.com/libp2p/rust-libp2p", features = [ "ed25519", "gossipsub", "identify", "macros", "noise", "ping", "tcp", "wasm-bindgen", "yamux" ], rev = "cdc9638" }
