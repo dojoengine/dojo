@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1741669031999,
+  "lastUpdate": 1741670491008,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -56857,6 +56857,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 17036653,
             "range": "± 537099",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "abfc8c45853188e93000d0a2fff1506bf18b3d70",
+          "message": "feat(torii-libp2p): inter torii messaging for offchain messages (#3082)\n\n* feat(torii-libp2p): inter torii messaging for offchain messages\n\n* add to cli/config\n\n* dial and publish message to peers\n\n* topic for peers\n\n* pass peers to relay\n\n* fmt\n\n* allow too maby args\n\n* fix wasm\n\n* fmt",
+          "timestamp": "2025-03-10T23:04:49-06:00",
+          "tree_id": "14c31b4b72f41e523104a032044dd4ecceee487c",
+          "url": "https://github.com/dojoengine/dojo/commit/abfc8c45853188e93000d0a2fff1506bf18b3d70"
+        },
+        "date": 1741670487618,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 47099317454,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
