@@ -2,7 +2,6 @@ use std::hash::{DefaultHasher, Hash, Hasher};
 
 use anyhow::{Context, Error, Result};
 use async_trait::async_trait;
-use dojo_types::naming::get_tag;
 use dojo_types::schema::{Struct, Ty};
 use dojo_world::contracts::abigen::world::Event as WorldEvent;
 use dojo_world::contracts::world::WorldContractReader;
@@ -122,7 +121,6 @@ where
 
         let wrapped_ty = Ty::Struct(Struct { name: schema.name(), children: vec![member] });
 
-        let historical = config.is_historical(&get_tag(&model.namespace, &model.name));
         db.set_entity(
             wrapped_ty,
             event_id,
@@ -130,7 +128,6 @@ where
             entity_id,
             model_selector,
             None,
-            historical,
         )
         .await?;
         Ok(())

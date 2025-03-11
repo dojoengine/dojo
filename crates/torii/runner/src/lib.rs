@@ -165,6 +165,7 @@ impl Runner {
             SqlConfig {
                 all_model_indices: self.args.sql.all_model_indices,
                 model_indices: self.args.sql.model_indices.unwrap_or_default(),
+                historical_models: self.args.events.historical.clone().into_iter().collect(),
             },
         )
         .await?;
@@ -197,7 +198,6 @@ impl Runner {
                 flags,
                 event_processor_config: EventProcessorConfig {
                     strict_model_reader: self.args.indexing.strict_model_reader,
-                    historical_models: self.args.events.historical.clone().into_iter().collect(),
                     namespaces: self.args.indexing.namespaces.into_iter().collect(),
                 },
                 world_block: self.args.indexing.world_block,
@@ -235,7 +235,7 @@ impl Runner {
         )
         .await?;
 
-        let mut libp2p_relay_server = torii_relay::server::Relay::new_with_historical_models(
+        let mut libp2p_relay_server = torii_relay::server::Relay::new(
             db,
             provider.clone(),
             self.args.relay.port,
@@ -243,7 +243,6 @@ impl Runner {
             self.args.relay.websocket_port,
             self.args.relay.local_key_path,
             self.args.relay.cert_path,
-            self.args.events.historical.clone().into_iter().collect(),
         )
         .expect("Failed to start libp2p relay server");
 

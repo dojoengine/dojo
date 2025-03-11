@@ -41,6 +41,7 @@ use cache::{LocalCache, Model, ModelCache};
 pub struct SqlConfig {
     pub all_model_indices: bool,
     pub model_indices: Vec<ModelIndices>,
+    pub historical_models: HashSet<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -90,13 +91,8 @@ impl Sql {
         }
 
         let local_cache = LocalCache::new(pool.clone()).await;
-        let db = Self {
-            pool: pool.clone(),
-            executor,
-            model_cache,
-            local_cache: Arc::new(local_cache),
-            config,
-        };
+        let db =
+            Self { pool: pool.clone(), executor, model_cache, local_cache: Arc::new(local_cache), config };
 
         db.execute().await?;
 
@@ -343,7 +339,6 @@ impl Sql {
         entity_id: Felt,
         model_id: Felt,
         keys_str: Option<&str>,
-        is_historical: bool,
     ) -> Result<()> {
         let namespaced_name = entity.name();
 
@@ -381,7 +376,7 @@ impl Sql {
                 model_id: model_id.clone(),
                 keys_str: keys_str.map(|s| s.to_string()),
                 ty: entity.clone(),
-                is_historical,
+                is_historical: self.config.historical_models.contains(&entity.name()),
             }),
         ))?;
 
@@ -402,7 +397,6 @@ impl Sql {
         entity: Ty,
         event_id: &str,
         block_timestamp: u64,
-        is_historical: bool,
     ) -> Result<()> {
         let keys = if let Ty::Struct(s) = &entity {
             let mut keys = Vec::new();
@@ -442,7 +436,7 @@ impl Sql {
                 event_id: event_id.to_string(),
                 block_timestamp: block_timestamp_str.clone(),
                 ty: entity.clone(),
-                is_historical,
+                is_historical: self.config.historical_models.contains(&entity.name()),
             }),
         ))?;
 
