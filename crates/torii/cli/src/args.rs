@@ -51,6 +51,9 @@ pub struct ToriiArgs {
     #[command(flatten)]
     pub erc: ErcOptions,
 
+    #[command(flatten)]
+    pub sql: SqlOptions,
+
     #[cfg(feature = "server")]
     #[command(flatten)]
     pub metrics: MetricsOptions,
@@ -107,6 +110,10 @@ impl ToriiArgs {
             self.erc = config.erc.unwrap_or_default();
         }
 
+        if self.sql == SqlOptions::default() {
+            self.sql = config.sql.unwrap_or_default();
+        }
+
         #[cfg(feature = "server")]
         {
             if self.server == ServerOptions::default() {
@@ -136,6 +143,7 @@ pub struct ToriiArgsConfig {
     pub indexing: Option<IndexingOptions>,
     pub events: Option<EventsOptions>,
     pub erc: Option<ErcOptions>,
+    pub sql: Option<SqlOptions>,
     #[cfg(feature = "server")]
     pub metrics: Option<MetricsOptions>,
     #[cfg(feature = "server")]
@@ -167,6 +175,7 @@ impl TryFrom<ToriiArgs> for ToriiArgsConfig {
         config.events =
             if args.events == EventsOptions::default() { None } else { Some(args.events) };
         config.erc = if args.erc == ErcOptions::default() { None } else { Some(args.erc) };
+        config.sql = if args.sql == SqlOptions::default() { None } else { Some(args.sql) };
 
         #[cfg(feature = "server")]
         {
@@ -187,7 +196,7 @@ mod test {
     use std::net::{IpAddr, Ipv4Addr};
     use std::str::FromStr;
 
-    use torii_sqlite::types::{Contract, ContractType};
+    use torii_sqlite::types::{Contract, ContractType, ModelIndices};
 
     use super::*;
 
@@ -208,6 +217,10 @@ mod test {
             "ns-E",
             "ns-EH"
         ]
+
+        [[sql.model_indices]]
+        model_tag = "ns-Position"
+        fields = ["vec.x", "vec.y"]
         "#;
         let path = std::env::temp_dir().join("torii-config2.json");
         std::fs::write(&path, content).unwrap();
@@ -225,6 +238,8 @@ mod test {
             "--events.historical",
             "a-A",
             "--indexing.transactions",
+            "--sql.model_indices",
+            "ns-Position:vec.x,vec.y;ns-Moves:player",
             "--config",
             path_str.as_str(),
         ];
@@ -238,6 +253,19 @@ mod test {
         assert_eq!(torii_args.events.historical, vec!["a-A".to_string()]);
         assert_eq!(torii_args.server, ServerOptions::default());
         assert!(torii_args.indexing.transactions);
+        assert_eq!(
+            torii_args.sql.model_indices,
+            Some(vec![
+                ModelIndices {
+                    model_tag: "ns-Position".to_string(),
+                    fields: vec!["vec.x".to_string(), "vec.y".to_string()],
+                },
+                ModelIndices {
+                    model_tag: "ns-Moves".to_string(),
+                    fields: vec!["player".to_string()],
+                },
+            ])
+        );
     }
 
     #[test]
@@ -269,6 +297,10 @@ mod test {
             "erc721:0x5678"
         ]
         namespaces = []
+
+        [[sql.model_indices]]
+        model_tag = "ns-Position"
+        fields = ["vec.x", "vec.y"]
         "#;
         let path = std::env::temp_dir().join("torii-config.json");
         std::fs::write(&path, content).unwrap();
@@ -302,6 +334,13 @@ mod test {
                     r#type: ContractType::ERC721
                 }
             ]
+        );
+        assert_eq!(
+            torii_args.sql.model_indices,
+            Some(vec![ModelIndices {
+                model_tag: "ns-Position".to_string(),
+                fields: vec!["vec.x".to_string(), "vec.y".to_string()],
+            }])
         );
         assert_eq!(torii_args.server.http_addr, IpAddr::V4(Ipv4Addr::LOCALHOST));
         assert_eq!(torii_args.server.http_port, 7777);
