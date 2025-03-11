@@ -225,6 +225,11 @@ impl<P: Provider + Sync> Relay<P> {
                             message_id,
                             message,
                         }) => {
+                            // Ignore our own messages
+                            if peer_id == self.swarm.local_peer_id() {
+                                continue;
+                            }
+
                             // Deserialize typed data.
                             // We shouldn't panic here
                             let data = match serde_json::from_slice::<Message>(&message.data) {
