@@ -224,6 +224,9 @@ mod test {
             "ns-EH"
         ]
 
+        [database]
+        page_size = 2048
+
         [[sql.model_indices]]
         model_tag = "ns-Position"
         fields = ["vec.x", "vec.y"]
@@ -246,6 +249,8 @@ mod test {
             "--indexing.transactions",
             "--sql.model_indices",
             "ns-Position:vec.x,vec.y;ns-Moves:player",
+            "--database.page_size",
+            "1024",
             "--config",
             path_str.as_str(),
         ];
@@ -259,6 +264,8 @@ mod test {
         assert_eq!(torii_args.events.historical, vec!["a-A".to_string()]);
         assert_eq!(torii_args.server, ServerOptions::default());
         assert!(torii_args.indexing.transactions);
+        assert_eq!(torii_args.database.page_size, 1024);
+        assert_eq!(torii_args.database.cache_size, DEFAULT_DATABASE_CACHE_SIZE);
         assert_eq!(
             torii_args.sql.model_indices,
             Some(vec![

@@ -300,6 +300,7 @@ pub const DEFAULT_DATABASE_PAGE_SIZE: u64 = 32_768;
 pub const DEFAULT_DATABASE_CACHE_SIZE: i64 = -500_000;
 
 #[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(default)]
 #[command(next_help_heading = "Database options")]
 pub struct DatabaseOptions {
     /// The page size to use for the database.
@@ -308,7 +309,6 @@ pub struct DatabaseOptions {
         default_value_t = DEFAULT_DATABASE_PAGE_SIZE,
         help = "The page size to use for the database."
     )]
-    #[serde(default)]
     pub page_size: u64,
 
     /// Cache size to use for the database.
@@ -317,7 +317,6 @@ pub struct DatabaseOptions {
         default_value_t = DEFAULT_DATABASE_CACHE_SIZE,
         help = "The cache size to use for the database. A positive value determines a number of pages, a negative value determines a number of KiB."
     )]
-    #[serde(default)]
     pub cache_size: i64,
 }
 
