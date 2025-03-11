@@ -250,7 +250,7 @@ mod test {
         assert_eq!(torii_args.world_address, Some(Felt::from_str("0x9999").unwrap()));
         assert_eq!(torii_args.rpc, Url::parse("http://0.0.0.0:6060").unwrap());
         assert_eq!(torii_args.db_dir, Some(PathBuf::from("/tmp/torii-test2")));
-        assert!(!torii_args.events.raw);
+        assert!(torii_args.events.raw);
         assert_eq!(torii_args.indexing.historical, vec!["a-A".to_string()]);
         assert_eq!(torii_args.server, ServerOptions::default());
         assert!(torii_args.indexing.transactions);
