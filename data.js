@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1741710256152,
+  "lastUpdate": 1741710323698,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -57199,6 +57199,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 46017643781,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "valentin@pupucecorp.com",
+            "name": "Brother MartianGreed",
+            "username": "MartianGreed"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2cc5eabbf5354b29a2b78165952ce8ca28d16efe",
+          "message": "feat(sozo-ts-bindgen): add enum const types (#3091)",
+          "timestamp": "2025-03-11T10:07:06-06:00",
+          "tree_id": "a60f1079e5e6c6a8614ac178fb5edaaf08e9d8b2",
+          "url": "https://github.com/dojoengine/dojo/commit/2cc5eabbf5354b29a2b78165952ce8ca28d16efe"
+        },
+        "date": 1741710320856,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2424692,
+            "range": "± 39841",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 403683,
+            "range": "± 12739",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2765898269,
+            "range": "± 258048627",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 18546382,
+            "range": "± 455957",
             "unit": "ns/iter"
           }
         ]
