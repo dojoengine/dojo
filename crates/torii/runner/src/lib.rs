@@ -39,7 +39,7 @@ use torii_sqlite::executor::Executor;
 use torii_sqlite::simple_broker::SimpleBroker;
 use torii_sqlite::types::{Contract, ContractType, Model};
 use torii_sqlite::{Sql, SqlConfig};
-use tracing::{error, info};
+use tracing::{error, info, warn};
 use tracing_subscriber::{fmt, EnvFilter};
 use url::form_urlencoded;
 
@@ -149,6 +149,14 @@ impl Runner {
         let executor_handle = tokio::spawn(async move { executor.run().await });
 
         let model_cache = Arc::new(ModelCache::new(readonly_pool.clone()));
+
+        if self.args.sql.all_model_indices && self.args.sql.model_indices.is_some() {
+            warn!(
+                target: LOG_TARGET,
+                "all_model_indices is true, which will override any specific indices in model_indices"
+            );
+        }
+
         let db = Sql::new_with_config(
             pool.clone(),
             sender.clone(),
