@@ -103,7 +103,6 @@ pub struct NodeArgs {
     #[command(flatten)]
     pub server: ServerOptions,
 
-    #[cfg(feature = "server")]
     #[command(flatten)]
     pub rpc: RpcOptions,
 
