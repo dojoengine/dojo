@@ -279,51 +279,6 @@ pub struct EventsOptions {
     pub historical: Vec<String>,
 }
 
-pub const DEFAULT_DATABASE_PAGE_SIZE: u64 = 32_768;
-/// Negative value is used to determine number of KiB to use for cache.
-pub const DEFAULT_DATABASE_CACHE_SIZE: i64 = -500_000;
-
-#[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(default)]
-#[command(next_help_heading = "Database options")]
-pub struct DatabaseOptions {
-    /// The page size to use for the database.
-    #[arg(
-        long = "database.page_size",
-        default_value_t = DEFAULT_DATABASE_PAGE_SIZE,
-        help = "The page size to use for the database."
-    )]
-    pub page_size: u64,
-
-    /// Cache size to use for the database.
-    #[arg(
-        long = "database.cache_size",
-        default_value_t = DEFAULT_DATABASE_CACHE_SIZE,
-        help = "The cache size to use for the database. A positive value determines a number of pages, a negative value determines a number of KiB."
-    )]
-    pub cache_size: i64,
-}
-
-impl Default for DatabaseOptions {
-    fn default() -> Self {
-        Self { page_size: DEFAULT_DATABASE_PAGE_SIZE, cache_size: DEFAULT_DATABASE_CACHE_SIZE }
-    }
-}
-
-impl DatabaseOptions {
-    pub fn merge(&mut self, other: Option<&Self>) {
-        if let Some(other) = other {
-            if self.page_size == DEFAULT_DATABASE_PAGE_SIZE {
-                self.page_size = other.page_size;
-            }
-
-            if self.cache_size == DEFAULT_DATABASE_CACHE_SIZE {
-                self.cache_size = other.cache_size;
-            }
-        }
-    }
-}
-
 #[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(default)]
 #[command(next_help_heading = "HTTP server options")]
@@ -408,7 +363,11 @@ impl Default for ErcOptions {
     }
 }
 
-#[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq, Default)]
+pub const DEFAULT_DATABASE_PAGE_SIZE: u64 = 32_768;
+/// Negative value is used to determine number of KiB to use for cache.
+pub const DEFAULT_DATABASE_CACHE_SIZE: i64 = -500_000; // 512MB, 25% of a common instance's 2GB RAM
+
+#[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(default)]
 #[command(next_help_heading = "SQL options")]
 pub struct SqlOptions {
@@ -430,6 +389,55 @@ pub struct SqlOptions {
         help = "Specify which fields should have indices for specific models. Format: \"model_name:field1,field2;another_model:field3,field4\""
     )]
     pub model_indices: Option<Vec<ModelIndices>>,
+
+    /// The page size to use for the database.
+    #[arg(
+        long = "sql.page_size",
+        default_value_t = DEFAULT_DATABASE_PAGE_SIZE,
+        help = "The page size to use for the database."
+    )]
+    pub page_size: u64,
+
+    /// Cache size to use for the database.
+    #[arg(
+        long = "sql.cache_size",
+        default_value_t = DEFAULT_DATABASE_CACHE_SIZE,
+        help = "The cache size to use for the database. A positive value determines a number of pages, a negative value determines a number of KiB."
+    )]
+    pub cache_size: i64,
+}
+
+impl Default for SqlOptions {
+    fn default() -> Self {
+        Self {
+            all_model_indices: false,
+            model_indices: None,
+            page_size: DEFAULT_DATABASE_PAGE_SIZE,
+            cache_size: DEFAULT_DATABASE_CACHE_SIZE,
+        }
+    }
+}
+
+impl SqlOptions {
+    pub fn merge(&mut self, other: Option<&Self>) {
+        if let Some(other) = other {
+            if !self.all_model_indices {
+                self.all_model_indices = other.all_model_indices;
+            }
+
+            if self.model_indices.is_none() {
+                self.model_indices = other.model_indices.clone();
+            }
+
+            if self.page_size == DEFAULT_DATABASE_PAGE_SIZE {
+                self.page_size = other.page_size;
+            }
+
+            if self.cache_size == DEFAULT_DATABASE_CACHE_SIZE {
+                self.cache_size = other.cache_size;
+            }
+        }
+    }
 }
 
 // Parses clap cli argument which is expected to be in the format:

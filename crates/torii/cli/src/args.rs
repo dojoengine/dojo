@@ -43,9 +43,6 @@ pub struct ToriiArgs {
     pub config: Option<PathBuf>,
 
     #[command(flatten)]
-    pub database: DatabaseOptions,
-
-    #[command(flatten)]
     pub indexing: IndexingOptions,
 
     #[command(flatten)]
@@ -103,9 +100,9 @@ impl ToriiArgs {
             self.explorer = config.explorer.unwrap_or_default();
         }
 
-        self.database.merge(config.database.as_ref());
-
         self.indexing.merge(config.indexing.as_ref());
+
+        self.sql.merge(config.sql.as_ref());
 
         if self.events == EventsOptions::default() {
             self.events = config.events.unwrap_or_default();
@@ -113,10 +110,6 @@ impl ToriiArgs {
 
         if self.erc == ErcOptions::default() {
             self.erc = config.erc.unwrap_or_default();
-        }
-
-        if self.sql == SqlOptions::default() {
-            self.sql = config.sql.unwrap_or_default();
         }
 
         #[cfg(feature = "server")]
@@ -147,7 +140,6 @@ pub struct ToriiArgsConfig {
     pub explorer: Option<bool>,
     pub indexing: Option<IndexingOptions>,
     pub events: Option<EventsOptions>,
-    pub database: Option<DatabaseOptions>,
     pub erc: Option<ErcOptions>,
     pub sql: Option<SqlOptions>,
     #[cfg(feature = "server")]
@@ -185,7 +177,7 @@ mod test {
             "ns-EH"
         ]
 
-        [database]
+        [sql]
         page_size = 2048
 
         [[sql.model_indices]]
@@ -210,7 +202,7 @@ mod test {
             "--indexing.transactions",
             "--sql.model_indices",
             "ns-Position:vec.x,vec.y;ns-Moves:player",
-            "--database.page_size",
+            "--sql.page_size",
             "1024",
             "--config",
             path_str.as_str(),
@@ -225,8 +217,8 @@ mod test {
         assert_eq!(torii_args.events.historical, vec!["a-A".to_string()]);
         assert_eq!(torii_args.server, ServerOptions::default());
         assert!(torii_args.indexing.transactions);
-        assert_eq!(torii_args.database.page_size, 1024);
-        assert_eq!(torii_args.database.cache_size, DEFAULT_DATABASE_CACHE_SIZE);
+        assert_eq!(torii_args.sql.page_size, 1024);
+        assert_eq!(torii_args.sql.cache_size, DEFAULT_DATABASE_CACHE_SIZE);
         assert_eq!(
             torii_args.sql.model_indices,
             Some(vec![

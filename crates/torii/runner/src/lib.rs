@@ -118,8 +118,8 @@ impl Runner {
         options = options.journal_mode(SqliteJournalMode::Wal);
         options = options.synchronous(SqliteSynchronous::Normal);
         options = options.optimize_on_close(true, None);
-        options = options.pragma("cache_size", self.args.database.cache_size.to_string());
-        options = options.pragma("page_size", self.args.database.page_size.to_string());
+        options = options.pragma("cache_size", self.args.sql.cache_size.to_string());
+        options = options.pragma("page_size", self.args.sql.page_size.to_string());
 
         let pool = SqlitePoolOptions::new()
             .min_connections(1)
