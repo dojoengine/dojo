@@ -134,7 +134,7 @@ impl ServerOptions {
 #[command(next_help_heading = "Rpc options")]
 pub struct RpcOptions {
     /// API's offered over the HTTP-RPC interface.
-    #[arg(long = "rpc.api", value_name = "MODULES")]
+    #[arg(long = "rpc.api", value_name = "MODULES", alias = "http.api")]
     #[arg(value_parser = RpcModulesList::parse)]
     #[serde(default)]
     pub http_modules: Option<RpcModulesList>,
