@@ -191,16 +191,6 @@ pub struct IndexingOptions {
     )]
     #[serde(default)]
     pub strict_model_reader: bool,
-
-    /// Models that are going to be treated as historical during indexing. Applies to event
-    /// messages and entities. A list of the model tags (namespace-name)
-    #[arg(
-        long = "indexing.historical",
-        value_delimiter = ',',
-        help = "Models that are going to be treated as historical during indexing."
-    )]
-    #[serde(default)]
-    pub historical: Vec<String>,
 }
 
 impl Default for IndexingOptions {
@@ -217,7 +207,6 @@ impl Default for IndexingOptions {
             world_block: 0,
             controllers: false,
             strict_model_reader: false,
-            historical: vec![],
         }
     }
 }
@@ -267,10 +256,6 @@ impl IndexingOptions {
 
             if !self.strict_model_reader {
                 self.strict_model_reader = other.strict_model_reader;
-            }
-
-            if self.historical.is_empty() {
-                self.historical = other.historical.clone();
             }
         }
     }
@@ -400,6 +385,16 @@ pub struct SqlOptions {
     )]
     #[serde(default)]
     pub model_indices: Option<Vec<ModelIndices>>,
+
+    /// Models that are going to be treated as historical during indexing. Applies to event
+    /// messages and entities. A list of the model tags (namespace-name)
+    #[arg(
+        long = "sql.historical",
+        value_delimiter = ',',
+        help = "Models that are going to be treated as historical during indexing."
+    )]
+    #[serde(default)]
+    pub historical: Vec<String>,
 }
 
 // Parses clap cli argument which is expected to be in the format:
