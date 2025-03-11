@@ -6,7 +6,7 @@ use camino::Utf8PathBuf;
 use serde::ser::SerializeSeq;
 use serde::{Deserialize, Serialize};
 use starknet::core::types::Felt;
-use torii_sqlite::types::{Contract, ContractType};
+use torii_sqlite::types::{Contract, ContractType, ModelIndices};
 
 pub const DEFAULT_HTTP_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::LOCALHOST);
 pub const DEFAULT_HTTP_PORT: u16 = 8080;
@@ -75,6 +75,16 @@ pub struct RelayOptions {
     )]
     #[serde(default)]
     pub cert_path: Option<String>,
+
+    /// A list of other torii relays to connect to and sync with.
+    /// Right now, only offchain messages broadcasted by the relay will be synced.
+    #[arg(
+        long = "relay.peers",
+        value_delimiter = ',',
+        help = "A list of other torii relays to connect to and sync with."
+    )]
+    #[serde(default)]
+    pub peers: Vec<String>,
 }
 
 impl Default for RelayOptions {
@@ -85,6 +95,7 @@ impl Default for RelayOptions {
             websocket_port: DEFAULT_RELAY_WEBSOCKET_PORT,
             local_key_path: None,
             cert_path: None,
+            peers: vec![],
         }
     }
 }
@@ -370,6 +381,45 @@ impl Default for ErcOptions {
     fn default() -> Self {
         Self { max_metadata_tasks: DEFAULT_ERC_MAX_METADATA_TASKS, artifacts_path: None }
     }
+}
+
+#[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[command(next_help_heading = "SQL options")]
+pub struct SqlOptions {
+    /// Whether model tables should default to having indices on all columns
+    #[arg(
+        long = "sql.all_model_indices",
+        default_value_t = false,
+        help = "If true, creates indices on all columns of model tables by default. If false, \
+                only key fields columns of model tables will have indices."
+    )]
+    #[serde(default)]
+    pub all_model_indices: bool,
+
+    /// Specify which fields should have indices for specific models
+    /// Format: "model_name:field1,field2;another_model:field3,field4"
+    #[arg(
+        long = "sql.model_indices",
+        value_delimiter = ';',
+        value_parser = parse_model_indices,
+        help = "Specify which fields should have indices for specific models. Format: \"model_name:field1,field2;another_model:field3,field4\""
+    )]
+    #[serde(default)]
+    pub model_indices: Option<Vec<ModelIndices>>,
+}
+
+// Parses clap cli argument which is expected to be in the format:
+// - model-tag:field1,field2;othermodel-tag:field3,field4
+fn parse_model_indices(part: &str) -> anyhow::Result<ModelIndices> {
+    let parts = part.split(':').collect::<Vec<&str>>();
+    if parts.len() != 2 {
+        return Err(anyhow::anyhow!("Invalid model indices format"));
+    }
+
+    let model_tag = parts[0].to_string();
+    let fields = parts[1].split(',').map(|s| s.to_string()).collect::<Vec<_>>();
+
+    Ok(ModelIndices { model_tag, fields })
 }
 
 // Parses clap cli argument which is expected to be in the format:

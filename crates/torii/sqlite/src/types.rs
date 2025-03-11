@@ -226,3 +226,9 @@ pub struct ContractCursor {
     pub last_pending_block_tx: Option<String>,
     pub last_pending_block_contract_tx: Option<String>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ModelIndices {
+    pub model_tag: String,
+    pub fields: Vec<String>,
+}
