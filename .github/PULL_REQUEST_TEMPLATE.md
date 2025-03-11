@@ -34,7 +34,7 @@ may be a README.md file added to your module/package, a DojoBook PR or both.
 
 ## Checklist
 
-- [ ] I've formatted my code (`scripts/prettier.sh`, `scripts/rust_fmt.sh`, `scripts/cairo_fmt.sh`)
+- [ ] I've formatted my code (`scripts/rust_fmt.sh`, `scripts/cairo_fmt.sh`)
 - [ ] I've linted my code (`scripts/clippy.sh`, `scripts/docs.sh`)
 - [ ] I've commented my code
 - [ ] I've requested a review after addressing the comments
