@@ -9,7 +9,6 @@ use url::Url;
 
 use super::options::*;
 
-
 /// Dojo World Indexer
 #[derive(Parser, Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[command(name = "torii", author, about, long_about = None)]

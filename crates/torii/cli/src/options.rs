@@ -129,7 +129,11 @@ pub struct RpcOptions {
 
 impl Default for RpcOptions {
     fn default() -> Self {
-        Self { strict_model_reader: false, events_chunk_size: DEFAULT_EVENTS_CHUNK_SIZE, url: Url::parse(DEFAULT_RPC_URL).unwrap() }
+        Self {
+            strict_model_reader: false,
+            events_chunk_size: DEFAULT_EVENTS_CHUNK_SIZE,
+            url: Url::parse(DEFAULT_RPC_URL).unwrap(),
+        }
     }
 }
 
