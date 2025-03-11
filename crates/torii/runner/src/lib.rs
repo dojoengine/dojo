@@ -235,7 +235,7 @@ impl Runner {
         )
         .await?;
 
-        let mut libp2p_relay_server = torii_relay::server::Relay::new(
+        let mut libp2p_relay_server = torii_relay::server::Relay::new_with_peers(
             db,
             provider.clone(),
             self.args.relay.port,
@@ -243,6 +243,7 @@ impl Runner {
             self.args.relay.websocket_port,
             self.args.relay.local_key_path,
             self.args.relay.cert_path,
+            self.args.relay.peers,
         )
         .expect("Failed to start libp2p relay server");
 

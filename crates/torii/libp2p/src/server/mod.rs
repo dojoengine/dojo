@@ -70,6 +70,29 @@ impl<P: Provider + Sync> Relay<P> {
         local_key_path: Option<String>,
         cert_path: Option<String>,
     ) -> Result<Self, Error> {
+        Self::new_with_peers(
+            pool,
+            provider,
+            port,
+            port_webrtc,
+            port_websocket,
+            local_key_path,
+            cert_path,
+            vec![],
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn new_with_peers(
+        pool: Sql,
+        provider: P,
+        port: u16,
+        port_webrtc: u16,
+        port_websocket: u16,
+        local_key_path: Option<String>,
+        cert_path: Option<String>,
+        peers: Vec<String>,
+    ) -> Result<Self, Error> {
         let local_key = if let Some(path) = local_key_path {
             let path = Path::new(&path);
             read_or_create_identity(path).map_err(Error::ReadIdentityError)?
@@ -167,6 +190,12 @@ impl<P: Provider + Sync> Relay<P> {
             .with(Protocol::Ws("/".to_string().into()));
         swarm.listen_on(listen_addr_wss.clone())?;
 
+        // We dial all of our peers. Our server will then broadcast
+        // all incoming offchain messages to all of our peers.
+        for peer in peers {
+            swarm.dial(peer.parse::<Multiaddr>().unwrap())?;
+        }
+
         // Clients will send their messages to the "message" topic
         // with a room name as the message data.
         // and we will forward those messages to a specific room - in this case the topic
@@ -175,6 +204,12 @@ impl<P: Provider + Sync> Relay<P> {
             .behaviour_mut()
             .gossipsub
             .subscribe(&IdentTopic::new(constants::MESSAGING_TOPIC))
+            .unwrap();
+
+        swarm
+            .behaviour_mut()
+            .gossipsub
+            .subscribe(&IdentTopic::new(constants::PEERS_MESSAGING_TOPIC))
             .unwrap();
 
         Ok(Self { swarm, db: pool, provider: Box::new(provider) })
@@ -285,7 +320,7 @@ impl<P: Provider + Sync> Relay<P> {
                                         continue;
                                     }
                                 },
-                                None => match get_identity_from_ty(&ty) {
+                                _ => match get_identity_from_ty(&ty) {
                                     Ok(identity) => identity,
                                     Err(e) => {
                                         warn!(
@@ -355,6 +390,30 @@ impl<P: Provider + Sync> Relay<P> {
                                 peer_id = %peer_id,
                                 "Message verified and set."
                             );
+
+                            // We only want to publish messages from our clients. Not from our peers
+                            // otherwise recursion hell :<
+                            if message.topic != IdentTopic::new(constants::MESSAGING_TOPIC).hash() {
+                                continue;
+                            }
+
+                            // Publish message to all peers
+                            if let Err(e) = self
+                                .swarm
+                                .behaviour_mut()
+                                .gossipsub
+                                .publish(
+                                    IdentTopic::new(constants::PEERS_MESSAGING_TOPIC),
+                                    serde_json::to_string(&data).unwrap(),
+                                )
+                                .map_err(Error::PublishError)
+                            {
+                                info!(
+                                    target: LOG_TARGET,
+                                    error = %e,
+                                    "Publishing message to peers."
+                                );
+                            }
                         }
                         ServerEvent::Gossipsub(gossipsub::Event::Subscribed { peer_id, topic }) => {
                             info!(
