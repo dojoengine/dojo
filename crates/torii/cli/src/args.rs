@@ -211,16 +211,17 @@ mod test {
         [indexing]
         transactions = false
 
-        [events]
-        raw = true
+        [sql]
         historical = [
             "ns-E",
             "ns-EH"
         ]
-
         [[sql.model_indices]]
         model_tag = "ns-Position"
         fields = ["vec.x", "vec.y"]
+        
+        [events]
+        raw = true
         "#;
         let path = std::env::temp_dir().join("torii-config2.json");
         std::fs::write(&path, content).unwrap();
@@ -235,7 +236,7 @@ mod test {
             "http://0.0.0.0:6060",
             "--db-dir",
             "/tmp/torii-test2",
-            "--events.historical",
+            "--indexing.historical",
             "a-A",
             "--indexing.transactions",
             "--sql.model_indices",
@@ -277,10 +278,6 @@ mod test {
 
         [events]
         raw = true
-        historical = [
-            "ns-E",
-            "ns-EH"
-        ]
 
         [server]
         http_addr = "127.0.0.1"
@@ -298,6 +295,12 @@ mod test {
         ]
         namespaces = []
 
+        [sql]
+        historical = [
+            "ns-E",
+            "ns-EH"
+        ]
+        
         [[sql.model_indices]]
         model_tag = "ns-Position"
         fields = ["vec.x", "vec.y"]
