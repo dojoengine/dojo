@@ -417,7 +417,7 @@ impl<P: Provider + Sync> Relay<P> {
                                     target: LOG_TARGET,
                                     "Forwarded message to peers."
                                 ),
-                                Err(Error::PublishError(PublishError::InsufficientPeers)) => {},
+                                Err(Error::PublishError(PublishError::InsufficientPeers)) => {}
                                 Err(e) => warn!(
                                     target: LOG_TARGET,
                                     error = %e,
