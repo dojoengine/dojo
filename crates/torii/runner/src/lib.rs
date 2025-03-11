@@ -165,7 +165,7 @@ impl Runner {
             SqlConfig {
                 all_model_indices: self.args.sql.all_model_indices,
                 model_indices: self.args.sql.model_indices.unwrap_or_default(),
-                historical_models: self.args.events.historical.clone().into_iter().collect(),
+                historical_models: self.args.sql.historical.clone().into_iter().collect(),
             },
         )
         .await?;
