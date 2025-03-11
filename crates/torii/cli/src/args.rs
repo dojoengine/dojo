@@ -158,45 +158,6 @@ pub struct ToriiArgsConfig {
     pub relay: Option<RelayOptions>,
 }
 
-impl TryFrom<ToriiArgs> for ToriiArgsConfig {
-    type Error = anyhow::Error;
-
-    fn try_from(args: ToriiArgs) -> Result<Self> {
-        // Ensure the config file is merged with the CLI arguments.
-        let args = args.with_config_file()?;
-
-        let mut config =
-            ToriiArgsConfig { world_address: args.world_address, ..Default::default() };
-
-        config.world_address = args.world_address;
-        config.rpc =
-            if args.rpc == Url::parse(DEFAULT_RPC_URL).unwrap() { None } else { Some(args.rpc) };
-        config.db_dir = args.db_dir;
-        config.explorer = Some(args.explorer);
-
-        // Only include the following options if they are not the default.
-        // This makes the config file more readable.
-        config.indexing =
-            if args.indexing == IndexingOptions::default() { None } else { Some(args.indexing) };
-        config.events =
-            if args.events == EventsOptions::default() { None } else { Some(args.events) };
-        config.erc = if args.erc == ErcOptions::default() { None } else { Some(args.erc) };
-        config.sql = if args.sql == SqlOptions::default() { None } else { Some(args.sql) };
-
-        #[cfg(feature = "server")]
-        {
-            config.server =
-                if args.server == ServerOptions::default() { None } else { Some(args.server) };
-            config.relay =
-                if args.relay == RelayOptions::default() { None } else { Some(args.relay) };
-            config.metrics =
-                if args.metrics == MetricsOptions::default() { None } else { Some(args.metrics) };
-        }
-
-        Ok(config)
-    }
-}
-
 #[cfg(test)]
 mod test {
     use std::net::{IpAddr, Ipv4Addr};
