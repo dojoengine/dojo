@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1741717818015,
+  "lastUpdate": 1741717885682,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -57277,6 +57277,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 46175219889,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "122404722+notV4l@users.noreply.github.com",
+            "name": "notV4l",
+            "username": "notV4l"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "649cc54dcfd2b559c2ebb4613b9b80656ba9d35e",
+          "message": "feat(katana): extract RpcOptions from ServerOptions (#3084)\n\n* extract RpcOptions from ServerOptions\n\n* fix tests\n\n* remove server feature\n\n* add alias to be backward compatible\n\n* fix: ensure test doesn't fail when peers check is done\n\n* fix: ensure server feature is not gating RpcOptions\n\n---------\n\nCo-authored-by: Ammar Arif <evergreenkary@gmail.com>\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2025-03-11T12:13:31-06:00",
+          "tree_id": "9a3783d7d6fe22829a7749307969c8379d58f376",
+          "url": "https://github.com/dojoengine/dojo/commit/649cc54dcfd2b559c2ebb4613b9b80656ba9d35e"
+        },
+        "date": 1741717882692,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2399086,
+            "range": "± 93400",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 393448,
+            "range": "± 4646",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2679384681,
+            "range": "± 224287100",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 17002209,
+            "range": "± 255294",
             "unit": "ns/iter"
           }
         ]
