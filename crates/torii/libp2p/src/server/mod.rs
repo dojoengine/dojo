@@ -235,7 +235,7 @@ impl<P: Provider + Sync> Relay<P> {
                             let data = match serde_json::from_slice::<Message>(&message.data) {
                                 Ok(message) => message,
                                 Err(e) => {
-                                    info!(
+                                    warn!(
                                         target: LOG_TARGET,
                                         error = %e,
                                         "Deserializing message."
@@ -247,7 +247,7 @@ impl<P: Provider + Sync> Relay<P> {
                             let ty = match validate_message(&self.db, &data.message).await {
                                 Ok(parsed_message) => parsed_message,
                                 Err(e) => {
-                                    info!(
+                                    warn!(
                                         target: LOG_TARGET,
                                         error = %e,
                                         "Validating message."
@@ -361,7 +361,7 @@ impl<P: Provider + Sync> Relay<P> {
                                     continue;
                                 }
                             } {
-                                info!(
+                                warn!(
                                     target: LOG_TARGET,
                                     message_id = %message_id,
                                     peer_id = %peer_id,
@@ -381,7 +381,7 @@ impl<P: Provider + Sync> Relay<P> {
                             )
                             .await
                             {
-                                info!(
+                                warn!(
                                     target: LOG_TARGET,
                                     error = %e,
                                     "Setting message."
@@ -418,7 +418,7 @@ impl<P: Provider + Sync> Relay<P> {
                                     "Forwarded message to peers."
                                 ),
                                 Err(Error::PublishError(PublishError::InsufficientPeers)) => {},
-                                Err(e) => info!(
+                                Err(e) => warn!(
                                     target: LOG_TARGET,
                                     error = %e,
                                     "Publishing message to peers."
