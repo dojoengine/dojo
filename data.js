@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1741702465896,
+  "lastUpdate": 1741702530535,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -57121,6 +57121,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 47380651871,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "09a5fad1bb3ef77e40c88bcaac9b69bff1fab2c2",
+          "message": "fix(torii-libp2p): ensure build not in wasm and avoid crash on invalid message (#3093)\n\n* chore: ensure torii relay can compile when not wasm target\n\n* fix(torii-relay): ensure torii doesn't crash on unwrap on compute selector from tag\n\n* chore: fix deps to only be used for non-wasm builds",
+          "timestamp": "2025-03-11T07:57:15-06:00",
+          "tree_id": "10fc292c9ef0fbeced303d8d47a9b5457cad16d5",
+          "url": "https://github.com/dojoengine/dojo/commit/09a5fad1bb3ef77e40c88bcaac9b69bff1fab2c2"
+        },
+        "date": 1741702526827,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2453195,
+            "range": "± 81747",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 394373,
+            "range": "± 13765",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2772909694,
+            "range": "± 248879449",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 17579665,
+            "range": "± 321212",
             "unit": "ns/iter"
           }
         ]
