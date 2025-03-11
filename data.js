@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1741670558253,
+  "lastUpdate": 1741672914144,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -56935,6 +56935,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 17064950,
             "range": "± 180114",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "fc0de900813a87ed23bcb9fecbfdf5314cdf9f4a",
+          "message": "feat(torii): add SSE support for mcp (#3075)\n\n* refactorC(torii-server): initializing handlers\n\n* keep handlers in place & write graphql\n\n* fmt\n\n* c\n\n* sse messages\n\n* mcp sse fixes\n\n* mcp response through sse event stream\n\n* use rwlock\n\n* rebase from optimize handlers\n\n* sse support\n\n* cleanup initializing tools\n\n* fmt\n\n* fix query tool\n\n* fix mcp args\n\n* fix mcp ws\n\n* torii mcp crate\n\n* fmt",
+          "timestamp": "2025-03-10T23:45:24-06:00",
+          "tree_id": "64310979239b8e20e5a1f838975c637eaa090950",
+          "url": "https://github.com/dojoengine/dojo/commit/fc0de900813a87ed23bcb9fecbfdf5314cdf9f4a"
+        },
+        "date": 1741672911536,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 44282569854,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
