@@ -43,6 +43,9 @@ pub struct ToriiArgs {
     pub config: Option<PathBuf>,
 
     #[command(flatten)]
+    pub database: DatabaseOptions,
+
+    #[command(flatten)]
     pub indexing: IndexingOptions,
 
     #[command(flatten)]
@@ -100,6 +103,8 @@ impl ToriiArgs {
             self.explorer = config.explorer.unwrap_or_default();
         }
 
+        self.database.merge(config.database.as_ref());
+
         self.indexing.merge(config.indexing.as_ref());
 
         if self.events == EventsOptions::default() {
@@ -142,6 +147,7 @@ pub struct ToriiArgsConfig {
     pub explorer: Option<bool>,
     pub indexing: Option<IndexingOptions>,
     pub events: Option<EventsOptions>,
+    pub database: Option<DatabaseOptions>,
     pub erc: Option<ErcOptions>,
     pub sql: Option<SqlOptions>,
     #[cfg(feature = "server")]

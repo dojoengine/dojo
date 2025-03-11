@@ -295,6 +295,52 @@ pub struct EventsOptions {
     pub historical: Vec<String>,
 }
 
+pub const DEFAULT_DATABASE_PAGE_SIZE: u64 = 32_768;
+/// Negative value is used to determine number of KiB to use for cache.
+pub const DEFAULT_DATABASE_CACHE_SIZE: i64 = -500_000;
+
+#[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq)]
+#[command(next_help_heading = "Database options")]
+pub struct DatabaseOptions {
+    /// The page size to use for the database.
+    #[arg(
+        long = "database.page_size",
+        default_value_t = DEFAULT_DATABASE_PAGE_SIZE,
+        help = "The page size to use for the database."
+    )]
+    #[serde(default)]
+    pub page_size: u64,
+
+    /// Cache size to use for the database.
+    #[arg(
+        long = "database.cache_size",
+        default_value_t = DEFAULT_DATABASE_CACHE_SIZE,
+        help = "The cache size to use for the database. A positive value determines a number of pages, a negative value determines a number of KiB."
+    )]
+    #[serde(default)]
+    pub cache_size: i64,
+}
+
+impl Default for DatabaseOptions {
+    fn default() -> Self {
+        Self { page_size: DEFAULT_DATABASE_PAGE_SIZE, cache_size: DEFAULT_DATABASE_CACHE_SIZE }
+    }
+}
+
+impl DatabaseOptions {
+    pub fn merge(&mut self, other: Option<&Self>) {
+        if let Some(other) = other {
+            if self.page_size == DEFAULT_DATABASE_PAGE_SIZE {
+                self.page_size = other.page_size;
+            }
+
+            if self.cache_size == DEFAULT_DATABASE_CACHE_SIZE {
+                self.cache_size = other.cache_size;
+            }
+        }
+    }
+}
+
 #[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq)]
 #[command(next_help_heading = "HTTP server options")]
 pub struct ServerOptions {
