@@ -195,7 +195,7 @@ pub struct IndexingOptions {
     /// Models that are going to be treated as historical during indexing. Applies to event
     /// messages and entities. A list of the model tags (namespace-name)
     #[arg(
-        long = "events.historical",
+        long = "indexing.historical",
         value_delimiter = ',',
         help = "Models that are going to be treated as historical during indexing."
     )]
