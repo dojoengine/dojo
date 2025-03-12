@@ -43,13 +43,11 @@ fn main() {
                 println!("stderr: {}", String::from_utf8_lossy(&output.stderr));
                 std::process::exit(1);
             }
-/*
-            let status = Command::new("bun")
-                .current_dir(&ui_dir)
-                .arg("install")
-                .status()
-                .expect("Failed to install UI dependencies");
- */
+            // let status = Command::new("bun")
+            // .current_dir(&ui_dir)
+            // .arg("install")
+            // .status()
+            // .expect("Failed to install UI dependencies");
             if !status.success() {
                 panic!("Failed to install UI dependencies");
             }
