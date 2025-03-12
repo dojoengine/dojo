@@ -1,3 +1,4 @@
+use std::fs::canonicalize;
 use std::path::Path;
 use std::process::Command;
 
@@ -39,13 +40,15 @@ fn main() {
         if !Path::new(&ui_dir).join("node_modules").exists() {
             println!("Installing UI dependencies...");
 
-            let output =
-                Command::new("bun").current_dir(&ui_dir).arg("install").output().unwrap_or_else(
-                    |e| {
-                        println!("Failed to execute bun install: {}", e);
-                        std::process::exit(1);
-                    },
-                );
+            let output = Command::new("bun")
+                // Attempt with canonicalize to avoid relative path issues mentioned in the doc.
+                .current_dir(&canonicalize(&ui_dir).unwrap())
+                .arg("install")
+                .output()
+                .unwrap_or_else(|e| {
+                    println!("Failed to execute bun install: {}", e);
+                    std::process::exit(1);
+                });
 
             if !output.status.success() {
                 println!("bun install failed with status: {}", output.status);
