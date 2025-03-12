@@ -95,7 +95,7 @@ impl Runner {
         .expect("Error setting Ctrl-C handler");
 
         let tempfile = NamedTempFile::new()?;
-        let database_path = if let Some(db_dir) = self.args.db_dir {
+        let database_path = if let Some(db_dir) = self.args.sql.db_dir {
             // Create the directory if it doesn't exist
             std::fs::create_dir_all(&db_dir)?;
             // Set the database file path inside the directory
@@ -134,7 +134,7 @@ impl Runner {
 
         sqlx::migrate!("../migrations").run(&pool).await?;
 
-        let provider: Arc<_> = JsonRpcClient::new(HttpTransport::new(self.args.rpc)).into();
+        let provider: Arc<_> = JsonRpcClient::new(HttpTransport::new(self.args.rpc.url)).into();
 
         // Get world address
         let world = WorldContractReader::new(world_address, provider.clone());
@@ -192,11 +192,11 @@ impl Runner {
             EngineConfig {
                 max_concurrent_tasks: self.args.indexing.max_concurrent_tasks,
                 blocks_chunk_size: self.args.indexing.blocks_chunk_size,
-                events_chunk_size: self.args.indexing.events_chunk_size,
+                events_chunk_size: self.args.rpc.events_chunk_size,
                 polling_interval: Duration::from_millis(self.args.indexing.polling_interval),
                 flags,
                 event_processor_config: EventProcessorConfig {
-                    strict_model_reader: self.args.indexing.strict_model_reader,
+                    strict_model_reader: self.args.rpc.strict_model_reader,
                     historical_events: self.args.events.historical.into_iter().collect(),
                     namespaces: self.args.indexing.namespaces.into_iter().collect(),
                 },
