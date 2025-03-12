@@ -22,6 +22,7 @@ jobs:
           submodules: recursive
           fetch-depth: 0
         # Workaround for https://github.com/actions/runner-images/issues/6775
+      - uses: oven-sh/setup-bun@v2
       - run: git config --global --add safe.directory "*"
       - uses: Swatinem/rust-cache@v2
       - run: |
@@ -34,6 +35,10 @@ jobs:
         with:
           name: dojo-bins
           path: bins
+      - uses: actions/upload-artifact@v4
+        with:
+          name: explorer-dist
+          path: crates/katana/explorer/ui/dist
 
   test:
     needs: [ensure-docker]

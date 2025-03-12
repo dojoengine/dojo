@@ -8,6 +8,7 @@ fn main() {
     if std::env::var("CARGO_MANIFEST_DIR").is_ok() {
         // $CARGO_MANIFEST_DIR/ui/
         let ui_dir = Path::new(&std::env::var("CARGO_MANIFEST_DIR").unwrap()).join("ui");
+        println!("Explorer UI directory: {}", ui_dir.display());
 
         // Update git submodule
         println!("UI directory is empty, updating git submodule...");
