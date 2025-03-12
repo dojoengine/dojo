@@ -24,6 +24,16 @@ fn main() {
             panic!("Failed to update git submodule");
         }
 
+        // ls the content of ui directory and who the content:
+        let o =
+            Command::new("ls").current_dir(&ui_dir).output().expect("Failed to list UI directory");
+
+        if !o.status.success() {
+            panic!("Failed to list UI directory");
+        }
+
+        println!("UI directory content: {}", String::from_utf8_lossy(&o.stdout));
+
         // Install dependencies if node_modules doesn't exist
         // $CARGO_MANIFEST_DIR/ui/node_modules
         if !Path::new(&ui_dir).join("node_modules").exists() {
