@@ -364,8 +364,9 @@ impl Default for ErcOptions {
 }
 
 pub const DEFAULT_DATABASE_PAGE_SIZE: u64 = 32_768;
-/// Negative value is used to determine number of KiB to use for cache.
-pub const DEFAULT_DATABASE_CACHE_SIZE: i64 = -500_000; // 512MB, 25% of a common instance's 2GB RAM
+/// Negative value is used to determine number of KiB to use for cache. Currently set as 512MB, 25%
+/// of the RAM of the smallest slot instance.
+pub const DEFAULT_DATABASE_CACHE_SIZE: i64 = -500_000;
 
 #[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(default)]
