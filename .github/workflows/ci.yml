@@ -37,10 +37,6 @@ jobs:
         with:
           name: dojo-bins
           path: bins
-      - uses: actions/upload-artifact@v4
-        with:
-          name: explorer-dist
-          path: crates/katana/explorer/ui/dist
 
   test:
     needs: [ensure-docker]
@@ -54,13 +50,11 @@ jobs:
         with:
           name: dojo-bins
           path: /tmp/bins
-      - uses: actions/download-artifact@v4
+      # Workaround for https://github.com/actions/runner-images/issues/6775
+      - run: git config --global --add safe.directory "*"
+      - uses: oven-sh/setup-bun@v1
         with:
-          name: explorer-dist
-          path: crates/katana/explorer/ui/dist
-      - name: Verify explorer UI assets
-        run: |
-          ls -la crates/katana/explorer/ui/dist || echo "Explorer UI dist directory not found"
+          bun-version: latest
       - run: |
           export PATH=/tmp/bins:$PATH
           chmod +x /tmp/bins/katana
@@ -83,13 +77,6 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
-      - uses: actions/download-artifact@v4
-        with:
-          name: explorer-dist
-          path: crates/katana/explorer/ui/dist
-      - name: Verify explorer UI assets
-        run: |
-          ls -la crates/katana/explorer/ui/dist || echo "Explorer UI dist directory not found"
       - name: Install wasm32 target
         run: rustup target add wasm32-unknown-unknown
       - run: cargo build -r --target wasm32-unknown-unknown -p torii-client
@@ -104,13 +91,11 @@ jobs:
           toolchain: ${{ env.rust_version }}
           target: x86_64-pc-windows-msvc
       - uses: swatinem/rust-cache@v2
-      - uses: actions/download-artifact@v4
+      # Workaround for https://github.com/actions/runner-images/issues/6775
+      - run: git config --global --add safe.directory "*"
+      - uses: oven-sh/setup-bun@v1
         with:
-          name: explorer-dist
-          path: crates/katana/explorer/ui/dist
-      - name: Verify explorer UI assets
-        run: |
-          dir crates\katana\explorer\ui\dist || echo "Explorer UI dist directory not found"
+          bun-version: latest
       - uses: arduino/setup-protoc@v2
         with:
           repo-token: ${{ secrets.github_token }}
@@ -201,18 +186,11 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
-      - uses: actions/download-artifact@v4
-        with:
-          name: explorer-dist
-          path: crates/katana/explorer/ui/dist
       # Workaround for https://github.com/actions/runner-images/issues/6775
       - run: git config --global --add safe.directory "*"
       - uses: oven-sh/setup-bun@v1
         with:
           bun-version: latest
-      - name: Verify explorer UI assets
-        run: |
-          ls -la crates/katana/explorer/ui/dist || echo "Explorer UI dist directory not found"
       - run: scripts/clippy.sh
 
   fmt:
@@ -232,18 +210,11 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
-      - uses: actions/download-artifact@v4
-        with:
-          name: explorer-dist
-          path: crates/katana/explorer/ui/dist
       # Workaround for https://github.com/actions/runner-images/issues/6775
       - run: git config --global --add safe.directory "*"
       - uses: oven-sh/setup-bun@v1
         with:
           bun-version: latest
-      - name: Verify explorer UI assets
-        run: |
-          ls -la crates/katana/explorer/ui/dist || echo "Explorer UI dist directory not found"
       - run: scripts/docs.sh
 
   test-hurl:
