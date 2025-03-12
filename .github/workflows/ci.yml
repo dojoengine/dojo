@@ -21,6 +21,8 @@ jobs:
         with:
           submodules: recursive
           fetch-depth: 0
+        # Workaround for https://github.com/actions/runner-images/issues/6775
+      - run: git config --global --add safe.directory "*"
       - uses: Swatinem/rust-cache@v2
       - run: |
           cargo build -r --bin katana
