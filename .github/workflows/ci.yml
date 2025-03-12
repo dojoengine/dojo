@@ -26,6 +26,8 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: |
           git submodule update --init --recursive --force
+          ls crates/katana/explorer/ui
+          cd crates/katana/explorer/ui && bun install && bun run build
           cargo build -r --bin katana
           cargo build -r --bin sozo
           mkdir -p bins
