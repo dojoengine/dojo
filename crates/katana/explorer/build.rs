@@ -28,12 +28,28 @@ fn main() {
         // $CARGO_MANIFEST_DIR/ui/node_modules
         if !Path::new(&ui_dir).join("node_modules").exists() {
             println!("Installing UI dependencies...");
+
+            let output =
+                Command::new("bun").current_dir(&ui_dir).arg("install").output().unwrap_or_else(
+                    |e| {
+                        println!("Failed to execute bun install: {}", e);
+                        std::process::exit(1);
+                    },
+                );
+
+            if !output.status.success() {
+                println!("bun install failed with status: {}", output.status);
+                println!("stdout: {}", String::from_utf8_lossy(&output.stdout));
+                println!("stderr: {}", String::from_utf8_lossy(&output.stderr));
+                std::process::exit(1);
+            }
+/*
             let status = Command::new("bun")
                 .current_dir(&ui_dir)
                 .arg("install")
                 .status()
                 .expect("Failed to install UI dependencies");
-
+ */
             if !status.success() {
                 panic!("Failed to install UI dependencies");
             }
