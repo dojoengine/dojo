@@ -165,6 +165,7 @@ impl Runner {
             SqlConfig {
                 all_model_indices: self.args.sql.all_model_indices,
                 model_indices: self.args.sql.model_indices.unwrap_or_default(),
+                historical_models: self.args.sql.historical.clone().into_iter().collect(),
             },
         )
         .await?;
@@ -197,7 +198,6 @@ impl Runner {
                 flags,
                 event_processor_config: EventProcessorConfig {
                     strict_model_reader: self.args.indexing.strict_model_reader,
-                    historical_events: self.args.events.historical.into_iter().collect(),
                     namespaces: self.args.indexing.namespaces.into_iter().collect(),
                 },
                 world_block: self.args.indexing.world_block,

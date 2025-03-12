@@ -283,16 +283,6 @@ pub struct EventsOptions {
     )]
     #[serde(default)]
     pub raw: bool,
-
-    /// Event messages that are going to be treated as historical
-    /// A list of the model tags (namespace-name)
-    #[arg(
-        long = "events.historical",
-        value_delimiter = ',',
-        help = "Event messages that are going to be treated as historical during indexing."
-    )]
-    #[serde(default)]
-    pub historical: Vec<String>,
 }
 
 #[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq)]
@@ -406,6 +396,16 @@ pub struct SqlOptions {
     )]
     #[serde(default)]
     pub model_indices: Option<Vec<ModelIndices>>,
+
+    /// Models that are going to be treated as historical during indexing. Applies to event
+    /// messages and entities. A list of the model tags (namespace-name)
+    #[arg(
+        long = "sql.historical",
+        value_delimiter = ',',
+        help = "Models that are going to be treated as historical during indexing."
+    )]
+    #[serde(default)]
+    pub historical: Vec<String>,
 }
 
 // Parses clap cli argument which is expected to be in the format:
