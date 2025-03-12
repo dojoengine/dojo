@@ -2,7 +2,6 @@ use std::path::PathBuf;
 
 use anyhow::Result;
 use clap::Parser;
-use dojo_utils::parse::parse_url;
 use serde::{Deserialize, Serialize};
 use starknet::core::types::Felt;
 use url::Url;
@@ -225,8 +224,8 @@ mod test {
         let torii_args = ToriiArgs::parse_from(args).with_config_file().unwrap();
 
         assert_eq!(torii_args.world_address, Some(Felt::from_str("0x9999").unwrap()));
-        assert_eq!(torii_args.rpc, Url::parse("http://0.0.0.0:6060").unwrap());
-        assert_eq!(torii_args.db_dir, Some(PathBuf::from("/tmp/torii-test2")));
+        assert_eq!(torii_args.rpc.url, Url::parse("http://0.0.0.0:6060").unwrap());
+        assert_eq!(torii_args.sql.db_dir, Some(PathBuf::from("/tmp/torii-test2")));
         assert!(!torii_args.events.raw);
         assert_eq!(torii_args.events.historical, vec!["a-A".to_string()]);
         assert_eq!(torii_args.server, ServerOptions::default());
@@ -290,11 +289,11 @@ mod test {
         let torii_args = ToriiArgs::parse_from(args).with_config_file().unwrap();
 
         assert_eq!(torii_args.world_address, Some(Felt::from_str("0x1234").unwrap()));
-        assert_eq!(torii_args.rpc, Url::parse("http://0.0.0.0:2222").unwrap());
-        assert_eq!(torii_args.db_dir, Some(PathBuf::from("/tmp/torii-test")));
+        assert_eq!(torii_args.rpc.url, Url::parse("http://0.0.0.0:2222").unwrap());
+        assert_eq!(torii_args.sql.db_dir, Some(PathBuf::from("/tmp/torii-test")));
         assert!(torii_args.events.raw);
         assert_eq!(torii_args.events.historical, vec!["ns-E".to_string(), "ns-EH".to_string()]);
-        assert_eq!(torii_args.indexing.events_chunk_size, 9999);
+        assert_eq!(torii_args.rpc.events_chunk_size, 9999);
         assert_eq!(torii_args.indexing.blocks_chunk_size, 10240);
         assert!(torii_args.indexing.pending);
         assert_eq!(torii_args.indexing.polling_interval, 500);
