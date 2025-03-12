@@ -23,6 +23,9 @@ jobs:
           fetch-depth: 0
         # Workaround for https://github.com/actions/runner-images/issues/6775
       - run: git config --global --add safe.directory "*"
+      - uses: oven-sh/setup-bun@v1
+         with:
+           bun-version: latest
       - uses: Swatinem/rust-cache@v2
       - run: |
           git submodule update --init --recursive --force
