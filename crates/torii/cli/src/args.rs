@@ -209,19 +209,19 @@ mod test {
         [indexing]
         transactions = false
 
-        [events]
-        raw = true
+        [sql]
         historical = [
             "ns-E",
             "ns-EH"
         ]
-
-        [sql]
         page_size = 2048
 
         [[sql.model_indices]]
         model_tag = "ns-Position"
         fields = ["vec.x", "vec.y"]
+        
+        [events]
+        raw = true
         "#;
         let path = std::env::temp_dir().join("torii-config2.json");
         std::fs::write(&path, content).unwrap();
@@ -236,7 +236,7 @@ mod test {
             "http://0.0.0.0:6060",
             "--db-dir",
             "/tmp/torii-test2",
-            "--events.historical",
+            "--sql.historical",
             "a-A",
             "--indexing.transactions",
             "--sql.model_indices",
@@ -252,8 +252,8 @@ mod test {
         assert_eq!(torii_args.world_address, Some(Felt::from_str("0x9999").unwrap()));
         assert_eq!(torii_args.rpc, Url::parse("http://0.0.0.0:6060").unwrap());
         assert_eq!(torii_args.db_dir, Some(PathBuf::from("/tmp/torii-test2")));
-        assert!(!torii_args.events.raw);
-        assert_eq!(torii_args.events.historical, vec!["a-A".to_string()]);
+        assert!(torii_args.events.raw);
+        assert_eq!(torii_args.sql.historical, vec!["a-A".to_string()]);
         assert_eq!(torii_args.server, ServerOptions::default());
         assert!(torii_args.indexing.transactions);
         assert_eq!(torii_args.sql.page_size, 1024);
@@ -309,14 +309,14 @@ mod test {
         assert_eq!(torii_args.indexing.max_concurrent_tasks, DEFAULT_MAX_CONCURRENT_TASKS);
 
         assert!(!torii_args.events.raw);
-        assert_eq!(torii_args.events.historical, Vec::<String>::new());
-
+		
         assert_eq!(torii_args.erc.max_metadata_tasks, DEFAULT_ERC_MAX_METADATA_TASKS);
         assert_eq!(torii_args.erc.artifacts_path, None);
-
+		
         assert_eq!(torii_args.sql.page_size, DEFAULT_DATABASE_PAGE_SIZE);
         assert_eq!(torii_args.sql.cache_size, DEFAULT_DATABASE_CACHE_SIZE);
         assert_eq!(torii_args.sql.model_indices, None);
+        assert_eq!(torii_args.sql.historical, Vec::<String>::new());
 
         assert_eq!(torii_args.server.http_addr, DEFAULT_HTTP_ADDR);
         assert_eq!(torii_args.server.http_port, DEFAULT_HTTP_PORT);
@@ -343,10 +343,6 @@ mod test {
 
         [events]
         raw = true
-        historical = [
-            "ns-E",
-            "ns-EH"
-        ]
 
         [server]
         http_addr = "127.0.0.1"
@@ -363,6 +359,12 @@ mod test {
             "erc721:0x5678"
         ]
         namespaces = []
+
+        [sql]
+        historical = [
+            "ns-E",
+            "ns-EH"
+        ]
 
         [[sql.model_indices]]
         model_tag = "ns-Position"
@@ -381,7 +383,7 @@ mod test {
         assert_eq!(torii_args.rpc, Url::parse("http://0.0.0.0:2222").unwrap());
         assert_eq!(torii_args.db_dir, Some(PathBuf::from("/tmp/torii-test")));
         assert!(torii_args.events.raw);
-        assert_eq!(torii_args.events.historical, vec!["ns-E".to_string(), "ns-EH".to_string()]);
+        assert_eq!(torii_args.sql.historical, vec!["ns-E".to_string(), "ns-EH".to_string()]);
         assert_eq!(torii_args.indexing.events_chunk_size, 9999);
         assert_eq!(torii_args.indexing.blocks_chunk_size, 10240);
         assert!(torii_args.indexing.pending);

@@ -373,7 +373,7 @@ impl<P: Provider + Sync> Relay<P> {
 
                             if let Err(e) = set_entity(
                                 &mut self.db,
-                                ty,
+                                ty.clone(),
                                 &message_id.to_string(),
                                 Utc::now().timestamp() as u64,
                                 entity_id,
@@ -608,6 +608,7 @@ fn get_identity_from_ty(ty: &Ty) -> Result<Felt, Error> {
     Ok(identity)
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn set_entity(
     db: &mut Sql,
     ty: Ty,

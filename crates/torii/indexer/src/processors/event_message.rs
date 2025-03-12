@@ -4,7 +4,6 @@ use anyhow::{Error, Result};
 use async_trait::async_trait;
 use cainome::cairo_serde::CairoSerde;
 use dojo_world::contracts::abigen::world::Event as WorldEvent;
-use dojo_world::contracts::naming::get_tag;
 use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::{Event, Felt};
 use starknet::providers::Provider;
@@ -58,7 +57,7 @@ where
         block_timestamp: u64,
         event_id: &str,
         event: &Event,
-        config: &EventProcessorConfig,
+        _config: &EventProcessorConfig,
     ) -> Result<(), Error> {
         // Torii version is coupled to the world version, so we can expect the event to be well
         // formed.
@@ -93,8 +92,7 @@ where
         let mut entity = model.schema.clone();
         entity.deserialize(&mut keys_and_unpacked)?;
 
-        let historical = config.is_historical(&get_tag(&model.namespace, &model.name));
-        db.set_event_message(entity, event_id, block_timestamp, historical).await?;
+        db.set_event_message(entity, event_id, block_timestamp).await?;
         Ok(())
     }
 }

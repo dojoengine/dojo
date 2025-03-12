@@ -268,15 +268,6 @@ pub struct EventsOptions {
         help = "Whether or not to index raw events."
     )]
     pub raw: bool,
-
-    /// Event messages that are going to be treated as historical
-    /// A list of the model tags (namespace-name)
-    #[arg(
-        long = "events.historical",
-        value_delimiter = ',',
-        help = "Event messages that are going to be treated as historical during indexing."
-    )]
-    pub historical: Vec<String>,
 }
 
 #[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq)]
@@ -391,11 +382,21 @@ pub struct SqlOptions {
     )]
     pub model_indices: Option<Vec<ModelIndices>>,
 
-    /// The page size to use for the database.
+    /// Models that are going to be treated as historical during indexing. Applies to event
+    /// messages and entities. A list of the model tags (namespace-name)
+    #[arg(
+        long = "sql.historical",
+        value_delimiter = ',',
+        help = "Models that are going to be treated as historical during indexing."
+    )]
+    #[serde(default)]
+    pub historical: Vec<String>,
+
+    /// The page size to use for the database. The page size must be a power of two between 512 and 65536 inclusive.
     #[arg(
         long = "sql.page_size",
         default_value_t = DEFAULT_DATABASE_PAGE_SIZE,
-        help = "The page size to use for the database."
+        help = "The page size to use for the database. The page size must be a power of two between 512 and 65536 inclusive."
     )]
     pub page_size: u64,
 
@@ -413,6 +414,7 @@ impl Default for SqlOptions {
         Self {
             all_model_indices: false,
             model_indices: None,
+            historical: vec![],
             page_size: DEFAULT_DATABASE_PAGE_SIZE,
             cache_size: DEFAULT_DATABASE_CACHE_SIZE,
         }
@@ -436,6 +438,10 @@ impl SqlOptions {
 
             if self.cache_size == DEFAULT_DATABASE_CACHE_SIZE {
                 self.cache_size = other.cache_size;
+            }
+
+            if self.historical.is_empty() {
+                self.historical = other.historical.clone();
             }
         }
     }

@@ -10,6 +10,7 @@ use dojo_types::schema::{Struct, Ty};
 use dojo_world::config::WorldMetadata;
 use dojo_world::contracts::abigen::model::Layout;
 use dojo_world::contracts::naming::compute_selector_from_names;
+use executor::EntityQuery;
 use sqlx::{Pool, Sqlite};
 use starknet::core::types::{Event, Felt, InvokeTransaction, Transaction};
 use starknet_crypto::poseidon_hash_many;
@@ -40,6 +41,7 @@ use cache::{LocalCache, Model, ModelCache};
 pub struct SqlConfig {
     pub all_model_indices: bool,
     pub model_indices: Vec<ModelIndices>,
+    pub historical_models: HashSet<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -333,6 +335,7 @@ impl Sql {
         Ok(())
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn set_entity(
         &mut self,
         entity: Ty,
@@ -371,7 +374,15 @@ impl Sql {
         self.executor.send(QueryMessage::new(
             insert_entities.to_string(),
             arguments,
-            QueryType::SetEntity(entity.clone()),
+            QueryType::SetEntity(EntityQuery {
+                event_id: event_id.to_string(),
+                block_timestamp: utc_dt_string_from_timestamp(block_timestamp),
+                entity_id: entity_id.clone(),
+                model_id: model_id.clone(),
+                keys_str: keys_str.map(|s| s.to_string()),
+                ty: entity.clone(),
+                is_historical: self.config.historical_models.contains(&entity.name()),
+            }),
         ))?;
 
         self.executor.send(QueryMessage::other(
@@ -391,7 +402,6 @@ impl Sql {
         entity: Ty,
         event_id: &str,
         block_timestamp: u64,
-        is_historical: bool,
     ) -> Result<()> {
         let keys = if let Ty::Struct(s) = &entity {
             let mut keys = Vec::new();
@@ -431,7 +441,7 @@ impl Sql {
                 event_id: event_id.to_string(),
                 block_timestamp: block_timestamp_str.clone(),
                 ty: entity.clone(),
-                is_historical,
+                is_historical: self.config.historical_models.contains(&entity.name()),
             }),
         ))?;
 
