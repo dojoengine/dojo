@@ -1,4 +1,3 @@
-use std::fs::canonicalize;
 use std::path::Path;
 use std::process::Command;
 
@@ -25,42 +24,17 @@ fn main() {
             panic!("Failed to update git submodule");
         }
 
-        // ls the content of ui directory and who the content:
-        let o =
-            Command::new("ls").current_dir(&ui_dir).output().expect("Failed to list UI directory");
-
-        if !o.status.success() {
-            panic!("Failed to list UI directory");
-        }
-
-        println!("UI directory content: {}", String::from_utf8_lossy(&o.stdout));
-
         // Install dependencies if node_modules doesn't exist
         // $CARGO_MANIFEST_DIR/ui/node_modules
         if !Path::new(&ui_dir).join("node_modules").exists() {
             println!("Installing UI dependencies...");
 
-            let output = Command::new("bun")
-                // Attempt with canonicalize to avoid relative path issues mentioned in the doc.
-                .current_dir(&canonicalize(&ui_dir).unwrap())
+            let status = Command::new("bun")
+                .current_dir(&ui_dir)
                 .arg("install")
-                .output()
-                .unwrap_or_else(|e| {
-                    println!("Failed to execute bun install: {}", e);
-                    std::process::exit(1);
-                });
+                .status()
+                .expect("Failed to install UI dependencies");
 
-            if !output.status.success() {
-                println!("bun install failed with status: {}", output.status);
-                println!("stdout: {}", String::from_utf8_lossy(&output.stdout));
-                println!("stderr: {}", String::from_utf8_lossy(&output.stderr));
-                std::process::exit(1);
-            }
-            // let status = Command::new("bun")
-            // .current_dir(&ui_dir)
-            // .arg("install")
-            // .status()
-            // .expect("Failed to install UI dependencies");
             if !status.success() {
                 panic!("Failed to install UI dependencies");
             }
