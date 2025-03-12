@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1741717885682,
+  "lastUpdate": 1741748855973,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -57325,6 +57325,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 17002209,
             "range": "± 255294",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "34617fd45ecb0e70060ce7f120c97695e4544b22",
+          "message": "feat(torii): historical entity updates  (#3090)\n\n* add historical entities table\n\n* historical generalized\n\n* write historical entity\n\n* fmt\n\n* keys nullable and slqite write\n\n* historical models on libp2p too\n\n* fmt\n\n* allow too many arguments\n\n* fix\n\n* historical models in sql\n\n* historical models in indexing\n\n* fmt\n\n* fix args\n\n* indexing\n\n* f\n\n* historical in sql args",
+          "timestamp": "2025-03-11T20:49:39-06:00",
+          "tree_id": "f7ce87d09958f27bada53fe27fbda15536d3d419",
+          "url": "https://github.com/dojoengine/dojo/commit/34617fd45ecb0e70060ce7f120c97695e4544b22"
+        },
+        "date": 1741748852637,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 51849086899,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
