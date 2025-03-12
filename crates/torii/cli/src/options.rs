@@ -392,7 +392,8 @@ pub struct SqlOptions {
     #[serde(default)]
     pub historical: Vec<String>,
 
-    /// The page size to use for the database. The page size must be a power of two between 512 and 65536 inclusive.
+    /// The page size to use for the database. The page size must be a power of two between 512 and
+    /// 65536 inclusive.
     #[arg(
         long = "sql.page_size",
         default_value_t = DEFAULT_DATABASE_PAGE_SIZE,

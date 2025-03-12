@@ -309,10 +309,10 @@ mod test {
         assert_eq!(torii_args.indexing.max_concurrent_tasks, DEFAULT_MAX_CONCURRENT_TASKS);
 
         assert!(!torii_args.events.raw);
-		
+
         assert_eq!(torii_args.erc.max_metadata_tasks, DEFAULT_ERC_MAX_METADATA_TASKS);
         assert_eq!(torii_args.erc.artifacts_path, None);
-		
+
         assert_eq!(torii_args.sql.page_size, DEFAULT_DATABASE_PAGE_SIZE);
         assert_eq!(torii_args.sql.cache_size, DEFAULT_DATABASE_CACHE_SIZE);
         assert_eq!(torii_args.sql.model_indices, None);
