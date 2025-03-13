@@ -206,10 +206,9 @@ struct CartridgeAccountResponse {
     calldata: Vec<Felt>,
 }
 
-/// Calls the Cartridge API to fetch the calldata for the constructor of the given controller
-/// address.
+/// Fetch the calldata for the constructor of the given controller address.
 ///
-/// Returns None if the controller address is not found in the Cartridge API.
+/// Returns `None` if the `address` is not associated with a Controller account.
 async fn fetch_controller_constructor_calldata(
     cartridge_api_url: &Url,
     address: Felt,
@@ -266,8 +265,6 @@ pub async fn handle_cartridge_estimate_fee(
     state: Arc<Box<dyn StateProvider>>,
     cartridge_api_url: &Url,
 ) -> anyhow::Result<Option<ExecutableTxWithHash>> {
-    let paymaster_nonce = state.nonce(paymaster_address)?;
-
     // The whole Cartridge paymaster flow would only be accessible mainly from the Controller
     // wallet. The Controller wallet only supports V3 transactions (considering < V3
     // transactions will soon be deprecated) hence why we're only checking for V3 transactions
@@ -282,7 +279,8 @@ pub async fn handle_cartridge_estimate_fee(
             return Ok(None);
         }
 
-        debug!(contract_address = ?maybe_controller_address, "Deploying controller account.");
+        let paymaster_nonce = state.nonce(paymaster_address)?;
+
         if let tx @ Some(..) = craft_deploy_cartridge_controller_tx(
             cartridge_api_url,
             maybe_controller_address,
@@ -293,6 +291,7 @@ pub async fn handle_cartridge_estimate_fee(
         )
         .await?
         {
+            debug!(address = %maybe_controller_address, "Deploying controller account.");
             return Ok(tx);
         }
     }
