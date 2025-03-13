@@ -50,6 +50,7 @@ use serde::Deserialize;
 use starknet::core::types::{Call, PriceUnit};
 use starknet::macros::selector;
 use starknet::signers::{LocalWallet, Signer, SigningKey};
+use tracing::debug;
 
 #[allow(missing_debug_implementations)]
 pub struct CartridgeApi<EF: ExecutorFactory> {
@@ -115,8 +116,6 @@ impl<EF: ExecutorFactory> CartridgeApi<EF> {
             .await
             {
                 self.pool.add_transaction(tx)?;
-                // TODO: we may avoid the sleep here using the executor?
-                tokio::time::sleep(std::time::Duration::from_secs(1)).await;
             }
         }
 
@@ -178,6 +177,8 @@ impl<EF: ExecutorFactory> CartridgeApiServer for CartridgeApi<EF> {
         outside_execution: OutsideExecution,
         signature: Vec<Felt>,
     ) -> RpcResult<InvokeTxResult> {
+        debug!(address = ?address, outside_execution = ?outside_execution, "Adding execute outside transaction.");
+
         let (paymaster_address, paymaster_alloc) =
             self.backend.chain_spec.genesis().accounts().nth(0).unwrap();
 
@@ -270,44 +271,33 @@ pub fn encode_calls(calls: Vec<Call>) -> Vec<Felt> {
 pub async fn handle_cartridge_estimate_fee(
     paymaster_address: ContractAddress,
     paymaster_private_key: Felt,
-    transactions: &[ExecutableTxWithHash],
+    tx: &ExecutableTxWithHash,
     chain_id: ChainId,
-    state: Box<dyn StateProvider>,
+    state: Arc<Box<dyn StateProvider>>,
     cartridge_api_url: &str,
-) -> Option<(ExecutableTxWithHash, FeeEstimate)> {
+) -> Option<ExecutableTxWithHash> {
     let paymaster_nonce = state.nonce(paymaster_address).expect("failed to get paymaster nonce");
 
-    for t in transactions {
-        if let ExecutableTx::Invoke(InvokeTx::V3(v3)) = &t.transaction {
-            let maybe_controller_address = v3.sender_address;
+    if let ExecutableTx::Invoke(InvokeTx::V3(v3)) = &tx.transaction {
+        let maybe_controller_address = v3.sender_address;
 
-            // Avoid deploying the controller account if it is already deployed.
-            if state.class_hash_of_contract(maybe_controller_address).unwrap().is_some() {
-                return None;
-            }
-
-            let tx = craft_deploy_cartridge_controller_tx(
-                cartridge_api_url,
-                maybe_controller_address,
-                paymaster_address,
-                paymaster_private_key,
-                chain_id,
-                paymaster_nonce,
-            )
-            .await?;
-
-            return Some((
-                tx,
-                FeeEstimate {
-                    gas_price: Felt::ZERO,
-                    gas_consumed: Felt::ZERO,
-                    overall_fee: Felt::ZERO,
-                    data_gas_price: Default::default(),
-                    data_gas_consumed: Default::default(),
-                    unit: PriceUnit::Fri,
-                },
-            ));
+        // Avoid deploying the controller account if it is already deployed.
+        if state.class_hash_of_contract(maybe_controller_address).unwrap().is_some() {
+            return None;
         }
+
+        debug!(contract_address = ?maybe_controller_address, "Deploying controller account.");
+        let tx = craft_deploy_cartridge_controller_tx(
+            cartridge_api_url,
+            maybe_controller_address,
+            paymaster_address,
+            paymaster_private_key,
+            chain_id,
+            paymaster_nonce,
+        )
+        .await?;
+
+        return Some(tx);
     }
 
     None

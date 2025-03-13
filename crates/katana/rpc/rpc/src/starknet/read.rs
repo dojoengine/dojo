@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use jsonrpsee::core::{async_trait, Error, RpcResult};
 use katana_executor::{EntryPointCall, ExecutorFactory};
 use katana_pool::TransactionPool;
@@ -22,6 +24,7 @@ use katana_rpc_types::transaction::{BroadcastedTx, Tx};
 use katana_rpc_types::trie::{ContractStorageKeys, GetStorageProofResponse};
 use katana_rpc_types::{FeeEstimate, FeltAsHex, FunctionCall, SimulationFlagForEstimateFee};
 use starknet::core::types::TransactionStatus;
+use tracing::debug;
 
 use super::StarknetApi;
 
@@ -225,7 +228,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
         // Refer to the `handle_cartridge_controller_deploy` function in `cartridge.rs`
         // for more details.
         #[cfg(feature = "cartridge")]
-        if self.inner.config.use_cartridge_paymaster {
+        let transactions = if self.inner.config.use_cartridge_paymaster {
             // Paymaster is the first dev account in the genesis.
             let (paymaster_address, paymaster_alloc) = self
                 .inner
@@ -243,27 +246,43 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
                 panic!("Paymaster is not a dev account");
             };
 
-            let state = self.inner.backend.blockchain.provider().latest().unwrap();
+            let state = Arc::new(self.inner.backend.blockchain.provider().latest().unwrap());
 
-            let c7e_result = crate::cartridge::handle_cartridge_estimate_fee(
-                *paymaster_address,
-                paymaster_private_key,
-                &transactions,
-                self.inner.backend.chain_spec.id(),
-                state,
-                &self.inner.config.cartridge_api_url,
-            )
-            .await;
+            let mut ctrl_transactions = Vec::new();
 
-            if let Some((tx, fee_estimate)) = c7e_result {
-                let _hash = self
-                    .inner
-                    .pool
-                    .add_transaction(tx)
-                    .expect("failed to add transaction for controller");
-                return Ok(vec![fee_estimate]);
+            for tx in &transactions {
+                let c7e_result = crate::cartridge::handle_cartridge_estimate_fee(
+                    *paymaster_address,
+                    paymaster_private_key,
+                    tx,
+                    self.inner.backend.chain_spec.id(),
+                    state.clone(),
+                    &self.inner.config.cartridge_api_url,
+                )
+                .await;
+
+                if let Some(tx) = c7e_result {
+                    let hash = self
+                        .inner
+                        .pool
+                        .add_transaction(tx.clone())
+                        .expect("failed to add transaction for controller");
+
+                    debug!(tx_hash = ?hash, "Added controller transaction for estimation.");
+                    ctrl_transactions.push(tx);
+                }
             }
-        }
+
+            if !ctrl_transactions.is_empty() {
+                let mut all_transactions = ctrl_transactions;
+                all_transactions.extend(transactions);
+                all_transactions
+            } else {
+                transactions
+            }
+        } else {
+            transactions
+        };
 
         self.on_cpu_blocking_task(move |this| {
             let results = this.estimate_fee_with(transactions, block_id, flags)?;
