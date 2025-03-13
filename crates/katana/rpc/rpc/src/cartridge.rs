@@ -1,29 +1,28 @@
-/// Handles management of Cartridge controller accounts.
-///
-/// When a Controller account is created, the username is used as a salt,
-/// and the latest controller class hash is used.
-/// This ensures that the controller account address is deterministic.
-///
-/// A consequence of that, is that all the controller class hashes must be
-/// known by Katana to ensure it can first deploy the controller account with the
-/// correct address, and then upgrade it to the latest version.
-///
-/// This module contains the function to work around this behavior, which also relies
-/// on the updated code into `katana-primitives` to ensure all the controller class hashes
-/// are available.
-///
-/// Two flows:
-///
-/// 1. When a Controller account is created, an execution from outside is received from the
-///    very first transaction that the user will want to achieve using the session. In this
-///    case, this module will hook the execution from outside to ensure the controller account
-///    is deployed.
-///
-/// 2. When a Controller account is already deployed, and the user logs in, the client code of
-///    controller is actually performing a `estimate_fee` to estimate the fee for the account
-///    upgrade. In this case, this module contains the code to hook the fee estimation, and
-///    return the associated transaction to be executed in order to deploy the controller
-///    account.
+//! Handles management of Cartridge controller accounts.
+//!
+//! When a Controller account is created, the username is used as a salt,
+//! and the latest controller class hash is used.
+//! This ensures that the controller account address is deterministic.
+//!
+//! A consequence of that, is that all the controller class hashes must be
+//! known by Katana to ensure it can first deploy the controller account with the
+//! correct address, and then upgrade it to the latest version.
+//!
+//! This module contains the function to work around this behavior, which also relies
+//! on the updated code into `katana-primitives` to ensure all the controller class hashes
+//! are available.
+//!
+//! Two flows:
+//!
+//! 1. When a Controller account is created, an execution from outside is received from the very
+//!    first transaction that the user will want to achieve using the session. In this case, this
+//!    module will hook the execution from outside to ensure the controller account is deployed.
+//!
+//! 2. When a Controller account is already deployed, and the user logs in, the client code of
+//!    controller is actually performing a `estimate_fee` to estimate the fee for the account
+//!    upgrade. In this case, this module contains the code to hook the fee estimation, and return
+//!    the associated transaction to be executed in order to deploy the controller account.
+
 use std::sync::Arc;
 
 use account_sdk::account::outside_execution::OutsideExecution;
