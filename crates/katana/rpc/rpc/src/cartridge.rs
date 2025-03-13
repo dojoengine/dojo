@@ -26,6 +26,7 @@
 use std::sync::Arc;
 
 use account_sdk::account::outside_execution::OutsideExecution;
+use anyhow::anyhow;
 use cainome::cairo_serde::CairoSerde;
 use jsonrpsee::core::{async_trait, RpcResult};
 use katana_core::backend::Backend;
@@ -86,55 +87,64 @@ impl<EF: ExecutorFactory> CartridgeApi<EF> {
 
     pub async fn execute_outside(
         &self,
-        paymaster_address: ContractAddress,
-        paymaster_private_key: Felt,
-        contract_address: ContractAddress,
+        address: ContractAddress,
         outside_execution: OutsideExecution,
         signature: Vec<Felt>,
     ) -> Result<InvokeTxResult, StarknetApiError> {
-        let state = self.backend.blockchain.provider().latest().unwrap();
-
-        let entrypoint = match outside_execution {
-            OutsideExecution::V2(_) => selector!("execute_from_outside_v2"),
-            OutsideExecution::V3(_) => selector!("execute_from_outside_v3"),
-        };
-
-        // If the controller has been created during the flow, there's no fee estimation.
-        // Hence, we can check if the controller is deployed, if not, deploy it.
-        if state.class_hash_of_contract(contract_address).unwrap().is_none() {
-            let nonce = state.nonce(paymaster_address).unwrap();
-
-            if let Some(tx) = craft_deploy_cartridge_controller_tx(
-                &self.api_url,
-                contract_address,
-                paymaster_address,
-                paymaster_private_key,
-                self.backend.chain_spec.id(),
-                nonce,
-            )
-            .await
-            {
-                self.pool.add_transaction(tx)?;
-            }
-        }
-
-        let state = self.backend.blockchain.provider().latest().unwrap();
-        let nonce = state.nonce(paymaster_address).unwrap();
-
-        let mut inner_calldata =
-            <OutsideExecution as CairoSerde>::cairo_serialize(&outside_execution);
-        inner_calldata.extend(<Vec<Felt> as CairoSerde>::cairo_serialize(&signature));
-
-        let call =
-            Call { to: contract_address.into(), selector: entrypoint, calldata: inner_calldata };
-
+        debug!(%address, ?outside_execution, "Adding execute outside transaction.");
         self.on_io_blocking_task(move |this| {
+            let (pm_address, pm_acc) = this
+                .backend
+                .chain_spec
+                .genesis()
+                .accounts()
+                .nth(0)
+                .ok_or(anyhow!("Cartridge paymaster account doesn't exist"))?;
+
+            let pm_private_key = if let GenesisAccountAlloc::DevAccount(pm) = pm_acc {
+                pm.private_key
+            } else {
+                panic!("Paymaster is not a dev account");
+            };
+
+            let provider = this.backend.blockchain.provider();
+            let state = provider.latest()?;
+
+            let entrypoint = match outside_execution {
+                OutsideExecution::V2(_) => selector!("execute_from_outside_v2"),
+                OutsideExecution::V3(_) => selector!("execute_from_outside_v3"),
+            };
+
+            // If the controller has been created during the flow, there's no fee estimation.
+            // Hence, we can check if the controller is deployed, if not, deploy it.
+            if state.class_hash_of_contract(address)?.is_none() {
+                let nonce = state.nonce(*pm_address)?;
+                if let Some(tx) = futures::executor::block_on(craft_deploy_cartridge_controller_tx(
+                    &this.api_url,
+                    address,
+                    *pm_address,
+                    pm_private_key,
+                    this.backend.chain_spec.id(),
+                    nonce,
+                )) {
+                    this.pool.add_transaction(tx)?;
+                }
+            }
+
+            let nonce = state.nonce(*pm_address)?;
+
+            let mut inner_calldata =
+                <OutsideExecution as CairoSerde>::cairo_serialize(&outside_execution);
+            inner_calldata.extend(<Vec<Felt> as CairoSerde>::cairo_serialize(&signature));
+
+            let call = Call { to: address.into(), selector: entrypoint, calldata: inner_calldata };
+
             let mut tx = InvokeTxV3 {
                 chain_id: this.backend.chain_spec.id(),
                 nonce: nonce.unwrap_or(Felt::ZERO),
                 calldata: encode_calls(vec![call]),
                 signature: vec![],
-                sender_address: paymaster_address,
+                sender_address: *pm_address,
                 resource_bounds: ResourceBoundsMapping::default(),
                 tip: 0_u64,
                 paymaster_data: vec![],
@@ -144,10 +154,9 @@ impl<EF: ExecutorFactory> CartridgeApi<EF> {
             };
             let tx_hash = InvokeTx::V3(tx.clone()).calculate_hash(false);
 
-            let signer = LocalWallet::from(SigningKey::from_secret_scalar(paymaster_private_key));
-
-            let signature = futures::executor::block_on(signer.sign_hash(&tx_hash))
-                .expect("failed to sign hash with paymaster");
+            let signer = LocalWallet::from(SigningKey::from_secret_scalar(pm_private_key));
+            let signature =
+                futures::executor::block_on(signer.sign_hash(&tx_hash)).map_err(|e| anyhow!(e))?;
             tx.signature = vec![signature.r, signature.s];
 
             let tx = ExecutableTxWithHash::new(ExecutableTx::Invoke(InvokeTx::V3(tx)));
@@ -176,26 +185,7 @@ impl<EF: ExecutorFactory> CartridgeApiServer for CartridgeApi<EF> {
         outside_execution: OutsideExecution,
         signature: Vec<Felt>,
     ) -> RpcResult<InvokeTxResult> {
-        debug!(address = ?address, outside_execution = ?outside_execution, "Adding execute outside transaction.");
-
-        let (paymaster_address, paymaster_alloc) =
-            self.backend.chain_spec.genesis().accounts().nth(0).unwrap();
-
-        let paymaster_private_key = if let GenesisAccountAlloc::DevAccount(pm) = paymaster_alloc {
-            pm.private_key
-        } else {
-            panic!("Paymaster is not a dev account");
-        };
-
-        Ok(self
-            .execute_outside(
-                *paymaster_address,
-                paymaster_private_key,
-                address,
-                outside_execution,
-                signature,
-            )
-            .await?)
+        Ok(self.execute_outside(address, outside_execution, signature).await?)
     }
 }
 
