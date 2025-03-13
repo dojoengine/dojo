@@ -38,8 +38,8 @@ use torii_sqlite::cache::ModelCache;
 use torii_sqlite::executor::Executor;
 use torii_sqlite::simple_broker::SimpleBroker;
 use torii_sqlite::types::{Contract, ContractType, Model};
-use torii_sqlite::Sql;
-use tracing::{error, info};
+use torii_sqlite::{Sql, SqlConfig};
+use tracing::{error, info, warn};
 use tracing_subscriber::{fmt, EnvFilter};
 use url::form_urlencoded;
 
@@ -112,6 +112,7 @@ impl Runner {
         options = options.auto_vacuum(SqliteAutoVacuum::None);
         options = options.journal_mode(SqliteJournalMode::Wal);
         options = options.synchronous(SqliteSynchronous::Normal);
+        options = options.pragma("cache_size", "-65536"); // Set cache size to 64MB (65536 KiB)
 
         let pool = SqlitePoolOptions::new()
             .min_connections(1)
@@ -148,11 +149,24 @@ impl Runner {
         let executor_handle = tokio::spawn(async move { executor.run().await });
 
         let model_cache = Arc::new(ModelCache::new(readonly_pool.clone()));
-        let db = Sql::new(
+
+        if self.args.sql.all_model_indices && self.args.sql.model_indices.is_some() {
+            warn!(
+                target: LOG_TARGET,
+                "all_model_indices is true, which will override any specific indices in model_indices"
+            );
+        }
+
+        let db = Sql::new_with_config(
             pool.clone(),
             sender.clone(),
             &self.args.indexing.contracts,
             model_cache.clone(),
+            SqlConfig {
+                all_model_indices: self.args.sql.all_model_indices,
+                model_indices: self.args.sql.model_indices.unwrap_or_default(),
+                historical_models: self.args.sql.historical.clone().into_iter().collect(),
+            },
         )
         .await?;
 
@@ -184,7 +198,6 @@ impl Runner {
                 flags,
                 event_processor_config: EventProcessorConfig {
                     strict_model_reader: self.args.indexing.strict_model_reader,
-                    historical_events: self.args.events.historical.into_iter().collect(),
                     namespaces: self.args.indexing.namespaces.into_iter().collect(),
                 },
                 world_block: self.args.indexing.world_block,
@@ -222,7 +235,7 @@ impl Runner {
         )
         .await?;
 
-        let mut libp2p_relay_server = torii_relay::server::Relay::new(
+        let mut libp2p_relay_server = torii_relay::server::Relay::new_with_peers(
             db,
             provider.clone(),
             self.args.relay.port,
@@ -230,6 +243,7 @@ impl Runner {
             self.args.relay.websocket_port,
             self.args.relay.local_key_path,
             self.args.relay.cert_path,
+            self.args.relay.peers,
         )
         .expect("Failed to start libp2p relay server");
 

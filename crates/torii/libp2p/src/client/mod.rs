@@ -5,12 +5,8 @@ use futures::channel::mpsc::{UnboundedReceiver, UnboundedSender};
 use futures::channel::oneshot;
 use futures::lock::Mutex;
 use futures::{select, StreamExt};
-#[cfg(target_arch = "wasm32")]
-use libp2p::core::{upgrade::Version, Transport};
 use libp2p::gossipsub::{self, IdentTopic, MessageId};
 use libp2p::swarm::{NetworkBehaviour, Swarm, SwarmEvent};
-#[cfg(not(target_arch = "wasm32"))]
-use libp2p::tcp;
 use libp2p::{identify, identity, noise, ping, yamux, Multiaddr, PeerId};
 use tracing::info;
 
@@ -50,15 +46,42 @@ enum Command {
 impl RelayClient {
     #[cfg(not(target_arch = "wasm32"))]
     pub fn new(relay_addr: String) -> Result<Self, Error> {
+        use libp2p::core::muxing::StreamMuxerBox;
+        use libp2p::core::upgrade::Version;
+        use libp2p::{dns, tcp, websocket, Transport};
+        use libp2p_webrtc as webrtc;
+        use libp2p_webrtc::tokio::Certificate;
+        use rand::thread_rng;
+
         let local_key = identity::Keypair::generate_ed25519();
         let peer_id = PeerId::from(local_key.public());
 
         info!(target: LOG_TARGET, peer_id = %peer_id, "Local peer id.");
 
+        let cert = Certificate::generate(&mut thread_rng()).unwrap();
         let mut swarm = libp2p::SwarmBuilder::with_existing_identity(local_key)
             .with_tokio()
             .with_tcp(tcp::Config::default(), noise::Config::new, yamux::Config::default)?
             .with_quic()
+            .with_other_transport(|key| {
+                webrtc::tokio::Transport::new(key.clone(), cert)
+                    .map(|(peer_id, conn), _| (peer_id, StreamMuxerBox::new(conn)))
+            })
+            .expect("Failed to create WebRTC transport")
+            .with_other_transport(|key| {
+                let transport = websocket::WsConfig::new(
+                    dns::tokio::Transport::system(tcp::tokio::Transport::new(
+                        tcp::Config::default(),
+                    ))
+                    .unwrap(),
+                );
+
+                transport
+                    .upgrade(Version::V1)
+                    .authenticate(noise::Config::new(key).unwrap())
+                    .multiplex(yamux::Config::default())
+            })
+            .expect("Failed to create WebSocket transport")
             .with_behaviour(|key| {
                 let gossipsub_config: gossipsub::Config = gossipsub::ConfigBuilder::default()
                     .heartbeat_interval(Duration::from_secs(
@@ -99,6 +122,9 @@ impl RelayClient {
 
     #[cfg(target_arch = "wasm32")]
     pub fn new(relay_addr: String) -> Result<Self, Error> {
+        use libp2p::core::upgrade::Version;
+        use libp2p::core::Transport;
+
         let local_key = identity::Keypair::generate_ed25519();
         let peer_id = PeerId::from(local_key.public());
 

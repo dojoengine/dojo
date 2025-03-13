@@ -86,6 +86,11 @@ jobs:
         with:
           cache-on-failure: true
 
+      # Required to build Katana at the moment.
+      - uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
       # required for `aws-lc-rs` crate to compile on Windows; https://aws.github.io/aws-lc-rs/requirements/windows.html
       - name: Install NASM
         uses: ilammy/setup-nasm@v1

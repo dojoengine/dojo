@@ -206,7 +206,7 @@ impl FetchDataResult {
 pub struct FetchRangeResult {
     // (block_number, transaction_hash) -> events
     // NOTE: LinkedList might contains blocks in different order
-    pub transactions: LinkedHashMap<(u64, Felt), Vec<EmittedEvent>>,
+    pub transactions: BTreeMap<u64, LinkedHashMap<Felt, Vec<EmittedEvent>>>,
     pub blocks: BTreeMap<u64, u64>,
     pub latest_block_number: u64,
 }
@@ -312,6 +312,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                                         self.db.flush().await?;
                                         self.db.apply_cache_diff(block_id).await?;
                                         self.db.execute().await?;
+                                        debug!(target: LOG_TARGET, block_number = ?block_id, "Flushed and applied cache diff.");
                                     }
                                 },
                                 Err(e) => {
@@ -444,7 +445,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
 
         // Flatten events pages and events according to the pending block cursor
         // to array of (block_number, transaction_hash)
-        let mut transactions = LinkedHashMap::new();
+        let mut transactions = BTreeMap::new();
 
         let mut block_set = HashSet::new();
         for event in events {
@@ -456,7 +457,9 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
             block_set.insert(block_number);
 
             transactions
-                .entry((block_number, event.transaction_hash))
+                .entry(block_number)
+                .or_insert(LinkedHashMap::new())
+                .entry(event.transaction_hash)
                 .or_insert(vec![])
                 .push(event);
         }
@@ -575,24 +578,26 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         // Process all transactions
         let mut processed_blocks = HashSet::new();
         let mut cursor_map = HashMap::new();
-        for ((block_number, transaction_hash), events) in data.transactions {
-            debug!("Processing transaction hash: {:#x}", transaction_hash);
-            // Process transaction
-            let transaction = if self.config.flags.contains(IndexingFlags::TRANSACTIONS) {
-                Some(self.provider.get_transaction_by_hash(transaction_hash).await?)
-            } else {
-                None
-            };
+        for (block_number, transactions) in data.transactions {
+            for (transaction_hash, events) in transactions {
+                debug!("Processing transaction hash: {:#x}", transaction_hash);
+                // Process transaction
+                let transaction = if self.config.flags.contains(IndexingFlags::TRANSACTIONS) {
+                    Some(self.provider.get_transaction_by_hash(transaction_hash).await?)
+                } else {
+                    None
+                };
 
-            self.process_transaction_with_events(
-                transaction_hash,
-                events.as_slice(),
-                block_number,
-                data.blocks[&block_number],
-                transaction,
-                &mut cursor_map,
-            )
-            .await?;
+                self.process_transaction_with_events(
+                    transaction_hash,
+                    events.as_slice(),
+                    block_number,
+                    data.blocks[&block_number],
+                    transaction,
+                    &mut cursor_map,
+                )
+                .await?;
+            }
 
             // Process block
             if !processed_blocks.contains(&block_number) {

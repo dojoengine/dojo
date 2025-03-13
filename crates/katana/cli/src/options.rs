@@ -7,20 +7,18 @@
 //!
 //! Currently, the merge is made at the top level of the commands.
 
-#[cfg(feature = "server")]
-use std::net::IpAddr;
-use std::net::Ipv4Addr;
+use std::net::{IpAddr, Ipv4Addr};
 
 use clap::Args;
 use katana_node::config::execution::{DEFAULT_INVOCATION_MAX_STEPS, DEFAULT_VALIDATION_MAX_STEPS};
 #[cfg(feature = "server")]
 use katana_node::config::metrics::{DEFAULT_METRICS_ADDR, DEFAULT_METRICS_PORT};
-#[cfg(feature = "server")]
-use katana_node::config::rpc::{RpcModulesList, DEFAULT_RPC_MAX_PROOF_KEYS};
-#[cfg(feature = "server")]
 use katana_node::config::rpc::{
-    DEFAULT_RPC_ADDR, DEFAULT_RPC_MAX_CALL_GAS, DEFAULT_RPC_MAX_EVENT_PAGE_SIZE, DEFAULT_RPC_PORT,
+    RpcModulesList, DEFAULT_RPC_MAX_CALL_GAS, DEFAULT_RPC_MAX_EVENT_PAGE_SIZE,
+    DEFAULT_RPC_MAX_PROOF_KEYS,
 };
+#[cfg(feature = "server")]
+use katana_node::config::rpc::{DEFAULT_RPC_ADDR, DEFAULT_RPC_PORT};
 use katana_primitives::block::BlockHashOrNumber;
 use katana_primitives::chain::ChainId;
 use katana_primitives::genesis::Genesis;
@@ -99,9 +97,41 @@ pub struct ServerOptions {
         deserialize_with = "deserialize_cors_origins"
     )]
     pub http_cors_origins: Vec<HeaderValue>,
+}
 
+#[cfg(feature = "server")]
+impl Default for ServerOptions {
+    fn default() -> Self {
+        ServerOptions {
+            http_addr: DEFAULT_RPC_ADDR,
+            http_port: DEFAULT_RPC_PORT,
+            http_cors_origins: Vec::new(),
+        }
+    }
+}
+
+#[cfg(feature = "server")]
+impl ServerOptions {
+    pub fn merge(&mut self, other: Option<&Self>) {
+        if let Some(other) = other {
+            if self.http_addr == DEFAULT_RPC_ADDR {
+                self.http_addr = other.http_addr;
+            }
+            if self.http_port == DEFAULT_RPC_PORT {
+                self.http_port = other.http_port;
+            }
+            if self.http_cors_origins.is_empty() {
+                self.http_cors_origins = other.http_cors_origins.clone();
+            }
+        }
+    }
+}
+
+#[derive(Debug, Args, Clone, Serialize, Deserialize, PartialEq)]
+#[command(next_help_heading = "Rpc options")]
+pub struct RpcOptions {
     /// API's offered over the HTTP-RPC interface.
-    #[arg(long = "http.api", value_name = "MODULES")]
+    #[arg(long = "rpc.api", value_name = "MODULES", alias = "http.api")]
     #[arg(value_parser = RpcModulesList::parse)]
     #[serde(default)]
     pub http_modules: Option<RpcModulesList>,
@@ -137,13 +167,9 @@ pub struct ServerOptions {
     pub max_call_gas: u64,
 }
 
-#[cfg(feature = "server")]
-impl Default for ServerOptions {
+impl Default for RpcOptions {
     fn default() -> Self {
-        ServerOptions {
-            http_addr: DEFAULT_RPC_ADDR,
-            http_port: DEFAULT_RPC_PORT,
-            http_cors_origins: Vec::new(),
+        RpcOptions {
             http_modules: None,
             max_event_page_size: DEFAULT_RPC_MAX_EVENT_PAGE_SIZE,
             max_proof_keys: DEFAULT_RPC_MAX_PROOF_KEYS,
@@ -155,19 +181,9 @@ impl Default for ServerOptions {
     }
 }
 
-#[cfg(feature = "server")]
-impl ServerOptions {
+impl RpcOptions {
     pub fn merge(&mut self, other: Option<&Self>) {
         if let Some(other) = other {
-            if self.http_addr == DEFAULT_RPC_ADDR {
-                self.http_addr = other.http_addr;
-            }
-            if self.http_port == DEFAULT_RPC_PORT {
-                self.http_port = other.http_port;
-            }
-            if self.http_cors_origins.is_empty() {
-                self.http_cors_origins = other.http_cors_origins.clone();
-            }
             if self.http_modules.is_none() {
                 self.http_modules = other.http_modules.clone();
             }
@@ -502,12 +518,10 @@ fn default_http_port() -> u16 {
     DEFAULT_RPC_PORT
 }
 
-#[cfg(feature = "server")]
 fn default_page_size() -> u64 {
     DEFAULT_RPC_MAX_EVENT_PAGE_SIZE
 }
 
-#[cfg(feature = "server")]
 fn default_proof_keys() -> u64 {
     katana_node::config::rpc::DEFAULT_RPC_MAX_PROOF_KEYS
 }
@@ -522,7 +536,6 @@ fn default_metrics_port() -> u16 {
     DEFAULT_METRICS_PORT
 }
 
-#[cfg(feature = "server")]
 fn default_max_call_gas() -> u64 {
     DEFAULT_RPC_MAX_CALL_GAS
 }

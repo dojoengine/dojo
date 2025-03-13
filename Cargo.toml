@@ -130,6 +130,7 @@ torii-runner = { path = "crates/torii/runner" }
 torii-server = { path = "crates/torii/server" }
 torii-sqlite = { path = "crates/torii/sqlite" }
 torii-typed-data = { path = "crates/torii/typed-data" }
+torii-mcp = { path = "crates/torii/mcp" }
 
 # sozo
 sozo-ops = { path = "crates/sozo/ops" }

@@ -16,7 +16,7 @@ use crate::processors::EventProcessorConfig;
 
 pub const TASK_ID_SEQUENTIAL: TaskId = 0;
 
-const LOG_TARGET: &str = "torii::indexer::task_manager";
+const LOG_TARGET: &str = "torii_indexer::task_manager";
 
 pub type TaskId = u64;
 pub type TaskPriority = usize;
