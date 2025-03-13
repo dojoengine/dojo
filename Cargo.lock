@@ -14958,6 +14958,7 @@ dependencies = [
  "serde",
  "starknet",
  "toml 0.8.19",
+ "torii-derive",
  "torii-sqlite",
  "url",
 ]
@@ -14988,6 +14989,15 @@ dependencies = [
  "torii-grpc",
  "torii-relay",
  "url",
+]
+
+[[package]]
+name = "torii-derive"
+version = "1.2.2"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.90",
 ]
 
 [[package]]
