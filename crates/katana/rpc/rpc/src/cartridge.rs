@@ -21,7 +21,9 @@
 //! 2. When a Controller account is already deployed, and the user logs in, the client code of
 //!    controller is actually performing a `estimate_fee` to estimate the fee for the account
 //!    upgrade. In this case, this module contains the code to hook the fee estimation, and return
-//!    the associated transaction to be executed in order to deploy the controller account.
+//!    the associated transaction to be executed in order to deploy the controller account. See the
+//!    fee estimate RPC method of [StarknetApi](crate::starknet::StarknetApi) to see how the
+//!    Controller deployment is handled during fee estimation.
 
 use std::sync::Arc;
 
