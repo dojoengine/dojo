@@ -271,6 +271,18 @@ impl NodeArgs {
                 modules.add(RpcModuleKind::Dev);
             }
 
+            #[cfg(feature = "cartridge")]
+            {
+                if self.cartridge.paymaster {
+                    let mut modules = modules.clone();
+                    modules.add(RpcModuleKind::Cartridge);
+                    modules
+                } else {
+                    modules
+                }
+            }
+
+            #[cfg(not(feature = "cartridge"))]
             modules
         };
 
