@@ -119,14 +119,16 @@ impl<EF: ExecutorFactory> CartridgeApi<EF> {
             // Hence, we can check if the controller is deployed, if not, deploy it.
             if state.class_hash_of_contract(address)?.is_none() {
                 let nonce = state.nonce(*pm_address)?;
-                if let Some(tx) = futures::executor::block_on(craft_deploy_cartridge_controller_tx(
-                    &this.api_url,
-                    address,
-                    *pm_address,
-                    pm_private_key,
-                    this.backend.chain_spec.id(),
-                    nonce,
-                )) {
+                if let Some(tx) =
+                    futures::executor::block_on(craft_deploy_cartridge_controller_tx(
+                        &this.api_url,
+                        address,
+                        *pm_address,
+                        pm_private_key,
+                        this.backend.chain_spec.id(),
+                        nonce,
+                    ))?
+                {
                     this.pool.add_transaction(tx)?;
                 }
             }
@@ -210,8 +212,8 @@ struct CartridgeAccountResponse {
 async fn fetch_controller_constructor_calldata(
     cartridge_api_url: &Url,
     address: Felt,
-) -> Option<Vec<Felt>> {
-    let account_data_url = cartridge_api_url.join("/accounts/calldata").unwrap();
+) -> anyhow::Result<Option<Vec<Felt>>> {
+    let account_data_url = cartridge_api_url.join("/accounts/calldata")?;
 
     let body = serde_json::json!({
         "address": format!("{:#066x}", address)
@@ -223,16 +225,15 @@ async fn fetch_controller_constructor_calldata(
         .header("Content-Type", "application/json")
         .json(&body)
         .send()
-        .await
-        .ok()?;
+        .await?;
 
     let response: CartridgeAccountResponse = if let Ok(r) = response.json().await {
         r
     } else {
-        return None;
+        return Ok(None);
     };
 
-    Some(response.calldata)
+    Ok(Some(response.calldata))
 }
 
 /// Encodes the given calls into a vector of Felt values (New encoding, cairo 1),
@@ -263,19 +264,19 @@ pub async fn handle_cartridge_estimate_fee(
     chain_id: ChainId,
     state: Arc<Box<dyn StateProvider>>,
     cartridge_api_url: &Url,
-) -> Option<ExecutableTxWithHash> {
-    let paymaster_nonce = state.nonce(paymaster_address).expect("failed to get paymaster nonce");
+) -> anyhow::Result<Option<ExecutableTxWithHash>> {
+    let paymaster_nonce = state.nonce(paymaster_address)?;
 
     if let ExecutableTx::Invoke(InvokeTx::V3(v3)) = &tx.transaction {
         let maybe_controller_address = v3.sender_address;
 
         // Avoid deploying the controller account if it is already deployed.
-        if state.class_hash_of_contract(maybe_controller_address).unwrap().is_some() {
-            return None;
+        if state.class_hash_of_contract(maybe_controller_address)?.is_some() {
+            return Ok(None);
         }
 
         debug!(contract_address = ?maybe_controller_address, "Deploying controller account.");
-        let tx = craft_deploy_cartridge_controller_tx(
+        if let tx @ Some(..) = craft_deploy_cartridge_controller_tx(
             cartridge_api_url,
             maybe_controller_address,
             paymaster_address,
@@ -283,12 +284,13 @@ pub async fn handle_cartridge_estimate_fee(
             chain_id,
             paymaster_nonce,
         )
-        .await?;
-
-        return Some(tx);
+        .await?
+        {
+            return Ok(tx);
+        }
     }
 
-    None
+    Ok(None)
 }
 
 /// Crafts a deploy controller transaction for a cartridge controller.
@@ -301,35 +303,41 @@ pub async fn craft_deploy_cartridge_controller_tx(
     paymaster_private_key: Felt,
     chain_id: ChainId,
     paymaster_nonce: Option<Felt>,
-) -> Option<ExecutableTxWithHash> {
-    let calldata =
-        fetch_controller_constructor_calldata(cartridge_api_url, controller_address.into()).await?;
+) -> anyhow::Result<Option<ExecutableTxWithHash>> {
+    if let Some(calldata) =
+        fetch_controller_constructor_calldata(cartridge_api_url, controller_address.into()).await?
+    {
+        let call = Call {
+            to: DEFAULT_UDC_ADDRESS.into(),
+            selector: selector!("deployContract"),
+            calldata,
+        };
 
-    let call =
-        Call { to: DEFAULT_UDC_ADDRESS.into(), selector: selector!("deployContract"), calldata };
+        let mut tx = InvokeTxV3 {
+            chain_id,
+            tip: 0_u64,
+            signature: vec![],
+            paymaster_data: vec![],
+            account_deployment_data: vec![],
+            sender_address: paymaster_address,
+            calldata: encode_calls(vec![call]),
+            nonce: paymaster_nonce.unwrap_or(Felt::ZERO),
+            resource_bounds: ResourceBoundsMapping::default(),
+            nonce_data_availability_mode: katana_primitives::da::DataAvailabilityMode::L1,
+            fee_data_availability_mode: katana_primitives::da::DataAvailabilityMode::L1,
+        };
 
-    let mut tx = InvokeTxV3 {
-        chain_id,
-        nonce: paymaster_nonce.unwrap_or(Felt::ZERO),
-        calldata: encode_calls(vec![call]),
-        sender_address: paymaster_address,
-        resource_bounds: ResourceBoundsMapping::default(),
-        tip: 0_u64,
-        paymaster_data: vec![],
-        account_deployment_data: vec![],
-        nonce_data_availability_mode: katana_primitives::da::DataAvailabilityMode::L1,
-        fee_data_availability_mode: katana_primitives::da::DataAvailabilityMode::L1,
-        signature: vec![],
-    };
-    let tx_hash = InvokeTx::V3(tx.clone()).calculate_hash(false);
+        let tx_hash = InvokeTx::V3(tx.clone()).calculate_hash(false);
 
-    let signer = LocalWallet::from(SigningKey::from_secret_scalar(paymaster_private_key));
+        let signer = LocalWallet::from(SigningKey::from_secret_scalar(paymaster_private_key));
+        let signature = futures::executor::block_on(signer.sign_hash(&tx_hash))
+            .expect("failed to sign hash with paymaster");
+        tx.signature = vec![signature.r, signature.s];
 
-    let signature = futures::executor::block_on(signer.sign_hash(&tx_hash))
-        .expect("failed to sign hash with paymaster");
-    tx.signature = vec![signature.r, signature.s];
+        let tx = ExecutableTxWithHash::new(ExecutableTx::Invoke(InvokeTx::V3(tx)));
 
-    let tx = ExecutableTxWithHash::new(ExecutableTx::Invoke(InvokeTx::V3(tx)));
-
-    Some(tx)
+        Ok(Some(tx))
+    } else {
+        Ok(None)
+    }
 }

@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use anyhow::anyhow;
 use jsonrpsee::core::{async_trait, Error, RpcResult};
 use katana_executor::{EntryPointCall, ExecutorFactory};
 use katana_pool::TransactionPool;
@@ -237,7 +238,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
                 .genesis()
                 .accounts()
                 .nth(0)
-                .expect("Paymaster not found at least one dev account expected");
+                .ok_or(anyhow!("Cartridge paymaster account doesn't exist"))?;
 
             let paymaster_private_key = if let GenesisAccountAlloc::DevAccount(pm) = paymaster_alloc
             {
@@ -246,7 +247,14 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
                 panic!("Paymaster is not a dev account");
             };
 
-            let state = Arc::new(self.inner.backend.blockchain.provider().latest().unwrap());
+            let state = self
+                .inner
+                .backend
+                .blockchain
+                .provider()
+                .latest()
+                .map(Arc::new)
+                .map_err(StarknetApiError::from)?;
 
             let mut ctrl_transactions = Vec::new();
 
@@ -259,7 +267,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
                     state.clone(),
                     &paymaster.cartridge_api_url,
                 )
-                .await;
+                .await?;
 
                 if let Some(tx) = c7e_result {
                     let hash = self
