@@ -244,7 +244,8 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
             {
                 pm.private_key
             } else {
-                panic!("Paymaster is not a dev account");
+                let reason = "Paymaster is not a dev account".to_string();
+                return Err(StarknetApiError::UnexpectedError { reason }.into());
             };
 
             let state = self
@@ -259,17 +260,18 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
             let mut ctrl_transactions = Vec::new();
 
             for tx in &transactions {
-                let c7e_result = crate::cartridge::handle_cartridge_estimate_fee(
-                    *paymaster_address,
-                    paymaster_private_key,
-                    tx,
-                    self.inner.backend.chain_spec.id(),
-                    state.clone(),
-                    &paymaster.cartridge_api_url,
-                )
-                .await?;
+                let deploy_controller_tx =
+                    crate::cartridge::get_controller_deploy_tx_if_controller_address(
+                        *paymaster_address,
+                        paymaster_private_key,
+                        tx,
+                        self.inner.backend.chain_spec.id(),
+                        state.clone(),
+                        &paymaster.cartridge_api_url,
+                    )
+                    .await?;
 
-                if let Some(tx) = c7e_result {
+                if let Some(tx) = deploy_controller_tx {
                     let hash = self
                         .inner
                         .pool

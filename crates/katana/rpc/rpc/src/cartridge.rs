@@ -93,6 +93,8 @@ impl<EF: ExecutorFactory> CartridgeApi<EF> {
     ) -> Result<InvokeTxResult, StarknetApiError> {
         debug!(%address, ?outside_execution, "Adding execute outside transaction.");
         self.on_io_blocking_task(move |this| {
+            // For now, we use the first predeployed account in the genesis as the paymaster
+            // account.
             let (pm_address, pm_acc) = this
                 .backend
                 .chain_spec
@@ -101,15 +103,18 @@ impl<EF: ExecutorFactory> CartridgeApi<EF> {
                 .nth(0)
                 .ok_or(anyhow!("Cartridge paymaster account doesn't exist"))?;
 
+            // TODO: create a dedicated types for aux accounts (eg paymaster)
             let pm_private_key = if let GenesisAccountAlloc::DevAccount(pm) = pm_acc {
                 pm.private_key
             } else {
-                panic!("Paymaster is not a dev account");
+                let reason = "Paymaster is not a dev account".to_string();
+                return Err(StarknetApiError::UnexpectedError { reason });
             };
 
             let provider = this.backend.blockchain.provider();
             let state = provider.latest()?;
 
+            // Contract function selector for
             let entrypoint = match outside_execution {
                 OutsideExecution::V2(_) => selector!("execute_from_outside_v2"),
                 OutsideExecution::V3(_) => selector!("execute_from_outside_v3"),
@@ -257,7 +262,7 @@ pub fn encode_calls(calls: Vec<Call>) -> Vec<Felt> {
 /// The controller accounts are created with a specific version of the controller.
 /// To ensure address determinism, the controller account must be deployed with the same version,
 /// which is included in the calldata retrieved from the Cartridge API.
-pub async fn handle_cartridge_estimate_fee(
+pub async fn get_controller_deploy_tx_if_controller_address(
     paymaster_address: ContractAddress,
     paymaster_private_key: Felt,
     tx: &ExecutableTxWithHash,
@@ -275,12 +280,11 @@ pub async fn handle_cartridge_estimate_fee(
         let maybe_controller_address = v3.sender_address;
 
         // Avoid deploying the controller account if it is already deployed.
-        if state.class_hash_of_contract(maybe_controller_address)?.is_some() {
+        if state.class_hash_of_contract(maybe_controller_address)?.is_none() {
             return Ok(None);
         }
 
         let paymaster_nonce = state.nonce(paymaster_address)?;
-
         if let tx @ Some(..) = craft_deploy_cartridge_controller_tx(
             cartridge_api_url,
             maybe_controller_address,
@@ -337,7 +341,7 @@ pub async fn craft_deploy_cartridge_controller_tx(
 
         let signer = LocalWallet::from(SigningKey::from_secret_scalar(paymaster_private_key));
         let signature = futures::executor::block_on(signer.sign_hash(&tx_hash))
-            .expect("failed to sign hash with paymaster");
+            .map_err(|e| anyhow!("failed to sign hash with paymaster: {e}"))?;
         tx.signature = vec![signature.r, signature.s];
 
         let tx = ExecutableTxWithHash::new(ExecutableTx::Invoke(InvokeTx::V3(tx)));
