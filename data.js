@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1741824734209,
+  "lastUpdate": 1741824804086,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -57433,6 +57433,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 44651971635,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "38dc02705b9a85e0a3bcf607181d4fb567a4957a",
+          "message": "build(katana): explorer ui build script (#3095)\n\n* build(katana): explorer ui build script\n\n* build(ci): fix removed job\n\n* fix git permission\n\n* ci: check bun install and upload dist artifacts\n\n* ci: add dependency on build to check explorer build\n\n* devcontainer: add unzip and bun\n\n* ci: use bun devcontainer\n\n* ci: fix typo\n\n* fix: add output instead of just status\n\n* fix: fmt\n\n* ci: add print ui directory\n\n* ci: attempt canonicalize\n\n* ci: try with new cache\n\n* ci: add force to submodule init\n\n* ci: check submodule being applied\n\n* ci: try bun from CLI\n\n* ci: add bun explicitely seems not picked up form container\n\n* ci: fix typo\n\n* ci: remove manual stuff and add bun manually\n\n* ci: add bun for docs and clippy since build.rs is triggered\n\n* ci: check without explorer artifacts\n\n---------\n\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2025-03-12T17:55:34-06:00",
+          "tree_id": "d2dde3a4fd579108d7ebc59487ecf89d8cfd4298",
+          "url": "https://github.com/dojoengine/dojo/commit/38dc02705b9a85e0a3bcf607181d4fb567a4957a"
+        },
+        "date": 1741824798884,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2404889,
+            "range": "± 56802",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 392602,
+            "range": "± 15821",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2742653902,
+            "range": "± 210930677",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 16963150,
+            "range": "± 551222",
             "unit": "ns/iter"
           }
         ]
