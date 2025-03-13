@@ -26,6 +26,8 @@ pub struct NodeArgsConfig {
     pub server: Option<ServerOptions>,
     #[cfg(feature = "server")]
     pub metrics: Option<MetricsOptions>,
+    #[cfg(feature = "cartridge")]
+    pub cartridge: Option<CartridgeOptions>,
 }
 
 impl NodeArgsConfig {
@@ -71,6 +73,15 @@ impl TryFrom<NodeArgs> for NodeArgsConfig {
                 if args.server == ServerOptions::default() { None } else { Some(args.server) };
             node_config.metrics =
                 if args.metrics == MetricsOptions::default() { None } else { Some(args.metrics) };
+        }
+
+        #[cfg(feature = "cartridge")]
+        {
+            node_config.cartridge = if args.cartridge == CartridgeOptions::default() {
+                None
+            } else {
+                Some(args.cartridge)
+            };
         }
 
         Ok(node_config)

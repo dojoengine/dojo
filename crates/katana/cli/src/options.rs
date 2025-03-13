@@ -427,7 +427,7 @@ pub struct SlotOptions {
 }
 
 #[cfg(feature = "cartridge")]
-#[derive(Debug, Args, Clone, Serialize, Deserialize, Default, PartialEq)]
+#[derive(Debug, Args, Clone, Serialize, Deserialize, PartialEq)]
 #[command(next_help_heading = "Cartridge options")]
 pub struct CartridgeOptions {
     /// Whether to use the Cartridge paymaster.
@@ -438,6 +438,7 @@ pub struct CartridgeOptions {
     /// disabled for slot deployments.
     #[arg(long = "cartridge.paymaster")]
     #[arg(default_value_t = false)]
+    #[serde(default = "default_paymaster")]
     pub paymaster: bool,
 
     /// The root URL for the Cartridge API.
@@ -447,7 +448,35 @@ pub struct CartridgeOptions {
     /// with local cartridge API.
     #[arg(long = "cartridge.api-url")]
     #[arg(default_value = "https://api.cartridge.gg")]
+    #[serde(default = "default_api_url")]
     pub api_url: String,
+}
+
+#[cfg(feature = "cartridge")]
+impl CartridgeOptions {
+    pub fn merge(&mut self, other: Option<&Self>) {
+        if let Some(other) = other {
+            if self.paymaster == default_paymaster() {
+                self.paymaster = other.paymaster;
+            }
+
+            if self.api_url == default_api_url() {
+                self.api_url = other.api_url.clone();
+            }
+        }
+    }
+}
+impl Default for CartridgeOptions {
+    fn default() -> Self {
+        CartridgeOptions { paymaster: default_paymaster(), api_url: default_api_url() }
+    }
+}
+fn default_paymaster() -> bool {
+    false
+}
+
+fn default_api_url() -> String {
+    "https://api.cartridge.gg".to_owned()
 }
 
 const DEFAULT_EXPLORER_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::LOCALHOST);

@@ -493,6 +493,11 @@ impl NodeArgs {
             }
         }
 
+        #[cfg(feature = "cartridge")]
+        {
+            self.cartridge.merge(config.cartridge.as_ref());
+        }
+
         Ok(self)
     }
 }
