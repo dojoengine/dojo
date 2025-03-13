@@ -112,10 +112,10 @@ impl Client {
     /// entities, this is less efficient as it requires an additional query for each entity's
     /// model data. Specifying a clause can optimize the query by limiting the retrieval to specific
     /// type of entites matching keys and/or models.
-    pub async fn entities(&self, query: Query) -> Result<Vec<Entity>, Error> {
+    pub async fn entities(&self, query: Query, historical: bool) -> Result<Vec<Entity>, Error> {
         let mut grpc_client = self.inner.write().await;
         let RetrieveEntitiesResponse { entities, total_count: _ } =
-            grpc_client.retrieve_entities(query).await?;
+            grpc_client.retrieve_entities(query, historical).await?;
         Ok(entities.into_iter().map(TryInto::try_into).collect::<Result<Vec<Entity>, _>>()?)
     }
 
@@ -143,9 +143,10 @@ impl Client {
     pub async fn on_entity_updated(
         &self,
         clauses: Vec<EntityKeysClause>,
+        historical: bool,
     ) -> Result<EntityUpdateStreaming, Error> {
         let mut grpc_client = self.inner.write().await;
-        let stream = grpc_client.subscribe_entities(clauses).await?;
+        let stream = grpc_client.subscribe_entities(clauses, historical).await?;
         Ok(stream)
     }
 
@@ -154,9 +155,10 @@ impl Client {
         &self,
         subscription_id: u64,
         clauses: Vec<EntityKeysClause>,
+        historical: bool,
     ) -> Result<(), Error> {
         let mut grpc_client = self.inner.write().await;
-        grpc_client.update_entities_subscription(subscription_id, clauses).await?;
+        grpc_client.update_entities_subscription(subscription_id, clauses, historical).await?;
         Ok(())
     }
 
