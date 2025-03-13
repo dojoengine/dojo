@@ -228,7 +228,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
         // Refer to the `handle_cartridge_controller_deploy` function in `cartridge.rs`
         // for more details.
         #[cfg(feature = "cartridge")]
-        let transactions = if self.inner.config.use_cartridge_paymaster {
+        let transactions = if let Some(paymaster) = &self.inner.config.paymaster {
             // Paymaster is the first dev account in the genesis.
             let (paymaster_address, paymaster_alloc) = self
                 .inner
@@ -257,7 +257,7 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
                     tx,
                     self.inner.backend.chain_spec.id(),
                     state.clone(),
-                    &self.inner.config.cartridge_api_url,
+                    &paymaster.cartridge_api_url,
                 )
                 .await;
 

@@ -49,6 +49,7 @@ use starknet::core::types::Call;
 use starknet::macros::selector;
 use starknet::signers::{LocalWallet, Signer, SigningKey};
 use tracing::debug;
+use url::Url;
 
 #[allow(missing_debug_implementations)]
 pub struct CartridgeApi<EF: ExecutorFactory> {
@@ -56,7 +57,7 @@ pub struct CartridgeApi<EF: ExecutorFactory> {
     block_producer: BlockProducer<EF>,
     pool: TxPool,
     /// The root URL for the Cartridge API for paymaster related operations.
-    api_url: String,
+    api_url: Url,
 }
 
 impl<EF> Clone for CartridgeApi<EF>
@@ -78,7 +79,7 @@ impl<EF: ExecutorFactory> CartridgeApi<EF> {
         backend: Arc<Backend<EF>>,
         block_producer: BlockProducer<EF>,
         pool: TxPool,
-        api_url: String,
+        api_url: Url,
     ) -> Self {
         Self { backend, block_producer, pool, api_url }
     }
@@ -217,10 +218,9 @@ struct CartridgeAccountResponse {
 ///
 /// Returns None if the controller address is not found in the Cartridge API.
 async fn fetch_controller_constructor_calldata(
-    cartridge_api_url: &str,
+    cartridge_api_url: &Url,
     address: Felt,
 ) -> Option<Vec<Felt>> {
-    let cartridge_api_url = cartridge_api_url.parse::<url::Url>().unwrap();
     let account_data_url = cartridge_api_url.join("/accounts/calldata").unwrap();
 
     let body = serde_json::json!({
@@ -272,7 +272,7 @@ pub async fn handle_cartridge_estimate_fee(
     tx: &ExecutableTxWithHash,
     chain_id: ChainId,
     state: Arc<Box<dyn StateProvider>>,
-    cartridge_api_url: &str,
+    cartridge_api_url: &Url,
 ) -> Option<ExecutableTxWithHash> {
     let paymaster_nonce = state.nonce(paymaster_address).expect("failed to get paymaster nonce");
 
@@ -305,7 +305,7 @@ pub async fn handle_cartridge_estimate_fee(
 ///
 /// Returns None if the provided `controller_address` is not registered in the Cartridge API.
 pub async fn craft_deploy_cartridge_controller_tx(
-    cartridge_api_url: &str,
+    cartridge_api_url: &Url,
     controller_address: ContractAddress,
     paymaster_address: ContractAddress,
     paymaster_private_key: Felt,

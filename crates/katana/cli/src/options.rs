@@ -446,10 +446,10 @@ pub struct CartridgeOptions {
     /// This is used to fetch the calldata for the constructor of the given controller
     /// address (at the moment). Must be configurable for local development
     /// with local cartridge API.
-    #[arg(long = "cartridge.api-url")]
+    #[arg(long = "cartridge.api", requires = "paymaster")]
     #[arg(default_value = "https://api.cartridge.gg")]
     #[serde(default = "default_api_url")]
-    pub api_url: String,
+    pub api: Url,
 }
 
 #[cfg(feature = "cartridge")]
@@ -460,23 +460,23 @@ impl CartridgeOptions {
                 self.paymaster = other.paymaster;
             }
 
-            if self.api_url == default_api_url() {
-                self.api_url = other.api_url.clone();
+            if self.api == default_api_url() {
+                self.api = other.api.clone();
             }
         }
     }
 }
 impl Default for CartridgeOptions {
     fn default() -> Self {
-        CartridgeOptions { paymaster: default_paymaster(), api_url: default_api_url() }
+        CartridgeOptions { paymaster: default_paymaster(), api: default_api_url() }
     }
 }
 fn default_paymaster() -> bool {
     false
 }
 
-fn default_api_url() -> String {
-    "https://api.cartridge.gg".to_owned()
+fn default_api_url() -> Url {
+    Url::parse("https://api.cartridge.gg").expect("qed; invalid url")
 }
 
 const DEFAULT_EXPLORER_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::LOCALHOST);
