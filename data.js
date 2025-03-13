@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1741830221528,
+  "lastUpdate": 1741830263434,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -57511,6 +57511,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 47920683804,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "distinct": true,
+          "id": "e561673238b5971ab545f5d532cc05e4c839f1e9",
+          "message": "ci: ensure release flow contains bun for explorer submodule",
+          "timestamp": "2025-03-12T19:26:40-06:00",
+          "tree_id": "8bcab89462a4c9a94ec3d4240314936e091d914d",
+          "url": "https://github.com/dojoengine/dojo/commit/e561673238b5971ab545f5d532cc05e4c839f1e9"
+        },
+        "date": 1741830260519,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2414604,
+            "range": "± 32756",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 396328,
+            "range": "± 9656",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2615840974,
+            "range": "± 233551503",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 16843096,
+            "range": "± 135045",
             "unit": "ns/iter"
           }
         ]
