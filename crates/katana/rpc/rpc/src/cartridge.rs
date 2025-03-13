@@ -268,6 +268,12 @@ pub async fn handle_cartridge_estimate_fee(
 ) -> anyhow::Result<Option<ExecutableTxWithHash>> {
     let paymaster_nonce = state.nonce(paymaster_address)?;
 
+    // The whole Cartridge paymaster flow would only be accessible mainly from the Controller
+    // wallet. The Controller wallet only supports V3 transactions (considering < V3
+    // transactions will soon be deprecated) hence why we're only checking for V3 transactions
+    // here.
+    //
+    // Yes, ideally it's better to handle all versions but it's probably fine for now.
     if let ExecutableTx::Invoke(InvokeTx::V3(v3)) = &tx.transaction {
         let maybe_controller_address = v3.sender_address;
 
