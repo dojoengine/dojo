@@ -28,7 +28,7 @@ use std::sync::Arc;
 use account_sdk::account::outside_execution::OutsideExecution;
 use anyhow::anyhow;
 use cainome::cairo_serde::CairoSerde;
-use jsonrpsee::core::{RpcResult, async_trait};
+use jsonrpsee::core::{async_trait, RpcResult};
 use katana_core::backend::Backend;
 use katana_core::service::block_producer::BlockProducer;
 use katana_executor::ExecutorFactory;
@@ -228,8 +228,13 @@ async fn fetch_controller_constructor_calldata(
         .send()
         .await?;
 
-    let response = response.json::<CartridgeAccountResponse>().await?;
-    Ok(Some(response.calldata))
+    let response = response.text().await?;
+    if response.contains("Address not found") {
+        Ok(None)
+    } else {
+        let account = serde_json::from_str::<CartridgeAccountResponse>(&response)?;
+        Ok(Some(account.calldata))
+    }
 }
 
 /// Encodes the given calls into a vector of Felt values (New encoding, cairo 1),
