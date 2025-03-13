@@ -76,6 +76,8 @@ pub(crate) static ENTITIES_TABLE: &str = "entities";
 pub(crate) static ENTITIES_MODEL_RELATION_TABLE: &str = "entity_model";
 pub(crate) static ENTITIES_ENTITY_RELATION_COLUMN: &str = "internal_entity_id";
 
+pub(crate) static ENTITIES_HISTORICAL_TABLE: &str = "entities_historical";
+
 pub(crate) static EVENT_MESSAGES_TABLE: &str = "event_messages";
 pub(crate) static EVENT_MESSAGES_MODEL_RELATION_TABLE: &str = "event_model";
 pub(crate) static EVENT_MESSAGES_ENTITY_RELATION_COLUMN: &str = "internal_event_message_id";
@@ -398,7 +400,7 @@ impl DojoWorld {
             .collect::<Vec<_>>()
             .join(" OR ");
 
-        if table == EVENT_MESSAGES_HISTORICAL_TABLE {
+        if table == EVENT_MESSAGES_HISTORICAL_TABLE || table == ENTITIES_HISTORICAL_TABLE {
             let count_query = format!(
                 r#"
                 SELECT COUNT(*) FROM {table}
@@ -526,7 +528,7 @@ impl DojoWorld {
             .collect::<Vec<_>>()
             .join(" OR ");
 
-        if table == EVENT_MESSAGES_HISTORICAL_TABLE {
+        if table == EVENT_MESSAGES_HISTORICAL_TABLE || table == ENTITIES_HISTORICAL_TABLE {
             let count_query = format!(
                 r#"
                 SELECT COUNT(*) FROM {table}
@@ -1469,10 +1471,10 @@ impl proto::world::world_server::World for DojoWorld {
         &self,
         request: Request<SubscribeEntitiesRequest>,
     ) -> ServiceResult<Self::SubscribeEntitiesStream> {
-        let SubscribeEntitiesRequest { clauses } = request.into_inner();
+        let SubscribeEntitiesRequest { clauses, historical } = request.into_inner();
         let rx = self
             .entity_manager
-            .add_subscriber(clauses.into_iter().map(|keys| keys.into()).collect())
+            .add_subscriber(clauses.into_iter().map(|keys| keys.into()).collect(), historical)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
@@ -1483,11 +1485,13 @@ impl proto::world::world_server::World for DojoWorld {
         &self,
         request: Request<UpdateEntitiesSubscriptionRequest>,
     ) -> ServiceResult<()> {
-        let UpdateEntitiesSubscriptionRequest { subscription_id, clauses } = request.into_inner();
+        let UpdateEntitiesSubscriptionRequest { subscription_id, clauses, historical } =
+            request.into_inner();
         self.entity_manager
             .update_subscriber(
                 subscription_id,
                 clauses.into_iter().map(|keys| keys.into()).collect(),
+                historical,
             )
             .await;
 
@@ -1548,14 +1552,12 @@ impl proto::world::world_server::World for DojoWorld {
         &self,
         request: Request<RetrieveEntitiesRequest>,
     ) -> Result<Response<RetrieveEntitiesResponse>, Status> {
-        let query = request
-            .into_inner()
-            .query
-            .ok_or_else(|| Status::invalid_argument("Missing query argument"))?;
+        let RetrieveEntitiesRequest { query, historical } = request.into_inner();
+        let query = query.ok_or_else(|| Status::invalid_argument("Missing query argument"))?;
 
         let entities = self
             .retrieve_entities(
-                ENTITIES_TABLE,
+                if historical { ENTITIES_HISTORICAL_TABLE } else { ENTITIES_TABLE },
                 ENTITIES_MODEL_RELATION_TABLE,
                 ENTITIES_ENTITY_RELATION_COLUMN,
                 query,
