@@ -182,7 +182,9 @@ mod test {
         // CLI args must take precedence over the config file.
         let content = r#"
         world_address = "0x1234"
-        rpc = "http://0.0.0.0:5050"
+        [rpc]
+        url = "http://0.0.0.0:5050"
+        [sql]
         db_dir = "/tmp/torii-test"
 
         [indexing]
@@ -210,7 +212,7 @@ mod test {
             "0x9999",
             "--rpc",
             "http://0.0.0.0:6060",
-            "--db-dir",
+            "--sql.db_dir",
             "/tmp/torii-test2",
             "--events.historical",
             "a-A",
@@ -249,7 +251,9 @@ mod test {
     fn test_config_fallback() {
         let content = r#"
         world_address = "0x1234"
-        rpc = "http://0.0.0.0:2222"
+        [rpc]
+        url = "http://0.0.0.0:2222"
+        [sql]
         db_dir = "/tmp/torii-test"
 
         [events]
