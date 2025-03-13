@@ -28,7 +28,7 @@ use std::sync::Arc;
 use account_sdk::account::outside_execution::OutsideExecution;
 use anyhow::anyhow;
 use cainome::cairo_serde::CairoSerde;
-use jsonrpsee::core::{async_trait, RpcResult};
+use jsonrpsee::core::{RpcResult, async_trait};
 use katana_core::backend::Backend;
 use katana_core::service::block_producer::BlockProducer;
 use katana_executor::ExecutorFactory;
@@ -194,15 +194,16 @@ impl<EF: ExecutorFactory> CartridgeApiServer for CartridgeApi<EF> {
 /// Response from the Cartridge API to fetch the calldata for the constructor of the given
 /// controller address.
 #[derive(Debug, Deserialize)]
-#[allow(unused)]
 struct CartridgeAccountResponse {
     /// The address of the controller account.
-    pub address: Felt,
+    #[allow(unused)]
+    address: Felt,
     /// The username of the controller account used as salt.
-    pub username: String,
+    #[allow(unused)]
+    username: String,
     /// The calldata for the constructor of the given controller address, this is
     /// UDC calldata, already containing the class hash and the salt + the constructor arguments.
-    pub calldata: Vec<Felt>,
+    calldata: Vec<Felt>,
 }
 
 /// Calls the Cartridge API to fetch the calldata for the constructor of the given controller
@@ -227,12 +228,7 @@ async fn fetch_controller_constructor_calldata(
         .send()
         .await?;
 
-    let response: CartridgeAccountResponse = if let Ok(r) = response.json().await {
-        r
-    } else {
-        return Ok(None);
-    };
-
+    let response = response.json::<CartridgeAccountResponse>().await?;
     Ok(Some(response.calldata))
 }
 
