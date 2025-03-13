@@ -120,8 +120,9 @@ impl<EF: ExecutorFactory> CartridgeApi<EF> {
                 OutsideExecution::V3(_) => selector!("execute_from_outside_v3"),
             };
 
-            // If the controller has been created during the flow, there's no fee estimation.
-            // Hence, we can check if the controller is deployed, if not, deploy it.
+            // ====================== CONTROLLER DEPLOYMENT ======================
+            // Check if the controller is already deployed. If not, deploy it.
+
             if state.class_hash_of_contract(address)?.is_none() {
                 let nonce = state.nonce(*pm_address)?;
                 if let Some(tx) =
@@ -137,6 +138,8 @@ impl<EF: ExecutorFactory> CartridgeApi<EF> {
                     this.pool.add_transaction(tx)?;
                 }
             }
+
+            // ===================================================================
 
             let nonce = state.nonce(*pm_address)?;
 
