@@ -39,6 +39,10 @@ pub fn is_tuple(ty: &str) -> bool {
     ty.starts_with('(')
 }
 
+pub fn is_option(ty: &str) -> bool {
+    ty.starts_with("Option<")
+}
+
 pub fn get_array_item_type(ty: &str) -> String {
     if ty.starts_with("Array<") {
         ty.trim().strip_prefix("Array<").unwrap().strip_suffix('>').unwrap().to_string()

@@ -11,6 +11,7 @@ pub mod derive_macros;
 pub mod inline_macros;
 pub mod semantics;
 pub mod syntax;
+pub mod utils;
 
 pub use cairo_plugin::{dojo_plugin_suite, BuiltinDojoPlugin, DOJO_PLUGIN_PACKAGE_NAME};
 
@@ -36,6 +37,17 @@ pub fn debug_expand(loc: &str, code: &str) {
         println!(
             "\n*> EXPAND {} <*\n>>>>>>>>>>>>>>>>>>>>>>>>>>>\n{}\n<<<<<<<<<<<<<<<<<<<<<<<<<<<\n",
             loc, code
+        );
+    }
+}
+
+/// Prints the given string only if the 'DOJO_STORE_EXPAND' environment variable is set.
+/// This is useful for debugging DojoStore implementation.
+pub fn debug_store_expand(element_name: &str, code: &str) {
+    if std::env::var("DOJO_STORE_EXPAND").is_ok() {
+        println!(
+            "\n*> EXPAND {} <*\n>>>>>>>>>>>>>>>>>>>>>>>>>>>\n{}\n<<<<<<<<<<<<<<<<<<<<<<<<<<<\n",
+            element_name, code
         );
     }
 }
