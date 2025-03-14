@@ -297,7 +297,7 @@ pub async fn get_controller_deploy_tx_if_controller_address(
         let maybe_controller_address = v3.sender_address;
 
         // Avoid deploying the controller account if it is already deployed.
-        if state.class_hash_of_contract(maybe_controller_address)?.is_none() {
+        if state.class_hash_of_contract(maybe_controller_address)?.is_some() {
             return Ok(None);
         }
 
