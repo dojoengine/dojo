@@ -12,7 +12,8 @@ use dojo_world::contracts::abigen::model::Layout;
 use dojo_world::contracts::naming::compute_selector_from_names;
 use executor::EntityQuery;
 use sqlx::{Pool, Sqlite};
-use starknet::core::types::{Event, Felt, InvokeTransaction, Transaction};
+use starknet::core::types::{Event, Felt, FunctionCall, InvokeTransaction, Transaction};
+use starknet::macros::selector;
 use starknet_crypto::poseidon_hash_many;
 use tokio::sync::mpsc::UnboundedSender;
 use utils::felts_to_sql_string;
@@ -552,7 +553,7 @@ impl Sql {
                 Transaction::Invoke(InvokeTransaction::V3(invoke_v3_transaction)) => (
                     Argument::FieldElement(invoke_v3_transaction.transaction_hash),
                     Argument::FieldElement(invoke_v3_transaction.sender_address),
-                    Argument::String(felts_to_sql_string(&invoke_v3_transaction.calldata)),
+                    &invoke_v3_transaction.calldata,
                     Argument::FieldElement(Felt::ZERO), // has no max_fee
                     Argument::String(felts_to_sql_string(&invoke_v3_transaction.signature)),
                     Argument::FieldElement(invoke_v3_transaction.nonce),
@@ -560,7 +561,7 @@ impl Sql {
                 Transaction::Invoke(InvokeTransaction::V1(invoke_v1_transaction)) => (
                     Argument::FieldElement(invoke_v1_transaction.transaction_hash),
                     Argument::FieldElement(invoke_v1_transaction.sender_address),
-                    Argument::String(felts_to_sql_string(&invoke_v1_transaction.calldata)),
+                    &invoke_v1_transaction.calldata,
                     Argument::FieldElement(invoke_v1_transaction.max_fee),
                     Argument::String(felts_to_sql_string(&invoke_v1_transaction.signature)),
                     Argument::FieldElement(invoke_v1_transaction.nonce),
@@ -568,7 +569,7 @@ impl Sql {
                 Transaction::L1Handler(l1_handler_transaction) => (
                     Argument::FieldElement(l1_handler_transaction.transaction_hash),
                     Argument::FieldElement(l1_handler_transaction.contract_address),
-                    Argument::String(felts_to_sql_string(&l1_handler_transaction.calldata)),
+                    &l1_handler_transaction.calldata,
                     Argument::FieldElement(Felt::ZERO), // has no max_fee
                     Argument::String("".to_string()),   // has no signature
                     Argument::FieldElement((l1_handler_transaction.nonce).into()),
@@ -576,16 +577,72 @@ impl Sql {
                 _ => return Ok(()),
             };
 
+        let calls_len: usize = calldata[0].try_into().unwrap();
+        let mut calls: Vec<FunctionCall> = vec![];
+        let mut outside_calls: Vec<FunctionCall> = vec![];
+
+        let mut offset = 0;
+        for _ in 0..calls_len {
+            let to_offset = offset + 1;
+            let selector_offset = to_offset + 1;
+            let calldata_offset = selector_offset + 2;
+            let calldata_len: usize = calldata[selector_offset + 1].try_into().unwrap();
+
+            let call = FunctionCall {
+                contract_address: calldata[to_offset],
+                entry_point_selector: calldata[selector_offset],
+                calldata: calldata[calldata_offset..calldata_offset + calldata_len].to_vec(),
+            };
+
+            if call.entry_point_selector == selector!("execute_from_outside_v3") {
+                let outside_calls_len: usize = calldata[calldata_offset + 5].try_into().unwrap();
+                for _ in 0..outside_calls_len {
+                    let to_offset = calldata_offset + 6;
+                    let selector_offset = to_offset + 1;
+                    let calldata_offset = selector_offset + 2;
+                    let calldata_len: usize = calldata[selector_offset + 1].try_into().unwrap();
+                    let outside_call = FunctionCall {
+                        contract_address: calldata[to_offset],
+                        entry_point_selector: calldata[selector_offset],
+                        calldata: calldata[calldata_offset..calldata_offset + calldata_len]
+                            .to_vec(),
+                    };
+                    outside_calls.push(outside_call);
+                }
+            } else if call.entry_point_selector == selector!("execute_from_outside_v2") {
+                // the execute_from_outside_v2 nonce is only a felt, thus we have a 4 offset
+                let outside_calls_len: usize = calldata[calldata_offset + 4].try_into().unwrap();
+                for _ in 0..outside_calls_len {
+                    let to_offset = calldata_offset + 5;
+                    let selector_offset = to_offset + 1;
+                    let calldata_offset = selector_offset + 2;
+                    let calldata_len: usize = calldata[selector_offset + 1].try_into().unwrap();
+                    let outside_call = FunctionCall {
+                        contract_address: calldata[to_offset],
+                        entry_point_selector: calldata[selector_offset],
+                        calldata: calldata[calldata_offset..calldata_offset + calldata_len]
+                            .to_vec(),
+                    };
+                    outside_calls.push(outside_call);
+                }
+            }
+
+            calls.push(call);
+            offset += 3 + calldata_len;
+        }
+
         self.executor.send(QueryMessage::other(
             "INSERT OR IGNORE INTO transactions (id, transaction_hash, sender_address, calldata, \
-             max_fee, signature, nonce, transaction_type, executed_at, block_number) VALUES (?, \
-             ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+             calls, outside_calls, max_fee, signature, nonce, transaction_type, executed_at, \
+             block_number) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
                 .to_string(),
             vec![
                 transaction_hash.clone(),
                 transaction_hash.clone(),
                 sender_address,
-                calldata,
+                Argument::String(felts_to_sql_string(&calldata)),
+                Argument::String(serde_json::to_string(&calls)?),
+                Argument::String(serde_json::to_string(&outside_calls)?),
                 max_fee,
                 signature,
                 nonce,
