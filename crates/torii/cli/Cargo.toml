@@ -15,7 +15,7 @@ starknet.workspace = true
 toml.workspace = true
 torii-sqlite.workspace = true
 url.workspace = true
-torii-derive = { path = "../derive" }
+merge-options.workspace = true
 
 [dev-dependencies]
 assert_matches.workspace = true

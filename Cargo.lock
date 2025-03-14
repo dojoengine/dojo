@@ -9484,6 +9484,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "merge-options"
+version = "1.2.2"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.90",
+]
+
+[[package]]
 name = "metrics"
 version = "0.23.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -14955,10 +14964,10 @@ dependencies = [
  "camino",
  "clap",
  "dojo-utils",
+ "merge-options",
  "serde",
  "starknet",
  "toml 0.8.19",
- "torii-derive",
  "torii-sqlite",
  "url",
 ]
@@ -14989,15 +14998,6 @@ dependencies = [
  "torii-grpc",
  "torii-relay",
  "url",
-]
-
-[[package]]
-name = "torii-derive"
-version = "1.2.2"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.90",
 ]
 
 [[package]]

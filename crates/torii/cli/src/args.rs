@@ -3,9 +3,9 @@ use std::path::PathBuf;
 use anyhow::Result;
 use clap::Parser;
 use dojo_utils::parse::parse_url;
+use merge_options::MergeOptions;
 use serde::{Deserialize, Serialize};
 use starknet::core::types::Felt;
-use torii_derive::MergeOptions;
 use url::Url;
 
 use super::options::*;

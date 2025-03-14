@@ -1,7 +1,7 @@
 [package]
 edition.workspace = true
 license.workspace = true
-name = "torii-derive"
+name = "merge-options"
 repository.workspace = true
 version.workspace = true
 

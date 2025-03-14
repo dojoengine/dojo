@@ -3,10 +3,10 @@ use std::str::FromStr;
 
 use anyhow::Context;
 use camino::Utf8PathBuf;
+use merge_options::MergeOptions;
 use serde::ser::SerializeSeq;
 use serde::{Deserialize, Serialize};
 use starknet::core::types::Felt;
-use torii_derive::MergeOptions;
 use torii_sqlite::types::{Contract, ContractType, ModelIndices};
 
 pub const DEFAULT_HTTP_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::LOCALHOST);
