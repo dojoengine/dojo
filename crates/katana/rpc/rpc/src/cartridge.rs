@@ -36,6 +36,7 @@ use katana_core::service::block_producer::BlockProducer;
 use katana_executor::ExecutorFactory;
 use katana_pool::{TransactionPool, TxPool};
 use katana_primitives::chain::ChainId;
+use katana_primitives::contract::Nonce;
 use katana_primitives::da::DataAvailabilityMode;
 use katana_primitives::fee::ResourceBoundsMapping;
 use katana_primitives::genesis::allocation::GenesisAccountAlloc;
@@ -122,8 +123,13 @@ impl<EF: ExecutorFactory> CartridgeApi<EF> {
                 OutsideExecution::V3(_) => selector!("execute_from_outside_v3"),
             };
 
+            // Get the current nonce of the paymaster account.
+            let mut nonce = state.nonce(*pm_address)?.unwrap_or_default();
+
             // ====================== CONTROLLER DEPLOYMENT ======================
             // Check if the controller is already deployed. If not, deploy it.
+
+            let mut controller_deployed = false;
 
             if state.class_hash_of_contract(address)?.is_none() {
                 let nonce = state.nonce(*pm_address)?;
@@ -138,12 +144,17 @@ impl<EF: ExecutorFactory> CartridgeApi<EF> {
                     ))?
                 {
                     this.pool.add_transaction(tx)?;
+                    controller_deployed = true;
                 }
             }
 
             // ===================================================================
 
-            let nonce = state.nonce(*pm_address)?;
+            // If we submitted a deploy Controller transaction, then the execute from outside
+            // transaction nonce should be incremented.
+            if controller_deployed {
+                nonce += Nonce::ONE;
+            }
 
             let mut inner_calldata =
                 <OutsideExecution as CairoSerde>::cairo_serialize(&outside_execution);
@@ -152,8 +163,8 @@ impl<EF: ExecutorFactory> CartridgeApi<EF> {
             let call = Call { to: address.into(), selector: entrypoint, calldata: inner_calldata };
 
             let mut tx = InvokeTxV3 {
+                nonce,
                 chain_id: this.backend.chain_spec.id(),
-                nonce: nonce.unwrap_or(Felt::ZERO),
                 calldata: encode_calls(vec![call]),
                 signature: vec![],
                 sender_address: *pm_address,
@@ -221,12 +232,13 @@ struct CartridgeAccountResponse {
 /// Returns `None` if the `address` is not associated with a Controller account.
 async fn fetch_controller_constructor_calldata(
     cartridge_api_url: &Url,
-    address: Felt,
+    address: ContractAddress,
 ) -> anyhow::Result<Option<Vec<Felt>>> {
+    debug!(target: "rpc::cartridge", %address, "Fetching Controller constructor calldata");
     let account_data_url = cartridge_api_url.join("/accounts/calldata")?;
 
     let body = serde_json::json!({
-        "address": format!("{:#066x}", address)
+        "address": address
     });
 
     let client = reqwest::Client::new();
@@ -320,7 +332,7 @@ pub async fn craft_deploy_cartridge_controller_tx(
     paymaster_nonce: Option<Felt>,
 ) -> anyhow::Result<Option<ExecutableTxWithHash>> {
     if let Some(calldata) =
-        fetch_controller_constructor_calldata(cartridge_api_url, controller_address.into()).await?
+        fetch_controller_constructor_calldata(cartridge_api_url, controller_address).await?
     {
         let call = Call {
             to: DEFAULT_UDC_ADDRESS.into(),
@@ -345,7 +357,9 @@ pub async fn craft_deploy_cartridge_controller_tx(
         let tx_hash = InvokeTx::V3(tx.clone()).calculate_hash(false);
 
         let signer = LocalWallet::from(SigningKey::from_secret_scalar(paymaster_private_key));
-        let signature = futures::executor::block_on(signer.sign_hash(&tx_hash))
+        let signature = signer
+            .sign_hash(&tx_hash)
+            .await
             .map_err(|e| anyhow!("failed to sign hash with paymaster: {e}"))?;
         tx.signature = vec![signature.r, signature.s];
 
