@@ -13,7 +13,7 @@ use super::options::*;
 pub const DEFAULT_RPC_URL: &str = "http://0.0.0.0:5050";
 
 /// Dojo World Indexer
-#[derive(Parser, Debug, Serialize, Deserialize, MergeOptions)]
+#[derive(Parser, Debug, Serialize, Deserialize, Clone, MergeOptions)]
 #[serde(default)]
 #[command(name = "torii", author, about, long_about = None)]
 #[command(next_help_heading = "Torii general options")]

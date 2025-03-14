@@ -47,7 +47,7 @@ mod constants;
 
 use crate::constants::LOG_TARGET;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Runner {
     args: ToriiArgs,
 }
