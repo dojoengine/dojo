@@ -2,6 +2,7 @@ use std::path::PathBuf;
 use std::str::FromStr;
 
 use anyhow::Context;
+use clap::builder::NonEmptyStringValueParser;
 use clap::Args;
 use deployment::DeploymentOutcome;
 use katana_chain_spec::rollup::{ChainConfigDir, FeeContract};
@@ -31,11 +32,9 @@ pub struct InitArgs {
     ///
     /// An empty `Id` is not a allowed, since the chain id must be
     /// a valid ASCII string.
-    /// This special value is used to prompt the user for the chain id if
-    /// a valid chain id is not provided.
     #[arg(long)]
-    #[arg(default_value = "")]
-    id: String,
+    #[arg(value_parser = NonEmptyStringValueParser::new())]
+    id: Option<String>,
 
     /// The settlement chain to be used, where the core contract is deployed.
     #[arg(long = "settlement-chain")]
@@ -69,6 +68,7 @@ pub struct InitArgs {
     /// Initialize a sovereign chain with no settlement layer, by only publishing the state updates
     /// and proofs on a Data Availability Layer. By using this flag, no settlement option is
     /// required.
+    #[arg(long)]
     #[arg(help = "Initialize a sovereign chain with no settlement layer, by only publishing the \
                   state updates and proofs on a Data Availability Layer.")]
     #[arg(requires_all = ["id"])]
@@ -132,10 +132,10 @@ impl InitArgs {
     }
 
     async fn configure_from_args(&self) -> Option<anyhow::Result<AnyOutcome>> {
-        if !self.id.is_empty() {
+        if let Some(id) = self.id.clone() {
             if self.sovereign {
                 return Some(Ok(AnyOutcome::Sovereign(SovereignOutcome {
-                    id: self.id.clone(),
+                    id,
                     #[cfg(feature = "init-slot")]
                     slot_paymasters: self.slot.paymaster_accounts.clone(),
                 })));
@@ -162,7 +162,7 @@ impl InitArgs {
 
             let l1_chain_id = settlement_provider.chain_id().await.unwrap();
 
-            let chain_id = cairo_short_string_to_felt(&self.id).unwrap();
+            let chain_id = cairo_short_string_to_felt(&id).unwrap();
 
             let deployment_outcome = if let Some(contract) = self.settlement_contract {
                 deployment::check_program_info(chain_id, contract.into(), &settlement_provider)
@@ -190,7 +190,7 @@ impl InitArgs {
             };
 
             Some(Ok(AnyOutcome::Persistent(PersistentOutcome {
-                id: self.id.clone(),
+                id,
                 deployment_outcome,
                 rpc_url: settlement_provider.url().clone(),
                 account: settlement_account_address,
