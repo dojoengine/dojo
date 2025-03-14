@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1741830263434,
+  "lastUpdate": 1741958525396,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -57559,6 +57559,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 16843096,
             "range": "± 135045",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "122404722+notV4l@users.noreply.github.com",
+            "name": "notV4l",
+            "username": "notV4l"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3b15aa41e42582dadb44f6b9b5d053204ae28144",
+          "message": "fix(katana): move rpc merge outside of cfg feature server (#3103)\n\nmove rpc merge outside of cfg feature server",
+          "timestamp": "2025-03-14T14:05:13+01:00",
+          "tree_id": "050b7e0214ec8caa67221c32ed715a83cd57fd9c",
+          "url": "https://github.com/dojoengine/dojo/commit/3b15aa41e42582dadb44f6b9b5d053204ae28144"
+        },
+        "date": 1741958522769,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 45733098117,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
