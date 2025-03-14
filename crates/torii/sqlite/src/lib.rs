@@ -549,16 +549,11 @@ impl Sql {
         let mut calls: Vec<FunctionCall> = vec![];
         let mut outside_calls: Vec<FunctionCall> = vec![];
 
-        println!("calldata: {:?}", calldata);
-        println!("calls_len: {}", calls_len);
         let mut offset = 0;
         for _ in 0..calls_len {
             let to_offset = offset + 1;
             let selector_offset = to_offset + 1;
-            println!("to_offset: {}", to_offset);
-            println!("selector_offset: {}", selector_offset);
             let calldata_offset = selector_offset + 2;
-            println!("calldata_offset: {}", calldata_offset);
             let calldata_len: usize = calldata[selector_offset + 1].try_into().unwrap();
 
             let call = FunctionCall {
