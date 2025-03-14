@@ -9493,6 +9493,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "merge-options-macro-test"
+version = "0.1.0"
+dependencies = [
+ "merge-options",
+]
+
+[[package]]
 name = "metrics"
 version = "0.23.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

@@ -42,6 +42,7 @@ members = [
 	"crates/katana/tasks",
 	"crates/katana/trie",
 	"crates/macros/merge-options",
+	"crates/macros/merge-options/macro_test",
 	"crates/metrics",
 	"crates/sozo/scarbext",
 	"crates/sozo/signers",
