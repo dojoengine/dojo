@@ -205,6 +205,10 @@ pub struct Katana {
     strk_gas_price: Option<u64>,
     genesis: Option<PathBuf>,
 
+    // Cartridge options
+    enable_cartridge_paymaster: bool,
+    cartridge_api_url: Option<String>,
+
     // Others
     timeout: Option<u64>,
     program: Option<PathBuf>,
@@ -563,6 +567,14 @@ impl Katana {
         // var to store the chain id parsed from the logs. default to KATANA (default katana chain
         // id) if not specified
         let mut chain_id: Felt = self.chain_id.unwrap_or(short_string!("KATANA"));
+
+        if let Some(url) = self.cartridge_api_url {
+            cmd.arg("--cartridge.api-url").arg(url);
+        }
+
+        if self.enable_cartridge_paymaster {
+            cmd.arg("--cartridge.paymaster");
+        }
 
         loop {
             if start + Duration::from_millis(self.timeout.unwrap_or(KATANA_STARTUP_TIMEOUT_MILLIS))

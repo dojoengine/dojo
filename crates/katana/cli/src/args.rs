@@ -22,6 +22,8 @@ use katana_node::config::rpc::{RpcConfig, RpcModuleKind, RpcModulesList};
 use katana_node::config::rpc::{DEFAULT_RPC_ADDR, DEFAULT_RPC_PORT};
 use katana_node::config::sequencing::SequencingConfig;
 use katana_node::config::Config;
+#[cfg(feature = "cartridge")]
+use katana_node::config::Paymaster;
 use katana_primitives::genesis::allocation::DevAllocationsGenerator;
 use katana_primitives::genesis::constant::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;
 #[cfg(feature = "server")]
@@ -121,6 +123,10 @@ pub struct NodeArgs {
     #[command(flatten)]
     pub slot: SlotOptions,
 
+    #[cfg(feature = "cartridge")]
+    #[command(flatten)]
+    pub cartridge: CartridgeOptions,
+
     #[command(flatten)]
     pub explorer: ExplorerOptions,
 }
@@ -211,6 +217,25 @@ impl NodeArgs {
         // the messagign config will eventually be removed slowly.
         let messaging = if cs_messaging.is_some() { cs_messaging } else { self.messaging.clone() };
 
+        #[cfg(feature = "cartridge")]
+        {
+            let cartridge = self.cartridge_config();
+
+            Ok(Config {
+                db,
+                dev,
+                rpc,
+                chain,
+                metrics,
+                forking,
+                paymaster: cartridge,
+                execution,
+                messaging,
+                sequencing,
+            })
+        }
+
+        #[cfg(not(feature = "cartridge"))]
         Ok(Config { metrics, db, dev, rpc, chain, execution, sequencing, messaging, forking })
     }
 
@@ -223,7 +248,8 @@ impl NodeArgs {
     }
 
     fn rpc_config(&self) -> Result<RpcConfig> {
-        let modules = if let Some(modules) = &self.rpc.http_modules {
+        #[allow(unused_mut)]
+        let mut modules = if let Some(modules) = &self.rpc.http_modules {
             // TODO: This check should be handled in the `katana-node` level. Right now if you
             // instantiate katana programmatically, you can still add the dev module without
             // enabling dev mode.
@@ -245,6 +271,14 @@ impl NodeArgs {
 
             modules
         };
+
+        // The cartridge rpc must be enabled if the paymaster is enabled.
+        // We put it here so that even when the individual api are explicitly specified
+        // (ie `--rpc.api`) we guarantee that the cartridge rpc is enabled.
+        #[cfg(feature = "cartridge")]
+        if self.cartridge.paymaster {
+            modules.add(RpcModuleKind::Cartridge);
+        }
 
         #[cfg(feature = "server")]
         let (cors_origins, http_port, http_addr) = {
@@ -310,7 +344,8 @@ impl NodeArgs {
                 chain_spec.genesis.sequencer_address = *DEFAULT_SEQUENCER_ADDRESS;
             }
 
-            // generate dev accounts
+            // Generate dev accounts.
+            // If `cartridge` is enabled, the first account will be the paymaster.
             let accounts = DevAllocationsGenerator::new(self.development.total_accounts)
                 .with_seed(parse_seed(&self.development.seed))
                 .with_balance(U256::from(DEFAULT_PREFUNDED_ACCOUNT_BALANCE))
@@ -390,6 +425,14 @@ impl NodeArgs {
         None
     }
 
+    fn cartridge_config(&self) -> Option<Paymaster> {
+        if self.cartridge.paymaster {
+            Some(Paymaster { cartridge_api_url: self.cartridge.api.clone() })
+        } else {
+            None
+        }
+    }
+
     /// Parse the node config from the command line arguments and the config file,
     /// and merge them together prioritizing the command line arguments.
     pub fn with_config_file(mut self) -> Result<Self> {
@@ -450,6 +493,11 @@ impl NodeArgs {
             if let Some(forking) = config.forking {
                 self.forking = forking;
             }
+        }
+
+        #[cfg(feature = "cartridge")]
+        {
+            self.cartridge.merge(config.cartridge.as_ref());
         }
 
         Ok(self)
@@ -739,5 +787,31 @@ chain_id.Named = "Mainnet"
         let config = args.config().unwrap();
 
         assert!(config.rpc.apis.contains(&RpcModuleKind::Dev));
+    }
+
+    #[cfg(feature = "cartridge")]
+    #[test]
+    fn cartridge_paymaster() {
+        let args = NodeArgs::parse_from(["katana", "--cartridge.paymaster"]);
+        let config = args.config().unwrap();
+
+        // Verify cartridge module is automatically enabled
+        assert!(config.rpc.apis.contains(&RpcModuleKind::Cartridge));
+
+        // Test with paymaster explicitly specified in RPC modules
+        let args =
+            NodeArgs::parse_from(["katana", "--cartridge.paymaster", "--rpc.api", "starknet"]);
+        let config = args.config().unwrap();
+
+        // Verify cartridge module is still enabled even when not in explicit RPC list
+        assert!(config.rpc.apis.contains(&RpcModuleKind::Cartridge));
+        assert!(config.rpc.apis.contains(&RpcModuleKind::Starknet));
+
+        // Test without paymaster enabled
+        let args = NodeArgs::parse_from(["katana"]);
+        let config = args.config().unwrap();
+
+        // Verify cartridge module is not enabled by default
+        assert!(!config.rpc.apis.contains(&RpcModuleKind::Cartridge));
     }
 }

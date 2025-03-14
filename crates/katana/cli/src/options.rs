@@ -426,6 +426,59 @@ pub struct SlotOptions {
     pub controller: bool,
 }
 
+#[cfg(feature = "cartridge")]
+#[derive(Debug, Args, Clone, Serialize, Deserialize, PartialEq)]
+#[command(next_help_heading = "Cartridge options")]
+pub struct CartridgeOptions {
+    /// Whether to use the Cartridge paymaster.
+    /// This has the cost to call the Cartridge API to check
+    /// if a controller account exists on each estimate fee call.
+    ///
+    /// Mostly used for local development using controller, and must be
+    /// disabled for slot deployments.
+    #[arg(long = "cartridge.paymaster")]
+    #[arg(default_value_t = false)]
+    #[serde(default = "default_paymaster")]
+    pub paymaster: bool,
+
+    /// The root URL for the Cartridge API.
+    ///
+    /// This is used to fetch the calldata for the constructor of the given controller
+    /// address (at the moment). Must be configurable for local development
+    /// with local cartridge API.
+    #[arg(long = "cartridge.api", requires = "paymaster")]
+    #[arg(default_value = "https://api.cartridge.gg")]
+    #[serde(default = "default_api_url")]
+    pub api: Url,
+}
+
+#[cfg(feature = "cartridge")]
+impl CartridgeOptions {
+    pub fn merge(&mut self, other: Option<&Self>) {
+        if let Some(other) = other {
+            if self.paymaster == default_paymaster() {
+                self.paymaster = other.paymaster;
+            }
+
+            if self.api == default_api_url() {
+                self.api = other.api.clone();
+            }
+        }
+    }
+}
+impl Default for CartridgeOptions {
+    fn default() -> Self {
+        CartridgeOptions { paymaster: default_paymaster(), api: default_api_url() }
+    }
+}
+fn default_paymaster() -> bool {
+    false
+}
+
+fn default_api_url() -> Url {
+    Url::parse("https://api.cartridge.gg").expect("qed; invalid url")
+}
+
 const DEFAULT_EXPLORER_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::LOCALHOST);
 const DEFAULT_EXPLORER_PORT: u16 = 3001;
 
