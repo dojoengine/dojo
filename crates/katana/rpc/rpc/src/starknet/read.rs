@@ -3,7 +3,6 @@ use std::sync::Arc;
 use anyhow::anyhow;
 use jsonrpsee::core::{async_trait, Error, RpcResult};
 use katana_executor::{EntryPointCall, ExecutorFactory};
-use katana_pool::TransactionPool;
 use katana_primitives::block::BlockIdOrTag;
 use katana_primitives::class::ClassHash;
 use katana_primitives::genesis::allocation::GenesisAccountAlloc;
@@ -25,9 +24,9 @@ use katana_rpc_types::transaction::{BroadcastedTx, Tx};
 use katana_rpc_types::trie::{ContractStorageKeys, GetStorageProofResponse};
 use katana_rpc_types::{FeeEstimate, FeltAsHex, FunctionCall, SimulationFlagForEstimateFee};
 use starknet::core::types::TransactionStatus;
-use tracing::debug;
 
 use super::StarknetApi;
+use crate::cartridge;
 
 #[async_trait]
 impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
@@ -257,11 +256,11 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
                 .map(Arc::new)
                 .map_err(StarknetApiError::from)?;
 
-            let mut ctrl_transactions = Vec::new();
+            let mut ctrl_deploy_txs = Vec::new();
 
             for tx in &transactions {
                 let deploy_controller_tx =
-                    crate::cartridge::get_controller_deploy_tx_if_controller_address(
+                    cartridge::get_controller_deploy_tx_if_controller_address(
                         *paymaster_address,
                         paymaster_private_key,
                         tx,
@@ -272,21 +271,16 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
                     .await?;
 
                 if let Some(tx) = deploy_controller_tx {
-                    let hash = self
-                        .inner
-                        .pool
-                        .add_transaction(tx.clone())
-                        .expect("failed to add transaction for controller");
-
-                    debug!(tx_hash = ?hash, "Added controller transaction for estimation.");
-                    ctrl_transactions.push(tx);
+                    ctrl_deploy_txs.push(tx);
                 }
             }
 
-            if !ctrl_transactions.is_empty() {
-                let mut all_transactions = ctrl_transactions;
-                all_transactions.extend(transactions);
-                all_transactions
+            if !ctrl_deploy_txs.is_empty() {
+                // Put the Controller deployment transactions at the beginning of the list
+                // so that all the requested transactions are executed against a state with the
+                // Controller accounts deployed.
+                ctrl_deploy_txs.extend(transactions);
+                ctrl_deploy_txs
             } else {
                 transactions
             }
