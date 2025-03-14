@@ -222,9 +222,8 @@ impl WorldClient {
     pub async fn retrieve_event_messages(
         &mut self,
         query: Query,
-        historical: bool,
     ) -> Result<RetrieveEntitiesResponse, Error> {
-        let request = RetrieveEventMessagesRequest { query: Some(query.into()), historical };
+        let request = RetrieveEventMessagesRequest { query: Some(query.into()) };
         self.inner
             .retrieve_event_messages(request)
             .await
@@ -299,12 +298,11 @@ impl WorldClient {
     pub async fn subscribe_event_messages(
         &mut self,
         clauses: Vec<EntityKeysClause>,
-        historical: bool,
     ) -> Result<EntityUpdateStreaming, Error> {
         let clauses = clauses.into_iter().map(|c| c.into()).collect();
         let stream = self
             .inner
-            .subscribe_event_messages(SubscribeEventMessagesRequest { clauses, historical })
+            .subscribe_event_messages(SubscribeEventMessagesRequest { clauses })
             .await
             .map_err(Error::Grpc)
             .map(|res| res.into_inner())?;
@@ -322,14 +320,12 @@ impl WorldClient {
         &mut self,
         subscription_id: u64,
         clauses: Vec<EntityKeysClause>,
-        historical: bool,
     ) -> Result<(), Error> {
         let clauses = clauses.into_iter().map(|c| c.into()).collect();
         self.inner
             .update_event_messages_subscription(UpdateEventMessagesSubscriptionRequest {
                 subscription_id,
                 clauses,
-                historical,
             })
             .await
             .map_err(Error::Grpc)

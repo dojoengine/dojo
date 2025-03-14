@@ -1607,10 +1607,10 @@ impl proto::world::world_server::World for DojoWorld {
         &self,
         request: Request<SubscribeEventMessagesRequest>,
     ) -> ServiceResult<Self::SubscribeEntitiesStream> {
-        let SubscribeEventMessagesRequest { clauses, historical } = request.into_inner();
+        let SubscribeEventMessagesRequest { clauses } = request.into_inner();
         let rx = self
             .event_message_manager
-            .add_subscriber(clauses.into_iter().map(|keys| keys.into()).collect(), historical)
+            .add_subscriber(clauses.into_iter().map(|keys| keys.into()).collect())
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
@@ -1621,13 +1621,12 @@ impl proto::world::world_server::World for DojoWorld {
         &self,
         request: Request<UpdateEventMessagesSubscriptionRequest>,
     ) -> ServiceResult<()> {
-        let UpdateEventMessagesSubscriptionRequest { subscription_id, clauses, historical } =
+        let UpdateEventMessagesSubscriptionRequest { subscription_id, clauses } =
             request.into_inner();
         self.event_message_manager
             .update_subscriber(
                 subscription_id,
                 clauses.into_iter().map(|keys| keys.into()).collect(),
-                historical,
             )
             .await;
 
@@ -1638,12 +1637,12 @@ impl proto::world::world_server::World for DojoWorld {
         &self,
         request: Request<RetrieveEventMessagesRequest>,
     ) -> Result<Response<RetrieveEntitiesResponse>, Status> {
-        let RetrieveEventMessagesRequest { query, historical } = request.into_inner();
+        let RetrieveEventMessagesRequest { query } = request.into_inner();
         let query = query.ok_or_else(|| Status::invalid_argument("Missing query argument"))?;
 
         let entities = self
             .retrieve_entities(
-                if historical { EVENT_MESSAGES_HISTORICAL_TABLE } else { EVENT_MESSAGES_TABLE },
+                EVENT_MESSAGES_TABLE,
                 EVENT_MESSAGES_MODEL_RELATION_TABLE,
                 EVENT_MESSAGES_ENTITY_RELATION_COLUMN,
                 query,

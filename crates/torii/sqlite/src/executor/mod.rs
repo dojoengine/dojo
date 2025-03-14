@@ -466,60 +466,6 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                     warn!(target: LOG_TARGET, "Entity has been updated without being set before. Keys are not known and non-updated values will be NULL.");
                 }
 
-                // Handle historical entities similar to historical event messages
-                let mut entity_counter: i64 = sqlx::query_scalar::<_, i64>(
-                    "SELECT historical_counter FROM entity_model WHERE entity_id = ? AND model_id \
-                     = ?",
-                )
-                .bind(entity.entity_id.clone())
-                .bind(entity.model_id.clone())
-                .fetch_optional(&mut **tx)
-                .await
-                .map_or(0, |counter| counter.unwrap_or(0));
-
-                if entity.is_historical {
-                    entity_counter += 1;
-
-                    let data = serde_json::to_string(&entity.ty.to_json_value()?)?;
-                    if let Some(keys) = entity.keys_str {
-                        sqlx::query(
-                            "INSERT INTO entities_historical (id, keys, event_id, data, model_id, \
-                             executed_at) VALUES (?, ?, ?, ?, ?, ?) RETURNING *",
-                        )
-                        .bind(entity.entity_id.clone())
-                        .bind(keys)
-                        .bind(entity.event_id.clone())
-                        .bind(data)
-                        .bind(entity.model_id.clone())
-                        .bind(entity.block_timestamp.clone())
-                        .fetch_one(&mut **tx)
-                        .await?;
-                    } else {
-                        sqlx::query(
-                            "INSERT INTO entities_historical (id, event_id, data, model_id, \
-                             executed_at) VALUES (?, ?, ?, ?, ?) RETURNING *",
-                        )
-                        .bind(entity.entity_id.clone())
-                        .bind(entity.event_id.clone())
-                        .bind(data)
-                        .bind(entity.model_id.clone())
-                        .bind(entity.block_timestamp.clone())
-                        .fetch_one(&mut **tx)
-                        .await?;
-                    }
-                }
-
-                sqlx::query(
-                    "INSERT INTO entity_model (entity_id, model_id, historical_counter) VALUES \
-                     (?, ?, ?) ON CONFLICT(entity_id, model_id) DO UPDATE SET \
-                     historical_counter=EXCLUDED.historical_counter",
-                )
-                .bind(entity.entity_id.clone())
-                .bind(entity.model_id.clone())
-                .bind(entity_counter)
-                .execute(&mut **tx)
-                .await?;
-
                 let optimistic_entity = unsafe {
                     std::mem::transmute::<EntityUpdated, OptimisticEntity>(entity_updated.clone())
                 };
@@ -597,45 +543,6 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                         query_message.statement, query_message.arguments
                     )
                 })?;
-
-                let mut event_counter: i64 = sqlx::query_scalar::<_, i64>(
-                    "SELECT historical_counter FROM event_model WHERE entity_id = ? AND model_id \
-                     = ?",
-                )
-                .bind(em_query.entity_id.clone())
-                .bind(em_query.model_id.clone())
-                .fetch_optional(&mut **tx)
-                .await
-                .map_or(0, |counter| counter.unwrap_or(0));
-
-                if em_query.is_historical {
-                    event_counter += 1;
-
-                    let data = serde_json::to_string(&em_query.ty.to_json_value()?)?;
-                    sqlx::query(
-                        "INSERT INTO event_messages_historical (id, keys, event_id, data, \
-                         model_id, executed_at) VALUES (?, ?, ?, ?, ?, ?) RETURNING *",
-                    )
-                    .bind(em_query.entity_id.clone())
-                    .bind(em_query.keys_str.clone())
-                    .bind(em_query.event_id.clone())
-                    .bind(data)
-                    .bind(em_query.model_id.clone())
-                    .bind(em_query.block_timestamp.clone())
-                    .fetch_one(&mut **tx)
-                    .await?;
-                }
-
-                sqlx::query(
-                    "INSERT INTO event_model (entity_id, model_id, historical_counter) VALUES (?, \
-                     ?, ?) ON CONFLICT(entity_id, model_id) DO UPDATE SET \
-                     historical_counter=EXCLUDED.historical_counter",
-                )
-                .bind(em_query.entity_id.clone())
-                .bind(em_query.model_id.clone())
-                .bind(event_counter)
-                .execute(&mut **tx)
-                .await?;
 
                 let mut event_message = EventMessageUpdated::from_row(&event_messages_row)?;
                 event_message.updated_model = Some(em_query.ty);
