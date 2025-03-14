@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1741968559102,
+  "lastUpdate": 1741968896261,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -57715,6 +57715,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 18140020,
             "range": "± 652264",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "25ce930fe3e5678cccd863196f59a9a1e2830b0f",
+          "message": "refactor(torii-cli): use merge-options derive for torii cli (#3100)\n\n* refactor(torii-cli): merge derive for torii cli\n\n* fmt\n\n* serde default\n\n* remove torii args config\n\n* derive default\n\n* args\n\n* refactor: move merge options in a new crate + update example\n\n* fix: add tests for the merge-options macro\n\n---------\n\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2025-03-14T15:57:52Z",
+          "tree_id": "03929f6d170c1b647b379d7e9c4504ab064fc07d",
+          "url": "https://github.com/dojoengine/dojo/commit/25ce930fe3e5678cccd863196f59a9a1e2830b0f"
+        },
+        "date": 1741968893508,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 44678984857,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
