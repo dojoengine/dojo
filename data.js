@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1741968970987,
+  "lastUpdate": 1741980738175,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -57793,6 +57793,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 17749872,
             "range": "± 639201",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "valentin@pupucecorp.com",
+            "name": "Brother MartianGreed",
+            "username": "MartianGreed"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "92422dbb4799a2a3046a7864083e3e5cb52250f4",
+          "message": "feat(katana): add cartridge_addExecuteOutsideTransaction rpc endpoint (#3058)\n\n* feat: add cartridge_addExecuteOutsideTransaction rpc endpoint\n\n* fix: use regular account for paymaster and fix execution from outside\n\n* refacto and cleanup\n\n* chore: use repo rev instead of local\n\n* cleanup\n\n* fix: ensure newly created controllers will also work\n\n* ci: bump rust toolchain version\n\n* chore: bump account_sdk\n\n* feat: add cartridge api-url to configure local or production env for controller\n\n* fix: ensure cartridge feature work to generate test db\n\n* fix wrong cli arg\n\n* remove unused types\n\n* fix: restore commit for explorer\n\n* fix: ensure cartridge module is correctly added\n\n* chore: bump account_sdk to match session format\n\n* fix: impl review comments for tx in the pool\n\n* fix: run linters\n\n* fix: add options to config file\n\n* chore: top level module doc\n\n* refactor: rename variables and slight config refactor\n\n* some clean up and error handling\n\n* refactor: improve error handling\n\n* simplified\n\n* handle no account found error from cartridge\n\n* comment\n\n* update\n\n* comemnt and variables rename\n\n* cute lil section highlight\n\n* update module doc\n\n* remove controller deployment tx pool inclusion on fee estimate\n\n* add comment\n\n* fix\n\n* fix\n\n---------\n\nCo-authored-by: glihm <dev@glihm.net>\nCo-authored-by: Ammar Arif <evergreenkary@gmail.com>",
+          "timestamp": "2025-03-14T19:15:25Z",
+          "tree_id": "2edec1266267697a41201b27b67f7e6d06574d72",
+          "url": "https://github.com/dojoengine/dojo/commit/92422dbb4799a2a3046a7864083e3e5cb52250f4"
+        },
+        "date": 1741980735513,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 47186784783,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
