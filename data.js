@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1741991159776,
+  "lastUpdate": 1741991838544,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -57949,6 +57949,54 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 16951040,
             "range": "± 134927",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "57156589+okhaimie-dev@users.noreply.github.com",
+            "name": "okhai",
+            "username": "okhaimie-dev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "fffa060d5ca41057184449aa8194cafd60d22bc9",
+          "message": "feat(sozo): auto chunk blocks fetching world data (#2929)\n\n* feat: removed world block\n\n* feat: minor changes\n\n* Update bin/sozo/src/commands/events.rs\n\nCo-authored-by: glihm <dev@glihm.net>\n\n* feat: wip\n\n* feat: event chunking edit\n\n* Temp event issue (#2)\n\n* fix: implimented glihm's feedback\r\n\r\n* fix: added short for max_block_range\n\n* fix: make the max_block_range configurable\n\n---------\n\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2025-03-14T22:18:40Z",
+          "tree_id": "839478a47bc5a99934b5c9db6ab69fc351432b65",
+          "url": "https://github.com/dojoengine/dojo/commit/fffa060d5ca41057184449aa8194cafd60d22bc9"
+        },
+        "date": 1741991835558,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2543860,
+            "range": "± 37097",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 395773,
+            "range": "± 10606",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2838515944,
+            "range": "± 216255749",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 17815157,
+            "range": "± 483139",
             "unit": "ns/iter"
           }
         ]
