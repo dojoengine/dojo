@@ -4,7 +4,7 @@ use std::sync::Arc;
 use dojo_types::schema::Ty;
 use dojo_world::contracts::abigen::model::Layout;
 use sqlx::{Pool, Sqlite, SqlitePool};
-use starknet::core::types::{BlockId, BlockTag, ContractClass};
+use starknet::core::types::{BlockId, ContractClass};
 use starknet::providers::Provider;
 use starknet_crypto::Felt;
 use tokio::sync::RwLock;

@@ -549,12 +549,17 @@ impl Sql {
         let mut calls: Vec<FunctionCall> = vec![];
         let mut outside_calls: Vec<FunctionCall> = vec![];
 
-        let mut offset = 1;
+        println!("calldata: {:?}", calldata);
+        println!("calls_len: {}", calls_len);
+        let mut offset = 0;
         for _ in 0..calls_len {
-            let calldata_len: usize = calldata[offset].try_into().unwrap();
             let to_offset = offset + 1;
             let selector_offset = to_offset + 1;
-            let calldata_offset = selector_offset + 1;
+            println!("to_offset: {}", to_offset);
+            println!("selector_offset: {}", selector_offset);
+            let calldata_offset = selector_offset + 2;
+            println!("calldata_offset: {}", calldata_offset);
+            let calldata_len: usize = calldata[selector_offset + 1].try_into().unwrap();
 
             let call = FunctionCall {
                 contract_address: calldata[to_offset],
@@ -565,21 +570,31 @@ impl Sql {
             if call.entry_point_selector == selector!("execute_from_outside_v3") {
                 let outside_calls_len: usize = calldata[calldata_offset + 5].try_into().unwrap();
                 for _ in 0..outside_calls_len {
+                    let to_offset = calldata_offset + 6;
+                    let selector_offset = to_offset + 1;
+                    let calldata_offset = selector_offset + 2;
+                    let calldata_len: usize = calldata[selector_offset + 1].try_into().unwrap();
                     let outside_call = FunctionCall {
-                        contract_address: calldata[calldata_offset + 6],
-                        entry_point_selector: calldata[calldata_offset + 7],
-                        calldata: calldata[calldata_offset + 8..].to_vec(),
-                        };
+                        contract_address: calldata[to_offset],
+                        entry_point_selector: calldata[selector_offset],
+                        calldata: calldata[calldata_offset..calldata_offset + calldata_len]
+                            .to_vec(),
+                    };
                     outside_calls.push(outside_call);
                 }
             } else if call.entry_point_selector == selector!("execute_from_outside_v2") {
                 // the execute_from_outside_v2 nonce is only a felt, thus we have a 4 offset
                 let outside_calls_len: usize = calldata[calldata_offset + 4].try_into().unwrap();
                 for _ in 0..outside_calls_len {
+                    let to_offset = calldata_offset + 5;
+                    let selector_offset = to_offset + 1;
+                    let calldata_offset = selector_offset + 2;
+                    let calldata_len: usize = calldata[selector_offset + 1].try_into().unwrap();
                     let outside_call = FunctionCall {
-                        contract_address: calldata[calldata_offset + 5],
-                        entry_point_selector: calldata[calldata_offset + 6],
-                        calldata: calldata[calldata_offset + 7..].to_vec(),
+                        contract_address: calldata[to_offset],
+                        entry_point_selector: calldata[selector_offset],
+                        calldata: calldata[calldata_offset..calldata_offset + calldata_len]
+                            .to_vec(),
                     };
                     outside_calls.push(outside_call);
                 }
@@ -591,8 +606,8 @@ impl Sql {
 
         self.executor.send(QueryMessage::other(
             "INSERT OR IGNORE INTO transactions (id, transaction_hash, sender_address, calldata, \
-             calls, outside_calls, max_fee, signature, nonce, transaction_type, executed_at, block_number) VALUES (?, \
-             ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+             calls, outside_calls, max_fee, signature, nonce, transaction_type, executed_at, \
+             block_number) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
                 .to_string(),
             vec![
                 transaction_hash.clone(),
