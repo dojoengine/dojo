@@ -12,6 +12,7 @@ use dojo_world::contracts::abigen::model::Layout;
 use dojo_world::contracts::naming::compute_selector_from_names;
 use sqlx::{Pool, Sqlite};
 use starknet::core::types::{Call, Event, Felt, InvokeTransaction, Transaction};
+use starknet::macros::felt;
 use starknet_crypto::poseidon_hash_many;
 use tokio::sync::mpsc::UnboundedSender;
 use utils::felts_to_sql_string;
@@ -544,8 +545,39 @@ impl Sql {
                 _ => return Ok(()),
             };
 
-        let num_calls = calldata[0];
+        let calls_len: usize = calldata[0].try_into().unwrap();
         let mut calls: Vec<Call> = vec![];
+        let mut outside_calls: Vec<Call> = vec![];
+
+        let mut offset = 1;
+        for _ in 0..calls_len {
+            let calldata_len: usize = calldata[offset].try_into().unwrap();
+            let to_offset = offset + 1;
+            let selector_offset = to_offset + 1;
+            let calldata_offset = selector_offset + 1;
+
+            let call = Call {
+                to: calldata[to_offset],
+                selector: calldata[selector_offset],
+                calldata: calldata[calldata_offset..calldata_offset + calldata_len].to_vec(),
+            };
+
+            // execute_from_outside_v3 selector
+            if call.selector == felt!("0x657865637574655f66726f6d5f6f7574736964655f7633") {
+                let outside_calls_len: usize = calldata[calldata_offset + 5].try_into().unwrap();
+                for _ in 0..outside_calls_len {
+                    let outside_call = Call {
+                        to: calldata[calldata_offset + 6],
+                        selector: calldata[calldata_offset + 7],
+                        calldata: calldata[calldata_offset + 8..].to_vec(),
+                    };
+                    outside_calls.push(outside_call);
+                }
+            }
+
+            calls.push(call);
+            offset += 3 + calldata_len;
+        }
 
         self.executor.send(QueryMessage::other(
             "INSERT OR IGNORE INTO transactions (id, transaction_hash, sender_address, calldata, \
