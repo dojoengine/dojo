@@ -60,11 +60,7 @@ impl EventMessageManager {
         Ok(receiver)
     }
 
-    pub async fn update_subscriber(
-        &self,
-        id: u64,
-        clauses: Vec<EntityKeysClause>,
-    ) {
+    pub async fn update_subscriber(&self, id: u64, clauses: Vec<EntityKeysClause>) {
         let sender = {
             let subscribers = self.subscribers.read().await;
             if let Some(subscriber) = subscribers.get(&id) {
@@ -74,10 +70,7 @@ impl EventMessageManager {
             }
         };
 
-        self.subscribers
-            .write()
-            .await
-            .insert(id, EventMessageSubscriber { clauses, sender });
+        self.subscribers.write().await.insert(id, EventMessageSubscriber { clauses, sender });
     }
 
     pub(super) async fn remove_subscriber(&self, id: u64) {

@@ -754,11 +754,8 @@ impl Sql {
         let mut create_table_query = format!(
             "CREATE TABLE IF NOT EXISTS [{table_id}] (internal_id TEXT NOT NULL{}, \
              internal_event_id TEXT NOT NULL, internal_entity_id TEXT, internal_event_message_id \
-             TEXT, ", if !self.config.historical_models.contains(&table_id) {
-                " PRIMARY KEY"
-            } else {
-                ""
-            },
+             TEXT, ",
+            if !self.config.historical_models.contains(&table_id) { " PRIMARY KEY" } else { "" },
         );
 
         indices.push(format!(
