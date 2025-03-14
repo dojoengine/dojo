@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1741968896261,
+  "lastUpdate": 1741968970987,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -57745,6 +57745,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 44678984857,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "25ce930fe3e5678cccd863196f59a9a1e2830b0f",
+          "message": "refactor(torii-cli): use merge-options derive for torii cli (#3100)\n\n* refactor(torii-cli): merge derive for torii cli\n\n* fmt\n\n* serde default\n\n* remove torii args config\n\n* derive default\n\n* args\n\n* refactor: move merge options in a new crate + update example\n\n* fix: add tests for the merge-options macro\n\n---------\n\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2025-03-14T15:57:52Z",
+          "tree_id": "03929f6d170c1b647b379d7e9c4504ab064fc07d",
+          "url": "https://github.com/dojoengine/dojo/commit/25ce930fe3e5678cccd863196f59a9a1e2830b0f"
+        },
+        "date": 1741968967023,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2417559,
+            "range": "± 26248",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 430304,
+            "range": "± 9146",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2731258271,
+            "range": "± 224259553",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 17749872,
+            "range": "± 639201",
             "unit": "ns/iter"
           }
         ]
