@@ -3,6 +3,7 @@ use std::str::FromStr;
 
 use anyhow::Context;
 use camino::Utf8PathBuf;
+use merge_options::MergeOptions;
 use serde::ser::SerializeSeq;
 use serde::{Deserialize, Serialize};
 use starknet::core::types::Felt;
@@ -22,7 +23,7 @@ pub const DEFAULT_RELAY_WEBSOCKET_PORT: u16 = 9092;
 
 pub const DEFAULT_ERC_MAX_METADATA_TASKS: usize = 10;
 
-#[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq, MergeOptions)]
 #[serde(default)]
 #[command(next_help_heading = "Relay options")]
 pub struct RelayOptions {
@@ -95,7 +96,7 @@ impl Default for RelayOptions {
     }
 }
 
-#[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq, MergeOptions)]
 #[serde(default)]
 #[command(next_help_heading = "Indexing options")]
 pub struct IndexingOptions {
@@ -207,57 +208,7 @@ impl Default for IndexingOptions {
     }
 }
 
-impl IndexingOptions {
-    pub fn merge(&mut self, other: Option<&Self>) {
-        if let Some(other) = other {
-            if self.events_chunk_size == DEFAULT_EVENTS_CHUNK_SIZE {
-                self.events_chunk_size = other.events_chunk_size;
-            }
-
-            if self.blocks_chunk_size == DEFAULT_BLOCKS_CHUNK_SIZE {
-                self.blocks_chunk_size = other.blocks_chunk_size;
-            }
-
-            if !self.pending {
-                self.pending = other.pending;
-            }
-
-            if self.polling_interval == DEFAULT_POLLING_INTERVAL {
-                self.polling_interval = other.polling_interval;
-            }
-
-            if self.max_concurrent_tasks == DEFAULT_MAX_CONCURRENT_TASKS {
-                self.max_concurrent_tasks = other.max_concurrent_tasks;
-            }
-
-            if !self.transactions {
-                self.transactions = other.transactions;
-            }
-
-            if self.contracts.is_empty() {
-                self.contracts = other.contracts.clone();
-            }
-
-            if self.namespaces.is_empty() {
-                self.namespaces = other.namespaces.clone();
-            }
-
-            if self.world_block == 0 {
-                self.world_block = other.world_block;
-            }
-
-            if !self.controllers {
-                self.controllers = other.controllers;
-            }
-
-            if !self.strict_model_reader {
-                self.strict_model_reader = other.strict_model_reader;
-            }
-        }
-    }
-}
-
-#[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq, Default, MergeOptions)]
 #[serde(default)]
 #[command(next_help_heading = "Events indexing options")]
 pub struct EventsOptions {
@@ -270,7 +221,7 @@ pub struct EventsOptions {
     pub raw: bool,
 }
 
-#[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq, MergeOptions)]
 #[serde(default)]
 #[command(next_help_heading = "HTTP server options")]
 pub struct ServerOptions {
@@ -296,7 +247,7 @@ impl Default for ServerOptions {
     }
 }
 
-#[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq, MergeOptions)]
 #[serde(default)]
 #[command(next_help_heading = "Metrics options")]
 pub struct MetricsOptions {
@@ -330,7 +281,7 @@ impl Default for MetricsOptions {
     }
 }
 
-#[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq, MergeOptions)]
 #[serde(default)]
 #[command(next_help_heading = "ERC options")]
 pub struct ErcOptions {
@@ -359,7 +310,7 @@ pub const DEFAULT_DATABASE_PAGE_SIZE: u64 = 32_768;
 /// of the RAM of the smallest slot instance.
 pub const DEFAULT_DATABASE_CACHE_SIZE: i64 = -500_000;
 
-#[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq, MergeOptions)]
 #[serde(default)]
 #[command(next_help_heading = "SQL options")]
 pub struct SqlOptions {
@@ -389,7 +340,6 @@ pub struct SqlOptions {
         value_delimiter = ',',
         help = "Models that are going to be treated as historical during indexing."
     )]
-    #[serde(default)]
     pub historical: Vec<String>,
 
     /// The page size to use for the database. The page size must be a power of two between 512 and
@@ -418,32 +368,6 @@ impl Default for SqlOptions {
             historical: vec![],
             page_size: DEFAULT_DATABASE_PAGE_SIZE,
             cache_size: DEFAULT_DATABASE_CACHE_SIZE,
-        }
-    }
-}
-
-impl SqlOptions {
-    pub fn merge(&mut self, other: Option<&Self>) {
-        if let Some(other) = other {
-            if !self.all_model_indices {
-                self.all_model_indices = other.all_model_indices;
-            }
-
-            if self.model_indices.is_none() {
-                self.model_indices = other.model_indices.clone();
-            }
-
-            if self.page_size == DEFAULT_DATABASE_PAGE_SIZE {
-                self.page_size = other.page_size;
-            }
-
-            if self.cache_size == DEFAULT_DATABASE_CACHE_SIZE {
-                self.cache_size = other.cache_size;
-            }
-
-            if self.historical.is_empty() {
-                self.historical = other.historical.clone();
-            }
         }
     }
 }
