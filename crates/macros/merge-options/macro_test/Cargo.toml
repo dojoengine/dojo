@@ -1,0 +1,8 @@
+[package]
+name = "merge-options-macro-test"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+merge-options = { path = "../" }
