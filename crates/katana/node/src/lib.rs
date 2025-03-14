@@ -229,8 +229,6 @@ pub async fn build(mut config: Config) -> Result<Node> {
             SettlementLayer::Ethereum { rpc_url, .. } => {
                 GasOracle::sampled_ethereum(rpc_url.clone())
             }
-            // TODO: not sure if fixed would be better here since it doesn't directly depends on the
-            // settlement layer.
             SettlementLayer::Sovereign { .. } => GasOracle::fixed(
                 GasPrices { eth: DEFAULT_ETH_L1_GAS_PRICE, strk: DEFAULT_STRK_L1_GAS_PRICE },
                 GasPrices {
