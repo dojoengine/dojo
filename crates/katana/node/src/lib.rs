@@ -231,7 +231,13 @@ pub async fn build(mut config: Config) -> Result<Node> {
             }
             // TODO: not sure if fixed would be better here since it doesn't directly depends on the
             // settlement layer.
-            SettlementLayer::Sovereign { .. } => GasOracle::sampled_starknet(),
+            SettlementLayer::Sovereign { .. } => GasOracle::fixed(
+                GasPrices { eth: DEFAULT_ETH_L1_GAS_PRICE, strk: DEFAULT_STRK_L1_GAS_PRICE },
+                GasPrices {
+                    eth: DEFAULT_ETH_L1_DATA_GAS_PRICE,
+                    strk: DEFAULT_STRK_L1_DATA_GAS_PRICE,
+                },
+            ),
         }
     } else {
         // Use default fixed gas prices if no url and if no fixed prices are provided
