@@ -154,16 +154,17 @@ fn model_union_field() -> Field {
                             "SELECT * FROM [{}] WHERE internal_event_message_id = ?",
                             table_name
                         );
-                        let row =
-                            sqlx::query(&query).bind(&entity_id).fetch_one(&mut *conn).await?;
+                        let rows =
+                            sqlx::query(&query).bind(&entity_id).fetch_all(&mut *conn).await?;
 
                         // Use value_mapping_from_row to handle nested structures
-                        let data = value_mapping_from_row(&row, &type_mapping, false, false)?;
-
-                        results.push(FieldValue::with_type(
-                            FieldValue::owned_any(data),
-                            utils::type_name_from_names(&namespace, &name),
-                        ))
+                        for row in rows {
+                            let data = value_mapping_from_row(&row, &type_mapping, false, false)?;
+                            results.push(FieldValue::with_type(
+                                FieldValue::owned_any(data),
+                                utils::type_name_from_names(&namespace, &name),
+                            ))
+                        }
                     }
 
                     Ok(Some(FieldValue::list(results)))
