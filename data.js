@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1741958604365,
+  "lastUpdate": 1741968465101,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -57637,6 +57637,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 16890421,
             "range": "± 242158",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "af476bb190b9441d553800f48bb215e335ba3865",
+          "message": "feat(katana): add support for sovereign mode for `init` command (#3101)\n\n* feat: add a proposal to support sovereign rollup Katana init\n\n* rename function\n\n* use fixed gas just for semantic\n\n* reject empty string on clap level\n\n* dont allow not specifying any args at all\n\n* fix: remove addresses TODO\n\n---------\n\nCo-authored-by: Ammar Arif <evergreenkary@gmail.com>",
+          "timestamp": "2025-03-14T15:51:12Z",
+          "tree_id": "b21dfd4eed0c15d12e4e264944a93d4c22e52ee7",
+          "url": "https://github.com/dojoengine/dojo/commit/af476bb190b9441d553800f48bb215e335ba3865"
+        },
+        "date": 1741968462340,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 43696036436,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
