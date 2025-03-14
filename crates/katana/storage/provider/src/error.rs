@@ -96,6 +96,12 @@ pub enum ProviderError {
         storage_key: StorageKey,
     },
 
+    #[error("State proof not supported")]
+    StateProofNotSupported,
+
+    #[error("State root not found")]
+    StateRootNotFound,
+
     #[error(transparent)]
     ContractClassCompilation(#[from] ContractClassCompilationError),
 
@@ -110,6 +116,6 @@ pub enum ProviderError {
     ForkedBackend(#[from] crate::providers::fork::backend::BackendError),
 
     /// Any error that is not covered by the other variants.
-    #[error("soemthing went wrong: {0}")]
+    #[error("Something went wrong: {0}")]
     Other(String),
 }

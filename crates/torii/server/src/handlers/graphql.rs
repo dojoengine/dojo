@@ -8,14 +8,14 @@ use super::Handler;
 
 pub(crate) const LOG_TARGET: &str = "torii::server::handlers::graphql";
 
+#[derive(Debug)]
 pub struct GraphQLHandler {
-    client_ip: IpAddr,
-    graphql_addr: Option<SocketAddr>,
+    pub(crate) graphql_addr: Option<SocketAddr>,
 }
 
 impl GraphQLHandler {
-    pub fn new(client_ip: IpAddr, graphql_addr: Option<SocketAddr>) -> Self {
-        Self { client_ip, graphql_addr }
+    pub fn new(graphql_addr: Option<SocketAddr>) -> Self {
+        Self { graphql_addr }
     }
 }
 
@@ -25,11 +25,10 @@ impl Handler for GraphQLHandler {
         req.uri().path().starts_with("/graphql")
     }
 
-    async fn handle(&self, req: Request<Body>) -> Response<Body> {
+    async fn handle(&self, req: Request<Body>, client_addr: IpAddr) -> Response<Body> {
         if let Some(addr) = self.graphql_addr {
             let graphql_addr = format!("http://{}", addr);
-            match crate::proxy::GRAPHQL_PROXY_CLIENT.call(self.client_ip, &graphql_addr, req).await
-            {
+            match crate::proxy::GRAPHQL_PROXY_CLIENT.call(client_addr, &graphql_addr, req).await {
                 Ok(response) => response,
                 Err(_error) => {
                     error!(target: LOG_TARGET, "GraphQL proxy error: {:?}", _error);

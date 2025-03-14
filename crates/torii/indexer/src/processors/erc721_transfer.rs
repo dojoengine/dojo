@@ -43,8 +43,8 @@ where
 
     fn task_identifier(&self, event: &Event) -> TaskId {
         let mut hasher = DefaultHasher::new();
-        // Hash the event key (Transfer)
-        event.keys[0].hash(&mut hasher);
+        // Hash the contract address
+        event.from_address.hash(&mut hasher);
 
         // Take the max of from/to addresses to get a canonical representation
         // This ensures transfers between the same pair of addresses are grouped together
@@ -80,17 +80,18 @@ where
         let token_id = U256Cainome::cairo_deserialize(&event.keys, 3)?;
         let token_id = U256::from_words(token_id.low, token_id.high);
 
-        db.handle_erc721_transfer(
+        db.handle_nft_transfer(
             token_address,
             from,
             to,
             token_id,
+            U256::from(1u8),
             block_timestamp,
             event_id,
             block_number,
         )
         .await?;
-        debug!(target: LOG_TARGET, from = ?from, to = ?to, token_id = ?token_id, "ERC721 Transfer");
+        debug!(target: LOG_TARGET, from = ?from, to = ?to, token_id = ?token_id, "ERC721 Transfer.");
 
         Ok(())
     }

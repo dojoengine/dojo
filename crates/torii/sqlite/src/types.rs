@@ -126,13 +126,36 @@ pub struct Event {
 
 #[derive(FromRow, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct Token {
+pub struct OptimisticToken {
     pub id: String,
     pub contract_address: String,
+    pub token_id: String,
     pub name: String,
     pub symbol: String,
     pub decimals: u8,
     pub metadata: String,
+}
+
+#[derive(FromRow, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct Token {
+    pub id: String,
+    pub contract_address: String,
+    pub token_id: String,
+    pub name: String,
+    pub symbol: String,
+    pub decimals: u8,
+    pub metadata: String,
+}
+
+#[derive(FromRow, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct OptimisticTokenBalance {
+    pub id: String,
+    pub balance: String,
+    pub account_address: String,
+    pub contract_address: String,
+    pub token_id: String,
 }
 
 #[derive(FromRow, Deserialize, Debug, Clone)]
@@ -156,6 +179,8 @@ pub enum ContractType {
     WORLD,
     ERC20,
     ERC721,
+    ERC1155,
+    UDC,
 }
 
 impl std::fmt::Display for Contract {
@@ -172,6 +197,8 @@ impl FromStr for ContractType {
             "world" => Ok(ContractType::WORLD),
             "erc20" => Ok(ContractType::ERC20),
             "erc721" => Ok(ContractType::ERC721),
+            "erc1155" => Ok(ContractType::ERC1155),
+            "udc" => Ok(ContractType::UDC),
             _ => Err(anyhow::anyhow!("Invalid ERC type: {}", input)),
         }
     }
@@ -183,6 +210,8 @@ impl std::fmt::Display for ContractType {
             ContractType::WORLD => write!(f, "WORLD"),
             ContractType::ERC20 => write!(f, "ERC20"),
             ContractType::ERC721 => write!(f, "ERC721"),
+            ContractType::ERC1155 => write!(f, "ERC1155"),
+            ContractType::UDC => write!(f, "UDC"),
         }
     }
 }
@@ -196,4 +225,10 @@ pub struct ContractCursor {
     pub contract_address: String,
     pub last_pending_block_tx: Option<String>,
     pub last_pending_block_contract_tx: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ModelIndices {
+    pub model_tag: String,
+    pub fields: Vec<String>,
 }

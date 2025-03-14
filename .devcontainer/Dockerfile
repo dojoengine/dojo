@@ -8,7 +8,9 @@ ARG RUST_VERSION
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     && apt-get -y install --no-install-recommends protobuf-compiler libprotobuf-dev libclang-dev libzstd-dev make pkg-config libssl-dev
 
-RUN apt-get install -y gh libgmp3-dev software-properties-common curl git
+RUN apt-get install -y gh libgmp3-dev software-properties-common curl git unzip
+
+RUN curl -fsSL https://bun.sh/install | bash && . /root/.bashrc
 
 RUN curl -L https://foundry.paradigm.xyz/ | bash && . /root/.bashrc && foundryup
 ENV PATH="${PATH}:/root/.foundry/bin"

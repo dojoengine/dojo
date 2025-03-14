@@ -5,6 +5,7 @@ use katana_core::backend::gas_oracle::GasOracle;
 use katana_core::backend::storage::{Blockchain, Database};
 use katana_core::backend::Backend;
 use katana_executor::implementation::blockifier::BlockifierFactory;
+use katana_executor::BlockLimits;
 use katana_primitives::chain::ChainId;
 use katana_primitives::env::CfgEnv;
 use katana_primitives::felt;
@@ -25,6 +26,7 @@ fn executor(chain_spec: &ChainSpec) -> BlockifierFactory {
             ..Default::default()
         },
         Default::default(),
+        BlockLimits::max(),
     )
 }
 
@@ -36,7 +38,7 @@ fn backend_with_db(chain_spec: &ChainSpec, provider: impl Database) -> Backend<B
     Backend::new(
         chain_spec.clone().into(),
         Blockchain::new(provider),
-        GasOracle::zero(),
+        GasOracle::sampled_starknet(),
         executor(chain_spec),
     )
 }
@@ -57,6 +59,7 @@ fn rollup_chain_spec() -> rollup::ChainSpec {
     let fee_contract = FeeContract::default();
 
     let settlement = SettlementLayer::Starknet {
+        block: 0,
         id: ChainId::default(),
         account: Default::default(),
         core_contract: Default::default(),
@@ -72,6 +75,19 @@ fn rollup_chain_spec() -> rollup::ChainSpec {
 fn can_initialize_genesis(#[case] chain: ChainSpec) {
     let backend = backend(&chain);
     backend.init_genesis().expect("failed to initialize genesis");
+}
+
+#[rstest]
+#[case::dev(ChainSpec::Dev(dev_chain_spec()))]
+#[case::rollup(ChainSpec::Rollup(rollup_chain_spec()))]
+fn can_reinitialize_genesis(#[case] chain: ChainSpec) {
+    let db = DbProvider::new_ephemeral();
+
+    let backend = backend_with_db(&chain, db.clone());
+    backend.init_genesis().expect("failed to initialize genesis");
+
+    let backend = backend_with_db(&chain, db);
+    backend.init_genesis().unwrap();
 }
 
 #[test]

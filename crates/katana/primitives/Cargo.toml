@@ -10,9 +10,11 @@ version.workspace = true
 katana-cairo.workspace = true
 
 anyhow.workspace = true
+account_sdk = { workspace = true, optional = true }
 arbitrary = { workspace = true, optional = true }
 base64.workspace = true
 derive_more.workspace = true
+heapless = { version = "0.8.0", features = [ "serde" ] }
 lazy_static.workspace = true
 num-traits.workspace = true
 rand = { workspace = true, features = [ "small_rng" ] }
@@ -37,6 +39,9 @@ postcard.workspace = true
 rstest.workspace = true
 similar-asserts.workspace = true
 
+criterion.workspace = true
+pprof.workspace = true
+
 [features]
 default = [ "serde" ]
 
@@ -46,6 +51,11 @@ arbitrary = [
 	# See the comment in katana-cairo/Cargo.toml for why this is needed.
 	"katana-cairo/cairo-vm-test-utils",
 ]
-controller = [  ]
+controller = [ ]
 serde = [ "alloy-primitives/serde" ]
 slot = [ "controller" ]
+cartridge = [ "account_sdk" ]
+
+[[bench]]
+harness = false
+name = "class"

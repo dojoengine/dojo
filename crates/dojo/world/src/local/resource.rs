@@ -11,6 +11,7 @@ pub enum ResourceLocal {
     Contract(ContractLocal),
     Model(ModelLocal),
     Event(EventLocal),
+    Library(LibraryLocal),
 }
 
 /// Common information about a world's resource.
@@ -36,6 +37,16 @@ pub struct ContractLocal {
     pub common: CommonLocalInfo,
     /// The systems of the contract.
     pub systems: Vec<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct LibraryLocal {
+    /// Common information about the resource.
+    pub common: CommonLocalInfo,
+    /// The systems of the library.
+    pub systems: Vec<String>,
+    /// The version of the library
+    pub version: String,
 }
 
 #[derive(Debug, Clone)]
@@ -79,6 +90,7 @@ impl ResourceLocal {
             ResourceLocal::Model(m) => m.common.name.clone(),
             ResourceLocal::Event(e) => e.common.name.clone(),
             ResourceLocal::Namespace(n) => n.name.clone(),
+            ResourceLocal::Library(l) => l.common.name.clone(),
         }
     }
 
@@ -89,6 +101,7 @@ impl ResourceLocal {
             ResourceLocal::Contract(c) => c.common.namespace.clone(),
             ResourceLocal::Model(m) => m.common.namespace.clone(),
             ResourceLocal::Event(e) => e.common.namespace.clone(),
+            ResourceLocal::Library(l) => l.common.namespace.clone(),
         }
     }
 
@@ -98,6 +111,7 @@ impl ResourceLocal {
             ResourceLocal::Contract(c) => c.common.class_hash,
             ResourceLocal::Model(m) => m.common.class_hash,
             ResourceLocal::Event(e) => e.common.class_hash,
+            ResourceLocal::Library(l) => l.common.class_hash,
             _ => Felt::ZERO,
         }
     }
@@ -108,6 +122,7 @@ impl ResourceLocal {
             ResourceLocal::Contract(c) => c.common.class.abi.clone(),
             ResourceLocal::Model(m) => m.common.class.abi.clone(),
             ResourceLocal::Event(e) => e.common.class.abi.clone(),
+            ResourceLocal::Library(l) => l.common.class.abi.clone(),
             _ => Vec::new(),
         }
     }
@@ -146,6 +161,7 @@ impl ResourceLocal {
             ResourceLocal::Model(_) => ResourceType::Model,
             ResourceLocal::Event(_) => ResourceType::Event,
             ResourceLocal::Namespace(_) => ResourceType::Namespace,
+            ResourceLocal::Library(_) => ResourceType::Library,
         }
     }
 
@@ -156,6 +172,7 @@ impl ResourceLocal {
             ResourceLocal::Model(m) => &m.common,
             ResourceLocal::Event(e) => &e.common,
             ResourceLocal::Namespace(_) => panic!("Namespace has no common info."),
+            ResourceLocal::Library(l) => &l.common,
         }
     }
 }

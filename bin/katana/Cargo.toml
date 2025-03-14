@@ -16,6 +16,7 @@ katana-primitives.workspace = true
 katana-rpc-types.workspace = true
 
 anyhow.workspace = true
+async-trait.workspace = true
 byte-unit = "5.1.4"
 cainome.workspace = true
 clap.workspace = true
@@ -23,7 +24,8 @@ clap_complete.workspace = true
 comfy-table = "7.1.1"
 dojo-utils.workspace = true
 inquire = "0.7.5"
-lazy_static.workspace = true
+# This revision is not published for Scarb issue only, it's just a binding change...
+piltover = { git = "https://github.com/keep-starknet-strange/piltover.git", rev = "4cdda5a" }
 rand.workspace = true
 shellexpand = "3.1.0"
 spinoff.workspace = true
@@ -32,6 +34,7 @@ strum_macros.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
 tracing.workspace = true
+url.workspace = true
 
 [dev-dependencies]
 assert_matches.workspace = true
@@ -39,8 +42,8 @@ rstest.workspace = true
 starknet.workspace = true
 
 [features]
-default = [ "jemalloc", "katana-cli/slot" ]
+default = [ "init-slot", "jemalloc", "katana-cli/slot" ]
 
 init-custom-settlement-chain = [  ]
+init-slot = [  ]
 jemalloc = [  ]
-starknet-messaging = [ "katana-cli/starknet-messaging" ]

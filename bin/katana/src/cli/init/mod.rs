@@ -1,194 +1,401 @@
-mod deployment;
-
+use std::path::PathBuf;
 use std::str::FromStr;
-use std::sync::Arc;
 
-use anyhow::{Context, Result};
+use anyhow::Context;
+use clap::builder::NonEmptyStringValueParser;
 use clap::Args;
-use inquire::{Confirm, CustomType, Select};
-use katana_chain_spec::rollup::FeeContract;
+use deployment::DeploymentOutcome;
+use katana_chain_spec::rollup::{ChainConfigDir, FeeContract};
 use katana_chain_spec::{rollup, SettlementLayer};
+use katana_primitives::block::BlockNumber;
 use katana_primitives::chain::ChainId;
 use katana_primitives::genesis::allocation::DevAllocationsGenerator;
 use katana_primitives::genesis::constant::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;
 use katana_primitives::genesis::Genesis;
 use katana_primitives::{ContractAddress, Felt, U256};
-use lazy_static::lazy_static;
+use settlement::SettlementChainProvider;
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
-use starknet::core::types::{BlockId, BlockTag};
 use starknet::core::utils::{cairo_short_string_to_felt, parse_cairo_short_string};
-use starknet::providers::jsonrpc::HttpTransport;
-use starknet::providers::{JsonRpcClient, Provider, Url};
-use starknet::signers::{LocalWallet, SigningKey};
-use tokio::runtime::Runtime as AsyncRuntime;
+use starknet::providers::Provider;
+use starknet::signers::SigningKey;
+use url::Url;
 
-const CARTRIDGE_SN_SEPOLIA_PROVIDER: &str = "https://api.cartridge.gg/x/starknet/sepolia";
+mod deployment;
+mod prompt;
+mod settlement;
+#[cfg(feature = "init-slot")]
+mod slot;
 
 #[derive(Debug, Args)]
-pub struct InitArgs;
+pub struct InitArgs {
+    /// The id of the new chain to be initialized.
+    ///
+    /// An empty `Id` is not a allowed, since the chain id must be
+    /// a valid ASCII string.
+    #[arg(long)]
+    #[arg(value_parser = NonEmptyStringValueParser::new())]
+    id: Option<String>,
+
+    /// The settlement chain to be used, where the core contract is deployed.
+    #[arg(long = "settlement-chain")]
+    #[arg(required_unless_present = "sovereign")]
+    #[arg(requires_all = ["id", "settlement_account", "settlement_account_private_key"])]
+    settlement_chain: Option<SettlementChain>,
+
+    /// The address of the settlement account to be used to configure the core contract.
+    #[arg(long = "settlement-account-address")]
+    #[arg(required_unless_present = "sovereign")]
+    #[arg(requires_all = ["id", "settlement_chain", "settlement_account_private_key"])]
+    settlement_account: Option<ContractAddress>,
+
+    /// The private key of the settlement account to be used to configure the core contract.
+    #[arg(long = "settlement-account-private-key")]
+    #[arg(required_unless_present = "sovereign")]
+    #[arg(requires_all = ["id", "settlement_chain", "settlement_account"])]
+    settlement_account_private_key: Option<Felt>,
+
+    /// The address of the settlement contract.
+    /// If not provided, the contract will be deployed on the settlement chain using the provided
+    /// settlement account.
+    #[arg(long = "settlement-contract")]
+    #[arg(requires_all = ["id", "settlement_chain", "settlement_account", "settlement_account_private_key", "settlement_contract_deployed_block"])]
+    settlement_contract: Option<ContractAddress>,
+
+    /// The block number of the settlement contract deployment.
+    /// This value is required if the `settlement-contract` is provided, for Katana to
+    /// know from which block the messages can be gathered from the settlement chain.
+    #[arg(long = "settlement-contract-deployed-block")]
+    #[arg(requires = "settlement_contract")]
+    settlement_contract_deployed_block: Option<BlockNumber>,
+
+    /// Initialize a sovereign chain with no settlement layer, by only publishing the state updates
+    /// and proofs on a Data Availability Layer. By using this flag, no settlement option is
+    /// required.
+    #[arg(long)]
+    #[arg(help = "Initialize a sovereign chain with no settlement layer, by only publishing the \
+                  state updates and proofs on a Data Availability Layer.")]
+    #[arg(requires_all = ["id"])]
+    #[arg(conflicts_with_all = ["settlement_chain", "settlement_account", "settlement_account_private_key", "settlement_contract"])]
+    sovereign: bool,
+
+    /// Specify the path of the directory where the configuration files will be stored at.
+    #[arg(long)]
+    output_path: Option<PathBuf>,
+
+    #[cfg(feature = "init-slot")]
+    #[command(flatten)]
+    slot: slot::SlotArgs,
+}
 
 impl InitArgs {
     // TODO:
     // - deploy bridge contract
-    // - generate the genesis
-    pub(crate) fn execute(self) -> Result<()> {
-        let rt = tokio::runtime::Builder::new_multi_thread().enable_all().build()?;
-        let input = self.prompt(&rt)?;
-
-        let settlement = SettlementLayer::Starknet {
-            account: input.account,
-            rpc_url: input.rpc_url,
-            id: ChainId::parse(&input.settlement_id)?,
-            core_contract: input.settlement_contract,
+    pub(crate) async fn execute(self) -> anyhow::Result<()> {
+        let output = if let Some(output) = self.configure_from_args().await {
+            output?
+        } else {
+            prompt::prompt().await?
         };
 
-        let id = ChainId::parse(&input.id)?;
-        let genesis = GENESIS.clone();
+        let settlement = match &output {
+            AnyOutcome::Persistent(persistent) => SettlementLayer::Starknet {
+                account: persistent.account,
+                rpc_url: persistent.rpc_url.clone(),
+                id: ChainId::parse(&persistent.settlement_id)?,
+                block: persistent.deployment_outcome.block_number,
+                core_contract: persistent.deployment_outcome.contract_address,
+            },
+            AnyOutcome::Sovereign(_) => SettlementLayer::Sovereign {},
+        };
+
+        let id = ChainId::parse(output.id())?;
+
+        #[cfg_attr(not(feature = "init-slot"), allow(unused_mut))]
+        let mut genesis = generate_genesis();
+        #[cfg(feature = "init-slot")]
+        slot::add_paymasters_to_genesis(
+            &mut genesis,
+            &output.slot_paymasters().unwrap_or_default(),
+        );
+
         // At the moment, the fee token is limited to a predefined token.
         let fee_contract = FeeContract::default();
-
         let chain_spec = rollup::ChainSpec { id, genesis, settlement, fee_contract };
-        rollup::file::write(&chain_spec).context("failed to write chain spec file")?;
+
+        if let Some(path) = self.output_path {
+            let dir = ChainConfigDir::create(path)?;
+            rollup::write(&dir, &chain_spec).context("failed to write chain spec file")?;
+        } else {
+            // Write to the local chain config directory by default if user
+            // doesn't specify the output path
+            rollup::write_local(&chain_spec).context("failed to write chain spec file")?;
+        }
 
         Ok(())
     }
 
-    fn prompt(&self, rt: &AsyncRuntime) -> Result<PromptOutcome> {
-        let chain_id = CustomType::<String>::new("Id")
-        .with_help_message("This will be the id of your rollup chain.")
-        // checks that the input is a valid ascii string.
-        .with_parser(&|input| {
-            if input.is_ascii() {
-                Ok(input.to_string())
-            } else {
-                Err(())
+    async fn configure_from_args(&self) -> Option<anyhow::Result<AnyOutcome>> {
+        if let Some(id) = self.id.clone() {
+            if self.sovereign {
+                return Some(Ok(AnyOutcome::Sovereign(SovereignOutcome {
+                    id,
+                    #[cfg(feature = "init-slot")]
+                    slot_paymasters: self.slot.paymaster_accounts.clone(),
+                })));
             }
-        })
-        .with_error_message("Must be valid ASCII characters")
-        .prompt()?;
 
-        #[derive(Debug, strum_macros::Display)]
-        enum SettlementChainOpt {
-            Sepolia,
-            #[cfg(feature = "init-custom-settlement-chain")]
-            Custom,
-        }
+            // These args are all required if at least one of them are specified (incl chain id) and
+            // `clap` has already handled that for us, so it's safe to unwrap here.
+            let settlement_chain = self.settlement_chain.clone().expect("must present");
+            let settlement_account_address = self.settlement_account.expect("must present");
+            let settlement_private_key = self.settlement_account_private_key.expect("must present");
 
-        // Right now we only support settling on Starknet Sepolia because we're limited to what
-        // network the Atlantic service could settle the proofs to. Supporting a custom
-        // network here (eg local devnet) would require that the proving service we're using
-        // be able to settle the proofs there.
-        let network_opts = vec![
-            SettlementChainOpt::Sepolia,
-            #[cfg(feature = "init-custom-settlement-chain")]
-            SettlementChainOpt::Custom,
-        ];
+            let settlement_provider = match settlement_chain {
+                SettlementChain::Mainnet => SettlementChainProvider::sn_mainnet(),
+                SettlementChain::Sepolia => SettlementChainProvider::sn_sepolia(),
+                #[cfg(feature = "init-custom-settlement-chain")]
+                SettlementChain::Custom(url) => {
+                    use katana_primitives::felt;
 
-        let network_type = Select::new("Settlement chain", network_opts).prompt()?;
-
-        let settlement_url = match network_type {
-            SettlementChainOpt::Sepolia => Url::parse(CARTRIDGE_SN_SEPOLIA_PROVIDER)?,
-
-            // Useful for testing the program flow without having to run it against actual network.
-            #[cfg(feature = "init-custom-settlement-chain")]
-            SettlementChainOpt::Custom => CustomType::<Url>::new("Settlement RPC URL")
-                .with_default(Url::parse("http://localhost:5050")?)
-                .with_error_message("Please enter a valid URL")
-                .prompt()?,
-        };
-
-        let l1_provider = Arc::new(JsonRpcClient::new(HttpTransport::new(settlement_url.clone())));
-
-        let contract_exist_parser = &|input: &str| {
-            let block_id = BlockId::Tag(BlockTag::Pending);
-            let address = Felt::from_str(input).map_err(|_| ())?;
-            let result = rt.block_on(l1_provider.clone().get_class_hash_at(block_id, address));
-
-            match result {
-                Ok(..) => Ok(ContractAddress::from(address)),
-                Err(..) => Err(()),
-            }
-        };
-
-        let account_address = CustomType::<ContractAddress>::new("Account")
-            .with_error_message("Please enter a valid account address")
-            .with_parser(contract_exist_parser)
-            .prompt()?;
-
-        let private_key = CustomType::<Felt>::new("Private key")
-            .with_formatter(&|input: Felt| format!("{input:#x}"))
-            .prompt()?;
-
-        let l1_chain_id = rt.block_on(l1_provider.chain_id())?;
-        let account = SingleOwnerAccount::new(
-            l1_provider.clone(),
-            LocalWallet::from_signing_key(SigningKey::from_secret_scalar(private_key)),
-            account_address.into(),
-            l1_chain_id,
-            ExecutionEncoding::New,
-        );
-
-        // The core settlement contract on L1c.
-        // Prompt the user whether to deploy the settlement contract or not.
-        let settlement_contract =
-            if Confirm::new("Deploy settlement contract?").with_default(true).prompt()? {
-                let chain_id = cairo_short_string_to_felt(&chain_id)?;
-                let initialize = deployment::deploy_settlement_contract(account, chain_id);
-                let result = rt.block_on(initialize);
-                result?
-            }
-            // If denied, prompt the user for an already deployed contract.
-            else {
-                let address = CustomType::<ContractAddress>::new("Settlement contract")
-                    .with_parser(contract_exist_parser)
-                    .prompt()?;
-
-                // Check that the settlement contract has been initialized with the correct program
-                // info.
-                let chain_id = cairo_short_string_to_felt(&chain_id)?;
-                rt.block_on(deployment::check_program_info(chain_id, address.into(), &l1_provider))
-                    .context(
-                        "Invalid settlement contract. The contract might have been configured \
-                         incorrectly.",
-                    )?;
-
-                address
+                    // TODO: make this configurable
+                    let facts_registry_placeholder = felt!("0x1337");
+                    SettlementChainProvider::new(url, facts_registry_placeholder)
+                }
             };
 
-        Ok(PromptOutcome {
-            account: account_address,
-            settlement_contract,
-            settlement_id: parse_cairo_short_string(&l1_chain_id)?,
-            id: chain_id,
-            rpc_url: settlement_url,
-        })
+            let l1_chain_id = settlement_provider.chain_id().await.unwrap();
+
+            let chain_id = cairo_short_string_to_felt(&id).unwrap();
+
+            let deployment_outcome = if let Some(contract) = self.settlement_contract {
+                deployment::check_program_info(chain_id, contract.into(), &settlement_provider)
+                    .await
+                    .unwrap();
+
+                DeploymentOutcome {
+                    contract_address: contract,
+                    block_number: self
+                        .settlement_contract_deployed_block
+                        .expect("must exist at this point"),
+                }
+            }
+            // If settlement contract is not provided, then we will deploy it.
+            else {
+                let account = SingleOwnerAccount::new(
+                    settlement_provider.clone(),
+                    SigningKey::from_secret_scalar(settlement_private_key).into(),
+                    settlement_account_address.into(),
+                    l1_chain_id,
+                    ExecutionEncoding::New,
+                );
+
+                deployment::deploy_settlement_contract(account, chain_id).await.unwrap()
+            };
+
+            Some(Ok(AnyOutcome::Persistent(PersistentOutcome {
+                id,
+                deployment_outcome,
+                rpc_url: settlement_provider.url().clone(),
+                account: settlement_account_address,
+                settlement_id: parse_cairo_short_string(&l1_chain_id).unwrap(),
+                #[cfg(feature = "init-slot")]
+                slot_paymasters: self.slot.paymaster_accounts.clone(),
+            })))
+        } else {
+            None
+        }
+    }
+}
+
+/// The outcome of the initialization process.
+#[derive(Debug)]
+enum AnyOutcome {
+    Persistent(PersistentOutcome),
+    Sovereign(SovereignOutcome),
+}
+
+impl AnyOutcome {
+    pub fn id(&self) -> &str {
+        match self {
+            AnyOutcome::Persistent(persistent) => &persistent.id,
+            AnyOutcome::Sovereign(sovereign) => &sovereign.id,
+        }
+    }
+
+    #[cfg(feature = "init-slot")]
+    pub fn slot_paymasters(&self) -> Option<Vec<slot::PaymasterAccountArgs>> {
+        match self {
+            AnyOutcome::Persistent(persistent) => persistent.slot_paymasters.clone(),
+            AnyOutcome::Sovereign(sovereign) => sovereign.slot_paymasters.clone(),
+        }
     }
 }
 
 #[derive(Debug)]
-struct PromptOutcome {
-    /// the account address that is used to send the transactions for contract
-    /// deployment/initialization.
-    account: ContractAddress,
+struct SovereignOutcome {
+    /// The id of the new chain to be initialized.
+    pub id: String,
 
-    // the id of the new chain to be initialized.
-    id: String,
-
-    // the chain id of the settlement layer.
-    settlement_id: String,
-
-    // the rpc url for the settlement layer.
-    rpc_url: Url,
-
-    settlement_contract: ContractAddress,
+    #[cfg(feature = "init-slot")]
+    pub slot_paymasters: Option<Vec<slot::PaymasterAccountArgs>>,
 }
 
-lazy_static! {
-    static ref GENESIS: Genesis = {
-        // master account
-        let accounts = DevAllocationsGenerator::new(1).with_balance(U256::from(DEFAULT_PREFUNDED_ACCOUNT_BALANCE)).generate();
-        let mut genesis = Genesis::default();
-        genesis.extend_allocations(accounts.into_iter().map(|(k, v)| (k, v.into())));
-        genesis
-    };
+#[derive(Debug)]
+struct PersistentOutcome {
+    /// the account address that is used to send the transactions for contract
+    /// deployment/initialization.
+    pub account: ContractAddress,
+
+    // the id of the new chain to be initialized.
+    pub id: String,
+
+    // the chain id of the settlement layer.
+    pub settlement_id: String,
+
+    // the rpc url for the settlement layer.
+    pub rpc_url: Url,
+
+    pub deployment_outcome: DeploymentOutcome,
+
+    #[cfg(feature = "init-slot")]
+    pub slot_paymasters: Option<Vec<slot::PaymasterAccountArgs>>,
+}
+
+fn generate_genesis() -> Genesis {
+    let accounts = DevAllocationsGenerator::new(1)
+        .with_balance(U256::from(DEFAULT_PREFUNDED_ACCOUNT_BALANCE))
+        .generate();
+    let mut genesis = Genesis::default();
+    genesis.extend_allocations(accounts.into_iter().map(|(k, v)| (k, v.into())));
+    genesis
+}
+
+#[derive(Debug, thiserror::Error)]
+#[error("Unsupported settlement chain: {id}")]
+struct SettlementChainTryFromStrError {
+    id: String,
+}
+
+#[derive(Debug, Clone, strum_macros::Display, PartialEq, Eq)]
+enum SettlementChain {
+    Mainnet,
+    Sepolia,
+    #[cfg(feature = "init-custom-settlement-chain")]
+    Custom(Url),
+}
+
+impl std::str::FromStr for SettlementChain {
+    type Err = SettlementChainTryFromStrError;
+    fn from_str(s: &str) -> Result<SettlementChain, <Self as ::core::str::FromStr>::Err> {
+        let id = s.to_lowercase();
+        if &id == "sepolia" || &id == "sn_sepolia" {
+            return Ok(SettlementChain::Sepolia);
+        }
+
+        if &id == "mainnet" || &id == "sn_mainnet" {
+            return Ok(SettlementChain::Mainnet);
+        }
+
+        #[cfg(feature = "init-custom-settlement-chain")]
+        if let Ok(url) = Url::parse(s) {
+            return Ok(SettlementChain::Custom(url));
+        };
+
+        Err(SettlementChainTryFromStrError { id: s.to_string() })
+    }
+}
+
+impl TryFrom<&str> for SettlementChain {
+    type Error = SettlementChainTryFromStrError;
+    fn try_from(s: &str) -> Result<SettlementChain, <Self as TryFrom<&str>>::Error> {
+        SettlementChain::from_str(s)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use assert_matches::assert_matches;
+    use clap::error::{ContextKind, ContextValue};
+    use clap::Parser;
+    use rstest::rstest;
+
+    use super::*;
+
+    #[rstest]
+    #[case("sepolia", SettlementChain::Sepolia)]
+    #[case("SEPOLIA", SettlementChain::Sepolia)]
+    #[case("sn_sepolia", SettlementChain::Sepolia)]
+    #[case("SN_SEPOLIA", SettlementChain::Sepolia)]
+    #[case("mainnet", SettlementChain::Mainnet)]
+    #[case("MAINNET", SettlementChain::Mainnet)]
+    #[case("sn_mainnet", SettlementChain::Mainnet)]
+    #[case("SN_MAINNET", SettlementChain::Mainnet)]
+    fn test_chain_from_str(#[case] input: &str, #[case] expected: SettlementChain) {
+        assert_matches!(SettlementChain::from_str(input), Ok(chain) if chain == expected);
+    }
+
+    #[test]
+    fn invalid_chain() {
+        assert!(SettlementChain::from_str("invalid_chain").is_err());
+    }
+
+    #[test]
+    #[cfg(feature = "init-custom-settlement-chain")]
+    fn custom_settlement_chain() {
+        assert_matches!(
+            SettlementChain::from_str("http://localhost:5050"),
+            Ok(SettlementChain::Custom(actual_url)) => {
+                assert_eq!(actual_url, Url::parse("http://localhost:5050").unwrap());
+            }
+        );
+    }
+
+    #[test]
+    fn non_sovereign_requires_all_settlement_args() {
+        #[derive(Parser)]
+        struct Cli {
+            #[command(flatten)]
+            args: InitArgs,
+        }
+
+        // This should fail with the expected error message:-
+        //
+        // ```
+        // error: the following required arguments were not provided:
+        //   --settlement-chain <SETTLEMENT_CHAIN>
+        //   --settlement-account-address <SETTLEMENT_ACCOUNT>
+        //   --settlement-account-private-key <SETTLEMENT_ACCOUNT_PRIVATE_KEY>
+        // ```
+        match Cli::try_parse_from(["init", "--id", "bruh"]) {
+            Ok(..) => panic!("Expected parsing to fail with missing required arguments"),
+            Err(err) => {
+                if let ContextValue::Strings(values) = err.get(ContextKind::InvalidArg).unwrap() {
+                    // Assert that the error message contains all the required arguments
+                    assert!(values.contains(&"--settlement-chain <SETTLEMENT_CHAIN>".to_string()));
+                    assert!(values.contains(
+                        &"--settlement-account-address <SETTLEMENT_ACCOUNT>".to_string()
+                    ));
+                    assert!(
+                        values.contains(
+                            &"--settlement-account-private-key <SETTLEMENT_ACCOUNT_PRIVATE_KEY>"
+                                .to_string()
+                        )
+                    );
+                } else {
+                    panic!("Expected InvalidArg context with Strings value");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn sovereign_does_not_require_settlement_args() {
+        #[derive(Parser)]
+        struct Cli {
+            #[command(flatten)]
+            args: InitArgs,
+        }
+
+        Cli::parse_from(["init", "--id", "bruh", "--sovereign"]);
+    }
 }

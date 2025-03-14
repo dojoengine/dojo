@@ -28,8 +28,13 @@ use torii_sqlite::{Cursors, Sql};
 use tracing::{debug, error, info, trace, warn};
 
 use crate::constants::LOG_TARGET;
+use crate::processors::controller::ControllerProcessor;
+use crate::processors::erc1155_transfer_batch::Erc1155TransferBatchProcessor;
+use crate::processors::erc1155_transfer_single::Erc1155TransferSingleProcessor;
 use crate::processors::erc20_legacy_transfer::Erc20LegacyTransferProcessor;
 use crate::processors::erc20_transfer::Erc20TransferProcessor;
+use crate::processors::erc4906_batch_metadata_update::Erc4906BatchMetadataUpdateProcessor;
+use crate::processors::erc4906_metadata_update::Erc4906MetadataUpdateProcessor;
 use crate::processors::erc721_legacy_transfer::Erc721LegacyTransferProcessor;
 use crate::processors::erc721_transfer::Erc721TransferProcessor;
 use crate::processors::event_message::EventMessageProcessor;
@@ -39,6 +44,7 @@ use crate::processors::register_event::RegisterEventProcessor;
 use crate::processors::register_model::RegisterModelProcessor;
 use crate::processors::store_del_record::StoreDelRecordProcessor;
 use crate::processors::store_set_record::StoreSetRecordProcessor;
+use crate::processors::store_transaction::StoreTransactionProcessor;
 use crate::processors::store_update_member::StoreUpdateMemberProcessor;
 use crate::processors::store_update_record::StoreUpdateRecordProcessor;
 use crate::processors::upgrade_event::UpgradeEventProcessor;
@@ -62,7 +68,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Default for Processo
     fn default() -> Self {
         Self {
             block: vec![],
-            transaction: vec![],
+            transaction: vec![Box::new(StoreTransactionProcessor)],
             // We shouldn't have a catch all for now since the world doesn't forward raw events
             // anymore.
             catch_all_event: Box::new(RawEventProcessor) as Box<dyn EventProcessor<P>>,
@@ -103,8 +109,20 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Processors<P> {
                 vec![
                     Box::new(Erc721TransferProcessor) as Box<dyn EventProcessor<P>>,
                     Box::new(Erc721LegacyTransferProcessor) as Box<dyn EventProcessor<P>>,
+                    Box::new(Erc4906MetadataUpdateProcessor) as Box<dyn EventProcessor<P>>,
+                    Box::new(Erc4906BatchMetadataUpdateProcessor) as Box<dyn EventProcessor<P>>,
                 ],
             ),
+            (
+                ContractType::ERC1155,
+                vec![
+                    Box::new(Erc1155TransferBatchProcessor) as Box<dyn EventProcessor<P>>,
+                    Box::new(Erc1155TransferSingleProcessor) as Box<dyn EventProcessor<P>>,
+                    Box::new(Erc4906MetadataUpdateProcessor) as Box<dyn EventProcessor<P>>,
+                    Box::new(Erc4906BatchMetadataUpdateProcessor) as Box<dyn EventProcessor<P>>,
+                ],
+            ),
+            (ContractType::UDC, vec![Box::new(ControllerProcessor) as Box<dyn EventProcessor<P>>]),
         ];
 
         for (contract_type, processors) in event_processors {
@@ -188,7 +206,7 @@ impl FetchDataResult {
 pub struct FetchRangeResult {
     // (block_number, transaction_hash) -> events
     // NOTE: LinkedList might contains blocks in different order
-    pub transactions: LinkedHashMap<(u64, Felt), Vec<EmittedEvent>>,
+    pub transactions: BTreeMap<u64, LinkedHashMap<Felt, Vec<EmittedEvent>>>,
     pub blocks: BTreeMap<u64, u64>,
     pub latest_block_number: u64,
 }
@@ -294,6 +312,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                                         self.db.flush().await?;
                                         self.db.apply_cache_diff(block_id).await?;
                                         self.db.execute().await?;
+                                        debug!(target: LOG_TARGET, block_number = ?block_id, "Flushed and applied cache diff.");
                                     }
                                 },
                                 Err(e) => {
@@ -426,7 +445,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
 
         // Flatten events pages and events according to the pending block cursor
         // to array of (block_number, transaction_hash)
-        let mut transactions = LinkedHashMap::new();
+        let mut transactions = BTreeMap::new();
 
         let mut block_set = HashSet::new();
         for event in events {
@@ -438,7 +457,9 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
             block_set.insert(block_number);
 
             transactions
-                .entry((block_number, event.transaction_hash))
+                .entry(block_number)
+                .or_insert(LinkedHashMap::new())
+                .entry(event.transaction_hash)
                 .or_insert(vec![])
                 .push(event);
         }
@@ -557,24 +578,26 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         // Process all transactions
         let mut processed_blocks = HashSet::new();
         let mut cursor_map = HashMap::new();
-        for ((block_number, transaction_hash), events) in data.transactions {
-            debug!("Processing transaction hash: {:#x}", transaction_hash);
-            // Process transaction
-            let transaction = if self.config.flags.contains(IndexingFlags::TRANSACTIONS) {
-                Some(self.provider.get_transaction_by_hash(transaction_hash).await?)
-            } else {
-                None
-            };
+        for (block_number, transactions) in data.transactions {
+            for (transaction_hash, events) in transactions {
+                debug!("Processing transaction hash: {:#x}", transaction_hash);
+                // Process transaction
+                let transaction = if self.config.flags.contains(IndexingFlags::TRANSACTIONS) {
+                    Some(self.provider.get_transaction_by_hash(transaction_hash).await?)
+                } else {
+                    None
+                };
 
-            self.process_transaction_with_events(
-                transaction_hash,
-                events.as_slice(),
-                block_number,
-                data.blocks[&block_number],
-                transaction,
-                &mut cursor_map,
-            )
-            .await?;
+                self.process_transaction_with_events(
+                    transaction_hash,
+                    events.as_slice(),
+                    block_number,
+                    data.blocks[&block_number],
+                    transaction,
+                    &mut cursor_map,
+                )
+                .await?;
+            }
 
             // Process block
             if !processed_blocks.contains(&block_number) {
@@ -638,8 +661,8 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
             .await?;
         }
 
-        for contract in unique_contracts {
-            let entry = cursor_map.entry(contract).or_insert((transaction_hash, 0));
+        for contract in &unique_contracts {
+            let entry = cursor_map.entry(*contract).or_insert((transaction_hash, 0));
             entry.1 += 1;
         }
 
@@ -649,6 +672,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                 block_number,
                 block_timestamp,
                 transaction_hash,
+                &unique_contracts,
                 transaction,
             )
             .await?;
@@ -703,6 +727,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                     block_number,
                     block_timestamp,
                     *transaction_hash,
+                    &unique_contracts,
                     &transaction_with_receipt.transaction,
                 )
                 .await?;
@@ -734,6 +759,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         block_number: u64,
         block_timestamp: u64,
         transaction_hash: Felt,
+        contract_addresses: &HashSet<Felt>,
         transaction: &Transaction,
     ) -> Result<()> {
         for processor in &self.processors.transaction {
@@ -744,6 +770,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                     block_number,
                     block_timestamp,
                     transaction_hash,
+                    contract_addresses,
                     transaction,
                 )
                 .await?

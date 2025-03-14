@@ -10,7 +10,7 @@ pub mod version;
 use std::future::IntoFuture;
 use std::sync::Arc;
 
-use anyhow::{Context, Result};
+use anyhow::{ensure, Context, Result};
 use config::rpc::RpcModuleKind;
 use config::Config;
 use dojo_metrics::exporters::prometheus::PrometheusRecorder;
@@ -34,13 +34,17 @@ use katana_pool::ordering::FiFo;
 use katana_pool::TxPool;
 use katana_primitives::block::GasPrices;
 use katana_primitives::env::{CfgEnv, FeeTokenAddressses};
+#[cfg(feature = "cartridge")]
+use katana_rpc::cartridge::CartridgeApi;
 use katana_rpc::cors::Cors;
 use katana_rpc::dev::DevApi;
 use katana_rpc::saya::SayaApi;
 use katana_rpc::starknet::forking::ForkedClient;
-use katana_rpc::starknet::{StarknetApi, StarknetApiConfig};
+use katana_rpc::starknet::{PaymasterConfig, StarknetApi, StarknetApiConfig};
 use katana_rpc::torii::ToriiApi;
 use katana_rpc::{RpcServer, RpcServerHandle};
+#[cfg(feature = "cartridge")]
+use katana_rpc_api::cartridge::CartridgeApiServer;
 use katana_rpc_api::dev::DevApiServer;
 use katana_rpc_api::saya::SayaApiServer;
 use katana_rpc_api::starknet::{StarknetApiServer, StarknetTraceApiServer, StarknetWriteApiServer};
@@ -182,7 +186,16 @@ pub async fn build(mut config: Config) -> Result<Node> {
         .with_account_validation(config.dev.account_validation)
         .with_fee(config.dev.fee);
 
-    let executor_factory = Arc::new(BlockifierFactory::new(cfg_env, execution_flags));
+    let executor_factory = {
+        let mut factory =
+            BlockifierFactory::new(cfg_env, execution_flags, config.sequencing.block_limits());
+
+        if let Some(max_call_gas) = config.rpc.max_call_gas {
+            factory.set_max_call_gas(max_call_gas);
+        }
+
+        Arc::new(factory)
+    };
 
     // --- build backend
 
@@ -220,6 +233,13 @@ pub async fn build(mut config: Config) -> Result<Node> {
             SettlementLayer::Ethereum { rpc_url, .. } => {
                 GasOracle::sampled_ethereum(rpc_url.clone())
             }
+            SettlementLayer::Sovereign { .. } => GasOracle::fixed(
+                GasPrices { eth: DEFAULT_ETH_L1_GAS_PRICE, strk: DEFAULT_STRK_L1_GAS_PRICE },
+                GasPrices {
+                    eth: DEFAULT_ETH_L1_DATA_GAS_PRICE,
+                    strk: DEFAULT_STRK_L1_DATA_GAS_PRICE,
+                },
+            ),
         }
     } else {
         // Use default fixed gas prices if no url and if no fixed prices are provided
@@ -267,10 +287,32 @@ pub async fn build(mut config: Config) -> Result<Node> {
         .allow_methods([Method::POST, Method::GET])
         .allow_headers([hyper::header::CONTENT_TYPE, "argent-client".parse().unwrap(), "argent-version".parse().unwrap()]);
 
+    #[cfg(feature = "cartridge")]
+    let paymaster = if let Some(paymaster) = &config.paymaster {
+        ensure!(
+            config.rpc.apis.contains(&RpcModuleKind::Cartridge),
+            "Cartridge API should be enabled when paymaster is set"
+        );
+
+        let api = CartridgeApi::new(
+            backend.clone(),
+            block_producer.clone(),
+            pool.clone(),
+            paymaster.cartridge_api_url.clone(),
+        );
+        rpc_modules.merge(api.into_rpc())?;
+
+        Some(PaymasterConfig { cartridge_api_url: paymaster.cartridge_api_url.clone() })
+    } else {
+        None
+    };
+
     if config.rpc.apis.contains(&RpcModuleKind::Starknet) {
         let cfg = StarknetApiConfig {
             max_event_page_size: config.rpc.max_event_page_size,
             max_proof_keys: config.rpc.max_proof_keys,
+            #[cfg(feature = "cartridge")]
+            paymaster,
         };
 
         let api = if let Some(client) = forked_client {
@@ -292,7 +334,7 @@ pub async fn build(mut config: Config) -> Result<Node> {
 
     if config.rpc.apis.contains(&RpcModuleKind::Dev) {
         let api = DevApi::new(backend.clone(), block_producer.clone());
-        rpc_modules.merge(api.into_rpc())?;
+        rpc_modules.merge(DevApiServer::into_rpc(api))?;
     }
 
     if config.rpc.apis.contains(&RpcModuleKind::Torii) {

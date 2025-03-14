@@ -20,6 +20,8 @@ pub enum SchemaError {
     FromSlice(#[from] std::array::TryFromSliceError),
     #[error(transparent)]
     FromStr(#[from] FromStrError),
+    #[error(transparent)]
+    FromUtf8(#[from] std::string::FromUtf8Error),
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
@@ -165,7 +167,6 @@ impl TryFrom<proto::types::Primitive> for Primitive {
             proto::types::primitive::PrimitiveType::U128(bytes) => Primitive::U128(Some(
                 u128::from_be_bytes(bytes.as_slice().try_into().map_err(SchemaError::FromSlice)?),
             )),
-            proto::types::primitive::PrimitiveType::Usize(int) => Primitive::USize(Some(*int)),
             proto::types::primitive::PrimitiveType::Felt252(felt) => {
                 Primitive::Felt252(Some(Felt::from_bytes_be_slice(felt.as_slice())))
             }
@@ -174,6 +175,9 @@ impl TryFrom<proto::types::Primitive> for Primitive {
             }
             proto::types::primitive::PrimitiveType::ContractAddress(felt) => {
                 Primitive::ContractAddress(Some(Felt::from_bytes_be_slice(felt.as_slice())))
+            }
+            proto::types::primitive::PrimitiveType::EthAddress(felt) => {
+                Primitive::EthAddress(Some(Felt::from_bytes_be_slice(felt.as_slice())))
             }
             proto::types::primitive::PrimitiveType::U256(bytes) => Primitive::U256(Some(
                 U256::from_be_bytes(bytes.as_slice().try_into().map_err(SchemaError::FromSlice)?),
@@ -220,9 +224,6 @@ impl From<Primitive> for proto::types::Primitive {
             Primitive::U128(u128) => proto::types::primitive::PrimitiveType::U128(
                 u128.unwrap_or_default().to_be_bytes().to_vec(),
             ),
-            Primitive::USize(usize) => {
-                proto::types::primitive::PrimitiveType::Usize(usize.unwrap_or_default())
-            }
             Primitive::Felt252(felt) => proto::types::primitive::PrimitiveType::Felt252(
                 felt.unwrap_or_default().to_bytes_be().to_vec(),
             ),
@@ -234,6 +235,9 @@ impl From<Primitive> for proto::types::Primitive {
                     felt.unwrap_or_default().to_bytes_be().to_vec(),
                 )
             }
+            Primitive::EthAddress(felt) => proto::types::primitive::PrimitiveType::EthAddress(
+                felt.unwrap_or_default().to_bytes_be().to_vec(),
+            ),
             Primitive::U256(u256) => proto::types::primitive::PrimitiveType::U256(
                 u256.unwrap_or_default().to_be_bytes().to_vec(),
             ),

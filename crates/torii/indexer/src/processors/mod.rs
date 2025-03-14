@@ -9,8 +9,13 @@ use torii_sqlite::Sql;
 
 use crate::task_manager::{TaskId, TaskPriority};
 
+pub mod controller;
+pub mod erc1155_transfer_batch;
+pub mod erc1155_transfer_single;
 pub mod erc20_legacy_transfer;
 pub mod erc20_transfer;
+pub mod erc4906_batch_metadata_update;
+pub mod erc4906_metadata_update;
 pub mod erc721_legacy_transfer;
 pub mod erc721_transfer;
 pub mod event_message;
@@ -28,15 +33,11 @@ pub mod upgrade_model;
 
 #[derive(Clone, Debug, Default)]
 pub struct EventProcessorConfig {
-    pub historical_events: HashSet<String>,
     pub namespaces: HashSet<String>,
+    pub strict_model_reader: bool,
 }
 
 impl EventProcessorConfig {
-    pub fn is_historical(&self, tag: &str) -> bool {
-        self.historical_events.contains(tag)
-    }
-
     pub fn should_index(&self, namespace: &str) -> bool {
         self.namespaces.is_empty() || self.namespaces.contains(namespace)
     }
@@ -93,6 +94,7 @@ pub trait TransactionProcessor<P: Provider + Sync>: Send + Sync {
         block_number: u64,
         block_timestamp: u64,
         transaction_hash: Felt,
+        contract_addresses: &HashSet<Felt>,
         transaction: &Transaction,
     ) -> Result<(), Error>;
 }

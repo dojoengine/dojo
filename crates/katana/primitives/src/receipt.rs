@@ -178,6 +178,7 @@ impl Receipt {
 }
 
 #[derive(Debug, Clone, AsRef, Deref, PartialEq, Eq)]
+#[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct ReceiptWithTxHash {
     /// The hash of the transaction.

@@ -9,6 +9,7 @@ pub mod event;
 pub mod event_message;
 pub mod indexer;
 pub mod model_diff;
+pub mod token;
 pub mod token_balance;
 
 pub(crate) fn match_entity_keys(
@@ -37,6 +38,10 @@ pub(crate) fn match_entity_keys(
 
                     if !clause.models.is_empty()
                         && !clause.models.iter().any(|clause_model| {
+                            if clause_model.is_empty() {
+                                return true;
+                            }
+
                             let (clause_namespace, clause_model) =
                                 clause_model.split_once('-').unwrap();
                             // if both namespace and model are empty, we should match all.

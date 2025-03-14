@@ -7,20 +7,18 @@
 //!
 //! Currently, the merge is made at the top level of the commands.
 
-#[cfg(feature = "server")]
-use std::net::IpAddr;
+use std::net::{IpAddr, Ipv4Addr};
 
 use clap::Args;
 use katana_node::config::execution::{DEFAULT_INVOCATION_MAX_STEPS, DEFAULT_VALIDATION_MAX_STEPS};
 #[cfg(feature = "server")]
 use katana_node::config::metrics::{DEFAULT_METRICS_ADDR, DEFAULT_METRICS_PORT};
-#[cfg(feature = "server")]
-use katana_node::config::rpc::{RpcModulesList, DEFAULT_RPC_MAX_PROOF_KEYS};
-#[cfg(feature = "server")]
 use katana_node::config::rpc::{
-    DEFAULT_RPC_ADDR, DEFAULT_RPC_MAX_CONNECTIONS, DEFAULT_RPC_MAX_EVENT_PAGE_SIZE,
-    DEFAULT_RPC_PORT,
+    RpcModulesList, DEFAULT_RPC_MAX_CALL_GAS, DEFAULT_RPC_MAX_EVENT_PAGE_SIZE,
+    DEFAULT_RPC_MAX_PROOF_KEYS,
 };
+#[cfg(feature = "server")]
+use katana_node::config::rpc::{DEFAULT_RPC_ADDR, DEFAULT_RPC_PORT};
 use katana_primitives::block::BlockHashOrNumber;
 use katana_primitives::chain::ChainId;
 use katana_primitives::genesis::Genesis;
@@ -99,18 +97,56 @@ pub struct ServerOptions {
         deserialize_with = "deserialize_cors_origins"
     )]
     pub http_cors_origins: Vec<HeaderValue>,
+}
 
+#[cfg(feature = "server")]
+impl Default for ServerOptions {
+    fn default() -> Self {
+        ServerOptions {
+            http_addr: DEFAULT_RPC_ADDR,
+            http_port: DEFAULT_RPC_PORT,
+            http_cors_origins: Vec::new(),
+        }
+    }
+}
+
+#[cfg(feature = "server")]
+impl ServerOptions {
+    pub fn merge(&mut self, other: Option<&Self>) {
+        if let Some(other) = other {
+            if self.http_addr == DEFAULT_RPC_ADDR {
+                self.http_addr = other.http_addr;
+            }
+            if self.http_port == DEFAULT_RPC_PORT {
+                self.http_port = other.http_port;
+            }
+            if self.http_cors_origins.is_empty() {
+                self.http_cors_origins = other.http_cors_origins.clone();
+            }
+        }
+    }
+}
+
+#[derive(Debug, Args, Clone, Serialize, Deserialize, PartialEq)]
+#[command(next_help_heading = "Rpc options")]
+pub struct RpcOptions {
     /// API's offered over the HTTP-RPC interface.
-    #[arg(long = "http.api", value_name = "MODULES")]
+    #[arg(long = "rpc.api", value_name = "MODULES", alias = "http.api")]
     #[arg(value_parser = RpcModulesList::parse)]
     #[serde(default)]
     pub http_modules: Option<RpcModulesList>,
 
     /// Maximum number of concurrent connections allowed.
-    #[arg(long = "rpc.max-connections", value_name = "COUNT")]
-    #[arg(default_value_t = DEFAULT_RPC_MAX_CONNECTIONS)]
-    #[serde(default = "default_max_connections")]
-    pub max_connections: u32,
+    #[arg(long = "rpc.max-connections", value_name = "MAX")]
+    pub max_connections: Option<u32>,
+
+    /// Maximum request body size (in bytes).
+    #[arg(long = "rpc.max-request-body-size", value_name = "SIZE")]
+    pub max_request_body_size: Option<u32>,
+
+    /// Maximum response body size (in bytes).
+    #[arg(long = "rpc.max-response-body-size", value_name = "SIZE")]
+    pub max_response_body_size: Option<u32>,
 
     /// Maximum page size for event queries.
     #[arg(long = "rpc.max-event-page-size", value_name = "SIZE")]
@@ -123,19 +159,52 @@ pub struct ServerOptions {
     #[arg(default_value_t = DEFAULT_RPC_MAX_PROOF_KEYS)]
     #[serde(default = "default_proof_keys")]
     pub max_proof_keys: u64,
+
+    /// Maximum gas for the `starknet_call` RPC method.
+    #[arg(long = "rpc.max-call-gas", value_name = "GAS")]
+    #[arg(default_value_t = DEFAULT_RPC_MAX_CALL_GAS)]
+    #[serde(default = "default_max_call_gas")]
+    pub max_call_gas: u64,
 }
 
-#[cfg(feature = "server")]
-impl Default for ServerOptions {
+impl Default for RpcOptions {
     fn default() -> Self {
-        ServerOptions {
-            http_addr: DEFAULT_RPC_ADDR,
-            http_port: DEFAULT_RPC_PORT,
-            http_cors_origins: Vec::new(),
-            http_modules: Some(RpcModulesList::default()),
-            max_connections: DEFAULT_RPC_MAX_CONNECTIONS,
+        RpcOptions {
+            http_modules: None,
             max_event_page_size: DEFAULT_RPC_MAX_EVENT_PAGE_SIZE,
             max_proof_keys: DEFAULT_RPC_MAX_PROOF_KEYS,
+            max_connections: None,
+            max_request_body_size: None,
+            max_response_body_size: None,
+            max_call_gas: DEFAULT_RPC_MAX_CALL_GAS,
+        }
+    }
+}
+
+impl RpcOptions {
+    pub fn merge(&mut self, other: Option<&Self>) {
+        if let Some(other) = other {
+            if self.http_modules.is_none() {
+                self.http_modules = other.http_modules.clone();
+            }
+            if self.max_connections.is_none() {
+                self.max_connections = other.max_connections;
+            }
+            if self.max_request_body_size.is_none() {
+                self.max_request_body_size = other.max_request_body_size;
+            }
+            if self.max_response_body_size.is_none() {
+                self.max_response_body_size = other.max_response_body_size;
+            }
+            if self.max_event_page_size == DEFAULT_RPC_MAX_EVENT_PAGE_SIZE {
+                self.max_event_page_size = other.max_event_page_size;
+            }
+            if self.max_proof_keys == DEFAULT_RPC_MAX_PROOF_KEYS {
+                self.max_proof_keys = other.max_proof_keys;
+            }
+            if self.max_call_gas == DEFAULT_RPC_MAX_CALL_GAS {
+                self.max_call_gas = other.max_call_gas;
+            }
         }
     }
 }
@@ -357,6 +426,100 @@ pub struct SlotOptions {
     pub controller: bool,
 }
 
+#[cfg(feature = "cartridge")]
+#[derive(Debug, Args, Clone, Serialize, Deserialize, PartialEq)]
+#[command(next_help_heading = "Cartridge options")]
+pub struct CartridgeOptions {
+    /// Whether to use the Cartridge paymaster.
+    /// This has the cost to call the Cartridge API to check
+    /// if a controller account exists on each estimate fee call.
+    ///
+    /// Mostly used for local development using controller, and must be
+    /// disabled for slot deployments.
+    #[arg(long = "cartridge.paymaster")]
+    #[arg(default_value_t = false)]
+    #[serde(default = "default_paymaster")]
+    pub paymaster: bool,
+
+    /// The root URL for the Cartridge API.
+    ///
+    /// This is used to fetch the calldata for the constructor of the given controller
+    /// address (at the moment). Must be configurable for local development
+    /// with local cartridge API.
+    #[arg(long = "cartridge.api", requires = "paymaster")]
+    #[arg(default_value = "https://api.cartridge.gg")]
+    #[serde(default = "default_api_url")]
+    pub api: Url,
+}
+
+#[cfg(feature = "cartridge")]
+impl CartridgeOptions {
+    pub fn merge(&mut self, other: Option<&Self>) {
+        if let Some(other) = other {
+            if self.paymaster == default_paymaster() {
+                self.paymaster = other.paymaster;
+            }
+
+            if self.api == default_api_url() {
+                self.api = other.api.clone();
+            }
+        }
+    }
+}
+impl Default for CartridgeOptions {
+    fn default() -> Self {
+        CartridgeOptions { paymaster: default_paymaster(), api: default_api_url() }
+    }
+}
+fn default_paymaster() -> bool {
+    false
+}
+
+fn default_api_url() -> Url {
+    Url::parse("https://api.cartridge.gg").expect("qed; invalid url")
+}
+
+const DEFAULT_EXPLORER_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::LOCALHOST);
+const DEFAULT_EXPLORER_PORT: u16 = 3001;
+
+#[derive(Debug, Args, Clone, Serialize, Deserialize, PartialEq)]
+#[command(next_help_heading = "Explorer options")]
+pub struct ExplorerOptions {
+    /// Enable and launch the explorer frontend
+    ///
+    /// This will start a web server that serves the explorer UI.
+    #[arg(long)]
+    #[serde(default)]
+    pub explorer: bool,
+
+    /// The address to run the explorer frontend on.
+    #[arg(long = "explorer.addr", value_name = "ADDRESS")]
+    #[arg(default_value_t = DEFAULT_EXPLORER_ADDR)]
+    pub explorer_addr: IpAddr,
+
+    /// The port to run the explorer frontend on.
+    ///
+    /// NOTE(@kariy):
+    // Right now we prevent the port from being 0 because that would mean the actual port would only
+    // be available after the server has been started. And due to some limitations with how the
+    // explorer requires that the node is started first (to get the actual socket address) and
+    // that we also need to pass the explorer address as CORS to the node server.
+    #[arg(long = "explorer.port", value_name = "PORT")]
+    #[arg(default_value_t = DEFAULT_EXPLORER_PORT)]
+    #[arg(value_parser = clap::value_parser!(u16).range(1..))]
+    pub explorer_port: u16,
+}
+
+impl Default for ExplorerOptions {
+    fn default() -> Self {
+        Self {
+            explorer: false,
+            explorer_addr: DEFAULT_EXPLORER_ADDR,
+            explorer_port: DEFAULT_EXPLORER_PORT,
+        }
+    }
+}
+
 // ** Default functions to setup serde of the configuration file **
 fn default_seed() -> String {
     DEFAULT_DEV_SEED.to_string()
@@ -384,17 +547,10 @@ fn default_http_port() -> u16 {
     DEFAULT_RPC_PORT
 }
 
-#[cfg(feature = "server")]
-fn default_max_connections() -> u32 {
-    DEFAULT_RPC_MAX_CONNECTIONS
-}
-
-#[cfg(feature = "server")]
 fn default_page_size() -> u64 {
     DEFAULT_RPC_MAX_EVENT_PAGE_SIZE
 }
 
-#[cfg(feature = "server")]
 fn default_proof_keys() -> u64 {
     katana_node::config::rpc::DEFAULT_RPC_MAX_PROOF_KEYS
 }
@@ -407,4 +563,8 @@ fn default_metrics_addr() -> IpAddr {
 #[cfg(feature = "server")]
 fn default_metrics_port() -> u16 {
     DEFAULT_METRICS_PORT
+}
+
+fn default_max_call_gas() -> u64 {
+    DEFAULT_RPC_MAX_CALL_GAS
 }

@@ -8,14 +8,14 @@ use super::Handler;
 
 pub(crate) const LOG_TARGET: &str = "torii::server::handlers::grpc";
 
+#[derive(Debug)]
 pub struct GrpcHandler {
-    client_ip: IpAddr,
     grpc_addr: Option<SocketAddr>,
 }
 
 impl GrpcHandler {
-    pub fn new(client_ip: IpAddr, grpc_addr: Option<SocketAddr>) -> Self {
-        Self { client_ip, grpc_addr }
+    pub fn new(grpc_addr: Option<SocketAddr>) -> Self {
+        Self { grpc_addr }
     }
 }
 
@@ -29,10 +29,10 @@ impl Handler for GrpcHandler {
             .unwrap_or(false)
     }
 
-    async fn handle(&self, req: Request<Body>) -> Response<Body> {
+    async fn handle(&self, req: Request<Body>, client_addr: IpAddr) -> Response<Body> {
         if let Some(grpc_addr) = self.grpc_addr {
             let grpc_addr = format!("http://{}", grpc_addr);
-            match crate::proxy::GRPC_PROXY_CLIENT.call(self.client_ip, &grpc_addr, req).await {
+            match crate::proxy::GRPC_PROXY_CLIENT.call(client_addr, &grpc_addr, req).await {
                 Ok(response) => response,
                 Err(_error) => {
                     error!(target: LOG_TARGET, "{:?}", _error);

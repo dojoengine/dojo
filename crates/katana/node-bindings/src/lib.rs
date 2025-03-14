@@ -188,6 +188,7 @@ pub struct Katana {
     http_addr: Option<SocketAddr>,
     http_port: Option<u16>,
     rpc_max_connections: Option<u64>,
+    rpc_max_call_gas: Option<u64>,
     http_cors_domain: Option<String>,
 
     // Dev options
@@ -203,6 +204,10 @@ pub struct Katana {
     eth_gas_price: Option<u64>,
     strk_gas_price: Option<u64>,
     genesis: Option<PathBuf>,
+
+    // Cartridge options
+    enable_cartridge_paymaster: bool,
+    cartridge_api_url: Option<String>,
 
     // Others
     timeout: Option<u64>,
@@ -323,6 +328,12 @@ impl Katana {
     /// Sets the maximum number of concurrent connections allowed.
     pub const fn rpc_max_connections(mut self, max_connections: u64) -> Self {
         self.rpc_max_connections = Some(max_connections);
+        self
+    }
+
+    /// Sets the maximum gas for the `starknet_call` RPC method.
+    pub const fn rpc_max_call_gas(mut self, max_call_gas: u64) -> Self {
+        self.rpc_max_call_gas = Some(max_call_gas);
         self
     }
 
@@ -525,6 +536,10 @@ impl Katana {
             cmd.arg("--rpc.max-connections").arg(max_connections.to_string());
         }
 
+        if let Some(max_call_gas) = self.rpc_max_call_gas {
+            cmd.arg("--rpc.max-call-gas").arg(max_call_gas.to_string());
+        }
+
         if let Some(allowed_origins) = self.http_cors_domain {
             cmd.arg("--http.corsdomain").arg(allowed_origins);
         }
@@ -552,6 +567,14 @@ impl Katana {
         // var to store the chain id parsed from the logs. default to KATANA (default katana chain
         // id) if not specified
         let mut chain_id: Felt = self.chain_id.unwrap_or(short_string!("KATANA"));
+
+        if let Some(url) = self.cartridge_api_url {
+            cmd.arg("--cartridge.api-url").arg(url);
+        }
+
+        if self.enable_cartridge_paymaster {
+            cmd.arg("--cartridge.paymaster");
+        }
 
         loop {
             if start + Duration::from_millis(self.timeout.unwrap_or(KATANA_STARTUP_TIMEOUT_MILLIS))

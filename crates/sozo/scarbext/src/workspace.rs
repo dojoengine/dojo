@@ -116,6 +116,8 @@ impl WorkspaceExt for Workspace<'_> {
         let content = fs::read_to_string(&config_path)?;
         let config: ProfileConfig = toml::from_str(&content)?;
 
+        config.validate()?;
+
         Ok(config)
     }
 

@@ -1,12 +1,14 @@
 use std::fmt::Display;
 use std::path::PathBuf;
 
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use clap::builder::PossibleValue;
 use clap::ValueEnum;
 use console::Style;
+use katana_chain_spec::rollup::ChainConfigDir;
 use katana_chain_spec::ChainSpec;
 use katana_primitives::block::{BlockHash, BlockHashOrNumber, BlockNumber};
+use katana_primitives::chain::ChainId;
 use katana_primitives::class::ClassHash;
 use katana_primitives::contract::ContractAddress;
 use katana_primitives::genesis::allocation::GenesisAccountAlloc;
@@ -234,6 +236,26 @@ where
         .map(HeaderValue::from_str)
         .collect::<Result<Vec<HeaderValue>, _>>()
         .map_err(serde::de::Error::custom)
+}
+
+// Chain IDs can be arbitrary ASCII strings, making them indistinguishable from filesystem paths.
+// To handle this ambiguity, we first try parsing single-component inputs as paths, then as chain
+// IDs. Multi-component inputs are always treated as paths.
+pub fn parse_chain_config_dir(value: &str) -> Result<ChainConfigDir> {
+    let path = PathBuf::from(value);
+
+    if path.components().count() == 1 {
+        if path.exists() {
+            Ok(ChainConfigDir::open(path)?)
+        } else if let Ok(id) = ChainId::parse(value) {
+            Ok(ChainConfigDir::open_local(&id)?)
+        } else {
+            Err(anyhow!("Invalid path or chain id"))
+        }
+    } else {
+        let path = PathBuf::from(shellexpand::tilde(value).as_ref());
+        Ok(ChainConfigDir::open(path)?)
+    }
 }
 
 #[cfg(test)]

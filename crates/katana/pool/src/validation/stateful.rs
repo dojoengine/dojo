@@ -9,10 +9,12 @@ use katana_executor::implementation::blockifier::blockifier::transaction::errors
     TransactionExecutionError, TransactionFeeError, TransactionPreValidationError,
 };
 use katana_executor::implementation::blockifier::blockifier::transaction::transaction_execution::Transaction;
+use katana_executor::implementation::blockifier::state::StateProviderDb;
 use katana_executor::implementation::blockifier::utils::{
     block_context_from_envs, to_address, to_executor_tx,
 };
-use katana_executor::{ExecutionFlags, StateProviderDb};
+use katana_executor::implementation::blockifier::COMPILED_CLASS_CACHE;
+use katana_executor::ExecutionFlags;
 use katana_primitives::contract::{ContractAddress, Nonce};
 use katana_primitives::env::{BlockEnv, CfgEnv};
 use katana_primitives::transaction::{ExecutableTx, ExecutableTxWithHash};
@@ -86,7 +88,8 @@ impl Inner {
     // for transaction validation.
     fn prepare(&self) -> StatefulValidator<StateProviderDb<'static>> {
         let state = Box::new(self.state.clone());
-        let cached_state = CachedState::new(StateProviderDb::new(state));
+        let cached_state =
+            CachedState::new(StateProviderDb::new(state, COMPILED_CLASS_CACHE.clone()));
         let context = block_context_from_envs(&self.block_env, &self.cfg_env);
         StatefulValidator::create(cached_state, context)
     }
@@ -166,11 +169,8 @@ fn validate(
     skip_validate: bool,
     skip_fee_check: bool,
 ) -> ValidationResult<ExecutableTxWithHash> {
-    let flags =
-        ExecutionFlags::new().with_account_validation(!skip_validate).with_fee(!skip_fee_check);
-
-    match to_executor_tx(pool_tx.clone(), flags) {
-        Transaction::Account(tx) => {
+    match to_executor_tx(pool_tx.clone()) {
+        Transaction::AccountTransaction(tx) => {
             match validator.perform_validations(tx, skip_validate, skip_fee_check) {
                 Ok(()) => Ok(ValidationOutcome::Valid(pool_tx)),
                 Err(e) => match map_invalid_tx_err(e) {
@@ -181,7 +181,7 @@ fn validate(
         }
 
         // we skip validation for L1HandlerTransaction
-        Transaction::L1Handler(_) => Ok(ValidationOutcome::Valid(pool_tx)),
+        Transaction::L1HandlerTransaction(_) => Ok(ValidationOutcome::Valid(pool_tx)),
     }
 }
 
@@ -199,15 +199,6 @@ fn map_invalid_tx_err(
                 let class_hash = class_hash.0;
                 let error = e.to_string();
                 Ok(InvalidTransactionError::ValidationFailure { address, class_hash, error })
-            }
-
-            TransactionExecutionError::PanicInValidate { panic_reason } => {
-                // TODO: maybe can remove the address and class hash?
-                Ok(InvalidTransactionError::ValidationFailure {
-                    address: Default::default(),
-                    class_hash: Default::default(),
-                    error: panic_reason.to_string(),
-                })
             }
 
             _ => Err(Box::new(err)),

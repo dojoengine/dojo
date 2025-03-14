@@ -1,5 +1,4 @@
 use std::collections::{BTreeMap, HashMap};
-use std::fmt::Debug;
 
 use katana_db::abstraction::Database;
 use katana_db::tables;
@@ -8,20 +7,15 @@ use katana_primitives::block::BlockNumber;
 use katana_primitives::class::{ClassHash, CompiledClassHash};
 use katana_primitives::state::StateUpdates;
 use katana_primitives::{ContractAddress, Felt};
-use katana_trie::{compute_contract_state_hash, ClassesTrie, ContractsTrie, StoragesTrie};
+use katana_trie::{
+    compute_contract_state_hash, ClassesTrie, ContractLeaf, ContractsTrie, StoragesTrie,
+};
 
 use crate::error::ProviderError;
 use crate::providers::db::DbProvider;
 use crate::traits::state::{StateFactoryProvider, StateProvider};
 use crate::traits::trie::TrieWriter;
 use crate::ProviderResult;
-
-#[derive(Debug, Default)]
-struct ContractLeaf {
-    pub class_hash: Option<Felt>,
-    pub storage_root: Option<Felt>,
-    pub nonce: Option<Felt>,
-}
 
 impl<Db: Database> TrieWriter for DbProvider<Db> {
     fn trie_insert_declared_classes(

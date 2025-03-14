@@ -3,4 +3,8 @@
 	url = https://github.com/foundry-rs/forge-std
 [submodule "crates/katana/contracts/piltover"]
 	path = crates/katana/contracts/piltover
-	url = https://github.com/cartridge-gg/piltover.git
+	url = https://github.com/keep-starknet-strange/piltover.git
+[submodule "crates/katana/explorer/ui"]
+	path = crates/katana/explorer/ui
+	url = https://github.com/cartridge-gg/explorer
+	branch = main

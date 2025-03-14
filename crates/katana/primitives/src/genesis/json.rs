@@ -10,6 +10,8 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::Arc;
 
+#[cfg(feature = "cartridge")]
+use account_sdk::artifacts::{Version as ControllerVersion, CONTROLLERS};
 use alloy_primitives::U256;
 use base64::prelude::*;
 use katana_cairo::cairo_vm::types::errors::program_errors::ProgramError;
@@ -32,6 +34,8 @@ use crate::class::{
     LegacyContractClass, SierraContractClass,
 };
 use crate::contract::{ContractAddress, StorageKey, StorageValue};
+#[cfg(feature = "cartridge")]
+use crate::utils::class::parse_sierra_class;
 use crate::Felt;
 
 type Object = Map<String, Value>;
@@ -156,6 +160,7 @@ pub struct GenesisAccountJson {
     pub class: Option<ClassNameOrHash>,
     pub storage: Option<BTreeMap<StorageKey, StorageValue>>,
     pub private_key: Option<Felt>,
+    pub salt: Option<Felt>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -285,6 +290,25 @@ impl TryFrom<GenesisJson> for Genesis {
         // ConfigMap when we embed the Controller class, and its capacity is only limited to 1MiB.
         classes.insert(CONTROLLER_CLASS_HASH, CONTROLLER_ACCOUNT_CLASS.clone().into());
 
+        #[cfg(feature = "cartridge")]
+        {
+            #[cfg(feature = "cartridge")]
+            classes.extend(
+                // Filter out the `1.0.4` already included and
+                // LATEST which is a duplicate of `1.0.9`.
+                CONTROLLERS
+                    .iter()
+                    .filter(|(v, _)| {
+                        **v == ControllerVersion::V1_0_5
+                            || **v == ControllerVersion::V1_0_6
+                            || **v == ControllerVersion::V1_0_7
+                            || **v == ControllerVersion::V1_0_8
+                            || **v == ControllerVersion::V1_0_9
+                    })
+                    .map(|(_, v)| (v.hash, parse_sierra_class(v.content).unwrap().into())),
+            );
+        }
+
         for entry in value.classes {
             let GenesisClassJson { class, name } = entry;
 
@@ -374,31 +398,41 @@ impl TryFrom<GenesisJson> for Genesis {
             };
 
             match account.private_key {
-                Some(private_key) => allocations.insert(
-                    address,
-                    GenesisAllocation::Account(GenesisAccountAlloc::DevAccount(
-                        DevGenesisAccount {
-                            private_key,
-                            inner: GenesisAccount {
-                                balance: account.balance,
-                                class_hash,
-                                nonce: account.nonce,
-                                storage: account.storage,
-                                public_key: account.public_key,
-                            },
-                        },
-                    )),
-                ),
-                None => allocations.insert(
-                    address,
-                    GenesisAllocation::Account(GenesisAccountAlloc::Account(GenesisAccount {
-                        balance: account.balance,
-                        class_hash,
-                        nonce: account.nonce,
-                        storage: account.storage,
-                        public_key: account.public_key,
-                    })),
-                ),
+                Some(private_key) => {
+                    let mut inner = if let Some(salt) = account.salt {
+                        GenesisAccount::new_with_salt(account.public_key, class_hash, salt)
+                    } else {
+                        GenesisAccount::new(account.public_key, class_hash)
+                    };
+
+                    inner.nonce = account.nonce;
+                    inner.storage = account.storage;
+                    inner.balance = account.balance;
+
+                    allocations.insert(
+                        address,
+                        GenesisAllocation::Account(GenesisAccountAlloc::DevAccount(
+                            DevGenesisAccount { private_key, inner },
+                        )),
+                    )
+                }
+
+                None => {
+                    let mut inner = if let Some(salt) = account.salt {
+                        GenesisAccount::new_with_salt(account.public_key, class_hash, salt)
+                    } else {
+                        GenesisAccount::new(account.public_key, class_hash)
+                    };
+
+                    inner.nonce = account.nonce;
+                    inner.storage = account.storage;
+                    inner.balance = account.balance;
+
+                    allocations.insert(
+                        address,
+                        GenesisAllocation::Account(GenesisAccountAlloc::Account(inner)),
+                    )
+                }
             };
         }
 
@@ -480,6 +514,7 @@ impl TryFrom<Genesis> for GenesisJson {
                             GenesisAccountJson {
                                 nonce: acc.nonce,
                                 private_key: None,
+                                salt: Some(acc.salt),
                                 storage: acc.storage,
                                 balance: acc.balance,
                                 public_key: acc.public_key,
@@ -491,6 +526,7 @@ impl TryFrom<Genesis> for GenesisJson {
                         accounts.insert(
                             address,
                             GenesisAccountJson {
+                                salt: Some(dev_acc.salt),
                                 nonce: dev_acc.inner.nonce,
                                 balance: dev_acc.inner.balance,
                                 storage: dev_acc.inner.storage,
@@ -746,13 +782,35 @@ mod tests {
         let json = GenesisJson::load(path).unwrap();
         let actual_genesis = Genesis::try_from(json).unwrap();
 
-        let expected_classes = BTreeMap::from([
-            (DEFAULT_LEGACY_ERC20_CLASS_HASH, DEFAULT_LEGACY_ERC20_CLASS.clone().into()),
-            (DEFAULT_LEGACY_UDC_CLASS_HASH, DEFAULT_LEGACY_UDC_CLASS.clone().into()),
-            (DEFAULT_ACCOUNT_CLASS_HASH, DEFAULT_ACCOUNT_CLASS.clone().into()),
-            #[cfg(feature = "controller")]
-            (CONTROLLER_CLASS_HASH, CONTROLLER_ACCOUNT_CLASS.clone().into()),
-        ]);
+        let mut expected_classes = BTreeMap::new();
+
+        expected_classes
+            .insert(DEFAULT_LEGACY_ERC20_CLASS_HASH, DEFAULT_LEGACY_ERC20_CLASS.clone().into());
+        expected_classes
+            .insert(DEFAULT_LEGACY_UDC_CLASS_HASH, DEFAULT_LEGACY_UDC_CLASS.clone().into());
+        expected_classes.insert(DEFAULT_ACCOUNT_CLASS_HASH, DEFAULT_ACCOUNT_CLASS.clone().into());
+
+        #[cfg(feature = "controller")]
+        expected_classes.insert(CONTROLLER_CLASS_HASH, CONTROLLER_ACCOUNT_CLASS.clone().into());
+
+        #[cfg(feature = "cartridge")]
+        {
+            #[cfg(feature = "cartridge")]
+            expected_classes.extend(
+                // Filter out the `1.0.4` already included and
+                // LATEST which is a duplicate of `1.0.9`.
+                CONTROLLERS
+                    .iter()
+                    .filter(|(v, _)| {
+                        **v == ControllerVersion::V1_0_5
+                            || **v == ControllerVersion::V1_0_6
+                            || **v == ControllerVersion::V1_0_7
+                            || **v == ControllerVersion::V1_0_8
+                            || **v == ControllerVersion::V1_0_9
+                    })
+                    .map(|(_, v)| (v.hash, parse_sierra_class(v.content).unwrap().into())),
+            );
+        }
 
         let acc_1 = address!("0x66efb28ac62686966ae85095ff3a772e014e7fbf56d4c5f6fac5606d4dde23a");
         let acc_2 = address!("0x6b86e40118f29ebe393a75469b4d926c7a44c2e2681b6d319520b7c1156d114");
@@ -777,6 +835,7 @@ mod tests {
                         (felt!("0x1"), felt!("0x1")),
                         (felt!("0x2"), felt!("0x2")),
                     ])),
+                    salt: GenesisAccount::DEFAULT_SALT,
                 })),
             ),
             (
@@ -787,6 +846,7 @@ mod tests {
                     class_hash: DEFAULT_ACCOUNT_CLASS_HASH,
                     nonce: None,
                     storage: None,
+                    salt: GenesisAccount::DEFAULT_SALT,
                 })),
             ),
             (
@@ -797,6 +857,7 @@ mod tests {
                     class_hash: DEFAULT_ACCOUNT_CLASS_HASH,
                     nonce: None,
                     storage: None,
+                    salt: GenesisAccount::DEFAULT_SALT,
                 })),
             ),
             (
@@ -809,6 +870,7 @@ mod tests {
                         class_hash: DEFAULT_ACCOUNT_CLASS_HASH,
                         nonce: None,
                         storage: None,
+                        salt: GenesisAccount::DEFAULT_SALT,
                     },
                 })),
             ),
@@ -925,11 +987,33 @@ mod tests {
         let genesis_json: GenesisJson = GenesisJson::from_str(json).unwrap();
         let actual_genesis = Genesis::try_from(genesis_json).unwrap();
 
-        let classes = BTreeMap::from([
-            (DEFAULT_ACCOUNT_CLASS_HASH, DEFAULT_ACCOUNT_CLASS.clone().into()),
-            #[cfg(feature = "controller")]
-            (CONTROLLER_CLASS_HASH, CONTROLLER_ACCOUNT_CLASS.clone().into()),
-        ]);
+        let mut classes = BTreeMap::new();
+        classes.insert(DEFAULT_ACCOUNT_CLASS_HASH, DEFAULT_ACCOUNT_CLASS.clone().into());
+
+        #[cfg(feature = "controller")]
+        // Merely a band aid fix for now.
+        // Adding this by default so that we can support mounting the genesis file from k8s
+        // ConfigMap when we embed the Controller class, and its capacity is only limited to 1MiB.
+        classes.insert(CONTROLLER_CLASS_HASH, CONTROLLER_ACCOUNT_CLASS.clone().into());
+
+        #[cfg(feature = "cartridge")]
+        {
+            #[cfg(feature = "cartridge")]
+            classes.extend(
+                // Filter out the `1.0.4` already included and
+                // LATEST which is a duplicate of `1.0.9`.
+                CONTROLLERS
+                    .iter()
+                    .filter(|(v, _)| {
+                        **v == ControllerVersion::V1_0_5
+                            || **v == ControllerVersion::V1_0_6
+                            || **v == ControllerVersion::V1_0_7
+                            || **v == ControllerVersion::V1_0_8
+                            || **v == ControllerVersion::V1_0_9
+                    })
+                    .map(|(_, v)| (v.hash, parse_sierra_class(v.content).unwrap().into())),
+            );
+        }
 
         let allocations = BTreeMap::from([(
             address!("0x66efb28ac62686966ae85095ff3a772e014e7fbf56d4c5f6fac5606d4dde23a"),
@@ -939,6 +1023,7 @@ mod tests {
                 class_hash: DEFAULT_ACCOUNT_CLASS_HASH,
                 nonce: None,
                 storage: None,
+                salt: GenesisAccount::DEFAULT_SALT,
             })),
         )]);
 
@@ -999,6 +1084,7 @@ mod tests {
         let name = "MyClass";
 
         let account = GenesisAccountJson {
+            salt: None,
             nonce: None,
             storage: None,
             balance: None,

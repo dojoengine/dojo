@@ -1,3 +1,4 @@
+use katana_primitives::block::BlockNumber;
 use katana_primitives::chain::ChainId;
 use katana_primitives::genesis::Genesis;
 use katana_primitives::{eth, ContractAddress};
@@ -79,6 +80,9 @@ pub enum SettlementLayer {
 
         // - The core appchain contract used to settlement
         core_contract: eth::Address,
+
+        // the block at which the core contract was deployed
+        block: alloy_primitives::BlockNumber,
     },
 
     Starknet {
@@ -93,5 +97,13 @@ pub enum SettlementLayer {
 
         // - The core appchain contract used to settlement
         core_contract: ContractAddress,
+
+        // the block at which the core contract was deployed
+        block: BlockNumber,
+    },
+
+    Sovereign {
+        // Once Katana can sync from data availability layer, we can add the details of the data
+        // availability layer to the chain spec for Katana to sync from it.
     },
 }

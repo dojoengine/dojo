@@ -56,7 +56,7 @@ mod read;
 mod trace;
 mod write;
 
-pub use config::StarknetApiConfig;
+pub use config::{PaymasterConfig, StarknetApiConfig};
 use forking::ForkedClient;
 
 type StarknetApiResult<T> = Result<T, StarknetApiError>;

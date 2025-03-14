@@ -77,7 +77,24 @@ pub impl WorldStorageInternalImpl of WorldStorageTrait {
                 //    .expect('Failed to get class hash');
                 Option::Some((contract_address, 0.try_into().unwrap()))
             },
+            Resource::Library((
+                class_hash, _,
+            )) => { Option::Some((starknet::contract_address_const::<0>(), class_hash)) },
             _ => Option::None,
+        }
+    }
+
+    fn dns_address(self: @WorldStorage, contract_name: @ByteArray) -> Option<ContractAddress> {
+        match self.dns(contract_name) {
+            Option::Some((address, _)) => Option::Some(address),
+            Option::None => Option::None,
+        }
+    }
+
+    fn dns_class_hash(self: @WorldStorage, contract_name: @ByteArray) -> Option<ClassHash> {
+        match self.dns(contract_name) {
+            Option::Some((_, class_hash)) => Option::Some(class_hash),
+            Option::None => Option::None,
         }
     }
 

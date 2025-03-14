@@ -2,7 +2,7 @@ use std::any::type_name;
 use std::str::FromStr;
 
 use cainome::cairo_serde::{ByteArray, CairoSerde};
-use crypto_bigint::{Encoding, U256};
+use crypto_bigint::U256;
 use indexmap::IndexMap;
 use itertools::Itertools;
 use num_traits::ToPrimitive;
@@ -242,13 +242,19 @@ impl Ty {
                 let diff_children: Vec<Member> = s1
                     .children
                     .iter()
-                    .filter(|m1| {
-                        s2.children
-                            .iter()
-                            .find(|m2| m2.name == m1.name)
-                            .map_or(true, |m2| *m1 != m2)
+                    .filter_map(|m1| {
+                        if let Some(m2) = s2.children.iter().find(|m2| m2.name == m1.name) {
+                            // Member exists in both - check if types are different
+                            m1.ty.diff(&m2.ty).map(|diff_ty| Member {
+                                name: m1.name.clone(),
+                                ty: diff_ty,
+                                key: m1.key,
+                            })
+                        } else {
+                            // Member doesn't exist in s2
+                            Some(m1.clone())
+                        }
                     })
-                    .cloned()
                     .collect();
 
                 if diff_children.is_empty() {
@@ -262,10 +268,17 @@ impl Ty {
                 let diff_options: Vec<EnumOption> = e1
                     .options
                     .iter()
-                    .filter(|o1| {
-                        e2.options.iter().find(|o2| o2.name == o1.name).map_or(true, |o2| *o1 != o2)
+                    .filter_map(|o1| {
+                        if let Some(o2) = e2.options.iter().find(|o2| o2.name == o1.name) {
+                            // Option exists in both - check if types are different
+                            o1.ty
+                                .diff(&o2.ty)
+                                .map(|diff_ty| EnumOption { name: o1.name.clone(), ty: diff_ty })
+                        } else {
+                            // Option doesn't exist in e2
+                            Some(o1.clone())
+                        }
                     })
-                    .cloned()
                     .collect();
 
                 if diff_options.is_empty() {
@@ -278,18 +291,26 @@ impl Ty {
                     }))
                 }
             }
+            (Ty::Tuple(t1), Ty::Tuple(t2)) => {
+                if t1.len() != t2.len() {
+                    Some(Ty::Tuple(
+                        t1.iter()
+                            .filter_map(|ty| if !t2.contains(ty) { Some(ty.clone()) } else { None })
+                            .collect(),
+                    ))
+                } else {
+                    // Compare each tuple element recursively
+                    let diff_elements: Vec<Ty> =
+                        t1.iter().zip(t2.iter()).filter_map(|(ty1, ty2)| ty1.diff(ty2)).collect();
+
+                    if diff_elements.is_empty() { None } else { Some(Ty::Tuple(diff_elements)) }
+                }
+            }
             (Ty::Array(a1), Ty::Array(a2)) => {
                 if a1 == a2 {
                     None
                 } else {
                     Some(Ty::Array(a1.clone()))
-                }
-            }
-            (Ty::Tuple(t1), Ty::Tuple(t2)) => {
-                if t1 == t2 {
-                    None
-                } else {
-                    Some(Ty::Tuple(t1.clone()))
                 }
             }
             (Ty::ByteArray(b1), Ty::ByteArray(b2)) => {
@@ -328,19 +349,11 @@ impl Ty {
                 Primitive::U32(Some(v)) => Ok(json!(*v)),
                 Primitive::U64(Some(v)) => Ok(json!(v.to_string())),
                 Primitive::U128(Some(v)) => Ok(json!(v.to_string())),
-                Primitive::USize(Some(v)) => Ok(json!(*v)),
-                Primitive::U256(Some(v)) => {
-                    let bytes = v.to_be_bytes();
-                    let high = u128::from_be_bytes(bytes[..16].try_into().unwrap());
-                    let low = u128::from_be_bytes(bytes[16..].try_into().unwrap());
-                    Ok(json!({
-                        "high": high.to_string(),
-                        "low": low.to_string()
-                    }))
-                }
+                Primitive::U256(Some(v)) => Ok(json!(format!("0x{:x}", v))),
                 Primitive::Felt252(Some(v)) => Ok(json!(format!("{:#x}", v))),
                 Primitive::ClassHash(Some(v)) => Ok(json!(format!("{:#x}", v))),
                 Primitive::ContractAddress(Some(v)) => Ok(json!(format!("{:#x}", v))),
+                Primitive::EthAddress(Some(v)) => Ok(json!(format!("{:#x}", v))),
                 _ => Err(PrimitiveError::MissingFieldElement),
             },
             Ty::Struct(s) => {
@@ -427,24 +440,9 @@ impl Ty {
                         *v = s.parse().ok();
                     }
                 }
-                Primitive::USize(v) => {
-                    if let JsonValue::Number(n) = value {
-                        *v = n.as_u64().map(|n| n as u32);
-                    }
-                }
                 Primitive::U256(v) => {
-                    if let JsonValue::Object(obj) = value {
-                        if let (Some(JsonValue::String(high)), Some(JsonValue::String(low))) =
-                            (obj.get("high"), obj.get("low"))
-                        {
-                            if let (Ok(high), Ok(low)) = (high.parse::<u128>(), low.parse::<u128>())
-                            {
-                                let mut bytes = [0u8; 32];
-                                bytes[..16].copy_from_slice(&high.to_be_bytes());
-                                bytes[16..].copy_from_slice(&low.to_be_bytes());
-                                *v = Some(U256::from_be_slice(&bytes));
-                            }
-                        }
+                    if let JsonValue::String(s) = value {
+                        *v = Some(U256::from_be_hex(s.trim_start_matches("0x")));
                     }
                 }
                 Primitive::Felt252(v) => {
@@ -458,6 +456,11 @@ impl Ty {
                     }
                 }
                 Primitive::ContractAddress(v) => {
+                    if let JsonValue::String(s) = value {
+                        *v = Felt::from_str(&s).ok();
+                    }
+                }
+                Primitive::EthAddress(v) => {
                     if let JsonValue::String(s) = value {
                         *v = Felt::from_str(&s).ok();
                     }
@@ -698,11 +701,6 @@ fn format_member(m: &Member) -> String {
                     str.push_str(&format!(" = {}", value));
                 }
             }
-            Primitive::USize(value) => {
-                if let Some(value) = value {
-                    str.push_str(&format!(" = {}", value));
-                }
-            }
             Primitive::Bool(value) => {
                 if let Some(value) = value {
                     str.push_str(&format!(" = {}", value));
@@ -719,6 +717,11 @@ fn format_member(m: &Member) -> String {
                 }
             }
             Primitive::ContractAddress(value) => {
+                if let Some(value) = value {
+                    str.push_str(&format!(" = {:#x}", value));
+                }
+            }
+            Primitive::EthAddress(value) => {
                 if let Some(value) = value {
                     str.push_str(&format!(" = {:#x}", value));
                 }

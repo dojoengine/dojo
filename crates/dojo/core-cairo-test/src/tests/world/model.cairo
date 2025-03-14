@@ -232,6 +232,7 @@ fn test_upgrade_model() {
     assert!(read.c == 0);
 }
 
+#[test]
 fn test_upgrade_model_with_member_changed() {
     let caller = starknet::contract_address_const::<0xb0b>();
     let world = deploy_world_for_model_upgrades();
@@ -350,7 +351,9 @@ fn test_upgrade_model_from_model_writer() {
 }
 
 #[test]
-#[should_panic(expected: ("Resource `dojo-Foo` is already registered", 'ENTRYPOINT_FAILED'))]
+#[should_panic(
+    expected: ("Resource (Model) `dojo-Foo` is already registered", 'ENTRYPOINT_FAILED'),
+)]
 fn test_upgrade_model_from_random_account() {
     let bob = starknet::contract_address_const::<0xb0b>();
     let alice = starknet::contract_address_const::<0xa11ce>();

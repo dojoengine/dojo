@@ -5,7 +5,6 @@ use katana_executor::implementation::noop::NoopExecutorFactory;
 use katana_primitives::transaction::{ExecutableTx, InvokeTx};
 use katana_primitives::Felt;
 use katana_provider::providers::db::DbProvider;
-use tokio::time;
 
 use super::*;
 use crate::backend::gas_oracle::GasOracle;
@@ -47,7 +46,7 @@ async fn interval_force_mine_without_transactions() {
 async fn interval_mine_after_timer() {
     let backend = test_backend();
     let mut producer = IntervalBlockProducer::new(backend.clone(), Some(1000));
-    // Initial state
+    // no timer should be set when no block is opened.
     assert!(producer.timer.is_none());
 
     producer.queued.push_back(vec![dummy_transaction()]);
@@ -55,19 +54,23 @@ async fn interval_mine_after_timer() {
     let stream = producer;
     pin_mut!(stream);
 
-    // Process the transaction, the timer should be automatically started
-    let _ = stream.next().await;
-    assert!(stream.timer.is_some());
+    let waker = futures::task::noop_waker();
+    let mut context = Context::from_waker(&waker);
 
-    // Advance time to trigger mining
-    time::sleep(Duration::from_secs(1)).await;
-    let result = stream.next().await.expect("should mine block").unwrap();
+    // mine the block
+    let poll_result = stream.as_mut().poll_next(&mut context);
 
-    assert_eq!(result.block_number, 1);
+    // based on how the `Stream` trait is implemented, there is a possibility that a single
+    // call to `poll_next` can complete the whole production flow so we added this just in case.
+    if poll_result.is_pending() {
+        assert!(stream.timer.is_some(), "timer should start once we received a tx");
+    } else {
+        assert!(stream.timer.is_none(), "no timer if block has been mined");
+    }
+
+    let outcome = stream.next().await.expect("should mine block").unwrap();
+    assert_eq!(outcome.block_number, 1);
     assert_eq!(backend.blockchain.provider().latest_number().unwrap(), 1);
-
-    // Final state
-    assert!(stream.timer.is_none());
 }
 
 // Helper functions to create test transactions

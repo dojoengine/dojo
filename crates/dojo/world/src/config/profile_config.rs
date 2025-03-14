@@ -2,7 +2,8 @@ use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::Path;
 
-use anyhow::Result;
+use anyhow::{bail, Result};
+use dojo_types::naming;
 use serde::Deserialize;
 use toml;
 
@@ -12,6 +13,15 @@ use super::namespace_config::NamespaceConfig;
 use super::resource_config::ResourceConfig;
 use super::world_config::WorldConfig;
 
+/// External contract configuration for the Profile config.
+#[derive(Debug, Clone, Deserialize)]
+pub struct ExternalContractConfig {
+    pub contract_name: String,
+    pub instance_name: Option<String>,
+    pub salt: String,
+    pub constructor_data: Option<Vec<String>>,
+}
+
 /// Profile configuration that is used to configure the world and its environment.
 ///
 /// This [`ProfileConfig`] is expected to be loaded from a TOML file.
@@ -20,7 +30,9 @@ pub struct ProfileConfig {
     pub world: WorldConfig,
     pub models: Option<Vec<ResourceConfig>>,
     pub contracts: Option<Vec<ResourceConfig>>,
+    pub libraries: Option<Vec<ResourceConfig>>,
     pub events: Option<Vec<ResourceConfig>>,
+    pub external_contracts: Option<Vec<ExternalContractConfig>>,
     pub namespace: NamespaceConfig,
     pub env: Option<Environment>,
     pub migration: Option<MigrationConfig>,
@@ -30,6 +42,8 @@ pub struct ProfileConfig {
     pub owners: Option<HashMap<String, HashSet<String>>>,
     /// A mapping <tag, <values>> of init call arguments to be passed to the contract.
     pub init_call_args: Option<HashMap<String, Vec<String>>>,
+    /// A mapping <tag, version> of libraries
+    pub lib_versions: Option<HashMap<String, String>>,
 }
 
 impl ProfileConfig {
@@ -81,6 +95,53 @@ impl ProfileConfig {
         } else {
             false
         }
+    }
+
+    /// Validate the consistency of the Profile configuration.
+    ///
+    /// Rules:
+    /// - for a same external contract name we should have:
+    ///   + only one [[external_contracts]] block if instance name is not set OR,
+    ///   + one or several [[external_contracts]] blocks with different instance names.
+    pub fn validate(&self) -> Result<()> {
+        if let Some(contracts) = &self.external_contracts {
+            let mut map = HashMap::<String, Vec<Option<String>>>::new();
+
+            for contract in contracts {
+                map.entry(contract.contract_name.clone())
+                    .or_default()
+                    .push(contract.instance_name.clone());
+            }
+
+            for (contract_name, instance_names) in map {
+                if instance_names.len() > 1 && instance_names.iter().any(|n| n.is_none()) {
+                    bail!(
+                        "There must be only one [[external_contracts]] block in the profile \
+                         config mentioning the contract name '{}' without instance name.",
+                        contract_name
+                    );
+                }
+
+                let instance_name_set: HashSet<_> = instance_names.iter().cloned().collect();
+                if instance_name_set.len() != instance_names.len() {
+                    bail!(
+                        "There are duplicated instance names for the external contract name '{}'",
+                        contract_name
+                    );
+                }
+
+                for instance_name in instance_name_set.into_iter().flatten() {
+                    if !naming::is_name_valid(&instance_name) {
+                        bail!(
+                            "The instance name '{}' is not valid according to Dojo format rules.",
+                            instance_name
+                        );
+                    }
+                }
+            }
+        }
+
+        Ok(())
     }
 }
 
@@ -181,6 +242,9 @@ mod tests {
 
         [init_call_args]
         "ns1-actions" = [ "0x1", "0x2" ]
+
+        [lib_versions]
+        "ns1-lib" = "0.0.0"
         "#;
 
         let config = toml::from_str::<ProfileConfig>(content).unwrap();
@@ -261,5 +325,132 @@ mod tests {
                 vec!["0x1".to_string(), "0x2".to_string()]
             )]))
         );
+        assert_eq!(
+            config.lib_versions,
+            Some(HashMap::from([("ns1-lib".to_string(), "0.0.0".to_string())]))
+        )
+    }
+
+    #[test]
+    fn test_profile_config_validation() {
+        let mut config = ProfileConfig::new("world", "seed", NamespaceConfig::new("ns"));
+
+        // duplicated None instance name for a same contract name
+        config.external_contracts = Some(vec![
+            ExternalContractConfig {
+                contract_name: "c1".to_string(),
+                instance_name: Some("x".to_string()),
+                salt: "0x01".to_string(),
+                constructor_data: None,
+            },
+            ExternalContractConfig {
+                contract_name: "c1".to_string(),
+                instance_name: None,
+                salt: "0x01".to_string(),
+                constructor_data: None,
+            },
+        ]);
+
+        let res = config.validate();
+        assert!(res.is_err());
+        assert_eq!(
+            res.err().unwrap().to_string(),
+            "There must be only one [[external_contracts]] block in the profile config mentioning \
+             the contract name 'c1' without instance name."
+        );
+
+        // duplicated instance name for a same contract name
+        config.external_contracts = Some(vec![
+            ExternalContractConfig {
+                contract_name: "c1".to_string(),
+                instance_name: Some("x".to_string()),
+                salt: "0x01".to_string(),
+                constructor_data: None,
+            },
+            ExternalContractConfig {
+                contract_name: "c1".to_string(),
+                instance_name: Some("y".to_string()),
+                salt: "0x01".to_string(),
+                constructor_data: None,
+            },
+            ExternalContractConfig {
+                contract_name: "c1".to_string(),
+                instance_name: Some("x".to_string()),
+                salt: "0x01".to_string(),
+                constructor_data: None,
+            },
+        ]);
+
+        let res = config.validate();
+        assert!(res.is_err());
+        assert_eq!(
+            res.err().unwrap().to_string(),
+            "There are duplicated instance names for the external contract name 'c1'"
+        );
+
+        // bad instance name
+        config.external_contracts = Some(vec![
+            ExternalContractConfig {
+                contract_name: "c1".to_string(),
+                instance_name: None,
+                salt: "0x01".to_string(),
+                constructor_data: None,
+            },
+            ExternalContractConfig {
+                contract_name: "c2".to_string(),
+                instance_name: Some("x@".to_string()),
+                salt: "0x01".to_string(),
+                constructor_data: None,
+            },
+            ExternalContractConfig {
+                contract_name: "c2".to_string(),
+                instance_name: Some("y".to_string()),
+                salt: "0x01".to_string(),
+                constructor_data: None,
+            },
+            ExternalContractConfig {
+                contract_name: "c3".to_string(),
+                instance_name: Some("c3".to_string()),
+                salt: "0x01".to_string(),
+                constructor_data: None,
+            },
+        ]);
+
+        let res = config.validate();
+        assert!(res.is_err());
+        assert_eq!(
+            res.err().unwrap().to_string(),
+            "The instance name 'x@' is not valid according to Dojo format rules."
+        );
+
+        // nominal case
+        config.external_contracts = Some(vec![
+            ExternalContractConfig {
+                contract_name: "c1".to_string(),
+                instance_name: None,
+                salt: "0x01".to_string(),
+                constructor_data: None,
+            },
+            ExternalContractConfig {
+                contract_name: "c2".to_string(),
+                instance_name: Some("x".to_string()),
+                salt: "0x01".to_string(),
+                constructor_data: None,
+            },
+            ExternalContractConfig {
+                contract_name: "c2".to_string(),
+                instance_name: Some("y".to_string()),
+                salt: "0x01".to_string(),
+                constructor_data: None,
+            },
+            ExternalContractConfig {
+                contract_name: "c3".to_string(),
+                instance_name: Some("c3".to_string()),
+                salt: "0x01".to_string(),
+                constructor_data: None,
+            },
+        ]);
+
+        assert!(config.validate().is_ok());
     }
 }

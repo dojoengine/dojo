@@ -1,4 +1,3 @@
-use katana_cairo::cairo_vm::types::builtin_name::BuiltinName;
 use katana_primitives::block::FinalityStatus;
 use katana_primitives::fee::{PriceUnit, TxFeeInfo};
 use katana_primitives::receipt::{MessageToL1, Receipt};
@@ -11,8 +10,6 @@ use starknet::core::types::{
     InvokeTransactionReceipt, L1HandlerTransactionReceipt, TransactionFinalityStatus,
     TransactionReceipt, TransactionReceiptWithBlockInfo,
 };
-
-use crate::utils::get_builtin_instance_count;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
@@ -171,38 +168,23 @@ impl From<katana_primitives::trace::TxResources> for ExecutionResources {
             computation_resources: ComputationResources {
                 steps: value.vm_resources.n_steps as u64,
                 memory_holes: Some(value.vm_resources.n_memory_holes as u64),
-                ec_op_builtin_applications: get_builtin_instance_count(
-                    &value.vm_resources,
-                    BuiltinName::ec_op,
-                ),
-                ecdsa_builtin_applications: get_builtin_instance_count(
-                    &value.vm_resources,
-                    BuiltinName::ecdsa,
-                ),
-                keccak_builtin_applications: get_builtin_instance_count(
-                    &value.vm_resources,
-                    BuiltinName::keccak,
-                ),
-                bitwise_builtin_applications: get_builtin_instance_count(
-                    &value.vm_resources,
-                    BuiltinName::bitwise,
-                ),
-                pedersen_builtin_applications: get_builtin_instance_count(
-                    &value.vm_resources,
-                    BuiltinName::pedersen,
-                ),
-                poseidon_builtin_applications: get_builtin_instance_count(
-                    &value.vm_resources,
-                    BuiltinName::poseidon,
-                ),
-                range_check_builtin_applications: get_builtin_instance_count(
-                    &value.vm_resources,
-                    BuiltinName::range_check,
-                ),
-                segment_arena_builtin: get_builtin_instance_count(
-                    &value.vm_resources,
-                    BuiltinName::segment_arena,
-                ),
+                ec_op_builtin_applications: value.vm_resources.builtin_instance_counter.ec_op(),
+                ecdsa_builtin_applications: value.vm_resources.builtin_instance_counter.ecdsa(),
+                keccak_builtin_applications: value.vm_resources.builtin_instance_counter.keccak(),
+                bitwise_builtin_applications: value.vm_resources.builtin_instance_counter.bitwise(),
+                pedersen_builtin_applications: value
+                    .vm_resources
+                    .builtin_instance_counter
+                    .pedersen(),
+                poseidon_builtin_applications: value
+                    .vm_resources
+                    .builtin_instance_counter
+                    .poseidon(),
+                range_check_builtin_applications: value
+                    .vm_resources
+                    .builtin_instance_counter
+                    .range_check(),
+                segment_arena_builtin: value.vm_resources.builtin_instance_counter.segment_arena(),
             },
             data_resources: DataResources {
                 data_availability: DataAvailabilityResources {

@@ -10,30 +10,37 @@ use starknet::core::types::{BlockId, BlockTag, FunctionCall, U256};
 use starknet::core::utils::{get_selector_from_name, parse_cairo_short_string};
 use starknet::providers::Provider;
 use starknet_crypto::Felt;
-use tracing::{debug, trace, warn};
+use tracing::{debug, warn};
 
-use super::{ApplyBalanceDiffQuery, Executor};
+use super::{ApplyBalanceDiffQuery, BrokerMessage, Executor};
 use crate::constants::{SQL_FELT_DELIMITER, TOKEN_BALANCE_TABLE};
 use crate::executor::LOG_TARGET;
 use crate::simple_broker::SimpleBroker;
-use crate::types::{ContractType, TokenBalance};
+use crate::types::{ContractType, OptimisticToken, OptimisticTokenBalance, Token, TokenBalance};
 use crate::utils::{
-    felt_to_sql_string, fetch_content_from_ipfs, sql_string_to_u256, u256_to_sql_string, I256,
+    felt_and_u256_to_sql_string, felt_to_sql_string, fetch_content_from_ipfs, sanitize_json_string,
+    sql_string_to_u256, u256_to_sql_string, I256,
 };
 
 #[derive(Debug, Clone)]
-pub struct RegisterErc721TokenQuery {
-    pub token_id: String,
+pub struct RegisterNftTokenQuery {
+    pub id: String,
     pub contract_address: Felt,
-    pub actual_token_id: U256,
+    pub token_id: U256,
 }
 
 #[derive(Debug, Clone)]
-pub struct RegisterErc721TokenMetadata {
-    pub query: RegisterErc721TokenQuery,
+pub struct RegisterNftTokenMetadata {
+    pub query: RegisterNftTokenQuery,
     pub name: String,
     pub symbol: String,
     pub metadata: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct UpdateNftMetadataQuery {
+    pub contract_address: Felt,
+    pub token_id: U256,
 }
 
 #[derive(Debug, Clone)]
@@ -56,6 +63,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
             let id = id_str.split(SQL_FELT_DELIMITER).collect::<Vec<&str>>();
             match contract_type {
                 ContractType::WORLD => unreachable!(),
+                ContractType::UDC => unreachable!(),
                 ContractType::ERC721 => {
                     // account_address/contract_address:id => ERC721
                     assert!(id.len() == 2);
@@ -73,8 +81,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                         Arc::clone(&provider),
                         apply_balance_diff.block_id,
                     )
-                    .await
-                    .with_context(|| "Failed to apply balance diff in apply_cache_diff")?;
+                    .await?;
                 }
                 ContractType::ERC20 => {
                     // account_address/contract_address/ => ERC20
@@ -92,8 +99,26 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                         Arc::clone(&provider),
                         apply_balance_diff.block_id,
                     )
-                    .await
-                    .with_context(|| "Failed to apply balance diff in apply_cache_diff")?;
+                    .await?;
+                }
+                ContractType::ERC1155 => {
+                    // account_address/contract_address:id => ERC1155
+                    assert!(id.len() == 2);
+                    let account_address = id[0];
+                    let token_id = id[1];
+                    let mid = token_id.split(":").collect::<Vec<&str>>();
+                    let contract_address = mid[0];
+
+                    self.apply_balance_diff_helper(
+                        id_str,
+                        account_address,
+                        contract_address,
+                        token_id,
+                        balance,
+                        Arc::clone(&provider),
+                        apply_balance_diff.block_id,
+                    )
+                    .await?;
                 }
             }
         }
@@ -174,94 +199,35 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
         .await?;
 
         debug!(target: LOG_TARGET, token_balance = ?token_balance, "Applied balance diff");
-        SimpleBroker::publish(token_balance);
+        SimpleBroker::publish(unsafe {
+            std::mem::transmute::<TokenBalance, OptimisticTokenBalance>(token_balance.clone())
+        });
+        self.publish_queue.push(BrokerMessage::TokenBalanceUpdated(token_balance));
 
         Ok(())
     }
 
-    pub async fn process_register_erc721_token_query(
-        register_erc721_token: RegisterErc721TokenQuery,
+    pub async fn process_register_nft_token_query(
+        register_nft_token: RegisterNftTokenQuery,
         provider: Arc<P>,
         name: String,
         symbol: String,
-    ) -> Result<RegisterErc721TokenMetadata> {
-        let token_uri = if let Ok(token_uri) = provider
-            .call(
-                FunctionCall {
-                    contract_address: register_erc721_token.contract_address,
-                    entry_point_selector: get_selector_from_name("token_uri").unwrap(),
-                    calldata: vec![
-                        register_erc721_token.actual_token_id.low().into(),
-                        register_erc721_token.actual_token_id.high().into(),
-                    ],
-                },
-                BlockId::Tag(BlockTag::Pending),
-            )
-            .await
-        {
-            token_uri
-        } else if let Ok(token_uri) = provider
-            .call(
-                FunctionCall {
-                    contract_address: register_erc721_token.contract_address,
-                    entry_point_selector: get_selector_from_name("tokenURI").unwrap(),
-                    calldata: vec![
-                        register_erc721_token.actual_token_id.low().into(),
-                        register_erc721_token.actual_token_id.high().into(),
-                    ],
-                },
-                BlockId::Tag(BlockTag::Pending),
-            )
-            .await
-        {
-            token_uri
-        } else {
-            warn!(
-                contract_address = format!("{:#x}", register_erc721_token.contract_address),
-                token_id = %register_erc721_token.actual_token_id,
-                "Error fetching token URI, empty metadata will be used instead.",
-            );
+    ) -> Result<RegisterNftTokenMetadata> {
+        let token_uri = Self::fetch_token_uri(
+            &provider,
+            register_nft_token.contract_address,
+            register_nft_token.token_id,
+        )
+        .await?;
 
-            // Ignoring the token URI if the contract can't return it.
-            ByteArray::cairo_serialize(&"".try_into().unwrap())
-        };
+        let metadata = Self::fetch_token_metadata(
+            register_nft_token.contract_address,
+            register_nft_token.token_id,
+            &token_uri,
+        )
+        .await?;
 
-        let token_uri = if let Ok(byte_array) = ByteArray::cairo_deserialize(&token_uri, 0) {
-            byte_array.to_string().expect("Return value not String")
-        } else if let Ok(felt_array) = Vec::<Felt>::cairo_deserialize(&token_uri, 0) {
-            felt_array
-                .iter()
-                .map(parse_cairo_short_string)
-                .collect::<Result<Vec<String>, _>>()
-                .map(|strings| strings.join(""))
-                .map_err(|_| anyhow::anyhow!("Failed parsing Array<Felt> to String"))?
-        } else {
-            return Err(anyhow::anyhow!("token_uri is neither ByteArray nor Array<Felt>"));
-        };
-
-        let metadata = if token_uri.is_empty() {
-            "".to_string()
-        } else {
-            let metadata = Self::fetch_metadata(&token_uri).await.with_context(|| {
-                format!(
-                    "Failed to fetch metadata for token_id: {}",
-                    register_erc721_token.actual_token_id
-                )
-            });
-
-            if let Ok(metadata) = metadata {
-                serde_json::to_string(&metadata).context("Failed to serialize metadata")?
-            } else {
-                warn!(
-                contract_address = format!("{:#x}", register_erc721_token.contract_address),
-                    token_id = %register_erc721_token.actual_token_id,
-                    "Error fetching metadata, empty metadata will be used instead.",
-                );
-                "".to_string()
-            }
-        };
-
-        Ok(RegisterErc721TokenMetadata { query: register_erc721_token, metadata, name, symbol })
+        Ok(RegisterNftTokenMetadata { query: register_nft_token, metadata, name, symbol })
     }
 
     // given a uri which can be either http/https url or data uri, fetch the metadata erc721
@@ -303,8 +269,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
             }
             uri if uri.starts_with("data") => {
                 // Parse and decode data URI
-                debug!("Parsing metadata from data URI");
-                trace!(data_uri = %token_uri);
+                debug!(data_uri = %token_uri, "Parsing metadata from data URI");
 
                 // HACK: https://github.com/servo/rust-url/issues/908
                 let uri = token_uri.replace("#", "%23");
@@ -323,9 +288,12 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                     .chars()
                     .filter(|c| !c.is_ascii_control())
                     .collect::<String>();
+                let sanitized_json = sanitize_json_string(&decoded_str);
 
-                let json: serde_json::Value = serde_json::from_str(&decoded_str)
-                    .context(format!("Failed to parse metadata JSON from data URI: {}", &uri))?;
+                let json: serde_json::Value =
+                    serde_json::from_str(&sanitized_json).with_context(|| {
+                        format!("Failed to parse metadata JSON from data URI: {}", &uri)
+                    })?;
 
                 Ok(json)
             }
@@ -333,25 +301,155 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
         }
     }
 
-    pub async fn handle_erc721_token_metadata(
+    pub async fn handle_nft_token_metadata(
         &mut self,
-        result: RegisterErc721TokenMetadata,
+        result: RegisterNftTokenMetadata,
     ) -> Result<()> {
-        let query = sqlx::query(
-            "INSERT INTO tokens (id, contract_address, name, symbol, decimals, metadata) VALUES \
-             (?, ?, ?, ?, ?, ?)",
+        let query = sqlx::query_as::<_, Token>(
+            "INSERT INTO tokens (id, contract_address, token_id, name, symbol, decimals, \
+             metadata) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING RETURNING *",
         )
-        .bind(&result.query.token_id)
+        .bind(&result.query.id)
         .bind(felt_to_sql_string(&result.query.contract_address))
+        .bind(u256_to_sql_string(&result.query.token_id))
         .bind(&result.name)
         .bind(&result.symbol)
         .bind(0)
         .bind(&result.metadata);
 
-        query
-            .execute(&mut *self.transaction)
+        let token = query
+            .fetch_optional(&mut *self.transaction)
             .await
             .with_context(|| format!("Failed to execute721Token query: {:?}", result))?;
+
+        if let Some(token) = token {
+            SimpleBroker::publish(unsafe {
+                std::mem::transmute::<Token, OptimisticToken>(token.clone())
+            });
+            self.publish_queue.push(BrokerMessage::TokenRegistered(token));
+        }
+
+        Ok(())
+    }
+
+    async fn fetch_token_uri(
+        provider: &P,
+        contract_address: Felt,
+        token_id: U256,
+    ) -> Result<String> {
+        let token_uri = if let Ok(token_uri) = provider
+            .call(
+                FunctionCall {
+                    contract_address,
+                    entry_point_selector: get_selector_from_name("token_uri").unwrap(),
+                    calldata: vec![token_id.low().into(), token_id.high().into()],
+                },
+                BlockId::Tag(BlockTag::Pending),
+            )
+            .await
+        {
+            token_uri
+        } else if let Ok(token_uri) = provider
+            .call(
+                FunctionCall {
+                    contract_address,
+                    entry_point_selector: get_selector_from_name("tokenURI").unwrap(),
+                    calldata: vec![token_id.low().into(), token_id.high().into()],
+                },
+                BlockId::Tag(BlockTag::Pending),
+            )
+            .await
+        {
+            token_uri
+        } else if let Ok(token_uri) = provider
+            .call(
+                FunctionCall {
+                    contract_address,
+                    entry_point_selector: get_selector_from_name("uri").unwrap(),
+                    calldata: vec![token_id.low().into(), token_id.high().into()],
+                },
+                BlockId::Tag(BlockTag::Pending),
+            )
+            .await
+        {
+            token_uri
+        } else {
+            warn!(
+                contract_address = format!("{:#x}", contract_address),
+                token_id = %token_id,
+                "Error fetching token URI, empty metadata will be used instead.",
+            );
+            return Ok("".to_string());
+        };
+
+        let mut token_uri = if let Ok(byte_array) = ByteArray::cairo_deserialize(&token_uri, 0) {
+            byte_array.to_string().expect("Return value not String")
+        } else if let Ok(felt_array) = Vec::<Felt>::cairo_deserialize(&token_uri, 0) {
+            felt_array
+                .iter()
+                .map(parse_cairo_short_string)
+                .collect::<Result<Vec<String>, _>>()
+                .map(|strings| strings.join(""))
+                .map_err(|_| anyhow::anyhow!("Failed parsing Array<Felt> to String"))?
+        } else {
+            debug!(
+                contract_address = format!("{:#x}", contract_address),
+                token_id = %token_id,
+                token_uri = %token_uri.iter().map(|f| format!("{:#x}", f)).collect::<Vec<String>>().join(", "),
+                "token_uri is neither ByteArray nor Array<Felt>"
+            );
+            "".to_string()
+        };
+
+        // Handle ERC1155 {id} replacement
+        let token_id_hex = format!("{:064x}", token_id);
+        token_uri = token_uri.replace("{id}", &token_id_hex);
+
+        Ok(token_uri)
+    }
+
+    async fn fetch_token_metadata(
+        contract_address: Felt,
+        token_id: U256,
+        token_uri: &str,
+    ) -> Result<String> {
+        if token_uri.is_empty() {
+            return Ok("".to_string());
+        }
+
+        let metadata = Self::fetch_metadata(token_uri).await;
+        match metadata {
+            Ok(metadata) => {
+                serde_json::to_string(&metadata).context("Failed to serialize metadata")
+            }
+            Err(_) => {
+                warn!(
+                    contract_address = format!("{:#x}", contract_address),
+                    token_id = %token_id,
+                    token_uri = %token_uri,
+                    "Error fetching metadata, empty metadata will be used instead.",
+                );
+                Ok("".to_string())
+            }
+        }
+    }
+
+    pub async fn update_nft_metadata(
+        &mut self,
+        contract_address: Felt,
+        token_id: U256,
+        provider: Arc<P>,
+    ) -> Result<()> {
+        let id = felt_and_u256_to_sql_string(&contract_address, &token_id);
+        let token_uri = Self::fetch_token_uri(&provider, contract_address, token_id).await?;
+        let metadata = Self::fetch_token_metadata(contract_address, token_id, &token_uri).await?;
+
+        // Update metadata in database
+        sqlx::query("UPDATE tokens SET metadata = ? WHERE id = ?")
+            .bind(&metadata)
+            .bind(id)
+            .execute(&mut *self.transaction)
+            .await?;
 
         Ok(())
     }

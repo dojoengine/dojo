@@ -1,28 +1,33 @@
 //! Katana node CLI options and configuration.
 
+use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
 
 use alloy_primitives::U256;
-#[cfg(feature = "server")]
-use anyhow::bail;
 use anyhow::{Context, Result};
 use clap::Parser;
+use katana_chain_spec::rollup::ChainConfigDir;
 use katana_chain_spec::ChainSpec;
 use katana_core::constants::DEFAULT_SEQUENCER_ADDRESS;
-use katana_core::service::messaging::MessagingConfig;
+use katana_explorer::Explorer;
+use katana_messaging::MessagingConfig;
 use katana_node::config::db::DbConfig;
 use katana_node::config::dev::{DevConfig, FixedL1GasPriceConfig};
 use katana_node::config::execution::ExecutionConfig;
 use katana_node::config::fork::ForkingConfig;
 use katana_node::config::metrics::MetricsConfig;
-use katana_node::config::rpc::RpcConfig;
-#[cfg(feature = "server")]
-use katana_node::config::rpc::{RpcModuleKind, RpcModulesList};
-use katana_node::config::{Config, SequencingConfig};
-use katana_primitives::chain::ChainId;
+use katana_node::config::rpc::{RpcConfig, RpcModuleKind, RpcModulesList};
+#[cfg(not(feature = "server"))]
+use katana_node::config::rpc::{DEFAULT_RPC_ADDR, DEFAULT_RPC_PORT};
+use katana_node::config::sequencing::SequencingConfig;
+use katana_node::config::Config;
+#[cfg(feature = "cartridge")]
+use katana_node::config::Paymaster;
 use katana_primitives::genesis::allocation::DevAllocationsGenerator;
 use katana_primitives::genesis::constant::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;
+#[cfg(feature = "server")]
+use katana_rpc::cors::HeaderValue;
 use serde::{Deserialize, Serialize};
 use tracing::{info, Subscriber};
 use tracing_log::LogTracer;
@@ -31,8 +36,7 @@ use url::Url;
 
 use crate::file::NodeArgsConfig;
 use crate::options::*;
-use crate::utils;
-use crate::utils::{parse_seed, LogFormat};
+use crate::utils::{self, parse_chain_config_dir, parse_seed, LogFormat};
 
 pub(crate) const LOG_TARGET: &str = "katana::cli";
 
@@ -45,8 +49,8 @@ pub struct NodeArgs {
 
     /// Path to the chain configuration file.
     #[arg(long, hide = true)]
-    #[arg(value_parser = ChainId::parse)]
-    pub chain: Option<ChainId>,
+    #[arg(value_parser = parse_chain_config_dir)]
+    pub chain: Option<ChainConfigDir>,
 
     /// Disable auto and interval mining, and mine on demand instead via an endpoint.
     #[arg(long)]
@@ -57,6 +61,10 @@ pub struct NodeArgs {
     #[arg(short, long)]
     #[arg(value_name = "MILLISECONDS")]
     pub block_time: Option<u64>,
+
+    #[arg(long = "sequencing.block-max-cairo-steps")]
+    #[arg(value_name = "TOTAL")]
+    pub block_cairo_steps_limit: Option<u64>,
 
     /// Directory path of the database to initialize from.
     ///
@@ -76,7 +84,8 @@ pub struct NodeArgs {
     /// settlement chain that can be Ethereum or an other Starknet sequencer.
     #[arg(long)]
     #[arg(value_name = "PATH")]
-    #[arg(value_parser = katana_core::service::messaging::MessagingConfig::parse)]
+    #[arg(value_parser = katana_messaging::MessagingConfig::parse)]
+    #[arg(conflicts_with = "chain")]
     pub messaging: Option<MessagingConfig>,
 
     #[arg(long = "l1.provider", value_name = "URL", alias = "l1-provider")]
@@ -96,6 +105,9 @@ pub struct NodeArgs {
     pub server: ServerOptions,
 
     #[command(flatten)]
+    pub rpc: RpcOptions,
+
+    #[command(flatten)]
     pub starknet: StarknetOptions,
 
     #[command(flatten)]
@@ -110,16 +122,19 @@ pub struct NodeArgs {
     #[cfg(feature = "slot")]
     #[command(flatten)]
     pub slot: SlotOptions,
+
+    #[cfg(feature = "cartridge")]
+    #[command(flatten)]
+    pub cartridge: CartridgeOptions,
+
+    #[command(flatten)]
+    pub explorer: ExplorerOptions,
 }
 
 impl NodeArgs {
-    pub fn execute(&self) -> Result<()> {
+    pub async fn execute(&self) -> Result<()> {
         self.init_logging()?;
-        tokio::runtime::Builder::new_multi_thread()
-            .enable_all()
-            .build()
-            .context("failed to build tokio runtime")?
-            .block_on(self.start_node())
+        self.start_node().await
     }
 
     async fn start_node(&self) -> Result<()> {
@@ -131,8 +146,19 @@ impl NodeArgs {
             utils::print_intro(self, &node.backend.chain_spec);
         }
 
+        // Get chain ID before launching the node
+        let chain_id = node.backend.chain_spec.id();
+
         // Launch the node
         let handle = node.launch().await.context("failed to launch node")?;
+
+        // Then start the explorer if enabled
+        if self.explorer.explorer {
+            let rpc_url = format!("http://{}", handle.rpc.addr());
+            let rpc_url = Url::parse(&rpc_url).context("failed to parse node url")?;
+            let addr = SocketAddr::new(self.explorer.explorer_addr, self.explorer.explorer_port);
+            let _ = Explorer::new(rpc_url, chain_id.to_string())?.start(addr)?;
+        }
 
         // Wait until an OS signal (ie SIGINT, SIGTERM) is received or the node is shutdown.
         tokio::select! {
@@ -180,69 +206,129 @@ impl NodeArgs {
         let db = self.db_config();
         let rpc = self.rpc_config()?;
         let dev = self.dev_config();
-        let chain = self.chain_spec()?;
+        let (chain, cs_messaging) = self.chain_spec()?;
         let metrics = self.metrics_config();
         let forking = self.forking_config()?;
         let execution = self.execution_config();
         let sequencing = self.sequencer_config();
-        let messaging = self.messaging.clone();
 
+        // the `katana init` will automatically generate a messaging config. so if katana is run
+        // with `--chain` then the `--messaging` flag is not required. this is temporary and
+        // the messagign config will eventually be removed slowly.
+        let messaging = if cs_messaging.is_some() { cs_messaging } else { self.messaging.clone() };
+
+        #[cfg(feature = "cartridge")]
+        {
+            let cartridge = self.cartridge_config();
+
+            Ok(Config {
+                db,
+                dev,
+                rpc,
+                chain,
+                metrics,
+                forking,
+                paymaster: cartridge,
+                execution,
+                messaging,
+                sequencing,
+            })
+        }
+
+        #[cfg(not(feature = "cartridge"))]
         Ok(Config { metrics, db, dev, rpc, chain, execution, sequencing, messaging, forking })
     }
 
     fn sequencer_config(&self) -> SequencingConfig {
-        SequencingConfig { block_time: self.block_time, no_mining: self.no_mining }
+        SequencingConfig {
+            block_time: self.block_time,
+            no_mining: self.no_mining,
+            block_cairo_steps_limit: self.block_cairo_steps_limit,
+        }
     }
 
     fn rpc_config(&self) -> Result<RpcConfig> {
-        #[cfg(feature = "server")]
-        {
-            let modules = if let Some(modules) = &self.server.http_modules {
-                // TODO: This check should be handled in the `katana-node` level. Right now if you
-                // instantiate katana programmatically, you can still add the dev module without
-                // enabling dev mode.
-                //
-                // We only allow the `dev` module in dev mode (ie `--dev` flag)
-                if !self.development.dev && modules.contains(&RpcModuleKind::Dev) {
-                    bail!("The `dev` module can only be enabled in dev mode (ie `--dev` flag)")
-                }
+        #[allow(unused_mut)]
+        let mut modules = if let Some(modules) = &self.rpc.http_modules {
+            // TODO: This check should be handled in the `katana-node` level. Right now if you
+            // instantiate katana programmatically, you can still add the dev module without
+            // enabling dev mode.
+            //
+            // We only allow the `dev` module in dev mode (ie `--dev` flag)
+            if !self.development.dev && modules.contains(&RpcModuleKind::Dev) {
+                anyhow::bail!("The `dev` module can only be enabled in dev mode (ie `--dev` flag)")
+            }
 
-                modules.clone()
-            } else {
-                // Expose the default modules if none is specified.
-                let mut modules = RpcModulesList::default();
+            modules.clone()
+        } else {
+            // Expose the default modules if none is specified.
+            let mut modules = RpcModulesList::default();
 
-                // Ensures the `--dev` flag enabled the dev module.
-                if self.development.dev {
-                    modules.add(RpcModuleKind::Dev);
-                }
+            // Ensures the `--dev` flag enabled the dev module.
+            if self.development.dev {
+                modules.add(RpcModuleKind::Dev);
+            }
 
-                modules
-            };
+            modules
+        };
 
-            Ok(RpcConfig {
-                apis: modules,
-                port: self.server.http_port,
-                addr: self.server.http_addr,
-                max_connections: self.server.max_connections,
-                cors_origins: self.server.http_cors_origins.clone(),
-                max_event_page_size: Some(self.server.max_event_page_size),
-                max_proof_keys: Some(self.server.max_proof_keys),
-            })
+        // The cartridge rpc must be enabled if the paymaster is enabled.
+        // We put it here so that even when the individual api are explicitly specified
+        // (ie `--rpc.api`) we guarantee that the cartridge rpc is enabled.
+        #[cfg(feature = "cartridge")]
+        if self.cartridge.paymaster {
+            modules.add(RpcModuleKind::Cartridge);
         }
+
+        #[cfg(feature = "server")]
+        let (cors_origins, http_port, http_addr) = {
+            let mut cors_origins = self.server.http_cors_origins.clone();
+
+            // Add explorer URL to CORS origins if explorer is enabled
+            if self.explorer.explorer {
+                // Add both http://127.0.0.1:PORT and http://localhost:PORT
+                cors_origins.push(
+                    HeaderValue::from_str(&format!(
+                        "http://127.0.0.1:{}",
+                        self.explorer.explorer_port
+                    ))
+                    .context("Failed to create CORS header")?,
+                );
+                cors_origins.push(
+                    HeaderValue::from_str(&format!(
+                        "http://localhost:{}",
+                        self.explorer.explorer_port
+                    ))
+                    .context("Failed to create CORS header")?,
+                );
+            }
+
+            (cors_origins, self.server.http_port, self.server.http_addr)
+        };
 
         #[cfg(not(feature = "server"))]
-        {
-            Ok(RpcConfig::default())
-        }
+        let (cors_origins, http_port, http_addr) = (vec![], DEFAULT_RPC_PORT, DEFAULT_RPC_ADDR);
+
+        Ok(RpcConfig {
+            apis: modules,
+            port: http_port,
+            addr: http_addr,
+            max_connections: self.rpc.max_connections,
+            cors_origins,
+            max_request_body_size: None,
+            max_response_body_size: None,
+            max_event_page_size: Some(self.rpc.max_event_page_size),
+            max_proof_keys: Some(self.rpc.max_proof_keys),
+            max_call_gas: Some(self.rpc.max_call_gas),
+        })
     }
 
-    fn chain_spec(&self) -> Result<Arc<ChainSpec>> {
-        if let Some(id) = &self.chain {
-            let mut cs =
-                katana_chain_spec::rollup::file::read(id).context("failed to load chain spec")?;
+    fn chain_spec(&self) -> Result<(Arc<ChainSpec>, Option<MessagingConfig>)> {
+        if let Some(path) = &self.chain {
+            let mut cs = katana_chain_spec::rollup::read(path)?;
             cs.genesis.sequencer_address = *DEFAULT_SEQUENCER_ADDRESS;
-            Ok(Arc::new(ChainSpec::Rollup(cs)))
+            let messaging_config = MessagingConfig::from_chain_spec(&cs);
+            Ok((Arc::new(ChainSpec::Rollup(cs)), Some(messaging_config)))
         }
         // exclusively for development mode
         else {
@@ -258,7 +344,8 @@ impl NodeArgs {
                 chain_spec.genesis.sequencer_address = *DEFAULT_SEQUENCER_ADDRESS;
             }
 
-            // generate dev accounts
+            // Generate dev accounts.
+            // If `cartridge` is enabled, the first account will be the paymaster.
             let accounts = DevAllocationsGenerator::new(self.development.total_accounts)
                 .with_seed(parse_seed(&self.development.seed))
                 .with_balance(U256::from(DEFAULT_PREFUNDED_ACCOUNT_BALANCE))
@@ -271,7 +358,7 @@ impl NodeArgs {
                 katana_slot_controller::add_controller_account(&mut chain_spec.genesis)?;
             }
 
-            Ok(Arc::new(ChainSpec::Dev(chain_spec)))
+            Ok((Arc::new(ChainSpec::Dev(chain_spec)), None))
         }
     }
 
@@ -338,6 +425,14 @@ impl NodeArgs {
         None
     }
 
+    fn cartridge_config(&self) -> Option<Paymaster> {
+        if self.cartridge.paymaster {
+            Some(Paymaster { cartridge_api_url: self.cartridge.api.clone() })
+        } else {
+            None
+        }
+    }
+
     /// Parse the node config from the command line arguments and the config file,
     /// and merge them together prioritizing the command line arguments.
     pub fn with_config_file(mut self) -> Result<Self> {
@@ -375,11 +470,7 @@ impl NodeArgs {
 
         #[cfg(feature = "server")]
         {
-            if self.server == ServerOptions::default() {
-                if let Some(server) = config.server {
-                    self.server = server;
-                }
-            }
+            self.server.merge(config.server.as_ref());
 
             if self.metrics == MetricsOptions::default() {
                 if let Some(metrics) = config.metrics {
@@ -390,6 +481,7 @@ impl NodeArgs {
 
         self.starknet.merge(config.starknet.as_ref());
         self.development.merge(config.development.as_ref());
+        self.rpc.merge(config.rpc.as_ref());
 
         if self.gpo == GasPriceOracleOptions::default() {
             if let Some(gpo) = config.gpo {
@@ -401,6 +493,11 @@ impl NodeArgs {
             if let Some(forking) = config.forking {
                 self.forking = forking;
             }
+        }
+
+        #[cfg(feature = "cartridge")]
+        {
+            self.cartridge.merge(config.cartridge.as_ref());
         }
 
         Ok(self)
@@ -662,14 +759,14 @@ chain_id.Named = "Mainnet"
 
     #[test]
     fn http_modules() {
-        // If the `--http.api` isn't specified, only starknet module will be exposed.
+        // If the `--rpc.api` isn't specified, only starknet module will be exposed.
         let config = NodeArgs::parse_from(["katana"]).config().unwrap();
         let modules = config.rpc.apis;
         assert_eq!(modules.len(), 1);
         assert!(modules.contains(&RpcModuleKind::Starknet));
 
-        // If the `--http.api` is specified, only the ones in the list will be exposed.
-        let config = NodeArgs::parse_from(["katana", "--http.api", "saya,torii"]).config().unwrap();
+        // If the `--rpc.api` is specified, only the ones in the list will be exposed.
+        let config = NodeArgs::parse_from(["katana", "--rpc.api", "saya,torii"]).config().unwrap();
         let modules = config.rpc.apis;
         assert_eq!(modules.len(), 2);
         assert!(modules.contains(&RpcModuleKind::Saya));
@@ -677,7 +774,7 @@ chain_id.Named = "Mainnet"
 
         // Specifiying the dev module without enabling dev mode is forbidden.
         let err =
-            NodeArgs::parse_from(["katana", "--http.api", "starknet,dev"]).config().unwrap_err();
+            NodeArgs::parse_from(["katana", "--rpc.api", "starknet,dev"]).config().unwrap_err();
         assert!(
             err.to_string()
                 .contains("The `dev` module can only be enabled in dev mode (ie `--dev` flag)")
@@ -690,5 +787,31 @@ chain_id.Named = "Mainnet"
         let config = args.config().unwrap();
 
         assert!(config.rpc.apis.contains(&RpcModuleKind::Dev));
+    }
+
+    #[cfg(feature = "cartridge")]
+    #[test]
+    fn cartridge_paymaster() {
+        let args = NodeArgs::parse_from(["katana", "--cartridge.paymaster"]);
+        let config = args.config().unwrap();
+
+        // Verify cartridge module is automatically enabled
+        assert!(config.rpc.apis.contains(&RpcModuleKind::Cartridge));
+
+        // Test with paymaster explicitly specified in RPC modules
+        let args =
+            NodeArgs::parse_from(["katana", "--cartridge.paymaster", "--rpc.api", "starknet"]);
+        let config = args.config().unwrap();
+
+        // Verify cartridge module is still enabled even when not in explicit RPC list
+        assert!(config.rpc.apis.contains(&RpcModuleKind::Cartridge));
+        assert!(config.rpc.apis.contains(&RpcModuleKind::Starknet));
+
+        // Test without paymaster enabled
+        let args = NodeArgs::parse_from(["katana"]);
+        let config = args.config().unwrap();
+
+        // Verify cartridge module is not enabled by default
+        assert!(!config.rpc.apis.contains(&RpcModuleKind::Cartridge));
     }
 }

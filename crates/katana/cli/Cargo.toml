@@ -8,6 +8,8 @@ version.workspace = true
 [dependencies]
 katana-chain-spec.workspace = true
 katana-core.workspace = true
+katana-explorer.workspace = true
+katana-messaging.workspace = true
 katana-node.workspace = true
 katana-primitives.workspace = true
 katana-rpc.workspace = true
@@ -34,7 +36,7 @@ assert_matches.workspace = true
 starknet.workspace = true
 
 [features]
-default = [ "server", "slot" ]
+default = [ "server", "slot", "cartridge" ]
 server = [  ]
 slot = [ "dep:katana-slot-controller", "katana-chain-spec/controller" ]
-starknet-messaging = [ "katana-node/starknet-messaging" ]
+cartridge = [ "katana-rpc/cartridge", "katana-node/cartridge", "katana-primitives/controller" ]

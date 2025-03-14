@@ -6,9 +6,8 @@ use std::io::{self, Write};
 
 use katana_cairo::lang::starknet_classes::contract_class::ContractEntryPoints;
 use katana_cairo::lang::utils::bigint::BigUintAsHex;
-use katana_cairo::starknet_api::contract_class::EntryPointType;
 use katana_cairo::starknet_api::deprecated_contract_class::{
-    ContractClassAbiEntry, EntryPointV0, Program as LegacyProgram,
+    ContractClassAbiEntry, EntryPoint, EntryPointType, Program as LegacyProgram,
 };
 use katana_cairo::starknet_api::serde_utils::deserialize_optional_contract_class_abi_entry_vector;
 use katana_primitives::class::{ContractClass, LegacyContractClass, SierraContractClass};
@@ -72,7 +71,7 @@ impl TryFrom<RpcContractClass> for ContractClass {
 
 // -- SIERRA CLASS
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub struct RpcSierraContractClass {
     pub sierra_program: Vec<Felt>,
     pub contract_class_version: String,
@@ -127,7 +126,7 @@ pub struct RpcLegacyContractClass {
     #[serde(with = "base64")]
     pub program: Vec<u8>,
     /// The selector of each entry point is a unique identifier in the program.
-    pub entry_points_by_type: HashMap<EntryPointType, Vec<EntryPointV0>>,
+    pub entry_points_by_type: HashMap<EntryPointType, Vec<EntryPoint>>,
     // Starknet does not verify the abi. If we can't parse it, we set it to None.
     #[serde(default, deserialize_with = "deserialize_optional_contract_class_abi_entry_vector")]
     pub abi: Option<Vec<ContractClassAbiEntry>>,
@@ -175,6 +174,36 @@ fn decompress_legacy_program(compressed_data: &[u8]) -> Result<LegacyProgram, Co
 // mainly for utility purposes, these conversions should be avoided from being used in a program
 // hot path.
 
+impl TryFrom<starknet::core::types::ContractClass> for RpcContractClass {
+    type Error = ConversionError;
+
+    fn try_from(value: starknet::core::types::ContractClass) -> Result<Self, Self::Error> {
+        match value {
+            starknet::core::types::ContractClass::Legacy(class) => {
+                Ok(Self::Legacy(RpcLegacyContractClass::try_from(class)?))
+            }
+            starknet::core::types::ContractClass::Sierra(class) => {
+                Ok(Self::Class(RpcSierraContractClass::try_from(class)?))
+            }
+        }
+    }
+}
+
+impl TryFrom<RpcContractClass> for starknet::core::types::ContractClass {
+    type Error = ConversionError;
+
+    fn try_from(value: RpcContractClass) -> Result<Self, Self::Error> {
+        match value {
+            RpcContractClass::Legacy(class) => {
+                Ok(Self::Legacy(CompressedLegacyContractClass::try_from(class)?))
+            }
+            RpcContractClass::Class(class) => {
+                Ok(Self::Sierra(FlattenedSierraClass::try_from(class)?))
+            }
+        }
+    }
+}
+
 impl TryFrom<FlattenedSierraClass> for RpcSierraContractClass {
     type Error = ConversionError;
 
@@ -214,6 +243,7 @@ impl TryFrom<RpcLegacyContractClass> for CompressedLegacyContractClass {
         Ok(class)
     }
 }
+
 #[cfg(test)]
 mod tests {
     use katana_primitives::class::{ContractClass, LegacyContractClass, SierraContractClass};
@@ -268,13 +298,11 @@ mod tests {
 
         let starknet_rs_class = serde_json::from_str::<SierraClass>(json).unwrap();
         let starknet_rs_hash = starknet_rs_class.class_hash().unwrap();
-        let rpc = starknet_rs_class.flatten().unwrap();
-
-        let json = serde_json::to_string(&rpc).unwrap();
+        let starknet_rpc = starknet_rs_class.flatten().unwrap();
 
         // -- katana
 
-        let rpc = serde_json::from_str::<RpcSierraContractClass>(&json).unwrap();
+        let rpc = RpcSierraContractClass::try_from(starknet_rpc).unwrap();
         let class = SierraContractClass::try_from(rpc).unwrap();
         let hash = ContractClass::Class(class.clone()).class_hash().unwrap();
 

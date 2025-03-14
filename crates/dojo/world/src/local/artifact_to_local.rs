@@ -3,21 +3,26 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use cairo_lang_starknet_classes::casm_contract_class::CasmContractClass;
 use cairo_lang_starknet_classes::contract_class::ContractClass;
+use dojo_types::naming::compute_bytearray_hash;
 use serde_json;
 use starknet::core::types::contract::{
-    AbiEntry, AbiImpl, CompiledClass, SierraClass, StateMutability,
+    AbiEntry, AbiEvent, AbiImpl, CompiledClass, SierraClass, StateMutability, TypedAbiEvent,
 };
 use starknet::core::types::Felt;
-use tracing::trace;
+use starknet::core::utils as snutils;
+use starknet_crypto::poseidon_hash_many;
+use tracing::{trace, warn};
 
 use super::*;
+use crate::config::calldata_decoder::decode_calldata;
 use crate::config::ProfileConfig;
 
 const WORLD_INTF: &str = "dojo::world::iworld::IWorld";
 const CONTRACT_INTF: &str = "dojo::contract::interface::IContract";
+const LIBRARY_INTF: &str = "dojo::contract::interface::ILibrary";
 const MODEL_INTF: &str = "dojo::model::interface::IModel";
 const EVENT_INTF: &str = "dojo::event::interface::IEvent";
 
@@ -29,6 +34,7 @@ impl WorldLocal {
             "Loading world from directory."
         );
         let mut resources = vec![];
+        let mut external_contract_classes = HashMap::new();
 
         let mut world_class = None;
         let mut world_class_hash = None;
@@ -40,8 +46,13 @@ impl WorldLocal {
             let entry = entry?;
             let path = entry.path();
             if path.is_file() {
+                if path.to_string_lossy().ends_with(".sierra.json") {
+                    trace!("Ignored .sierra.json: {}", path.to_string_lossy().to_string());
+                    continue;
+                }
+
                 if let Ok(sierra) =
-                    serde_json::from_reader::<_, SierraClass>(std::fs::File::open(&path)?)
+                    serde_json::from_slice::<SierraClass>(std::fs::read(&path)?.as_slice())
                 {
                     let casm_path = PathBuf::from(
                         path.to_string_lossy()
@@ -50,9 +61,9 @@ impl WorldLocal {
                     );
 
                     let casm_class = if casm_path.exists() {
-                        Some(serde_json::from_reader::<_, CompiledClass>(std::fs::File::open(
-                            &casm_path,
-                        )?)?)
+                        Some(serde_json::from_slice::<CompiledClass>(
+                            std::fs::read(&casm_path)?.as_slice(),
+                        )?)
                     } else {
                         None
                     };
@@ -69,14 +80,18 @@ impl WorldLocal {
                     // As a resource may be registered in multiple namespaces, currently the
                     // sierra class is being cloned for each namespace. Not ideal but keeping it
                     // simple for now.
+                    let mut dojo_resource_found = false;
+
                     for i in impls {
                         match identify_resource_type(i) {
                             ResourceType::World => {
-                                world_class = Some(sierra);
+                                world_class = Some(sierra.clone());
                                 world_class_hash = Some(class_hash);
                                 world_casm_class_hash = Some(casm_class_hash);
                                 world_entrypoints = systems_from_abi(&abi);
                                 world_casm_class = casm_class;
+
+                                dojo_resource_found = true;
                                 break;
                             }
                             ResourceType::Contract(name) => {
@@ -105,6 +120,56 @@ impl WorldLocal {
 
                                     resources.push(resource);
                                 }
+
+                                dojo_resource_found = true;
+                                break;
+                            }
+                            ResourceType::Library(name) => {
+                                let namespaces = profile_config.namespace.get_namespaces(&name);
+
+                                let systems = systems_from_abi(&abi);
+
+                                let mut added_resources = false;
+                                for ns in namespaces {
+                                    if let Some(version) = profile_config.lib_versions.as_ref() {
+                                        if let Some(v) = version.get(&format!("{}-{}", ns, name)) {
+                                            trace!(
+                                                name,
+                                                namespace = ns,
+                                                version = v,
+                                                "Adding local library from artifact."
+                                            );
+
+                                            let resource = ResourceLocal::Library(LibraryLocal {
+                                                common: CommonLocalInfo {
+                                                    namespace: ns,
+                                                    name: name.clone(),
+                                                    class: sierra.clone(),
+                                                    casm_class: casm_class.clone(),
+                                                    class_hash,
+                                                    casm_class_hash,
+                                                },
+                                                systems: systems.clone(),
+                                                version: v.clone(),
+                                            });
+
+                                            resources.push(resource);
+                                            added_resources = true;
+                                        }
+                                    }
+                                }
+
+                                if !added_resources {
+                                    warn!(
+                                        "No library version found for library `{}` in the Dojo \
+                                         profile config. Consider adding a `[lib_versions]` entry \
+                                         with the version.",
+                                        name
+                                    );
+                                } else {
+                                    dojo_resource_found = true;
+                                }
+
                                 break;
                             }
                             ResourceType::Model(name) => {
@@ -131,6 +196,8 @@ impl WorldLocal {
 
                                     resources.push(resource);
                                 }
+
+                                dojo_resource_found = true;
                                 break;
                             }
                             ResourceType::Event(name) => {
@@ -157,11 +224,94 @@ impl WorldLocal {
 
                                     resources.push(resource);
                                 }
+
+                                dojo_resource_found = true;
                                 break;
                             }
                             ResourceType::Other => {}
                         }
                     }
+
+                    // No Dojo resource found in this file so it is a classic Starknet contract
+                    if !dojo_resource_found {
+                        trace!(
+                            filename = path.file_name().unwrap().to_str().unwrap(),
+                            "Classic Starknet contract."
+                        );
+
+                        let contract_name = match contract_name_from_abi(&abi) {
+                            Some(c) => c,
+                            None => {
+                                bail!(
+                                    "Unable to find the name of the contract in the file {}",
+                                    path.file_name().unwrap().to_str().unwrap()
+                                );
+                            }
+                        };
+
+                        external_contract_classes.insert(
+                            contract_name.clone(),
+                            ExternalContractClassLocal {
+                                contract_name,
+                                casm_class_hash,
+                                class: sierra.clone(),
+                            },
+                        );
+                    }
+                }
+            }
+        }
+
+        let mut external_contracts = vec![];
+
+        if let Some(contracts) = &profile_config.external_contracts {
+            for contract in contracts {
+                if let Some(local_class) = external_contract_classes.get(&contract.contract_name) {
+                    let raw_constructor_data = if let Some(data) = &contract.constructor_data {
+                        decode_calldata(data)?
+                    } else {
+                        vec![]
+                    };
+
+                    let instance_name =
+                        contract.instance_name.clone().unwrap_or(contract.contract_name.clone());
+
+                    let salt = poseidon_hash_many(&[
+                        compute_bytearray_hash(&instance_name),
+                        compute_bytearray_hash(&contract.salt),
+                    ]);
+                    let class_hash = local_class.class.class_hash()?;
+
+                    let address = snutils::get_contract_address(
+                        salt,
+                        class_hash,
+                        &raw_constructor_data,
+                        Felt::ZERO,
+                    );
+
+                    let instance = ExternalContractLocal {
+                        contract_name: contract.contract_name.clone(),
+                        class_hash,
+                        instance_name,
+                        salt,
+                        constructor_data: contract.constructor_data.clone().unwrap_or(vec![]),
+                        raw_constructor_data,
+                        address,
+                    };
+
+                    trace!(
+                        contract_name = contract.contract_name.clone(),
+                        instance_name = instance.instance_name.clone(),
+                        "External contract instance."
+                    );
+
+                    external_contracts.push(instance);
+                } else {
+                    bail!(
+                        "Your profile configuration mentions the external contract '{}' but it \
+                         has NOT been compiled.",
+                        contract.contract_name
+                    );
                 }
             }
         }
@@ -187,6 +337,8 @@ impl WorldLocal {
                 casm_class: world_casm_class,
                 casm_class_hash,
                 resources: HashMap::new(),
+                external_contract_classes,
+                external_contracts,
                 profile_config,
                 entrypoints: world_entrypoints,
             },
@@ -216,7 +368,7 @@ build-external-contracts = ["dojo::world::world_contract::world"]
 fn casm_class_hash_from_sierra_file<P: AsRef<Path>>(path: P) -> Result<Felt> {
     let bytecode_max_size = usize::MAX;
     let sierra_class: ContractClass =
-        serde_json::from_reader::<_, ContractClass>(std::fs::File::open(path)?)?;
+        serde_json::from_slice::<ContractClass>(std::fs::read(path)?.as_slice())?;
     let casm_class =
         CasmContractClass::from_contract_class(sierra_class, false, bytecode_max_size)?;
     Ok(casm_class.compiled_class_hash())
@@ -227,6 +379,7 @@ fn casm_class_hash_from_sierra_file<P: AsRef<Path>>(path: P) -> Result<Felt> {
 enum ResourceType {
     World,
     Contract(String),
+    Library(String),
     Model(String),
     Event(String),
     Other,
@@ -238,6 +391,8 @@ fn identify_resource_type(implem: &AbiImpl) -> ResourceType {
         ResourceType::World
     } else if implem.interface_name == CONTRACT_INTF {
         ResourceType::Contract(name_from_impl(&implem.name))
+    } else if implem.interface_name == LIBRARY_INTF {
+        ResourceType::Library(name_from_impl(&implem.name))
     } else if implem.interface_name == MODEL_INTF {
         ResourceType::Model(name_from_impl(&implem.name))
     } else if implem.interface_name == EVENT_INTF {
@@ -273,6 +428,24 @@ fn systems_from_abi(abi: &[AbiEntry]) -> Vec<String> {
     }
 
     abi.iter().flat_map(extract_systems_from_abi_entry).collect()
+}
+
+/// Get the contract name from the ABI.
+///
+/// Note: The last AbiEntry of type `event` and kind `enum` is always the main
+/// Event enum of the contract. So, we find it and use its name to get
+/// the contract name.
+fn contract_name_from_abi(abi: &[AbiEntry]) -> Option<String> {
+    for entry in abi.iter().rev() {
+        if let AbiEntry::Event(AbiEvent::Typed(TypedAbiEvent::Enum(e))) = entry {
+            let mut it = e.name.rsplit("::");
+            if let (Some(_), Some(name)) = (it.next(), it.next()) {
+                return Some(name.to_string());
+            }
+        }
+    }
+
+    None
 }
 
 #[cfg(test)]
@@ -342,6 +515,7 @@ mod tests {
                 "register_event",
                 "register_model",
                 "register_contract",
+                "register_library",
                 "init_contract",
                 "upgrade_event",
                 "upgrade_model",

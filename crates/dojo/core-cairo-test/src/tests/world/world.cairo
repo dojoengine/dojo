@@ -10,7 +10,8 @@ use dojo::event::{Event, EventStorage};
 
 use crate::tests::helpers::{
     bar, IbarDispatcherTrait, drop_all_events, deploy_world_and_bar, Foo, m_Foo, test_contract,
-    test_contract_with_dojo_init_args, SimpleEvent, e_SimpleEvent, deploy_world,
+    test_contract_with_dojo_init_args, SimpleEvent, e_SimpleEvent, deploy_world, library_a,
+    LibraryALibraryDispatcher, LibraryADispatcherTrait,
 };
 use crate::{spawn_test_world, ContractDefTrait, NamespaceDef, TestResource, WorldStorageTestTrait};
 
@@ -330,4 +331,44 @@ pub fn dns_valid_class_hash() {
     assert!(class_hash == 0.try_into().unwrap());
     // TODO: once starknet 0.13.4 is out, uncomment that.
 //assert!(class_hash == bar::TEST_CLASS_HASH.try_into().unwrap());
+}
+
+#[test]
+fn test_register_library() {
+    let world = deploy_world();
+    let world = world.dispatcher;
+
+    world.register_library("dojo", library_a::TEST_CLASS_HASH.try_into().unwrap(), "liba", "0_1_0");
+}
+
+#[test]
+#[should_panic(
+    expected: (
+        "Resource (Library) `dojo-liba_v0_1_0` is already registered. Libraries can't be updated, increment the version in the Dojo configuration file instead.",
+        'ENTRYPOINT_FAILED',
+    ),
+)]
+fn test_register_library_already_registered() {
+    let world = deploy_world();
+    let world = world.dispatcher;
+
+    world.register_library("dojo", library_a::TEST_CLASS_HASH.try_into().unwrap(), "liba", "0_1_0");
+
+    world.register_library("dojo", library_a::TEST_CLASS_HASH.try_into().unwrap(), "liba", "0_1_0");
+}
+
+#[test]
+fn test_library_call() {
+    let world = deploy_world();
+    let world = world.dispatcher;
+
+    world.register_library("dojo", library_a::TEST_CLASS_HASH.try_into().unwrap(), "liba", "0_1_0");
+
+    let world = WorldStorageTrait::new(world, @"dojo");
+
+    let (_, class_hash) = world.dns(@"liba_v0_1_0").unwrap();
+
+    let liba = LibraryALibraryDispatcher { class_hash };
+    let res = liba.get_byte();
+    assert(res == 42, 'should return 42');
 }

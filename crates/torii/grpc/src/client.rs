@@ -1,7 +1,9 @@
 //! Client implementation for the gRPC service.
 use std::num::ParseIntError;
+#[cfg(not(target_arch = "wasm32"))]
 use std::time::Duration;
 
+use crypto_bigint::{Encoding, U256};
 use futures_util::stream::MapOk;
 use futures_util::{Stream, StreamExt, TryStreamExt};
 use starknet::core::types::{Felt, FromStrError, StateDiff, StateUpdate};
@@ -10,19 +12,20 @@ use tonic::codec::CompressionEncoding;
 use tonic::transport::Endpoint;
 
 use crate::proto::world::{
-    world_client, RetrieveEntitiesRequest, RetrieveEntitiesResponse, RetrieveEventMessagesRequest,
-    RetrieveEventsRequest, RetrieveEventsResponse, RetrieveTokenBalancesRequest,
-    RetrieveTokenBalancesResponse, RetrieveTokensRequest, RetrieveTokensResponse,
-    SubscribeEntitiesRequest, SubscribeEntityResponse, SubscribeEventMessagesRequest,
-    SubscribeEventsRequest, SubscribeEventsResponse, SubscribeIndexerRequest,
-    SubscribeIndexerResponse, SubscribeModelsRequest, SubscribeModelsResponse,
-    SubscribeTokenBalancesResponse, UpdateEntitiesSubscriptionRequest,
+    world_client, RetrieveControllersRequest, RetrieveControllersResponse, RetrieveEntitiesRequest,
+    RetrieveEntitiesResponse, RetrieveEventMessagesRequest, RetrieveEventsRequest,
+    RetrieveEventsResponse, RetrieveTokenBalancesRequest, RetrieveTokenBalancesResponse,
+    RetrieveTokensRequest, RetrieveTokensResponse, SubscribeEntitiesRequest,
+    SubscribeEntityResponse, SubscribeEventMessagesRequest, SubscribeEventsRequest,
+    SubscribeEventsResponse, SubscribeIndexerRequest, SubscribeIndexerResponse,
+    SubscribeModelsRequest, SubscribeModelsResponse, SubscribeTokenBalancesResponse,
+    SubscribeTokensResponse, UpdateEntitiesSubscriptionRequest,
     UpdateEventMessagesSubscriptionRequest, UpdateTokenBalancesSubscriptionRequest,
-    WorldMetadataRequest,
+    UpdateTokenSubscriptionRequest, WorldMetadataRequest,
 };
 use crate::types::schema::{Entity, SchemaError};
 use crate::types::{
-    EntityKeysClause, Event, EventQuery, IndexerUpdate, ModelKeysClause, Query, TokenBalance,
+    EntityKeysClause, Event, EventQuery, IndexerUpdate, ModelKeysClause, Query, Token, TokenBalance,
 };
 
 #[derive(Debug, thiserror::Error)]
@@ -95,12 +98,12 @@ impl WorldClient {
             .and_then(|metadata| metadata.try_into().map_err(Error::ParseStr))
     }
 
-    pub async fn retrieve_tokens(
+    pub async fn retrieve_controllers(
         &mut self,
         contract_addresses: Vec<Felt>,
-    ) -> Result<RetrieveTokensResponse, Error> {
+    ) -> Result<RetrieveControllersResponse, Error> {
         self.inner
-            .retrieve_tokens(RetrieveTokensRequest {
+            .retrieve_controllers(RetrieveControllersRequest {
                 contract_addresses: contract_addresses
                     .into_iter()
                     .map(|c| c.to_bytes_be().to_vec())
@@ -111,10 +114,85 @@ impl WorldClient {
             .map(|res| res.into_inner())
     }
 
+    pub async fn retrieve_tokens(
+        &mut self,
+        contract_addresses: Vec<Felt>,
+        token_ids: Vec<U256>,
+    ) -> Result<RetrieveTokensResponse, Error> {
+        self.inner
+            .retrieve_tokens(RetrieveTokensRequest {
+                contract_addresses: contract_addresses
+                    .into_iter()
+                    .map(|c| c.to_bytes_be().to_vec())
+                    .collect(),
+                token_ids: token_ids.into_iter().map(|id| id.to_be_bytes().to_vec()).collect(),
+            })
+            .await
+            .map_err(Error::Grpc)
+            .map(|res| res.into_inner())
+    }
+
+    pub async fn subscribe_tokens(
+        &mut self,
+        contract_addresses: Vec<Felt>,
+        token_ids: Vec<U256>,
+    ) -> Result<TokenUpdateStreaming, Error> {
+        let request = RetrieveTokensRequest {
+            contract_addresses: contract_addresses
+                .into_iter()
+                .map(|c| c.to_bytes_be().to_vec())
+                .collect(),
+            token_ids: token_ids.into_iter().map(|id| id.to_be_bytes().to_vec()).collect(),
+        };
+        let stream = self
+            .inner
+            .subscribe_tokens(request)
+            .await
+            .map_err(Error::Grpc)
+            .map(|res| res.into_inner())?;
+        Ok(TokenUpdateStreaming(stream.map_ok(Box::new(|res| {
+            (
+                res.subscription_id,
+                match res.token {
+                    Some(token) => token.try_into().expect("must able to serialize"),
+                    None => Token {
+                        token_id: U256::ZERO,
+                        contract_address: Felt::ZERO,
+                        name: "".to_string(),
+                        symbol: "".to_string(),
+                        decimals: 0,
+                        metadata: "".to_string(),
+                    },
+                },
+            )
+        }))))
+    }
+
+    pub async fn update_tokens_subscription(
+        &mut self,
+        subscription_id: u64,
+        contract_addresses: Vec<Felt>,
+        token_ids: Vec<U256>,
+    ) -> Result<(), Error> {
+        let contract_addresses =
+            contract_addresses.into_iter().map(|c| c.to_bytes_be().to_vec()).collect();
+        let request = UpdateTokenSubscriptionRequest {
+            subscription_id,
+            contract_addresses,
+            token_ids: token_ids.into_iter().map(|id| id.to_be_bytes().to_vec()).collect(),
+        };
+        self.inner
+            .update_tokens_subscription(request)
+            .await
+            .map_err(Error::Grpc)
+            .map(|res| res.into_inner())
+    }
+
     pub async fn retrieve_token_balances(
         &mut self,
         account_addresses: Vec<Felt>,
         contract_addresses: Vec<Felt>,
+        token_ids: Vec<U256>,
     ) -> Result<RetrieveTokenBalancesResponse, Error> {
         self.inner
             .retrieve_token_balances(RetrieveTokenBalancesRequest {
@@ -126,6 +204,7 @@ impl WorldClient {
                     .into_iter()
                     .map(|c| c.to_bytes_be().to_vec())
                     .collect(),
+                token_ids: token_ids.into_iter().map(|id| id.to_be_bytes().to_vec()).collect(),
             })
             .await
             .map_err(Error::Grpc)
@@ -304,6 +383,7 @@ impl WorldClient {
         &mut self,
         contract_addresses: Vec<Felt>,
         account_addresses: Vec<Felt>,
+        token_ids: Vec<U256>,
     ) -> Result<TokenBalanceStreaming, Error> {
         let request = RetrieveTokenBalancesRequest {
             contract_addresses: contract_addresses
@@ -314,6 +394,7 @@ impl WorldClient {
                 .into_iter()
                 .map(|a| a.to_bytes_be().to_vec())
                 .collect(),
+            token_ids: token_ids.into_iter().map(|id| id.to_be_bytes().to_vec()).collect(),
         };
         let stream = self
             .inner
@@ -322,7 +403,18 @@ impl WorldClient {
             .map_err(Error::Grpc)
             .map(|res| res.into_inner())?;
         Ok(TokenBalanceStreaming(stream.map_ok(Box::new(|res| {
-            (res.subscription_id, res.balance.unwrap().try_into().expect("must able to serialize"))
+            (
+                res.subscription_id,
+                match res.balance {
+                    Some(balance) => balance.try_into().expect("must able to serialize"),
+                    None => TokenBalance {
+                        balance: U256::ZERO,
+                        account_address: Felt::ZERO,
+                        contract_address: Felt::ZERO,
+                        token_id: U256::ZERO,
+                    },
+                },
+            )
         }))))
     }
 
@@ -332,6 +424,7 @@ impl WorldClient {
         subscription_id: u64,
         contract_addresses: Vec<Felt>,
         account_addresses: Vec<Felt>,
+        token_ids: Vec<U256>,
     ) -> Result<(), Error> {
         let request = UpdateTokenBalancesSubscriptionRequest {
             subscription_id,
@@ -343,12 +436,31 @@ impl WorldClient {
                 .into_iter()
                 .map(|a| a.to_bytes_be().to_vec())
                 .collect(),
+            token_ids: token_ids.into_iter().map(|id| id.to_be_bytes().to_vec()).collect(),
         };
         self.inner
             .update_token_balances_subscription(request)
             .await
             .map_err(Error::Grpc)
             .map(|res| res.into_inner())
+    }
+}
+
+type TokenMappedStream = MapOk<
+    tonic::Streaming<SubscribeTokensResponse>,
+    Box<dyn Fn(SubscribeTokensResponse) -> (SubscriptionId, Token) + Send>,
+>;
+
+#[derive(Debug)]
+pub struct TokenUpdateStreaming(TokenMappedStream);
+
+impl Stream for TokenUpdateStreaming {
+    type Item = <TokenMappedStream as Stream>::Item;
+    fn poll_next(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        self.0.poll_next_unpin(cx)
     }
 }
 

@@ -13,6 +13,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 
+use crypto_bigint::{Encoding, U256};
 use dojo_types::naming::compute_selector_from_tag;
 use dojo_types::primitive::{Primitive, PrimitiveError};
 use dojo_types::schema::Ty;
@@ -34,6 +35,7 @@ use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use subscriptions::event::EventManager;
 use subscriptions::indexer::IndexerManager;
+use subscriptions::token::TokenManager;
 use subscriptions::token_balance::TokenBalanceManager;
 use tokio::net::TcpListener;
 use tokio::sync::mpsc::{channel, Receiver};
@@ -46,6 +48,7 @@ use torii_sqlite::cache::ModelCache;
 use torii_sqlite::error::{Error, ParseError, QueryError};
 use torii_sqlite::model::{fetch_entities, map_row_to_ty};
 use torii_sqlite::types::{Token, TokenBalance};
+use torii_sqlite::utils::u256_to_sql_string;
 use tower_http::cors::{AllowOrigin, CorsLayer};
 
 use self::subscriptions::entity::EntityManager;
@@ -56,12 +59,14 @@ use crate::proto::types::member_value::ValueType;
 use crate::proto::types::LogicalOperator;
 use crate::proto::world::world_server::WorldServer;
 use crate::proto::world::{
-    RetrieveEntitiesStreamingResponse, RetrieveEventMessagesRequest, RetrieveTokenBalancesRequest,
-    RetrieveTokenBalancesResponse, RetrieveTokensRequest, RetrieveTokensResponse,
-    SubscribeEntitiesRequest, SubscribeEntityResponse, SubscribeEventMessagesRequest,
-    SubscribeEventsResponse, SubscribeIndexerRequest, SubscribeIndexerResponse,
-    SubscribeTokenBalancesResponse, UpdateEventMessagesSubscriptionRequest,
-    UpdateTokenBalancesSubscriptionRequest, WorldMetadataRequest, WorldMetadataResponse,
+    RetrieveControllersRequest, RetrieveControllersResponse, RetrieveEntitiesStreamingResponse,
+    RetrieveEventMessagesRequest, RetrieveTokenBalancesRequest, RetrieveTokenBalancesResponse,
+    RetrieveTokensRequest, RetrieveTokensResponse, SubscribeEntitiesRequest,
+    SubscribeEntityResponse, SubscribeEventMessagesRequest, SubscribeEventsResponse,
+    SubscribeIndexerRequest, SubscribeIndexerResponse, SubscribeTokenBalancesResponse,
+    SubscribeTokensResponse, UpdateEventMessagesSubscriptionRequest,
+    UpdateTokenBalancesSubscriptionRequest, UpdateTokenSubscriptionRequest, WorldMetadataRequest,
+    WorldMetadataResponse,
 };
 use crate::proto::{self};
 use crate::types::schema::SchemaError;
@@ -88,6 +93,7 @@ impl From<SchemaError> for Error {
             SchemaError::ParseIntError(err) => ParseError::ParseIntError(err).into(),
             SchemaError::FromSlice(err) => ParseError::FromSlice(err).into(),
             SchemaError::FromStr(err) => ParseError::FromStr(err).into(),
+            SchemaError::FromUtf8(err) => ParseError::FromUtf8(err).into(),
         }
     }
 }
@@ -95,22 +101,39 @@ impl From<SchemaError> for Error {
 impl From<Token> for proto::types::Token {
     fn from(value: Token) -> Self {
         Self {
-            contract_address: value.contract_address,
+            token_id: U256::from_be_hex(value.token_id.trim_start_matches("0x"))
+                .to_be_bytes()
+                .to_vec(),
+            contract_address: Felt::from_str(&value.contract_address)
+                .unwrap()
+                .to_bytes_be()
+                .to_vec(),
             name: value.name,
             symbol: value.symbol,
             decimals: value.decimals as u32,
-            metadata: value.metadata,
+            metadata: value.metadata.as_bytes().to_vec(),
         }
     }
 }
 
 impl From<TokenBalance> for proto::types::TokenBalance {
     fn from(value: TokenBalance) -> Self {
+        let id = value.token_id.split(':').collect::<Vec<&str>>();
+
         Self {
-            balance: value.balance,
-            account_address: value.account_address,
-            contract_address: value.contract_address,
-            token_id: value.token_id,
+            balance: U256::from_be_hex(value.balance.trim_start_matches("0x"))
+                .to_be_bytes()
+                .to_vec(),
+            account_address: Felt::from_str(&value.account_address).unwrap().to_bytes_be().to_vec(),
+            contract_address: Felt::from_str(&value.contract_address)
+                .unwrap()
+                .to_bytes_be()
+                .to_vec(),
+            token_id: if id.len() == 2 {
+                U256::from_be_hex(id[1].trim_start_matches("0x")).to_be_bytes().to_vec()
+            } else {
+                U256::ZERO.to_be_bytes().to_vec()
+            },
         }
     }
 }
@@ -126,6 +149,7 @@ pub struct DojoWorld {
     state_diff_manager: Arc<StateDiffManager>,
     indexer_manager: Arc<IndexerManager>,
     token_balance_manager: Arc<TokenBalanceManager>,
+    token_manager: Arc<TokenManager>,
 }
 
 impl DojoWorld {
@@ -142,6 +166,7 @@ impl DojoWorld {
         let state_diff_manager = Arc::new(StateDiffManager::default());
         let indexer_manager = Arc::new(IndexerManager::default());
         let token_balance_manager = Arc::new(TokenBalanceManager::default());
+        let token_manager = Arc::new(TokenManager::default());
 
         tokio::task::spawn(subscriptions::model_diff::Service::new_with_block_rcv(
             block_rx,
@@ -164,6 +189,8 @@ impl DojoWorld {
             &token_balance_manager,
         )));
 
+        tokio::task::spawn(subscriptions::token::Service::new(Arc::clone(&token_manager)));
+
         Self {
             pool,
             world_address,
@@ -174,6 +201,7 @@ impl DojoWorld {
             state_diff_manager,
             indexer_manager,
             token_balance_manager,
+            token_manager,
         }
     }
 }
@@ -444,17 +472,40 @@ impl DojoWorld {
         entity_updated_after: Option<String>,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         let keys_pattern = build_keys_pattern(keys_clause)?;
+        let model_selectors: Vec<String> = keys_clause
+            .models
+            .iter()
+            .map(|model| format!("{:#x}", compute_selector_from_tag(model)))
+            .collect();
 
-        let where_clause = format!(
-            "{table}.keys REGEXP ? {}",
-            if entity_updated_after.is_some() {
-                format!("AND {table}.updated_at >= ?")
-            } else {
-                String::new()
-            }
-        );
+        let where_clause = if model_selectors.is_empty() {
+            format!(
+                "{table}.keys REGEXP ? {}",
+                if entity_updated_after.is_some() {
+                    format!("AND {table}.updated_at >= ?")
+                } else {
+                    String::new()
+                }
+            )
+        } else {
+            format!(
+                "({table}.keys REGEXP ? AND {model_relation_table}.model_id IN ({})) OR \
+                 {model_relation_table}.model_id NOT IN ({}) {}",
+                vec!["?"; model_selectors.len()].join(", "),
+                vec!["?"; model_selectors.len()].join(", "),
+                if entity_updated_after.is_some() {
+                    format!("AND {table}.updated_at >= ?")
+                } else {
+                    String::new()
+                }
+            )
+        };
 
         let mut bind_values = vec![keys_pattern];
+        if !model_selectors.is_empty() {
+            bind_values.extend(model_selectors.clone());
+            bind_values.extend(model_selectors);
+        }
         if let Some(entity_updated_after) = entity_updated_after.clone() {
             bind_values.push(entity_updated_after);
         }
@@ -703,7 +754,7 @@ impl DojoWorld {
         entity_updated_after: Option<String>,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         let (where_clause, bind_values) =
-            build_composite_clause(table, &composite, entity_updated_after)?;
+            build_composite_clause(table, model_relation_table, &composite, entity_updated_after)?;
 
         let entity_models =
             entity_models.iter().map(|model| compute_selector_from_tag(model)).collect::<Vec<_>>();
@@ -769,17 +820,30 @@ impl DojoWorld {
     async fn retrieve_tokens(
         &self,
         contract_addresses: Vec<Felt>,
+        token_ids: Vec<U256>,
     ) -> Result<RetrieveTokensResponse, Status> {
-        let query = if contract_addresses.is_empty() {
-            "SELECT * FROM tokens".to_string()
-        } else {
+        let mut query = "SELECT * FROM tokens".to_string();
+        let mut bind_values = Vec::new();
+        let mut conditions = Vec::new();
+
+        if !contract_addresses.is_empty() {
             let placeholders = vec!["?"; contract_addresses.len()].join(", ");
-            format!("SELECT * FROM tokens WHERE contract_address IN ({})", placeholders)
-        };
+            conditions.push(format!("contract_address IN ({})", placeholders));
+            bind_values.extend(contract_addresses.iter().map(|addr| format!("{:#x}", addr)));
+        }
+        if !token_ids.is_empty() {
+            let placeholders = vec!["?"; token_ids.len()].join(", ");
+            conditions.push(format!("token_id IN ({})", placeholders));
+            bind_values.extend(token_ids.iter().map(|id| u256_to_sql_string(&(*id).into())));
+        }
+
+        if !conditions.is_empty() {
+            query += &format!(" WHERE {}", conditions.join(" AND "));
+        }
 
         let mut query = sqlx::query_as(&query);
-        for address in &contract_addresses {
-            query = query.bind(format!("{:#x}", address));
+        for value in bind_values {
+            query = query.bind(value);
         }
 
         let tokens: Vec<Token> =
@@ -793,6 +857,7 @@ impl DojoWorld {
         &self,
         account_addresses: Vec<Felt>,
         contract_addresses: Vec<Felt>,
+        token_ids: Vec<U256>,
     ) -> Result<RetrieveTokenBalancesResponse, Status> {
         let mut query = "SELECT * FROM token_balances".to_string();
         let mut bind_values = Vec::new();
@@ -810,6 +875,13 @@ impl DojoWorld {
             bind_values.extend(contract_addresses.iter().map(|addr| format!("{:#x}", addr)));
         }
 
+        if !token_ids.is_empty() {
+            let placeholders = vec!["?"; token_ids.len()].join(", ");
+            conditions
+                .push(format!("SUBSTR(token_id, INSTR(token_id, ':') + 1) IN ({})", placeholders));
+            bind_values.extend(token_ids.iter().map(|id| u256_to_sql_string(&(*id).into())));
+        }
+
         if !conditions.is_empty() {
             query += &format!(" WHERE {}", conditions.join(" AND "));
         }
@@ -824,23 +896,6 @@ impl DojoWorld {
 
         let balances = balances.iter().map(|balance| balance.clone().into()).collect();
         Ok(RetrieveTokenBalancesResponse { balances })
-    }
-
-    async fn subscribe_token_balances(
-        &self,
-        contract_addresses: Vec<Felt>,
-        account_addresses: Vec<Felt>,
-    ) -> Result<Receiver<Result<proto::world::SubscribeTokenBalancesResponse, tonic::Status>>, Error>
-    {
-        self.token_balance_manager.add_subscriber(contract_addresses, account_addresses).await
-    }
-
-    async fn subscribe_indexer(
-        &self,
-        contract_address: Felt,
-    ) -> Result<Receiver<Result<proto::world::SubscribeIndexerResponse, tonic::Status>>, Error>
-    {
-        self.indexer_manager.add_subscriber(&self.pool, contract_address).await
     }
 
     async fn subscribe_models(
@@ -869,13 +924,6 @@ impl DojoWorld {
         }
 
         self.state_diff_manager.add_subscriber(subs).await
-    }
-
-    async fn subscribe_entities(
-        &self,
-        keys: Vec<proto::types::EntityKeysClause>,
-    ) -> Result<Receiver<Result<proto::world::SubscribeEntityResponse, tonic::Status>>, Error> {
-        self.entity_manager.add_subscriber(keys.into_iter().map(|keys| keys.into()).collect()).await
     }
 
     async fn retrieve_entities(
@@ -1013,16 +1061,6 @@ impl DojoWorld {
         Ok(RetrieveEntitiesResponse { entities, total_count })
     }
 
-    async fn subscribe_event_messages(
-        &self,
-        clauses: Vec<proto::types::EntityKeysClause>,
-        historical: bool,
-    ) -> Result<Receiver<Result<proto::world::SubscribeEntityResponse, tonic::Status>>, Error> {
-        self.event_message_manager
-            .add_subscriber(clauses.into_iter().map(|keys| keys.into()).collect(), historical)
-            .await
-    }
-
     async fn retrieve_events(
         &self,
         query: &proto::types::EventQuery,
@@ -1034,13 +1072,36 @@ impl DojoWorld {
         Ok(RetrieveEventsResponse { events })
     }
 
-    async fn subscribe_events(
+    async fn retrieve_controllers(
         &self,
-        clause: Vec<proto::types::EntityKeysClause>,
-    ) -> Result<Receiver<Result<proto::world::SubscribeEventsResponse, tonic::Status>>, Error> {
-        self.event_manager
-            .add_subscriber(clause.into_iter().map(|keys| keys.into()).collect())
-            .await
+        contract_addresses: Vec<Felt>,
+    ) -> Result<proto::world::RetrieveControllersResponse, Error> {
+        let query = if contract_addresses.is_empty() {
+            "SELECT address, username, deployed_at FROM controllers".to_string()
+        } else {
+            format!(
+                "SELECT address, username, deployed_at FROM controllers WHERE address IN ({})",
+                contract_addresses.iter().map(|_| "?".to_string()).collect::<Vec<_>>().join(", ")
+            )
+        };
+
+        let mut db_query = sqlx::query_as::<_, (String, String, DateTime<Utc>)>(&query);
+        for address in &contract_addresses {
+            db_query = db_query.bind(format!("{:#x}", address));
+        }
+
+        let rows = db_query.fetch_all(&self.pool).await?;
+
+        let controllers = rows
+            .into_iter()
+            .map(|(address, username, deployed_at)| proto::types::Controller {
+                address: address.parse::<Felt>().unwrap().to_bytes_be().to_vec(),
+                username,
+                deployed_at_timestamp: deployed_at.timestamp() as u64,
+            })
+            .collect();
+
+        Ok(RetrieveControllersResponse { controllers })
     }
 }
 
@@ -1124,6 +1185,7 @@ fn build_keys_pattern(clause: &proto::types::KeysClause) -> Result<String, Error
 // builds a composite clause for a query
 fn build_composite_clause(
     table: &str,
+    model_relation_table: &str,
     composite: &proto::types::CompositeClause,
     entity_updated_after: Option<String>,
 ) -> Result<(String, Vec<String>), Error> {
@@ -1148,20 +1210,26 @@ fn build_composite_clause(
             ClauseType::Keys(keys) => {
                 let keys_pattern = build_keys_pattern(keys)?;
                 bind_values.push(keys_pattern);
-                where_clauses.push(format!("({table}.keys REGEXP ?)"));
+                let model_selectors: Vec<String> = keys
+                    .models
+                    .iter()
+                    .map(|model| format!("{:#x}", compute_selector_from_tag(model)))
+                    .collect();
 
-                // Add model checks for specified models
-
-                // NOTE: disabled since we are now using the top level entity models
-
-                // for model in &keys.models {
-                //     let (namespace, model_name) = model
-                //         .split_once('-')
-                //         .ok_or(QueryError::InvalidNamespacedModel(model.clone()))?;
-                //     let model_id = compute_selector_from_names(namespace, model_name);
-
-                //     having_clauses.push(format!("INSTR(model_ids, '{:#x}') > 0", model_id));
-                // }
+                if model_selectors.is_empty() {
+                    where_clauses.push(format!("({table}.keys REGEXP ?)"));
+                } else {
+                    // Add bind value placeholders for each model selector
+                    let placeholders = vec!["?"; model_selectors.len()].join(", ");
+                    where_clauses.push(format!(
+                        "({table}.keys REGEXP ? AND {model_relation_table}.model_id IN ({})) OR \
+                         {model_relation_table}.model_id NOT IN ({})",
+                        placeholders, placeholders
+                    ));
+                    // Add each model selector twice (once for IN and once for NOT IN)
+                    bind_values.extend(model_selectors.clone());
+                    bind_values.extend(model_selectors);
+                }
             }
             ClauseType::Member(member) => {
                 let comparison_operator = ComparisonOperator::from_repr(member.operator as usize)
@@ -1203,8 +1271,12 @@ fn build_composite_clause(
             }
             ClauseType::Composite(nested) => {
                 // Handle nested composite by recursively building the clause
-                let (nested_where, nested_values) =
-                    build_composite_clause(table, nested, entity_updated_after.clone())?;
+                let (nested_where, nested_values) = build_composite_clause(
+                    table,
+                    model_relation_table,
+                    nested,
+                    entity_updated_after.clone(),
+                )?;
 
                 if !nested_where.is_empty() {
                     where_clauses.push(nested_where);
@@ -1248,6 +1320,8 @@ type RetrieveEntitiesStreamingResponseStream =
     Pin<Box<dyn Stream<Item = Result<RetrieveEntitiesStreamingResponse, Status>> + Send>>;
 type SubscribeTokenBalancesResponseStream =
     Pin<Box<dyn Stream<Item = Result<SubscribeTokenBalancesResponse, Status>> + Send>>;
+type SubscribeTokensResponseStream =
+    Pin<Box<dyn Stream<Item = Result<SubscribeTokensResponse, Status>> + Send>>;
 
 #[tonic::async_trait]
 impl proto::world::world_server::World for DojoWorld {
@@ -1258,6 +1332,7 @@ impl proto::world::world_server::World for DojoWorld {
     type SubscribeIndexerStream = SubscribeIndexerResponseStream;
     type RetrieveEntitiesStreamingStream = RetrieveEntitiesStreamingResponseStream;
     type SubscribeTokenBalancesStream = SubscribeTokenBalancesResponseStream;
+    type SubscribeTokensStream = SubscribeTokensResponseStream;
 
     async fn world_metadata(
         &self,
@@ -1271,28 +1346,82 @@ impl proto::world::world_server::World for DojoWorld {
         Ok(Response::new(WorldMetadataResponse { metadata }))
     }
 
-    async fn retrieve_tokens(
+    async fn retrieve_controllers(
         &self,
-        request: Request<RetrieveTokensRequest>,
-    ) -> Result<Response<RetrieveTokensResponse>, Status> {
-        let RetrieveTokensRequest { contract_addresses } = request.into_inner();
+        request: Request<RetrieveControllersRequest>,
+    ) -> Result<Response<RetrieveControllersResponse>, Status> {
+        let RetrieveControllersRequest { contract_addresses } = request.into_inner();
         let contract_addresses = contract_addresses
             .iter()
             .map(|address| Felt::from_bytes_be_slice(address))
             .collect::<Vec<_>>();
 
+        let controllers = self
+            .retrieve_controllers(contract_addresses)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+        Ok(Response::new(controllers))
+    }
+
+    async fn retrieve_tokens(
+        &self,
+        request: Request<RetrieveTokensRequest>,
+    ) -> Result<Response<RetrieveTokensResponse>, Status> {
+        let RetrieveTokensRequest { contract_addresses, token_ids } = request.into_inner();
+        let contract_addresses = contract_addresses
+            .iter()
+            .map(|address| Felt::from_bytes_be_slice(address))
+            .collect::<Vec<_>>();
+        let token_ids =
+            token_ids.iter().map(|id| crypto_bigint::U256::from_be_slice(id)).collect::<Vec<_>>();
+
         let tokens = self
-            .retrieve_tokens(contract_addresses)
+            .retrieve_tokens(contract_addresses, token_ids)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
         Ok(Response::new(tokens))
+    }
+
+    async fn subscribe_tokens(
+        &self,
+        request: Request<RetrieveTokensRequest>,
+    ) -> ServiceResult<Self::SubscribeTokensStream> {
+        let RetrieveTokensRequest { contract_addresses, token_ids } = request.into_inner();
+        let contract_addresses = contract_addresses
+            .iter()
+            .map(|address| Felt::from_bytes_be_slice(address))
+            .collect::<Vec<_>>();
+        let token_ids = token_ids.iter().map(|id| U256::from_be_slice(id)).collect::<Vec<_>>();
+
+        let rx = self
+            .token_manager
+            .add_subscriber(contract_addresses, token_ids)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+        Ok(Response::new(Box::pin(ReceiverStream::new(rx)) as Self::SubscribeTokensStream))
+    }
+
+    async fn update_tokens_subscription(
+        &self,
+        request: Request<UpdateTokenSubscriptionRequest>,
+    ) -> ServiceResult<()> {
+        let UpdateTokenSubscriptionRequest { subscription_id, contract_addresses, token_ids } =
+            request.into_inner();
+        let contract_addresses = contract_addresses
+            .iter()
+            .map(|address| Felt::from_bytes_be_slice(address))
+            .collect::<Vec<_>>();
+        let token_ids = token_ids.iter().map(|id| U256::from_be_slice(id)).collect::<Vec<_>>();
+
+        self.token_manager.update_subscriber(subscription_id, contract_addresses, token_ids).await;
+        Ok(Response::new(()))
     }
 
     async fn retrieve_token_balances(
         &self,
         request: Request<RetrieveTokenBalancesRequest>,
     ) -> Result<Response<RetrieveTokenBalancesResponse>, Status> {
-        let RetrieveTokenBalancesRequest { account_addresses, contract_addresses } =
+        let RetrieveTokenBalancesRequest { account_addresses, contract_addresses, token_ids } =
             request.into_inner();
         let account_addresses = account_addresses
             .iter()
@@ -1302,9 +1431,10 @@ impl proto::world::world_server::World for DojoWorld {
             .iter()
             .map(|address| Felt::from_bytes_be_slice(address))
             .collect::<Vec<_>>();
+        let token_ids = token_ids.iter().map(|id| U256::from_be_slice(id)).collect::<Vec<_>>();
 
         let balances = self
-            .retrieve_token_balances(account_addresses, contract_addresses)
+            .retrieve_token_balances(account_addresses, contract_addresses, token_ids)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
         Ok(Response::new(balances))
@@ -1316,7 +1446,8 @@ impl proto::world::world_server::World for DojoWorld {
     ) -> ServiceResult<Self::SubscribeIndexerStream> {
         let SubscribeIndexerRequest { contract_address } = request.into_inner();
         let rx = self
-            .subscribe_indexer(Felt::from_bytes_be_slice(&contract_address))
+            .indexer_manager
+            .add_subscriber(&self.pool, Felt::from_bytes_be_slice(&contract_address))
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
         Ok(Response::new(Box::pin(ReceiverStream::new(rx)) as Self::SubscribeIndexerStream))
@@ -1339,8 +1470,11 @@ impl proto::world::world_server::World for DojoWorld {
         request: Request<SubscribeEntitiesRequest>,
     ) -> ServiceResult<Self::SubscribeEntitiesStream> {
         let SubscribeEntitiesRequest { clauses } = request.into_inner();
-        let rx =
-            self.subscribe_entities(clauses).await.map_err(|e| Status::internal(e.to_string()))?;
+        let rx = self
+            .entity_manager
+            .add_subscriber(clauses.into_iter().map(|keys| keys.into()).collect())
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(Box::pin(ReceiverStream::new(rx)) as Self::SubscribeEntitiesStream))
     }
@@ -1364,7 +1498,7 @@ impl proto::world::world_server::World for DojoWorld {
         &self,
         request: Request<RetrieveTokenBalancesRequest>,
     ) -> ServiceResult<Self::SubscribeTokenBalancesStream> {
-        let RetrieveTokenBalancesRequest { contract_addresses, account_addresses } =
+        let RetrieveTokenBalancesRequest { contract_addresses, account_addresses, token_ids } =
             request.into_inner();
         let contract_addresses = contract_addresses
             .iter()
@@ -1374,9 +1508,11 @@ impl proto::world::world_server::World for DojoWorld {
             .iter()
             .map(|address| Felt::from_bytes_be_slice(address))
             .collect::<Vec<_>>();
+        let token_ids = token_ids.iter().map(|id| U256::from_be_slice(id)).collect::<Vec<_>>();
 
         let rx = self
-            .subscribe_token_balances(contract_addresses, account_addresses)
+            .token_balance_manager
+            .add_subscriber(contract_addresses, account_addresses, token_ids)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
         Ok(Response::new(Box::pin(ReceiverStream::new(rx)) as Self::SubscribeTokenBalancesStream))
@@ -1390,6 +1526,7 @@ impl proto::world::world_server::World for DojoWorld {
             subscription_id,
             contract_addresses,
             account_addresses,
+            token_ids,
         } = request.into_inner();
         let contract_addresses = contract_addresses
             .iter()
@@ -1399,9 +1536,10 @@ impl proto::world::world_server::World for DojoWorld {
             .iter()
             .map(|address| Felt::from_bytes_be_slice(address))
             .collect::<Vec<_>>();
+        let token_ids = token_ids.iter().map(|id| U256::from_be_slice(id)).collect::<Vec<_>>();
 
         self.token_balance_manager
-            .update_subscriber(subscription_id, contract_addresses, account_addresses)
+            .update_subscriber(subscription_id, contract_addresses, account_addresses, token_ids)
             .await;
         Ok(Response::new(()))
     }
@@ -1471,7 +1609,8 @@ impl proto::world::world_server::World for DojoWorld {
     ) -> ServiceResult<Self::SubscribeEntitiesStream> {
         let SubscribeEventMessagesRequest { clauses, historical } = request.into_inner();
         let rx = self
-            .subscribe_event_messages(clauses, historical)
+            .event_message_manager
+            .add_subscriber(clauses.into_iter().map(|keys| keys.into()).collect(), historical)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
@@ -1535,7 +1674,11 @@ impl proto::world::world_server::World for DojoWorld {
         request: Request<proto::world::SubscribeEventsRequest>,
     ) -> ServiceResult<Self::SubscribeEventsStream> {
         let keys = request.into_inner().keys;
-        let rx = self.subscribe_events(keys).await.map_err(|e| Status::internal(e.to_string()))?;
+        let rx = self
+            .event_manager
+            .add_subscriber(keys.into_iter().map(|keys| keys.into()).collect())
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(Box::pin(ReceiverStream::new(rx)) as Self::SubscribeEventsStream))
     }

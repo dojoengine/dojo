@@ -4,9 +4,8 @@ use std::mem;
 
 use anyhow::{Context, Result};
 use katana_cairo::lang::starknet_classes::casm_contract_class::CasmContractClass;
-use katana_cairo::starknet_api::contract_class::EntryPointType;
 use katana_cairo::starknet_api::deprecated_contract_class::{
-    ContractClassAbiEntry, EntryPointV0, TypedParameter,
+    ContractClassAbiEntry, EntryPoint, EntryPointType, TypedParameter,
 };
 use serde::Deserialize;
 use serde_json::json;
@@ -35,10 +34,10 @@ pub fn legacy_inner_to_rpc_class(
     legacy_contract_class: LegacyContractClass,
 ) -> Result<ContractClass> {
     fn to_rpc_entry_points(
-        entries: &HashMap<EntryPointType, Vec<EntryPointV0>>,
+        entries: &HashMap<EntryPointType, Vec<EntryPoint>>,
     ) -> Result<LegacyEntryPointsByType> {
         fn collect_entry_points(
-            entries: &HashMap<EntryPointType, Vec<EntryPointV0>>,
+            entries: &HashMap<EntryPointType, Vec<EntryPoint>>,
             entry_point_type: &EntryPointType,
         ) -> Result<Vec<LegacyContractEntryPoint>> {
             Ok(entries

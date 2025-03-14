@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use anyhow::Result;
-use katana_core::service::messaging::MessagingConfig;
+use katana_messaging::MessagingConfig;
 use serde::{Deserialize, Serialize};
 
 use crate::options::*;
@@ -12,6 +12,7 @@ use crate::NodeArgs;
 pub struct NodeArgsConfig {
     pub no_mining: Option<bool>,
     pub block_time: Option<u64>,
+    pub block_cairo_steps_limit: Option<u64>,
     pub db_dir: Option<PathBuf>,
     pub messaging: Option<MessagingConfig>,
     pub logging: Option<LoggingOptions>,
@@ -20,10 +21,13 @@ pub struct NodeArgsConfig {
     pub forking: Option<ForkingOptions>,
     #[serde(rename = "dev")]
     pub development: Option<DevOptions>,
+    pub rpc: Option<RpcOptions>,
     #[cfg(feature = "server")]
     pub server: Option<ServerOptions>,
     #[cfg(feature = "server")]
     pub metrics: Option<MetricsOptions>,
+    #[cfg(feature = "cartridge")]
+    pub cartridge: Option<CartridgeOptions>,
 }
 
 impl NodeArgsConfig {
@@ -43,6 +47,7 @@ impl TryFrom<NodeArgs> for NodeArgsConfig {
         let mut node_config = NodeArgsConfig {
             no_mining: if args.no_mining { Some(true) } else { None },
             block_time: args.block_time,
+            block_cairo_steps_limit: args.block_cairo_steps_limit,
             db_dir: args.db_dir,
             messaging: args.messaging,
             ..Default::default()
@@ -60,6 +65,7 @@ impl TryFrom<NodeArgs> for NodeArgsConfig {
             if args.forking == ForkingOptions::default() { None } else { Some(args.forking) };
         node_config.development =
             if args.development == DevOptions::default() { None } else { Some(args.development) };
+        node_config.rpc = if args.rpc == RpcOptions::default() { None } else { Some(args.rpc) };
 
         #[cfg(feature = "server")]
         {
@@ -67,6 +73,15 @@ impl TryFrom<NodeArgs> for NodeArgsConfig {
                 if args.server == ServerOptions::default() { None } else { Some(args.server) };
             node_config.metrics =
                 if args.metrics == MetricsOptions::default() { None } else { Some(args.metrics) };
+        }
+
+        #[cfg(feature = "cartridge")]
+        {
+            node_config.cartridge = if args.cartridge == CartridgeOptions::default() {
+                None
+            } else {
+                Some(args.cartridge)
+            };
         }
 
         Ok(node_config)

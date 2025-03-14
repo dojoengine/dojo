@@ -1,14 +1,16 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::convert::TryInto;
 use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::{anyhow, Context, Result};
 use dojo_types::naming::get_tag;
+use dojo_types::primitive::SqlType;
 use dojo_types::schema::{Struct, Ty};
 use dojo_world::config::WorldMetadata;
 use dojo_world::contracts::abigen::model::Layout;
 use dojo_world::contracts::naming::compute_selector_from_names;
+use executor::EntityQuery;
 use sqlx::{Pool, Sqlite};
 use starknet::core::types::{Event, Felt, InvokeTransaction, Transaction};
 use starknet_crypto::poseidon_hash_many;
@@ -20,11 +22,8 @@ use crate::executor::{
     Argument, DeleteEntityQuery, EventMessageQuery, QueryMessage, QueryType, ResetCursorsQuery,
     SetHeadQuery, UpdateCursorsQuery,
 };
-use crate::types::Contract;
+use crate::types::{Contract, ModelIndices};
 use crate::utils::utc_dt_string_from_timestamp;
-
-type IsEventMessage = bool;
-type IsStoreUpdate = bool;
 
 pub mod cache;
 pub mod constants;
@@ -38,12 +37,20 @@ pub mod utils;
 
 use cache::{LocalCache, Model, ModelCache};
 
+#[derive(Debug, Clone, Default)]
+pub struct SqlConfig {
+    pub all_model_indices: bool,
+    pub model_indices: Vec<ModelIndices>,
+    pub historical_models: HashSet<String>,
+}
+
 #[derive(Debug, Clone)]
 pub struct Sql {
     pub pool: Pool<Sqlite>,
     pub executor: UnboundedSender<QueryMessage>,
     model_cache: Arc<ModelCache>,
     local_cache: Arc<LocalCache>,
+    config: SqlConfig,
 }
 
 #[derive(Debug, Clone)]
@@ -60,6 +67,16 @@ impl Sql {
         contracts: &[Contract],
         model_cache: Arc<ModelCache>,
     ) -> Result<Self> {
+        Self::new_with_config(pool, executor, contracts, model_cache, Default::default()).await
+    }
+
+    pub async fn new_with_config(
+        pool: Pool<Sqlite>,
+        executor: UnboundedSender<QueryMessage>,
+        contracts: &[Contract],
+        model_cache: Arc<ModelCache>,
+        config: SqlConfig,
+    ) -> Result<Self> {
         for contract in contracts {
             executor.send(QueryMessage::other(
                 "INSERT OR IGNORE INTO contracts (id, contract_address, contract_type) VALUES (?, \
@@ -74,8 +91,13 @@ impl Sql {
         }
 
         let local_cache = LocalCache::new(pool.clone()).await;
-        let db =
-            Self { pool: pool.clone(), executor, model_cache, local_cache: Arc::new(local_cache) };
+        let db = Self {
+            pool: pool.clone(),
+            executor,
+            model_cache,
+            local_cache: Arc::new(local_cache),
+            config,
+        };
 
         db.execute().await?;
 
@@ -313,6 +335,7 @@ impl Sql {
         Ok(())
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn set_entity(
         &mut self,
         entity: Ty,
@@ -351,7 +374,15 @@ impl Sql {
         self.executor.send(QueryMessage::new(
             insert_entities.to_string(),
             arguments,
-            QueryType::SetEntity(entity.clone()),
+            QueryType::SetEntity(EntityQuery {
+                event_id: event_id.to_string(),
+                block_timestamp: utc_dt_string_from_timestamp(block_timestamp),
+                entity_id: entity_id.clone(),
+                model_id: model_id.clone(),
+                keys_str: keys_str.map(|s| s.to_string()),
+                ty: entity.clone(),
+                is_historical: self.config.historical_models.contains(&entity.name()),
+            }),
         ))?;
 
         self.executor.send(QueryMessage::other(
@@ -361,13 +392,7 @@ impl Sql {
             vec![Argument::String(entity_id.clone()), Argument::String(model_id.clone())],
         ))?;
 
-        self.set_entity_model(
-            &namespaced_name,
-            event_id,
-            (&entity_id, false),
-            (&entity, keys_str.is_none()),
-            block_timestamp,
-        )?;
+        self.set_entity_model(&namespaced_name, event_id, &entity_id, &entity, block_timestamp)?;
 
         Ok(())
     }
@@ -377,7 +402,6 @@ impl Sql {
         entity: Ty,
         event_id: &str,
         block_timestamp: u64,
-        is_historical: bool,
     ) -> Result<()> {
         let keys = if let Ty::Struct(s) = &entity {
             let mut keys = Vec::new();
@@ -417,15 +441,15 @@ impl Sql {
                 event_id: event_id.to_string(),
                 block_timestamp: block_timestamp_str.clone(),
                 ty: entity.clone(),
-                is_historical,
+                is_historical: self.config.historical_models.contains(&entity.name()),
             }),
         ))?;
 
         self.set_entity_model(
             &namespaced_name,
             event_id,
-            (&entity_id, true),
-            (&entity, false),
+            &format!("event:{}", entity_id),
+            &entity,
             block_timestamp,
         )?;
 
@@ -513,11 +537,10 @@ impl Sql {
     pub fn store_transaction(
         &mut self,
         transaction: &Transaction,
-        transaction_id: &str,
+        block_number: u64,
+        contract_addresses: &HashSet<Felt>,
         block_timestamp: u64,
     ) -> Result<()> {
-        let id = Argument::String(transaction_id.to_string());
-
         let transaction_type = match transaction {
             Transaction::Invoke(_) => "INVOKE",
             Transaction::L1Handler(_) => "L1_HANDLER",
@@ -555,12 +578,12 @@ impl Sql {
 
         self.executor.send(QueryMessage::other(
             "INSERT OR IGNORE INTO transactions (id, transaction_hash, sender_address, calldata, \
-             max_fee, signature, nonce, transaction_type, executed_at) VALUES (?, ?, ?, ?, ?, ?, \
-             ?, ?, ?)"
+             max_fee, signature, nonce, transaction_type, executed_at, block_number) VALUES (?, \
+             ?, ?, ?, ?, ?, ?, ?, ?, ?)"
                 .to_string(),
             vec![
-                id,
-                transaction_hash,
+                transaction_hash.clone(),
+                transaction_hash.clone(),
                 sender_address,
                 calldata,
                 max_fee,
@@ -568,8 +591,18 @@ impl Sql {
                 nonce,
                 Argument::String(transaction_type.to_string()),
                 Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
+                Argument::String(block_number.to_string()),
             ],
         ))?;
+
+        for contract_address in contract_addresses {
+            self.executor.send(QueryMessage::other(
+                "INSERT OR IGNORE INTO transaction_contract (transaction_hash, contract_address) \
+                 VALUES (?, ?)"
+                    .to_string(),
+                vec![transaction_hash.clone(), Argument::FieldElement(*contract_address)],
+            ))?;
+        }
 
         Ok(())
     }
@@ -602,19 +635,16 @@ impl Sql {
         &mut self,
         model_name: &str,
         event_id: &str,
-        entity_id: (&str, IsEventMessage),
-        entity: (&Ty, IsStoreUpdate),
+        entity_id: &str,
+        entity: &Ty,
         block_timestamp: u64,
     ) -> Result<()> {
-        let (entity_id, is_event_message) = entity_id;
-        let (entity, is_store_update) = entity;
-
         let mut columns = vec![
             "internal_id".to_string(),
             "internal_event_id".to_string(),
             "internal_executed_at".to_string(),
             "internal_updated_at".to_string(),
-            if is_event_message {
+            if entity_id.starts_with("event:") {
                 "internal_event_message_id".to_string()
             } else {
                 "internal_entity_id".to_string()
@@ -622,15 +652,11 @@ impl Sql {
         ];
 
         let mut arguments = vec![
-            Argument::String(if is_event_message {
-                "event:".to_string() + entity_id
-            } else {
-                entity_id.to_string()
-            }),
+            Argument::String(entity_id.to_string()),
             Argument::String(event_id.to_string()),
             Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
             Argument::String(chrono::Utc::now().to_rfc3339()),
-            Argument::String(entity_id.to_string()),
+            Argument::String(entity_id.trim_start_matches("event:").to_string()),
         ];
 
         fn collect_members(
@@ -696,33 +722,15 @@ impl Sql {
         // Collect all columns and arguments recursively
         collect_members("", entity, &mut columns, &mut arguments)?;
 
-        // Build the final query
+        // Build the final query - if an entity is updated, we insert the entity and default to NULL
+        // for non updated values.
         let placeholders: Vec<&str> = arguments.iter().map(|_| "?").collect();
-        let statement = if is_store_update {
-            arguments.push(Argument::String(if is_event_message {
-                "event:".to_string() + entity_id
-            } else {
-                entity_id.to_string()
-            }));
-
-            format!(
-                "UPDATE [{}] SET {} WHERE internal_id = ?",
-                model_name,
-                columns
-                    .iter()
-                    .zip(placeholders.iter())
-                    .map(|(column, placeholder)| format!("{} = {}", column, placeholder))
-                    .collect::<Vec<String>>()
-                    .join(", ")
-            )
-        } else {
-            format!(
-                "INSERT OR REPLACE INTO [{}] ({}) VALUES ({})",
-                model_name,
-                columns.join(","),
-                placeholders.join(",")
-            )
-        };
+        let statement = format!(
+            "INSERT OR REPLACE INTO [{}] ({}) VALUES ({})",
+            model_name,
+            columns.join(","),
+            placeholders.join(",")
+        );
 
         // Execute the single query
         self.executor.send(QueryMessage::other(statement, arguments))?;
@@ -759,7 +767,7 @@ impl Sql {
         ));
 
         // Recursively add columns for all nested type
-        add_columns_recursive(
+        self.add_columns_recursive(
             &path,
             model,
             &mut columns,
@@ -767,6 +775,7 @@ impl Sql {
             &mut indices,
             &table_id,
             upgrade_diff,
+            false,
         )?;
 
         // Add all columns to the create table query
@@ -803,6 +812,251 @@ impl Sql {
         Ok(())
     }
 
+    #[allow(clippy::too_many_arguments)]
+    fn add_columns_recursive(
+        &self,
+        path: &[String],
+        ty: &Ty,
+        columns: &mut Vec<String>,
+        alter_table_queries: &mut Vec<String>,
+        indices: &mut Vec<String>,
+        table_id: &str,
+        upgrade_diff: Option<&Ty>,
+        is_key: bool,
+    ) -> Result<()> {
+        let column_prefix = if path.len() > 1 { path[1..].join(".") } else { String::new() };
+
+        let mut add_column = |name: &str, sql_type: &str| {
+            if upgrade_diff.is_some() {
+                alter_table_queries
+                    .push(format!("ALTER TABLE [{table_id}] ADD COLUMN [{name}] {sql_type}"));
+            } else {
+                columns.push(format!("[{name}] {sql_type}"));
+            }
+
+            let model_indices = self.config.model_indices.iter().find(|m| m.model_tag == table_id);
+
+            if model_indices.is_some_and(|m| m.fields.contains(&name.to_string()))
+                || (model_indices.is_none() && (self.config.all_model_indices || is_key))
+            {
+                indices.push(format!(
+                    "CREATE INDEX IF NOT EXISTS [idx_{table_id}_{name}] ON [{table_id}] \
+                     ([{name}]);"
+                ));
+            }
+        };
+
+        let modify_column = |alter_table_queries: &mut Vec<String>,
+                             name: &str,
+                             sql_type: &str,
+                             sql_value: &str| {
+            // SQLite doesn't support ALTER COLUMN directly, so we need to:
+            // 1. Create a temporary table to store the current values
+            // 2. Drop the old column & index
+            // 3. Create new column with new type/constraint
+            // 4. Copy values back & create new index
+            alter_table_queries.push(format!(
+                "CREATE TEMPORARY TABLE [tmp_values_{name}] AS SELECT internal_id, [{name}] FROM \
+                 [{table_id}]"
+            ));
+            alter_table_queries.push(format!("DROP INDEX IF EXISTS [idx_{table_id}_{name}]"));
+            alter_table_queries.push(format!("ALTER TABLE [{table_id}] DROP COLUMN [{name}]"));
+            alter_table_queries
+                .push(format!("ALTER TABLE [{table_id}] ADD COLUMN [{name}] {sql_type}"));
+            alter_table_queries.push(format!(
+                "UPDATE [{table_id}] SET [{name}] = (SELECT {sql_value} FROM [tmp_values_{name}] \
+                 WHERE [tmp_values_{name}].internal_id = [{table_id}].internal_id)"
+            ));
+            alter_table_queries.push(format!("DROP TABLE [tmp_values_{name}]"));
+            alter_table_queries.push(format!(
+                "CREATE INDEX IF NOT EXISTS [idx_{table_id}_{name}] ON [{table_id}] ([{name}]);"
+            ));
+        };
+
+        match ty {
+            Ty::Struct(s) => {
+                let struct_diff = if let Some(upgrade_diff) = upgrade_diff {
+                    upgrade_diff.as_struct()
+                } else {
+                    None
+                };
+
+                for member in &s.children {
+                    let member_diff = if let Some(diff) = struct_diff {
+                        if let Some(m) = diff.children.iter().find(|m| m.name == member.name) {
+                            Some(&m.ty)
+                        } else {
+                            // If the member is not in the diff, skip it
+                            continue;
+                        }
+                    } else {
+                        None
+                    };
+
+                    let mut new_path = path.to_vec();
+                    new_path.push(member.name.clone());
+
+                    self.add_columns_recursive(
+                        &new_path,
+                        &member.ty,
+                        columns,
+                        alter_table_queries,
+                        indices,
+                        table_id,
+                        member_diff,
+                        member.key,
+                    )?;
+                }
+            }
+            Ty::Tuple(tuple) => {
+                let elements_to_process = if let Some(diff) =
+                    upgrade_diff.and_then(|d| d.as_tuple())
+                {
+                    // Only process elements from the diff
+                    diff.iter()
+                        .filter_map(|m| {
+                            tuple.iter().position(|member| member == m).map(|idx| (idx, m, Some(m)))
+                        })
+                        .collect()
+                } else {
+                    // Process all elements
+                    tuple
+                        .iter()
+                        .enumerate()
+                        .map(|(idx, member)| (idx, member, None))
+                        .collect::<Vec<_>>()
+                };
+
+                for (idx, member, member_diff) in elements_to_process {
+                    let mut new_path = path.to_vec();
+                    new_path.push(idx.to_string());
+                    self.add_columns_recursive(
+                        &new_path,
+                        member,
+                        columns,
+                        alter_table_queries,
+                        indices,
+                        table_id,
+                        member_diff,
+                        is_key,
+                    )?;
+                }
+            }
+            Ty::Array(_) => {
+                let column_name =
+                    if column_prefix.is_empty() { "value".to_string() } else { column_prefix };
+
+                add_column(&column_name, "TEXT");
+            }
+            Ty::Enum(e) => {
+                let enum_diff = if let Some(upgrade_diff) = upgrade_diff {
+                    upgrade_diff.as_enum()
+                } else {
+                    None
+                };
+
+                let column_name =
+                    if column_prefix.is_empty() { "option".to_string() } else { column_prefix };
+
+                let all_options = e
+                    .options
+                    .iter()
+                    .map(|c| format!("'{}'", c.name))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+
+                let sql_type = format!(
+                    "TEXT CONSTRAINT [{column_name}_check] CHECK([{column_name}] IN \
+                     ({all_options}))"
+                );
+                if enum_diff.is_some_and(|diff| diff != e) {
+                    // For upgrades, modify the existing option column to add the new options to the
+                    // CHECK constraint We need to drop the old column and create a new
+                    // one with the new CHECK constraint
+                    modify_column(
+                        alter_table_queries,
+                        &column_name,
+                        &sql_type,
+                        &format!("[{column_name}]"),
+                    );
+                } else {
+                    // For new tables, create the column directly
+                    add_column(&column_name, &sql_type);
+                }
+
+                for child in &e.options {
+                    // If we have a diff, only process new variants that aren't in the original enum
+                    let variant_diff = if let Some(diff) = enum_diff {
+                        if let Some(v) = diff.options.iter().find(|v| v.name == child.name) {
+                            Some(&v.ty)
+                        } else {
+                            continue;
+                        }
+                    } else {
+                        None
+                    };
+
+                    if let Ty::Tuple(tuple) = &child.ty {
+                        if tuple.is_empty() {
+                            continue;
+                        }
+                    }
+
+                    let mut new_path = path.to_vec();
+                    new_path.push(child.name.clone());
+
+                    self.add_columns_recursive(
+                        &new_path,
+                        &child.ty,
+                        columns,
+                        alter_table_queries,
+                        indices,
+                        table_id,
+                        variant_diff,
+                        is_key,
+                    )?;
+                }
+            }
+            Ty::ByteArray(_) => {
+                let column_name =
+                    if column_prefix.is_empty() { "value".to_string() } else { column_prefix };
+
+                add_column(&column_name, "TEXT");
+            }
+            Ty::Primitive(p) => {
+                let column_name =
+                    if column_prefix.is_empty() { "value".to_string() } else { column_prefix };
+
+                if let Some(upgrade_diff) = upgrade_diff {
+                    if let Some(old_primitive) = upgrade_diff.as_primitive() {
+                        // For upgrades to larger numeric types, convert to hex string padded to 64
+                        // chars
+                        let sql_value = if old_primitive.to_sql_type() == SqlType::Integer
+                            && p.to_sql_type() == SqlType::Text
+                        {
+                            // Convert integer to hex string with '0x' prefix and proper padding
+                            format!("printf('%064x', [{column_name}])")
+                        } else {
+                            format!("[{column_name}]")
+                        };
+
+                        modify_column(
+                            alter_table_queries,
+                            &column_name,
+                            p.to_sql_type().as_ref(),
+                            &sql_value,
+                        );
+                    }
+                } else {
+                    // New column
+                    add_column(&column_name, p.to_sql_type().as_ref());
+                }
+            }
+        }
+
+        Ok(())
+    }
+
     pub async fn execute(&self) -> Result<()> {
         let (execute, recv) = QueryMessage::execute_recv();
         self.executor.send(execute)?;
@@ -820,127 +1074,31 @@ impl Sql {
         self.executor.send(rollback)?;
         recv.await?
     }
-}
 
-fn add_columns_recursive(
-    path: &[String],
-    ty: &Ty,
-    columns: &mut Vec<String>,
-    alter_table_queries: &mut Vec<String>,
-    indices: &mut Vec<String>,
-    table_id: &str,
-    upgrade_diff: Option<&Ty>,
-) -> Result<()> {
-    let column_prefix = if path.len() > 1 { path[1..].join(".") } else { String::new() };
+    pub async fn add_controller(
+        &mut self,
+        username: &str,
+        address: &str,
+        block_timestamp: u64,
+    ) -> Result<()> {
+        let insert_controller = "
+            INSERT INTO controllers (id, username, address, deployed_at)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                username=EXCLUDED.username,
+                address=EXCLUDED.address,
+                deployed_at=EXCLUDED.deployed_at
+            RETURNING *";
 
-    let mut add_column = |name: &str, sql_type: &str| {
-        if upgrade_diff.is_some() {
-            alter_table_queries
-                .push(format!("ALTER TABLE [{table_id}] ADD COLUMN [{name}] {sql_type}"));
-        } else {
-            columns.push(format!("[{name}] {sql_type}"));
-        }
-        indices.push(format!(
-            "CREATE INDEX IF NOT EXISTS [idx_{table_id}_{name}] ON [{table_id}] ([{name}]);"
-        ));
-    };
+        let arguments = vec![
+            Argument::String(username.to_string()),
+            Argument::String(username.to_string()),
+            Argument::String(address.to_string()),
+            Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
+        ];
 
-    match ty {
-        Ty::Struct(s) => {
-            for member in &s.children {
-                if let Some(upgrade_diff) = upgrade_diff {
-                    if !upgrade_diff
-                        .as_struct()
-                        .unwrap()
-                        .children
-                        .iter()
-                        .any(|m| m.name == member.name)
-                    {
-                        continue;
-                    }
-                }
+        self.executor.send(QueryMessage::other(insert_controller.to_string(), arguments))?;
 
-                let mut new_path = path.to_vec();
-                new_path.push(member.name.clone());
-
-                add_columns_recursive(
-                    &new_path,
-                    &member.ty,
-                    columns,
-                    alter_table_queries,
-                    indices,
-                    table_id,
-                    None,
-                )?;
-            }
-        }
-        Ty::Tuple(tuple) => {
-            for (idx, member) in tuple.iter().enumerate() {
-                let mut new_path = path.to_vec();
-                new_path.push(idx.to_string());
-
-                add_columns_recursive(
-                    &new_path,
-                    member,
-                    columns,
-                    alter_table_queries,
-                    indices,
-                    table_id,
-                    None,
-                )?;
-            }
-        }
-        Ty::Array(_) => {
-            let column_name =
-                if column_prefix.is_empty() { "value".to_string() } else { column_prefix };
-
-            add_column(&column_name, "TEXT");
-        }
-        Ty::Enum(e) => {
-            // The variant of the enum
-            let column_name =
-                if column_prefix.is_empty() { "option".to_string() } else { column_prefix };
-
-            let all_options =
-                e.options.iter().map(|c| format!("'{}'", c.name)).collect::<Vec<_>>().join(", ");
-
-            let sql_type = format!("TEXT CHECK([{column_name}] IN ({all_options}))");
-            add_column(&column_name, &sql_type);
-
-            for child in &e.options {
-                if let Ty::Tuple(tuple) = &child.ty {
-                    if tuple.is_empty() {
-                        continue;
-                    }
-                }
-
-                let mut new_path = path.to_vec();
-                new_path.push(child.name.clone());
-
-                add_columns_recursive(
-                    &new_path,
-                    &child.ty,
-                    columns,
-                    alter_table_queries,
-                    indices,
-                    table_id,
-                    None,
-                )?;
-            }
-        }
-        Ty::ByteArray(_) => {
-            let column_name =
-                if column_prefix.is_empty() { "value".to_string() } else { column_prefix };
-
-            add_column(&column_name, "TEXT");
-        }
-        Ty::Primitive(p) => {
-            let column_name =
-                if column_prefix.is_empty() { "value".to_string() } else { column_prefix };
-
-            add_column(&column_name, p.to_sql_type().as_ref());
-        }
+        Ok(())
     }
-
-    Ok(())
 }

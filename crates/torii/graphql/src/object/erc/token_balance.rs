@@ -1,11 +1,16 @@
 use async_graphql::connection::PageInfo;
-use async_graphql::dynamic::{Field, FieldFuture, FieldValue, InputValue, TypeRef};
+use async_graphql::dynamic::{
+    Field, FieldFuture, FieldValue, InputValue, SubscriptionField, SubscriptionFieldFuture, TypeRef,
+};
 use convert_case::{Case, Casing};
 use serde::Deserialize;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{FromRow, Pool, Row, Sqlite, SqliteConnection};
 use starknet_crypto::Felt;
+use tokio_stream::StreamExt;
 use torii_sqlite::constants::TOKEN_BALANCE_TABLE;
+use torii_sqlite::simple_broker::SimpleBroker;
+use torii_sqlite::types::TokenBalance;
 use torii_sqlite::utils::felt_to_sql_string;
 use tracing::warn;
 
@@ -17,7 +22,7 @@ use crate::object::connection::page_info::PageInfoObject;
 use crate::object::connection::{
     connection_arguments, cursor, parse_connection_arguments, ConnectionArguments,
 };
-use crate::object::erc::erc_token::Erc721Token;
+use crate::object::erc::erc_token::{Erc1155Token, Erc721Token};
 use crate::object::{BasicObject, ResolvableObject};
 use crate::query::data::count_rows;
 use crate::query::filter::{Comparator, Filter, FilterValue};
@@ -84,6 +89,201 @@ impl ResolvableObject for ErcBalanceObject {
 
         field = connection_arguments(field);
         vec![field]
+    }
+
+    fn subscriptions(&self) -> Option<Vec<SubscriptionField>> {
+        Some(vec![
+            SubscriptionField::new(
+                "tokenBalanceUpdated",
+                TypeRef::named_nn(self.type_name()),
+                |ctx| {
+                    SubscriptionFieldFuture::new(async move {
+                        let address = match ctx.args.get("accountAddress") {
+                            Some(addr) => Some(addr.string()?.to_string()),
+                            None => None,
+                        };
+
+                        let pool = ctx.data::<Pool<Sqlite>>()?;
+                        Ok(SimpleBroker::<TokenBalance>::subscribe()
+                            .then(move |token_balance| {
+                                let address = address.clone();
+                                let pool = pool.clone();
+                                async move {
+                                    // Filter by account address if provided
+                                    if let Some(addr) = &address {
+                                        if token_balance.account_address != *addr {
+                                            return None;
+                                        }
+                                    }
+
+                                    // Fetch associated token data
+                                    let query = format!(
+                                        "SELECT b.id, t.contract_address, t.name, t.symbol, \
+                                         t.decimals, b.balance, b.token_id, t.metadata, \
+                                         c.contract_type
+                                        FROM {} b
+                                        JOIN tokens t ON b.token_id = t.id
+                                        JOIN contracts c ON t.contract_address = \
+                                         c.contract_address
+                                        WHERE b.id = ?",
+                                        TOKEN_BALANCE_TABLE
+                                    );
+
+                                    let row = match sqlx::query(&query)
+                                        .bind(&token_balance.id)
+                                        .fetch_one(&pool)
+                                        .await
+                                    {
+                                        Ok(row) => row,
+                                        Err(_) => return None,
+                                    };
+
+                                    let row = match BalanceQueryResultRaw::from_row(&row) {
+                                        Ok(row) => row,
+                                        Err(_) => return None,
+                                    };
+
+                                    let balance_value = match row
+                                        .contract_type
+                                        .to_lowercase()
+                                        .as_str()
+                                    {
+                                        "erc20" => {
+                                            let token_metadata = Erc20Token {
+                                                contract_address: row.contract_address,
+                                                name: row.name,
+                                                symbol: row.symbol,
+                                                decimals: row.decimals,
+                                                amount: row.balance,
+                                            };
+                                            ErcTokenType::Erc20(token_metadata)
+                                        }
+                                        "erc721" => {
+                                            let token_id =
+                                                row.token_id.split(':').collect::<Vec<&str>>();
+                                            assert!(token_id.len() == 2);
+
+                                            let metadata_str = row.metadata;
+                                            let (
+                                                metadata_str,
+                                                metadata_name,
+                                                metadata_description,
+                                                metadata_attributes,
+                                                image_path,
+                                            ) = if metadata_str.is_empty() {
+                                                (String::new(), None, None, None, String::new())
+                                            } else {
+                                                let metadata: serde_json::Value =
+                                                    serde_json::from_str(&metadata_str)
+                                                        .expect("metadata is always json");
+                                                let metadata_name = metadata.get("name").map(|v| {
+                                                    v.to_string().trim_matches('"').to_string()
+                                                });
+                                                let metadata_description =
+                                                    metadata.get("description").map(|v| {
+                                                        v.to_string().trim_matches('"').to_string()
+                                                    });
+                                                let metadata_attributes =
+                                                    metadata.get("attributes").map(|v| {
+                                                        v.to_string().trim_matches('"').to_string()
+                                                    });
+
+                                                let image_path =
+                                                    format!("{}/{}", token_id.join("/"), "image");
+
+                                                (
+                                                    metadata_str,
+                                                    metadata_name,
+                                                    metadata_description,
+                                                    metadata_attributes,
+                                                    image_path,
+                                                )
+                                            };
+
+                                            let token_metadata = Erc721Token {
+                                                name: row.name,
+                                                metadata: metadata_str,
+                                                contract_address: row.contract_address,
+                                                symbol: row.symbol,
+                                                token_id: token_id[1].to_string(),
+                                                metadata_name,
+                                                metadata_description,
+                                                metadata_attributes,
+                                                image_path,
+                                            };
+                                            ErcTokenType::Erc721(token_metadata)
+                                        }
+                                        "erc1155" => {
+                                            let token_id =
+                                                row.token_id.split(':').collect::<Vec<&str>>();
+                                            assert!(token_id.len() == 2);
+
+                                            let metadata_str = row.metadata;
+                                            let (
+                                                metadata_str,
+                                                metadata_name,
+                                                metadata_description,
+                                                metadata_attributes,
+                                                image_path,
+                                            ) = if metadata_str.is_empty() {
+                                                (String::new(), None, None, None, String::new())
+                                            } else {
+                                                let metadata: serde_json::Value =
+                                                    serde_json::from_str(&metadata_str)
+                                                        .expect("metadata is always json");
+                                                let metadata_name = metadata.get("name").map(|v| {
+                                                    v.to_string().trim_matches('"').to_string()
+                                                });
+                                                let metadata_description =
+                                                    metadata.get("description").map(|v| {
+                                                        v.to_string().trim_matches('"').to_string()
+                                                    });
+                                                let metadata_attributes =
+                                                    metadata.get("attributes").map(|v| {
+                                                        v.to_string().trim_matches('"').to_string()
+                                                    });
+
+                                                let image_path =
+                                                    format!("{}/{}", token_id.join("/"), "image");
+
+                                                (
+                                                    metadata_str,
+                                                    metadata_name,
+                                                    metadata_description,
+                                                    metadata_attributes,
+                                                    image_path,
+                                                )
+                                            };
+
+                                            let token_metadata = Erc1155Token {
+                                                name: row.name,
+                                                metadata: metadata_str,
+                                                contract_address: row.contract_address,
+                                                symbol: row.symbol,
+                                                token_id: token_id[1].to_string(),
+                                                amount: row.balance,
+                                                metadata_name,
+                                                metadata_description,
+                                                metadata_attributes,
+                                                image_path,
+                                            };
+                                            ErcTokenType::Erc1155(token_metadata)
+                                        }
+                                        _ => {
+                                            warn!("Unknown contract type: {}", row.contract_type);
+                                            return None;
+                                        }
+                                    };
+
+                                    Some(Ok(FieldValue::owned_any(balance_value)))
+                                }
+                            })
+                            .filter_map(|result| result))
+                    })
+                },
+            )
+            .argument(InputValue::new("accountAddress", TypeRef::named(TypeRef::STRING))),
+        ])
     }
 }
 
@@ -285,6 +485,58 @@ fn token_balances_connection_output<'a>(
                 };
 
                 ErcTokenType::Erc721(token_metadata)
+            }
+            "erc1155" => {
+                // contract_address:token_id
+                let token_id = row.token_id.split(':').collect::<Vec<&str>>();
+                assert!(token_id.len() == 2);
+
+                let metadata_str = row.metadata;
+                let (
+                    metadata_str,
+                    metadata_name,
+                    metadata_description,
+                    metadata_attributes,
+                    image_path,
+                ) = if metadata_str.is_empty() {
+                    (String::new(), None, None, None, String::new())
+                } else {
+                    let metadata: serde_json::Value =
+                        serde_json::from_str(&metadata_str).expect("metadata is always json");
+                    let metadata_name =
+                        metadata.get("name").map(|v| v.to_string().trim_matches('"').to_string());
+                    let metadata_description = metadata
+                        .get("description")
+                        .map(|v| v.to_string().trim_matches('"').to_string());
+                    let metadata_attributes = metadata
+                        .get("attributes")
+                        .map(|v| v.to_string().trim_matches('"').to_string());
+
+                    let image_path = format!("{}/{}", token_id.join("/"), "image");
+
+                    (
+                        metadata_str,
+                        metadata_name,
+                        metadata_description,
+                        metadata_attributes,
+                        image_path,
+                    )
+                };
+
+                let token_metadata = Erc1155Token {
+                    name: row.name,
+                    metadata: metadata_str.to_owned(),
+                    contract_address: row.contract_address,
+                    symbol: row.symbol,
+                    token_id: token_id[1].to_string(),
+                    amount: row.balance,
+                    metadata_name,
+                    metadata_description,
+                    metadata_attributes,
+                    image_path,
+                };
+
+                ErcTokenType::Erc1155(token_metadata)
             }
             _ => {
                 warn!("Unknown contract type: {}", row.contract_type);

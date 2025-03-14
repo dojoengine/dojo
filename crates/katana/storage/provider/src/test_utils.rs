@@ -53,7 +53,7 @@ fn create_chain_for_testing() -> katana_chain_spec::dev::ChainSpec {
     };
 
     // setup test account
-    let (_, account) = DevGenesisAccount::new_with_balance(felt!("0x1"), class_hash, U256::MAX);
+    let account = DevGenesisAccount::new_with_balance(felt!("0x1"), class_hash, U256::MAX);
     let account = GenesisAllocation::Account(GenesisAccountAlloc::DevAccount(account));
 
     let mut genesis = Genesis::default();

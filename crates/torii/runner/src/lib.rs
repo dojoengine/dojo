@@ -17,6 +17,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use camino::Utf8PathBuf;
+use constants::UDC_ADDRESS;
 use dojo_metrics::exporters::prometheus::PrometheusRecorder;
 use dojo_world::contracts::world::WorldContractReader;
 use sqlx::sqlite::{
@@ -31,21 +32,22 @@ use tokio::sync::broadcast::Sender;
 use tokio_stream::StreamExt;
 use torii_cli::ToriiArgs;
 use torii_indexer::engine::{Engine, EngineConfig, IndexingFlags, Processors};
-use torii_indexer::processors::store_transaction::StoreTransactionProcessor;
 use torii_indexer::processors::EventProcessorConfig;
 use torii_server::proxy::Proxy;
 use torii_sqlite::cache::ModelCache;
 use torii_sqlite::executor::Executor;
 use torii_sqlite::simple_broker::SimpleBroker;
 use torii_sqlite::types::{Contract, ContractType, Model};
-use torii_sqlite::Sql;
-use tracing::{error, info};
+use torii_sqlite::{Sql, SqlConfig};
+use tracing::{error, info, warn};
 use tracing_subscriber::{fmt, EnvFilter};
 use url::form_urlencoded;
 
-pub(crate) const LOG_TARGET: &str = "torii:runner";
+mod constants;
 
-#[derive(Debug, Clone)]
+use crate::constants::LOG_TARGET;
+
+#[derive(Debug)]
 pub struct Runner {
     args: ToriiArgs,
 }
@@ -66,6 +68,13 @@ impl Runner {
             .indexing
             .contracts
             .push(Contract { address: world_address, r#type: ContractType::WORLD });
+
+        if self.args.indexing.controllers {
+            self.args
+                .indexing
+                .contracts
+                .push(Contract { address: UDC_ADDRESS, r#type: ContractType::UDC });
+        }
 
         let filter_layer = EnvFilter::try_from_default_env()
             .unwrap_or_else(|_| EnvFilter::new("info,hyper_reverse_proxy=off"));
@@ -103,6 +112,7 @@ impl Runner {
         options = options.auto_vacuum(SqliteAutoVacuum::None);
         options = options.journal_mode(SqliteJournalMode::Wal);
         options = options.synchronous(SqliteSynchronous::Normal);
+        options = options.pragma("cache_size", "-65536"); // Set cache size to 64MB (65536 KiB)
 
         let pool = SqlitePoolOptions::new()
             .min_connections(1)
@@ -133,24 +143,34 @@ impl Runner {
             pool.clone(),
             shutdown_tx.clone(),
             provider.clone(),
-            self.args.indexing.max_concurrent_tasks,
+            self.args.erc.max_metadata_tasks,
         )
         .await?;
         let executor_handle = tokio::spawn(async move { executor.run().await });
 
         let model_cache = Arc::new(ModelCache::new(readonly_pool.clone()));
-        let db = Sql::new(
+
+        if self.args.sql.all_model_indices && self.args.sql.model_indices.is_some() {
+            warn!(
+                target: LOG_TARGET,
+                "all_model_indices is true, which will override any specific indices in model_indices"
+            );
+        }
+
+        let db = Sql::new_with_config(
             pool.clone(),
             sender.clone(),
             &self.args.indexing.contracts,
             model_cache.clone(),
+            SqlConfig {
+                all_model_indices: self.args.sql.all_model_indices,
+                model_indices: self.args.sql.model_indices.unwrap_or_default(),
+                historical_models: self.args.sql.historical.clone().into_iter().collect(),
+            },
         )
         .await?;
 
-        let processors = Processors {
-            transaction: vec![Box::new(StoreTransactionProcessor)],
-            ..Processors::default()
-        };
+        let processors = Processors::default();
 
         let (block_tx, block_rx) = tokio::sync::mpsc::channel(100);
 
@@ -177,7 +197,7 @@ impl Runner {
                 polling_interval: Duration::from_millis(self.args.indexing.polling_interval),
                 flags,
                 event_processor_config: EventProcessorConfig {
-                    historical_events: self.args.events.historical.into_iter().collect(),
+                    strict_model_reader: self.args.indexing.strict_model_reader,
                     namespaces: self.args.indexing.namespaces.into_iter().collect(),
                 },
                 world_block: self.args.indexing.world_block,
@@ -201,6 +221,7 @@ impl Runner {
         let temp_dir = TempDir::new()?;
         let artifacts_path = self
             .args
+            .erc
             .artifacts_path
             .unwrap_or_else(|| Utf8PathBuf::from(temp_dir.path().to_str().unwrap()));
 
@@ -214,7 +235,7 @@ impl Runner {
         )
         .await?;
 
-        let mut libp2p_relay_server = torii_relay::server::Relay::new(
+        let mut libp2p_relay_server = torii_relay::server::Relay::new_with_peers(
             db,
             provider.clone(),
             self.args.relay.port,
@@ -222,6 +243,7 @@ impl Runner {
             self.args.relay.websocket_port,
             self.args.relay.local_key_path,
             self.args.relay.cert_path,
+            self.args.relay.peers,
         )
         .expect("Failed to start libp2p relay server");
 

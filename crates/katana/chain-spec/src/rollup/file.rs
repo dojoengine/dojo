@@ -1,6 +1,6 @@
-use std::fs::File;
+use std::fs::{self, File};
 use std::io::{self, BufReader, BufWriter};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use katana_primitives::chain::ChainId;
 use katana_primitives::genesis::json::GenesisJson;
@@ -16,14 +16,23 @@ pub enum Error {
     #[error("OS not supported")]
     UnsupportedOS,
 
-    #[error("config directory not found for chain `{id}`")]
-    DirectoryNotFound { id: String },
+    #[error("No local config directory found for chain `{id}`")]
+    LocalConfigDirectoryNotFound { id: String },
 
-    #[error("failed to read config file: {0}")]
+    #[error("Chain config path must be a directory")]
+    MustBeADirectory,
+
+    #[error("Failed to read config file: {0}")]
     ConfigReadError(#[from] toml::ser::Error),
 
-    #[error("failed to write config file: {0}")]
+    #[error("Failed to write config file: {0}")]
     ConfigWriteError(#[from] toml::de::Error),
+
+    #[error("Missing chain configuration file")]
+    MissingConfigFile,
+
+    #[error("Missing genesis file")]
+    MissingGenesisFile,
 
     #[error(transparent)]
     IO(#[from] std::io::Error),
@@ -32,16 +41,43 @@ pub enum Error {
     GenesisJson(#[from] katana_primitives::genesis::json::GenesisJsonError),
 }
 
-pub fn read(id: &ChainId) -> Result<ChainSpec, Error> {
-    let dir = ChainConfigDir::open(id)?;
+/// Read the [`ChainSpec`] of the given `id` from the local config directory.
+pub fn read_local(id: &ChainId) -> Result<ChainSpec, Error> {
+    read(&ChainConfigDir::open_local(id)?)
+}
+
+/// Write the given [`ChainSpec`] at the local config directory based on it's id.
+pub fn write_local(chain_spec: &ChainSpec) -> Result<(), Error> {
+    write(&ChainConfigDir::create_local(&chain_spec.id)?, chain_spec)
+}
+
+/// List all of the available chain configurations.
+///
+/// This will list only the configurations that are stored in the default local directory. See
+/// [`local_dir`].
+pub fn list() -> Result<Vec<ChainId>, Error> {
+    list_at(local_dir()?)
+}
+
+pub fn read(dir: &ChainConfigDir) -> Result<ChainSpec, Error> {
+    let config_path = dir.config_path();
+    let genesis_path = dir.genesis_path();
+
+    if !config_path.exists() {
+        return Err(Error::MissingConfigFile);
+    }
+
+    if !genesis_path.exists() {
+        return Err(Error::MissingGenesisFile);
+    }
 
     let chain_spec: ChainSpecFile = {
-        let content = std::fs::read_to_string(dir.config_path())?;
+        let content = fs::read_to_string(config_path)?;
         toml::from_str(&content)?
     };
 
     let genesis: Genesis = {
-        let file = BufReader::new(File::open(dir.genesis_path())?);
+        let file = BufReader::new(File::open(genesis_path)?);
         let json: GenesisJson = serde_json::from_reader(file).map_err(io::Error::from)?;
         Genesis::try_from(json)?
     };
@@ -54,9 +90,7 @@ pub fn read(id: &ChainId) -> Result<ChainSpec, Error> {
     })
 }
 
-pub fn write(chain_spec: &ChainSpec) -> Result<(), Error> {
-    let dir = ChainConfigDir::create(&chain_spec.id)?;
-
+pub fn write(dir: &ChainConfigDir, chain_spec: &ChainSpec) -> Result<(), Error> {
     {
         let cfg = ChainSpecFile {
             id: chain_spec.id,
@@ -77,6 +111,35 @@ pub fn write(chain_spec: &ChainSpec) -> Result<(), Error> {
     Ok(())
 }
 
+fn list_at<P: AsRef<Path>>(dir: P) -> Result<Vec<ChainId>, Error> {
+    let mut chains = Vec::new();
+    let dir = dir.as_ref();
+
+    if dir.exists() {
+        for entry in std::fs::read_dir(dir)? {
+            let entry = entry?;
+
+            // Ignore entry that is:-
+            //
+            // - not a directory
+            // - name can't be parse as chain id
+            // - config file is not found inside the directory
+            if entry.file_type()?.is_dir() {
+                if let Some(name) = entry.file_name().to_str() {
+                    if let Ok(chain_id) = ChainId::parse(name) {
+                        let cs = LocalChainConfigDir::open_at(dir, &chain_id).expect("must exist");
+                        if cs.config_path().exists() {
+                            chains.push(chain_id);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(chains)
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 struct ChainSpecFile {
@@ -88,17 +151,87 @@ struct ChainSpecFile {
 /// The local directory name where the chain configuration files are stored.
 const KATANA_LOCAL_DIR: &str = "katana";
 
-// > LOCAL_DIR/$chain_id/
-#[derive(Debug, Clone)]
-pub struct ChainConfigDir(PathBuf);
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ChainConfigDir {
+    Absolute(PathBuf),
+    Local(LocalChainConfigDir),
+}
 
 impl ChainConfigDir {
-    /// Create a new config directory for the given chain ID.
+    pub fn create_local(id: &ChainId) -> Result<Self, Error> {
+        Ok(Self::Local(LocalChainConfigDir::create(id)?))
+    }
+
+    pub fn open_local(id: &ChainId) -> Result<Self, Error> {
+        Ok(Self::Local(LocalChainConfigDir::open(id)?))
+    }
+
+    pub fn create<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
+        let path = path.as_ref();
+
+        if !path.exists() {
+            std::fs::create_dir_all(path)?;
+        }
+
+        Ok(ChainConfigDir::Absolute(path.to_path_buf()))
+    }
+
+    pub fn open<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
+        let path = fs::canonicalize(path)?;
+
+        if !path.is_dir() {
+            return Err(Error::MustBeADirectory);
+        }
+
+        Ok(Self::Absolute(path.to_path_buf()))
+    }
+
+    pub fn config_path(&self) -> PathBuf {
+        match self {
+            Self::Absolute(path) => path.join("config").with_extension("toml"),
+            Self::Local(local) => local.config_path(),
+        }
+    }
+
+    pub fn genesis_path(&self) -> PathBuf {
+        match self {
+            Self::Absolute(path) => path.join("genesis").with_extension("json"),
+            Self::Local(local) => local.genesis_path(),
+        }
+    }
+}
+
+// > LOCAL_DIR/$chain_id/
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LocalChainConfigDir(PathBuf);
+
+impl LocalChainConfigDir {
+    /// Creates a new config directory for the given chain ID.
+    ///
+    /// The directory will be created at `$LOCAL_DIR/<id>`, where `$LOCAL_DIR` is the path returned
+    /// by [`local_dir`].
     ///
     /// This will create the directory if it does not yet exist.
     pub fn create(id: &ChainId) -> Result<Self, Error> {
+        Self::create_at(local_dir()?, id)
+    }
+
+    /// Opens an existing config directory for the given chain ID.
+    ///
+    /// The path of the directory is expected to be `$LOCAL_DIR/<id>`, where `$LOCAL_DIR` is the
+    /// path returned by [`local_dir`].
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if no directory exists with the given chain ID.
+    pub fn open(id: &ChainId) -> Result<Self, Error> {
+        Self::open_at(local_dir()?, id)
+    }
+
+    /// Same like [`Self::create`] but at a specific base path instead of `$LOCAL_DIR`.
+    pub fn create_at<P: AsRef<Path>>(base: P, id: &ChainId) -> Result<Self, Error> {
         let id = id.to_string();
-        let path = local_dir()?.join(id);
+        let path = base.as_ref().join(id);
 
         if !path.exists() {
             std::fs::create_dir_all(&path)?;
@@ -107,15 +240,13 @@ impl ChainConfigDir {
         Ok(Self(path))
     }
 
-    /// Open an existing config directory for the given chain ID.
-    ///
-    /// This will return an error if the no config directory exists for the given chain ID.
-    pub fn open(id: &ChainId) -> Result<Self, Error> {
+    /// Same like [`Self::open`] but at a specific base path instead of `$LOCAL_DIR`.
+    pub fn open_at<P: AsRef<Path>>(base: P, id: &ChainId) -> Result<Self, Error> {
         let id = id.to_string();
-        let path = local_dir()?.join(&id);
+        let path = base.as_ref().join(&id);
 
         if !path.exists() {
-            return Err(Error::DirectoryNotFound { id: id.clone() });
+            return Err(Error::LocalConfigDirectoryNotFound { id: id.clone() });
         }
 
         Ok(Self(path))
@@ -151,25 +282,50 @@ pub fn local_dir() -> Result<PathBuf, Error> {
 
 #[cfg(test)]
 mod tests {
+    use std::fs;
+    use std::path::Path;
+    use std::sync::OnceLock;
+
+    use katana_primitives::chain::ChainId;
+    use katana_primitives::genesis::Genesis;
     use katana_primitives::ContractAddress;
+    use tempfile::TempDir;
     use url::Url;
 
-    use super::*;
+    use super::Error;
+    use crate::rollup::file::{local_dir, ChainConfigDir, LocalChainConfigDir, KATANA_LOCAL_DIR};
+    use crate::rollup::{ChainSpec, FeeContract};
+    use crate::SettlementLayer;
 
-    // To make sure the path returned by `local_dir` is always the same across
-    // testes and is created inside of a temp dir
-    fn init() {
-        let temp_dir = tempfile::TempDir::new().unwrap();
-        let path = temp_dir.path();
+    static TEMPDIR: OnceLock<TempDir> = OnceLock::new();
 
-        #[cfg(target_os = "linux")]
-        if std::env::var("XDG_CONFIG_HOME").is_err() {
-            std::env::set_var("XDG_CONFIG_HOME", path);
+    fn with_temp_dir<T>(f: impl FnOnce(&Path) -> T) -> T {
+        f(TEMPDIR.get_or_init(|| tempfile::TempDir::new().unwrap()).path())
+    }
+
+    /// Test version of [`super::read`].
+    fn read(id: &ChainId) -> Result<ChainSpec, Error> {
+        with_temp_dir(|dir| {
+            let dir = LocalChainConfigDir::open_at(dir, id)?;
+            super::read(&ChainConfigDir::Local(dir))
+        })
+    }
+
+    /// Test version of [`super::write`].
+    fn write(chain_spec: &ChainSpec) -> Result<(), Error> {
+        with_temp_dir(|dir| {
+            let dir = LocalChainConfigDir::create_at(dir, &chain_spec.id)?;
+            super::write(&ChainConfigDir::Local(dir), chain_spec)
+        })
+    }
+
+    impl LocalChainConfigDir {
+        fn open_tmp(id: &ChainId) -> Result<Self, Error> {
+            with_temp_dir(|dir| Self::open_at(dir, id))
         }
 
-        #[cfg(target_os = "macos")]
-        if std::env::var("HOME").is_err() {
-            std::env::set_var("HOME", path);
+        fn create_tmp(id: &ChainId) -> Result<Self, Error> {
+            with_temp_dir(|dir| Self::create_at(dir, id))
         }
     }
 
@@ -179,6 +335,7 @@ mod tests {
             genesis: Genesis::default(),
             fee_contract: FeeContract { strk: ContractAddress::default() },
             settlement: SettlementLayer::Starknet {
+                block: 0,
                 id: ChainId::default(),
                 account: ContractAddress::default(),
                 core_contract: ContractAddress::default(),
@@ -189,8 +346,6 @@ mod tests {
 
     #[test]
     fn test_read_write_chainspec() {
-        init();
-
         let chain_spec = chainspec();
         let id = chain_spec.id;
 
@@ -204,39 +359,87 @@ mod tests {
 
     #[test]
     fn test_chain_config_dir() {
-        init();
-
         let chain_id = ChainId::parse("test").unwrap();
 
         // Test creation
-        let config_dir = ChainConfigDir::create(&chain_id).unwrap();
+        let config_dir = LocalChainConfigDir::create_tmp(&chain_id).unwrap();
         assert!(config_dir.0.exists());
 
         // Test opening existing dir
-        let opened_dir = ChainConfigDir::open(&chain_id).unwrap();
+        let opened_dir = LocalChainConfigDir::open_tmp(&chain_id).unwrap();
         assert_eq!(config_dir.0, opened_dir.0);
 
         // Test opening non-existent dir
         let bad_id = ChainId::parse("nonexistent").unwrap();
-        assert!(matches!(ChainConfigDir::open(&bad_id), Err(Error::DirectoryNotFound { .. })));
+        assert!(matches!(
+            LocalChainConfigDir::open_tmp(&bad_id),
+            Err(Error::LocalConfigDirectoryNotFound { .. })
+        ));
     }
 
     #[test]
     fn test_local_dir() {
-        init();
-
         let dir = local_dir().unwrap();
         assert!(dir.ends_with(KATANA_LOCAL_DIR));
     }
 
     #[test]
     fn test_config_paths() {
-        init();
-
         let chain_id = ChainId::parse("test").unwrap();
-        let config_dir = ChainConfigDir::create(&chain_id).unwrap();
+        let config_dir = LocalChainConfigDir::create_tmp(&chain_id).unwrap();
 
         assert!(config_dir.config_path().ends_with("config.toml"));
         assert!(config_dir.genesis_path().ends_with("genesis.json"));
+    }
+
+    #[test]
+    fn test_list_chain_specs() {
+        let dir = tempfile::TempDir::new().unwrap().into_path();
+
+        let listed_chains = super::list_at(&dir).unwrap();
+        assert_eq!(listed_chains.len(), 0, "Must be empty initially");
+
+        // Create some dummy chain specs
+        let mut chain_specs = Vec::new();
+        for i in 1..=3 {
+            let mut spec = chainspec();
+            // update the chain id to make they're unqiue
+            spec.id = ChainId::parse(&format!("chain_{i}")).unwrap();
+            chain_specs.push(spec);
+        }
+
+        // Write them to disk
+        for spec in &chain_specs {
+            let id = &spec.id;
+            let dir = LocalChainConfigDir::create_at(&dir, id).unwrap();
+            super::write(&ChainConfigDir::Local(dir), spec).unwrap();
+        }
+
+        let listed_chains = super::list_at(&dir).unwrap();
+        assert_eq!(listed_chains.len(), chain_specs.len());
+    }
+
+    #[test]
+    fn test_absolute_chain_config_dir() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let path = temp_dir.path();
+
+        // Test creating absolute dir
+        let chain_dir = ChainConfigDir::create(path).unwrap();
+        match &chain_dir {
+            ChainConfigDir::Absolute(p) => assert_eq!(p, &path),
+            _ => panic!("Expected Absolute variant"),
+        }
+
+        // Test opening existing absolute dir
+        let opened_dir = ChainConfigDir::open(path).unwrap();
+        match opened_dir {
+            ChainConfigDir::Absolute(p) => assert_eq!(p, fs::canonicalize(path).unwrap()),
+            _ => panic!("Expected Absolute variant"),
+        }
+
+        // Test error on non-existent dir
+        let bad_path = path.join("nonexistent");
+        assert!(matches!(ChainConfigDir::open(&bad_path), Err(Error::IO(..))));
     }
 }

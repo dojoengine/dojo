@@ -33,8 +33,7 @@ pub(crate) fn get_namespace_and_path(token: &Composite) -> (String, String, Stri
 /// Generates default values for each fields of the struct.
 pub(crate) fn generate_type_init(token: &Composite) -> String {
     format!(
-        "{{\n\t\t\tfieldOrder: [{}],\n{}\n\t\t}}",
-        token.inners.iter().map(|i| format!("'{}'", i.name)).collect::<Vec<String>>().join(", "),
+        "{{\n{}\n\t\t}}",
         token
             .inners
             .iter()
@@ -49,11 +48,27 @@ pub(crate) fn generate_type_init(token: &Composite) -> String {
 pub(crate) fn token_is_option(token: &Composite) -> bool {
     token.type_path.starts_with(CAIRO_OPTION_TYPE_PATH)
 }
+/// Checks if token has inner composite
+/// * token - The token to check
+fn token_has_inner_composite(token: &Composite) -> bool {
+    token.inners.iter().any(|inner| match &inner.token {
+        Token::Array(array) => array.inner.to_composite().is_ok(),
+        Token::Tuple(tuple) => tuple.inners.iter().any(|t| matches!(t, Token::Composite(_))),
+        Token::Composite(_) => true,
+        _ => false,
+    })
+}
 
 /// Checks if Token::Composite is an custom enum (enum with nested Composite types)
 /// * token - The token to check
 pub(crate) fn token_is_enum(token: &Composite) -> bool {
     token.r#type == CompositeType::Enum
+}
+
+/// Checks if Token::Composite is an custom enum (enum with nested Composite types)
+/// * token - The token to check
+pub(crate) fn token_is_custom_enum(token: &Composite) -> bool {
+    token.r#type == CompositeType::Enum && token_has_inner_composite(token)
 }
 
 /// Type used to map cainome `Token` into javascript types in interface definition
@@ -809,7 +824,6 @@ mod tests {
         // the content of generate_type_init is wrapped in a function that adds brackets before and
         // after
         let expected = "{
-\t\t\tfieldOrder: ['field1', 'field2', 'field3'],
 \t\t\tfield1: 0,
 \t\t\tfield2: 0,
 \t\t\tfield3: 0,

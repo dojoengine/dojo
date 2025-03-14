@@ -6,15 +6,18 @@ pub mod execution;
 pub mod fork;
 pub mod metrics;
 pub mod rpc;
+pub mod sequencing;
 
 use db::DbConfig;
 use dev::DevConfig;
 use execution::ExecutionConfig;
 use fork::ForkingConfig;
 use katana_chain_spec::ChainSpec;
-use katana_core::service::messaging::MessagingConfig;
+use katana_messaging::MessagingConfig;
 use metrics::MetricsConfig;
 use rpc::RpcConfig;
+use sequencing::SequencingConfig;
+use url::Url;
 
 /// Node configurations.
 ///
@@ -47,16 +50,15 @@ pub struct Config {
 
     /// Development options.
     pub dev: DevConfig,
+
+    /// Cartridge paymaster options.
+    #[cfg(feature = "cartridge")]
+    pub paymaster: Option<Paymaster>,
 }
 
-/// Configurations related to block production.
-#[derive(Debug, Clone, Default)]
-pub struct SequencingConfig {
-    /// The time in milliseconds for a block to be produced.
-    pub block_time: Option<u64>,
-
-    /// Disable automatic block production.
-    ///
-    /// Allowing block to only be produced manually.
-    pub no_mining: bool,
+#[cfg(feature = "cartridge")]
+#[derive(Debug, Clone)]
+pub struct Paymaster {
+    /// The root URL for the Cartridge API.
+    pub cartridge_api_url: Url,
 }
