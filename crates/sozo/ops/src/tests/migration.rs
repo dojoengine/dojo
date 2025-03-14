@@ -41,6 +41,7 @@ async fn setup_migration(
         world_local,
         &provider,
         None,
+        200_000,
         &whitelisted_namespaces,
     )
     .await?;

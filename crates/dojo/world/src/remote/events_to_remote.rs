@@ -24,11 +24,16 @@ use crate::remote::{
 
 impl WorldRemote {
     /// Fetch the events from the world and convert them to remote resources.
+    ///
+    /// The `max_block_range` is the maximum number of blocks that will separate the `from_block`
+    /// and the `to_block` in the event fetching, which if too high will cause the event fetching
+    /// to fail in most of the node providers.
     #[allow(clippy::field_reassign_with_default)]
     pub async fn from_events<P: Provider>(
         world_address: Felt,
         provider: &P,
         from_block: Option<u64>,
+        max_block_range: u64,
         whitelisted_namespaces: Option<Vec<String>>,
     ) -> Result<Self> {
         let mut world = Self::default();
@@ -69,45 +74,50 @@ impl WorldRemote {
             world::LibraryRegistered::event_selector(),
         ]];
 
-        let filter = EventFilter {
-            // Most of the node providers are struggling with wide block ranges.
-            // For this reason, we must be able to accept a custom from block.
-            from_block: from_block.map(BlockId::Number),
-            to_block: Some(BlockId::Tag(BlockTag::Pending)),
-            address: Some(world_address),
-            keys: Some(keys),
-        };
-
         let chunk_size = 500;
 
-        trace!(
-            world_address = format!("{:#066x}", world_address),
-            chunk_size,
-            ?filter,
-            "Fetching remote world events."
-        );
-
+        let from_block = from_block.unwrap_or(0);
+        let to_block = provider.block_number().await?;
+        let mut current_from = from_block;
         let mut events = Vec::new();
 
-        // Initial fetch.
-        let page = provider.get_events(filter.clone(), None, chunk_size).await?;
-        events.extend(page.events);
+        while current_from <= to_block {
+            let current_to = std::cmp::min(current_from + max_block_range - 1, to_block);
 
-        let mut continuation_token = page.continuation_token;
+            let filter = EventFilter {
+                from_block: Some(BlockId::Number(current_from)),
+                to_block: Some(BlockId::Number(current_to)),
+                address: Some(world_address),
+                keys: Some(keys.clone()),
+            };
 
-        while continuation_token.is_some() {
-            let page = provider.get_events(filter.clone(), continuation_token, chunk_size).await?;
+            trace!(
+                world_address = format!("{:#066x}", world_address),
+                chunk_size,
+                ?filter,
+                "Fetching remote world events for block range {}-{}.",
+                current_from,
+                current_to
+            );
 
-            // Katana is actually returning a null continuation token.
-            // However, we need to remove this check for empty page since worlds deploy on
-            // mainnet may have empty pages.
-            // TODO: @glihm,@kariy check if Katana is actually returning a null continuation token.
-            if is_katana && page.events.is_empty() {
-                break;
+            let mut continuation_token = None;
+            loop {
+                let page =
+                    provider.get_events(filter.clone(), continuation_token, chunk_size).await?;
+
+                if is_katana && page.events.is_empty() {
+                    break;
+                }
+
+                events.extend(page.events);
+
+                continuation_token = page.continuation_token;
+                if continuation_token.is_none() {
+                    break;
+                }
             }
 
-            continuation_token = page.continuation_token;
-            events.extend(page.events);
+            current_from = current_to + 1;
         }
 
         trace!(
