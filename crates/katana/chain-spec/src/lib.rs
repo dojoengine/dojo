@@ -101,4 +101,9 @@ pub enum SettlementLayer {
         // the block at which the core contract was deployed
         block: BlockNumber,
     },
+
+    Sovereign {
+        // Once Katana can sync from data availability layer, we can add the details of the data
+        // availability layer to the chain spec for Katana to sync from it.
+    },
 }

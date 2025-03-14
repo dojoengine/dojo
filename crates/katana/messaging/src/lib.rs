@@ -136,6 +136,9 @@ impl MessagingConfig {
                 from_block: *block,
                 interval: 2,
             },
+            katana_chain_spec::SettlementLayer::Sovereign { .. } => {
+                panic!("Sovereign chains are not supported for messaging.")
+            }
         }
     }
 }
