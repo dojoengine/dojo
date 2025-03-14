@@ -4,7 +4,6 @@ pub mod subscriptions;
 #[cfg(test)]
 mod tests;
 
-use std::collections::HashMap;
 use std::future::Future;
 use std::net::SocketAddr;
 use std::pin::Pin;
@@ -79,8 +78,6 @@ pub(crate) static ENTITIES_ENTITY_RELATION_COLUMN: &str = "internal_entity_id";
 pub(crate) static EVENT_MESSAGES_TABLE: &str = "event_messages";
 pub(crate) static EVENT_MESSAGES_MODEL_RELATION_TABLE: &str = "event_model";
 pub(crate) static EVENT_MESSAGES_ENTITY_RELATION_COLUMN: &str = "internal_event_message_id";
-
-pub(crate) static EVENT_MESSAGES_HISTORICAL_TABLE: &str = "event_messages_historical";
 
 impl From<SchemaError> for Error {
     fn from(err: SchemaError) -> Self {
@@ -298,41 +295,6 @@ impl DojoWorld {
         row_events.iter().map(map_row_to_event).collect()
     }
 
-    async fn fetch_historical_event_messages(
-        &self,
-        query: &str,
-        bind_values: Vec<String>,
-        limit: Option<u32>,
-        offset: Option<u32>,
-    ) -> Result<Vec<proto::types::Entity>, Error> {
-        let mut query = sqlx::query_as(query);
-        for value in bind_values {
-            query = query.bind(value);
-        }
-        let db_entities: Vec<(String, String, String, String)> =
-            query.bind(limit).bind(offset).fetch_all(&self.pool).await?;
-
-        let mut entities = HashMap::new();
-        for (id, data, model_id, _) in db_entities {
-            let hashed_keys =
-                Felt::from_str(&id).map_err(ParseError::FromStr)?.to_bytes_be().to_vec();
-            let model = self
-                .model_cache
-                .model(&Felt::from_str(&model_id).map_err(ParseError::FromStr)?)
-                .await?;
-            let mut schema = model.schema;
-            schema
-                .from_json_value(serde_json::from_str(&data).map_err(ParseError::FromJsonStr)?)?;
-
-            let entity = entities
-                .entry(id)
-                .or_insert_with(|| proto::types::Entity { hashed_keys, models: vec![] });
-            entity.models.push(schema.as_struct().unwrap().clone().into());
-        }
-
-        Ok(entities.into_values().collect())
-    }
-
     #[allow(clippy::too_many_arguments)]
     pub(crate) async fn query_by_hashed_keys(
         &self,
@@ -397,42 +359,6 @@ impl DojoWorld {
             .map(|model| format!("INSTR(model_ids, '{:#x}') > 0", model))
             .collect::<Vec<_>>()
             .join(" OR ");
-
-        if table == EVENT_MESSAGES_HISTORICAL_TABLE {
-            let count_query = format!(
-                r#"
-                SELECT COUNT(*) FROM {table}
-                JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
-                WHERE {where_clause}
-                GROUP BY {table}.event_id
-            "#
-            );
-            let mut total_count = sqlx::query_scalar(&count_query);
-            for value in &bind_values {
-                total_count = total_count.bind(value);
-            }
-            let total_count = total_count.fetch_one(&self.pool).await?;
-            if total_count == 0 {
-                return Ok((Vec::new(), 0));
-            }
-
-            let entities = self.fetch_historical_event_messages(
-                &format!(
-                    r#"
-                SELECT {table}.id, {table}.data, {table}.model_id, group_concat({model_relation_table}.model_id) as model_ids
-                FROM {table}
-                JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
-                WHERE {where_clause}
-                GROUP BY {table}.event_id
-                ORDER BY {table}.event_id DESC
-             "#
-                ),
-                bind_values,
-                limit,
-                offset
-            ).await?;
-            return Ok((entities, total_count));
-        }
 
         let (rows, total_count) = fetch_entities(
             &self.pool,
@@ -525,42 +451,6 @@ impl DojoWorld {
             .map(|model| format!("INSTR(model_ids, '{:#x}') > 0", model))
             .collect::<Vec<_>>()
             .join(" OR ");
-
-        if table == EVENT_MESSAGES_HISTORICAL_TABLE {
-            let count_query = format!(
-                r#"
-                SELECT COUNT(*) FROM {table}
-                JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
-                WHERE {where_clause}
-                GROUP BY {table}.event_id
-            "#
-            );
-            let mut total_count = sqlx::query_scalar(&count_query);
-            for value in &bind_values {
-                total_count = total_count.bind(value);
-            }
-            let total_count = total_count.fetch_one(&self.pool).await?;
-            if total_count == 0 {
-                return Ok((Vec::new(), 0));
-            }
-
-            let entities = self.fetch_historical_event_messages(
-                &format!(
-                    r#"
-                    SELECT {table}.id, {table}.data, {table}.model_id, group_concat({model_relation_table}.model_id) as model_ids
-                    FROM {table}
-                    JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
-                    WHERE {where_clause}
-                    GROUP BY {table}.event_id
-                    ORDER BY {table}.event_id DESC
-                 "#
-                ),
-                bind_values,
-                limit,
-                offset
-            ).await?;
-            return Ok((entities, total_count));
-        }
 
         let (rows, total_count) = fetch_entities(
             &self.pool,
