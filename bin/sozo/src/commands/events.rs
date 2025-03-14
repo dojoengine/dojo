@@ -39,8 +39,9 @@ pub struct EventsArgs {
     pub chunk_size: u64,
 
     #[arg(short, long)]
-    #[arg(help = "Maximum number of blocks to query at once")]
-    #[arg(default_value_t = 50_000)]
+    #[arg(help = "Maximum number of blocks between `from_block` and `to_block`. A too high \
+                  value will cause the event fetching to fail.")]
+    #[arg(default_value_t = 200_000)]
     pub max_block_range: u64,
 
     #[arg(long)]
@@ -74,6 +75,11 @@ impl EventsArgs {
             };
             let to_block = self.to_block.unwrap_or(latest_block);
 
+            let chain_id = provider.chain_id().await?;
+            // Katana if it's not `SN_SEPOLIA` or `SN_MAIN`.
+            let is_katana = chain_id != felt!("0x534e5f5345504f4c4941")
+                && chain_id != felt!("0x534e5f4d41494e");
+
             let mut current_from = from_block;
             let mut events = Vec::new();
 
@@ -97,11 +103,6 @@ impl EventsArgs {
                     current_from,
                     current_to
                 );
-
-                let chain_id = provider.chain_id().await?;
-                // Katana if it's not `SN_SEPOLIA` or `SN_MAIN`.
-                let is_katana = chain_id != felt!("0x534e5f5345504f4c4941")
-                    && chain_id != felt!("0x534e5f4d41494e");
 
                 let mut continuation_token = None;
                 loop {

@@ -68,6 +68,7 @@ async fn migrate_spawn_and_move(db_path: &Path) -> Result<Manifest> {
         world_local,
         &runner.provider(),
         None,
+        200_000,
         &whitelisted_namespaces,
     )
     .await?;
@@ -126,6 +127,7 @@ async fn migrate_types_test(db_path: &Path) -> Result<Manifest> {
         world_local,
         &runner.provider(),
         None,
+        200_000,
         &whitelisted_namespaces,
     )
     .await?;

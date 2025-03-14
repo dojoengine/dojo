@@ -1,8 +1,8 @@
 {
   "world": {
-    "class_hash": "0x2f92b70bd2b5a40ddef12c55257f245176870b25c7eb0bd7a60cf1f1f2fbf0e",
-    "address": "0x222b086c792ac5d3ea8c11c13ab227967a07b35febc2c9ea822c2ea722a3cf2",
-    "seed": "simple3",
+    "class_hash": "0x4b767fda48530353c2e44e4b9433f4d75c6c9974aaff43ecc00de9455eb71b8",
+    "address": "0x60b5af1dbe01ba39aba022cf73d0990e5139df0aab76937630c2373e407d0c9",
+    "seed": "simple2",
     "name": "simple",
     "entrypoints": [
       "uuid",
@@ -92,6 +92,10 @@
           {
             "name": "metadata_uri",
             "type": "core::byte_array::ByteArray"
+          },
+          {
+            "name": "metadata_hash",
+            "type": "core::felt252"
           }
         ]
       },
@@ -1002,6 +1006,11 @@
             "name": "uri",
             "type": "core::byte_array::ByteArray",
             "kind": "data"
+          },
+          {
+            "name": "hash",
+            "type": "core::felt252",
+            "kind": "data"
           }
         ]
       },
@@ -1243,8 +1252,8 @@
   },
   "contracts": [
     {
-      "address": "0x5b713d5d994bf5b11795fe8463c0753c5158d1b1ebd956ab8d4863dcfe23af4",
-      "class_hash": "0x758181d4a28c2a580c7ef9e963d4bcd5b0712320dc68a174c4f3ff4ad3eaae0",
+      "address": "0x1fc128b5f494f198ce3548468d2795f87c6927cb353f6376dd71b224781189b",
+      "class_hash": "0x4f8b513b49ec2fdb194efa3a8d041aef0e66346a6e8a9a999b1f4eb2fb17045",
       "abi": [
         {
           "type": "impl",
@@ -1501,8 +1510,8 @@
       ]
     },
     {
-      "address": "0x811f5003c889294792e04361b2108ee8a2321c0a05e58570a8d98656a273f0",
-      "class_hash": "0x2a400df88b0add6c980d281dc96354a5cfc2b886547e9ed621b097e21842ee6",
+      "address": "0x685b51107b14cce85420d228f6c733165fb66edad4b1ac5da796bd895a9db9a",
+      "class_hash": "0x61abffb3fd1eee27cba6298be11b8252c21eb3f69c8730ff44e9859e173cfb8",
       "abi": [
         {
           "type": "impl",
@@ -1677,184 +1686,8 @@
       ]
     },
     {
-      "address": "0x2a27076c297cd13db40c114a44dee9a6fd4f3d85a886fdf64ded18a1e4a12df",
-      "class_hash": "0x7cc8d15e576873d544640f7fd124bd430bd19c0f31e203fb069b4fc2f5c0ab9",
-      "abi": [
-        {
-          "type": "impl",
-          "name": "c3__ContractImpl",
-          "interface_name": "dojo::contract::interface::IContract"
-        },
-        {
-          "type": "interface",
-          "name": "dojo::contract::interface::IContract",
-          "items": []
-        },
-        {
-          "type": "impl",
-          "name": "c3__DeployedContractImpl",
-          "interface_name": "dojo::meta::interface::IDeployedResource"
-        },
-        {
-          "type": "struct",
-          "name": "core::byte_array::ByteArray",
-          "members": [
-            {
-              "name": "data",
-              "type": "core::array::Array::<core::bytes_31::bytes31>"
-            },
-            {
-              "name": "pending_word",
-              "type": "core::felt252"
-            },
-            {
-              "name": "pending_word_len",
-              "type": "core::integer::u32"
-            }
-          ]
-        },
-        {
-          "type": "interface",
-          "name": "dojo::meta::interface::IDeployedResource",
-          "items": [
-            {
-              "type": "function",
-              "name": "dojo_name",
-              "inputs": [],
-              "outputs": [
-                {
-                  "type": "core::byte_array::ByteArray"
-                }
-              ],
-              "state_mutability": "view"
-            }
-          ]
-        },
-        {
-          "type": "function",
-          "name": "dojo_init",
-          "inputs": [],
-          "outputs": [],
-          "state_mutability": "view"
-        },
-        {
-          "type": "impl",
-          "name": "WorldProviderImpl",
-          "interface_name": "dojo::contract::components::world_provider::IWorldProvider"
-        },
-        {
-          "type": "struct",
-          "name": "dojo::world::iworld::IWorldDispatcher",
-          "members": [
-            {
-              "name": "contract_address",
-              "type": "core::starknet::contract_address::ContractAddress"
-            }
-          ]
-        },
-        {
-          "type": "interface",
-          "name": "dojo::contract::components::world_provider::IWorldProvider",
-          "items": [
-            {
-              "type": "function",
-              "name": "world_dispatcher",
-              "inputs": [],
-              "outputs": [
-                {
-                  "type": "dojo::world::iworld::IWorldDispatcher"
-                }
-              ],
-              "state_mutability": "view"
-            }
-          ]
-        },
-        {
-          "type": "impl",
-          "name": "UpgradeableImpl",
-          "interface_name": "dojo::contract::components::upgradeable::IUpgradeable"
-        },
-        {
-          "type": "interface",
-          "name": "dojo::contract::components::upgradeable::IUpgradeable",
-          "items": [
-            {
-              "type": "function",
-              "name": "upgrade",
-              "inputs": [
-                {
-                  "name": "new_class_hash",
-                  "type": "core::starknet::class_hash::ClassHash"
-                }
-              ],
-              "outputs": [],
-              "state_mutability": "external"
-            }
-          ]
-        },
-        {
-          "type": "constructor",
-          "name": "constructor",
-          "inputs": []
-        },
-        {
-          "type": "event",
-          "name": "dojo::contract::components::upgradeable::upgradeable_cpt::Upgraded",
-          "kind": "struct",
-          "members": [
-            {
-              "name": "class_hash",
-              "type": "core::starknet::class_hash::ClassHash",
-              "kind": "data"
-            }
-          ]
-        },
-        {
-          "type": "event",
-          "name": "dojo::contract::components::upgradeable::upgradeable_cpt::Event",
-          "kind": "enum",
-          "variants": [
-            {
-              "name": "Upgraded",
-              "type": "dojo::contract::components::upgradeable::upgradeable_cpt::Upgraded",
-              "kind": "nested"
-            }
-          ]
-        },
-        {
-          "type": "event",
-          "name": "dojo::contract::components::world_provider::world_provider_cpt::Event",
-          "kind": "enum",
-          "variants": []
-        },
-        {
-          "type": "event",
-          "name": "dojo_simple::c3::Event",
-          "kind": "enum",
-          "variants": [
-            {
-              "name": "UpgradeableEvent",
-              "type": "dojo::contract::components::upgradeable::upgradeable_cpt::Event",
-              "kind": "nested"
-            },
-            {
-              "name": "WorldProviderEvent",
-              "type": "dojo::contract::components::world_provider::world_provider_cpt::Event",
-              "kind": "nested"
-            }
-          ]
-        }
-      ],
-      "init_calldata": [],
-      "tag": "ns-c3",
-      "selector": "0x69bd1ce04aa3945bacae701a68e86c58b44d21c4debee8a65fa921b4a717c5f",
-      "systems": [
-        "upgrade"
-      ]
-    },
-    {
-      "address": "0x383866b1de57234f2b0e4409f1bc2863c0b94b08f0dcffc8fff0e37b1b56ebd",
-      "class_hash": "0x758181d4a28c2a580c7ef9e963d4bcd5b0712320dc68a174c4f3ff4ad3eaae0",
+      "address": "0x4ed6c59dccd98f5b7916bf00be00258e4bc93b1aa670546f2f182fa2a057455",
+      "class_hash": "0x4f8b513b49ec2fdb194efa3a8d041aef0e66346a6e8a9a999b1f4eb2fb17045",
       "abi": [
         {
           "type": "impl",
@@ -2111,32 +1944,34 @@
       ]
     }
   ],
+  "libraries": [],
   "models": [
     {
       "members": [],
-      "class_hash": "0x506d770b7301fc791cf3a19705848647524a0e2595a4d38365df917b4d1d246",
-      "tag": "M",
-      "selector": "0x3b26427a55dd1d51738b0e3e989fe6f25649e1311295f30f0a4fa2db439aa2c"
+      "class_hash": "0x1df58a3ea6de0001ca46fd906276d7189856a306c4e3002040c36c183d94296",
+      "tag": "ns-M",
+      "selector": "0x50aac05281bbfaa5393cacacc12e86f59ab7d5f3ee619427dd33a0756526f24"
     },
     {
       "members": [],
-      "class_hash": "0x506d770b7301fc791cf3a19705848647524a0e2595a4d38365df917b4d1d246",
-      "tag": "M",
-      "selector": "0x50aac05281bbfaa5393cacacc12e86f59ab7d5f3ee619427dd33a0756526f24"
+      "class_hash": "0x1df58a3ea6de0001ca46fd906276d7189856a306c4e3002040c36c183d94296",
+      "tag": "ns2-M",
+      "selector": "0x3b26427a55dd1d51738b0e3e989fe6f25649e1311295f30f0a4fa2db439aa2c"
     }
   ],
   "events": [
     {
       "members": [],
-      "class_hash": "0x5c72f78327d896e16f3c9fe7ee5e136ad9fc4cda89fba1ce7e665877d477cd5",
-      "tag": "E",
+      "class_hash": "0x59d5383613416bc60ebabaff3f908509cf6df91d0fdd67d2c73723619c17ae4",
+      "tag": "ns-E",
       "selector": "0x260e0511a6fa454a7d4ed8bea5fa52fc80fc588e33ba4cb58c65bbeeadf7565"
     },
     {
       "members": [],
-      "class_hash": "0x408fc887363634ee0d261cc26606574ce2bc433bedbcef4bb88f8fbc69a1e43",
-      "tag": "EH",
+      "class_hash": "0x1c07ad25f96c43cd5d0f4ed4f60eb111e5e4819b7ad8858c8e1e91d3386e614",
+      "tag": "ns-EH",
       "selector": "0x4c6c7772b19b700cf97d078d02a419670d11d2b689a7a3647eac311b2817ced"
     }
-  ]
+  ],
+  "external_contracts": []
 }

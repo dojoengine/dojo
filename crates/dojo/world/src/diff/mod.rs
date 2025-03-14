@@ -203,6 +203,7 @@ impl WorldDiff {
         world_local: WorldLocal,
         provider: P,
         from_block: Option<u64>,
+        max_block_range: u64,
         whitelisted_namespaces: &[String],
     ) -> Result<Self>
     where
@@ -236,8 +237,14 @@ impl WorldDiff {
         };
 
         if is_deployed {
-            let mut world_remote =
-                WorldRemote::from_events(world_address, &provider, from_block, namespaces).await?;
+            let mut world_remote = WorldRemote::from_events(
+                world_address,
+                &provider,
+                from_block,
+                max_block_range,
+                namespaces,
+            )
+            .await?;
 
             let mut external_contract_classes = vec![];
             for (name, class) in &world_local.external_contract_classes {

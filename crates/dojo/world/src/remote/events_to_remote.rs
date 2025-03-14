@@ -24,11 +24,16 @@ use crate::remote::{
 
 impl WorldRemote {
     /// Fetch the events from the world and convert them to remote resources.
+    ///
+    /// The `max_block_range` is the maximum number of blocks that will separate the `from_block`
+    /// and the `to_block` in the event fetching, which if too high will cause the event fetching
+    /// to fail in most of the node providers.
     #[allow(clippy::field_reassign_with_default)]
     pub async fn from_events<P: Provider>(
         world_address: Felt,
         provider: &P,
         from_block: Option<u64>,
+        max_block_range: u64,
         whitelisted_namespaces: Option<Vec<String>>,
     ) -> Result<Self> {
         let mut world = Self::default();
@@ -69,9 +74,6 @@ impl WorldRemote {
             world::LibraryRegistered::event_selector(),
         ]];
 
-        // Maximum blocks per query
-        // TODO: initial value pending benchmarking to determine optimal range
-        const MAX_BLOCK_RANGE: u64 = 50_000;
         let chunk_size = 500;
 
         let from_block = from_block.unwrap_or(0);
@@ -80,7 +82,7 @@ impl WorldRemote {
         let mut events = Vec::new();
 
         while current_from <= to_block {
-            let current_to = std::cmp::min(current_from + MAX_BLOCK_RANGE - 1, to_block);
+            let current_to = std::cmp::min(current_from + max_block_range - 1, to_block);
 
             let filter = EventFilter {
                 from_block: Some(BlockId::Number(current_from)),
