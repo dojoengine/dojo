@@ -27,29 +27,54 @@ mod slot;
 
 #[derive(Debug, Args)]
 pub struct InitArgs {
+    /// The id of the new chain to be initialized.
+    ///
+    /// An empty `Id` is not a allowed, since the chain id must be
+    /// a valid ASCII string.
+    /// This special value is used to prompt the user for the chain id if
+    /// a valid chain id is not provided.
     #[arg(long)]
-    #[arg(requires_all = ["settlement_chain", "settlement_account", "settlement_account_private_key"])]
-    id: Option<String>,
+    #[arg(default_value = "")]
+    id: String,
 
+    /// The settlement chain to be used, where the core contract is deployed.
     #[arg(long = "settlement-chain")]
     #[arg(requires_all = ["id", "settlement_account", "settlement_account_private_key"])]
     settlement_chain: Option<SettlementChain>,
 
+    /// The address of the settlement account to be used to configure the core contract.
     #[arg(long = "settlement-account-address")]
     #[arg(requires_all = ["id", "settlement_chain", "settlement_account_private_key"])]
     settlement_account: Option<ContractAddress>,
 
+    /// The private key of the settlement account to be used to configure the core contract.
     #[arg(long = "settlement-account-private-key")]
     #[arg(requires_all = ["id", "settlement_chain", "settlement_account"])]
     settlement_account_private_key: Option<Felt>,
 
+    /// The address of the settlement contract.
+    /// If not provided, the contract will be deployed on the settlement chain using the provided
+    /// settlement account.
     #[arg(long = "settlement-contract")]
     #[arg(requires_all = ["id", "settlement_chain", "settlement_account", "settlement_account_private_key", "settlement_contract_deployed_block"])]
     settlement_contract: Option<ContractAddress>,
 
+    /// The block number of the settlement contract deployment.
+    /// This value is required if the `settlement-contract` is provided, for Katana to
+    /// know from which block the messages can be gathered from the settlement chain.
     #[arg(long = "settlement-contract-deployed-block")]
     #[arg(requires_all = ["id", "settlement_chain", "settlement_account", "settlement_account_private_key", "settlement_contract"])]
     settlement_contract_deployed_block: Option<BlockNumber>,
+
+    /// Initialize a sovereign chain with no settlement layer, by only publishing the state updates
+    /// and proofs on a Data Availability Layer. By using this flag, no settlement option is
+    /// required.
+    #[arg(long = "sovereign")]
+    #[arg(help = "Initialize a sovereign chain with no settlement layer, by only publishing the \
+                  state updates and proofs on a Data Availability Layer.")]
+    #[arg(requires_all = ["id"])]
+    #[arg(conflicts_with_all = ["settlement_chain", "settlement_account", "settlement_account_private_key", "settlement_contract"])]
+    sovereign: bool,
 
     /// Specify the path of the directory where the configuration files will be stored at.
     #[arg(long)]
@@ -70,20 +95,26 @@ impl InitArgs {
             prompt::prompt().await?
         };
 
-        let settlement = SettlementLayer::Starknet {
-            account: output.account,
-            rpc_url: output.rpc_url,
-            id: ChainId::parse(&output.settlement_id)?,
-            block: output.deployment_outcome.block_number,
-            core_contract: output.deployment_outcome.contract_address,
+        let settlement = match &output {
+            AnyOutcome::Persistent(persistent) => SettlementLayer::Starknet {
+                account: persistent.account,
+                rpc_url: persistent.rpc_url.clone(),
+                id: ChainId::parse(&persistent.settlement_id)?,
+                block: persistent.deployment_outcome.block_number,
+                core_contract: persistent.deployment_outcome.contract_address,
+            },
+            AnyOutcome::Sovereign(_) => SettlementLayer::Sovereign {},
         };
 
-        let id = ChainId::parse(&output.id)?;
+        let id = ChainId::parse(output.id())?;
 
         #[cfg_attr(not(feature = "init-slot"), allow(unused_mut))]
         let mut genesis = generate_genesis();
         #[cfg(feature = "init-slot")]
-        slot::add_paymasters_to_genesis(&mut genesis, &output.slot_paymasters.unwrap_or_default());
+        slot::add_paymasters_to_genesis(
+            &mut genesis,
+            &output.slot_paymasters().unwrap_or_default(),
+        );
 
         // At the moment, the fee token is limited to a predefined token.
         let fee_contract = FeeContract::default();
@@ -101,10 +132,16 @@ impl InitArgs {
         Ok(())
     }
 
-    async fn configure_from_args(&self) -> Option<anyhow::Result<Outcome>> {
-        // Here we just check that if `id` is present, then all the other required* arguments must
-        // be present as well. This is guaranteed by `clap`.
-        if let Some(id) = self.id.clone() {
+    async fn configure_from_args(&self) -> Option<anyhow::Result<AnyOutcome>> {
+        if !self.id.is_empty() {
+            if self.sovereign {
+                return Some(Ok(AnyOutcome::Sovereign(SovereignOutcome {
+                    id: self.id.clone(),
+                    #[cfg(feature = "init-slot")]
+                    slot_paymasters: self.slot.paymaster_accounts.clone(),
+                })));
+            }
+
             // These args are all required if at least one of them are specified (incl chain id) and
             // `clap` has already handled that for us, so it's safe to unwrap here.
             let settlement_chain = self.settlement_chain.clone().expect("must present");
@@ -126,7 +163,7 @@ impl InitArgs {
 
             let l1_chain_id = settlement_provider.chain_id().await.unwrap();
 
-            let chain_id = cairo_short_string_to_felt(&id).unwrap();
+            let chain_id = cairo_short_string_to_felt(&self.id).unwrap();
 
             let deployment_outcome = if let Some(contract) = self.settlement_contract {
                 deployment::check_program_info(chain_id, contract.into(), &settlement_provider)
@@ -153,23 +190,56 @@ impl InitArgs {
                 deployment::deploy_settlement_contract(account, chain_id).await.unwrap()
             };
 
-            Some(Ok(Outcome {
-                id,
+            Some(Ok(AnyOutcome::Persistent(PersistentOutcome {
+                id: self.id.clone(),
                 deployment_outcome,
                 rpc_url: settlement_provider.url().clone(),
                 account: settlement_account_address,
                 settlement_id: parse_cairo_short_string(&l1_chain_id).unwrap(),
                 #[cfg(feature = "init-slot")]
                 slot_paymasters: self.slot.paymaster_accounts.clone(),
-            }))
+            })))
         } else {
             None
         }
     }
 }
 
+/// The outcome of the initialization process.
 #[derive(Debug)]
-struct Outcome {
+enum AnyOutcome {
+    Persistent(PersistentOutcome),
+    Sovereign(SovereignOutcome),
+}
+
+impl AnyOutcome {
+    pub fn id(&self) -> &str {
+        match self {
+            AnyOutcome::Persistent(persistent) => &persistent.id,
+            AnyOutcome::Sovereign(sovereign) => &sovereign.id,
+        }
+    }
+
+    #[cfg(feature = "init-slot")]
+    pub fn slot_paymasters(&self) -> Option<Vec<slot::PaymasterAccountArgs>> {
+        match self {
+            AnyOutcome::Persistent(persistent) => persistent.slot_paymasters.clone(),
+            AnyOutcome::Sovereign(sovereign) => sovereign.slot_paymasters.clone(),
+        }
+    }
+}
+
+#[derive(Debug)]
+struct SovereignOutcome {
+    /// The id of the new chain to be initialized.
+    pub id: String,
+
+    #[cfg(feature = "init-slot")]
+    pub slot_paymasters: Option<Vec<slot::PaymasterAccountArgs>>,
+}
+
+#[derive(Debug)]
+struct PersistentOutcome {
     /// the account address that is used to send the transactions for contract
     /// deployment/initialization.
     pub account: ContractAddress,

@@ -14,12 +14,12 @@ use starknet::providers::Provider;
 use starknet::signers::{LocalWallet, SigningKey};
 use tokio::runtime::Handle;
 
-use super::{deployment, Outcome};
+use super::{deployment, AnyOutcome, PersistentOutcome, SovereignOutcome};
 use crate::cli::init::deployment::DeploymentOutcome;
 use crate::cli::init::settlement::SettlementChainProvider;
 use crate::cli::init::slot::{self, PaymasterAccountArgs};
 
-pub async fn prompt() -> Result<Outcome> {
+pub async fn prompt() -> Result<AnyOutcome> {
     let chain_id = CustomType::<String>::new("Id")
     .with_help_message("This will be the id of your rollup chain.")
     // checks that the input is a valid ascii string.
@@ -37,6 +37,7 @@ pub async fn prompt() -> Result<Outcome> {
     enum SettlementChainOpt {
         Mainnet,
         Sepolia,
+        Sovereign,
         #[cfg(feature = "init-custom-settlement-chain")]
         Custom,
     }
@@ -48,6 +49,7 @@ pub async fn prompt() -> Result<Outcome> {
     let network_opts = vec![
         SettlementChainOpt::Mainnet,
         SettlementChainOpt::Sepolia,
+        SettlementChainOpt::Sovereign,
         #[cfg(feature = "init-custom-settlement-chain")]
         SettlementChainOpt::Custom,
     ];
@@ -59,6 +61,16 @@ pub async fn prompt() -> Result<Outcome> {
     let settlement_provider = match network_type {
         SettlementChainOpt::Mainnet => SettlementChainProvider::sn_mainnet(),
         SettlementChainOpt::Sepolia => SettlementChainProvider::sn_sepolia(),
+
+        SettlementChainOpt::Sovereign => {
+            let slot_paymasters = collect_slot_paymasters()?;
+
+            return Ok(AnyOutcome::Sovereign(SovereignOutcome {
+                id: chain_id,
+                #[cfg(feature = "init-slot")]
+                slot_paymasters,
+            }));
+        }
 
         // Useful for testing the program flow without having to run it against actual network.
         #[cfg(feature = "init-custom-settlement-chain")]
@@ -158,6 +170,20 @@ pub async fn prompt() -> Result<Outcome> {
         DeploymentOutcome { contract_address: address, block_number }
     };
 
+    let slot_paymasters = collect_slot_paymasters()?;
+
+    Ok(AnyOutcome::Persistent(PersistentOutcome {
+        id: chain_id,
+        deployment_outcome,
+        rpc_url: settlement_provider.url().clone(),
+        account: account_address,
+        settlement_id: parse_cairo_short_string(&l1_chain_id)?,
+        #[cfg(feature = "init-slot")]
+        slot_paymasters,
+    }))
+}
+
+fn collect_slot_paymasters() -> Result<Option<Vec<slot::PaymasterAccountArgs>>> {
     // It's wrapped like this because the prompt validator requires captured variables to have
     // 'static lifetime.
     let slot_paymasters: Rc<RefCell<Vec<PaymasterAccountArgs>>> = Default::default();
@@ -200,13 +226,5 @@ pub async fn prompt() -> Result<Outcome> {
         paymaster_count += 1;
     }
 
-    Ok(Outcome {
-        id: chain_id,
-        deployment_outcome,
-        rpc_url: settlement_provider.url().clone(),
-        account: account_address,
-        settlement_id: parse_cairo_short_string(&l1_chain_id)?,
-        #[cfg(feature = "init-slot")]
-        slot_paymasters: Some(Rc::unwrap_or_clone(slot_paymasters).take()),
-    })
+    Ok(Some(Rc::unwrap_or_clone(slot_paymasters).take()))
 }
