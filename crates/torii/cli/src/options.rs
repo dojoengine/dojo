@@ -24,6 +24,7 @@ pub const DEFAULT_RELAY_WEBSOCKET_PORT: u16 = 9092;
 pub const DEFAULT_ERC_MAX_METADATA_TASKS: usize = 10;
 
 #[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq, MergeOptions)]
+#[serde(default)]
 #[command(next_help_heading = "Relay options")]
 pub struct RelayOptions {
     /// Port to serve Libp2p TCP & UDP Quic transports
@@ -96,6 +97,7 @@ impl Default for RelayOptions {
 }
 
 #[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq, MergeOptions)]
+#[serde(default)]
 #[command(next_help_heading = "Indexing options")]
 pub struct IndexingOptions {
     /// Chunk size of the events page when indexing using events
@@ -207,6 +209,7 @@ impl Default for IndexingOptions {
 }
 
 #[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq, MergeOptions)]
+#[serde(default)]
 #[command(next_help_heading = "Events indexing options")]
 pub struct EventsOptions {
     /// Whether or not to index raw events
@@ -225,6 +228,7 @@ impl Default for EventsOptions {
 }
 
 #[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq, MergeOptions)]
+#[serde(default)]
 #[command(next_help_heading = "HTTP server options")]
 pub struct ServerOptions {
     /// HTTP server listening interface.
@@ -250,6 +254,7 @@ impl Default for ServerOptions {
 }
 
 #[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq, MergeOptions)]
+#[serde(default)]
 #[command(next_help_heading = "Metrics options")]
 pub struct MetricsOptions {
     /// Enable metrics.
@@ -283,6 +288,7 @@ impl Default for MetricsOptions {
 }
 
 #[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq, MergeOptions)]
+#[serde(default)]
 #[command(next_help_heading = "ERC options")]
 pub struct ErcOptions {
     /// The maximum number of concurrent tasks to use for indexing ERC721 and ERC1155 token
@@ -306,6 +312,7 @@ impl Default for ErcOptions {
 }
 
 #[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq, MergeOptions)]
+#[serde(default)]
 #[command(next_help_heading = "SQL options")]
 pub struct SqlOptions {
     /// Whether model tables should default to having indices on all columns
