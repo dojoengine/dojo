@@ -428,7 +428,6 @@ impl NodeArgs {
         #[cfg(feature = "server")]
         {
             self.server.merge(config.server.as_ref());
-            self.rpc.merge(config.rpc.as_ref());
 
             if self.metrics == MetricsOptions::default() {
                 if let Some(metrics) = config.metrics {
@@ -439,6 +438,7 @@ impl NodeArgs {
 
         self.starknet.merge(config.starknet.as_ref());
         self.development.merge(config.development.as_ref());
+        self.rpc.merge(config.rpc.as_ref());
 
         if self.gpo == GasPriceOracleOptions::default() {
             if let Some(gpo) = config.gpo {
