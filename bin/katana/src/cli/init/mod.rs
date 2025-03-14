@@ -69,7 +69,6 @@ pub struct InitArgs {
     /// Initialize a sovereign chain with no settlement layer, by only publishing the state updates
     /// and proofs on a Data Availability Layer. By using this flag, no settlement option is
     /// required.
-    #[arg(long = "sovereign")]
     #[arg(help = "Initialize a sovereign chain with no settlement layer, by only publishing the \
                   state updates and proofs on a Data Availability Layer.")]
     #[arg(requires_all = ["id"])]

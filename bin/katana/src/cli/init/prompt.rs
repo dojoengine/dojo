@@ -63,8 +63,7 @@ pub async fn prompt() -> Result<AnyOutcome> {
         SettlementChainOpt::Sepolia => SettlementChainProvider::sn_sepolia(),
 
         SettlementChainOpt::Sovereign => {
-            let slot_paymasters = collect_slot_paymasters()?;
-
+            let slot_paymasters = prompt_slot_paymasters()?;
             return Ok(AnyOutcome::Sovereign(SovereignOutcome {
                 id: chain_id,
                 #[cfg(feature = "init-slot")]
@@ -170,7 +169,7 @@ pub async fn prompt() -> Result<AnyOutcome> {
         DeploymentOutcome { contract_address: address, block_number }
     };
 
-    let slot_paymasters = collect_slot_paymasters()?;
+    let slot_paymasters = prompt_slot_paymasters()?;
 
     Ok(AnyOutcome::Persistent(PersistentOutcome {
         id: chain_id,
@@ -183,7 +182,7 @@ pub async fn prompt() -> Result<AnyOutcome> {
     }))
 }
 
-fn collect_slot_paymasters() -> Result<Option<Vec<slot::PaymasterAccountArgs>>> {
+fn prompt_slot_paymasters() -> Result<Option<Vec<slot::PaymasterAccountArgs>>> {
     // It's wrapped like this because the prompt validator requires captured variables to have
     // 'static lifetime.
     let slot_paymasters: Rc<RefCell<Vec<PaymasterAccountArgs>>> = Default::default();
