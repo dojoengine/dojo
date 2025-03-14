@@ -208,7 +208,7 @@ impl Default for IndexingOptions {
     }
 }
 
-#[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq, MergeOptions)]
+#[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq, Default, MergeOptions)]
 #[serde(default)]
 #[command(next_help_heading = "Events indexing options")]
 pub struct EventsOptions {
@@ -219,12 +219,6 @@ pub struct EventsOptions {
         help = "Whether or not to index raw events."
     )]
     pub raw: bool,
-}
-
-impl Default for EventsOptions {
-    fn default() -> Self {
-        Self { raw: false }
-    }
 }
 
 #[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq, MergeOptions)]
@@ -311,7 +305,7 @@ impl Default for ErcOptions {
     }
 }
 
-#[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq, MergeOptions)]
+#[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq, Default, MergeOptions)]
 #[serde(default)]
 #[command(next_help_heading = "SQL options")]
 pub struct SqlOptions {
@@ -342,12 +336,6 @@ pub struct SqlOptions {
         help = "Models that are going to be treated as historical during indexing."
     )]
     pub historical: Vec<String>,
-}
-
-impl Default for SqlOptions {
-    fn default() -> Self {
-        Self { all_model_indices: false, model_indices: None, historical: vec![] }
-    }
 }
 
 // Parses clap cli argument which is expected to be in the format:
