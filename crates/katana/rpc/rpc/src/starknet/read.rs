@@ -258,6 +258,11 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
 
             let mut ctrl_deploy_txs = Vec::new();
 
+            // Check if any of the transactions are sent from an address associated with a Cartridge
+            // Controller account. If yes, we craft a Controller deployment transaction
+            // for each of the unique sender and push it at the beginning of the
+            // transaction list so that all the requested transactions are executed against a state
+            // with the Controller accounts deployed.
             for tx in &transactions {
                 let deploy_controller_tx =
                     cartridge::get_controller_deploy_tx_if_controller_address(
@@ -276,9 +281,6 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
             }
 
             if !ctrl_deploy_txs.is_empty() {
-                // Put the Controller deployment transactions at the beginning of the list
-                // so that all the requested transactions are executed against a state with the
-                // Controller accounts deployed.
                 ctrl_deploy_txs.extend(transactions);
                 ctrl_deploy_txs
             } else {
