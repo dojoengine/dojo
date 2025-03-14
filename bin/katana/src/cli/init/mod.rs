@@ -38,16 +38,19 @@ pub struct InitArgs {
 
     /// The settlement chain to be used, where the core contract is deployed.
     #[arg(long = "settlement-chain")]
+    #[arg(required_unless_present = "sovereign")]
     #[arg(requires_all = ["id", "settlement_account", "settlement_account_private_key"])]
     settlement_chain: Option<SettlementChain>,
 
     /// The address of the settlement account to be used to configure the core contract.
     #[arg(long = "settlement-account-address")]
+    #[arg(required_unless_present = "sovereign")]
     #[arg(requires_all = ["id", "settlement_chain", "settlement_account_private_key"])]
     settlement_account: Option<ContractAddress>,
 
     /// The private key of the settlement account to be used to configure the core contract.
     #[arg(long = "settlement-account-private-key")]
+    #[arg(required_unless_present = "sovereign")]
     #[arg(requires_all = ["id", "settlement_chain", "settlement_account"])]
     settlement_account_private_key: Option<Felt>,
 
@@ -62,7 +65,7 @@ pub struct InitArgs {
     /// This value is required if the `settlement-contract` is provided, for Katana to
     /// know from which block the messages can be gathered from the settlement chain.
     #[arg(long = "settlement-contract-deployed-block")]
-    #[arg(requires_all = ["id", "settlement_chain", "settlement_account", "settlement_account_private_key", "settlement_contract"])]
+    #[arg(requires = "settlement_contract")]
     settlement_contract_deployed_block: Option<BlockNumber>,
 
     /// Initialize a sovereign chain with no settlement layer, by only publishing the state updates
@@ -312,6 +315,8 @@ impl TryFrom<&str> for SettlementChain {
 #[cfg(test)]
 mod tests {
     use assert_matches::assert_matches;
+    use clap::error::{ContextKind, ContextValue};
+    use clap::Parser;
     use rstest::rstest;
 
     use super::*;
@@ -343,5 +348,54 @@ mod tests {
                 assert_eq!(actual_url, Url::parse("http://localhost:5050").unwrap());
             }
         );
+    }
+
+    #[test]
+    fn non_sovereign_requires_all_settlement_args() {
+        #[derive(Parser)]
+        struct Cli {
+            #[command(flatten)]
+            args: InitArgs,
+        }
+
+        // This should fail with the expected error message:-
+        //
+        // ```
+        // error: the following required arguments were not provided:
+        //   --settlement-chain <SETTLEMENT_CHAIN>
+        //   --settlement-account-address <SETTLEMENT_ACCOUNT>
+        //   --settlement-account-private-key <SETTLEMENT_ACCOUNT_PRIVATE_KEY>
+        // ```
+        match Cli::try_parse_from(["init", "--id", "bruh"]) {
+            Ok(..) => panic!("Expected parsing to fail with missing required arguments"),
+            Err(err) => {
+                if let ContextValue::Strings(values) = err.get(ContextKind::InvalidArg).unwrap() {
+                    // Assert that the error message contains all the required arguments
+                    assert!(values.contains(&"--settlement-chain <SETTLEMENT_CHAIN>".to_string()));
+                    assert!(values.contains(
+                        &"--settlement-account-address <SETTLEMENT_ACCOUNT>".to_string()
+                    ));
+                    assert!(
+                        values.contains(
+                            &"--settlement-account-private-key <SETTLEMENT_ACCOUNT_PRIVATE_KEY>"
+                                .to_string()
+                        )
+                    );
+                } else {
+                    panic!("Expected InvalidArg context with Strings value");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn sovereign_does_not_require_settlement_args() {
+        #[derive(Parser)]
+        struct Cli {
+            #[command(flatten)]
+            args: InitArgs,
+        }
+
+        Cli::parse_from(["init", "--id", "bruh", "--sovereign"]);
     }
 }
