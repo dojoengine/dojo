@@ -13,7 +13,7 @@ use sqlx::Row;
 use torii_sqlite::constants::SQL_FELT_DELIMITER;
 
 use crate::constants::{
-    BOOLEAN_TRUE, ENTITY_ID_COLUMN, EVENT_MESSAGE_ID_COLUMN, INTERNAL_ENTITY_ID_KEY,
+    BOOLEAN_TRUE, ENTITY_ID_COLUMN, EVENT_MESSAGE_ID_COLUMN, INTERNAL_ENTITY_ID_KEY, INTERNAL_EXECUTED_AT_COLUMN
 };
 use crate::types::{TypeData, TypeMapping, ValueMapping};
 
@@ -31,6 +31,8 @@ pub fn build_type_mapping(namespace: &str, schema: &Ty) -> TypeMapping {
             let type_data = member_to_type_data(namespace, &member.ty);
             (Name::new(&member.name), type_data)
         })
+        .chain(vec![(Name::new(INTERNAL_EXECUTED_AT_COLUMN), TypeData::Simple(TypeRef::named("DateTime")))]
+            .into_iter())
         .collect()
 }
 

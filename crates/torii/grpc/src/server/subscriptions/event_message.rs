@@ -30,8 +30,6 @@ pub(crate) const LOG_TARGET: &str = "torii::grpc::server::subscriptions::event_m
 pub struct EventMessageSubscriber {
     /// Entity ids that the subscriber is interested in
     pub(crate) clauses: Vec<EntityKeysClause>,
-    /// Whether the subscriber is interested in historical event messages
-    pub(crate) historical: bool,
     /// The channel to send the response back to the subscriber.
     pub(crate) sender: Sender<Result<proto::world::SubscribeEntityResponse, tonic::Status>>,
 }
@@ -45,7 +43,6 @@ impl EventMessageManager {
     pub async fn add_subscriber(
         &self,
         clauses: Vec<EntityKeysClause>,
-        historical: bool,
     ) -> Result<Receiver<Result<proto::world::SubscribeEntityResponse, tonic::Status>>, Error> {
         let subscription_id = rand::thread_rng().gen::<u64>();
         let (sender, receiver) = channel(1);
@@ -58,17 +55,12 @@ impl EventMessageManager {
         self.subscribers
             .write()
             .await
-            .insert(subscription_id, EventMessageSubscriber { clauses, historical, sender });
+            .insert(subscription_id, EventMessageSubscriber { clauses, sender });
 
         Ok(receiver)
     }
 
-    pub async fn update_subscriber(
-        &self,
-        id: u64,
-        clauses: Vec<EntityKeysClause>,
-        historical: bool,
-    ) {
+    pub async fn update_subscriber(&self, id: u64, clauses: Vec<EntityKeysClause>) {
         let sender = {
             let subscribers = self.subscribers.read().await;
             if let Some(subscriber) = subscribers.get(&id) {
@@ -78,10 +70,7 @@ impl EventMessageManager {
             }
         };
 
-        self.subscribers
-            .write()
-            .await
-            .insert(id, EventMessageSubscriber { clauses, historical, sender });
+        self.subscribers.write().await.insert(id, EventMessageSubscriber { clauses, sender });
     }
 
     pub(super) async fn remove_subscriber(&self, id: u64) {
@@ -135,11 +124,6 @@ impl Service {
             .map_err(ParseError::FromStr)?;
 
         for (idx, sub) in subs.subscribers.read().await.iter() {
-            // Check if the subscriber is interested in this historical or non-historical event
-            if sub.historical != entity.historical {
-                continue;
-            }
-
             // Check if the subscriber is interested in this entity
             // If we have a clause of hashed keys, then check that the id of the entity
             // is in the list of hashed keys.

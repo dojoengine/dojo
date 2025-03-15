@@ -17,6 +17,7 @@ pub const ENTITY_ID_COLUMN: &str = "internal_entity_id";
 pub const EVENT_MESSAGE_ID_COLUMN: &str = "internal_event_message_id";
 pub const JSON_COLUMN: &str = "json";
 pub const TRANSACTION_HASH_COLUMN: &str = "transaction_hash";
+pub const INTERNAL_EXECUTED_AT_COLUMN: &str = "internal_executed_at";
 
 pub const INTERNAL_ENTITY_ID_KEY: &str = "$entity_id$";
 
