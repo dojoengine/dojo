@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1742055166027,
+  "lastUpdate": 1742055297358,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -58056,6 +58056,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 44495659269,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "76473430+edisontim@users.noreply.github.com",
+            "name": "tedison",
+            "username": "edisontim"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "545165053d9a019faff74876c7832c04611aa2d1",
+          "message": "feat(torii): add configurable DB cache (#3096)\n\n* Add config for cache_size and page_size + run pragma optimize on close of db connection\n\n* Add testing\n\n* Remove unused TryFrom trait\n\n* Change the way defaults are done for torii cli args\n\n* Merge database options to SQL options\n\n* re-introduce TryFrom<ToriiArgs> for ToriiArgsConfig\n\n* Add test + fmt comment\n\n* fmt\n\n* order of variables",
+          "timestamp": "2025-03-15T09:58:52-06:00",
+          "tree_id": "e9e3c9cf48d11f0d4e0541810da433afc7a4c81f",
+          "url": "https://github.com/dojoengine/dojo/commit/545165053d9a019faff74876c7832c04611aa2d1"
+        },
+        "date": 1742055294487,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 45283451800,
             "range": "± 0",
             "unit": "ns/iter"
           }
