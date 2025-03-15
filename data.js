@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1742062848568,
+  "lastUpdate": 1742062987111,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -58213,6 +58213,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 46455885634,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a77d7443349a44059e4059d67ec1b3aa7ebe0572",
+          "message": "fix(katana): ensure the messaging is not panicking when started in sovereign (#3107)\n\nfix: ensure the messaging is not panicking when started in sovereign mode",
+          "timestamp": "2025-03-15T12:04:23-06:00",
+          "tree_id": "7a5aa604689cd8ea96d80efbfd3b759bcfe049f2",
+          "url": "https://github.com/dojoengine/dojo/commit/a77d7443349a44059e4059d67ec1b3aa7ebe0572"
+        },
+        "date": 1742062983596,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2652648,
+            "range": "± 46244",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 390551,
+            "range": "± 11204",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2786965670,
+            "range": "± 270812075",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 16799327,
+            "range": "± 257419",
             "unit": "ns/iter"
           }
         ]
