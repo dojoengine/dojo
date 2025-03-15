@@ -196,10 +196,10 @@ impl Default for IndexingOptions {
             events_chunk_size: DEFAULT_EVENTS_CHUNK_SIZE,
             blocks_chunk_size: DEFAULT_BLOCKS_CHUNK_SIZE,
             pending: true,
-            transactions: false,
-            contracts: vec![],
             polling_interval: DEFAULT_POLLING_INTERVAL,
             max_concurrent_tasks: DEFAULT_MAX_CONCURRENT_TASKS,
+            transactions: false,
+            contracts: vec![],
             namespaces: vec![],
             world_block: 0,
             controllers: false,
@@ -305,7 +305,12 @@ impl Default for ErcOptions {
     }
 }
 
-#[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq, Default, MergeOptions)]
+pub const DEFAULT_DATABASE_PAGE_SIZE: u64 = 32_768;
+/// Negative value is used to determine number of KiB to use for cache. Currently set as 512MB, 25%
+/// of the RAM of the smallest slot instance.
+pub const DEFAULT_DATABASE_CACHE_SIZE: i64 = -500_000;
+
+#[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq, MergeOptions)]
 #[serde(default)]
 #[command(next_help_heading = "SQL options")]
 pub struct SqlOptions {
@@ -336,6 +341,35 @@ pub struct SqlOptions {
         help = "Models that are going to be treated as historical during indexing."
     )]
     pub historical: Vec<String>,
+
+    /// The page size to use for the database. The page size must be a power of two between 512 and
+    /// 65536 inclusive.
+    #[arg(
+        long = "sql.page_size",
+        default_value_t = DEFAULT_DATABASE_PAGE_SIZE,
+        help = "The page size to use for the database. The page size must be a power of two between 512 and 65536 inclusive."
+    )]
+    pub page_size: u64,
+
+    /// Cache size to use for the database.
+    #[arg(
+        long = "sql.cache_size",
+        default_value_t = DEFAULT_DATABASE_CACHE_SIZE,
+        help = "The cache size to use for the database. A positive value determines a number of pages, a negative value determines a number of KiB."
+    )]
+    pub cache_size: i64,
+}
+
+impl Default for SqlOptions {
+    fn default() -> Self {
+        Self {
+            all_model_indices: false,
+            model_indices: None,
+            historical: vec![],
+            page_size: DEFAULT_DATABASE_PAGE_SIZE,
+            cache_size: DEFAULT_DATABASE_CACHE_SIZE,
+        }
+    }
 }
 
 // Parses clap cli argument which is expected to be in the format:

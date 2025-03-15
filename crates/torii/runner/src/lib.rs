@@ -108,11 +108,18 @@ impl Runner {
             .create_if_missing(true)
             .with_regexp();
 
+        // Set the number of threads based on CPU count
+        let cpu_count = std::thread::available_parallelism().unwrap().get();
+        let thread_count = cmp::min(cpu_count, 8);
+        options = options.pragma("threads", thread_count.to_string());
+
         // Performance settings
         options = options.auto_vacuum(SqliteAutoVacuum::None);
         options = options.journal_mode(SqliteJournalMode::Wal);
         options = options.synchronous(SqliteSynchronous::Normal);
-        options = options.pragma("cache_size", "-65536"); // Set cache size to 64MB (65536 KiB)
+        options = options.optimize_on_close(true, None);
+        options = options.pragma("cache_size", self.args.sql.cache_size.to_string());
+        options = options.pragma("page_size", self.args.sql.page_size.to_string());
 
         let pool = SqlitePoolOptions::new()
             .min_connections(1)
@@ -126,11 +133,6 @@ impl Runner {
             .max_connections(100)
             .connect_with(readonly_options)
             .await?;
-
-        // Set the number of threads based on CPU count
-        let cpu_count = std::thread::available_parallelism().unwrap().get();
-        let thread_count = cmp::min(cpu_count, 8);
-        sqlx::query(&format!("PRAGMA threads = {};", thread_count)).execute(&pool).await?;
 
         sqlx::migrate!("../migrations").run(&pool).await?;
 

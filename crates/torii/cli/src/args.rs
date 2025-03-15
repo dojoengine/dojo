@@ -131,6 +131,8 @@ mod test {
             "ns-E",
             "ns-EH"
         ]
+        page_size = 2048
+
         [[sql.model_indices]]
         model_tag = "ns-Position"
         fields = ["vec.x", "vec.y"]
@@ -156,6 +158,8 @@ mod test {
             "--indexing.transactions",
             "--sql.model_indices",
             "ns-Position:vec.x,vec.y;ns-Moves:player",
+            "--sql.page_size",
+            "1024",
             "--config",
             path_str.as_str(),
         ];
@@ -169,6 +173,8 @@ mod test {
         assert_eq!(torii_args.sql.historical, vec!["a-A".to_string()]);
         assert_eq!(torii_args.server, ServerOptions::default());
         assert!(torii_args.indexing.transactions);
+        assert_eq!(torii_args.sql.page_size, 1024);
+        assert_eq!(torii_args.sql.cache_size, DEFAULT_DATABASE_CACHE_SIZE);
         assert_eq!(
             torii_args.sql.model_indices,
             Some(vec![
@@ -182,6 +188,67 @@ mod test {
                 },
             ])
         );
+    }
+
+    #[test]
+    fn test_config_default_empty_toml() {
+        // give empty cli args and an empty toml file and check it has the default values
+        let content = "";
+        let path = std::env::temp_dir().join("torii-config3.json");
+        std::fs::write(&path, content).unwrap();
+
+        let path_str = path.to_string_lossy().to_string();
+
+        let args = vec!["torii", "--config", path_str.as_str()];
+
+        let torii_args = ToriiArgs::parse_from(args).with_config_file().unwrap();
+
+        assert_eq!(torii_args.world_address, None);
+
+        assert_eq!(torii_args.rpc, Url::parse(DEFAULT_RPC_URL).unwrap());
+
+        assert_eq!(torii_args.db_dir, None);
+
+        assert!(!torii_args.explorer);
+
+        assert_eq!(torii_args.indexing, IndexingOptions::default());
+        assert_eq!(torii_args.events, EventsOptions::default());
+        assert_eq!(torii_args.erc, ErcOptions::default());
+        assert_eq!(torii_args.sql, SqlOptions::default());
+        assert_eq!(torii_args.server, ServerOptions::default());
+        assert_eq!(torii_args.relay, RelayOptions::default());
+        assert_eq!(torii_args.metrics, MetricsOptions::default());
+
+        assert_eq!(torii_args.indexing.blocks_chunk_size, DEFAULT_BLOCKS_CHUNK_SIZE);
+        assert_eq!(torii_args.indexing.events_chunk_size, DEFAULT_EVENTS_CHUNK_SIZE);
+        assert!(torii_args.indexing.pending);
+        assert_eq!(torii_args.indexing.polling_interval, DEFAULT_POLLING_INTERVAL);
+        assert_eq!(torii_args.indexing.max_concurrent_tasks, DEFAULT_MAX_CONCURRENT_TASKS);
+
+        assert!(!torii_args.events.raw);
+
+        assert_eq!(torii_args.erc.max_metadata_tasks, DEFAULT_ERC_MAX_METADATA_TASKS);
+        assert_eq!(torii_args.erc.artifacts_path, None);
+
+        assert_eq!(torii_args.sql.page_size, DEFAULT_DATABASE_PAGE_SIZE);
+        assert_eq!(torii_args.sql.cache_size, DEFAULT_DATABASE_CACHE_SIZE);
+        assert_eq!(torii_args.sql.model_indices, None);
+        assert_eq!(torii_args.sql.historical, Vec::<String>::new());
+
+        assert_eq!(torii_args.server.http_addr, DEFAULT_HTTP_ADDR);
+        assert_eq!(torii_args.server.http_port, DEFAULT_HTTP_PORT);
+        assert_eq!(torii_args.server.http_cors_origins, None);
+
+        assert!(!torii_args.metrics.metrics);
+        assert_eq!(torii_args.metrics.metrics_addr, DEFAULT_METRICS_ADDR);
+        assert_eq!(torii_args.metrics.metrics_port, DEFAULT_METRICS_PORT);
+
+        assert_eq!(torii_args.relay.port, DEFAULT_RELAY_PORT);
+        assert_eq!(torii_args.relay.webrtc_port, DEFAULT_RELAY_WEBRTC_PORT);
+        assert_eq!(torii_args.relay.websocket_port, DEFAULT_RELAY_WEBSOCKET_PORT);
+        assert_eq!(torii_args.relay.local_key_path, None);
+        assert_eq!(torii_args.relay.cert_path, None);
+        assert_eq!(torii_args.relay.peers, Vec::<String>::new());
     }
 
     #[test]
