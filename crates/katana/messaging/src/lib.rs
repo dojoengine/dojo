@@ -59,6 +59,7 @@ use self::starknet::StarknetMessaging;
 pub(crate) const LOG_TARGET: &str = "messaging";
 pub(crate) const CONFIG_CHAIN_ETHEREUM: &str = "ethereum";
 pub(crate) const CONFIG_CHAIN_STARKNET: &str = "starknet";
+pub(crate) const CONFIG_CHAIN_SOVEREIGN: &str = "sovereign";
 
 type MessengerResult<T> = Result<T, Error>;
 
@@ -136,9 +137,13 @@ impl MessagingConfig {
                 from_block: *block,
                 interval: 2,
             },
-            katana_chain_spec::SettlementLayer::Sovereign { .. } => {
-                panic!("Sovereign chains are not supported for messaging.")
-            }
+            katana_chain_spec::SettlementLayer::Sovereign { .. } => Self {
+                chain: CONFIG_CHAIN_SOVEREIGN.to_string(),
+                // Ideally, we don't want to trigger the await on the messaging service if in
+                // sovereign mode.
+                interval: 60,
+                ..Default::default()
+            },
         }
     }
 }
@@ -174,7 +179,11 @@ pub trait Messenger {
 pub enum MessengerMode {
     Ethereum(EthereumMessaging),
     Starknet(StarknetMessaging),
+    Sovereign(SovereignMessaging),
 }
+
+#[derive(Debug)]
+pub struct SovereignMessaging {}
 
 impl MessengerMode {
     pub async fn from_config(config: MessagingConfig) -> MessengerResult<Self> {
@@ -200,6 +209,11 @@ impl MessengerMode {
                     Err(Error::InitError)
                 }
             },
+
+            CONFIG_CHAIN_SOVEREIGN => {
+                info!(target: LOG_TARGET, "Messaging not available [Sovereign].");
+                Ok(MessengerMode::Sovereign(SovereignMessaging {}))
+            }
 
             chain => {
                 error!(target: LOG_TARGET, chain = %chain, "Unsupported settlement chain.");
