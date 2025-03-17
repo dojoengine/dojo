@@ -405,15 +405,20 @@ impl DojoWorld {
                 r#"
                 SELECT COUNT(*) FROM {table}
                 JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
-                WHERE {where_clause}
+                {}
                 GROUP BY {table}.event_id
-            "#
+            "#,
+                if where_clause.is_empty() {
+                    String::new()
+                } else {
+                    format!("WHERE {}", where_clause)
+                }
             );
             let mut total_count = sqlx::query_scalar(&count_query);
             for value in &bind_values {
                 total_count = total_count.bind(value);
             }
-            let total_count = total_count.fetch_one(&self.pool).await?;
+            let total_count = total_count.fetch_optional(&self.pool).await?.unwrap_or(0);
             if total_count == 0 {
                 return Ok((Vec::new(), 0));
             }
@@ -424,11 +429,16 @@ impl DojoWorld {
                 SELECT {table}.id, {table}.data, {table}.model_id, group_concat({model_relation_table}.model_id) as model_ids
                 FROM {table}
                 JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
-                WHERE {where_clause}
+                {}
                 GROUP BY {table}.event_id
                 ORDER BY {table}.event_id DESC
-             "#
-                ),
+             "#,
+                if where_clause.is_empty() {
+                    String::new()
+                } else {
+                    format!("WHERE {}", where_clause)
+                }
+            ),
                 bind_values,
                 limit,
                 offset
@@ -533,15 +543,20 @@ impl DojoWorld {
                 r#"
                 SELECT COUNT(*) FROM {table}
                 JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
-                WHERE {where_clause}
+                {}
                 GROUP BY {table}.event_id
-            "#
+            "#,
+                if where_clause.is_empty() {
+                    String::new()
+                } else {
+                    format!("WHERE {}", where_clause)
+                }
             );
             let mut total_count = sqlx::query_scalar(&count_query);
             for value in &bind_values {
                 total_count = total_count.bind(value);
             }
-            let total_count = total_count.fetch_one(&self.pool).await?;
+            let total_count = total_count.fetch_optional(&self.pool).await?.unwrap_or(0);
             if total_count == 0 {
                 return Ok((Vec::new(), 0));
             }
@@ -552,10 +567,15 @@ impl DojoWorld {
                     SELECT {table}.id, {table}.data, {table}.model_id, group_concat({model_relation_table}.model_id) as model_ids
                     FROM {table}
                     JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
-                    WHERE {where_clause}
+                    {}
                     GROUP BY {table}.event_id
                     ORDER BY {table}.event_id DESC
-                 "#
+                 "#,
+                    if where_clause.is_empty() {
+                        String::new()
+                    } else {
+                        format!("WHERE {}", where_clause)
+                    }
                 ),
                 bind_values,
                 limit,
