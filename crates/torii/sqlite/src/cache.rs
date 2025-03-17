@@ -2,9 +2,12 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use dojo_types::schema::Ty;
+use dojo_world::contracts::abigen;
 use dojo_world::contracts::abigen::model::Layout;
 use sqlx::{Pool, Sqlite, SqlitePool};
-use starknet::core::types::{BlockId, ContractClass};
+use starknet::core::types::contract::{AbiConstructor, AbiEntry, AbiInterface};
+use starknet::core::types::{BlockId, ContractClass, LegacyContractAbiEntry};
+use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
 use starknet_crypto::Felt;
 use tokio::sync::RwLock;
@@ -152,12 +155,12 @@ impl LocalCache {
 }
 
 #[derive(Debug)]
-pub struct ContractClassCache<P: Provider + Send + Sync + std::fmt::Debug + 'static> {
+pub struct ContractClassCache<P: Provider + Sync + std::fmt::Debug> {
     pub classes: RwLock<HashMap<Felt, (Felt, ContractClass)>>,
     pub provider: Arc<P>,
 }
 
-impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> ContractClassCache<P> {
+impl<P: Provider + Sync + std::fmt::Debug> ContractClassCache<P> {
     pub fn new(provider: Arc<P>) -> Self {
         Self { classes: RwLock::new(HashMap::new()), provider }
     }
@@ -176,5 +179,39 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> ContractClassCache<P
         let class = self.provider.get_class(block_id, class_hash).await.unwrap();
         self.classes.write().await.insert(contract_address, (class_hash, class.clone()));
         Ok(class)
+    }
+}
+
+pub fn get_entrypoint_name_from_class(class: &ContractClass, selector: Felt) -> Option<String> {
+    match class {
+        ContractClass::Sierra(sierra) => {
+            let abi: Vec<AbiEntry> = serde_json::from_str(&sierra.abi).unwrap();
+            abi.iter().find_map(|entry| match entry {
+                AbiEntry::Function(function) => {
+                    if get_selector_from_name(&function.name).unwrap() == selector {
+                        Some(function.name.clone())
+                    } else {
+                        None
+                    }
+                }
+                _ => None,
+            })
+        }
+        ContractClass::Legacy(legacy) => {
+            if let Some(abi) = &legacy.abi {
+                abi.iter().find_map(|entry| match entry {
+                    LegacyContractAbiEntry::Function(function) => {
+                        if get_selector_from_name(&function.name).unwrap() == selector {
+                            Some(function.name.clone())
+                        } else {
+                            None
+                        }
+                    }
+                    _ => None,
+                })
+            } else {
+                None
+            }
+        }
     }
 }

@@ -1,10 +1,12 @@
 use std::collections::HashSet;
+use std::sync::Arc;
 
 use anyhow::{Error, Result};
 use async_trait::async_trait;
 use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::{Event, Felt, Transaction};
 use starknet::providers::Provider;
+use torii_sqlite::cache::ContractClassCache;
 use torii_sqlite::Sql;
 
 use crate::task_manager::{TaskId, TaskPriority};
@@ -90,7 +92,7 @@ pub trait BlockProcessor<P: Provider + Sync>: Send + Sync {
 }
 
 #[async_trait]
-pub trait TransactionProcessor<P: Provider + Sync>: Send + Sync {
+pub trait TransactionProcessor<P: Provider + Sync + std::fmt::Debug>: Send + Sync {
     #[allow(clippy::too_many_arguments)]
     async fn process(
         &self,
@@ -101,5 +103,6 @@ pub trait TransactionProcessor<P: Provider + Sync>: Send + Sync {
         transaction_hash: Felt,
         contract_addresses: &HashSet<Felt>,
         transaction: &Transaction,
+        contract_class_cache: &ContractClassCache<P>,
     ) -> Result<(), Error>;
 }
