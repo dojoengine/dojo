@@ -16,7 +16,7 @@ use super::TransactionProcessor;
 pub struct StoreTransactionProcessor;
 
 #[async_trait]
-impl<P: Provider + Sync + std::fmt::Debug> TransactionProcessor<P> for StoreTransactionProcessor {
+impl<P: Provider + Send + Sync + std::fmt::Debug> TransactionProcessor<P> for StoreTransactionProcessor {
     async fn process(
         &self,
         db: &mut Sql,
