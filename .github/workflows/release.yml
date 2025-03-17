@@ -137,7 +137,7 @@ jobs:
             cd ./target/${TARGET}/release
             7z a -tzip "dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.zip" katana.exe sozo.exe torii.exe dojo-language-server.exe
             mv "dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.zip" ../../../
-            echo "file_name=dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz" >> $GITHUB_OUTPUT
+            echo "file_name=dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.zip" >> $GITHUB_OUTPUT
           fi
         shell: bash
 
