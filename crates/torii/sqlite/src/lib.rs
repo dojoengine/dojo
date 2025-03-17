@@ -610,7 +610,7 @@ impl Sql {
                         calldata: calldata[calldata_offset..calldata_offset + calldata_len]
                             .to_vec(),
                     };
-                    outside_calls.push((calldata[0], outside_call));
+                    outside_calls.push((call.contract_address, outside_call));
                 }
             } else if call.entry_point_selector == selector!("execute_from_outside_v2") {
                 // the execute_from_outside_v2 nonce is only a felt, thus we have a 4 offset
@@ -626,7 +626,7 @@ impl Sql {
                         calldata: calldata[calldata_offset..calldata_offset + calldata_len]
                             .to_vec(),
                     };
-                    outside_calls.push((calldata[0], outside_call));
+                    outside_calls.push((call.contract_address, outside_call));
                 }
             }
 
