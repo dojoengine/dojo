@@ -2,10 +2,28 @@ use async_graphql::dynamic::Field;
 
 use super::{BasicObject, ResolvableObject, TypeMapping};
 use crate::constants::{
-    ID_COLUMN, TRANSACTION_HASH_COLUMN, TRANSACTION_NAMES, TRANSACTION_TABLE, TRANSACTION_TYPE_NAME,
+    FUNCTION_CALL_TYPE_NAME, ID_COLUMN, TRANSACTION_HASH_COLUMN, TRANSACTION_NAMES, TRANSACTION_TABLE, TRANSACTION_TYPE_NAME
 };
-use crate::mapping::TRANSACTION_MAPPING;
+use crate::mapping::{FUNCTION_CALL_MAPPING, TRANSACTION_MAPPING};
 use crate::object::{resolve_many, resolve_one};
+
+#[derive(Debug)]
+pub struct FunctionCallObject;
+
+impl BasicObject for FunctionCallObject {
+    fn name(&self) -> (&str, &str) {
+        ("functionCall", "")
+    }
+
+    fn type_name(&self) -> &str {
+        FUNCTION_CALL_TYPE_NAME
+    }
+
+    fn type_mapping(&self) -> &TypeMapping {
+        &FUNCTION_CALL_MAPPING
+    }
+}
+
 
 #[derive(Debug)]
 pub struct TransactionObject;

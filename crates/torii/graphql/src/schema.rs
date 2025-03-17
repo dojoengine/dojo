@@ -26,7 +26,7 @@ use crate::object::metadata::content::ContentObject;
 use crate::object::metadata::social::SocialObject;
 use crate::object::metadata::MetadataObject;
 use crate::object::model::ModelObject;
-use crate::object::transaction::TransactionObject;
+use crate::object::transaction::{FunctionCallObject, TransactionObject};
 use crate::object::ObjectVariant;
 use crate::query::build_type_mapping;
 
@@ -135,6 +135,7 @@ async fn build_objects(pool: &SqlitePool) -> Result<(Vec<ObjectVariant>, Vec<Uni
         ObjectVariant::Basic(Box::new(Erc20TokenObject)),
         ObjectVariant::Basic(Box::new(Erc1155TokenObject)),
         ObjectVariant::Basic(Box::new(EmptyObject)),
+        ObjectVariant::Basic(Box::new(FunctionCallObject)),
     ];
 
     // model union object

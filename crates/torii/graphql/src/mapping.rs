@@ -4,7 +4,7 @@ use async_graphql::Name;
 use dojo_types::primitive::Primitive;
 use lazy_static::lazy_static;
 
-use crate::constants::{CONTENT_TYPE_NAME, SOCIAL_TYPE_NAME, TOKEN_UNION_TYPE_NAME};
+use crate::constants::{CONTENT_TYPE_NAME, FUNCTION_CALL_TYPE_NAME, SOCIAL_TYPE_NAME, TOKEN_UNION_TYPE_NAME};
 use crate::types::{GraphqlType, TypeData, TypeMapping};
 
 lazy_static! {
@@ -64,6 +64,11 @@ lazy_static! {
             TypeData::Simple(TypeRef::named(GraphqlType::DateTime.to_string())),
         ),
     ]);
+    pub static ref FUNCTION_CALL_MAPPING: TypeMapping = IndexMap::from([
+        (Name::new("contract_address"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+        (Name::new("entry_point_selector"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+        (Name::new("calldata"), TypeData::Simple(TypeRef::named_list(TypeRef::STRING))),
+    ]);
     pub static ref TRANSACTION_MAPPING: TypeMapping = IndexMap::from([
         (Name::new("id"), TypeData::Simple(TypeRef::named(TypeRef::ID))),
         (
@@ -77,6 +82,14 @@ lazy_static! {
         (
             Name::new("calldata"),
             TypeData::Simple(TypeRef::named_list(Primitive::Felt252(None).to_string()))
+        ),
+        (
+            Name::new("calls"),
+            TypeData::List(Box::new(TypeData::Nested((TypeRef::named(FUNCTION_CALL_TYPE_NAME), FUNCTION_CALL_MAPPING.clone()))))
+        ),
+        (
+            Name::new("outsideCalls"),
+            TypeData::List(Box::new(TypeData::Nested((TypeRef::named(FUNCTION_CALL_TYPE_NAME), FUNCTION_CALL_MAPPING.clone()))))
         ),
         (
             Name::new("maxFee"),
