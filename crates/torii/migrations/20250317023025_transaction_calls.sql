@@ -5,10 +5,11 @@ CREATE TABLE IF NOT EXISTS transaction_calls (
     entry_point_selector TEXT NOT NULL,
     calldata TEXT NOT NULL,
     call_type TEXT NOT NULL DEFAULT 'EXECUTE',
-    FOREIGN KEY (transaction_hash) REFERENCES transactions(id),
+    caller_address TEXT NOT NULL,
+    FOREIGN KEY (transaction_hash) REFERENCES transactions(id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_transaction_calls_transaction_hash ON transaction_calls (transaction_hash);
 CREATE INDEX IF NOT EXISTS idx_transaction_calls_contract_address ON transaction_calls (contract_address);
 CREATE INDEX IF NOT EXISTS idx_transaction_calls_entry_point_selector ON transaction_calls (entry_point_selector);
-CREATE INDEX IF NOT EXISTS idx_transaction_calls_call_type ON transaction_calls (call_type);
+CREATE INDEX IF NOT EXISTS idx_transaction_calls_caller_address ON transaction_calls (caller_address);

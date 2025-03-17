@@ -554,7 +554,7 @@ impl Sql {
             vec![
                 transaction_hash.clone(),
                 transaction_hash.clone(),
-                sender_address,
+                sender_address.clone(),
                 Argument::String(felts_to_sql_string(calldata)),
                 max_fee,
                 signature,
@@ -581,7 +581,8 @@ impl Sql {
 
         let calls_len: usize = calldata[0].try_into().unwrap();
         let mut calls: Vec<FunctionCall> = vec![];
-        let mut outside_calls: Vec<FunctionCall> = vec![];
+        // (our outside sender address, the outside call)
+        let mut outside_calls: Vec<(Felt, FunctionCall)> = vec![];
 
         let mut offset = 0;
         for _ in 0..calls_len {
@@ -609,7 +610,7 @@ impl Sql {
                         calldata: calldata[calldata_offset..calldata_offset + calldata_len]
                             .to_vec(),
                     };
-                    outside_calls.push(outside_call);
+                    outside_calls.push((calldata[0], outside_call));
                 }
             } else if call.entry_point_selector == selector!("execute_from_outside_v2") {
                 // the execute_from_outside_v2 nonce is only a felt, thus we have a 4 offset
@@ -625,7 +626,7 @@ impl Sql {
                         calldata: calldata[calldata_offset..calldata_offset + calldata_len]
                             .to_vec(),
                     };
-                    outside_calls.push(outside_call);
+                    outside_calls.push((calldata[0], outside_call));
                 }
             }
 
@@ -636,8 +637,8 @@ impl Sql {
         // Store each call in the transaction_calls table
         for call in calls {
             self.executor.send(QueryMessage::other(
-                "INSERT OR IGNORE INTO transaction_calls (transaction_hash, contract_address, entry_point_selector, calldata, call_type) \
-                 VALUES (?, ?, ?, ?, ?)"
+                "INSERT OR IGNORE INTO transaction_calls (transaction_hash, contract_address, entry_point_selector, calldata, call_type, caller_address) \
+                 VALUES (?, ?, ?, ?, ?, ?)"
                     .to_string(),
                 vec![
                     transaction_hash.clone(),
@@ -645,6 +646,7 @@ impl Sql {
                     Argument::FieldElement(call.entry_point_selector),
                     Argument::String(felts_to_sql_string(&call.calldata)),
                     Argument::String("EXECUTE".to_string()),
+                    sender_address.clone(),
                 ],
             ))?;
         }
@@ -652,15 +654,16 @@ impl Sql {
         // Store each outside call in the transaction_calls table
         for outside_call in outside_calls {
             self.executor.send(QueryMessage::other(
-                "INSERT OR IGNORE INTO transaction_calls (transaction_hash, contract_address, entry_point_selector, calldata, call_type) \
-                 VALUES (?, ?, ?, ?, ?)"
+                "INSERT OR IGNORE INTO transaction_calls (transaction_hash, contract_address, entry_point_selector, calldata, call_type, caller_address) \
+                 VALUES (?, ?, ?, ?, ?, ?)"
                     .to_string(),
                 vec![
                     transaction_hash.clone(),
-                    Argument::FieldElement(outside_call.contract_address),
-                    Argument::FieldElement(outside_call.entry_point_selector),
-                    Argument::String(felts_to_sql_string(&outside_call.calldata)),
+                    Argument::FieldElement(outside_call.1.contract_address),
+                    Argument::FieldElement(outside_call.1.entry_point_selector),
+                    Argument::String(felts_to_sql_string(&outside_call.1.calldata)),
                     Argument::String("EXECUTE_FROM_OUTSIDE".to_string()),
+                    Argument::FieldElement(outside_call.0),
                 ],
             ))?;
         }

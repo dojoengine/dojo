@@ -32,6 +32,33 @@ pub async fn fetch_world_address(conn: &mut SqliteConnection) -> Result<String> 
     Ok(res.0)
 }
 
+#[derive(Clone, Debug)]
+pub struct JoinConfig {
+    pub table: String,
+    pub alias: Option<String>,
+    pub on_condition: String,
+    pub join_type: JoinType,
+}
+
+#[derive(Clone, Debug)]
+pub enum JoinType {
+    Inner,
+    Left,
+    Right,
+    Full,
+}
+
+impl JoinType {
+    fn as_sql(&self) -> &'static str {
+        match self {
+            JoinType::Inner => "INNER JOIN",
+            JoinType::Left => "LEFT JOIN",
+            JoinType::Right => "LEFT JOIN", // SQLite doesn't support RIGHT JOIN, so we use LEFT
+            JoinType::Full => "LEFT JOIN",  // SQLite doesn't support FULL JOIN, so we use LEFT
+        }
+    }
+}
+
 pub async fn fetch_single_row(
     conn: &mut SqliteConnection,
     table_name: &str,
@@ -39,6 +66,42 @@ pub async fn fetch_single_row(
     id: &str,
 ) -> sqlx::Result<SqliteRow> {
     let query = format!("SELECT * FROM [{}] WHERE {} = '{}'", table_name, id_column, id);
+    sqlx::query(&query).fetch_one(conn).await
+}
+
+pub async fn fetch_single_row_with_joins(
+    conn: &mut SqliteConnection,
+    table_name: &str,
+    id_column: &str,
+    id: &str,
+    joins: Vec<JoinConfig>,
+    select_columns: Option<Vec<String>>,
+) -> sqlx::Result<SqliteRow> {
+    // Build the SELECT clause
+    let select = match select_columns {
+        Some(columns) => columns.join(", "),
+        None => format!("[{}].*", table_name),
+    };
+    
+    // Build the JOIN clauses
+    let join_clauses = joins
+        .iter()
+        .map(|join| {
+            let table_ref = match &join.alias {
+                Some(alias) => format!("[{}] AS {}", join.table, alias),
+                None => format!("[{}]", join.table),
+            };
+            format!("{} {} ON {}", join.join_type.as_sql(), table_ref, join.on_condition)
+        })
+        .collect::<Vec<String>>()
+        .join(" ");
+    
+    // Build the complete query
+    let query = format!(
+        "SELECT {} FROM [{}] {} WHERE [{}].{} = '{}'",
+        select, table_name, join_clauses, table_name, id_column, id
+    );
+    
     sqlx::query(&query).fetch_one(conn).await
 }
 

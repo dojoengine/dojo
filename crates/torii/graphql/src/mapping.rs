@@ -67,9 +67,10 @@ lazy_static! {
         ),
     ]);
     pub static ref FUNCTION_CALL_MAPPING: TypeMapping = IndexMap::from([
-        (Name::new("contract_address"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
-        (Name::new("entry_point_selector"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+        (Name::new("contractAddress"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+        (Name::new("entryPointSelector"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
         (Name::new("calldata"), TypeData::Simple(TypeRef::named_list(TypeRef::STRING))),
+        (Name::new("callType"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
     ]);
     pub static ref TRANSACTION_MAPPING: TypeMapping = IndexMap::from([
         (Name::new("id"), TypeData::Simple(TypeRef::named(TypeRef::ID))),

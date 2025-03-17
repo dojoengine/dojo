@@ -8,6 +8,7 @@ pub const EVENT_TABLE: &str = "events";
 pub const EVENT_MESSAGE_TABLE: &str = "event_messages";
 pub const MODEL_TABLE: &str = "models";
 pub const TRANSACTION_TABLE: &str = "transactions";
+pub const TRANSACTION_CALLS_TABLE: &str = "transaction_calls";
 pub const METADATA_TABLE: &str = "metadata";
 pub const CONTROLLER_TABLE: &str = "controllers";
 
