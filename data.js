@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1742233742289,
+  "lastUpdate": 1742233887074,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -58369,6 +58369,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 48354615773,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "distinct": true,
+          "id": "e4702479ec9cf0f01d6927d36f0a3910cf6cb3e3",
+          "message": "fix(ci): add .zip files to the release archive",
+          "timestamp": "2025-03-17T11:30:19-06:00",
+          "tree_id": "e235ab17adff057ef5d44129fde51772215d9253",
+          "url": "https://github.com/dojoengine/dojo/commit/e4702479ec9cf0f01d6927d36f0a3910cf6cb3e3"
+        },
+        "date": 1742233883504,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2635419,
+            "range": "± 89464",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 390274,
+            "range": "± 23165",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2723918078,
+            "range": "± 276851841",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 16794523,
+            "range": "± 794172",
             "unit": "ns/iter"
           }
         ]
