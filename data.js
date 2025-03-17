@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1742062987111,
+  "lastUpdate": 1742230347929,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -58261,6 +58261,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 16799327,
             "range": "± 257419",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "distinct": true,
+          "id": "91bb9b3a91adb2fec31cf4f79a33edfc5ccd8e8c",
+          "message": "ci: fix zip name to add windows binaries to release",
+          "timestamp": "2025-03-17T10:34:20-06:00",
+          "tree_id": "a7a074f3dab210a5abdc307c6a8eeab6d8cea526",
+          "url": "https://github.com/dojoengine/dojo/commit/91bb9b3a91adb2fec31cf4f79a33edfc5ccd8e8c"
+        },
+        "date": 1742230345125,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 46801035231,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
