@@ -170,9 +170,11 @@ impl<P: Provider + Sync + std::fmt::Debug> ContractClassCache<P> {
         contract_address: Felt,
         block_id: BlockId,
     ) -> Result<ContractClass, Error> {
-        let classes = self.classes.read().await;
-        if let Some(class) = classes.get(&contract_address) {
-            return Ok(class.1.clone());
+        {
+            let classes = self.classes.read().await;
+            if let Some(class) = classes.get(&contract_address) {
+                return Ok(class.1.clone());
+            }
         }
 
         let class_hash = self.provider.get_class_hash_at(block_id, contract_address).await.unwrap();
