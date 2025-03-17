@@ -11,8 +11,7 @@ use dojo_world::config::WorldMetadata;
 use dojo_world::contracts::abigen::model::Layout;
 use dojo_world::contracts::naming::compute_selector_from_names;
 use sqlx::{Pool, Sqlite};
-use starknet::core::types::{ContractClass, Event, Felt, FunctionCall, InvokeTransaction, Transaction};
-use starknet::macros::selector;
+use starknet::core::types::{Event, Felt};
 use starknet_crypto::poseidon_hash_many;
 use tokio::sync::mpsc::UnboundedSender;
 use types::ParsedCall;
@@ -526,6 +525,7 @@ impl Sql {
              block_number) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
                 .to_string(),
             vec![
+                Argument::FieldElement(transaction_hash),
                 Argument::FieldElement(transaction_hash),
                 Argument::FieldElement(sender_address),
                 Argument::String(felts_to_sql_string(calldata)),

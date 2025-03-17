@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use anyhow::{Error, Ok, Result};
 use async_trait::async_trait;
-use starknet::core::types::{BlockId, ContractClass, Felt, InvokeTransaction, Transaction};
+use starknet::core::types::{BlockId, BlockTag, ContractClass, Felt, InvokeTransaction, Transaction};
 use starknet::macros::selector;
 use starknet::providers::Provider;
 use torii_sqlite::cache::{get_entrypoint_name_from_class, ContractClassCache};
