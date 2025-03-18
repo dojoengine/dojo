@@ -9,6 +9,7 @@ pub const EVENT_MESSAGE_TABLE: &str = "event_messages";
 pub const MODEL_TABLE: &str = "models";
 pub const TRANSACTION_TABLE: &str = "transactions";
 pub const TRANSACTION_CALLS_TABLE: &str = "transaction_calls";
+pub const TOKEN_TRANSFER_TABLE: &str = "token_transfers";
 pub const METADATA_TABLE: &str = "metadata";
 pub const CONTROLLER_TABLE: &str = "controllers";
 
