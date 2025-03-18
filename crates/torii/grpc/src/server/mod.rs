@@ -106,9 +106,7 @@ impl From<Token> for proto::types::Token {
             token_id: if value.token_id.is_empty() {
                 U256::ZERO.to_be_bytes().to_vec()
             } else {
-                U256::from_be_hex(value.token_id.trim_start_matches("0x"))
-                    .to_be_bytes()
-                    .to_vec()
+                U256::from_be_hex(value.token_id.trim_start_matches("0x")).to_be_bytes().to_vec()
             },
             contract_address: Felt::from_str(&value.contract_address)
                 .unwrap()
