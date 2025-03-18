@@ -261,12 +261,11 @@ impl WorldClient {
     pub async fn subscribe_entities(
         &mut self,
         clauses: Vec<EntityKeysClause>,
-        historical: bool,
     ) -> Result<EntityUpdateStreaming, Error> {
         let clauses = clauses.into_iter().map(|c| c.into()).collect();
         let stream = self
             .inner
-            .subscribe_entities(SubscribeEntitiesRequest { clauses, historical })
+            .subscribe_entities(SubscribeEntitiesRequest { clauses })
             .await
             .map_err(Error::Grpc)
             .map(|res| res.into_inner())?;
@@ -284,7 +283,6 @@ impl WorldClient {
         &mut self,
         subscription_id: u64,
         clauses: Vec<EntityKeysClause>,
-        historical: bool,
     ) -> Result<(), Error> {
         let clauses = clauses.into_iter().map(|c| c.into()).collect();
 
@@ -292,7 +290,6 @@ impl WorldClient {
             .update_entities_subscription(UpdateEntitiesSubscriptionRequest {
                 subscription_id,
                 clauses,
-                historical,
             })
             .await
             .map_err(Error::Grpc)
@@ -303,12 +300,11 @@ impl WorldClient {
     pub async fn subscribe_event_messages(
         &mut self,
         clauses: Vec<EntityKeysClause>,
-        historical: bool,
     ) -> Result<EntityUpdateStreaming, Error> {
         let clauses = clauses.into_iter().map(|c| c.into()).collect();
         let stream = self
             .inner
-            .subscribe_event_messages(SubscribeEventMessagesRequest { clauses, historical })
+            .subscribe_event_messages(SubscribeEventMessagesRequest { clauses })
             .await
             .map_err(Error::Grpc)
             .map(|res| res.into_inner())?;
@@ -326,14 +322,12 @@ impl WorldClient {
         &mut self,
         subscription_id: u64,
         clauses: Vec<EntityKeysClause>,
-        historical: bool,
     ) -> Result<(), Error> {
         let clauses = clauses.into_iter().map(|c| c.into()).collect();
         self.inner
             .update_event_messages_subscription(UpdateEventMessagesSubscriptionRequest {
                 subscription_id,
                 clauses,
-                historical,
             })
             .await
             .map_err(Error::Grpc)

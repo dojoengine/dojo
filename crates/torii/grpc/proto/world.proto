@@ -174,24 +174,20 @@ message SubscribeModelsResponse {
 
 message SubscribeEntitiesRequest {
     repeated types.EntityKeysClause clauses = 1;
-    bool historical = 2;
 }
 
 message SubscribeEventMessagesRequest {
     repeated types.EntityKeysClause clauses = 1;
-    bool historical = 2;
 }
 
 message UpdateEntitiesSubscriptionRequest {
     uint64 subscription_id = 1;
     repeated types.EntityKeysClause clauses = 2;
-    bool historical = 3;
 }
 
 message UpdateEventMessagesSubscriptionRequest {
     uint64 subscription_id = 1;
     repeated types.EntityKeysClause clauses = 2;
-    bool historical = 3;
 }
 
 message SubscribeEntityResponse {
