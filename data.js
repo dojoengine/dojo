@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1742268794290,
+  "lastUpdate": 1742269270194,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -58495,6 +58495,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 16919333,
             "range": "± 435000",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "09d52f4c3078f9c17351b05dc5b4306c6f2942c7",
+          "message": "feat(torii-grpc): retrieving and subscribe historical entities (#3099)\n\n* feat(torii-grpc): retrieving and subscribe historical entities\n\n* updatre query for historical\n\n* fmt\n\n* update client\n\n* fix historical queries where & empty",
+          "timestamp": "2025-03-17T21:24:55-06:00",
+          "tree_id": "3b233d0a2d88ce9958fa2dde5218fcf8911fcfba",
+          "url": "https://github.com/dojoengine/dojo/commit/09d52f4c3078f9c17351b05dc5b4306c6f2942c7"
+        },
+        "date": 1742269267365,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 45992743786,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
