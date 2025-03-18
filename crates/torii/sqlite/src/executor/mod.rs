@@ -461,6 +461,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 let mut entity_updated = EntityUpdated::from_row(&row)?;
                 entity_updated.updated_model = Some(entity.ty.clone());
                 entity_updated.deleted = false;
+                entity_updated.historical = entity.is_historical;
 
                 if entity_updated.keys.is_empty() {
                     warn!(target: LOG_TARGET, "Entity has been updated without being set before. Keys are not known and non-updated values will be NULL.");
