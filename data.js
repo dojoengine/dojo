@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1742310435785,
+  "lastUpdate": 1742314313010,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -58729,6 +58729,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 16853621,
             "range": "± 1343859",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d3942a27a3358c3300efdee2f3d4e81be6f2838e",
+          "message": "chore: remove `cargo-udeps` workflow (#3112)\n\nchore: remove `cargo-udeps` job",
+          "timestamp": "2025-03-18T23:55:20+08:00",
+          "tree_id": "bfceef88fc661fa304522299103f96c6491e21fc",
+          "url": "https://github.com/dojoengine/dojo/commit/d3942a27a3358c3300efdee2f3d4e81be6f2838e"
+        },
+        "date": 1742314310207,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 46684967376,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
