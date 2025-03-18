@@ -4,8 +4,8 @@ use anyhow::Result;
 use clap::{Args, Parser};
 use colored::{ColoredString, Colorize};
 use dojo_bindgen::{BuiltinPlugins, PluginManager};
-use dojo_world::local::{ResourceLocal, WorldLocal};
 use dojo_world::ResourceType;
+use dojo_world::local::{ResourceLocal, WorldLocal};
 use scarb::core::{Config, Package, TargetKind};
 use scarb::ops::CompileOpts;
 use scarb_ui::args::{FeaturesSpec, PackagesFilter};
@@ -33,6 +33,10 @@ pub struct BuildArgs {
     #[arg(long)]
     #[arg(help = "Generate Unity bindings.")]
     pub unity: bool,
+
+    #[arg(long)]
+    #[arg(help = "Generate Unreal Engine bindings.")]
+    pub unrealengine: bool,
 
     #[arg(long)]
     #[arg(help = "Output directory.", default_value = "bindings")]
@@ -130,6 +134,10 @@ impl BuildArgs {
             builtin_plugins.push(BuiltinPlugins::Unity);
         }
 
+        if self.unrealengine {
+            builtin_plugins.push(BuiltinPlugins::UnrealEngine);
+        }
+
         // Custom plugins are always empty for now.
         let bindgen = PluginManager {
             profile_name: ws.current_profile().expect("Profile expected").to_string(),
@@ -214,6 +222,7 @@ impl Default for BuildArgs {
             typescript_v2: false,
             recs: false,
             unity: false,
+            unrealengine: false,
             bindings_output: "bindings".to_string(),
             stats: StatOptions::default(),
             packages: None,
