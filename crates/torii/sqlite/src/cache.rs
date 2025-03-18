@@ -6,7 +6,7 @@ use dojo_world::contracts::abigen::model::Layout;
 use sqlx::{Pool, Sqlite, SqlitePool};
 use starknet::core::types::contract::AbiEntry;
 use starknet::core::types::{
-    BlockId, BlockTag, ContractClass, LegacyContractAbiEntry, StarknetError,
+    BlockId, BlockTag, ContractClass, LegacyContractAbiEntry, LegacyFunctionAbiEntry, StarknetError,
 };
 use starknet::providers::{Provider, ProviderError};
 use starknet_crypto::Felt;
@@ -251,13 +251,18 @@ pub fn get_entrypoint_name_from_class(class: &ContractClass, selector: Felt) -> 
                 Some(abi) => abi,
                 None => return None,
             };
-
-            abi.get(entrypoint_idx as usize)
-                .map(|entry| match entry {
-                    LegacyContractAbiEntry::Function(function) => Some(function.name.clone()),
-                    _ => None,
+            let functions: Vec<LegacyFunctionAbiEntry> = abi
+                .iter()
+                .filter_map(|entry| {
+                    if let LegacyContractAbiEntry::Function(function) = entry {
+                        Some(function.clone())
+                    } else {
+                        None
+                    }
                 })
-                .flatten()
+                .collect();
+
+            functions.get(entrypoint_idx as usize).map(|function| function.name.clone())
         }
     }
 }
