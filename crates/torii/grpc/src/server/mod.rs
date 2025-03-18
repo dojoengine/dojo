@@ -1491,10 +1491,10 @@ impl proto::world::world_server::World for DojoWorld {
         &self,
         request: Request<SubscribeEntitiesRequest>,
     ) -> ServiceResult<Self::SubscribeEntitiesStream> {
-        let SubscribeEntitiesRequest { clauses, historical } = request.into_inner();
+        let SubscribeEntitiesRequest { clauses } = request.into_inner();
         let rx = self
             .entity_manager
-            .add_subscriber(clauses.into_iter().map(|keys| keys.into()).collect(), historical)
+            .add_subscriber(clauses.into_iter().map(|keys| keys.into()).collect())
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
@@ -1505,13 +1505,12 @@ impl proto::world::world_server::World for DojoWorld {
         &self,
         request: Request<UpdateEntitiesSubscriptionRequest>,
     ) -> ServiceResult<()> {
-        let UpdateEntitiesSubscriptionRequest { subscription_id, clauses, historical } =
+        let UpdateEntitiesSubscriptionRequest { subscription_id, clauses } =
             request.into_inner();
         self.entity_manager
             .update_subscriber(
                 subscription_id,
                 clauses.into_iter().map(|keys| keys.into()).collect(),
-                historical,
             )
             .await;
 
@@ -1629,10 +1628,10 @@ impl proto::world::world_server::World for DojoWorld {
         &self,
         request: Request<SubscribeEventMessagesRequest>,
     ) -> ServiceResult<Self::SubscribeEntitiesStream> {
-        let SubscribeEventMessagesRequest { clauses, historical } = request.into_inner();
+        let SubscribeEventMessagesRequest { clauses } = request.into_inner();
         let rx = self
             .event_message_manager
-            .add_subscriber(clauses.into_iter().map(|keys| keys.into()).collect(), historical)
+            .add_subscriber(clauses.into_iter().map(|keys| keys.into()).collect())
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
@@ -1643,13 +1642,12 @@ impl proto::world::world_server::World for DojoWorld {
         &self,
         request: Request<UpdateEventMessagesSubscriptionRequest>,
     ) -> ServiceResult<()> {
-        let UpdateEventMessagesSubscriptionRequest { subscription_id, clauses, historical } =
+        let UpdateEventMessagesSubscriptionRequest { subscription_id, clauses } =
             request.into_inner();
         self.event_message_manager
             .update_subscriber(
                 subscription_id,
                 clauses.into_iter().map(|keys| keys.into()).collect(),
-                historical,
             )
             .await;
 

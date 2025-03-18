@@ -143,10 +143,9 @@ impl Client {
     pub async fn on_entity_updated(
         &self,
         clauses: Vec<EntityKeysClause>,
-        historical: bool,
     ) -> Result<EntityUpdateStreaming, Error> {
         let mut grpc_client = self.inner.write().await;
-        let stream = grpc_client.subscribe_entities(clauses, historical).await?;
+        let stream = grpc_client.subscribe_entities(clauses).await?;
         Ok(stream)
     }
 
@@ -155,10 +154,9 @@ impl Client {
         &self,
         subscription_id: u64,
         clauses: Vec<EntityKeysClause>,
-        historical: bool,
     ) -> Result<(), Error> {
         let mut grpc_client = self.inner.write().await;
-        grpc_client.update_entities_subscription(subscription_id, clauses, historical).await?;
+        grpc_client.update_entities_subscription(subscription_id, clauses).await?;
         Ok(())
     }
 
@@ -166,10 +164,9 @@ impl Client {
     pub async fn on_event_message_updated(
         &self,
         clauses: Vec<EntityKeysClause>,
-        historical: bool,
     ) -> Result<EntityUpdateStreaming, Error> {
         let mut grpc_client = self.inner.write().await;
-        let stream = grpc_client.subscribe_event_messages(clauses, historical).await?;
+        let stream = grpc_client.subscribe_event_messages(clauses).await?;
         Ok(stream)
     }
 
@@ -178,12 +175,9 @@ impl Client {
         &self,
         subscription_id: u64,
         clauses: Vec<EntityKeysClause>,
-        historical: bool,
     ) -> Result<(), Error> {
         let mut grpc_client = self.inner.write().await;
-        grpc_client
-            .update_event_messages_subscription(subscription_id, clauses, historical)
-            .await?;
+        grpc_client.update_event_messages_subscription(subscription_id, clauses).await?;
         Ok(())
     }
 

@@ -45,8 +45,6 @@ pub struct Entity {
     pub updated_model: Option<Ty>,
     #[sqlx(skip)]
     pub deleted: bool,
-    #[sqlx(skip)]
-    pub historical: bool,
 }
 
 #[derive(FromRow, Deserialize, Debug, Clone)]
@@ -64,8 +62,6 @@ pub struct OptimisticEntity {
     pub updated_model: Option<Ty>,
     #[sqlx(skip)]
     pub deleted: bool,
-    #[sqlx(skip)]
-    pub historical: bool,
 }
 
 #[derive(FromRow, Deserialize, Debug, Clone)]
@@ -81,8 +77,6 @@ pub struct EventMessage {
     // this should never be None
     #[sqlx(skip)]
     pub updated_model: Option<Ty>,
-    #[sqlx(skip)]
-    pub historical: bool,
 }
 
 #[derive(FromRow, Deserialize, Debug, Clone)]
@@ -98,8 +92,6 @@ pub struct OptimisticEventMessage {
     // this should never be None
     #[sqlx(skip)]
     pub updated_model: Option<Ty>,
-    #[sqlx(skip)]
-    pub historical: bool,
 }
 
 #[derive(FromRow, Deserialize, Debug, Clone)]
