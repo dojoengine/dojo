@@ -24,6 +24,12 @@ fn main() {
             panic!("Failed to update git submodule");
         }
 
+        let bun_check = Command::new("bun").arg("--version").output();
+
+        if bun_check.is_err() || !bun_check.unwrap().status.success() {
+            panic!("Bun is not installed. Please install Bun at https://bun.sh .");
+        }
+
         // Install dependencies if node_modules doesn't exist
         // $CARGO_MANIFEST_DIR/ui/node_modules
         if !Path::new(&ui_dir).join("node_modules").exists() {
