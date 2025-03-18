@@ -8,6 +8,7 @@ use starknet::core::types::contract::AbiEntry;
 use starknet::core::types::{
     BlockId, BlockTag, ContractClass, LegacyContractAbiEntry, LegacyFunctionAbiEntry, StarknetError,
 };
+use starknet::core::utils::get_selector_from_name;
 use starknet::providers::{Provider, ProviderError};
 use starknet_crypto::Felt;
 use tokio::sync::RwLock;
@@ -235,34 +236,22 @@ pub fn get_entrypoint_name_from_class(class: &ContractClass, selector: Felt) -> 
                 .flatten()
         }
         ContractClass::Legacy(legacy) => {
-            let entrypoint_idx = match legacy
-                .entry_points_by_type
-                .external
-                .iter()
-                .chain(legacy.entry_points_by_type.l1_handler.iter())
-                .chain(legacy.entry_points_by_type.constructor.iter())
-                .find(|entrypoint| entrypoint.selector == selector)
-            {
-                Some(entrypoint) => entrypoint.offset,
-                None => return None,
-            };
-
             let abi = match &legacy.abi {
                 Some(abi) => abi,
                 None => return None,
             };
-            let functions: Vec<LegacyFunctionAbiEntry> = abi
+
+
+            abi
                 .iter()
-                .filter_map(|entry| {
-                    if let LegacyContractAbiEntry::Function(function) = entry {
-                        Some(function.clone())
-                    } else {
-                        None
+                .find_map(|entry| {
+                    match entry {
+                        LegacyContractAbiEntry::Function(function) if get_selector_from_name(&function.name).unwrap() == selector => {
+                            Some(function.name.clone())
+                        }
+                        _ => None,
                     }
                 })
-                .collect();
-
-            functions.get(entrypoint_idx as usize).map(|function| function.name.clone())
         }
     }
 }
