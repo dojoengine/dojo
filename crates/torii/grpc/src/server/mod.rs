@@ -1505,8 +1505,7 @@ impl proto::world::world_server::World for DojoWorld {
         &self,
         request: Request<UpdateEntitiesSubscriptionRequest>,
     ) -> ServiceResult<()> {
-        let UpdateEntitiesSubscriptionRequest { subscription_id, clauses } =
-            request.into_inner();
+        let UpdateEntitiesSubscriptionRequest { subscription_id, clauses } = request.into_inner();
         self.entity_manager
             .update_subscriber(
                 subscription_id,

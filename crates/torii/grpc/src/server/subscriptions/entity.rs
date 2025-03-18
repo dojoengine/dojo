@@ -59,11 +59,7 @@ impl EntityManager {
         Ok(receiver)
     }
 
-    pub async fn update_subscriber(
-        &self,
-        id: u64,
-        clauses: Vec<EntityKeysClause>,
-    ) {
+    pub async fn update_subscriber(&self, id: u64, clauses: Vec<EntityKeysClause>) {
         let sender = {
             let subscribers = self.subscribers.read().await;
             if let Some(subscriber) = subscribers.get(&id) {
@@ -73,10 +69,7 @@ impl EntityManager {
             }
         };
 
-        self.subscribers
-            .write()
-            .await
-            .insert(id, EntitiesSubscriber { clauses, sender });
+        self.subscribers.write().await.insert(id, EntitiesSubscriber { clauses, sender });
     }
 
     pub(super) async fn remove_subscriber(&self, id: u64) {
