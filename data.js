@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1742308859622,
+  "lastUpdate": 1742310291725,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -58651,6 +58651,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 17060387,
             "range": "± 979187",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "076a4152769e56c74cf4ee3a424aa043199a12c5",
+          "message": "fix(torii-grpc): ensure correct u256 token id deser (#3111)\n\n* fix(torii-grpc): u256 token id deser\n\n* fix\n\n* fix: run linters\n\n---------\n\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2025-03-18T14:48:41Z",
+          "tree_id": "f2c2e41db01259e3963dd337249e844be059f2d3",
+          "url": "https://github.com/dojoengine/dojo/commit/076a4152769e56c74cf4ee3a424aa043199a12c5"
+        },
+        "date": 1742310288832,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 45322865762,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
