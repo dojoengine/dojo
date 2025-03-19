@@ -9,6 +9,10 @@ use tokio::sync::mpsc;
 use crate::ordering::PoolOrd;
 use crate::tx::{PendingTx, PoolTransaction};
 
+/// A subscription to newly added transactions in the pool.
+///
+/// This stream yields transactions in the order determined by the pool ordering, even if multiple
+/// transactions are received between polls.
 #[derive(Debug)]
 pub struct Subscription<T, O: PoolOrd> {
     txs: Mutex<BTreeSet<PendingTx<T, O>>>,
