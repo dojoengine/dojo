@@ -522,7 +522,7 @@ impl Sql {
         self.executor.send(QueryMessage::new(
             "INSERT OR IGNORE INTO transactions (id, transaction_hash, sender_address, calldata, \
              max_fee, signature, nonce, transaction_type, executed_at, block_number) VALUES (?, \
-             ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+             ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *"
                 .to_string(),
             vec![
                 Argument::FieldElement(transaction_hash),
