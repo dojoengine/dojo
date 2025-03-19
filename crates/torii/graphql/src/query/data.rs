@@ -82,7 +82,7 @@ pub async fn fetch_single_row_with_joins(
         Some(columns) => columns.join(", "),
         None => format!("[{}].*", table_name),
     };
-    
+
     // Build the JOIN clauses
     let join_clauses = joins
         .iter()
@@ -95,13 +95,13 @@ pub async fn fetch_single_row_with_joins(
         })
         .collect::<Vec<String>>()
         .join(" ");
-    
+
     // Build the complete query
     let query = format!(
         "SELECT {} FROM [{}] {} WHERE [{}].{} = '{}'",
         select, table_name, join_clauses, table_name, id_column, id
     );
-    
+
     sqlx::query(&query).fetch_one(conn).await
 }
 

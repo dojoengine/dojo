@@ -241,17 +241,14 @@ pub fn get_entrypoint_name_from_class(class: &ContractClass, selector: Felt) -> 
                 None => return None,
             };
 
-
-            abi
-                .iter()
-                .find_map(|entry| {
-                    match entry {
-                        LegacyContractAbiEntry::Function(function) if get_selector_from_name(&function.name).unwrap() == selector => {
-                            Some(function.name.clone())
-                        }
-                        _ => None,
-                    }
-                })
+            abi.iter().find_map(|entry| match entry {
+                LegacyContractAbiEntry::Function(function)
+                    if get_selector_from_name(&function.name).unwrap() == selector =>
+                {
+                    Some(function.name.clone())
+                }
+                _ => None,
+            })
         }
     }
 }

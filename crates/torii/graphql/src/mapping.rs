@@ -4,9 +4,7 @@ use async_graphql::Name;
 use dojo_types::primitive::Primitive;
 use lazy_static::lazy_static;
 
-use crate::constants::{
-    CONTENT_TYPE_NAME, SOCIAL_TYPE_NAME, TOKEN_UNION_TYPE_NAME,
-};
+use crate::constants::{CONTENT_TYPE_NAME, SOCIAL_TYPE_NAME, TOKEN_UNION_TYPE_NAME};
 use crate::types::{GraphqlType, TypeData, TypeMapping};
 
 lazy_static! {

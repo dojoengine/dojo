@@ -28,11 +28,12 @@ use self::connection::{
 };
 use self::inputs::keys_input::parse_keys_argument;
 use self::inputs::order_input::parse_order_argument;
-use crate::query::data::{count_rows, fetch_multiple_rows, fetch_single_row, fetch_single_row_with_joins};
+use crate::query::data::{
+    count_rows, fetch_multiple_rows, fetch_single_row, fetch_single_row_with_joins, JoinConfig,
+};
 use crate::query::value_mapping_from_row;
 use crate::types::{TypeMapping, ValueMapping};
 use crate::utils::extract;
-use crate::query::data::JoinConfig;
 
 #[allow(missing_debug_implementations)]
 pub enum ObjectVariant {
@@ -271,7 +272,8 @@ pub fn resolve_one(
     .argument(argument)
 }
 
-// Resolves single object queries with joins, returns current object of type type_name with related data
+// Resolves single object queries with joins, returns current object of type type_name with related
+// data
 pub fn resolve_one_with_joins(
     table_name: &str,
     id_column: &str,
@@ -300,13 +302,14 @@ pub fn resolve_one_with_joins(
             let id: String =
                 extract::<String>(ctx.args.as_index_map(), &id_column.to_case(Case::Camel))?;
             let data = fetch_single_row_with_joins(
-                &mut conn, 
-                &table_name, 
-                &id_column, 
-                &id, 
+                &mut conn,
+                &table_name,
+                &id_column,
+                &id,
                 joins,
                 select_columns,
-            ).await?;
+            )
+            .await?;
             let model = value_mapping_from_row(&data, &type_mapping, false, true)?;
             Ok(Some(Value::Object(model)))
         })

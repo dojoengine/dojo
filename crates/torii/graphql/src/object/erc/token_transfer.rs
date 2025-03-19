@@ -241,11 +241,11 @@ fn token_transfers_connection_output<'a>(
     for row in data {
         let row = TransferQueryResultRaw::from_row(row)?;
         let cursor = cursor::encode(&row.id, &row.id);
-        
+
         match token_transfer_mapping_from_row(&row) {
             Ok(transfer_node) => {
                 edges.push(ConnectionEdge { node: transfer_node, cursor });
-            },
+            }
             Err(err) => {
                 warn!("Failed to transform row to TokenTransferNode: {}", err);
                 continue;
@@ -261,7 +261,9 @@ fn token_transfers_connection_output<'a>(
 }
 
 /// Transforms a TransferQueryResultRaw into a TokenTransferNode
-pub fn token_transfer_mapping_from_row(row: &TransferQueryResultRaw) -> Result<TokenTransferNode, String> {
+pub fn token_transfer_mapping_from_row(
+    row: &TransferQueryResultRaw,
+) -> Result<TokenTransferNode, String> {
     let transaction_hash = get_transaction_hash_from_event_id(&row.id);
 
     match row.contract_type.to_lowercase().as_str() {
@@ -294,12 +296,11 @@ pub fn token_transfer_mapping_from_row(row: &TransferQueryResultRaw) -> Result<T
                 Ok(value) => value,
                 Err(e) => return Err(format!("Failed to parse metadata as JSON: {}", e)),
             };
-            
+
             let metadata_name =
                 metadata.get("name").map(|v| v.to_string().trim_matches('"').to_string());
-            let metadata_description = metadata
-                .get("description")
-                .map(|v| v.to_string().trim_matches('"').to_string());
+            let metadata_description =
+                metadata.get("description").map(|v| v.to_string().trim_matches('"').to_string());
             let metadata_attributes =
                 metadata.get("attributes").map(|v| v.to_string().trim_matches('"').to_string());
 
@@ -333,7 +334,7 @@ pub fn token_transfer_mapping_from_row(row: &TransferQueryResultRaw) -> Result<T
             }
 
             let metadata_str = &row.metadata;
-            let (metadata_name, metadata_description, metadata_attributes, image_path) = 
+            let (metadata_name, metadata_description, metadata_attributes, image_path) =
                 if metadata_str.is_empty() {
                     (None, None, None, String::new())
                 } else {
@@ -341,7 +342,7 @@ pub fn token_transfer_mapping_from_row(row: &TransferQueryResultRaw) -> Result<T
                         Ok(value) => value,
                         Err(e) => return Err(format!("Failed to parse metadata as JSON: {}", e)),
                     };
-                    
+
                     let metadata_name =
                         metadata.get("name").map(|v| v.to_string().trim_matches('"').to_string());
                     let metadata_description = metadata

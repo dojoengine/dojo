@@ -145,9 +145,15 @@ impl ResolvableObject for ErcBalanceObject {
 
                                     // Use the extracted mapping function
                                     match token_balance_mapping_from_row(&row) {
-                                        Ok(balance_value) => Some(Ok(FieldValue::owned_any(balance_value))),
+                                        Ok(balance_value) => {
+                                            Some(Ok(FieldValue::owned_any(balance_value)))
+                                        }
                                         Err(err) => {
-                                            warn!("Failed to transform row to token balance in subscription: {}", err);
+                                            warn!(
+                                                "Failed to transform row to token balance in \
+                                                 subscription: {}",
+                                                err
+                                            );
                                             None
                                         }
                                     }
@@ -301,7 +307,7 @@ fn token_balances_connection_output<'a>(
         match token_balance_mapping_from_row(&row) {
             Ok(balance_value) => {
                 edges.push(ConnectionEdge { node: balance_value, cursor });
-            },
+            }
             Err(err) => {
                 warn!("Failed to transform row to token balance: {}", err);
                 continue;
@@ -351,15 +357,14 @@ fn token_balance_mapping_from_row(row: &BalanceQueryResultRaw) -> Result<ErcToke
                     Ok(value) => value,
                     Err(e) => return Err(format!("Failed to parse metadata as JSON: {}", e)),
                 };
-                
+
                 let metadata_name =
                     metadata.get("name").map(|v| v.to_string().trim_matches('"').to_string());
                 let metadata_description = metadata
                     .get("description")
                     .map(|v| v.to_string().trim_matches('"').to_string());
-                let metadata_attributes = metadata
-                    .get("attributes")
-                    .map(|v| v.to_string().trim_matches('"').to_string());
+                let metadata_attributes =
+                    metadata.get("attributes").map(|v| v.to_string().trim_matches('"').to_string());
 
                 let image_path = format!("{}/{}", token_id.join("/"), "image");
 
@@ -407,15 +412,14 @@ fn token_balance_mapping_from_row(row: &BalanceQueryResultRaw) -> Result<ErcToke
                     Ok(value) => value,
                     Err(e) => return Err(format!("Failed to parse metadata as JSON: {}", e)),
                 };
-                
+
                 let metadata_name =
                     metadata.get("name").map(|v| v.to_string().trim_matches('"').to_string());
                 let metadata_description = metadata
                     .get("description")
                     .map(|v| v.to_string().trim_matches('"').to_string());
-                let metadata_attributes = metadata
-                    .get("attributes")
-                    .map(|v| v.to_string().trim_matches('"').to_string());
+                let metadata_attributes =
+                    metadata.get("attributes").map(|v| v.to_string().trim_matches('"').to_string());
 
                 let image_path = format!("{}/{}", token_id.join("/"), "image");
 

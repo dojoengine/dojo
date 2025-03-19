@@ -1,5 +1,6 @@
-use async_graphql::dynamic::{Field, FieldValue};
-use async_graphql::dynamic::{FieldFuture, InputValue, SubscriptionField, SubscriptionFieldFuture, TypeRef};
+use async_graphql::dynamic::{
+    Field, FieldFuture, FieldValue, InputValue, SubscriptionField, SubscriptionFieldFuture, TypeRef,
+};
 use async_graphql::{Name, Value};
 use sqlx::{FromRow, Pool, Sqlite};
 use tokio_stream::StreamExt;
@@ -13,8 +14,7 @@ use crate::constants::{
     TRANSACTION_TYPE_NAME,
 };
 use crate::mapping::{CALL_MAPPING, TRANSACTION_MAPPING};
-use crate::object::erc::token_transfer::token_transfer_mapping_from_row;
-use crate::object::erc::token_transfer::TransferQueryResultRaw;
+use crate::object::erc::token_transfer::{token_transfer_mapping_from_row, TransferQueryResultRaw};
 use crate::object::{resolve_many, resolve_one};
 use crate::query::value_mapping_from_row;
 use crate::utils;
@@ -91,14 +91,20 @@ impl ResolvableObject for TransactionObject {
                     };
                     // if hash is None, then subscribe to all transactions
                     // if hash is Some, then subscribe to only the transaction with that hash
-                    Ok(SimpleBroker::<Transaction>::subscribe().filter_map(move |transaction: Transaction| {
-                        if hash.is_none() || hash == Some(transaction.transaction_hash.clone()) {
-                            Some(Ok(Value::Object(TransactionObject::value_mapping(transaction))))
-                        } else {
-                            // hash != transaction.transaction_hash, then don't send anything, still listening
-                            None
-                        }
-                    }))
+                    Ok(SimpleBroker::<Transaction>::subscribe().filter_map(
+                        move |transaction: Transaction| {
+                            if hash.is_none() || hash == Some(transaction.transaction_hash.clone())
+                            {
+                                Some(Ok(Value::Object(TransactionObject::value_mapping(
+                                    transaction,
+                                ))))
+                            } else {
+                                // hash != transaction.transaction_hash, then don't send anything,
+                                // still listening
+                                None
+                            }
+                        },
+                    ))
                 })
             })
             .argument(InputValue::new("hash", TypeRef::named(TypeRef::ID))),
