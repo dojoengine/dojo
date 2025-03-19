@@ -1,9 +1,12 @@
 use async_graphql::dynamic::{Field, FieldValue};
-use async_graphql::dynamic::{FieldFuture, TypeRef};
-use async_graphql::Value;
+use async_graphql::dynamic::{FieldFuture, InputValue, SubscriptionField, SubscriptionFieldFuture, TypeRef};
+use async_graphql::{Name, Value};
 use sqlx::{FromRow, Pool, Sqlite};
+use tokio_stream::StreamExt;
+use torii_sqlite::simple_broker::SimpleBroker;
+use torii_sqlite::types::Transaction;
 
-use super::{BasicObject, ResolvableObject, TypeMapping};
+use super::{BasicObject, ResolvableObject, TypeMapping, ValueMapping};
 use crate::constants::{
     CALL_TYPE_NAME, ID_COLUMN, TOKEN_TRANSFER_TABLE, TOKEN_TRANSFER_TYPE_NAME,
     TRANSACTION_CALLS_TABLE, TRANSACTION_HASH_COLUMN, TRANSACTION_NAMES, TRANSACTION_TABLE,
@@ -76,6 +79,48 @@ impl ResolvableObject for TransactionObject {
         );
 
         vec![resolve_one, resolve_many]
+    }
+
+    fn subscriptions(&self) -> Option<Vec<SubscriptionField>> {
+        Some(vec![
+            SubscriptionField::new("transaction", TypeRef::named_nn(self.type_name()), |ctx| {
+                SubscriptionFieldFuture::new(async move {
+                    let hash = match ctx.args.get("hash") {
+                        Some(hash) => Some(hash.string()?.to_string()),
+                        None => None,
+                    };
+                    // if hash is None, then subscribe to all transactions
+                    // if hash is Some, then subscribe to only the transaction with that hash
+                    Ok(SimpleBroker::<Transaction>::subscribe().filter_map(move |transaction: Transaction| {
+                        if hash.is_none() || hash == Some(transaction.transaction_hash.clone()) {
+                            Some(Ok(Value::Object(TransactionObject::value_mapping(transaction))))
+                        } else {
+                            // hash != transaction.transaction_hash, then don't send anything, still listening
+                            None
+                        }
+                    }))
+                })
+            })
+            .argument(InputValue::new("hash", TypeRef::named(TypeRef::ID))),
+        ])
+    }
+}
+
+impl TransactionObject {
+    pub fn value_mapping(transaction: Transaction) -> ValueMapping {
+        async_graphql::dynamic::indexmap::IndexMap::from([
+            (Name::new("id"), Value::from(transaction.id)),
+            (Name::new("transactionHash"), Value::from(transaction.transaction_hash)),
+            (Name::new("senderAddress"), Value::from(transaction.sender_address)),
+            (Name::new("calldata"), Value::from(transaction.calldata)),
+            (Name::new("maxFee"), Value::from(transaction.max_fee)),
+            (Name::new("signature"), Value::from(transaction.signature)),
+            (Name::new("nonce"), Value::from(transaction.nonce)),
+            (Name::new("executedAt"), Value::from(transaction.executed_at.to_rfc3339())),
+            (Name::new("createdAt"), Value::from(transaction.created_at.to_rfc3339())),
+            (Name::new("transactionType"), Value::from(transaction.transaction_type)),
+            (Name::new("blockNumber"), Value::from(transaction.block_number)),
+        ])
     }
 }
 
