@@ -1,5 +1,5 @@
 use core::fmt;
-use std::str::FromStr;
+use std::{collections::HashSet, str::FromStr};
 
 use chrono::{DateTime, Utc};
 use dojo_types::schema::Ty;
@@ -227,7 +227,7 @@ pub struct ContractCursor {
     pub last_pending_block_contract_tx: Option<String>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize)]
 pub enum CallType {
     Execute,
     ExecuteFromOutside,
@@ -242,7 +242,7 @@ impl std::fmt::Display for CallType {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct ParsedCall {
     pub contract_address: Felt,
     pub entrypoint: String,
@@ -265,4 +265,9 @@ pub struct Transaction {
     pub created_at: DateTime<Utc>,
     pub transaction_type: String,
     pub block_number: u64,
+
+    #[sqlx(skip)]
+    pub calls: Vec<ParsedCall>,
+    #[sqlx(skip)]
+    pub contract_addresses: HashSet<Felt>,
 }

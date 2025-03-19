@@ -455,9 +455,9 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                         query_message.statement, query_message.arguments
                     )
                 })?;
-                let transaction = Transaction::from_row(&row)?;
+                let mut transaction = Transaction::from_row(&row)?;
 
-                for contract_address in store_transaction.contract_addresses {
+                for contract_address in &store_transaction.contract_addresses {
                     sqlx::query(
                         "INSERT OR IGNORE INTO transaction_contract (transaction_hash, \
                          contract_address) VALUES (?, ?)",
@@ -469,7 +469,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 }
 
                 // Store each call in the transaction_calls table
-                for call in store_transaction.calls {
+                for call in &store_transaction.calls {
                     sqlx::query(
                         "INSERT OR IGNORE INTO transaction_calls (transaction_hash, \
                          contract_address, entrypoint, calldata, call_type, caller_address) \
@@ -477,13 +477,16 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                     )
                     .bind(&transaction.transaction_hash)
                     .bind(felt_to_sql_string(&call.contract_address))
-                    .bind(call.entrypoint)
+                    .bind(call.entrypoint.clone())
                     .bind(felts_to_sql_string(&call.calldata))
                     .bind(call.call_type.to_string())
                     .bind(felt_to_sql_string(&call.caller_address))
                     .execute(&mut **tx)
                     .await?;
                 }
+
+                transaction.contract_addresses = store_transaction.contract_addresses;
+                transaction.calls = store_transaction.calls;
 
                 self.publish_queue.push(BrokerMessage::Transaction(transaction));
             }

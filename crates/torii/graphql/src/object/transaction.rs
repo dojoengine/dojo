@@ -1,8 +1,11 @@
+use std::str::FromStr;
+
 use async_graphql::dynamic::{
     Field, FieldFuture, FieldValue, InputValue, SubscriptionField, SubscriptionFieldFuture, TypeRef,
 };
 use async_graphql::{Name, Value};
 use sqlx::{FromRow, Pool, Sqlite};
+use starknet_crypto::Felt;
 use tokio_stream::StreamExt;
 use torii_sqlite::simple_broker::SimpleBroker;
 use torii_sqlite::types::Transaction;
@@ -82,18 +85,32 @@ impl ResolvableObject for TransactionObject {
     }
 
     fn subscriptions(&self) -> Option<Vec<SubscriptionField>> {
-        Some(vec![
-            SubscriptionField::new("transaction", TypeRef::named_nn(self.type_name()), |ctx| {
+        Some(vec![SubscriptionField::new(
+            "transaction",
+            TypeRef::named_nn(self.type_name()),
+            |ctx| {
                 SubscriptionFieldFuture::new(async move {
                     let hash = match ctx.args.get("hash") {
                         Some(hash) => Some(hash.string()?.to_string()),
                         None => None,
                     };
+
+                    let caller = match ctx.args.get("hasCaller") {
+                        Some(caller) => Some(caller.string()?.to_string()),
+                        None => None,
+                    };
+
                     // if hash is None, then subscribe to all transactions
                     // if hash is Some, then subscribe to only the transaction with that hash
                     Ok(SimpleBroker::<Transaction>::subscribe().filter_map(
                         move |transaction: Transaction| {
-                            if hash.is_none() || hash == Some(transaction.transaction_hash.clone())
+                            if (hash.is_none()
+                                || hash == Some(transaction.transaction_hash.clone()))
+                                && (caller.is_none()
+                                    || transaction.calls.iter().any(|call| {
+                                        call.caller_address
+                                            == Felt::from_str(&caller.clone().unwrap()).unwrap()
+                                    }))
                             {
                                 Some(Ok(Value::Object(TransactionObject::value_mapping(
                                     transaction,
@@ -106,9 +123,10 @@ impl ResolvableObject for TransactionObject {
                         },
                     ))
                 })
-            })
-            .argument(InputValue::new("hash", TypeRef::named(TypeRef::ID))),
-        ])
+            },
+        )
+        .argument(InputValue::new("hash", TypeRef::named(TypeRef::ID)))
+        .argument(InputValue::new("hasCaller", TypeRef::named(TypeRef::STRING)))])
     }
 }
 
