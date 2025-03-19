@@ -10,6 +10,7 @@ use dojo_types::schema::{Struct, Ty};
 use dojo_world::config::WorldMetadata;
 use dojo_world::contracts::abigen::model::Layout;
 use dojo_world::contracts::naming::compute_selector_from_names;
+use executor::StoreTransactionQuery;
 use sqlx::{Pool, Sqlite};
 use starknet::core::types::{Event, Felt};
 use starknet_crypto::poseidon_hash_many;
@@ -519,7 +520,7 @@ impl Sql {
     ) -> Result<()> {
 
         // Store the transaction in the transactions table
-        self.executor.send(QueryMessage::other(
+        self.executor.send(QueryMessage::new(
             "INSERT OR IGNORE INTO transactions (id, transaction_hash, sender_address, calldata, \
              max_fee, signature, nonce, transaction_type, executed_at, \
              block_number) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
@@ -536,36 +537,11 @@ impl Sql {
                 Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
                 Argument::String(block_number.to_string()),
             ],
+            QueryType::StoreTransaction(StoreTransactionQuery {
+                contract_addresses: contract_addresses.clone(),
+                calls: calls.to_vec(),
+            }),
         ))?;
-
-        for contract_address in contract_addresses {
-            self.executor.send(QueryMessage::other(
-                "INSERT OR IGNORE INTO transaction_contract (transaction_hash, contract_address) \
-                 VALUES (?, ?)"
-                    .to_string(),
-                vec![
-                    Argument::FieldElement(transaction_hash),
-                    Argument::FieldElement(*contract_address),
-                ],
-            ))?;
-        }
-
-        // Store each call in the transaction_calls table
-        for call in calls {
-            self.executor.send(QueryMessage::other(
-                "INSERT OR IGNORE INTO transaction_calls (transaction_hash, contract_address, entrypoint, calldata, call_type, caller_address) \
-                 VALUES (?, ?, ?, ?, ?, ?)"
-                    .to_string(),
-                vec![
-                    Argument::FieldElement(transaction_hash),
-                    Argument::FieldElement(call.contract_address),
-                    Argument::String(call.entrypoint.clone()),
-                    Argument::String(felts_to_sql_string(&call.calldata)),
-                    Argument::String(call.call_type.to_string()),
-                    Argument::FieldElement(call.caller_address),
-                ],
-            ))?;
-        }
 
         Ok(())
     }

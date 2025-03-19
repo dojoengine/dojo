@@ -6,7 +6,7 @@ use dojo_world::contracts::abigen::model::Layout;
 use sqlx::{Pool, Sqlite, SqlitePool};
 use starknet::core::types::contract::AbiEntry;
 use starknet::core::types::{
-    BlockId, BlockTag, ContractClass, LegacyContractAbiEntry, LegacyFunctionAbiEntry, StarknetError,
+    BlockId, BlockTag, ContractClass, LegacyContractAbiEntry, StarknetError,
 };
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::{Provider, ProviderError};
