@@ -32,7 +32,7 @@ use anyhow::anyhow;
 use cainome::cairo_serde::CairoSerde;
 use jsonrpsee::core::{async_trait, RpcResult};
 use katana_core::backend::Backend;
-use katana_core::service::block_producer::BlockProducer;
+use katana_core::service::block_producer::{BlockProducer, BlockProducerMode, PendingExecutor};
 use katana_executor::ExecutorFactory;
 use katana_pool::{TransactionPool, TxPool};
 use katana_primitives::chain::ChainId;
@@ -88,6 +88,17 @@ impl<EF: ExecutorFactory> CartridgeApi<EF> {
         Self { backend, block_producer, pool, api_url }
     }
 
+    fn nonce(&self, contract_address: ContractAddress) -> Result<Option<Nonce>, StarknetApiError> {
+        Ok(self.pool.validator().pool_nonce(contract_address)?)
+    }
+
+    fn pending_executor(&self) -> Option<PendingExecutor> {
+        match &*self.block_producer.producer.read() {
+            BlockProducerMode::Instant(_) => None,
+            BlockProducerMode::Interval(producer) => Some(producer.executor()),
+        }
+    }
+
     pub async fn execute_outside(
         &self,
         address: ContractAddress,
@@ -114,8 +125,6 @@ impl<EF: ExecutorFactory> CartridgeApi<EF> {
                 return Err(StarknetApiError::UnexpectedError { reason });
             };
 
-            let provider = this.backend.blockchain.provider();
-            let state = provider.latest()?;
 
             // Contract function selector for
             let entrypoint = match outside_execution {
@@ -124,15 +133,24 @@ impl<EF: ExecutorFactory> CartridgeApi<EF> {
             };
 
             // Get the current nonce of the paymaster account.
-            let mut nonce = state.nonce(*pm_address)?.unwrap_or_default();
+            let mut nonce = this.nonce(*pm_address)?.unwrap_or_default();
 
             // ====================== CONTROLLER DEPLOYMENT ======================
             // Check if the controller is already deployed. If not, deploy it.
 
             let mut controller_deployed = false;
 
-            if state.class_hash_of_contract(address)?.is_none() {
-                let nonce = state.nonce(*pm_address)?;
+            let controller_is_deployed = {
+	            match this.pending_executor().as_ref() {
+	                Some(executor) => executor.read().state().class_hash_of_contract(address)?.is_some(),
+	                None => {
+						let provider = this.backend.blockchain.provider();
+						provider.latest()?.class_hash_of_contract(address)?.is_some()},
+	            }
+            };
+
+            if dbg!(!controller_is_deployed) {
+	           	debug!(target: "rpc::cartridge", controller = %address, "Controller not yet deployed");
                 if let Some(tx) =
                     futures::executor::block_on(craft_deploy_cartridge_controller_tx(
                         &this.api_url,
@@ -143,6 +161,7 @@ impl<EF: ExecutorFactory> CartridgeApi<EF> {
                         nonce,
                     ))?
                 {
+                	debug!(target: "rpc::cartridge", controller = %address, tx = format!("{:#x}", tx.hash),  "Inserting Controller deployment transaction");
                     this.pool.add_transaction(tx)?;
                     controller_deployed = true;
                 }
@@ -282,6 +301,7 @@ pub fn encode_calls(calls: Vec<Call>) -> Vec<Felt> {
 pub async fn get_controller_deploy_tx_if_controller_address(
     paymaster_address: ContractAddress,
     paymaster_private_key: Felt,
+    paymaster_nonce: Nonce,
     tx: &ExecutableTxWithHash,
     chain_id: ChainId,
     state: Arc<Box<dyn StateProvider>>,
@@ -301,7 +321,6 @@ pub async fn get_controller_deploy_tx_if_controller_address(
             return Ok(None);
         }
 
-        let paymaster_nonce = state.nonce(paymaster_address)?;
         if let tx @ Some(..) = craft_deploy_cartridge_controller_tx(
             cartridge_api_url,
             maybe_controller_address,
@@ -329,7 +348,7 @@ pub async fn craft_deploy_cartridge_controller_tx(
     paymaster_address: ContractAddress,
     paymaster_private_key: Felt,
     chain_id: ChainId,
-    paymaster_nonce: Option<Felt>,
+    paymaster_nonce: Felt,
 ) -> anyhow::Result<Option<ExecutableTxWithHash>> {
     if let Some(calldata) =
         fetch_controller_constructor_calldata(cartridge_api_url, controller_address).await?
@@ -348,7 +367,7 @@ pub async fn craft_deploy_cartridge_controller_tx(
             account_deployment_data: vec![],
             sender_address: paymaster_address,
             calldata: encode_calls(vec![call]),
-            nonce: paymaster_nonce.unwrap_or(Felt::ZERO),
+            nonce: paymaster_nonce,
             resource_bounds: ResourceBoundsMapping::default(),
             nonce_data_availability_mode: katana_primitives::da::DataAvailabilityMode::L1,
             fee_data_availability_mode: katana_primitives::da::DataAvailabilityMode::L1,

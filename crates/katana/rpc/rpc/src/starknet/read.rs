@@ -5,6 +5,7 @@ use jsonrpsee::core::{async_trait, Error, RpcResult};
 use katana_executor::{EntryPointCall, ExecutorFactory};
 use katana_primitives::block::BlockIdOrTag;
 use katana_primitives::class::ClassHash;
+use katana_primitives::contract::Nonce;
 use katana_primitives::genesis::allocation::GenesisAccountAlloc;
 use katana_primitives::transaction::{ExecutableTx, ExecutableTxWithHash, TxHash};
 use katana_primitives::{ContractAddress, Felt};
@@ -263,11 +264,21 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
             // for each of the unique sender and push it at the beginning of the
             // transaction list so that all the requested transactions are executed against a state
             // with the Controller accounts deployed.
+
+            let paymaster_nonce = match self.nonce_at(block_id, *paymaster_address).await {
+                Ok(nonce) => nonce,
+                Err(err) => match err {
+                    StarknetApiError::ContractNotFound => Nonce::default(),
+                    _ => return Err(Error::from(err)),
+                },
+            };
+
             for tx in &transactions {
                 let deploy_controller_tx =
                     cartridge::get_controller_deploy_tx_if_controller_address(
                         *paymaster_address,
                         paymaster_private_key,
+                        paymaster_nonce,
                         tx,
                         self.inner.backend.chain_spec.id(),
                         state.clone(),
