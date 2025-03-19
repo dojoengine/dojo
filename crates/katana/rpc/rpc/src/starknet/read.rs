@@ -268,7 +268,12 @@ impl<EF: ExecutorFactory> StarknetApiServer for StarknetApi<EF> {
             let paymaster_nonce = match self.nonce_at(block_id, *paymaster_address).await {
                 Ok(nonce) => nonce,
                 Err(err) => match err {
-                    StarknetApiError::ContractNotFound => Nonce::default(),
+                    // this should be unreachable bcs we already checked for the paymaster account
+                    // existence earlier
+                    StarknetApiError::ContractNotFound => {
+                        let error = anyhow!("Cartridge paymaster account doesn't exist");
+                        return Err(Error::from(error))?;
+                    }
                     _ => return Err(Error::from(err)),
                 },
             };
