@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1742355471741,
+  "lastUpdate": 1742418742252,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -58963,6 +58963,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 16898668,
             "range": "± 270305",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "347f40c2d5475eb155564f44dd4d62984a730e18",
+          "message": "fix(katana): using outdated state when creating the paymaster txs (#3117)\n\nCurrently, the creation of paymaster transaction(s) does not take into account the 'pending' state. Evident in the usage of:\n\n```rust\n// crates/katana/rpc/rpc/src/cartridge.rs\n\nlet provider = this.backend.blockchain.provider();\nlet state = provider.latest()?;\n\n// ...\n\nif state.class_hash_of_contract(address)?.is_none() {\n// ...\n}\n```\n\nas well as:\n\n```rust\n// crates/katana/rpc/rpc/src/starknet/read.rs\nlet paymaster_nonce = state.nonce(paymaster_address)?;\n```\n\nwhere `state` is actually the 'latest' state (doesn't include pending state):\n\nhttps://github.com/dojoengine/dojo/blob/5e0de118533a00267895e5e58cf86ae10d844fb8/crates/katana/rpc/rpc/src/starknet/read.rs#L250-L257\n\nThis becomes an issue when `katana` is running in interval block production where some expected state may still be 'pending'. Where the transactions that we send using the paymaster flow may still be in the pending block, and querying the nonce from the latest state results in an invalid/outdated nonce.\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n\n## Summary by CodeRabbit\n\n- **New Features**\n  - Enhanced deployment transactions with consolidated nonce management and state checks for improved reliability.\n\n- **Refactor**\n  - Updated logging settings to adjust message prioritization.\n  - Streamlined error handling during fee estimation to provide clearer notifications when account issues arise.\n\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+          "timestamp": "2025-03-20T04:55:51+08:00",
+          "tree_id": "2fea0db7cbc050ab78215a536d420a01bd5a6b0e",
+          "url": "https://github.com/dojoengine/dojo/commit/347f40c2d5475eb155564f44dd4d62984a730e18"
+        },
+        "date": 1742418738401,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 49198413126,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
