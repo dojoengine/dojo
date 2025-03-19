@@ -1,5 +1,4 @@
 use std::collections::HashSet;
-use std::sync::Arc;
 
 use anyhow::{Error, Result};
 use async_trait::async_trait;
