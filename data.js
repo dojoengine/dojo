@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1742418742252,
+  "lastUpdate": 1742418751950,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -58992,6 +58992,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 49198413126,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "366dc5a652826a7a22593eb3e2f842f6afae8cb3",
+          "message": "ci: include `katana` startup benchmark (#3118)",
+          "timestamp": "2025-03-20T04:56:05+08:00",
+          "tree_id": "066a6a6e7cc1aff1b3c7804b1ff2b66891591418",
+          "url": "https://github.com/dojoengine/dojo/commit/366dc5a652826a7a22593eb3e2f842f6afae8cb3"
+        },
+        "date": 1742418748850,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 46519490213,
             "range": "± 0",
             "unit": "ns/iter"
           }
