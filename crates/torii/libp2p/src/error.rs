@@ -53,4 +53,7 @@ pub enum Error {
 
     #[error("Invalid message provided: {0}")]
     InvalidMessageError(String),
+
+    #[error("Address not connected")]
+    AddressNotConnected,
 }

@@ -29,6 +29,7 @@ rand = { workspace = true, optional = true }
 starknet-crypto = { workspace = true, optional = true }
 chrono = { workspace = true, optional = true }
 libp2p-webrtc = { git = "https://github.com/libp2p/rust-libp2p", features = [ "pem", "tokio" ], rev = "cdc9638", optional = true }
+bimap = "0.6.3"
 
 [dev-dependencies]
 indexmap.workspace = true

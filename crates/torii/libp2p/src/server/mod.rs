@@ -6,6 +6,7 @@ use std::str::FromStr;
 use std::time::Duration;
 use std::{fs, io};
 
+use bimap::BiMap;
 use chrono::Utc;
 use dojo_types::naming::is_valid_tag;
 use dojo_types::schema::Ty;
@@ -54,11 +55,13 @@ pub struct Behaviour {
     gossipsub: gossipsub::Behaviour,
 }
 
+type Address = Felt;
 #[allow(missing_debug_implementations)]
 pub struct Relay<P: Provider + Sync> {
     swarm: Swarm<Behaviour>,
     db: Sql,
     provider: Box<P>,
+    sessions: BiMap<Address, PeerId>
 }
 
 impl<P: Provider + Sync> Relay<P> {
@@ -213,7 +216,7 @@ impl<P: Provider + Sync> Relay<P> {
             .subscribe(&IdentTopic::new(constants::PEERS_MESSAGING_TOPIC))
             .unwrap();
 
-        Ok(Self { swarm, db: pool, provider: Box::new(provider) })
+        Ok(Self { swarm, db: pool, provider: Box::new(provider), sessions: BiMap::new() })
     }
 
     pub async fn run(&mut self) {
@@ -244,6 +247,73 @@ impl<P: Provider + Sync> Relay<P> {
                                     continue;
                                 }
                             };
+
+                            // Special handling for "Identify" message type
+                            if data.message.primary_type == "Identify" {
+                                // Extract identity address from message
+                                let identity = match data.message.message.get("identity") {
+                                    Some(PrimitiveType::String(address_str)) => match Felt::from_str(address_str) {
+                                        Ok(address) => address,
+                                        Err(e) => {
+                                            warn!(
+                                                target: LOG_TARGET,
+                                                error = %e,
+                                                "Invalid identity address in Identify message."
+                                            );
+                                            continue;
+                                        }
+                                    },
+                                    _ => {
+                                        warn!(
+                                            target: LOG_TARGET,
+                                            "Identify message missing valid identity field."
+                                        );
+                                        continue;
+                                    }
+                                };
+
+                                // Verify the signature
+                                match validate_signature(
+                                    &self.provider,
+                                    identity,
+                                    &data.message,
+                                    &data.signature,
+                                )
+                                .await
+                                {
+                                    Ok(valid) => {
+                                        if !valid {
+                                            warn!(
+                                                target: LOG_TARGET,
+                                                message_id = %message_id,
+                                                peer_id = %peer_id,
+                                                "Invalid signature for Identify message."
+                                            );
+                                            continue;
+                                        }
+                                    },
+                                    Err(e) => {
+                                        warn!(
+                                            target: LOG_TARGET,
+                                            error = %e,
+                                            "Verifying signature for Identify message."
+                                        );
+                                        continue;
+                                    }
+                                }
+
+                                // Update sessions map with the valid identity
+                                self.sessions.insert(identity, *peer_id);
+
+                                info!(
+                                    target: LOG_TARGET,
+                                    message_id = %message_id,
+                                    peer_id = %peer_id,
+                                    identity = %identity,
+                                    "Identified peer with address."
+                                );
+                                continue;
+                            }
 
                             let ty = match validate_message(&self.db, &data.message).await {
                                 Ok(parsed_message) => parsed_message,
@@ -473,10 +543,70 @@ impl<P: Provider + Sync> Relay<P> {
                 SwarmEvent::NewListenAddr { address, .. } => {
                     info!(target: LOG_TARGET, address = %address, "New listen address.");
                 }
+                SwarmEvent::ConnectionClosed { peer_id, .. } => {
+                    // Remove from sessions if this peer was identified
+                    if let Some(address) = self.sessions.get_by_right(&peer_id).copied() {
+                        self.sessions.remove_by_right(&peer_id);
+                        info!(
+                            target: LOG_TARGET,
+                            peer_id = %peer_id,
+                            address = %address,
+                            "Disconnected peer removed from sessions."
+                        );
+                    }
+                }
                 event => {
                     info!(target: LOG_TARGET, event = ?event, "Unhandled event.");
                 }
             }
+        }
+    }
+
+    /// Get the peer ID associated with a given address
+    pub fn get_peer_by_address(&self, address: &Felt) -> Option<PeerId> {
+        self.sessions.get_by_left(address).copied()
+    }
+
+    /// Get the address associated with a given peer ID
+    pub fn get_address_by_peer(&self, peer_id: &PeerId) -> Option<Felt> {
+        self.sessions.get_by_right(peer_id).copied()
+    }
+
+    /// Send a message to a specific address if connected
+    pub fn send_to_address(&mut self, address: &Felt, message: &Message) -> Result<(), Error> {
+        // Check if we have a peer ID for this address
+        if let Some(peer_id) = self.get_peer_by_address(address) {
+            info!(
+                target: LOG_TARGET,
+                address = %address,
+                peer_id = %peer_id,
+                "Sending direct message to address."
+            );
+            
+            // Create a unique topic for this peer
+            let topic = IdentTopic::new(format!("direct/{}", address));
+            
+            // Make sure we're subscribed to this topic
+            if !self.swarm.behaviour().gossipsub.is_subscribed(&topic) {
+                // Subscribe to the topic if we're not already
+                self.swarm.behaviour_mut().gossipsub.subscribe(&topic)?;
+            }
+            
+            // Publish the message to the topic
+            self.swarm
+                .behaviour_mut()
+                .gossipsub
+                .publish(topic, serde_json::to_string(message).unwrap())
+                .map_err(Error::PublishError)?;
+                
+            Ok(())
+        } else {
+            warn!(
+                target: LOG_TARGET,
+                address = %address,
+                "Cannot send message: address not connected."
+            );
+            Err(Error::AddressNotConnected)
         }
     }
 }
