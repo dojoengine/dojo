@@ -5,7 +5,6 @@ use jsonrpsee::core::{async_trait, Error, RpcResult};
 use katana_executor::{EntryPointCall, ExecutorFactory};
 use katana_primitives::block::BlockIdOrTag;
 use katana_primitives::class::ClassHash;
-use katana_primitives::contract::Nonce;
 use katana_primitives::genesis::allocation::GenesisAccountAlloc;
 use katana_primitives::transaction::{ExecutableTx, ExecutableTxWithHash, TxHash};
 use katana_primitives::{ContractAddress, Felt};
