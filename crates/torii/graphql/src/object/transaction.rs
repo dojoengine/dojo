@@ -118,7 +118,7 @@ impl TransactionObject {
             (Name::new("id"), Value::from(transaction.id)),
             (Name::new("transactionHash"), Value::from(transaction.transaction_hash)),
             (Name::new("senderAddress"), Value::from(transaction.sender_address)),
-            (Name::new("calldata"), Value::from(transaction.calldata)),
+            (Name::new("calldata"), Value::from(transaction.calldata.split("/").collect::<Vec<_>>())),
             (Name::new("maxFee"), Value::from(transaction.max_fee)),
             (Name::new("signature"), Value::from(transaction.signature)),
             (Name::new("nonce"), Value::from(transaction.nonce)),

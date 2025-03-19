@@ -264,5 +264,5 @@ pub struct Transaction {
     pub executed_at: DateTime<Utc>,
     pub created_at: DateTime<Utc>,
     pub transaction_type: String,
-    pub block_number: String,
+    pub block_number: u64,
 }

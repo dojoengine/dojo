@@ -106,6 +106,10 @@ lazy_static! {
             Name::new("createdAt"),
             TypeData::Simple(TypeRef::named(GraphqlType::DateTime.to_string())),
         ),
+        (
+            Name::new("blockNumber"),
+            TypeData::Simple(TypeRef::named(TypeRef::STRING)),
+        )
     ]);
     pub static ref PAGE_INFO_TYPE_MAPPING: TypeMapping = TypeMapping::from([
         (Name::new("hasPreviousPage"), TypeData::Simple(TypeRef::named_nn(TypeRef::BOOLEAN))),
