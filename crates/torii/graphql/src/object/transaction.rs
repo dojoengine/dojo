@@ -85,10 +85,8 @@ impl ResolvableObject for TransactionObject {
     }
 
     fn subscriptions(&self) -> Option<Vec<SubscriptionField>> {
-        Some(vec![SubscriptionField::new(
-            "transaction",
-            TypeRef::named_nn(self.type_name()),
-            |ctx| {
+        Some(vec![
+            SubscriptionField::new("transaction", TypeRef::named_nn(self.type_name()), |ctx| {
                 SubscriptionFieldFuture::new(async move {
                     let hash = match ctx.args.get("hash") {
                         Some(hash) => Some(hash.string()?.to_string()),
@@ -123,10 +121,10 @@ impl ResolvableObject for TransactionObject {
                         },
                     ))
                 })
-            },
-        )
-        .argument(InputValue::new("hash", TypeRef::named(TypeRef::ID)))
-        .argument(InputValue::new("hasCaller", TypeRef::named(TypeRef::STRING)))])
+            })
+            .argument(InputValue::new("hash", TypeRef::named(TypeRef::ID)))
+            .argument(InputValue::new("hasCaller", TypeRef::named(TypeRef::STRING))),
+        ])
     }
 }
 
