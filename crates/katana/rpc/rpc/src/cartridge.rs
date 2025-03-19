@@ -138,9 +138,7 @@ impl<EF: ExecutorFactory> CartridgeApi<EF> {
             // ====================== CONTROLLER DEPLOYMENT ======================
             // Check if the controller is already deployed. If not, deploy it.
 
-            let mut controller_deployed = false;
-
-            let controller_is_deployed = {
+            let is_controller_deployed = {
 	            match this.pending_executor().as_ref() {
 	                Some(executor) => executor.read().state().class_hash_of_contract(address)?.is_some(),
 	                None => {
@@ -149,7 +147,7 @@ impl<EF: ExecutorFactory> CartridgeApi<EF> {
 	            }
             };
 
-            if !controller_is_deployed {
+            if !is_controller_deployed {
 	           	debug!(target: "rpc::cartridge", controller = %address, "Controller not yet deployed");
                 if let Some(tx) =
                     futures::executor::block_on(craft_deploy_cartridge_controller_tx(
@@ -163,7 +161,6 @@ impl<EF: ExecutorFactory> CartridgeApi<EF> {
                 {
                 	debug!(target: "rpc::cartridge", controller = %address, tx = format!("{:#x}", tx.hash),  "Inserting Controller deployment transaction");
                     this.pool.add_transaction(tx)?;
-                    controller_deployed = true;
                 }
             }
 
@@ -171,7 +168,7 @@ impl<EF: ExecutorFactory> CartridgeApi<EF> {
 
             // If we submitted a deploy Controller transaction, then the execute from outside
             // transaction nonce should be incremented.
-            if controller_deployed {
+            if !is_controller_deployed {
                 nonce += Nonce::ONE;
             }
 
