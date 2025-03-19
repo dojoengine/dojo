@@ -149,7 +149,7 @@ impl<EF: ExecutorFactory> CartridgeApi<EF> {
 	            }
             };
 
-            if dbg!(!controller_is_deployed) {
+            if !controller_is_deployed {
 	           	debug!(target: "rpc::cartridge", controller = %address, "Controller not yet deployed");
                 if let Some(tx) =
                     futures::executor::block_on(craft_deploy_cartridge_controller_tx(
