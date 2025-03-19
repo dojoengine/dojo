@@ -76,6 +76,8 @@ pub(crate) static ENTITIES_TABLE: &str = "entities";
 pub(crate) static ENTITIES_MODEL_RELATION_TABLE: &str = "entity_model";
 pub(crate) static ENTITIES_ENTITY_RELATION_COLUMN: &str = "internal_entity_id";
 
+pub(crate) static ENTITIES_HISTORICAL_TABLE: &str = "entities_historical";
+
 pub(crate) static EVENT_MESSAGES_TABLE: &str = "event_messages";
 pub(crate) static EVENT_MESSAGES_MODEL_RELATION_TABLE: &str = "event_model";
 pub(crate) static EVENT_MESSAGES_ENTITY_RELATION_COLUMN: &str = "internal_event_message_id";
@@ -101,9 +103,11 @@ impl From<SchemaError> for Error {
 impl From<Token> for proto::types::Token {
     fn from(value: Token) -> Self {
         Self {
-            token_id: U256::from_be_hex(value.token_id.trim_start_matches("0x"))
-                .to_be_bytes()
-                .to_vec(),
+            token_id: if value.token_id.is_empty() {
+                U256::ZERO.to_be_bytes().to_vec()
+            } else {
+                U256::from_be_hex(value.token_id.trim_start_matches("0x")).to_be_bytes().to_vec()
+            },
             contract_address: Felt::from_str(&value.contract_address)
                 .unwrap()
                 .to_bytes_be()
@@ -398,20 +402,25 @@ impl DojoWorld {
             .collect::<Vec<_>>()
             .join(" OR ");
 
-        if table == EVENT_MESSAGES_HISTORICAL_TABLE {
+        if table == EVENT_MESSAGES_HISTORICAL_TABLE || table == ENTITIES_HISTORICAL_TABLE {
             let count_query = format!(
                 r#"
                 SELECT COUNT(*) FROM {table}
                 JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
-                WHERE {where_clause}
+                {}
                 GROUP BY {table}.event_id
-            "#
+            "#,
+                if where_clause.is_empty() {
+                    String::new()
+                } else {
+                    format!("WHERE {}", where_clause)
+                }
             );
             let mut total_count = sqlx::query_scalar(&count_query);
             for value in &bind_values {
                 total_count = total_count.bind(value);
             }
-            let total_count = total_count.fetch_one(&self.pool).await?;
+            let total_count = total_count.fetch_optional(&self.pool).await?.unwrap_or(0);
             if total_count == 0 {
                 return Ok((Vec::new(), 0));
             }
@@ -422,11 +431,16 @@ impl DojoWorld {
                 SELECT {table}.id, {table}.data, {table}.model_id, group_concat({model_relation_table}.model_id) as model_ids
                 FROM {table}
                 JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
-                WHERE {where_clause}
+                {}
                 GROUP BY {table}.event_id
                 ORDER BY {table}.event_id DESC
-             "#
-                ),
+             "#,
+                if where_clause.is_empty() {
+                    String::new()
+                } else {
+                    format!("WHERE {}", where_clause)
+                }
+            ),
                 bind_values,
                 limit,
                 offset
@@ -526,20 +540,25 @@ impl DojoWorld {
             .collect::<Vec<_>>()
             .join(" OR ");
 
-        if table == EVENT_MESSAGES_HISTORICAL_TABLE {
+        if table == EVENT_MESSAGES_HISTORICAL_TABLE || table == ENTITIES_HISTORICAL_TABLE {
             let count_query = format!(
                 r#"
                 SELECT COUNT(*) FROM {table}
                 JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
-                WHERE {where_clause}
+                {}
                 GROUP BY {table}.event_id
-            "#
+            "#,
+                if where_clause.is_empty() {
+                    String::new()
+                } else {
+                    format!("WHERE {}", where_clause)
+                }
             );
             let mut total_count = sqlx::query_scalar(&count_query);
             for value in &bind_values {
                 total_count = total_count.bind(value);
             }
-            let total_count = total_count.fetch_one(&self.pool).await?;
+            let total_count = total_count.fetch_optional(&self.pool).await?.unwrap_or(0);
             if total_count == 0 {
                 return Ok((Vec::new(), 0));
             }
@@ -550,10 +569,15 @@ impl DojoWorld {
                     SELECT {table}.id, {table}.data, {table}.model_id, group_concat({model_relation_table}.model_id) as model_ids
                     FROM {table}
                     JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
-                    WHERE {where_clause}
+                    {}
                     GROUP BY {table}.event_id
                     ORDER BY {table}.event_id DESC
-                 "#
+                 "#,
+                    if where_clause.is_empty() {
+                        String::new()
+                    } else {
+                        format!("WHERE {}", where_clause)
+                    }
                 ),
                 bind_values,
                 limit,
@@ -1548,14 +1572,12 @@ impl proto::world::world_server::World for DojoWorld {
         &self,
         request: Request<RetrieveEntitiesRequest>,
     ) -> Result<Response<RetrieveEntitiesResponse>, Status> {
-        let query = request
-            .into_inner()
-            .query
-            .ok_or_else(|| Status::invalid_argument("Missing query argument"))?;
+        let RetrieveEntitiesRequest { query, historical } = request.into_inner();
+        let query = query.ok_or_else(|| Status::invalid_argument("Missing query argument"))?;
 
         let entities = self
             .retrieve_entities(
-                ENTITIES_TABLE,
+                if historical { ENTITIES_HISTORICAL_TABLE } else { ENTITIES_TABLE },
                 ENTITIES_MODEL_RELATION_TABLE,
                 ENTITIES_ENTITY_RELATION_COLUMN,
                 query,
@@ -1607,10 +1629,10 @@ impl proto::world::world_server::World for DojoWorld {
         &self,
         request: Request<SubscribeEventMessagesRequest>,
     ) -> ServiceResult<Self::SubscribeEntitiesStream> {
-        let SubscribeEventMessagesRequest { clauses, historical } = request.into_inner();
+        let SubscribeEventMessagesRequest { clauses } = request.into_inner();
         let rx = self
             .event_message_manager
-            .add_subscriber(clauses.into_iter().map(|keys| keys.into()).collect(), historical)
+            .add_subscriber(clauses.into_iter().map(|keys| keys.into()).collect())
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
@@ -1621,13 +1643,12 @@ impl proto::world::world_server::World for DojoWorld {
         &self,
         request: Request<UpdateEventMessagesSubscriptionRequest>,
     ) -> ServiceResult<()> {
-        let UpdateEventMessagesSubscriptionRequest { subscription_id, clauses, historical } =
+        let UpdateEventMessagesSubscriptionRequest { subscription_id, clauses } =
             request.into_inner();
         self.event_message_manager
             .update_subscriber(
                 subscription_id,
                 clauses.into_iter().map(|keys| keys.into()).collect(),
-                historical,
             )
             .await;
 

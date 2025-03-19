@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use anyhow::Result;
 use clap::Parser;
 use dojo_utils::parse::parse_url;
+use merge_options::MergeOptions;
 use serde::{Deserialize, Serialize};
 use starknet::core::types::Felt;
 use url::Url;
@@ -12,7 +13,8 @@ use super::options::*;
 pub const DEFAULT_RPC_URL: &str = "http://0.0.0.0:5050";
 
 /// Dojo World Indexer
-#[derive(Parser, Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Parser, Debug, Serialize, Deserialize, Clone, MergeOptions)]
+#[serde(default)]
 #[command(name = "torii", author, about, long_about = None)]
 #[command(next_help_heading = "Torii general options")]
 pub struct ToriiArgs {
@@ -51,6 +53,9 @@ pub struct ToriiArgs {
     #[command(flatten)]
     pub erc: ErcOptions,
 
+    #[command(flatten)]
+    pub sql: SqlOptions,
+
     #[cfg(feature = "server")]
     #[command(flatten)]
     pub metrics: MetricsOptions,
@@ -64,121 +69,40 @@ pub struct ToriiArgs {
     pub relay: RelayOptions,
 }
 
+impl Default for ToriiArgs {
+    fn default() -> Self {
+        Self {
+            world_address: None,
+            rpc: Url::parse(DEFAULT_RPC_URL).unwrap(),
+            db_dir: None,
+            explorer: false,
+            config: None,
+            indexing: IndexingOptions::default(),
+            events: EventsOptions::default(),
+            erc: ErcOptions::default(),
+            sql: SqlOptions::default(),
+            #[cfg(feature = "server")]
+            metrics: MetricsOptions::default(),
+            #[cfg(feature = "server")]
+            server: ServerOptions::default(),
+            #[cfg(feature = "server")]
+            relay: RelayOptions::default(),
+        }
+    }
+}
+
 impl ToriiArgs {
     pub fn with_config_file(mut self) -> Result<Self> {
-        let config: ToriiArgsConfig = if let Some(path) = &self.config {
+        let config: Self = if let Some(path) = &self.config {
             toml::from_str(&std::fs::read_to_string(path)?)?
         } else {
             return Ok(self);
         };
 
         // the CLI (self) takes precedence over the config file.
-        // Currently, the merge is made at the top level of the commands.
-        // We may add recursive merging in the future.
-
-        if self.world_address.is_none() {
-            self.world_address = config.world_address;
-        }
-
-        if self.rpc == Url::parse(DEFAULT_RPC_URL).unwrap() {
-            if let Some(rpc) = config.rpc {
-                self.rpc = rpc;
-            }
-        }
-
-        if self.db_dir.is_none() {
-            self.db_dir = config.db_dir;
-        }
-
-        // Currently the comparison it's only at the top level.
-        // Need to make it more granular.
-
-        if !self.explorer {
-            self.explorer = config.explorer.unwrap_or_default();
-        }
-
-        self.indexing.merge(config.indexing.as_ref());
-
-        if self.events == EventsOptions::default() {
-            self.events = config.events.unwrap_or_default();
-        }
-
-        if self.erc == ErcOptions::default() {
-            self.erc = config.erc.unwrap_or_default();
-        }
-
-        #[cfg(feature = "server")]
-        {
-            if self.server == ServerOptions::default() {
-                self.server = config.server.unwrap_or_default();
-            }
-
-            if self.relay == RelayOptions::default() {
-                self.relay = config.relay.unwrap_or_default();
-            }
-
-            if self.metrics == MetricsOptions::default() {
-                self.metrics = config.metrics.unwrap_or_default();
-            }
-        }
+        self.merge(Some(&config));
 
         Ok(self)
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize, Default)]
-pub struct ToriiArgsConfig {
-    pub world_address: Option<Felt>,
-    pub rpc: Option<Url>,
-    pub db_dir: Option<PathBuf>,
-    pub external_url: Option<Url>,
-    pub explorer: Option<bool>,
-    pub indexing: Option<IndexingOptions>,
-    pub events: Option<EventsOptions>,
-    pub erc: Option<ErcOptions>,
-    #[cfg(feature = "server")]
-    pub metrics: Option<MetricsOptions>,
-    #[cfg(feature = "server")]
-    pub server: Option<ServerOptions>,
-    #[cfg(feature = "server")]
-    pub relay: Option<RelayOptions>,
-}
-
-impl TryFrom<ToriiArgs> for ToriiArgsConfig {
-    type Error = anyhow::Error;
-
-    fn try_from(args: ToriiArgs) -> Result<Self> {
-        // Ensure the config file is merged with the CLI arguments.
-        let args = args.with_config_file()?;
-
-        let mut config =
-            ToriiArgsConfig { world_address: args.world_address, ..Default::default() };
-
-        config.world_address = args.world_address;
-        config.rpc =
-            if args.rpc == Url::parse(DEFAULT_RPC_URL).unwrap() { None } else { Some(args.rpc) };
-        config.db_dir = args.db_dir;
-        config.explorer = Some(args.explorer);
-
-        // Only include the following options if they are not the default.
-        // This makes the config file more readable.
-        config.indexing =
-            if args.indexing == IndexingOptions::default() { None } else { Some(args.indexing) };
-        config.events =
-            if args.events == EventsOptions::default() { None } else { Some(args.events) };
-        config.erc = if args.erc == ErcOptions::default() { None } else { Some(args.erc) };
-
-        #[cfg(feature = "server")]
-        {
-            config.server =
-                if args.server == ServerOptions::default() { None } else { Some(args.server) };
-            config.relay =
-                if args.relay == RelayOptions::default() { None } else { Some(args.relay) };
-            config.metrics =
-                if args.metrics == MetricsOptions::default() { None } else { Some(args.metrics) };
-        }
-
-        Ok(config)
     }
 }
 
@@ -187,7 +111,7 @@ mod test {
     use std::net::{IpAddr, Ipv4Addr};
     use std::str::FromStr;
 
-    use torii_sqlite::types::{Contract, ContractType};
+    use torii_sqlite::types::{Contract, ContractType, ModelIndices};
 
     use super::*;
 
@@ -202,12 +126,19 @@ mod test {
         [indexing]
         transactions = false
 
-        [events]
-        raw = true
+        [sql]
         historical = [
             "ns-E",
             "ns-EH"
         ]
+        page_size = 2048
+
+        [[sql.model_indices]]
+        model_tag = "ns-Position"
+        fields = ["vec.x", "vec.y"]
+        
+        [events]
+        raw = true
         "#;
         let path = std::env::temp_dir().join("torii-config2.json");
         std::fs::write(&path, content).unwrap();
@@ -222,9 +153,13 @@ mod test {
             "http://0.0.0.0:6060",
             "--db-dir",
             "/tmp/torii-test2",
-            "--events.historical",
+            "--sql.historical",
             "a-A",
             "--indexing.transactions",
+            "--sql.model_indices",
+            "ns-Position:vec.x,vec.y;ns-Moves:player",
+            "--sql.page_size",
+            "1024",
             "--config",
             path_str.as_str(),
         ];
@@ -234,10 +169,86 @@ mod test {
         assert_eq!(torii_args.world_address, Some(Felt::from_str("0x9999").unwrap()));
         assert_eq!(torii_args.rpc, Url::parse("http://0.0.0.0:6060").unwrap());
         assert_eq!(torii_args.db_dir, Some(PathBuf::from("/tmp/torii-test2")));
-        assert!(!torii_args.events.raw);
-        assert_eq!(torii_args.events.historical, vec!["a-A".to_string()]);
+        assert!(torii_args.events.raw);
+        assert_eq!(torii_args.sql.historical, vec!["a-A".to_string()]);
         assert_eq!(torii_args.server, ServerOptions::default());
         assert!(torii_args.indexing.transactions);
+        assert_eq!(torii_args.sql.page_size, 1024);
+        assert_eq!(torii_args.sql.cache_size, DEFAULT_DATABASE_CACHE_SIZE);
+        assert_eq!(
+            torii_args.sql.model_indices,
+            Some(vec![
+                ModelIndices {
+                    model_tag: "ns-Position".to_string(),
+                    fields: vec!["vec.x".to_string(), "vec.y".to_string()],
+                },
+                ModelIndices {
+                    model_tag: "ns-Moves".to_string(),
+                    fields: vec!["player".to_string()],
+                },
+            ])
+        );
+    }
+
+    #[test]
+    fn test_config_default_empty_toml() {
+        // give empty cli args and an empty toml file and check it has the default values
+        let content = "";
+        let path = std::env::temp_dir().join("torii-config3.json");
+        std::fs::write(&path, content).unwrap();
+
+        let path_str = path.to_string_lossy().to_string();
+
+        let args = vec!["torii", "--config", path_str.as_str()];
+
+        let torii_args = ToriiArgs::parse_from(args).with_config_file().unwrap();
+
+        assert_eq!(torii_args.world_address, None);
+
+        assert_eq!(torii_args.rpc, Url::parse(DEFAULT_RPC_URL).unwrap());
+
+        assert_eq!(torii_args.db_dir, None);
+
+        assert!(!torii_args.explorer);
+
+        assert_eq!(torii_args.indexing, IndexingOptions::default());
+        assert_eq!(torii_args.events, EventsOptions::default());
+        assert_eq!(torii_args.erc, ErcOptions::default());
+        assert_eq!(torii_args.sql, SqlOptions::default());
+        assert_eq!(torii_args.server, ServerOptions::default());
+        assert_eq!(torii_args.relay, RelayOptions::default());
+        assert_eq!(torii_args.metrics, MetricsOptions::default());
+
+        assert_eq!(torii_args.indexing.blocks_chunk_size, DEFAULT_BLOCKS_CHUNK_SIZE);
+        assert_eq!(torii_args.indexing.events_chunk_size, DEFAULT_EVENTS_CHUNK_SIZE);
+        assert!(torii_args.indexing.pending);
+        assert_eq!(torii_args.indexing.polling_interval, DEFAULT_POLLING_INTERVAL);
+        assert_eq!(torii_args.indexing.max_concurrent_tasks, DEFAULT_MAX_CONCURRENT_TASKS);
+
+        assert!(!torii_args.events.raw);
+
+        assert_eq!(torii_args.erc.max_metadata_tasks, DEFAULT_ERC_MAX_METADATA_TASKS);
+        assert_eq!(torii_args.erc.artifacts_path, None);
+
+        assert_eq!(torii_args.sql.page_size, DEFAULT_DATABASE_PAGE_SIZE);
+        assert_eq!(torii_args.sql.cache_size, DEFAULT_DATABASE_CACHE_SIZE);
+        assert_eq!(torii_args.sql.model_indices, None);
+        assert_eq!(torii_args.sql.historical, Vec::<String>::new());
+
+        assert_eq!(torii_args.server.http_addr, DEFAULT_HTTP_ADDR);
+        assert_eq!(torii_args.server.http_port, DEFAULT_HTTP_PORT);
+        assert_eq!(torii_args.server.http_cors_origins, None);
+
+        assert!(!torii_args.metrics.metrics);
+        assert_eq!(torii_args.metrics.metrics_addr, DEFAULT_METRICS_ADDR);
+        assert_eq!(torii_args.metrics.metrics_port, DEFAULT_METRICS_PORT);
+
+        assert_eq!(torii_args.relay.port, DEFAULT_RELAY_PORT);
+        assert_eq!(torii_args.relay.webrtc_port, DEFAULT_RELAY_WEBRTC_PORT);
+        assert_eq!(torii_args.relay.websocket_port, DEFAULT_RELAY_WEBSOCKET_PORT);
+        assert_eq!(torii_args.relay.local_key_path, None);
+        assert_eq!(torii_args.relay.cert_path, None);
+        assert_eq!(torii_args.relay.peers, Vec::<String>::new());
     }
 
     #[test]
@@ -249,10 +260,6 @@ mod test {
 
         [events]
         raw = true
-        historical = [
-            "ns-E",
-            "ns-EH"
-        ]
 
         [server]
         http_addr = "127.0.0.1"
@@ -269,6 +276,16 @@ mod test {
             "erc721:0x5678"
         ]
         namespaces = []
+
+        [sql]
+        historical = [
+            "ns-E",
+            "ns-EH"
+        ]
+
+        [[sql.model_indices]]
+        model_tag = "ns-Position"
+        fields = ["vec.x", "vec.y"]
         "#;
         let path = std::env::temp_dir().join("torii-config.json");
         std::fs::write(&path, content).unwrap();
@@ -283,7 +300,7 @@ mod test {
         assert_eq!(torii_args.rpc, Url::parse("http://0.0.0.0:2222").unwrap());
         assert_eq!(torii_args.db_dir, Some(PathBuf::from("/tmp/torii-test")));
         assert!(torii_args.events.raw);
-        assert_eq!(torii_args.events.historical, vec!["ns-E".to_string(), "ns-EH".to_string()]);
+        assert_eq!(torii_args.sql.historical, vec!["ns-E".to_string(), "ns-EH".to_string()]);
         assert_eq!(torii_args.indexing.events_chunk_size, 9999);
         assert_eq!(torii_args.indexing.blocks_chunk_size, 10240);
         assert!(torii_args.indexing.pending);
@@ -302,6 +319,13 @@ mod test {
                     r#type: ContractType::ERC721
                 }
             ]
+        );
+        assert_eq!(
+            torii_args.sql.model_indices,
+            Some(vec![ModelIndices {
+                model_tag: "ns-Position".to_string(),
+                fields: vec!["vec.x".to_string(), "vec.y".to_string()],
+            }])
         );
         assert_eq!(torii_args.server.http_addr, IpAddr::V4(Ipv4Addr::LOCALHOST));
         assert_eq!(torii_args.server.http_port, 7777);

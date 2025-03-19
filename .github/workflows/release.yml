@@ -14,7 +14,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  RUST_VERSION: 1.81.0
+  RUST_VERSION: 1.85.0
   REGISTRY_IMAGE: ghcr.io/${{ github.repository }}
 
 jobs:
@@ -86,6 +86,11 @@ jobs:
         with:
           cache-on-failure: true
 
+      # Required to build Katana at the moment.
+      - uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
       # required for `aws-lc-rs` crate to compile on Windows; https://aws.github.io/aws-lc-rs/requirements/windows.html
       - name: Install NASM
         uses: ilammy/setup-nasm@v1
@@ -132,7 +137,7 @@ jobs:
             cd ./target/${TARGET}/release
             7z a -tzip "dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.zip" katana.exe sozo.exe torii.exe dojo-language-server.exe
             mv "dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.zip" ../../../
-            echo "file_name=dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz" >> $GITHUB_OUTPUT
+            echo "file_name=dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.zip" >> $GITHUB_OUTPUT
           fi
         shell: bash
 
@@ -181,7 +186,7 @@ jobs:
           echo "version=v$(cargo get workspace.package.version)" >> $GITHUB_OUTPUT
       - name: Display structure of downloaded files
         run: ls -R artifacts
-      - run: gh release create ${{ steps.version_info.outputs.version }} ./artifacts/*.gz --generate-notes --draft
+      - run: gh release create ${{ steps.version_info.outputs.version }} ./artifacts/*.{gz,zip} --generate-notes --draft
 
   docker-build-and-push:
     runs-on: ubuntu-20.04-4-cores

@@ -9,7 +9,7 @@ use katana_pool::{TransactionPool, TxPool};
 use katana_primitives::chain::ChainId;
 use katana_primitives::transaction::{ExecutableTxWithHash, L1HandlerTx, TxHash};
 use tokio::time::{interval_at, Instant, Interval};
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 use super::{MessagingConfig, Messenger, MessengerMode, MessengerResult, LOG_TARGET};
 
@@ -97,6 +97,8 @@ impl MessagingService {
 
                 Ok((block_num, txs_count))
             }
+
+            MessengerMode::Sovereign(_) => Ok((0, 0)),
         }
     }
 }
@@ -153,6 +155,13 @@ impl Stream for MessagingService {
 
 /// Returns an `Interval` from the given seconds.
 fn interval_from_seconds(secs: u64) -> Interval {
+    let secs = if secs == 0 {
+        warn!(target: LOG_TARGET, "Messaging interval is 0, using 1 second instead.");
+        1
+    } else {
+        secs
+    };
+
     let duration = Duration::from_secs(secs);
     let mut interval = interval_at(Instant::now() + duration, duration);
     interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);

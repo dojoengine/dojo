@@ -178,12 +178,12 @@ async fn test_client_messaging() -> Result<(), Box<dyn Error>> {
             .sign(&message_hash)
             .unwrap();
 
+    sleep(std::time::Duration::from_secs(2)).await;
+
     client
         .command_sender
         .publish(Message { message: typed_data, signature: vec![signature.r, signature.s] })
         .await?;
-
-    sleep(std::time::Duration::from_secs(2)).await;
 
     loop {
         select! {

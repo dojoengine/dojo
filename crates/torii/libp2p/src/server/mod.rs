@@ -7,6 +7,7 @@ use std::time::Duration;
 use std::{fs, io};
 
 use chrono::Utc;
+use dojo_types::naming::is_valid_tag;
 use dojo_types::schema::Ty;
 use dojo_world::contracts::naming::compute_selector_from_tag;
 use futures::StreamExt;
@@ -14,7 +15,7 @@ use libp2p::core::multiaddr::Protocol;
 use libp2p::core::muxing::StreamMuxerBox;
 use libp2p::core::upgrade::Version;
 use libp2p::core::Multiaddr;
-use libp2p::gossipsub::{self, IdentTopic};
+use libp2p::gossipsub::{self, IdentTopic, PublishError};
 use libp2p::swarm::{NetworkBehaviour, SwarmEvent};
 use libp2p::{
     dns, identify, identity, noise, ping, relay, tcp, websocket, yamux, PeerId, Swarm, Transport,
@@ -69,6 +70,29 @@ impl<P: Provider + Sync> Relay<P> {
         port_websocket: u16,
         local_key_path: Option<String>,
         cert_path: Option<String>,
+    ) -> Result<Self, Error> {
+        Self::new_with_peers(
+            pool,
+            provider,
+            port,
+            port_webrtc,
+            port_websocket,
+            local_key_path,
+            cert_path,
+            vec![],
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn new_with_peers(
+        pool: Sql,
+        provider: P,
+        port: u16,
+        port_webrtc: u16,
+        port_websocket: u16,
+        local_key_path: Option<String>,
+        cert_path: Option<String>,
+        peers: Vec<String>,
     ) -> Result<Self, Error> {
         let local_key = if let Some(path) = local_key_path {
             let path = Path::new(&path);
@@ -167,6 +191,12 @@ impl<P: Provider + Sync> Relay<P> {
             .with(Protocol::Ws("/".to_string().into()));
         swarm.listen_on(listen_addr_wss.clone())?;
 
+        // We dial all of our peers. Our server will then broadcast
+        // all incoming offchain messages to all of our peers.
+        for peer in peers {
+            swarm.dial(peer.parse::<Multiaddr>().unwrap())?;
+        }
+
         // Clients will send their messages to the "message" topic
         // with a room name as the message data.
         // and we will forward those messages to a specific room - in this case the topic
@@ -175,6 +205,12 @@ impl<P: Provider + Sync> Relay<P> {
             .behaviour_mut()
             .gossipsub
             .subscribe(&IdentTopic::new(constants::MESSAGING_TOPIC))
+            .unwrap();
+
+        swarm
+            .behaviour_mut()
+            .gossipsub
+            .subscribe(&IdentTopic::new(constants::PEERS_MESSAGING_TOPIC))
             .unwrap();
 
         Ok(Self { swarm, db: pool, provider: Box::new(provider) })
@@ -190,12 +226,17 @@ impl<P: Provider + Sync> Relay<P> {
                             message_id,
                             message,
                         }) => {
+                            // Ignore our own messages
+                            if peer_id == self.swarm.local_peer_id() {
+                                continue;
+                            }
+
                             // Deserialize typed data.
                             // We shouldn't panic here
                             let data = match serde_json::from_slice::<Message>(&message.data) {
                                 Ok(message) => message,
                                 Err(e) => {
-                                    info!(
+                                    warn!(
                                         target: LOG_TARGET,
                                         error = %e,
                                         "Deserializing message."
@@ -207,7 +248,7 @@ impl<P: Provider + Sync> Relay<P> {
                             let ty = match validate_message(&self.db, &data.message).await {
                                 Ok(parsed_message) => parsed_message,
                                 Err(e) => {
-                                    info!(
+                                    warn!(
                                         target: LOG_TARGET,
                                         error = %e,
                                         "Validating message."
@@ -285,7 +326,7 @@ impl<P: Provider + Sync> Relay<P> {
                                         continue;
                                     }
                                 },
-                                None => match get_identity_from_ty(&ty) {
+                                _ => match get_identity_from_ty(&ty) {
                                     Ok(identity) => identity,
                                     Err(e) => {
                                         warn!(
@@ -321,7 +362,7 @@ impl<P: Provider + Sync> Relay<P> {
                                     continue;
                                 }
                             } {
-                                info!(
+                                warn!(
                                     target: LOG_TARGET,
                                     message_id = %message_id,
                                     peer_id = %peer_id,
@@ -332,7 +373,7 @@ impl<P: Provider + Sync> Relay<P> {
 
                             if let Err(e) = set_entity(
                                 &mut self.db,
-                                ty,
+                                ty.clone(),
                                 &message_id.to_string(),
                                 Utc::now().timestamp() as u64,
                                 entity_id,
@@ -341,7 +382,7 @@ impl<P: Provider + Sync> Relay<P> {
                             )
                             .await
                             {
-                                info!(
+                                warn!(
                                     target: LOG_TARGET,
                                     error = %e,
                                     "Setting message."
@@ -355,6 +396,35 @@ impl<P: Provider + Sync> Relay<P> {
                                 peer_id = %peer_id,
                                 "Message verified and set."
                             );
+
+                            // We only want to publish messages from our clients. Not from our peers
+                            // otherwise recursion hell :<
+                            if message.topic != IdentTopic::new(constants::MESSAGING_TOPIC).hash() {
+                                continue;
+                            }
+
+                            // Publish message to all peers if there are any
+                            match self
+                                .swarm
+                                .behaviour_mut()
+                                .gossipsub
+                                .publish(
+                                    IdentTopic::new(constants::PEERS_MESSAGING_TOPIC),
+                                    serde_json::to_string(&data).unwrap(),
+                                )
+                                .map_err(Error::PublishError)
+                            {
+                                Ok(_) => info!(
+                                    target: LOG_TARGET,
+                                    "Forwarded message to peers."
+                                ),
+                                Err(Error::PublishError(PublishError::InsufficientPeers)) => {}
+                                Err(e) => warn!(
+                                    target: LOG_TARGET,
+                                    error = %e,
+                                    "Publishing message to peers."
+                                ),
+                            }
                         }
                         ServerEvent::Gossipsub(gossipsub::Event::Subscribed { peer_id, topic }) => {
                             info!(
@@ -452,6 +522,13 @@ fn ty_keys(ty: &Ty) -> Result<Vec<Felt>, Error> {
 fn ty_model_id(ty: &Ty) -> Result<Felt, Error> {
     let namespaced_name = ty.name();
 
+    if !is_valid_tag(&namespaced_name) {
+        return Err(Error::InvalidMessageError(format!(
+            "Invalid message model (invalid tag): {}",
+            namespaced_name
+        )));
+    }
+
     let selector = compute_selector_from_tag(&namespaced_name);
     Ok(selector)
 }
@@ -459,6 +536,13 @@ fn ty_model_id(ty: &Ty) -> Result<Felt, Error> {
 // Validates the message model
 // and returns the identity and signature
 async fn validate_message(db: &Sql, message: &TypedData) -> Result<Ty, Error> {
+    if !is_valid_tag(&message.primary_type) {
+        return Err(Error::InvalidMessageError(format!(
+            "Invalid message model (invalid tag): {}",
+            message.primary_type
+        )));
+    }
+
     let selector = compute_selector_from_tag(&message.primary_type);
 
     let mut ty = db
@@ -524,6 +608,7 @@ fn get_identity_from_ty(ty: &Ty) -> Result<Felt, Error> {
     Ok(identity)
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn set_entity(
     db: &mut Sql,
     ty: Ty,

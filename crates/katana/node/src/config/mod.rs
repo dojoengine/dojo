@@ -17,6 +17,7 @@ use katana_messaging::MessagingConfig;
 use metrics::MetricsConfig;
 use rpc::RpcConfig;
 use sequencing::SequencingConfig;
+use url::Url;
 
 /// Node configurations.
 ///
@@ -49,4 +50,15 @@ pub struct Config {
 
     /// Development options.
     pub dev: DevConfig,
+
+    /// Cartridge paymaster options.
+    #[cfg(feature = "cartridge")]
+    pub paymaster: Option<Paymaster>,
+}
+
+#[cfg(feature = "cartridge")]
+#[derive(Debug, Clone)]
+pub struct Paymaster {
+    /// The root URL for the Cartridge API.
+    pub cartridge_api_url: Url,
 }

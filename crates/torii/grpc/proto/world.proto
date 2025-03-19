@@ -178,7 +178,6 @@ message SubscribeEntitiesRequest {
 
 message SubscribeEventMessagesRequest {
     repeated types.EntityKeysClause clauses = 1;
-    bool historical = 2;
 }
 
 message UpdateEntitiesSubscriptionRequest {
@@ -189,7 +188,6 @@ message UpdateEntitiesSubscriptionRequest {
 message UpdateEventMessagesSubscriptionRequest {
     uint64 subscription_id = 1;
     repeated types.EntityKeysClause clauses = 2;
-    bool historical = 3;
 }
 
 message SubscribeEntityResponse {
@@ -200,6 +198,8 @@ message SubscribeEntityResponse {
 message RetrieveEntitiesRequest {
     // The entities to retrieve
     types.Query query = 1;
+    // Should we retrieve historical entities?
+    bool historical = 2;
 }
 
 message RetrieveEventMessagesRequest {

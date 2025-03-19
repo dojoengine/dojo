@@ -21,10 +21,13 @@ pub struct NodeArgsConfig {
     pub forking: Option<ForkingOptions>,
     #[serde(rename = "dev")]
     pub development: Option<DevOptions>,
+    pub rpc: Option<RpcOptions>,
     #[cfg(feature = "server")]
     pub server: Option<ServerOptions>,
     #[cfg(feature = "server")]
     pub metrics: Option<MetricsOptions>,
+    #[cfg(feature = "cartridge")]
+    pub cartridge: Option<CartridgeOptions>,
 }
 
 impl NodeArgsConfig {
@@ -62,6 +65,7 @@ impl TryFrom<NodeArgs> for NodeArgsConfig {
             if args.forking == ForkingOptions::default() { None } else { Some(args.forking) };
         node_config.development =
             if args.development == DevOptions::default() { None } else { Some(args.development) };
+        node_config.rpc = if args.rpc == RpcOptions::default() { None } else { Some(args.rpc) };
 
         #[cfg(feature = "server")]
         {
@@ -69,6 +73,15 @@ impl TryFrom<NodeArgs> for NodeArgsConfig {
                 if args.server == ServerOptions::default() { None } else { Some(args.server) };
             node_config.metrics =
                 if args.metrics == MetricsOptions::default() { None } else { Some(args.metrics) };
+        }
+
+        #[cfg(feature = "cartridge")]
+        {
+            node_config.cartridge = if args.cartridge == CartridgeOptions::default() {
+                None
+            } else {
+                Some(args.cartridge)
+            };
         }
 
         Ok(node_config)

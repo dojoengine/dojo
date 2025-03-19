@@ -28,6 +28,11 @@ use crate::commands::options::starknet::StarknetOptions;
 use crate::commands::options::world::WorldOptions;
 use crate::commands::LOG_TARGET;
 
+/// The maximum number of blocks that will separate the `from_block` and the `to_block` in the
+/// event fetching, which if too high will cause the event fetching to fail in most of the node
+/// providers.
+pub const MAX_BLOCK_RANGE: u64 = 200_000;
+
 pub const CALLDATA_DOC: &str = "
 Space separated values e.g., 0x12345 128 u256:9999999999 str:'hello world'.
 Sozo supports some prefixes that you can use to automatically parse some types. The supported \
@@ -166,6 +171,7 @@ pub async fn get_world_diff_and_provider(
         world_local,
         &provider,
         env.and_then(|e| e.world_block),
+        env.and_then(|e| e.max_block_range).unwrap_or(MAX_BLOCK_RANGE),
         &world.namespaces,
     )
     .await?;

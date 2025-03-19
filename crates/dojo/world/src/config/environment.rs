@@ -11,6 +11,7 @@ pub struct Environment {
     pub keystore_password: Option<String>,
     pub world_address: Option<String>,
     pub world_block: Option<u64>,
+    pub max_block_range: Option<u64>,
     pub http_headers: Option<Vec<HttpHeader>>,
     pub ipfs_config: Option<IpfsConfig>,
 }

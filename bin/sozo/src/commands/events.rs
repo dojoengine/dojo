@@ -11,7 +11,9 @@ use sozo_ops::model;
 use sozo_scarbext::WorkspaceExt;
 use starknet::core::types::{BlockId, BlockTag, EventFilter, Felt};
 use starknet::core::utils::starknet_keccak;
+use starknet::macros::felt;
 use starknet::providers::Provider;
+use tracing::trace;
 
 use super::options::starknet::StarknetOptions;
 use super::options::world::WorldOptions;
@@ -36,9 +38,11 @@ pub struct EventsArgs {
     #[arg(default_value_t = 100)]
     pub chunk_size: u64,
 
-    #[arg(long)]
-    #[arg(help = "Continuation string to be passed for rpc request")]
-    pub continuation_token: Option<String>,
+    #[arg(short, long)]
+    #[arg(help = "Maximum number of blocks between `from_block` and `to_block`. A too high \
+                  value will cause the event fetching to fail.")]
+    #[arg(default_value_t = 200_000)]
+    pub max_block_range: u64,
 
     #[arg(long)]
     #[arg(help = "Print values as raw json")]
@@ -59,35 +63,78 @@ impl EventsArgs {
 
             let (world_diff, provider, _) =
                 utils::get_world_diff_and_provider(self.starknet, self.world, &ws).await?;
-
             let provider = Arc::new(provider);
 
+            let latest_block = provider.block_number().await?;
             let from_block = if let Some(world_block) =
                 profile_config.env.as_ref().and_then(|e| e.world_block)
             {
-                Some(BlockId::Number(world_block))
+                world_block
             } else {
-                self.from_block.map(BlockId::Number)
+                self.from_block.unwrap_or(0)
             };
+            let to_block = self.to_block.unwrap_or(latest_block);
 
-            let to_block = self.to_block.map(BlockId::Number);
-            let keys = self
-                .events
-                .map(|e| vec![e.iter().map(|event| starknet_keccak(event.as_bytes())).collect()]);
+            let chain_id = provider.chain_id().await?;
+            // Katana if it's not `SN_SEPOLIA` or `SN_MAIN`.
+            let is_katana = chain_id != felt!("0x534e5f5345504f4c4941")
+                && chain_id != felt!("0x534e5f4d41494e");
 
-            let event_filter = EventFilter {
-                from_block,
-                to_block,
-                address: Some(world_diff.world_info.address),
-                keys,
-            };
+            let mut current_from = from_block;
+            let mut events = Vec::new();
 
-            let res =
-                provider.get_events(event_filter, self.continuation_token, self.chunk_size).await?;
+            while current_from <= to_block {
+                let current_to = std::cmp::min(current_from + self.max_block_range - 1, to_block);
 
-            for event in &res.events {
+                let filter = EventFilter {
+                    from_block: Some(BlockId::Number(current_from)),
+                    to_block: Some(BlockId::Number(current_to)),
+                    address: Some(world_diff.world_info.address),
+                    keys: self.events.as_ref().map(|e| {
+                        vec![e.iter().map(|event| starknet_keccak(event.as_bytes())).collect()]
+                    }),
+                };
+
+                trace!(
+                    world_address = format!("{:#066x}", world_diff.world_info.address),
+                    self.chunk_size,
+                    ?filter,
+                    "Fetching remote world events for block range {}-{}.",
+                    current_from,
+                    current_to
+                );
+
+                let mut continuation_token = None;
+                loop {
+                    let page = provider
+                        .get_events(filter.clone(), continuation_token, self.chunk_size)
+                        .await?;
+
+                    if is_katana && page.events.is_empty() {
+                        break;
+                    }
+
+                    events.extend(page.events);
+
+                    continuation_token = page.continuation_token;
+                    if continuation_token.is_none() {
+                        break;
+                    }
+                }
+
+                current_from = current_to + 1;
+            }
+
+            trace!(
+                events_count = events.len(),
+                world_address = format!("{:#066x}", world_diff.world_info.address),
+                "Fetched events for world."
+            );
+
+            for event in &events {
                 match world::Event::try_from(event) {
                     Ok(ev) => {
+                        trace!(?ev, "Processing world event.");
                         match_event(
                             &ev,
                             &world_diff,
@@ -95,10 +142,7 @@ impl EventsArgs {
                             event.transaction_hash,
                             &provider,
                         )
-                        .await
-                        .unwrap_or_else(|e| {
-                            tracing::error!(?e, "Failed to process event: {:?}", ev);
-                        });
+                        .await?;
                     }
                     Err(e) => {
                         tracing::error!(
@@ -107,11 +151,6 @@ impl EventsArgs {
                         );
                     }
                 }
-            }
-
-            if let Some(continuation_token) = res.continuation_token {
-                println!("Continuation token: {:?}", continuation_token);
-                println!("----------------------------------------------");
             }
 
             Ok(())

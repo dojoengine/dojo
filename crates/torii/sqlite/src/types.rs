@@ -78,8 +78,6 @@ pub struct EventMessage {
     // this should never be None
     #[sqlx(skip)]
     pub updated_model: Option<Ty>,
-    #[sqlx(skip)]
-    pub historical: bool,
 }
 
 #[derive(FromRow, Deserialize, Debug, Clone)]
@@ -95,8 +93,6 @@ pub struct OptimisticEventMessage {
     // this should never be None
     #[sqlx(skip)]
     pub updated_model: Option<Ty>,
-    #[sqlx(skip)]
-    pub historical: bool,
 }
 
 #[derive(FromRow, Deserialize, Debug, Clone)]
@@ -271,4 +267,10 @@ pub struct Transaction {
     pub calls: Vec<ParsedCall>,
     #[sqlx(skip)]
     pub contract_addresses: HashSet<Felt>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ModelIndices {
+    pub model_tag: String,
+    pub fields: Vec<String>,
 }
