@@ -89,6 +89,7 @@ impl KatanaInstance {
 impl Drop for KatanaInstance {
     fn drop(&mut self) {
         self.child.kill().expect("could not kill katana");
+        let _ = self.child.wait().expect("could not kill katana");
     }
 }
 
