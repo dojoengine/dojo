@@ -4,6 +4,7 @@ use dojo_types::primitive::PrimitiveError;
 use dojo_types::schema::EnumError;
 use starknet::core::types::FromStrError;
 use starknet::core::utils::{CairoShortStringToFeltError, NonAsciiNameError};
+use starknet::providers::ProviderError;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -17,6 +18,8 @@ pub enum Error {
     PrimitiveError(#[from] PrimitiveError),
     #[error(transparent)]
     EnumError(#[from] EnumError),
+    #[error(transparent)]
+    ProviderError(#[from] ProviderError),
 }
 
 #[derive(Debug, thiserror::Error)]

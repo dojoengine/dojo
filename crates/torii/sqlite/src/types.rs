@@ -1,4 +1,5 @@
 use core::fmt;
+use std::collections::HashSet;
 use std::str::FromStr;
 
 use chrono::{DateTime, Utc};
@@ -221,6 +222,51 @@ pub struct ContractCursor {
     pub contract_address: String,
     pub last_pending_block_tx: Option<String>,
     pub last_pending_block_contract_tx: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub enum CallType {
+    Execute,
+    ExecuteFromOutside,
+}
+
+impl std::fmt::Display for CallType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CallType::Execute => write!(f, "EXECUTE"),
+            CallType::ExecuteFromOutside => write!(f, "EXECUTE_FROM_OUTSIDE"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct ParsedCall {
+    pub contract_address: Felt,
+    pub entrypoint: String,
+    pub calldata: Vec<Felt>,
+    pub call_type: CallType,
+    pub caller_address: Felt,
+}
+
+#[derive(FromRow, Deserialize, Debug, Clone, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct Transaction {
+    pub id: String,
+    pub transaction_hash: String,
+    pub sender_address: String,
+    pub calldata: String,
+    pub max_fee: String,
+    pub signature: String,
+    pub nonce: String,
+    pub executed_at: DateTime<Utc>,
+    pub created_at: DateTime<Utc>,
+    pub transaction_type: String,
+    pub block_number: u64,
+
+    #[sqlx(skip)]
+    pub calls: Vec<ParsedCall>,
+    #[sqlx(skip)]
+    pub contract_addresses: HashSet<Felt>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

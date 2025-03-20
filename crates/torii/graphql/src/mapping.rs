@@ -64,6 +64,14 @@ lazy_static! {
             TypeData::Simple(TypeRef::named(GraphqlType::DateTime.to_string())),
         ),
     ]);
+    pub static ref CALL_MAPPING: TypeMapping = IndexMap::from([
+        (Name::new("transactionHash"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+        (Name::new("contractAddress"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+        (Name::new("entrypoint"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+        (Name::new("calldata"), TypeData::Simple(TypeRef::named_list(TypeRef::STRING))),
+        (Name::new("callType"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+        (Name::new("callerAddress"), TypeData::Simple(TypeRef::named(TypeRef::STRING))),
+    ]);
     pub static ref TRANSACTION_MAPPING: TypeMapping = IndexMap::from([
         (Name::new("id"), TypeData::Simple(TypeRef::named(TypeRef::ID))),
         (
@@ -98,6 +106,10 @@ lazy_static! {
             Name::new("createdAt"),
             TypeData::Simple(TypeRef::named(GraphqlType::DateTime.to_string())),
         ),
+        (
+            Name::new("blockNumber"),
+            TypeData::Simple(TypeRef::named(TypeRef::STRING)),
+        )
     ]);
     pub static ref PAGE_INFO_TYPE_MAPPING: TypeMapping = TypeMapping::from([
         (Name::new("hasPreviousPage"), TypeData::Simple(TypeRef::named_nn(TypeRef::BOOLEAN))),

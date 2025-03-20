@@ -143,139 +143,20 @@ impl ResolvableObject for ErcBalanceObject {
                                         Err(_) => return None,
                                     };
 
-                                    let balance_value = match row
-                                        .contract_type
-                                        .to_lowercase()
-                                        .as_str()
-                                    {
-                                        "erc20" => {
-                                            let token_metadata = Erc20Token {
-                                                contract_address: row.contract_address,
-                                                name: row.name,
-                                                symbol: row.symbol,
-                                                decimals: row.decimals,
-                                                amount: row.balance,
-                                            };
-                                            ErcTokenType::Erc20(token_metadata)
+                                    // Use the extracted mapping function
+                                    match token_balance_mapping_from_row(&row) {
+                                        Ok(balance_value) => {
+                                            Some(Ok(FieldValue::owned_any(balance_value)))
                                         }
-                                        "erc721" => {
-                                            let token_id =
-                                                row.token_id.split(':').collect::<Vec<&str>>();
-                                            assert!(token_id.len() == 2);
-
-                                            let metadata_str = row.metadata;
-                                            let (
-                                                metadata_str,
-                                                metadata_name,
-                                                metadata_description,
-                                                metadata_attributes,
-                                                image_path,
-                                            ) = if metadata_str.is_empty() {
-                                                (String::new(), None, None, None, String::new())
-                                            } else {
-                                                let metadata: serde_json::Value =
-                                                    serde_json::from_str(&metadata_str)
-                                                        .expect("metadata is always json");
-                                                let metadata_name = metadata.get("name").map(|v| {
-                                                    v.to_string().trim_matches('"').to_string()
-                                                });
-                                                let metadata_description =
-                                                    metadata.get("description").map(|v| {
-                                                        v.to_string().trim_matches('"').to_string()
-                                                    });
-                                                let metadata_attributes =
-                                                    metadata.get("attributes").map(|v| {
-                                                        v.to_string().trim_matches('"').to_string()
-                                                    });
-
-                                                let image_path =
-                                                    format!("{}/{}", token_id.join("/"), "image");
-
-                                                (
-                                                    metadata_str,
-                                                    metadata_name,
-                                                    metadata_description,
-                                                    metadata_attributes,
-                                                    image_path,
-                                                )
-                                            };
-
-                                            let token_metadata = Erc721Token {
-                                                name: row.name,
-                                                metadata: metadata_str,
-                                                contract_address: row.contract_address,
-                                                symbol: row.symbol,
-                                                token_id: token_id[1].to_string(),
-                                                metadata_name,
-                                                metadata_description,
-                                                metadata_attributes,
-                                                image_path,
-                                            };
-                                            ErcTokenType::Erc721(token_metadata)
+                                        Err(err) => {
+                                            warn!(
+                                                "Failed to transform row to token balance in \
+                                                 subscription: {}",
+                                                err
+                                            );
+                                            None
                                         }
-                                        "erc1155" => {
-                                            let token_id =
-                                                row.token_id.split(':').collect::<Vec<&str>>();
-                                            assert!(token_id.len() == 2);
-
-                                            let metadata_str = row.metadata;
-                                            let (
-                                                metadata_str,
-                                                metadata_name,
-                                                metadata_description,
-                                                metadata_attributes,
-                                                image_path,
-                                            ) = if metadata_str.is_empty() {
-                                                (String::new(), None, None, None, String::new())
-                                            } else {
-                                                let metadata: serde_json::Value =
-                                                    serde_json::from_str(&metadata_str)
-                                                        .expect("metadata is always json");
-                                                let metadata_name = metadata.get("name").map(|v| {
-                                                    v.to_string().trim_matches('"').to_string()
-                                                });
-                                                let metadata_description =
-                                                    metadata.get("description").map(|v| {
-                                                        v.to_string().trim_matches('"').to_string()
-                                                    });
-                                                let metadata_attributes =
-                                                    metadata.get("attributes").map(|v| {
-                                                        v.to_string().trim_matches('"').to_string()
-                                                    });
-
-                                                let image_path =
-                                                    format!("{}/{}", token_id.join("/"), "image");
-
-                                                (
-                                                    metadata_str,
-                                                    metadata_name,
-                                                    metadata_description,
-                                                    metadata_attributes,
-                                                    image_path,
-                                                )
-                                            };
-
-                                            let token_metadata = Erc1155Token {
-                                                name: row.name,
-                                                metadata: metadata_str,
-                                                contract_address: row.contract_address,
-                                                symbol: row.symbol,
-                                                token_id: token_id[1].to_string(),
-                                                amount: row.balance,
-                                                metadata_name,
-                                                metadata_description,
-                                                metadata_attributes,
-                                                image_path,
-                                            };
-                                            ErcTokenType::Erc1155(token_metadata)
-                                        }
-                                        _ => {
-                                            warn!("Unknown contract type: {}", row.contract_type);
-                                            return None;
-                                        }
-                                    };
-
-                                    Some(Ok(FieldValue::owned_any(balance_value)))
+                                    }
                                 }
                             })
                             .filter_map(|result| result))
@@ -423,128 +304,15 @@ fn token_balances_connection_output<'a>(
         let row = BalanceQueryResultRaw::from_row(row)?;
         let cursor = cursor::encode(&row.id, &row.id);
 
-        let balance_value = match row.contract_type.to_lowercase().as_str() {
-            "erc20" => {
-                let token_metadata = Erc20Token {
-                    contract_address: row.contract_address,
-                    name: row.name,
-                    symbol: row.symbol,
-                    decimals: row.decimals,
-                    amount: row.balance,
-                };
-
-                ErcTokenType::Erc20(token_metadata)
+        match token_balance_mapping_from_row(&row) {
+            Ok(balance_value) => {
+                edges.push(ConnectionEdge { node: balance_value, cursor });
             }
-            "erc721" => {
-                // contract_address:token_id
-                let token_id = row.token_id.split(':').collect::<Vec<&str>>();
-                assert!(token_id.len() == 2);
-
-                let metadata_str = row.metadata;
-                let (
-                    metadata_str,
-                    metadata_name,
-                    metadata_description,
-                    metadata_attributes,
-                    image_path,
-                ) = if metadata_str.is_empty() {
-                    (String::new(), None, None, None, String::new())
-                } else {
-                    let metadata: serde_json::Value =
-                        serde_json::from_str(&metadata_str).expect("metadata is always json");
-                    let metadata_name =
-                        metadata.get("name").map(|v| v.to_string().trim_matches('"').to_string());
-                    let metadata_description = metadata
-                        .get("description")
-                        .map(|v| v.to_string().trim_matches('"').to_string());
-                    let metadata_attributes = metadata
-                        .get("attributes")
-                        .map(|v| v.to_string().trim_matches('"').to_string());
-
-                    let image_path = format!("{}/{}", token_id.join("/"), "image");
-
-                    (
-                        metadata_str,
-                        metadata_name,
-                        metadata_description,
-                        metadata_attributes,
-                        image_path,
-                    )
-                };
-
-                let token_metadata = Erc721Token {
-                    name: row.name,
-                    metadata: metadata_str.to_owned(),
-                    contract_address: row.contract_address,
-                    symbol: row.symbol,
-                    token_id: token_id[1].to_string(),
-                    metadata_name,
-                    metadata_description,
-                    metadata_attributes,
-                    image_path,
-                };
-
-                ErcTokenType::Erc721(token_metadata)
-            }
-            "erc1155" => {
-                // contract_address:token_id
-                let token_id = row.token_id.split(':').collect::<Vec<&str>>();
-                assert!(token_id.len() == 2);
-
-                let metadata_str = row.metadata;
-                let (
-                    metadata_str,
-                    metadata_name,
-                    metadata_description,
-                    metadata_attributes,
-                    image_path,
-                ) = if metadata_str.is_empty() {
-                    (String::new(), None, None, None, String::new())
-                } else {
-                    let metadata: serde_json::Value =
-                        serde_json::from_str(&metadata_str).expect("metadata is always json");
-                    let metadata_name =
-                        metadata.get("name").map(|v| v.to_string().trim_matches('"').to_string());
-                    let metadata_description = metadata
-                        .get("description")
-                        .map(|v| v.to_string().trim_matches('"').to_string());
-                    let metadata_attributes = metadata
-                        .get("attributes")
-                        .map(|v| v.to_string().trim_matches('"').to_string());
-
-                    let image_path = format!("{}/{}", token_id.join("/"), "image");
-
-                    (
-                        metadata_str,
-                        metadata_name,
-                        metadata_description,
-                        metadata_attributes,
-                        image_path,
-                    )
-                };
-
-                let token_metadata = Erc1155Token {
-                    name: row.name,
-                    metadata: metadata_str.to_owned(),
-                    contract_address: row.contract_address,
-                    symbol: row.symbol,
-                    token_id: token_id[1].to_string(),
-                    amount: row.balance,
-                    metadata_name,
-                    metadata_description,
-                    metadata_attributes,
-                    image_path,
-                };
-
-                ErcTokenType::Erc1155(token_metadata)
-            }
-            _ => {
-                warn!("Unknown contract type: {}", row.contract_type);
+            Err(err) => {
+                warn!("Failed to transform row to token balance: {}", err);
                 continue;
             }
-        };
-
-        edges.push(ConnectionEdge { node: balance_value, cursor });
+        }
     }
 
     Ok(FieldValue::owned_any(Connection {
@@ -552,6 +320,135 @@ fn token_balances_connection_output<'a>(
         edges,
         page_info: PageInfoObject::value(page_info),
     }))
+}
+
+/// Transforms a BalanceQueryResultRaw into an ErcTokenType
+fn token_balance_mapping_from_row(row: &BalanceQueryResultRaw) -> Result<ErcTokenType, String> {
+    match row.contract_type.to_lowercase().as_str() {
+        "erc20" => {
+            let token_metadata = Erc20Token {
+                contract_address: row.contract_address.clone(),
+                name: row.name.clone(),
+                symbol: row.symbol.clone(),
+                decimals: row.decimals,
+                amount: row.balance.clone(),
+            };
+
+            Ok(ErcTokenType::Erc20(token_metadata))
+        }
+        "erc721" => {
+            // contract_address:token_id
+            let token_id = row.token_id.split(':').collect::<Vec<&str>>();
+            if token_id.len() != 2 {
+                return Err(format!("Invalid token_id format: {}", row.token_id));
+            }
+
+            let metadata_str = &row.metadata;
+            let (
+                metadata_str,
+                metadata_name,
+                metadata_description,
+                metadata_attributes,
+                image_path,
+            ) = if metadata_str.is_empty() {
+                (String::new(), None, None, None, String::new())
+            } else {
+                let metadata: serde_json::Value = match serde_json::from_str(metadata_str) {
+                    Ok(value) => value,
+                    Err(e) => return Err(format!("Failed to parse metadata as JSON: {}", e)),
+                };
+
+                let metadata_name =
+                    metadata.get("name").map(|v| v.to_string().trim_matches('"').to_string());
+                let metadata_description = metadata
+                    .get("description")
+                    .map(|v| v.to_string().trim_matches('"').to_string());
+                let metadata_attributes =
+                    metadata.get("attributes").map(|v| v.to_string().trim_matches('"').to_string());
+
+                let image_path = format!("{}/{}", token_id.join("/"), "image");
+
+                (
+                    metadata_str.to_owned(),
+                    metadata_name,
+                    metadata_description,
+                    metadata_attributes,
+                    image_path,
+                )
+            };
+
+            let token_metadata = Erc721Token {
+                name: row.name.clone(),
+                metadata: metadata_str,
+                contract_address: row.contract_address.clone(),
+                symbol: row.symbol.clone(),
+                token_id: token_id[1].to_string(),
+                metadata_name,
+                metadata_description,
+                metadata_attributes,
+                image_path,
+            };
+
+            Ok(ErcTokenType::Erc721(token_metadata))
+        }
+        "erc1155" => {
+            // contract_address:token_id
+            let token_id = row.token_id.split(':').collect::<Vec<&str>>();
+            if token_id.len() != 2 {
+                return Err(format!("Invalid token_id format: {}", row.token_id));
+            }
+
+            let metadata_str = &row.metadata;
+            let (
+                metadata_str,
+                metadata_name,
+                metadata_description,
+                metadata_attributes,
+                image_path,
+            ) = if metadata_str.is_empty() {
+                (String::new(), None, None, None, String::new())
+            } else {
+                let metadata: serde_json::Value = match serde_json::from_str(metadata_str) {
+                    Ok(value) => value,
+                    Err(e) => return Err(format!("Failed to parse metadata as JSON: {}", e)),
+                };
+
+                let metadata_name =
+                    metadata.get("name").map(|v| v.to_string().trim_matches('"').to_string());
+                let metadata_description = metadata
+                    .get("description")
+                    .map(|v| v.to_string().trim_matches('"').to_string());
+                let metadata_attributes =
+                    metadata.get("attributes").map(|v| v.to_string().trim_matches('"').to_string());
+
+                let image_path = format!("{}/{}", token_id.join("/"), "image");
+
+                (
+                    metadata_str.to_owned(),
+                    metadata_name,
+                    metadata_description,
+                    metadata_attributes,
+                    image_path,
+                )
+            };
+
+            let token_metadata = Erc1155Token {
+                name: row.name.clone(),
+                metadata: metadata_str,
+                contract_address: row.contract_address.clone(),
+                symbol: row.symbol.clone(),
+                token_id: token_id[1].to_string(),
+                amount: row.balance.clone(),
+                metadata_name,
+                metadata_description,
+                metadata_attributes,
+                image_path,
+            };
+
+            Ok(ErcTokenType::Erc1155(token_metadata))
+        }
+        _ => Err(format!("Unknown contract type: {}", row.contract_type)),
+    }
 }
 
 // TODO: This would be required when subscriptions are needed

@@ -14,6 +14,7 @@ async-trait.workspace = true
 base64.workspace = true
 bitflags = "2.6.0"
 cainome.workspace = true
+cainome-cairo-serde.workspace = true
 chrono.workspace = true
 crypto-bigint.workspace = true
 data-url.workspace = true

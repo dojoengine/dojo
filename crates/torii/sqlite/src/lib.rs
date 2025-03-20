@@ -10,11 +10,12 @@ use dojo_types::schema::{Struct, Ty};
 use dojo_world::config::WorldMetadata;
 use dojo_world::contracts::abigen::model::Layout;
 use dojo_world::contracts::naming::compute_selector_from_names;
-use executor::EntityQuery;
+use executor::{EntityQuery, StoreTransactionQuery};
 use sqlx::{Pool, Sqlite};
-use starknet::core::types::{Event, Felt, InvokeTransaction, Transaction};
+use starknet::core::types::{Event, Felt};
 use starknet_crypto::poseidon_hash_many;
 use tokio::sync::mpsc::UnboundedSender;
+use types::ParsedCall;
 use utils::felts_to_sql_string;
 
 use crate::constants::SQL_FELT_DELIMITER;
@@ -534,75 +535,44 @@ impl Sql {
         self.model_cache.model(&selector).await.map_err(|e| e.into())
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn store_transaction(
         &mut self,
-        transaction: &Transaction,
+        transaction_hash: Felt,
+        sender_address: Felt,
+        calldata: &[Felt],
+        max_fee: Felt,
+        signature: &[Felt],
+        nonce: Felt,
         block_number: u64,
         contract_addresses: &HashSet<Felt>,
+        transaction_type: &str,
         block_timestamp: u64,
+        calls: &[ParsedCall],
     ) -> Result<()> {
-        let transaction_type = match transaction {
-            Transaction::Invoke(_) => "INVOKE",
-            Transaction::L1Handler(_) => "L1_HANDLER",
-            _ => return Ok(()),
-        };
-
-        let (transaction_hash, sender_address, calldata, max_fee, signature, nonce) =
-            match transaction {
-                Transaction::Invoke(InvokeTransaction::V3(invoke_v3_transaction)) => (
-                    Argument::FieldElement(invoke_v3_transaction.transaction_hash),
-                    Argument::FieldElement(invoke_v3_transaction.sender_address),
-                    Argument::String(felts_to_sql_string(&invoke_v3_transaction.calldata)),
-                    Argument::FieldElement(Felt::ZERO), // has no max_fee
-                    Argument::String(felts_to_sql_string(&invoke_v3_transaction.signature)),
-                    Argument::FieldElement(invoke_v3_transaction.nonce),
-                ),
-                Transaction::Invoke(InvokeTransaction::V1(invoke_v1_transaction)) => (
-                    Argument::FieldElement(invoke_v1_transaction.transaction_hash),
-                    Argument::FieldElement(invoke_v1_transaction.sender_address),
-                    Argument::String(felts_to_sql_string(&invoke_v1_transaction.calldata)),
-                    Argument::FieldElement(invoke_v1_transaction.max_fee),
-                    Argument::String(felts_to_sql_string(&invoke_v1_transaction.signature)),
-                    Argument::FieldElement(invoke_v1_transaction.nonce),
-                ),
-                Transaction::L1Handler(l1_handler_transaction) => (
-                    Argument::FieldElement(l1_handler_transaction.transaction_hash),
-                    Argument::FieldElement(l1_handler_transaction.contract_address),
-                    Argument::String(felts_to_sql_string(&l1_handler_transaction.calldata)),
-                    Argument::FieldElement(Felt::ZERO), // has no max_fee
-                    Argument::String("".to_string()),   // has no signature
-                    Argument::FieldElement((l1_handler_transaction.nonce).into()),
-                ),
-                _ => return Ok(()),
-            };
-
-        self.executor.send(QueryMessage::other(
+        // Store the transaction in the transactions table
+        self.executor.send(QueryMessage::new(
             "INSERT OR IGNORE INTO transactions (id, transaction_hash, sender_address, calldata, \
              max_fee, signature, nonce, transaction_type, executed_at, block_number) VALUES (?, \
-             ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+             ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *"
                 .to_string(),
             vec![
-                transaction_hash.clone(),
-                transaction_hash.clone(),
-                sender_address,
-                calldata,
-                max_fee,
-                signature,
-                nonce,
+                Argument::FieldElement(transaction_hash),
+                Argument::FieldElement(transaction_hash),
+                Argument::FieldElement(sender_address),
+                Argument::String(felts_to_sql_string(calldata)),
+                Argument::FieldElement(max_fee),
+                Argument::String(felts_to_sql_string(signature)),
+                Argument::FieldElement(nonce),
                 Argument::String(transaction_type.to_string()),
                 Argument::String(utc_dt_string_from_timestamp(block_timestamp)),
                 Argument::String(block_number.to_string()),
             ],
+            QueryType::StoreTransaction(StoreTransactionQuery {
+                contract_addresses: contract_addresses.clone(),
+                calls: calls.to_vec(),
+            }),
         ))?;
-
-        for contract_address in contract_addresses {
-            self.executor.send(QueryMessage::other(
-                "INSERT OR IGNORE INTO transaction_contract (transaction_hash, contract_address) \
-                 VALUES (?, ?)"
-                    .to_string(),
-                vec![transaction_hash.clone(), Argument::FieldElement(*contract_address)],
-            ))?;
-        }
 
         Ok(())
     }

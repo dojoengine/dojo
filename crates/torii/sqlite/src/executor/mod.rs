@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::mem;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -8,7 +8,7 @@ use anyhow::{Context, Result};
 use cainome::cairo_serde::{ByteArray, CairoSerde};
 use dojo_types::schema::{Struct, Ty};
 use erc::{RegisterNftTokenMetadata, UpdateNftMetadataQuery};
-use sqlx::{FromRow, Pool, Sqlite, Transaction};
+use sqlx::{FromRow, Pool, Sqlite, Transaction as SqlxTransaction};
 use starknet::core::types::{BlockId, BlockTag, Felt, FunctionCall};
 use starknet::core::utils::{get_selector_from_name, parse_cairo_short_string};
 use starknet::providers::Provider;
@@ -24,9 +24,9 @@ use crate::simple_broker::SimpleBroker;
 use crate::types::{
     ContractCursor, ContractType, Entity as EntityUpdated, Event as EventEmitted,
     EventMessage as EventMessageUpdated, Model as ModelRegistered, OptimisticEntity,
-    OptimisticEventMessage, Token, TokenBalance,
+    OptimisticEventMessage, ParsedCall, Token, TokenBalance, Transaction,
 };
-use crate::utils::{felt_to_sql_string, I256};
+use crate::utils::{felt_to_sql_string, felts_to_sql_string, I256};
 
 pub mod erc;
 pub use erc::{RegisterErc20TokenQuery, RegisterNftTokenQuery};
@@ -51,6 +51,7 @@ pub enum BrokerMessage {
     EventEmitted(EventEmitted),
     TokenRegistered(Token),
     TokenBalanceUpdated(TokenBalance),
+    Transaction(Transaction),
 }
 
 #[derive(Debug, Clone)]
@@ -105,6 +106,12 @@ pub struct EventMessageQuery {
 }
 
 #[derive(Debug, Clone)]
+pub struct StoreTransactionQuery {
+    pub contract_addresses: HashSet<Felt>,
+    pub calls: Vec<ParsedCall>,
+}
+
+#[derive(Debug, Clone)]
 pub struct EntityQuery {
     pub entity_id: String,
     pub model_id: String,
@@ -117,6 +124,7 @@ pub struct EntityQuery {
 
 #[derive(Debug, Clone)]
 pub enum QueryType {
+    StoreTransaction(StoreTransactionQuery),
     SetHead(SetHeadQuery),
     ResetCursors(ResetCursorsQuery),
     UpdateCursors(UpdateCursorsQuery),
@@ -141,7 +149,7 @@ pub struct Executor<'c, P: Provider + Sync + Send + 'static> {
     // Queries should use `transaction` instead of `pool`
     // This `pool` is only used to create a new `transaction`
     pool: Pool<Sqlite>,
-    transaction: Transaction<'c, Sqlite>,
+    transaction: SqlxTransaction<'c, Sqlite>,
     publish_queue: Vec<BrokerMessage>,
     rx: UnboundedReceiver<QueryMessage>,
     shutdown_rx: Receiver<()>,
@@ -450,6 +458,48 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                     // Send appropriate ContractUpdated publish message
                     self.publish_queue.push(BrokerMessage::SetHead(cursor.clone()));
                 }
+            }
+            QueryType::StoreTransaction(store_transaction) => {
+                let row = query.fetch_one(&mut **tx).await.with_context(|| {
+                    format!(
+                        "Failed to execute query: {:?}, args: {:?}",
+                        query_message.statement, query_message.arguments
+                    )
+                })?;
+                let mut transaction = Transaction::from_row(&row)?;
+
+                for contract_address in &store_transaction.contract_addresses {
+                    sqlx::query(
+                        "INSERT OR IGNORE INTO transaction_contract (transaction_hash, \
+                         contract_address) VALUES (?, ?)",
+                    )
+                    .bind(&transaction.transaction_hash)
+                    .bind(felt_to_sql_string(contract_address))
+                    .execute(&mut **tx)
+                    .await?;
+                }
+
+                // Store each call in the transaction_calls table
+                for call in &store_transaction.calls {
+                    sqlx::query(
+                        "INSERT OR IGNORE INTO transaction_calls (transaction_hash, \
+                         contract_address, entrypoint, calldata, call_type, caller_address) \
+                         VALUES (?, ?, ?, ?, ?, ?)",
+                    )
+                    .bind(&transaction.transaction_hash)
+                    .bind(felt_to_sql_string(&call.contract_address))
+                    .bind(call.entrypoint.clone())
+                    .bind(felts_to_sql_string(&call.calldata))
+                    .bind(call.call_type.to_string())
+                    .bind(felt_to_sql_string(&call.caller_address))
+                    .execute(&mut **tx)
+                    .await?;
+                }
+
+                transaction.contract_addresses = store_transaction.contract_addresses;
+                transaction.calls = store_transaction.calls;
+
+                self.publish_queue.push(BrokerMessage::Transaction(transaction));
             }
             QueryType::SetEntity(entity) => {
                 let row = query.fetch_one(&mut **tx).await.with_context(|| {
@@ -901,5 +951,6 @@ fn send_broker_message(message: BrokerMessage) {
         BrokerMessage::EventEmitted(event) => SimpleBroker::publish(event),
         BrokerMessage::TokenRegistered(token) => SimpleBroker::publish(token),
         BrokerMessage::TokenBalanceUpdated(token_balance) => SimpleBroker::publish(token_balance),
+        BrokerMessage::Transaction(transaction) => SimpleBroker::publish(transaction),
     }
 }

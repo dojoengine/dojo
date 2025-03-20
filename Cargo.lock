@@ -15318,6 +15318,7 @@ dependencies = [
  "base64 0.21.7",
  "bitflags 2.6.0",
  "cainome 0.5.0",
+ "cainome-cairo-serde 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "chrono",
  "crypto-bigint",
  "data-url",

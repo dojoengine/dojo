@@ -23,6 +23,7 @@ use tokio::sync::mpsc::Sender as BoundedSender;
 use tokio::sync::Semaphore;
 use tokio::task::JoinSet;
 use tokio::time::{sleep, Instant};
+use torii_sqlite::cache::ContractClassCache;
 use torii_sqlite::types::{Contract, ContractType};
 use torii_sqlite::{Cursors, Sql};
 use tracing::{debug, error, info, trace, warn};
@@ -229,6 +230,7 @@ pub struct Engine<P: Provider + Send + Sync + std::fmt::Debug + 'static> {
     block_tx: Option<BoundedSender<u64>>,
     task_manager: TaskManager<P>,
     contracts: Arc<HashMap<Felt, ContractType>>,
+    contract_class_cache: Arc<ContractClassCache<P>>,
 }
 
 struct UnprocessedEvent {
@@ -255,11 +257,12 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         let processors = Arc::new(processors);
         let max_concurrent_tasks = config.max_concurrent_tasks;
         let event_processor_config = config.event_processor_config.clone();
+        let provider = Arc::new(provider);
 
         Self {
             world: world.clone(),
             db: db.clone(),
-            provider: Arc::new(provider),
+            provider: provider.clone(),
             processors: processors.clone(),
             config,
             shutdown_tx,
@@ -272,6 +275,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                 max_concurrent_tasks,
                 event_processor_config,
             ),
+            contract_class_cache: Arc::new(ContractClassCache::new(provider)),
         }
     }
 
@@ -772,6 +776,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                     transaction_hash,
                     contract_addresses,
                     transaction,
+                    self.contract_class_cache.as_ref(),
                 )
                 .await?
         }

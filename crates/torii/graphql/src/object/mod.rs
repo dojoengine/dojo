@@ -28,7 +28,9 @@ use self::connection::{
 };
 use self::inputs::keys_input::parse_keys_argument;
 use self::inputs::order_input::parse_order_argument;
-use crate::query::data::{count_rows, fetch_multiple_rows, fetch_single_row};
+use crate::query::data::{
+    count_rows, fetch_multiple_rows, fetch_single_row, fetch_single_row_with_joins, JoinConfig,
+};
 use crate::query::value_mapping_from_row;
 use crate::types::{TypeMapping, ValueMapping};
 use crate::utils::extract;
@@ -263,6 +265,51 @@ pub fn resolve_one(
             let id: String =
                 extract::<String>(ctx.args.as_index_map(), &id_column.to_case(Case::Camel))?;
             let data = fetch_single_row(&mut conn, &table_name, &id_column, &id).await?;
+            let model = value_mapping_from_row(&data, &type_mapping, false, true)?;
+            Ok(Some(Value::Object(model)))
+        })
+    })
+    .argument(argument)
+}
+
+// Resolves single object queries with joins, returns current object of type type_name with related
+// data
+pub fn resolve_one_with_joins(
+    table_name: &str,
+    id_column: &str,
+    field_name: &str,
+    type_name: &str,
+    type_mapping: &TypeMapping,
+    joins: Vec<JoinConfig>,
+    select_columns: Option<Vec<String>>,
+) -> Field {
+    let type_mapping = type_mapping.clone();
+    let table_name = table_name.to_owned();
+    let id_column = id_column.to_owned();
+    let joins = joins.to_owned();
+    let select_columns = select_columns.to_owned();
+    let argument = InputValue::new(id_column.to_case(Case::Camel), TypeRef::named_nn(TypeRef::ID));
+
+    Field::new(field_name, TypeRef::named_nn(type_name), move |ctx| {
+        let type_mapping = type_mapping.clone();
+        let table_name = table_name.to_owned();
+        let id_column = id_column.to_owned();
+        let joins = joins.to_owned();
+        let select_columns = select_columns.to_owned();
+
+        FieldFuture::new(async move {
+            let mut conn = ctx.data::<Pool<Sqlite>>()?.acquire().await?;
+            let id: String =
+                extract::<String>(ctx.args.as_index_map(), &id_column.to_case(Case::Camel))?;
+            let data = fetch_single_row_with_joins(
+                &mut conn,
+                &table_name,
+                &id_column,
+                &id,
+                joins,
+                select_columns,
+            )
+            .await?;
             let model = value_mapping_from_row(&data, &type_mapping, false, true)?;
             Ok(Some(Value::Object(model)))
         })

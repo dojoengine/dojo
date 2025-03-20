@@ -8,6 +8,8 @@ pub const EVENT_TABLE: &str = "events";
 pub const EVENT_MESSAGE_TABLE: &str = "event_messages";
 pub const MODEL_TABLE: &str = "models";
 pub const TRANSACTION_TABLE: &str = "transactions";
+pub const TRANSACTION_CALLS_TABLE: &str = "transaction_calls";
+pub const TOKEN_TRANSFER_TABLE: &str = "token_transfers";
 pub const METADATA_TABLE: &str = "metadata";
 pub const CONTROLLER_TABLE: &str = "controllers";
 
@@ -30,6 +32,7 @@ pub const CONTENT_TYPE_NAME: &str = "World__Content";
 pub const METADATA_TYPE_NAME: &str = "World__Metadata";
 pub const PAGE_INFO_TYPE_NAME: &str = "World__PageInfo";
 pub const TRANSACTION_TYPE_NAME: &str = "World__Transaction";
+pub const CALL_TYPE_NAME: &str = "World__Call";
 pub const QUERY_TYPE_NAME: &str = "World__Query";
 pub const SUBSCRIPTION_TYPE_NAME: &str = "World__Subscription";
 pub const MODEL_ORDER_TYPE_NAME: &str = "World__ModelOrder";
