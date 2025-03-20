@@ -620,7 +620,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         let last_block_timestamp =
             get_block_timestamp(&self.provider, data.latest_block_number).await.unwrap();
 
-        self.db.reset_cursors(data.latest_block_number, last_block_timestamp, None, cursor_map)?;
+        self.db.update_cursors(data.latest_block_number, last_block_timestamp, None, cursor_map)?;
 
         Ok(())
     }
