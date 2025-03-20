@@ -12,7 +12,7 @@ use tracing::debug;
 use super::{EventProcessor, EventProcessorConfig};
 use crate::task_manager::{TaskId, TaskPriority};
 
-pub(crate) const LOG_TARGET: &str = "torii_indexer::processors::erc721_transfer";
+pub(crate) const LOG_TARGET: &str = "torii::indexer::processors::erc721_transfer";
 
 #[derive(Default, Debug)]
 pub struct Erc721TransferProcessor;

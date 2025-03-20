@@ -13,7 +13,7 @@ use tracing::{debug, info};
 use super::{EventProcessor, EventProcessorConfig};
 use crate::task_manager::{TaskId, TaskPriority};
 
-pub(crate) const LOG_TARGET: &str = "torii_indexer::processors::upgrade_model";
+pub(crate) const LOG_TARGET: &str = "torii::indexer::processors::upgrade_model";
 
 #[derive(Default, Debug)]
 pub struct UpgradeModelProcessor;

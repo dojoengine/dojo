@@ -320,7 +320,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                                     }
                                 },
                                 Err(e) => {
-                                    error!(target: LOG_TARGET, error = %e, "Processing fetched data.");
+                                    error!(target: LOG_TARGET, error = ?e, "Processing fetched data.");
                                     erroring_out = true;
                                     // incase of error rollback the transaction
                                     self.db.rollback().await?;

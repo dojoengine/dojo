@@ -207,7 +207,7 @@ async fn test_client_connection_wasm() -> Result<(), Box<dyn Error>> {
 
     tracing_wasm::set_as_global_default();
 
-    let _ = tracing_subscriber::fmt().with_env_filter("torii_libp2p=debug").try_init();
+    let _ = tracing_subscriber::fmt().with_env_filter("torii::relay=debug").try_init();
     // Initialize the first client (listener)
     // Make sure the cert hash is correct - corresponding to the cert in the relay server
     let mut client = RelayClient::new(
