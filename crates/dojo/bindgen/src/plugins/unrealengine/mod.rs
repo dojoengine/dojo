@@ -1,11 +1,9 @@
 use std::collections::{HashMap, HashSet};
-use std::fmt::format;
 use std::path::{Path, PathBuf};
 
 use async_trait::async_trait;
 use cainome::parser::tokens::{Composite, CompositeType, FunctionOutputKind, Token};
 use dojo_world::contracts::naming::{self, get_name_from_tag, get_namespace_from_tag};
-use starknet::core::utils::get_contract_address;
 
 use crate::error::BindgenResult;
 use crate::plugins::BuiltinPlugin;
@@ -92,7 +90,7 @@ impl UnrealEnginePlugin {
 
                     let type_str = match composite.r#type {
                         CompositeType::Struct => "F".to_owned() + &type_name,
-                        CompositeType::Enum => "E".to_owned() + &type_name,
+                        CompositeType::Enum => "ED".to_owned() + &type_name,
                         _ => type_name,
                     };
                     return type_str;
@@ -187,7 +185,7 @@ struct F{}
         let name = token.type_name();
 
         // Start with the UENUM declaration
-        let mut result = format!("\nUENUM(BlueprintType)\nenum class E{} : uint8\n{{\n", name);
+        let mut result = format!("\nUENUM(BlueprintType)\nenum class ED{} : uint8\n{{\n", name);
 
         // Add enum values
         // Start from 0 and explicitly set values
@@ -264,11 +262,12 @@ public:
         let mut out = String::new();
         out += UnrealEnginePlugin::generated_header().as_str();
         out += UnrealEnginePlugin::header_imports().as_str();
-        let mut handled_tokens = HashMap::<String, Composite>::new();
         let mut defined_enums = HashSet::<String>::new();
+        let mut handled_tokens = HashMap::<String, Composite>::new();
 
         for (_, model) in models {
             let mut model_struct: Option<&Composite> = None;
+
             let tokens = &model.tokens;
 
             let mut sorted_structs = tokens.structs.clone();
@@ -282,13 +281,19 @@ public:
                 if handled_tokens.contains_key(&token.type_path()) {
                     continue;
                 }
-
                 handled_tokens.insert(token.type_path(), token.to_composite().unwrap().to_owned());
-
                 if token.type_name() == naming::get_name_from_tag(&model.tag) {
                     model_struct = Some(token.to_composite().unwrap());
+                    break;
+                }
+            }
+
+            // Process enums
+            for token in &sorted_enums {
+                if handled_tokens.contains_key(&token.type_path()) {
                     continue;
                 }
+                handled_tokens.insert(token.type_path(), token.to_composite().unwrap().to_owned());
             }
 
             let model_struct = model_struct.expect("model struct not found");
@@ -310,15 +315,6 @@ public:
                 if let Some(s) = handled_tokens.remove(&key) {
                     out += UnrealEnginePlugin::format_struct(&s).as_str();
                 }
-            }
-
-            // Process enums
-            for token in &sorted_enums {
-                if handled_tokens.contains_key(&token.type_path()) {
-                    continue;
-                }
-
-                handled_tokens.insert(token.type_path(), token.to_composite().unwrap().to_owned());
             }
 
             // Handle enum dependencies
@@ -507,8 +503,279 @@ public:
             .collect::<Vec<_>>()
             .join("");
 
+        let mut static_converters: String = String::new();
+        let mut else_if_type_converter: String = String::new();
+        let mut defined_enums = HashSet::<String>::new();
+        let mut handled_tokens = HashMap::<String, Composite>::new();
+
+        for (_, model) in models {
+            let mut model_struct: Option<&Composite> = None;
+
+            let tokens = &model.tokens;
+
+            let mut sorted_structs = tokens.structs.clone();
+            sorted_structs.sort_by(compare_tokens_by_type_name);
+
+            let mut sorted_enums = tokens.enums.clone();
+            sorted_enums.sort_by(compare_tokens_by_type_name);
+
+            // Process structs first
+            for token in &sorted_structs {
+                if handled_tokens.contains_key(&token.type_path()) {
+                    continue;
+                }
+                handled_tokens.insert(token.type_path(), token.to_composite().unwrap().to_owned());
+                if token.type_name() == naming::get_name_from_tag(&model.tag) {
+                    model_struct = Some(token.to_composite().unwrap());
+                }
+            }
+
+            // Process enums
+            for token in &sorted_enums {
+                if handled_tokens.contains_key(&token.type_path()) {
+                    continue;
+                }
+                handled_tokens.insert(token.type_path(), token.to_composite().unwrap().to_owned());
+            }
+
+            let model_struct = model_struct.expect("model struct not found");
+
+            // Handle struct dependencies
+            let struct_keys: Vec<String> = handled_tokens
+                .iter()
+                .filter(|(_, s)| {
+                    model_struct.inners.iter().any(|inner| {
+                        s.r#type == CompositeType::Struct
+                            && check_token_in_recursively(&inner.token, &s.type_name())
+                            && inner.token.type_name() != "ByteArray"
+                    })
+                })
+                .map(|(k, _)| k.clone())
+                .collect();
+
+            for key in struct_keys {
+                if let Some(s) = handled_tokens.remove(&key) {
+                    static_converters += &format!(
+                        "static F{type_name} ConvertToF{type_name}(const Member* member) {{
+        //TODO implement
+    }}
+
+    ",
+                        type_name = s.type_name()
+                    );
+                    else_if_type_converter += &format!(
+                        "else if constexpr (std::is_same_v<T, F{type_name}>) {{
+        if (strcmp(expectedType, \"{type_name}\") == 0) {{
+            output = TypeConverter::ConvertToF{type_name}(member);
+        }}
+    }}
+    ",
+                        type_name = s.type_name()
+                    );
+                }
+            }
+
+            // Handle enum dependencies
+            let enum_keys: Vec<String> = handled_tokens
+                .iter()
+                .filter(|(_, s)| {
+                    model_struct.inners.iter().any(|inner| {
+                        s.r#type == CompositeType::Enum
+                            && check_token_in_recursively(&inner.token, &s.type_name())
+                    })
+                })
+                .map(|(k, _)| k.clone())
+                .collect();
+
+            for key in enum_keys {
+                if let Some(s) = handled_tokens.remove(&key) {
+                    if !defined_enums.contains(&s.type_name()) {
+                        static_converters += &format!(
+                            "static ED{type_name} ConvertToED{type_name}(const Member* member) {{
+        return static_cast<ED{type_name}>(member->ty->primitive.u8);
+    }}
+
+    ",
+                            type_name = s.type_name()
+                        );
+                        else_if_type_converter += &format!(
+                            "else if constexpr (std::is_same_v<T, ED{type_name}>) {{
+        if (strcmp(expectedType, \"{type_name}\") == 0) {{
+            output = TypeConverter::ConvertToED{type_name}(member);
+        }}
+    }}
+    ",
+                            type_name = s.type_name()
+                        );
+                        defined_enums.insert(s.type_name());
+                    }
+                }
+            }
+        }
+
+        let class_types_converter = format!("
+class TypeConverter {{
+public:
+    static FString ConvertToFString(const Member* member) {{
+        switch (member->ty->primitive.tag) {{
+            case Primitive_Tag::ContractAddress:
+                return FDojoModule::bytes_to_fstring(member->ty->primitive.contract_address.data, 32);
+            case Primitive_Tag::I128:
+                return FDojoModule::bytes_to_fstring(member->ty->primitive.i128, 16);
+            case Primitive_Tag::U128:
+                return FDojoModule::bytes_to_fstring(member->ty->primitive.u128, 16);
+            case Primitive_Tag::Felt252:
+                return FDojoModule::bytes_to_fstring(member->ty->primitive.felt252.data, 32);
+            case Primitive_Tag::ClassHash:
+                return FDojoModule::bytes_to_fstring(member->ty->primitive.class_hash.data, 32);
+            case Primitive_Tag::EthAddress:
+                return FDojoModule::bytes_to_fstring(member->ty->primitive.eth_address.data, 32);
+            default:
+                return FString();
+        }}
+        }}
+
+    static int ConvertToInt(const Member* member) {{
+        switch(member->ty->primitive.tag) {{
+            case Primitive_Tag::I8:  return member->ty->primitive.i8;
+            case Primitive_Tag::I16: return member->ty->primitive.i16;
+            case Primitive_Tag::I32: return member->ty->primitive.i32;
+            case Primitive_Tag::U8:  return member->ty->primitive.u8;
+            case Primitive_Tag::U16: return member->ty->primitive.u16;
+            case Primitive_Tag::U32: return member->ty->primitive.u32;
+            default: return 0;
+        }}
+        }}
+
+    static long ConvertToLong(const Member* member) {{
+        switch(member->ty->primitive.tag) {{
+            case Primitive_Tag::I64: return member->ty->primitive.i64;
+            case Primitive_Tag::U64: return member->ty->primitive.u64;
+            default: return 0;
+        }}
+        }}
+
+    static bool ConvertToBool(const Member* member) {{
+        if (member->ty->primitive.tag == Primitive_Tag::Bool) {{
+            return member->ty->primitive.bool_;
+        }}
+        return false;
+    }}
+
+    template<typename T>
+    static TArray<T> ConvertToArray(const Member* member) {{
+        TArray<T> result;
+        if (member->ty->tag == Ty_Tag::Array_) {{
+            // Implémenter la logique de conversion d'array
+            // Accéder à member->ty->array pour les données
+        }}
+        return result;
+    }}
+
+    {static_converters}
+}};
+
+template<typename T>
+static void ProcessMember(const Member* member, const char* expectedName, const char* expectedType, T& output) {{
+    if (strcmp(member->name, expectedName) != 0) {{
+        return;
+    }}
+
+    if constexpr (std::is_same_v<T, FString>) {{
+        if (strcmp(expectedType, \"i128\") == 0 ||
+            strcmp(expectedType, \"u128\") == 0 ||
+            strcmp(expectedType, \"u256\") == 0 ||
+            strcmp(expectedType, \"felt252\") == 0 ||
+            strcmp(expectedType, \"bytes31\") == 0 ||
+            strcmp(expectedType, \"ClassHash\") == 0 ||
+            strcmp(expectedType, \"ContractAddress\") == 0 ||
+            strcmp(expectedType, \"ByteArray\") == 0) {{
+            output = TypeConverter::ConvertToFString(member);
+        }}
+    }}
+    else if constexpr (std::is_same_v<T, int>) {{
+        if (strcmp(expectedType, \"i8\") == 0 ||
+        strcmp(expectedType, \"i16\") == 0 ||
+        strcmp(expectedType, \"i32\") == 0 ||
+        strcmp(expectedType, \"u8\") == 0 ||
+        strcmp(expectedType, \"u16\") == 0 ||
+        strcmp(expectedType, \"u32\") == 0) {{
+            output = TypeConverter::ConvertToInt(member);
+        }}
+    }}
+    else if constexpr (std::is_same_v<T, long>) {{
+        if (strcmp(expectedType, \"i64\") == 0 ||
+        strcmp(expectedType, \"u64\") == 0 ||
+        strcmp(expectedType, \"usize\") == 0) {{
+            output = TypeConverter::ConvertToLong(member);
+        }}
+    }}
+    else if constexpr (std::is_same_v<T, bool>) {{
+        if (strcmp(expectedType, \"bool\") == 0) {{
+            output = TypeConverter::ConvertToBool(member);
+        }}
+    }}
+    {else_if_type_converter}
+
+    FDojoModule::TyFree(member->ty);
+}}",
+    static_converters = static_converters,
+    else_if_type_converter = else_if_type_converter);
+
+        let parse_models_functions_bodies = models
+            .iter()
+            .map(|(_, model)| {
+                format!(
+                    "UDojoModel* AGeneratedHelpers::parse{namespace}{model_name}Model(struct Struct* model)
+{{
+    UDojoModel{namespace}{model_name}* Model = NewObject<UDojoModel{namespace}{model_name}>();
+    CArrayMember* members = &model->children;
+
+    for (int k = 0; k < members->data_len; k++) {{
+        Member* member = &members->data[k];
+        {process_members}
+    }}
+
+    FDojoModule::CArrayFree(members->data, members->data_len);
+    return Model;
+}}
+",
+                    namespace = Self::to_pascal_case(&get_namespace_from_tag(&model.tag)),
+                    model_name = model
+                        .tokens
+                        .structs
+                        .iter()
+                        .find(|t| t.type_name() == naming::get_name_from_tag(&model.tag))
+                        .expect("model struct not found")
+                        .type_name(),
+                    process_members = model
+                        .tokens
+                        .structs
+                        .iter()
+                        .find(|t| t.type_name() == naming::get_name_from_tag(&model.tag))
+                        .expect("model struct not found")
+                        .to_composite()
+                        .unwrap()
+                        .inners
+                        .iter()
+                        .map(|field| {
+                            format!(
+                                "ProcessMember(member, \"{}\", \"{}\", Model->{});",
+                                &field.name,
+                                &field.token.type_name(),
+                                Self::to_pascal_case(&field.name),
+                            )
+                        })
+                        .collect::<Vec<String>>()
+                        .join("\n        ")
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+
         let mut function_parse_models: String = String::new();
         function_parse_models += &format!("
+{}
 void AGeneratedHelpers::ParseModelsAndSend(struct CArrayStruct* models)
 {{
 
@@ -569,7 +836,7 @@ void AGeneratedHelpers::ParseModelsAndSend(struct CArrayStruct* models)
         FDojoModule::CArrayFree(models->data, models->data_len);
     }}
 }}
-", if_else_parse_models);
+", parse_models_functions_bodies, if_else_parse_models);
 
         let mut contract_addresses: String = String::from(
             "const TMap<FString, FString> AGeneratedHelpers::ContractsAddresses = {\n",
@@ -619,15 +886,15 @@ void AGeneratedHelpers::ParseModelsAndSend(struct CArrayStruct* models)
                         })
                         .collect::<Vec<String>>()
                         .join("\n");
-                    format!("FString args;\n    FString arg;\n{}\n", args_text)
+                    format!("FString args;\n    FString arg;\n{}\n    ", args_text)
                 };
                 functions_bodies += &format!(
                     "
-void Call{namespace}{system}{selector}(const FAccount& account{args}) {{
+void AGeneratedHelpers::Call{namespace}{system}{selector}(const FAccount& account{args}) {{
     {args_body}this->ExecuteRawDeprecated(account, this->ContractsAddresses[\"{contract_name}\"], TEXT(\"{selector_raw}\"), args);
 }}
 
-void CallController{namespace}{system}{selector}(const FControllerAccount& account{args}) {{
+void AGeneratedHelpers::CallController{namespace}{system}{selector}(const FControllerAccount& account{args}) {{
     {args_body}this->ExecuteFromOutside(account, this->ContractsAddresses[\"{contract_name}\"], TEXT(\"{selector_raw}\"), args);
 }}
 ",
@@ -811,8 +1078,8 @@ void AGeneratedHelpers::CallbackProxy(struct FieldElement key, struct CArrayStru
 }
         ");
 
+        out += &class_types_converter;
         out += &function_parse_models;
-
         out += &functions_bodies;
 
         out
@@ -839,7 +1106,6 @@ fn check_token_in_recursively(token: &Token, type_name: &str) -> bool {
 impl BuiltinPlugin for UnrealEnginePlugin {
     async fn generate_code(&self, data: &DojoData) -> BindgenResult<HashMap<PathBuf, Vec<u8>>> {
         let mut out: HashMap<PathBuf, Vec<u8>> = HashMap::new();
-        let mut handled_tokens = HashMap::<String, Composite>::new();
 
         let mut models = data.models.iter().collect::<Vec<_>>();
         // Sort models based on their tag to ensure deterministic output.
