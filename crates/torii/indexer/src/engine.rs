@@ -667,6 +667,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
 
         for contract in &unique_contracts {
             let entry = cursor_map.entry(*contract).or_insert((transaction_hash, 0));
+            entry.0 = transaction_hash;
             entry.1 += 1;
         }
 
