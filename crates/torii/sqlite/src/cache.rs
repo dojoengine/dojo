@@ -6,7 +6,7 @@ use dojo_world::contracts::abigen::model::Layout;
 use sqlx::{Pool, Sqlite, SqlitePool};
 use starknet::core::types::contract::AbiEntry;
 use starknet::core::types::{
-    BlockId, BlockTag, ContractClass, EntryPointsByType, LegacyContractAbiEntry, StarknetError
+    BlockId, BlockTag, ContractClass, EntryPointsByType, LegacyContractAbiEntry, StarknetError,
 };
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::{Provider, ProviderError};
@@ -241,15 +241,13 @@ pub fn get_entrypoint_name_from_class(class: &ClassAbi, selector: Felt) -> Optio
                 _ => None,
             })
         }
-        ClassAbi::Legacy(abi) => {
-            abi.iter().find_map(|entry| match entry {
-                LegacyContractAbiEntry::Function(function)
-                    if get_selector_from_name(&function.name).unwrap() == selector =>
-                {
-                    Some(function.name.clone())
-                }
-                _ => None,
-            })
-        }
+        ClassAbi::Legacy(abi) => abi.iter().find_map(|entry| match entry {
+            LegacyContractAbiEntry::Function(function)
+                if get_selector_from_name(&function.name).unwrap() == selector =>
+            {
+                Some(function.name.clone())
+            }
+            _ => None,
+        }),
     }
 }
