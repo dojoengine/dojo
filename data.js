@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1742418894317,
+  "lastUpdate": 1742445190781,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -59119,6 +59119,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 17219749,
             "range": "± 880177",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "255691b294cc2f41550836dcc9b437db1a08533a",
+          "message": "feat(torii-indexer): transaction calls and outside calls (#3085)\n\n* feat(torii-indexer): transaction calls and outside calls\n\n* parse calls\n\n* contract class cache\n\n* c\n\n* parsing native and outside calls\n\n* support v2 and write db\n\n* correct decoding of raw felts\n\n* clean\n\n* feat: add support to graphql\n\n* f\n\n* use transaction calls table instead\n\n* add caller address for outisde exectuion and calls\n\n* fix: correct caller address\n\n* fetch entrypoints names\n\n* fix send for class abo\n\n* fix deadlock\n\n* fix block not found error on pending\n\n* only parse calldata for invoke tx\n\n* offset ovr fns\n\n* retrieving function name for legacy class\n\n* use cainome\n\n* add calls graphql\n\n* token transfers from tx\n\n* move tx to executro & broadcast\n\n* trnsaction subscription\n\n* f\n\n* chore\n\n* fix tx\n\n* tx subscirption and block number\n\n* fmt\n\n* subscribe to have speicfic caller\n\n* f\n\n* c\n\n* cleanup for merge\n\n* f\n\n* transaction c\n\n* opt memroy footprint\n\n* f",
+          "timestamp": "2025-03-20T13:16:57+09:00",
+          "tree_id": "dafe662b41838ec5128f6b1d2ffafa81d3a2a2d2",
+          "url": "https://github.com/dojoengine/dojo/commit/255691b294cc2f41550836dcc9b437db1a08533a"
+        },
+        "date": 1742445187159,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 47982831589,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
