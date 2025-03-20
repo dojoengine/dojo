@@ -637,10 +637,8 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         let mut unique_contracts = HashSet::new();
         // Contract -> Cursor
         for (event_idx, event) in events.iter().enumerate() {
-            // NOTE: erc* processors expect the event_id to be in this format to get
-            // transaction_hash:
             let event_id =
-                format!("{:#064x}:{:#x}:{:#04x}", block_number, transaction_hash, event_idx);
+                format!("{:#x}:{:#04x}", transaction_hash, event_idx);
 
             let event = Event {
                 from_address: event.from_address,
@@ -709,11 +707,8 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                 };
 
                 unique_contracts.insert(event.from_address);
-
-                // NOTE: erc* processors expect the event_id to be in this format to get
-                // transaction_hash:
                 let event_id =
-                    format!("{:#064x}:{:#x}:{:#04x}", block_number, *transaction_hash, event_idx);
+                    format!("{:#x}:{:#04x}", *transaction_hash, event_idx);
 
                 self.process_event(
                     block_number,
