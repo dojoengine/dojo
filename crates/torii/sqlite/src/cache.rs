@@ -225,14 +225,12 @@ pub fn get_entrypoint_name_from_class(class: &ContractClass, selector: Felt) -> 
             let abi: Vec<AbiEntry> = serde_json::from_str(&sierra.abi).unwrap();
             let functions: Vec<AbiEntry> = flatten_abi_funcs_recursive(&abi);
 
-            functions
-                .get(entrypoint_idx as usize)
-                .and_then(|function| match function {
-                    AbiEntry::Function(function) => Some(function.name.clone()),
-                    AbiEntry::L1Handler(l1_handler) => Some(l1_handler.name.clone()),
-                    AbiEntry::Constructor(constructor) => Some(constructor.name.clone()),
-                    _ => None,
-                })
+            functions.get(entrypoint_idx as usize).and_then(|function| match function {
+                AbiEntry::Function(function) => Some(function.name.clone()),
+                AbiEntry::L1Handler(l1_handler) => Some(l1_handler.name.clone()),
+                AbiEntry::Constructor(constructor) => Some(constructor.name.clone()),
+                _ => None,
+            })
         }
         ContractClass::Legacy(legacy) => {
             let abi = match &legacy.abi {
