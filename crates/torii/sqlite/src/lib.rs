@@ -535,6 +535,7 @@ impl Sql {
         self.model_cache.model(&selector).await.map_err(|e| e.into())
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn store_transaction(
         &mut self,
         transaction_hash: Felt,
@@ -561,7 +562,7 @@ impl Sql {
                 Argument::FieldElement(sender_address),
                 Argument::String(felts_to_sql_string(calldata)),
                 Argument::FieldElement(max_fee),
-                Argument::String(felts_to_sql_string(&signature)),
+                Argument::String(felts_to_sql_string(signature)),
                 Argument::FieldElement(nonce),
                 Argument::String(transaction_type.to_string()),
                 Argument::String(utc_dt_string_from_timestamp(block_timestamp)),

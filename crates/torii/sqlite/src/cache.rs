@@ -182,7 +182,7 @@ impl<P: Provider + Sync + std::fmt::Debug> ContractClassCache<P> {
             Ok(class_hash) => class_hash,
             Err(e) => match e {
                 // if we got a block not found error, we probably are in a pending block.
-                ProviderError::StarknetError(e) if e == StarknetError::BlockNotFound => {
+                ProviderError::StarknetError(StarknetError::BlockNotFound) => {
                     block_id = BlockId::Tag(BlockTag::Pending);
                     self.provider.get_class_hash_at(block_id, contract_address).await?
                 }
@@ -227,13 +227,12 @@ pub fn get_entrypoint_name_from_class(class: &ContractClass, selector: Felt) -> 
 
             functions
                 .get(entrypoint_idx as usize)
-                .map(|function| match function {
+                .and_then(|function| match function {
                     AbiEntry::Function(function) => Some(function.name.clone()),
                     AbiEntry::L1Handler(l1_handler) => Some(l1_handler.name.clone()),
                     AbiEntry::Constructor(constructor) => Some(constructor.name.clone()),
                     _ => None,
                 })
-                .flatten()
         }
         ContractClass::Legacy(legacy) => {
             let abi = match &legacy.abi {

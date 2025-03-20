@@ -474,7 +474,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                          contract_address) VALUES (?, ?)",
                     )
                     .bind(&transaction.transaction_hash)
-                    .bind(felt_to_sql_string(&contract_address))
+                    .bind(felt_to_sql_string(contract_address))
                     .execute(&mut **tx)
                     .await?;
                 }
