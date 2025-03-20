@@ -20,8 +20,8 @@ use utils::felts_to_sql_string;
 
 use crate::constants::SQL_FELT_DELIMITER;
 use crate::executor::{
-    Argument, DeleteEntityQuery, EventMessageQuery, QueryMessage, QueryType, ResetCursorsQuery,
-    SetHeadQuery, UpdateCursorsQuery,
+    Argument, DeleteEntityQuery, EventMessageQuery, QueryMessage, QueryType, SetHeadQuery,
+    UpdateCursorsQuery,
 };
 use crate::types::{Contract, ModelIndices};
 use crate::utils::utc_dt_string_from_timestamp;
@@ -226,33 +226,12 @@ impl Sql {
         })
     }
 
-    // For a given contract address, sets head to the passed value and sets
-    // last_pending_block_contract_tx and last_pending_block_tx to null
-    pub fn reset_cursors(
-        &mut self,
-        head: u64,
-        cursor_map: HashMap<Felt, (Felt, u64)>,
-        last_block_timestamp: u64,
-    ) -> Result<()> {
-        self.executor.send(QueryMessage::new(
-            "".to_string(),
-            vec![],
-            QueryType::ResetCursors(ResetCursorsQuery {
-                cursor_map,
-                last_block_timestamp,
-                last_block_number: head,
-            }),
-        ))?;
-
-        Ok(())
-    }
-
     pub fn update_cursors(
         &mut self,
-        head: u64,
+        last_block_number: u64,
+        last_block_timestamp: u64,
         last_pending_block_tx: Option<Felt>,
         cursor_map: HashMap<Felt, (Felt, u64)>,
-        pending_block_timestamp: u64,
     ) -> Result<()> {
         self.executor.send(QueryMessage::new(
             "".to_string(),
@@ -260,8 +239,8 @@ impl Sql {
             QueryType::UpdateCursors(UpdateCursorsQuery {
                 cursor_map,
                 last_pending_block_tx,
-                last_block_number: head,
-                pending_block_timestamp,
+                last_block_number,
+                last_block_timestamp,
             }),
         ))?;
         Ok(())
@@ -816,32 +795,30 @@ impl Sql {
             }
         };
 
-        let modify_column = |alter_table_queries: &mut Vec<String>,
-                             name: &str,
-                             sql_type: &str,
-                             sql_value: &str| {
-            // SQLite doesn't support ALTER COLUMN directly, so we need to:
-            // 1. Create a temporary table to store the current values
-            // 2. Drop the old column & index
-            // 3. Create new column with new type/constraint
-            // 4. Copy values back & create new index
-            alter_table_queries.push(format!(
+        let modify_column =
+            |alter_table_queries: &mut Vec<String>, name: &str, sql_type: &str, sql_value: &str| {
+                // SQLite doesn't support ALTER COLUMN directly, so we need to:
+                // 1. Create a temporary table to store the current values
+                // 2. Drop the old column & index
+                // 3. Create new column with new type/constraint
+                // 4. Copy values back & create new index
+                alter_table_queries.push(format!(
                 "CREATE TEMPORARY TABLE [tmp_values_{name}] AS SELECT internal_id, [{name}] FROM \
                  [{table_id}]"
             ));
-            alter_table_queries.push(format!("DROP INDEX IF EXISTS [idx_{table_id}_{name}]"));
-            alter_table_queries.push(format!("ALTER TABLE [{table_id}] DROP COLUMN [{name}]"));
-            alter_table_queries
-                .push(format!("ALTER TABLE [{table_id}] ADD COLUMN [{name}] {sql_type}"));
-            alter_table_queries.push(format!(
+                alter_table_queries.push(format!("DROP INDEX IF EXISTS [idx_{table_id}_{name}]"));
+                alter_table_queries.push(format!("ALTER TABLE [{table_id}] DROP COLUMN [{name}]"));
+                alter_table_queries
+                    .push(format!("ALTER TABLE [{table_id}] ADD COLUMN [{name}] {sql_type}"));
+                alter_table_queries.push(format!(
                 "UPDATE [{table_id}] SET [{name}] = (SELECT {sql_value} FROM [tmp_values_{name}] \
                  WHERE [tmp_values_{name}].internal_id = [{table_id}].internal_id)"
             ));
-            alter_table_queries.push(format!("DROP TABLE [tmp_values_{name}]"));
-            alter_table_queries.push(format!(
+                alter_table_queries.push(format!("DROP TABLE [tmp_values_{name}]"));
+                alter_table_queries.push(format!(
                 "CREATE INDEX IF NOT EXISTS [idx_{table_id}_{name}] ON [{table_id}] ([{name}]);"
             ));
-        };
+            };
 
         match ty {
             Ty::Struct(s) => {

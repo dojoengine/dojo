@@ -354,7 +354,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         let from = cursors.head.unwrap_or(self.config.world_block);
         let total_remaining_blocks = latest_block.block_number - from;
         let blocks_to_process = total_remaining_blocks.min(self.config.blocks_chunk_size);
-        let to = from + blocks_to_process;
+        let to = (from + blocks_to_process).min(latest_block.block_number);
 
         let instant = Instant::now();
         let result = if from < latest_block.block_number {
@@ -570,9 +570,9 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
 
         self.db.update_cursors(
             data.block_number - 1,
+            timestamp,
             last_pending_block_tx,
             cursor_map,
-            timestamp,
         )?;
 
         Ok(())
@@ -618,9 +618,9 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         self.task_manager.process_tasks().await?;
 
         let last_block_timestamp =
-            get_block_timestamp(&self.provider, data.latest_block_number).await?;
+            get_block_timestamp(&self.provider, data.latest_block_number).await.unwrap();
 
-        self.db.reset_cursors(data.latest_block_number, cursor_map, last_block_timestamp)?;
+        self.db.reset_cursors(data.latest_block_number, last_block_timestamp, None, cursor_map)?;
 
         Ok(())
     }
