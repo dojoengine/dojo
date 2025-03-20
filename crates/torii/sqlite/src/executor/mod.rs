@@ -66,7 +66,6 @@ pub struct DeleteEntityQuery {
 #[derive(Debug, Clone)]
 pub struct ApplyBalanceDiffQuery {
     pub erc_cache: HashMap<(ContractType, String), I256>,
-    pub block_id: BlockId,
 }
 
 #[derive(Debug, Clone)]

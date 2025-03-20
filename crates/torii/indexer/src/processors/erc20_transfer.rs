@@ -12,7 +12,7 @@ use tracing::debug;
 use super::{EventProcessor, EventProcessorConfig};
 use crate::task_manager::{TaskId, TaskPriority};
 
-pub(crate) const LOG_TARGET: &str = "torii::indexer::processors::erc20_transfer";
+pub(crate) const LOG_TARGET: &str = "torii_indexer::processors::erc20_transfer";
 
 #[derive(Default, Debug)]
 pub struct Erc20TransferProcessor;
@@ -59,7 +59,7 @@ where
         &self,
         world: &WorldContractReader<P>,
         db: &mut Sql,
-        block_number: u64,
+        _block_number: u64,
         block_timestamp: u64,
         event_id: &str,
         event: &Event,
@@ -80,7 +80,6 @@ where
             world.provider(),
             block_timestamp,
             event_id,
-            block_number,
         )
         .await?;
         debug!(target: LOG_TARGET,from = ?from, to = ?to, value = ?value, "ERC20 Transfer.");

@@ -314,13 +314,13 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                                     // we don't need to flush or apply cache diff
                                     if let Some(block_id) = block_id {
                                         self.db.flush().await?;
-                                        self.db.apply_cache_diff(block_id).await?;
+                                        self.db.apply_cache_diff().await?;
                                         self.db.execute().await?;
                                         debug!(target: LOG_TARGET, block_number = ?block_id, "Flushed and applied cache diff.");
                                     }
                                 },
                                 Err(e) => {
-                                    error!(target: LOG_TARGET, error = ?e, "Processing fetched data.");
+                                    error!(target: LOG_TARGET, error = %e, "Processing fetched data.");
                                     erroring_out = true;
                                     // incase of error rollback the transaction
                                     self.db.rollback().await?;
