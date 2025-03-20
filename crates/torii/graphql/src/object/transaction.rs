@@ -168,8 +168,8 @@ fn calls_field() -> Field {
                     let results = rows
                         .iter()
                         .map(|row| {
-                            value_mapping_from_row(&row, &CALL_MAPPING, false, true)
-                                .map(|value| Value::Object(value))
+                            value_mapping_from_row(row, &CALL_MAPPING, false, true)
+                                .map(Value::Object)
                         })
                         .collect::<Result<Vec<_>, _>>()?;
 
