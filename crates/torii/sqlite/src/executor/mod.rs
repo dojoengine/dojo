@@ -367,8 +367,11 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                             num_transactions / (current_time - cursor_timestamp)
                         };
 
-                        cursor.last_pending_block_contract_tx =
-                            Some(felt_to_sql_string(&new_cursor.0));
+                        cursor.last_pending_block_contract_tx = if update_cursors.last_pending_block_tx.is_some() {
+                            Some(felt_to_sql_string(&new_cursor.0))
+                        } else {
+                            None
+                        };
                         cursor.tps = new_tps.try_into().expect("does't fit in i64");
                     } else {
                         cursor.tps = 0;
