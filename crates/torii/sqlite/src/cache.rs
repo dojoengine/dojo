@@ -6,7 +6,7 @@ use dojo_world::contracts::abigen::model::Layout;
 use sqlx::{Pool, Sqlite, SqlitePool};
 use starknet::core::types::contract::AbiEntry;
 use starknet::core::types::{
-    BlockId, BlockTag, ContractClass, LegacyContractAbiEntry, StarknetError,
+    BlockId, BlockTag, ContractClass, EntryPointsByType, LegacyContractAbiEntry, StarknetError
 };
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::{Provider, ProviderError};
@@ -155,9 +155,15 @@ impl LocalCache {
     }
 }
 
+#[derive(Debug, Clone)]
+pub enum ClassAbi {
+    Sierra((EntryPointsByType, Vec<AbiEntry>)),
+    Legacy(Vec<LegacyContractAbiEntry>),
+}
+
 #[derive(Debug)]
 pub struct ContractClassCache<P: Provider + Sync + std::fmt::Debug> {
-    pub classes: RwLock<HashMap<Felt, (Felt, ContractClass)>>,
+    pub classes: RwLock<HashMap<Felt, (Felt, ClassAbi)>>,
     pub provider: Arc<P>,
 }
 
@@ -170,7 +176,7 @@ impl<P: Provider + Sync + std::fmt::Debug> ContractClassCache<P> {
         &self,
         contract_address: Felt,
         mut block_id: BlockId,
-    ) -> Result<ContractClass, Error> {
+    ) -> Result<ClassAbi, Error> {
         {
             let classes = self.classes.read().await;
             if let Some(class) = classes.get(&contract_address) {
@@ -189,55 +195,53 @@ impl<P: Provider + Sync + std::fmt::Debug> ContractClassCache<P> {
                 _ => return Err(Error::ProviderError(e)),
             },
         };
-        let class = self.provider.get_class_at(block_id, contract_address).await?;
+        let class = match self.provider.get_class_at(block_id, contract_address).await? {
+            ContractClass::Sierra(sierra) => {
+                let abi: Vec<AbiEntry> = serde_json::from_str(&sierra.abi).unwrap();
+                let functions: Vec<AbiEntry> = flatten_abi_funcs_recursive(&abi);
+                ClassAbi::Sierra((sierra.entry_points_by_type, functions))
+            }
+            ContractClass::Legacy(legacy) => ClassAbi::Legacy(legacy.abi.unwrap_or_default()),
+        };
         self.classes.write().await.insert(contract_address, (class_hash, class.clone()));
         Ok(class)
     }
 }
 
-pub fn get_entrypoint_name_from_class(class: &ContractClass, selector: Felt) -> Option<String> {
-    fn flatten_abi_funcs_recursive(abi: &[AbiEntry]) -> Vec<AbiEntry> {
-        abi.iter()
-            .flat_map(|entry| match entry {
-                AbiEntry::Function(_) | AbiEntry::L1Handler(_) | AbiEntry::Constructor(_) => {
-                    vec![entry.clone()]
-                }
-                AbiEntry::Interface(interface) => flatten_abi_funcs_recursive(&interface.items),
-                _ => vec![],
-            })
-            .collect()
-    }
+fn flatten_abi_funcs_recursive(abi: &[AbiEntry]) -> Vec<AbiEntry> {
+    abi.iter()
+        .flat_map(|entry| match entry {
+            AbiEntry::Function(_) | AbiEntry::L1Handler(_) | AbiEntry::Constructor(_) => {
+                vec![entry.clone()]
+            }
+            AbiEntry::Interface(interface) => flatten_abi_funcs_recursive(&interface.items),
+            _ => vec![],
+        })
+        .collect()
+}
 
+pub fn get_entrypoint_name_from_class(class: &ClassAbi, selector: Felt) -> Option<String> {
     match class {
-        ContractClass::Sierra(sierra) => {
-            let entrypoint_idx = match sierra
-                .entry_points_by_type
+        ClassAbi::Sierra((entrypoints, abi)) => {
+            let entrypoint_idx = match entrypoints
                 .external
                 .iter()
-                .chain(sierra.entry_points_by_type.l1_handler.iter())
-                .chain(sierra.entry_points_by_type.constructor.iter())
+                .chain(entrypoints.l1_handler.iter())
+                .chain(entrypoints.constructor.iter())
                 .find(|entrypoint| entrypoint.selector == selector)
             {
                 Some(entrypoint) => entrypoint.function_idx,
                 None => return None,
             };
 
-            let abi: Vec<AbiEntry> = serde_json::from_str(&sierra.abi).unwrap();
-            let functions: Vec<AbiEntry> = flatten_abi_funcs_recursive(&abi);
-
-            functions.get(entrypoint_idx as usize).and_then(|function| match function {
+            abi.get(entrypoint_idx as usize).and_then(|function| match function {
                 AbiEntry::Function(function) => Some(function.name.clone()),
                 AbiEntry::L1Handler(l1_handler) => Some(l1_handler.name.clone()),
                 AbiEntry::Constructor(constructor) => Some(constructor.name.clone()),
                 _ => None,
             })
         }
-        ContractClass::Legacy(legacy) => {
-            let abi = match &legacy.abi {
-                Some(abi) => abi,
-                None => return None,
-            };
-
+        ClassAbi::Legacy(abi) => {
             abi.iter().find_map(|entry| match entry {
                 LegacyContractAbiEntry::Function(function)
                     if get_selector_from_name(&function.name).unwrap() == selector =>
