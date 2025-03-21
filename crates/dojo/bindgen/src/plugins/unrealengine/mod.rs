@@ -945,7 +945,7 @@ void AGeneratedHelpers::CallController{namespace}{system}{selector}(const FContr
                 &naming::get_name_from_tag(&contract.tag)
             );
             policies_addresses += &format!(
-                "FieldElement {name}Contract;\n    FDojoModule::string_to_bytes(this->ContractsAddresses[\"{raw_contract_name}\"], {name}Contract.data, 32);",
+                "FieldElement {name}Contract;\n    FDojoModule::string_to_bytes(std::string(TCHAR_TO_UTF8(*this->ContractsAddresses[\"{raw_contract_name}\"])), {name}Contract.data, 32);",
                 name = contract_name,
                 raw_contract_name = raw_contract_name,
             );
@@ -1133,6 +1133,10 @@ void AGeneratedHelpers::CallbackProxy(struct FieldElement key, struct CArrayStru
     if (!Instance) return;
     Instance->ParseModelsAndSend(&models);
 }}
+
+template<typename T>
+static void ProcessMember(const Member* member, const char* expectedName, const char* expectedType, T& output);
+
         ", policies_addresses = policies_addresses, policies = policies, nb_policies = nb_policies);
 
         out += &class_types_converter;
