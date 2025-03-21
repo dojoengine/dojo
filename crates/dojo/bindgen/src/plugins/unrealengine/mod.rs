@@ -455,7 +455,7 @@ public:
 
     // CONTROLLER
     UFUNCTION(BlueprintCallable)
-    void ControllerGetAccountOrConnect(const FString& rpc_url, const FString& chain_id, const FString& actions_contract);
+    void ControllerGetAccountOrConnect(const FString& rpc_url, const FString& chain_id);
 
     DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnDojoControllerAccount, struct FControllerAccount, Account);
 
@@ -557,11 +557,26 @@ public:
                 if let Some(s) = handled_tokens.remove(&key) {
                     static_converters += &format!(
                         "static F{type_name} ConvertToF{type_name}(const Member* member) {{
-        //TODO implement
+        F{type_name} value;
+        {struct_members}
+        return value;
     }}
-
     ",
-                        type_name = s.type_name()
+                        type_name = s.type_name(),
+                        struct_members = s.inners
+                            .iter()
+                            .enumerate()
+                            .map(|(i, field)| {
+                                format!(
+                                    "ProcessMember(&member->ty->struct_.children.data[{}], \"{}\", \"{}\", value.{});",
+                                    i,
+                                    &field.name,
+                                    &field.token.type_name(),
+                                    Self::to_pascal_case(&field.name),
+                                )
+                            })
+                            .collect::<Vec<String>>()
+                            .join("\n       ")
                     );
                     else_if_type_converter += &format!(
                         "else if constexpr (std::is_same_v<T, F{type_name}>) {{
@@ -717,7 +732,7 @@ static void ProcessMember(const Member* member, const char* expectedName, const 
     }}
     {else_if_type_converter}
 
-    FDojoModule::TyFree(member->ty);
+    //FDojoModule::TyFree(member->ty);
 }}",
     static_converters = static_converters,
     else_if_type_converter = else_if_type_converter);
@@ -911,33 +926,69 @@ void AGeneratedHelpers::CallController{namespace}{system}{selector}(const FContr
         }
 
         out += &contract_addresses;
-        out += &String::from("
-};
+
+        // Policies
+        let mut policies_addresses: String = String::new();
+        let mut policies: String = String::new();
+        let mut nb_policies = 0;
+        for (_, contract) in contracts {
+            let contract_name =
+                Self::to_pascal_case(&naming::get_namespace_from_tag(&contract.tag))
+                    + &Self::to_pascal_case(&naming::get_name_from_tag(&contract.tag));
+            policies_addresses += &format!(
+                "FieldElement {name}Contract;\n    FDojoModule::string_to_bytes(\"{address}\", {name}Contract.data, 32);",
+                name = contract_name,
+                address = "0x0TODO"
+            );
+
+            let filtered_systems = contract.systems.iter().filter(|s| {
+                let function = s.to_function().unwrap();
+                function.get_output_kind() as u8 == FunctionOutputKind::NoOutput as u8
+                    && function.name != "upgrade"
+            });
+
+            for system_token in filtered_systems {
+                let function = system_token.to_function().unwrap();
+                nb_policies += 1;
+
+                if !policies.is_empty() {
+                    policies += ",\n        ";
+                }
+
+                policies += &format!(
+                    "{{ {}Contract, \"{}\", \"{}\" }}",
+                    contract_name, function.name, function.name
+                );
+            }
+        }
+
+        out += &format!("
+}};
 AGeneratedHelpers* AGeneratedHelpers::Instance = nullptr;
 
 AGeneratedHelpers::AGeneratedHelpers()
-{
+{{
     Instance = this;
     subscribed = false;
-}
+}}
 
 AGeneratedHelpers::~AGeneratedHelpers()
-{
-    if (subscribed) {
+{{
+    if (subscribed) {{
         FDojoModule::SubscriptionCancel(subscription);
-    }
-}
+    }}
+}}
 
 void AGeneratedHelpers::Connect(const FString& torii_url, const FString& world)
-{
+{{
     std::string torii_url_string = std::string(TCHAR_TO_UTF8(*torii_url));
     std::string world_string = std::string(TCHAR_TO_UTF8(*world));
     toriiClient = FDojoModule::CreateToriiClient(torii_url_string.c_str(), world_string.c_str());
     UE_LOG(LogTemp, Log, TEXT(\"Torii Client initialized.\"));
-}
+}}
 
 FAccount AGeneratedHelpers::CreateAccountDeprecated(const FString& rpc_url, const FString& address, const FString& private_key)
-{
+{{
     FAccount account;
 
     std::string rpc_url_string = std::string(TCHAR_TO_UTF8(*rpc_url));
@@ -946,137 +997,134 @@ FAccount AGeneratedHelpers::CreateAccountDeprecated(const FString& rpc_url, cons
     account.account = FDojoModule::CreateAccount(rpc_url_string.c_str(), address_string.c_str(), private_key_string.c_str());
     account.Address = address;
     return account;
-}
+}}
 
 FAccount AGeneratedHelpers::CreateBurnerDeprecated(const FString& rpc_url, const FString& address, const FString& private_key)
-{
+{{
     FAccount account;
 
     std::string rpc_url_string = std::string(TCHAR_TO_UTF8(*rpc_url));
     std::string address_string = std::string(TCHAR_TO_UTF8(*address));
     std::string private_key_string = std::string(TCHAR_TO_UTF8(*private_key));
     Account *master_account = FDojoModule::CreateAccount(rpc_url_string.c_str(), address_string.c_str(), private_key_string.c_str());
-    if (master_account == nullptr) {
+    if (master_account == nullptr) {{
         account.Address = UTF8_TO_TCHAR(\"0x0\");
         return account;
-    }
+    }}
     account.account = FDojoModule::CreateBurner(rpc_url_string.c_str(), master_account);
-    if (account.account == nullptr) {
+    if (account.account == nullptr) {{
         account.Address = UTF8_TO_TCHAR(\"0x0\");
         return account;
-    }
+    }}
     account.Address = FDojoModule::AccountAddress(account.account);
     return account;
-}
+}}
 
-void AGeneratedHelpers::ControllerGetAccountOrConnect(const FString& rpc_url, const FString& chain_id, const FString& actions_contract)
-{
+void AGeneratedHelpers::ControllerGetAccountOrConnect(const FString& rpc_url, const FString& chain_id)
+{{
     std::string rpc_url_string = std::string(TCHAR_TO_UTF8(*rpc_url));
     std::string chain_id_string = std::string(TCHAR_TO_UTF8(*chain_id));
-    std::string actions_contract_string = std::string(TCHAR_TO_UTF8(*actions_contract));
 
-    FieldElement actionsContract;
-    FDojoModule::string_to_bytes(actions_contract_string, actionsContract.data, 32);
-    struct Policy policies[] = {
-        { actionsContract, \"spawn\", \"Spawn\" },
-        { actionsContract, \"move\", \"Move\" },
-    };
-    int nbPolicies = 2;
+    {policies_addresses}
+    struct Policy policies[] = {{
+        {policies}
+    }};
+    int nbPolicies = {nb_policies};
 
     FDojoModule::ControllerGetAccountOrConnect(rpc_url_string.c_str(), chain_id_string.c_str(), policies, nbPolicies, ControllerCallbackProxy);
-}
+}}
 
 void AGeneratedHelpers::ControllerCallbackProxy(ControllerAccount *account)
-{
+{{
     if (!Instance) return;
     Instance->ControllerAccountCallback(account);
-}
+}}
 
 void AGeneratedHelpers::ControllerAccountCallback(ControllerAccount *account)
-{
+{{
     // Going back to Blueprint thread to broadcast the account
-    Async(EAsyncExecution::TaskGraphMainThread, [this, account]() {
+    Async(EAsyncExecution::TaskGraphMainThread, [this, account]() {{
         FControllerAccount controllerAccount;
         controllerAccount.account = account;
         FOnDojoControllerAccount.Broadcast(controllerAccount);
-    });
-}
+    }});
+}}
 
 void AGeneratedHelpers::ExecuteRawDeprecated(const FAccount& account, const FString& to, const FString& selector, const FString& calldataParameter)
-{
+{{
     Async(EAsyncExecution::Thread, [this, account, to, selector, calldataParameter]()
-    {
+    {{
         std::vector<std::string> felts;
-        if (strcmp(TCHAR_TO_UTF8(*calldataParameter), \"\") != 0) {
+        if (strcmp(TCHAR_TO_UTF8(*calldataParameter), \"\") != 0) {{
             TArray<FString> Out;
             calldataParameter.ParseIntoArray(Out,TEXT(\",\"),true);
-            for (int i = 0; i < Out.Num(); i++) {
+            for (int i = 0; i < Out.Num(); i++) {{
                 std::string felt = TCHAR_TO_UTF8(*Out[i]);
                 felts.push_back(felt);
-            }
-        }
+            }}
+        }}
         FDojoModule::ExecuteRaw(account.account, TCHAR_TO_UTF8(*to), TCHAR_TO_UTF8(*selector), felts);
-    });
-}
+    }});
+}}
 
 void AGeneratedHelpers::ExecuteFromOutside(const FControllerAccount& account, const FString& to, const FString& selector, const FString& calldataParameter)
-{
+{{
     Async(EAsyncExecution::Thread, [this, account, to, selector, calldataParameter]()
-    {
+    {{
         std::vector<std::string> felts;
-        if (strcmp(TCHAR_TO_UTF8(*calldataParameter), \"\") != 0) {
+        if (strcmp(TCHAR_TO_UTF8(*calldataParameter), \"\") != 0) {{
             TArray<FString> Out;
             calldataParameter.ParseIntoArray(Out,TEXT(\",\"),true);
-            for (int i = 0; i < Out.Num(); i++) {
+            for (int i = 0; i < Out.Num(); i++) {{
                 std::string felt = TCHAR_TO_UTF8(*Out[i]);
                 felts.push_back(felt);
-            }
-        }
+            }}
+        }}
         FDojoModule::ExecuteFromOutside(account.account, TCHAR_TO_UTF8(*to), TCHAR_TO_UTF8(*selector), felts);
-    });
-}
+    }});
+}}
 
 void AGeneratedHelpers::FetchExistingModels()
-{
+{{
     Async(EAsyncExecution::Thread, [this]()
-            {
-        ResultCArrayEntity resEntities = FDojoModule::GetEntities(toriiClient, \"{ not used }\");
-        if (resEntities.tag == ErrCArrayEntity) {
+            {{
+        ResultCArrayEntity resEntities = FDojoModule::GetEntities(toriiClient, \"{{ not used }}\");
+        if (resEntities.tag == ErrCArrayEntity) {{
             UE_LOG(LogTemp, Log, TEXT(\"Failed to fetch entities: %hs\"), resEntities.err.message);
             return;
-        }
+        }}
         CArrayEntity *entities = &resEntities.ok;
 
-        for (int i = 0; i < entities->data_len; i++) {
+        for (int i = 0; i < entities->data_len; i++) {{
             CArrayStruct* models = &entities->data[i].models;
             this->ParseModelsAndSend(models);
-        }
+        }}
         FDojoModule::CArrayFree(entities->data, entities->data_len);
-    });
-}
+    }});
+    }}
 
 void AGeneratedHelpers::SubscribeOnDojoModelUpdate()
-{
+{{
     UE_LOG(LogTemp, Log, TEXT(\"Subscribing to entity update.\"));
-    if (subscribed) {
+    if (subscribed) {{
         UE_LOG(LogTemp, Log, TEXT(\"Warning: cancelled, already subscribed.\"));
         return;
-    }
-    if (toriiClient == nullptr) {
+    }}
+    if (toriiClient == nullptr) {{
         UE_LOG(LogTemp, Log, TEXT(\"Error: .\"));
         return;
-    }
+    }}
     subscribed = true;
-    struct ResultSubscription res = FDojoModule::OnEntityUpdate(toriiClient, \"{}\", nullptr, CallbackProxy);
+    struct ResultSubscription res = FDojoModule::OnEntityUpdate(toriiClient, \"{{}}\", nullptr, CallbackProxy);
     subscription = res.ok;
-}
+}}
 
 void AGeneratedHelpers::CallbackProxy(struct FieldElement key, struct CArrayStruct models)
-{
+{{
     if (!Instance) return;
     Instance->ParseModelsAndSend(&models);
-}
-        ");
+}}
+        ", policies_addresses = policies_addresses, policies = policies, nb_policies = nb_policies);
 
         out += &class_types_converter;
         out += &function_parse_models;
