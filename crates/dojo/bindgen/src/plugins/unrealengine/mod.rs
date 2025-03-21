@@ -901,16 +901,20 @@ void AGeneratedHelpers::ParseModelsAndSend(struct CArrayStruct* models)
                         })
                         .collect::<Vec<String>>()
                         .join("\n");
-                    format!("FString args;\n    FString arg;\n{}\n    ", args_text)
+                    format!("FString arg;\n{}\n    ", args_text)
                 };
                 functions_bodies += &format!(
                     "
 void AGeneratedHelpers::Call{namespace}{system}{selector}(const FAccount& account{args}) {{
-    {args_body}this->ExecuteRawDeprecated(account, this->ContractsAddresses[\"{contract_name}\"], TEXT(\"{selector_raw}\"), args);
+    FString args;
+    {args_body}
+    this->ExecuteRawDeprecated(account, this->ContractsAddresses[\"{contract_name}\"], TEXT(\"{selector_raw}\"), args);
 }}
 
 void AGeneratedHelpers::CallController{namespace}{system}{selector}(const FControllerAccount& account{args}) {{
-    {args_body}this->ExecuteFromOutside(account, this->ContractsAddresses[\"{contract_name}\"], TEXT(\"{selector_raw}\"), args);
+    FString args;
+    {args_body}
+    this->ExecuteFromOutside(account, this->ContractsAddresses[\"{contract_name}\"], TEXT(\"{selector_raw}\"), args);
 }}
 ",
                     namespace =
@@ -935,10 +939,15 @@ void AGeneratedHelpers::CallController{namespace}{system}{selector}(const FContr
             let contract_name =
                 Self::to_pascal_case(&naming::get_namespace_from_tag(&contract.tag))
                     + &Self::to_pascal_case(&naming::get_name_from_tag(&contract.tag));
+            let raw_contract_name = &format!(
+                "{}-{}",
+                &naming::get_namespace_from_tag(&contract.tag),
+                &naming::get_name_from_tag(&contract.tag)
+            );
             policies_addresses += &format!(
-                "FieldElement {name}Contract;\n    FDojoModule::string_to_bytes(\"{address}\", {name}Contract.data, 32);",
+                "FieldElement {name}Contract;\n    FDojoModule::string_to_bytes(this->ContractsAddresses[\"{raw_contract_name}\"], {name}Contract.data, 32);",
                 name = contract_name,
-                address = "0x0TODO"
+                raw_contract_name = raw_contract_name,
             );
 
             let filtered_systems = contract.systems.iter().filter(|s| {
