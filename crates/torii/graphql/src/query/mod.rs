@@ -322,6 +322,10 @@ fn fetch_value(
                         .to_rfc3339();
                     Value::from(dt)
                 }
+                "Int" => {
+                    let i = row.try_get::<i64, &str>(&column_name)?;
+                    Value::from(i)
+                }
                 _ => {
                     let s = row.try_get::<String, &str>(&column_name)?;
                     Value::from(s)
