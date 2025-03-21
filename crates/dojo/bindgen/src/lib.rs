@@ -12,12 +12,13 @@ use dojo_world::local::{ResourceLocal, WorldLocal};
 use error::BindgenResult;
 
 mod plugins;
+use plugins::BuiltinPlugin;
+pub use plugins::BuiltinPlugins;
 use plugins::recs::TypescriptRecsPlugin;
 use plugins::typescript::TypescriptPlugin;
 use plugins::typescript_v2::TypeScriptV2Plugin;
 use plugins::unity::UnityPlugin;
-use plugins::BuiltinPlugin;
-pub use plugins::BuiltinPlugins;
+use plugins::unrealengine::UnrealEnginePlugin;
 
 #[derive(Debug, PartialEq)]
 pub struct DojoModel {
@@ -101,6 +102,7 @@ impl PluginManager {
             let builder: Box<dyn BuiltinPlugin> = match plugin {
                 BuiltinPlugins::Typescript => Box::new(TypescriptPlugin::new()),
                 BuiltinPlugins::Unity => Box::new(UnityPlugin::new()),
+                BuiltinPlugins::UnrealEngine => Box::new(UnrealEnginePlugin::new()),
                 BuiltinPlugins::TypeScriptV2 => Box::new(TypeScriptV2Plugin::new()),
                 BuiltinPlugins::Recs => Box::new(TypescriptRecsPlugin::new()),
             };
