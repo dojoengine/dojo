@@ -275,8 +275,8 @@ pprof = { version = "0.13.0", features = [ "criterion", "flamegraph" ] }
 slot = { git = "https://github.com/cartridge-gg/slot", rev = "1298a30" }
 
 # alloy core
-alloy-primitives = { version = "0.8", default-features = false }
-alloy-sol-types = { version = "0.8", default-features = false }
+alloy-primitives = { version = "0.8.24", default-features = false }
+alloy-sol-types = { version = "0.8.24", default-features = false }
 
 # alloy
 alloy-contract = { version = "0.4", default-features = false }
