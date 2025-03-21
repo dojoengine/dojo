@@ -28,6 +28,30 @@ enum EComplex {
     B,
 }
 
+
+#[derive(Drop, Introspect, Serde, Debug, PartialEq)]
+struct GenericStruct<T> {
+    value: T,
+}
+
+#[derive(Drop, Introspect, Serde, Default, Debug, PartialEq)]
+enum GenericEnum<T> {
+    #[default]
+    A: T,
+}
+
+#[derive(Drop, Introspect, Serde, Debug, PartialEq)]
+struct UseGenericStruct {
+    x: GenericStruct<u16>,
+    y: u8,
+}
+
+#[derive(Drop, Introspect, Serde, Debug, PartialEq)]
+struct UseGenericEnum {
+    x: GenericEnum<u16>,
+    y: u8,
+}
+
 #[test]
 fn test_dojo_store_primitives() {
     // felt252
@@ -289,6 +313,75 @@ fn test_dojo_store_tuples() {
     let res = DojoStore::<E>::deserialize(ref values);
     assert_eq!(
         res, Option::Some(E::C((38, (12, 42), 98))), "DojoStore<Tuple> deserialization failed",
+    );
+}
+
+#[test]
+fn test_dojo_store_generic_struct() {
+    let s = GenericStruct::<u32> { value: 1234567 };
+
+    let mut serialized = array![];
+    DojoStore::serialize(@s, ref serialized);
+    assert_eq!(serialized, array![1234567], "DojoStore<GenericStruct<u32>> serialization failed");
+
+    let mut values = [1234567].span();
+    let res = DojoStore::<GenericStruct<u32>>::deserialize(ref values);
+    assert_eq!(
+        res,
+        Option::Some(GenericStruct::<u32> { value: 1234567 }),
+        "DojoStore<GenericStruct<u32>> deserialization failed",
+    );
+}
+
+#[test]
+fn test_dojo_store_generic_enum() {
+    let e = GenericEnum::<u32>::A(1234567);
+
+    let mut serialized = array![];
+    DojoStore::serialize(@e, ref serialized);
+    assert_eq!(serialized, array![1, 1234567], "DojoStore<GenericEnum<u32>> serialization failed");
+
+    let mut values = [1, 1234567].span();
+    let res = DojoStore::<GenericEnum<u32>>::deserialize(ref values);
+    assert_eq!(
+        res,
+        Option::Some(GenericEnum::<u32>::A(1234567)),
+        "DojoStore<GenericEnum<u32>> deserialization failed",
+    );
+}
+
+
+#[test]
+fn test_dojo_store_use_generic_struct() {
+    let s = UseGenericStruct { x: GenericStruct { value: 12345 }, y: 42 };
+
+    let mut serialized = array![];
+    DojoStore::serialize(@s, ref serialized);
+    assert_eq!(serialized, array![12345, 42], "DojoStore<UseGenericStruct> serialization failed");
+
+    let mut values = [12345, 42].span();
+    let res = DojoStore::<UseGenericStruct>::deserialize(ref values);
+    assert_eq!(
+        res,
+        Option::Some(UseGenericStruct { x: GenericStruct { value: 12345 }, y: 42 }),
+        "DojoStore<UseGenericStruct> deserialization failed",
+    );
+}
+
+#[test]
+fn test_dojo_store_use_generic_enum() {
+    let e = UseGenericEnum { x: GenericEnum::A(12345), y: 42 };
+
+    let mut serialized = array![];
+    DojoStore::serialize(@e, ref serialized);
+    assert_eq!(serialized, array![1, 12345, 42], "DojoStore<UseGenericEnum> serialization failed");
+
+    let mut values = [1, 12345, 42].span();
+    let res = DojoStore::<UseGenericEnum>::deserialize(ref values);
+    assert_eq!(
+        res,
+        Option::Some(UseGenericEnum { x: GenericEnum::A(12345), y: 42 }),
+        "DojoStore<UseGenericEnum> deserialization failed",
     );
 }
 
