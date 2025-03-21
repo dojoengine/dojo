@@ -189,7 +189,6 @@ fn test_generic_struct_introspect() {
     );
 }
 
-
 #[test]
 fn test_generic_enum_introspect() {
     let size = Introspect::<GenericEnum<u32>>::size();

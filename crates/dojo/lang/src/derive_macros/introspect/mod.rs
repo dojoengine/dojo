@@ -33,11 +33,8 @@ pub fn handle_introspect_struct(
 
     let inspect_gen_impls =
         build_generic_impls(&gen_types, &["+dojo::meta::introspect::Introspect".to_string()], &[]);
-    let dojo_store_gen_impls = build_generic_impls(
-        &gen_types,
-        &["+dojo::storage::DojoStore".to_string(), "+core::serde::Serde".to_string()],
-        &[format!("+core::serde::Serde<{struct_name_with_generics}>")],
-    );
+    let dojo_store_gen_impls =
+        build_generic_impls(&gen_types, &["+dojo::storage::DojoStore".to_string()], &[]);
 
     let struct_size = size::compute_struct_layout_size(db, &struct_ast, packed);
     let ty = ty::build_struct_ty(db, &struct_name_with_generics, &struct_ast);
@@ -95,10 +92,7 @@ pub fn handle_introspect_enum(
     let dojo_store_gen_impls = build_generic_impls(
         &gen_types,
         &["+dojo::storage::DojoStore".to_string(), "+core::serde::Serde".to_string()],
-        &[
-            format!("+core::serde::Serde<{enum_name_with_generics}>"),
-            format!("+core::traits::Default<{enum_name_with_generics}>"),
-        ],
+        &[format!("+core::traits::Default<{enum_name_with_generics}>")],
     );
 
     let variant_sizes = size::compute_enum_variant_sizes(db, &enum_ast);

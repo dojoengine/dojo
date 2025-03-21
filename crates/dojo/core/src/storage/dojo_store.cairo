@@ -1,44 +1,48 @@
+// Might not be necessary from Cairo 2.11
 pub impl ContractAddressDefault of Default<core::starknet::ContractAddress> {
     fn default() -> core::starknet::ContractAddress {
         core::starknet::contract_address_const::<0>()
     }
 }
 
-/// Handle data (de)serialization to be stored into
-/// the world storage.
-///
-/// The default implementation of this trait uses Serde.
-pub trait DojoStore<T, +Serde<T>> {
-    fn serialize(
-        self: @T, ref serialized: Array<felt252>,
-    ) {
-        Serde::<T>::serialize(self, ref serialized);
-    }
-    fn deserialize(ref values: Span<felt252>) -> Option<T> {
-        Serde::<T>::deserialize(ref values)
+/// Handle data (de)serialization to be stored into the world storage.
+pub trait DojoStore<T> {
+    fn serialize(self: @T, ref serialized: Array<felt252>);
+    fn deserialize(ref values: Span<felt252>) -> Option<T>;
+}
+
+/// The default implementation of DojoStore uses Serde.
+mod default_impl {
+    pub impl SerdeBasedDojoStore<T, +Serde<T>> of super::DojoStore<T> {
+        fn serialize(self: @T, ref serialized: Array<felt252>) {
+            Serde::serialize(self, ref serialized);
+        }
+        fn deserialize(ref values: Span<felt252>) -> Option<T> {
+            Serde::<T>::deserialize(ref values)
+        }
     }
 }
 
-impl DojoStore_felt252 of DojoStore<felt252>;
-impl DojoStore_bool of DojoStore<bool>;
-impl DojoStore_u8 of DojoStore<u8>;
-impl DojoStore_u16 of DojoStore<u16>;
-impl DojoStore_u32 of DojoStore<u32>;
-impl DojoStore_u64 of DojoStore<u64>;
-impl DojoStore_u128 of DojoStore<u128>;
-impl DojoStore_u256 of DojoStore<u256>;
-impl DojoStore_i8 of DojoStore<i8>;
-impl DojoStore_i16 of DojoStore<i16>;
-impl DojoStore_i32 of DojoStore<i32>;
-impl DojoStore_i64 of DojoStore<i64>;
-impl DojoStore_i128 of DojoStore<i128>;
-impl DojoStore_ContractAddress of DojoStore<starknet::ContractAddress>;
-impl DojoStore_ClassHash of DojoStore<starknet::ClassHash>;
-impl DojoStore_EthAddress of DojoStore<starknet::EthAddress>;
-impl DojoStore_ByteArray of DojoStore<ByteArray>;
+pub impl DojoStore_felt252 = default_impl::SerdeBasedDojoStore<felt252>;
+pub impl DojoStore_bool = default_impl::SerdeBasedDojoStore<bool>;
+pub impl DojoStore_u8 = default_impl::SerdeBasedDojoStore<u8>;
+pub impl DojoStore_u16 = default_impl::SerdeBasedDojoStore<u16>;
+pub impl DojoStore_u32 = default_impl::SerdeBasedDojoStore<u32>;
+pub impl DojoStore_u64 = default_impl::SerdeBasedDojoStore<u64>;
+pub impl DojoStore_u128 = default_impl::SerdeBasedDojoStore<u128>;
+pub impl DojoStore_u256 = default_impl::SerdeBasedDojoStore<u256>;
+pub impl DojoStore_i8 = default_impl::SerdeBasedDojoStore<i8>;
+pub impl DojoStore_i16 = default_impl::SerdeBasedDojoStore<i16>;
+pub impl DojoStore_i32 = default_impl::SerdeBasedDojoStore<i32>;
+pub impl DojoStore_i64 = default_impl::SerdeBasedDojoStore<i64>;
+pub impl DojoStore_i128 = default_impl::SerdeBasedDojoStore<i128>;
+pub impl DojoStore_ContractAddress = default_impl::SerdeBasedDojoStore<starknet::ContractAddress>;
+pub impl DojoStore_ClassHash = default_impl::SerdeBasedDojoStore<starknet::ClassHash>;
+pub impl DojoStore_EthAddress = default_impl::SerdeBasedDojoStore<starknet::EthAddress>;
+pub impl DojoStore_ByteArray = default_impl::SerdeBasedDojoStore<ByteArray>;
 
 /// Specific implementation of DojoStore for Option<T>.
-impl DojoStore_option<T, +Serde<T>, +DojoStore<T>, +Serde<Option<T>>> of DojoStore<Option<T>> {
+impl DojoStore_option<T, +DojoStore<T>> of DojoStore<Option<T>> {
     fn serialize(self: @Option<T>, ref serialized: Array<felt252>) {
         match self {
             Option::Some(x) => {
@@ -63,7 +67,7 @@ impl DojoStore_option<T, +Serde<T>, +DojoStore<T>, +Serde<Option<T>>> of DojoSto
     }
 }
 
-fn serialize_array_helper<T, +Serde<T>, +DojoStore<T>, +Drop<T>>(
+fn serialize_array_helper<T, +DojoStore<T>, +Drop<T>>(
     mut input: Span<T>, ref output: Array<felt252>,
 ) {
     match input.pop_front() {
@@ -75,7 +79,7 @@ fn serialize_array_helper<T, +Serde<T>, +DojoStore<T>, +Drop<T>>(
     }
 }
 
-fn deserialize_array_helper<T, +Serde<T>, +DojoStore<T>, +Drop<T>>(
+fn deserialize_array_helper<T, +DojoStore<T>, +Drop<T>>(
     ref serialized: Span<felt252>, mut curr_output: Array<T>, remaining: felt252,
 ) -> Option<Array<T>> {
     if remaining == 0 {
@@ -85,10 +89,9 @@ fn deserialize_array_helper<T, +Serde<T>, +DojoStore<T>, +Drop<T>>(
     deserialize_array_helper(ref serialized, curr_output, remaining - 1)
 }
 
-
 /// Specific implementation of DojoStore for Array<T>,
 /// to call DojoStore for array items instead of Serde directly.
-impl DojoStore_array<T, +Drop<T>, +Serde<T>, +DojoStore<T>> of DojoStore<Array<T>> {
+impl DojoStore_array<T, +Drop<T>, +DojoStore<T>> of DojoStore<Array<T>> {
     fn serialize(self: @Array<T>, ref serialized: Array<felt252>) {
         DojoStore::serialize(@self.len(), ref serialized);
         serialize_array_helper(self.span(), ref serialized);
@@ -100,4 +103,3 @@ impl DojoStore_array<T, +Drop<T>, +Serde<T>, +DojoStore<T>> of DojoStore<Array<T
         deserialize_array_helper(ref values, arr, length)
     }
 }
-
