@@ -11,7 +11,7 @@ use starknet::core::types::{
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::{Provider, ProviderError};
 use starknet_crypto::Felt;
-use tokio::sync::RwLock;
+use tokio::sync::{Mutex, RwLock};
 
 use crate::constants::TOKEN_BALANCE_TABLE;
 use crate::error::{Error, ParseError};
@@ -126,7 +126,9 @@ impl ModelCache {
 #[derive(Debug)]
 pub struct LocalCache {
     pub erc_cache: RwLock<HashMap<(ContractType, String), I256>>,
-    pub token_id_registry: RwLock<HashSet<String>>,
+    // we are using a mutex here because this needs to be atomic.
+    // since we paralellize token transfers and thus token reigstrations
+    pub token_id_registry: Mutex<HashSet<String>>,
 }
 
 impl LocalCache {
@@ -142,16 +144,26 @@ impl LocalCache {
 
         Self {
             erc_cache: RwLock::new(HashMap::new()),
-            token_id_registry: RwLock::new(token_id_registry),
+            token_id_registry: Mutex::new(token_id_registry)
         }
     }
 
     pub async fn contains_token_id(&self, token_id: &str) -> bool {
-        self.token_id_registry.read().await.contains(token_id)
+        self.token_id_registry.lock().await.contains(token_id)
     }
 
     pub async fn register_token_id(&self, token_id: String) {
-        self.token_id_registry.write().await.insert(token_id);
+        self.token_id_registry.lock().await.insert(token_id);
+    }
+
+    pub async fn try_register_token_id(&self, token_id: String) -> bool {
+        let mut registry = self.token_id_registry.lock().await;
+        if registry.contains(&token_id) {
+            return false;
+        }
+
+        registry.insert(token_id);
+        true
     }
 }
 

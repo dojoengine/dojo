@@ -36,8 +36,11 @@ impl Sql {
         // contract_address
         let token_id = felt_to_sql_string(&contract_address);
 
-        let token_exists: bool = self.local_cache.contains_token_id(&token_id).await;
-
+        // optimistically add the token_id to cache
+        // this cache is used while applying the cache diff
+        // so we need to make sure that all RegisterErc*Token queries
+        // are applied before the cache diff is applied
+        let token_exists: bool = !self.local_cache.try_register_token_id(token_id.to_string()).await;
         if !token_exists {
             self.register_erc20_token_metadata(contract_address, &token_id, provider).await?;
         }
@@ -92,8 +95,11 @@ impl Sql {
     ) -> Result<()> {
         // contract_address:id
         let id = felt_and_u256_to_sql_string(&contract_address, &token_id);
-        let token_exists: bool = self.local_cache.contains_token_id(&id).await;
-
+        // optimistically add the token_id to cache
+        // this cache is used while applying the cache diff
+        // so we need to make sure that all RegisterErc*Token queries
+        // are applied before the cache diff is applied
+        let token_exists: bool = !self.local_cache.try_register_token_id(id.clone()).await;
         if !token_exists {
             self.register_nft_token_metadata(&id, contract_address, token_id).await?;
         }
@@ -225,8 +231,6 @@ impl Sql {
             }),
         ))?;
 
-        self.local_cache.register_token_id(token_id.to_string()).await;
-
         Ok(())
     }
 
@@ -245,13 +249,6 @@ impl Sql {
                 token_id: actual_token_id,
             }),
         ))?;
-
-        // optimistically add the token_id to cache
-        // this cache is used while applying the cache diff
-        // so we need to make sure that all RegisterErc*Token queries
-        // are applied before the cache diff is applied
-        self.local_cache.register_token_id(id.to_string()).await;
-
         Ok(())
     }
 
