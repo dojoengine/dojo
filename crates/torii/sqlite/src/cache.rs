@@ -144,7 +144,7 @@ impl LocalCache {
 
         Self {
             erc_cache: RwLock::new(HashMap::new()),
-            token_id_registry: Mutex::new(token_id_registry)
+            token_id_registry: Mutex::new(token_id_registry),
         }
     }
 

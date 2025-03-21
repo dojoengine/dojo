@@ -40,7 +40,8 @@ impl Sql {
         // this cache is used while applying the cache diff
         // so we need to make sure that all RegisterErc*Token queries
         // are applied before the cache diff is applied
-        let token_exists: bool = !self.local_cache.try_register_token_id(token_id.to_string()).await;
+        let token_exists: bool =
+            !self.local_cache.try_register_token_id(token_id.to_string()).await;
         if !token_exists {
             self.register_erc20_token_metadata(contract_address, &token_id, provider).await?;
         }
