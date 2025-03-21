@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1742580447545,
+  "lastUpdate": 1742580611177,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -59305,6 +59305,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 44888747510,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tarrencev@users.noreply.github.com",
+            "name": "Tarrence van As",
+            "username": "tarrencev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "52e3b55a38083d8f21622b33342526ddad78971d",
+          "message": "chore(devcontainer): update image: v1.3.1 (#3123)\n\nUpdate devcontainer image: v1.3.1\n\nCo-authored-by: glihm <glihm@users.noreply.github.com>",
+          "timestamp": "2025-03-21T11:51:25-06:00",
+          "tree_id": "dbfc5d060f9e7a3b0fe4d6b151e92f24d5c9b180",
+          "url": "https://github.com/dojoengine/dojo/commit/52e3b55a38083d8f21622b33342526ddad78971d"
+        },
+        "date": 1742580608106,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2557218,
+            "range": "± 36611",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 392042,
+            "range": "± 26421",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2779409437,
+            "range": "± 255443201",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 16873449,
+            "range": "± 89543",
             "unit": "ns/iter"
           }
         ]
