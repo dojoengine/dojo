@@ -31,7 +31,6 @@ impl Sql {
         provider: &P,
         block_timestamp: u64,
         event_id: &str,
-        block_number: u64,
     ) -> Result<()> {
         // contract_address
         let token_id = felt_to_sql_string(&contract_address);
@@ -68,11 +67,10 @@ impl Sql {
                 *to_balance += I256::from(amount);
             }
         }
-        let block_id = BlockId::Number(block_number);
 
         if self.local_cache.erc_cache.read().await.len() >= 100000 {
             self.flush().await.with_context(|| "Failed to flush in handle_erc20_transfer")?;
-            self.apply_cache_diff(block_id).await?;
+            self.apply_cache_diff().await?;
         }
 
         Ok(())
@@ -88,7 +86,6 @@ impl Sql {
         amount: U256,
         block_timestamp: u64,
         event_id: &str,
-        block_number: u64,
     ) -> Result<()> {
         // contract_address:id
         let id = felt_and_u256_to_sql_string(&contract_address, &token_id);
@@ -128,11 +125,9 @@ impl Sql {
             }
         }
 
-        let block_id = BlockId::Number(block_number);
-
         if self.local_cache.erc_cache.read().await.len() >= 100000 {
             self.flush().await.with_context(|| "Failed to flush in handle_erc721_transfer")?;
-            self.apply_cache_diff(block_id).await?;
+            self.apply_cache_diff().await?;
         }
 
         Ok(())
@@ -290,7 +285,7 @@ impl Sql {
         Ok(())
     }
 
-    pub async fn apply_cache_diff(&mut self, block_id: BlockId) -> Result<()> {
+    pub async fn apply_cache_diff(&mut self) -> Result<()> {
         if !self.local_cache.erc_cache.read().await.is_empty() {
             let mut erc_cache = self.local_cache.erc_cache.write().await;
             self.executor.send(QueryMessage::new(
@@ -298,7 +293,6 @@ impl Sql {
                 vec![],
                 QueryType::ApplyBalanceDiff(ApplyBalanceDiffQuery {
                     erc_cache: mem::replace(&mut erc_cache, HashMap::with_capacity(64)),
-                    block_id,
                 }),
             ))?;
         }

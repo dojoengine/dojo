@@ -1,1 +1,1 @@
-pub(crate) const LOG_TARGET: &str = "torii_indexer::engine";
+pub(crate) const LOG_TARGET: &str = "torii::indexer::engine";

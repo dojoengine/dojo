@@ -79,7 +79,6 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                         token_id,
                         balance,
                         Arc::clone(&provider),
-                        apply_balance_diff.block_id,
                     )
                     .await?;
                 }
@@ -97,7 +96,6 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                         token_id,
                         balance,
                         Arc::clone(&provider),
-                        apply_balance_diff.block_id,
                     )
                     .await?;
                 }
@@ -116,7 +114,6 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                         token_id,
                         balance,
                         Arc::clone(&provider),
-                        apply_balance_diff.block_id,
                     )
                     .await?;
                 }
@@ -135,7 +132,6 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
         token_id: &str,
         balance_diff: &I256,
         provider: Arc<P>,
-        block_id: BlockId,
     ) -> Result<()> {
         let tx = &mut self.transaction;
         let balance: Option<(String,)> =
@@ -163,7 +159,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                             entry_point_selector: get_selector_from_name("balanceOf").unwrap(),
                             calldata: vec![Felt::from_str(account_address).unwrap()],
                         },
-                        block_id,
+                        BlockId::Tag(BlockTag::Pending),
                     )
                     .await
                     .with_context(|| format!("Failed to fetch balance for id: {}", id))?;

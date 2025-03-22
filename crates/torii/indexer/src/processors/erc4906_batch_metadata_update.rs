@@ -10,7 +10,7 @@ use tracing::debug;
 use super::{EventProcessor, EventProcessorConfig};
 use crate::task_manager::{self, TaskId, TaskPriority};
 
-pub(crate) const LOG_TARGET: &str = "torii_indexer::processors::erc4906_metadata_update_batch";
+pub(crate) const LOG_TARGET: &str = "torii::indexer::processors::erc4906_metadata_update_batch";
 
 #[derive(Default, Debug)]
 pub struct Erc4906BatchMetadataUpdateProcessor;
