@@ -108,7 +108,7 @@ lazy_static! {
         ),
         (
             Name::new("blockNumber"),
-            TypeData::Simple(TypeRef::named(TypeRef::STRING)),
+            TypeData::Simple(TypeRef::named(TypeRef::INT)),
         )
     ]);
     pub static ref PAGE_INFO_TYPE_MAPPING: TypeMapping = TypeMapping::from([
