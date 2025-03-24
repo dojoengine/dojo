@@ -751,12 +751,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 .bind(&register_erc20_token.symbol)
                 .bind(register_erc20_token.decimals);
 
-                let token = query.fetch_one(&mut **tx).await.with_context(|| {
-                    format!(
-                        "Failed to execute RegisterErc20Token query: {:?}",
-                        register_erc20_token
-                    )
-                })?;
+                let token = query.fetch_one(&mut **tx).await?;
 
                 self.publish_queue.push(BrokerMessage::TokenRegistered(token));
             }
