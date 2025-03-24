@@ -55,7 +55,7 @@ where
     engine.process_range(data).await.unwrap();
 
     db.flush().await.unwrap();
-    db.apply_cache_diff(BlockId::Number(to)).await.unwrap();
+    db.apply_cache_diff().await.unwrap();
     db.execute().await.unwrap();
 
     Ok(engine)
