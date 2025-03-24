@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1742839725064,
+  "lastUpdate": 1742841442193,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -59509,6 +59509,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 17298085,
             "range": "± 248642",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7f7424f535e04ed8363d346440ab6efb2f80c734",
+          "message": "fix(torii-sqlite): entity update for write members (#3127)\n\n* fix(torii-sqlite): entity update for write members\n\n* fmt",
+          "timestamp": "2025-03-24T12:20:57-06:00",
+          "tree_id": "1e4cba8a11fb548949bcd80fe1678357fa394ca0",
+          "url": "https://github.com/dojoengine/dojo/commit/7f7424f535e04ed8363d346440ab6efb2f80c734"
+        },
+        "date": 1742841438652,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 49350399237,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
