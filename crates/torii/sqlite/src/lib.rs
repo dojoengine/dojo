@@ -705,7 +705,7 @@ impl Sql {
                 .collect::<Vec<_>>()
                 .join(", ")
         );
-        
+
         // Execute the single query
         self.executor.send(QueryMessage::other(insert_statement, arguments))?;
 
