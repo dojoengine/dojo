@@ -671,18 +671,22 @@ impl Sql {
         // Collect all columns and arguments recursively
         collect_members("", entity, &mut columns, &mut arguments)?;
 
-        // Build the final query - if an entity is updated, we insert the entity and default to NULL
-        // for non updated values.
+        // Try to insert first - this will only succeed if the entity doesn't exist
         let placeholders: Vec<&str> = arguments.iter().map(|_| "?").collect();
-        let statement = format!(
-            "INSERT OR REPLACE INTO [{}] ({}) VALUES ({})",
+        let insert_statement = format!(
+            "INSERT INTO [{}] ({}) VALUES ({}) ON CONFLICT(internal_id) DO UPDATE SET {}",
             model_name,
             columns.join(","),
-            placeholders.join(",")
+            placeholders.join(","),
+            columns.iter()
+                .skip(1) // Skip internal_id which is the primary key
+                .map(|col| format!("{0}=excluded.{0}", col))
+                .collect::<Vec<_>>()
+                .join(", ")
         );
 
         // Execute the single query
-        self.executor.send(QueryMessage::other(statement, arguments))?;
+        self.executor.send(QueryMessage::other(insert_statement, arguments))?;
 
         Ok(())
     }
