@@ -220,9 +220,9 @@ rpassword = "7.2.0"
 rstest = "0.18.2"
 rstest_reuse = "0.6.0"
 salsa = "0.16.1"
-scarb = { git = "https://github.com/dojoengine/scarb", rev = "7db466b31baf637c7809297af709fab45a1090c9" }
-scarb-metadata = { git = "https://github.com/dojoengine/scarb", rev = "7db466b31baf637c7809297af709fab45a1090c9" }
-scarb-ui = { git = "https://github.com/dojoengine/scarb", rev = "7db466b31baf637c7809297af709fab45a1090c9" }
+scarb = { git = "https://github.com/dojoengine/scarb", rev = "adfab4ee806f382534d9b4c7c80554b8810982bc" }
+scarb-metadata = { git = "https://github.com/dojoengine/scarb", rev = "adfab4ee806f382534d9b4c7c80554b8810982bc" }
+scarb-ui = { git = "https://github.com/dojoengine/scarb", rev = "adfab4ee806f382534d9b4c7c80554b8810982bc" }
 semver = "1.0.5"
 serde = { version = "1.0", features = [ "derive" ] }
 serde_json = { version = "1.0", features = [ "arbitrary_precision" ] }
