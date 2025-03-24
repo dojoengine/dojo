@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1742841583316,
+  "lastUpdate": 1742841693578,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -59587,6 +59587,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 16907337,
             "range": "± 149649",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "271cf44055f2b42e50e898e3dc34a13ae530b329",
+          "message": "fix(torii): atomic token registry cache to ifx race condition (#3124)\n\n* fix(torii): atomic token registry cache to ifx race condition\n\n* chore\n\n* chpre config files",
+          "timestamp": "2025-03-24T12:25:11-06:00",
+          "tree_id": "55e0a9c02e12c172ed72232beb1140365611fbee",
+          "url": "https://github.com/dojoengine/dojo/commit/271cf44055f2b42e50e898e3dc34a13ae530b329"
+        },
+        "date": 1742841690016,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 47976659171,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
