@@ -1,1 +1,1 @@
-CREATE INDEX IF NOT EXISTS idx_transactions_executed_at ON transactions (executed_at);
+CREATE INDEX IF NOT EXISTS idx_transactions_executed_at ON transactions (executed_at DESC);
