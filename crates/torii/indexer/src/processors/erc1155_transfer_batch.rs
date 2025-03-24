@@ -10,7 +10,7 @@ use tracing::debug;
 use super::{EventProcessor, EventProcessorConfig};
 use crate::task_manager::{self, TaskId, TaskPriority};
 
-pub(crate) const LOG_TARGET: &str = "torii_indexer::processors::erc1155_transfer_batch";
+pub(crate) const LOG_TARGET: &str = "torii::indexer::processors::erc1155_transfer_batch";
 
 #[derive(Default, Debug)]
 pub struct Erc1155TransferBatchProcessor;
@@ -43,7 +43,7 @@ where
         &self,
         _world: &WorldContractReader<P>,
         db: &mut Sql,
-        block_number: u64,
+        _block_number: u64,
         block_timestamp: u64,
         event_id: &str,
         event: &Event,
@@ -94,7 +94,6 @@ where
                 amount,
                 block_timestamp,
                 event_id,
-                block_number,
             )
             .await?;
 

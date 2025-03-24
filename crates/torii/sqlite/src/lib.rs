@@ -20,8 +20,8 @@ use utils::felts_to_sql_string;
 
 use crate::constants::SQL_FELT_DELIMITER;
 use crate::executor::{
-    Argument, DeleteEntityQuery, EventMessageQuery, QueryMessage, QueryType, ResetCursorsQuery,
-    SetHeadQuery, UpdateCursorsQuery,
+    Argument, DeleteEntityQuery, EventMessageQuery, QueryMessage, QueryType, SetHeadQuery,
+    UpdateCursorsQuery,
 };
 use crate::types::{Contract, ModelIndices};
 use crate::utils::utc_dt_string_from_timestamp;
@@ -226,33 +226,12 @@ impl Sql {
         })
     }
 
-    // For a given contract address, sets head to the passed value and sets
-    // last_pending_block_contract_tx and last_pending_block_tx to null
-    pub fn reset_cursors(
-        &mut self,
-        head: u64,
-        cursor_map: HashMap<Felt, (Felt, u64)>,
-        last_block_timestamp: u64,
-    ) -> Result<()> {
-        self.executor.send(QueryMessage::new(
-            "".to_string(),
-            vec![],
-            QueryType::ResetCursors(ResetCursorsQuery {
-                cursor_map,
-                last_block_timestamp,
-                last_block_number: head,
-            }),
-        ))?;
-
-        Ok(())
-    }
-
     pub fn update_cursors(
         &mut self,
-        head: u64,
+        last_block_number: u64,
+        last_block_timestamp: u64,
         last_pending_block_tx: Option<Felt>,
         cursor_map: HashMap<Felt, (Felt, u64)>,
-        pending_block_timestamp: u64,
     ) -> Result<()> {
         self.executor.send(QueryMessage::new(
             "".to_string(),
@@ -260,8 +239,8 @@ impl Sql {
             QueryType::UpdateCursors(UpdateCursorsQuery {
                 cursor_map,
                 last_pending_block_tx,
-                last_block_number: head,
-                pending_block_timestamp,
+                last_block_number,
+                last_block_timestamp,
             }),
         ))?;
         Ok(())

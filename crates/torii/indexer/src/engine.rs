@@ -314,7 +314,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                                     // we don't need to flush or apply cache diff
                                     if let Some(block_id) = block_id {
                                         self.db.flush().await?;
-                                        self.db.apply_cache_diff(block_id).await?;
+                                        self.db.apply_cache_diff().await?;
                                         self.db.execute().await?;
                                         debug!(target: LOG_TARGET, block_number = ?block_id, "Flushed and applied cache diff.");
                                     }
@@ -354,7 +354,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         let from = cursors.head.unwrap_or(self.config.world_block);
         let total_remaining_blocks = latest_block.block_number - from;
         let blocks_to_process = total_remaining_blocks.min(self.config.blocks_chunk_size);
-        let to = from + blocks_to_process;
+        let to = (from + blocks_to_process).min(latest_block.block_number);
 
         let instant = Instant::now();
         let result = if from < latest_block.block_number {
@@ -570,9 +570,9 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
 
         self.db.update_cursors(
             data.block_number - 1,
+            timestamp,
             last_pending_block_tx,
             cursor_map,
-            timestamp,
         )?;
 
         Ok(())
@@ -617,10 +617,12 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         // Process parallelized events
         self.task_manager.process_tasks().await?;
 
-        let last_block_timestamp =
-            get_block_timestamp(&self.provider, data.latest_block_number).await?;
-
-        self.db.reset_cursors(data.latest_block_number, cursor_map, last_block_timestamp)?;
+        let last_block_timestamp = data
+            .blocks
+            .get(&data.latest_block_number)
+            .copied()
+            .unwrap_or(get_block_timestamp(&self.provider, data.latest_block_number).await?);
+        self.db.update_cursors(data.latest_block_number, last_block_timestamp, None, cursor_map)?;
 
         Ok(())
     }
@@ -667,6 +669,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
 
         for contract in &unique_contracts {
             let entry = cursor_map.entry(*contract).or_insert((transaction_hash, 0));
+            entry.0 = transaction_hash;
             entry.1 += 1;
         }
 

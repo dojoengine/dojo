@@ -14,7 +14,7 @@ use scarb::compiler::Profile;
 use sozo_scarbext::WorkspaceExt;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use starknet::accounts::Account;
-use starknet::core::types::{BlockId, Call, Felt, U256};
+use starknet::core::types::{Call, Felt, U256};
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
@@ -55,7 +55,7 @@ where
     engine.process_range(data).await.unwrap();
 
     db.flush().await.unwrap();
-    db.apply_cache_diff(BlockId::Number(to)).await.unwrap();
+    db.apply_cache_diff().await.unwrap();
     db.execute().await.unwrap();
 
     Ok(engine)

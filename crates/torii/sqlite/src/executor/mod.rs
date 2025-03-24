@@ -66,7 +66,6 @@ pub struct DeleteEntityQuery {
 #[derive(Debug, Clone)]
 pub struct ApplyBalanceDiffQuery {
     pub erc_cache: HashMap<(ContractType, String), I256>,
-    pub block_id: BlockId,
 }
 
 #[derive(Debug, Clone)]
@@ -78,20 +77,12 @@ pub struct SetHeadQuery {
 }
 
 #[derive(Debug, Clone)]
-pub struct ResetCursorsQuery {
-    // contract => (last_txn, txn_count)
-    pub cursor_map: HashMap<Felt, (Felt, u64)>,
-    pub last_block_timestamp: u64,
-    pub last_block_number: u64,
-}
-
-#[derive(Debug, Clone)]
 pub struct UpdateCursorsQuery {
     // contract => (last_txn, txn_count)
     pub cursor_map: HashMap<Felt, (Felt, u64)>,
     pub last_block_number: u64,
+    pub last_block_timestamp: u64,
     pub last_pending_block_tx: Option<Felt>,
-    pub pending_block_timestamp: u64,
 }
 
 #[derive(Debug, Clone)]
@@ -126,7 +117,6 @@ pub struct EntityQuery {
 pub enum QueryType {
     StoreTransaction(StoreTransactionQuery),
     SetHead(SetHeadQuery),
-    ResetCursors(ResetCursorsQuery),
     UpdateCursors(UpdateCursorsQuery),
     SetEntity(EntityQuery),
     DeleteEntity(DeleteEntityQuery),
@@ -349,57 +339,6 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 let contract = ContractCursor::from_row(&row)?;
                 self.publish_queue.push(BrokerMessage::SetHead(contract));
             }
-            QueryType::ResetCursors(reset_heads) => {
-                // Read all cursors from db
-                let mut cursors: Vec<ContractCursor> =
-                    sqlx::query_as("SELECT * FROM contracts").fetch_all(&mut **tx).await?;
-
-                let new_head =
-                    reset_heads.last_block_number.try_into().expect("doesn't fit in i64");
-                let new_timestamp = reset_heads.last_block_timestamp;
-
-                for cursor in &mut cursors {
-                    if let Some(new_cursor) = reset_heads
-                        .cursor_map
-                        .get(&Felt::from_str(&cursor.contract_address).unwrap())
-                    {
-                        let cursor_timestamp: u64 =
-                            cursor.last_block_timestamp.try_into().expect("doesn't fit in i64");
-
-                        let new_tps = if new_timestamp - cursor_timestamp != 0 {
-                            new_cursor.1 / (new_timestamp - cursor_timestamp)
-                        } else {
-                            new_cursor.1
-                        };
-
-                        cursor.tps = new_tps.try_into().expect("does't fit in i64");
-                    } else {
-                        cursor.tps = 0;
-                    }
-
-                    cursor.head = new_head;
-                    cursor.last_block_timestamp =
-                        new_timestamp.try_into().expect("doesnt fit in i64");
-                    cursor.last_pending_block_tx = None;
-                    cursor.last_pending_block_contract_tx = None;
-
-                    sqlx::query(
-                        "UPDATE contracts SET head = ?, last_block_timestamp = ?, \
-                         last_pending_block_tx = ?, last_pending_block_contract_tx = ? WHERE id = \
-                         ?",
-                    )
-                    .bind(cursor.head)
-                    .bind(cursor.last_block_timestamp)
-                    .bind(&cursor.last_pending_block_tx)
-                    .bind(&cursor.last_pending_block_contract_tx)
-                    .bind(&cursor.contract_address)
-                    .execute(&mut **tx)
-                    .await?;
-
-                    // Send appropriate ContractUpdated publish message
-                    self.publish_queue.push(BrokerMessage::SetHead(cursor.clone()));
-                }
-            }
             QueryType::UpdateCursors(update_cursors) => {
                 // Read all cursors from db
                 let mut cursors: Vec<ContractCursor> =
@@ -407,7 +346,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
 
                 let new_head =
                     update_cursors.last_block_number.try_into().expect("doesn't fit in i64");
-                let new_timestamp = update_cursors.pending_block_timestamp;
+                let new_timestamp = update_cursors.last_block_timestamp;
 
                 for cursor in &mut cursors {
                     if let Some(new_cursor) = update_cursors
@@ -429,15 +368,17 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                         };
 
                         cursor.last_pending_block_contract_tx =
-                            Some(felt_to_sql_string(&new_cursor.0));
+                            if update_cursors.last_pending_block_tx.is_some() {
+                                Some(felt_to_sql_string(&new_cursor.0))
+                            } else {
+                                None
+                            };
                         cursor.tps = new_tps.try_into().expect("does't fit in i64");
                     } else {
                         cursor.tps = 0;
                     }
-                    cursor.last_block_timestamp = update_cursors
-                        .pending_block_timestamp
-                        .try_into()
-                        .expect("doesn't fit in i64");
+                    cursor.last_block_timestamp =
+                        new_timestamp.try_into().expect("doesn't fit in i64");
                     cursor.head = new_head;
                     cursor.last_pending_block_tx =
                         update_cursors.last_pending_block_tx.map(|felt| felt_to_sql_string(&felt));
