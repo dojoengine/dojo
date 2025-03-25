@@ -4606,7 +4606,29 @@ dependencies = [
  "cairo-lang-semantic",
  "cairo-lang-syntax",
  "cairo-lang-utils",
- "dojo-types",
+ "dojo-types 1.3.1",
+ "itertools 0.12.1",
+ "serde",
+ "smol_str",
+ "starknet 0.12.0",
+ "starknet-crypto 0.7.4",
+ "tracing",
+]
+
+[[package]]
+name = "dojo-lang"
+version = "1.3.1"
+source = "git+https://github.com/remybar/dojo?rev=d20c0e0c1338a04bed1228f980bda7940b4018fa#d20c0e0c1338a04bed1228f980bda7940b4018fa"
+dependencies = [
+ "anyhow",
+ "cairo-lang-defs",
+ "cairo-lang-diagnostics",
+ "cairo-lang-filesystem",
+ "cairo-lang-plugins",
+ "cairo-lang-semantic",
+ "cairo-lang-syntax",
+ "cairo-lang-utils",
+ "dojo-types 1.3.1 (git+https://github.com/remybar/dojo?rev=d20c0e0c1338a04bed1228f980bda7940b4018fa)",
  "itertools 0.12.1",
  "serde",
  "smol_str",
@@ -4621,7 +4643,7 @@ version = "1.3.1"
 dependencies = [
  "cairo-lang-language-server",
  "clap",
- "dojo-lang",
+ "dojo-lang 1.3.1",
 ]
 
 [[package]]
@@ -4686,6 +4708,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "dojo-types"
+version = "1.3.1"
+source = "git+https://github.com/remybar/dojo?rev=d20c0e0c1338a04bed1228f980bda7940b4018fa#d20c0e0c1338a04bed1228f980bda7940b4018fa"
+dependencies = [
+ "anyhow",
+ "cainome 0.5.0",
+ "crypto-bigint",
+ "hex",
+ "indexmap 2.7.1",
+ "itertools 0.12.1",
+ "num-traits 0.2.19",
+ "regex",
+ "serde",
+ "serde_json",
+ "starknet 0.12.0",
+ "starknet-crypto 0.7.4",
+ "strum 0.25.0",
+ "strum_macros 0.25.3",
+ "thiserror 1.0.63",
+]
+
+[[package]]
 name = "dojo-utils"
 version = "1.3.1"
 dependencies = [
@@ -4711,7 +4755,7 @@ dependencies = [
  "async-trait",
  "cainome 0.5.0",
  "cairo-lang-starknet-classes",
- "dojo-types",
+ "dojo-types 1.3.1",
  "futures",
  "hex",
  "hex-literal",
@@ -12570,7 +12614,7 @@ dependencies = [
  "derive_builder",
  "dialoguer",
  "directories",
- "dojo-lang",
+ "dojo-lang 1.3.1 (git+https://github.com/remybar/dojo?rev=d20c0e0c1338a04bed1228f980bda7940b4018fa)",
  "dunce",
  "flate2",
  "fs4",
@@ -13403,7 +13447,7 @@ dependencies = [
  "colored",
  "dojo-bindgen",
  "dojo-test-utils",
- "dojo-types",
+ "dojo-types 1.3.1",
  "dojo-utils",
  "dojo-world",
  "katana-rpc-api",
@@ -13445,7 +13489,7 @@ dependencies = [
  "colored",
  "colored_json",
  "dojo-test-utils",
- "dojo-types",
+ "dojo-types 1.3.1",
  "dojo-utils",
  "dojo-world",
  "futures",
@@ -15051,7 +15095,7 @@ dependencies = [
  "async-trait",
  "camino",
  "crypto-bigint",
- "dojo-types",
+ "dojo-types 1.3.1",
  "dojo-world",
  "futures",
  "futures-util",
@@ -15085,7 +15129,7 @@ dependencies = [
  "chrono",
  "convert_case 0.6.0",
  "dojo-test-utils",
- "dojo-types",
+ "dojo-types 1.3.1",
  "dojo-utils",
  "dojo-world",
  "katana-runner",
@@ -15121,7 +15165,7 @@ dependencies = [
  "camino",
  "crypto-bigint",
  "dojo-test-utils",
- "dojo-types",
+ "dojo-types 1.3.1",
  "dojo-utils",
  "dojo-world",
  "futures",
@@ -15175,7 +15219,7 @@ dependencies = [
  "crypto-bigint",
  "data-url",
  "dojo-test-utils",
- "dojo-types",
+ "dojo-types 1.3.1",
  "dojo-utils",
  "dojo-world",
  "futures-channel",
@@ -15220,7 +15264,7 @@ version = "1.3.1"
 dependencies = [
  "anyhow",
  "chrono",
- "dojo-types",
+ "dojo-types 1.3.1",
  "dojo-world",
  "futures",
  "indexmap 2.7.1",
@@ -15260,7 +15304,7 @@ dependencies = [
  "chrono",
  "ctrlc",
  "dojo-metrics",
- "dojo-types",
+ "dojo-types 1.3.1",
  "dojo-utils",
  "dojo-world",
  "either",
@@ -15346,7 +15390,7 @@ dependencies = [
  "crypto-bigint",
  "data-url",
  "dojo-test-utils",
- "dojo-types",
+ "dojo-types 1.3.1",
  "dojo-utils",
  "dojo-world",
  "futures-channel",
@@ -15378,7 +15422,7 @@ version = "1.3.1"
 dependencies = [
  "cainome 0.5.0",
  "crypto-bigint",
- "dojo-types",
+ "dojo-types 1.3.1",
  "indexmap 2.7.1",
  "serde",
  "serde_json",
