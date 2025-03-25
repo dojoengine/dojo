@@ -26,9 +26,7 @@ pub impl IStoredEventImpl<
         // Note that event layout is not used at the moment,
         // because events are not stored in the world storage
         // but emitted as real Starknet events.
-        dojo::meta::layout::build_legacy_layout(
-            Event::<E>::layout()
-        )
+        dojo::meta::layout::build_legacy_layout(Event::<E>::layout())
     }
 }
 
