@@ -96,14 +96,14 @@ impl UnrealEnginePlugin {
     }
 
     fn header_imports() -> String {
-        "
+        r#"
 #pragma once
 
-#include \"CoreMinimal.h\"
-#include \"GameFramework/Actor.h\"
-#include \"DojoModule.h\"
-#include \"Account.h\"
-#include \"GeneratedHelpers.generated.h\"
+#include "CoreMinimal.h"
+#include "GameFramework/Actor.h"
+#include "DojoModule.h"
+#include "Account.h"
+#include "DojoHelpers.generated.h"
 
 UCLASS(BlueprintType)
 class UDojoModel : public UObject
@@ -115,20 +115,20 @@ public:
     FString DojoModelType;
 };
 
-    "
+    "#
         .to_string()
     }
 
     fn cppfile_imports() -> String {
-        "
-#include \"GeneratedHelpers.h\"
+        r#"
+#include "DojoHelpers.h"
 #include <string>
 #include <iomanip>
 #include <sstream>
 #include <memory>
-#include \"Async/Async.h\"
+#include "Async/Async.h"
 
-"
+"#
         .to_string()
     }
 
@@ -367,13 +367,13 @@ public:
                     .join(", ");
 
                 functions_calls += &format!(
-                    "
-    UFUNCTION(BlueprintCallable, Category = \"Calls\")
+                    r#"
+    UFUNCTION(BlueprintCallable, Category = "Calls")
     void Call{namespace}{system}{selector}(const FAccount& account{args});
 
-    UFUNCTION(BlueprintCallable, Category = \"Controller Calls\")
+    UFUNCTION(BlueprintCallable, Category = "Controller Calls")
     void CallController{namespace}{system}{selector}(const FControllerAccount& account{args});
-",
+"#,
                     namespace =
                         Self::to_pascal_case(&naming::get_namespace_from_tag(&contract.tag)),
                     system = Self::to_pascal_case(&naming::get_name_from_tag(&contract.tag)),
@@ -385,7 +385,7 @@ public:
 
         out.push_str(&format!(
             "UCLASS()
-class AGeneratedHelpers : public AActor
+class ADojoHelpers : public AActor
 {{
     GENERATED_BODY()
 
@@ -398,7 +398,7 @@ private:
 
     struct Subscription *subscription;
 
-    static AGeneratedHelpers* Instance;
+    static ADojoHelpers* Instance;
 
     void ControllerAccountCallback(ControllerAccount *account);
 
@@ -421,11 +421,11 @@ private:
                               const FString& calldataParameter);
 
 public:
-    AGeneratedHelpers();
-    ~AGeneratedHelpers();
+    ADojoHelpers();
+    ~ADojoHelpers();
 
-    AGeneratedHelpers* GetGlobalInstance();
-    void SetGlobalInstance(AGeneratedHelpers* instance);
+    ADojoHelpers* GetGlobalInstance();
+    void SetGlobalInstance(ADojoHelpers* instance);
 
     UFUNCTION(BlueprintCallable)
     void Connect(const FString& torii_url, const FString& world);
@@ -476,7 +476,7 @@ public:
             .iter()
             .map(|(_, model)| {
                 format!(
-                    "UDojoModel* AGeneratedHelpers::parse{namespace}{model_name}Model(struct \
+                    "UDojoModel* ADojoHelpers::parse{namespace}{model_name}Model(struct \
                      Struct* model)
 {{
     UDojoModel{namespace}{model_name}* Model = NewObject<UDojoModel{namespace}{model_name}>();
@@ -511,7 +511,7 @@ public:
                         .iter()
                         .map(|field| {
                             format!(
-                                "ConvertTyToUnrealEngineType(member, \"{}\", \"{}\", Model->{});",
+                                r#"ConvertTyToUnrealEngineType(member, "{}", "{}", Model->{});"#,
                                 &field.name,
                                 &field.token.type_name(),
                                 Self::to_pascal_case(&field.name),
@@ -529,13 +529,13 @@ public:
             .enumerate()
             .map(|(i, (_, model))| {
                 format!(
-                    "
-        {ifelse} (strcmp(ModelName, \"{namespace}-{modelName}\") == 0)
+                    r#"
+        {ifelse} (strcmp(ModelName, "{namespace}-{modelName}") == 0)
         {{
             ParsedModel = \
-                     AGeneratedHelpers::parse{namespaceCamelCase}{modelName}Model(&\
+                     ADojoHelpers::parse{namespaceCamelCase}{modelName}Model(&\
                      models->data[Index]);
-        }}",
+        }}"#,
                     ifelse = if i == 0 { "if" } else { "else if" },
                     namespace = get_namespace_from_tag(&model.tag),
                     modelName = model
@@ -552,12 +552,12 @@ public:
             .join("");
 
         format!(
-            "{}
-void AGeneratedHelpers::ParseModelsAndSend(struct CArrayStruct* models)
+            r#"{}
+void ADojoHelpers::ParseModelsAndSend(struct CArrayStruct* models)
 {{
     if (!models || !models->data)
     {{
-        UE_LOG(LogTemp, Warning, TEXT(\"ParseModelsAndSend: Invalid input models\"));
+        UE_LOG(LogTemp, Warning, TEXT("ParseModelsAndSend: Invalid input models"));
         return;
     }}
 
@@ -569,7 +569,7 @@ void AGeneratedHelpers::ParseModelsAndSend(struct CArrayStruct* models)
         const char* ModelName = models->data[Index].name;
         if (!ModelName)
         {{
-            UE_LOG(LogTemp, Warning, TEXT(\"ParseModelsAndSend: null model name (%d)\"), Index);
+            UE_LOG(LogTemp, Warning, TEXT("ParseModelsAndSend: null model name (%d)"), Index);
             continue;
         }}
 
@@ -577,7 +577,7 @@ void AGeneratedHelpers::ParseModelsAndSend(struct CArrayStruct* models)
         {}
         else
         {{
-            UE_LOG(LogTemp, Warning, TEXT(\"ParseModelsAndSend: Unknown model type %s\"), \
+            UE_LOG(LogTemp, Warning, TEXT("ParseModelsAndSend: Unknown model type %s"), \
              UTF8_TO_TCHAR(ModelName));
             continue;
         }}
@@ -589,7 +589,7 @@ void AGeneratedHelpers::ParseModelsAndSend(struct CArrayStruct* models)
         }}
         else
         {{
-            UE_LOG(LogTemp, Warning, TEXT(\"ParseModelsAndSend: Failed to parse model %s\"), \
+            UE_LOG(LogTemp, Warning, TEXT("ParseModelsAndSend: Failed to parse model %s"), \
              UTF8_TO_TCHAR(ModelName));
         }}
     }}
@@ -614,7 +614,7 @@ void AGeneratedHelpers::ParseModelsAndSend(struct CArrayStruct* models)
         FDojoModule::CArrayFree(models->data, models->data_len);
     }}
 }}
-",
+"#,
             parse_models_functions_bodies, if_else_parse_models
         )
     }
@@ -633,9 +633,9 @@ void AGeneratedHelpers::ParseModelsAndSend(struct CArrayStruct* models)
                 &naming::get_name_from_tag(&contract.tag)
             );
             policies_addresses += &format!(
-                "FieldElement {name}Contract;\n    \
+                r#"FieldElement {name}Contract;\n    \
                  FDojoModule::string_to_bytes(std::string(TCHAR_TO_UTF8(*\
-                 this->ContractsAddresses[\"{raw_contract_name}\"])), {name}Contract.data, 32);",
+                 this->ContractsAddresses["{raw_contract_name}"])), {name}Contract.data, 32);"#,
                 name = contract_name,
                 raw_contract_name = raw_contract_name,
             );
@@ -655,7 +655,7 @@ void AGeneratedHelpers::ParseModelsAndSend(struct CArrayStruct* models)
                 }
 
                 policies += &format!(
-                    "{{ {}Contract, \"{}\", \"{}\" }}",
+                    r#"{{ {}Contract, "{}", "{}" }}"#,
                     contract_name, function.name, function.name
                 );
             }
@@ -678,7 +678,7 @@ void AGeneratedHelpers::ParseModelsAndSend(struct CArrayStruct* models)
         let mut calls_functions: String = String::new();
         for (_, contract) in contracts {
             contract_addresses += &format!(
-                "    {{TEXT(\"{}-{}\"), TEXT(\"{}\")}},\n",
+                r#"    {{TEXT("{}-{}"), TEXT("{}")}},\n"#,
                 &get_namespace_from_tag(&contract.tag),
                 &get_name_from_tag(&contract.tag),
                 "COPY_ADDRESS_HERE"
@@ -706,8 +706,8 @@ void AGeneratedHelpers::ParseModelsAndSend(struct CArrayStruct* models)
                         .iter()
                         .map(|arg| {
                             format!(
-                                "args.Append(ConvertToFeltHexa<{arg_type}>({name}, \
-                                 \"{arg_dojo_type}\"));",
+                                r#"args.Append(ConvertToFeltHexa<{arg_type}>({name}, \
+                                 "{arg_dojo_type}"));"#,
                                 name = &arg.0,
                                 arg_dojo_type = &arg.1.type_name().as_str(),
                                 arg_type = UnrealEnginePlugin::map_type(&arg.1)
@@ -717,22 +717,22 @@ void AGeneratedHelpers::ParseModelsAndSend(struct CArrayStruct* models)
                         .join("\n    ")
                 };
                 calls_functions += &format!(
-                    "
-void AGeneratedHelpers::Call{namespace}{system}{selector}(const FAccount& account{args}) {{
+                    r#"
+void ADojoHelpers::Call{namespace}{system}{selector}(const FAccount& account{args}) {{
     TArray<FString> args;
     {args_body}
-    this->ExecuteRawDeprecated(account, this->ContractsAddresses[\"{contract_name}\"], \
-                     TEXT(\"{selector_raw}\"), FString::Join(args, TEXT(\",\")));
+    this->ExecuteRawDeprecated(account, this->ContractsAddresses["{contract_name}"], \
+                     TEXT("{selector_raw}"), FString::Join(args, TEXT(",")));
 }}
 
-void AGeneratedHelpers::CallController{namespace}{system}{selector}(const FControllerAccount& \
+void ADojoHelpers::CallController{namespace}{system}{selector}(const FControllerAccount& \
                      account{args}) {{
     TArray<FString> args;
     {args_body}
-    this->ExecuteFromOutside(account, this->ContractsAddresses[\"{contract_name}\"], \
-                     TEXT(\"{selector_raw}\"), FString::Join(args, TEXT(\",\")));
+    this->ExecuteFromOutside(account, this->ContractsAddresses["{contract_name}"], \
+                     TEXT("{selector_raw}"), FString::Join(args, TEXT(",")));
 }}
-",
+"#,
                     namespace =
                         Self::to_pascal_case(&naming::get_namespace_from_tag(&contract.tag)),
                     system = Self::to_pascal_case(&naming::get_name_from_tag(&contract.tag)),
@@ -820,8 +820,8 @@ void AGeneratedHelpers::CallController{namespace}{system}{selector}(const FContr
                             .enumerate()
                             .map(|(i, field)| {
                                 format!(
-                                    "ConvertTyToUnrealEngineType(&member->ty->struct_.children.\
-                                     data[{}], \"{}\", \"{}\", value.{});",
+                                    r#"ConvertTyToUnrealEngineType(&member->ty->struct_.children.\
+                                     data[{}], "{}", "{}", value.{});"#,
                                     i,
                                     &field.name,
                                     &field.token.type_name(),
@@ -832,32 +832,32 @@ void AGeneratedHelpers::CallController{namespace}{system}{selector}(const FContr
                             .join("\n        ")
                     );
                     else_if_type_converter += &format!(
-                        "else if constexpr (std::is_same_v<T, F{type_name}>) {{
-        if (strcmp(expectedType, \"{type_name}\") == 0) {{
+                        r#"else if constexpr (std::is_same_v<T, F{type_name}>) {{
+        if (strcmp(expectedType, "{type_name}") == 0) {{
             output = TypeConverter::ConvertToF{type_name}(member);
         }}
     }}
-    ",
+    "#,
                         type_name = s.type_name()
                     );
                     convert_custom_types_to_felt_string += &format!(
-                        "else if constexpr (std::is_same_v<T, F{type_name}>) {{
-        if (strcmp(valueType, \"{type_name}\") == 0) {{
+                        r#"else if constexpr (std::is_same_v<T, F{type_name}>) {{
+        if (strcmp(valueType, "{type_name}") == 0) {{
             TArray<FString> strings;
 
             {struct_members}
             return strings;
         }}
     }}
-    ",
+    "#,
                         type_name = s.type_name(),
                         struct_members = s
                             .inners
                             .iter()
                             .map(|field| {
                                 format!(
-                                    "strings.Append(ConvertToFeltHexa<{cpp_type}>(value.{name}, \
-                                     \"{type_name}\"));",
+                                    r#"strings.Append(ConvertToFeltHexa<{cpp_type}>(value.{name}, \
+                                     "{type_name}"));"#,
                                     cpp_type = Self::map_type(&field.token),
                                     name = Self::to_pascal_case(&field.name),
                                     type_name = &field.token.type_name(),
@@ -893,26 +893,26 @@ void AGeneratedHelpers::CallController{namespace}{system}{selector}(const FContr
                             type_name = s.type_name()
                         );
                         else_if_type_converter += &format!(
-                            "else if constexpr (std::is_same_v<T, ED{type_name}>) {{
-        if (strcmp(expectedType, \"{type_name}\") == 0) {{
+                            r#"else if constexpr (std::is_same_v<T, ED{type_name}>) {{
+        if (strcmp(expectedType, "{type_name}") == 0) {{
             output = TypeConverter::ConvertToED{type_name}(member);
         }}
     }}
-    ",
+    "#,
                             type_name = s.type_name()
                         );
 
                         convert_custom_types_to_felt_string += &format!(
-                            "else if constexpr (std::is_same_v<T, {cpp_type}>) {{
-        if (strcmp(valueType, \"{type_name}\") == 0) {{
-            FString hexValue = FString::Printf(TEXT(\"%X\"), static_cast<int>(value));
+                            r#"else if constexpr (std::is_same_v<T, {cpp_type}>) {{
+        if (strcmp(valueType, "{type_name}") == 0) {{
+            FString hexValue = FString::Printf(TEXT("%X"), static_cast<int>(value));
             while (hexValue.Len() < 64) {{
-                hexValue = TEXT(\"0\") + hexValue;
+                hexValue = TEXT("0") + hexValue;
             }}
-            return TArray<FString>{{TEXT(\"0x\") + hexValue}};
+            return TArray<FString>{{TEXT("0x") + hexValue}};
         }}
     }}
-    ",
+    "#,
                             cpp_type = "ED".to_owned() + &s.type_name(),
                             type_name = s.type_name()
                         );
@@ -923,7 +923,7 @@ void AGeneratedHelpers::CallController{namespace}{system}{selector}(const FContr
         }
 
         format!(
-            "class TypeConverter {{
+            r#"class TypeConverter {{
 public:
     static FString ConvertToFString(const Member* member) {{
         switch (member->ty->primitive.tag) {{
@@ -988,24 +988,24 @@ public:
 template<typename T>
 static TArray<FString> ConvertToFeltHexa(const T& value, const char* valueType) {{
     if constexpr (std::is_same_v<T, FString>) {{
-        if (strcmp(valueType, \"i128\") == 0 ||
-            strcmp(valueType, \"u128\") == 0 ||
-            strcmp(valueType, \"u256\") == 0 ||
-            strcmp(valueType, \"felt252\") == 0 ||
-            strcmp(valueType, \"bytes31\") == 0 ||
-            strcmp(valueType, \"ClassHash\") == 0 ||
-            strcmp(valueType, \"ContractAddress\") == 0 ||
-            strcmp(valueType, \"ByteArray\") == 0) {{
+        if (strcmp(valueType, "i128") == 0 ||
+            strcmp(valueType, "u128") == 0 ||
+            strcmp(valueType, "u256") == 0 ||
+            strcmp(valueType, "felt252") == 0 ||
+            strcmp(valueType, "bytes31") == 0 ||
+            strcmp(valueType, "ClassHash") == 0 ||
+            strcmp(valueType, "ContractAddress") == 0 ||
+            strcmp(valueType, "ByteArray") == 0) {{
 
-            // Remove \"0x\" if present
+            // Remove "0x" if present
             FString hexValue = value;
-            if (hexValue.StartsWith(TEXT(\"0x\"))) {{
+            if (hexValue.StartsWith(TEXT("0x"))) {{
                 hexValue.RightChopInline(2);
             }}
 
             // Pad with leading zeros to make it 64 characters
             while (hexValue.Len() < 64) {{
-                hexValue = TEXT(\"0\") + hexValue;
+                hexValue = TEXT("0") + hexValue;
             }}
 
             // Truncate if longer than 64 characters
@@ -1013,56 +1013,56 @@ static TArray<FString> ConvertToFeltHexa(const T& value, const char* valueType) 
                 hexValue = hexValue.Right(64);
             }}
 
-            return TArray<FString>{{TEXT(\"0x\") + hexValue}};
+            return TArray<FString>{{TEXT("0x") + hexValue}};
         }}
     }}
     else if constexpr (std::is_same_v<T, int>) {{
-        if (strcmp(valueType, \"i8\") == 0 ||
-            strcmp(valueType, \"i16\") == 0 ||
-            strcmp(valueType, \"i32\") == 0 ||
-            strcmp(valueType, \"u8\") == 0 ||
-            strcmp(valueType, \"u16\") == 0 ||
-            strcmp(valueType, \"u32\") == 0) {{
+        if (strcmp(valueType, "i8") == 0 ||
+            strcmp(valueType, "i16") == 0 ||
+            strcmp(valueType, "i32") == 0 ||
+            strcmp(valueType, "u8") == 0 ||
+            strcmp(valueType, "u16") == 0 ||
+            strcmp(valueType, "u32") == 0) {{
 
-            FString hexValue = FString::Printf(TEXT(\"%X\"), value);
+            FString hexValue = FString::Printf(TEXT("%X"), value);
 
             // Pad with leading zeros to make it 64 characters
             while (hexValue.Len() < 64) {{
-                hexValue = TEXT(\"0\") + hexValue;
+                hexValue = TEXT("0") + hexValue;
             }}
 
-            return TArray<FString>{{TEXT(\"0x\") + hexValue}};
+            return TArray<FString>{{TEXT("0x") + hexValue}};
         }}
     }}
     else if constexpr (std::is_same_v<T, bool>) {{
-        if (strcmp(valueType, \"bool\") == 0) {{
-            FString hexValue = FString::Printf(TEXT(\"%X\"), value ? 1 : 0);
+        if (strcmp(valueType, "bool") == 0) {{
+            FString hexValue = FString::Printf(TEXT("%X"), value ? 1 : 0);
             // Pad with leading zeros to make it 64 characters
             while (hexValue.Len() < 64) {{
-                hexValue = TEXT(\"0\") + hexValue;
+                hexValue = TEXT("0") + hexValue;
             }}
-            return TArray<FString>{{TEXT(\"0x\") + hexValue}};
+            return TArray<FString>{{TEXT("0x") + hexValue}};
         }}
     }}
     else if constexpr (std::is_same_v<T, TArray<int>>) {{
-        if (strcmp(valueType, \"array\") == 0) {{
+        if (strcmp(valueType, "array") == 0) {{
             TArray<FString> strings;
 
             // Add array length
-            FString hexValue = FString::Printf(TEXT(\"%X\"), static_cast<int>(value.Num()));
+            FString hexValue = FString::Printf(TEXT("%X"), static_cast<int>(value.Num()));
             while (hexValue.Len() < 64) {{
-                hexValue = TEXT(\"0\") + hexValue;
+                hexValue = TEXT("0") + hexValue;
             }}
-            hexValue = TEXT(\"0x\") + hexValue;
+            hexValue = TEXT("0x") + hexValue;
             strings.Add(hexValue);
 
             // Add array elements
             for (const int& element : value) {{
-                FString elementHexValue = FString::Printf(TEXT(\"%X\"), element);
+                FString elementHexValue = FString::Printf(TEXT("%X"), element);
                 while (elementHexValue.Len() < 64) {{
-                    elementHexValue = TEXT(\"0\") + elementHexValue;
+                    elementHexValue = TEXT("0") + elementHexValue;
                 }}
-                elementHexValue = TEXT(\"0x\") + elementHexValue;
+                elementHexValue = TEXT("0x") + elementHexValue;
                 strings.Add(elementHexValue);
             }}
 
@@ -1071,7 +1071,7 @@ static TArray<FString> ConvertToFeltHexa(const T& value, const char* valueType) 
     }}
     {convert_custom_types_to_felt_string}
     // Default return value padded to 64 characters
-    return TArray<FString>{{TEXT(\"0x\") + FString::ChrN(64, TEXT('0'))}};
+    return TArray<FString>{{TEXT("0x") + FString::ChrN(64, TEXT('0'))}};
 }}
 
 template<typename T>
@@ -1082,43 +1082,43 @@ static void ConvertTyToUnrealEngineType(const Member* member, const char* expect
     }}
 
     if constexpr (std::is_same_v<T, FString>) {{
-        if (strcmp(expectedType, \"i128\") == 0 ||
-            strcmp(expectedType, \"u128\") == 0 ||
-            strcmp(expectedType, \"u256\") == 0 ||
-            strcmp(expectedType, \"felt252\") == 0 ||
-            strcmp(expectedType, \"bytes31\") == 0 ||
-            strcmp(expectedType, \"ClassHash\") == 0 ||
-            strcmp(expectedType, \"ContractAddress\") == 0 ||
-            strcmp(expectedType, \"ByteArray\") == 0) {{
+        if (strcmp(expectedType, "i128") == 0 ||
+            strcmp(expectedType, "u128") == 0 ||
+            strcmp(expectedType, "u256") == 0 ||
+            strcmp(expectedType, "felt252") == 0 ||
+            strcmp(expectedType, "bytes31") == 0 ||
+            strcmp(expectedType, "ClassHash") == 0 ||
+            strcmp(expectedType, "ContractAddress") == 0 ||
+            strcmp(expectedType, "ByteArray") == 0) {{
             output = TypeConverter::ConvertToFString(member);
         }}
     }}
     else if constexpr (std::is_same_v<T, int>) {{
-        if (strcmp(expectedType, \"i8\") == 0 ||
-        strcmp(expectedType, \"i16\") == 0 ||
-        strcmp(expectedType, \"i32\") == 0 ||
-        strcmp(expectedType, \"u8\") == 0 ||
-        strcmp(expectedType, \"u16\") == 0 ||
-        strcmp(expectedType, \"u32\") == 0) {{
+        if (strcmp(expectedType, "i8") == 0 ||
+        strcmp(expectedType, "i16") == 0 ||
+        strcmp(expectedType, "i32") == 0 ||
+        strcmp(expectedType, "u8") == 0 ||
+        strcmp(expectedType, "u16") == 0 ||
+        strcmp(expectedType, "u32") == 0) {{
             output = TypeConverter::ConvertToInt(member);
         }}
     }}
     else if constexpr (std::is_same_v<T, long>) {{
-        if (strcmp(expectedType, \"i64\") == 0 ||
-        strcmp(expectedType, \"u64\") == 0 ||
-        strcmp(expectedType, \"usize\") == 0) {{
+        if (strcmp(expectedType, "i64") == 0 ||
+        strcmp(expectedType, "u64") == 0 ||
+        strcmp(expectedType, "usize") == 0) {{
             output = TypeConverter::ConvertToLong(member);
         }}
     }}
     else if constexpr (std::is_same_v<T, bool>) {{
-        if (strcmp(expectedType, \"bool\") == 0) {{
+        if (strcmp(expectedType, "bool") == 0) {{
             output = TypeConverter::ConvertToBool(member);
         }}
     }}
     {else_if_type_converter}
 }}
 
-",
+"#,
             static_converters = static_converters,
             else_if_type_converter = else_if_type_converter,
             convert_custom_types_to_felt_string = convert_custom_types_to_felt_string
@@ -1141,32 +1141,32 @@ static void ConvertTyToUnrealEngineType(const Member* member, const char* expect
             Self::generate_contract_addresses_and_calls_functions(contracts);
 
         out += &format!(
-            "const TMap<FString, FString> AGeneratedHelpers::ContractsAddresses = {{
+            r#"const TMap<FString, FString> ADojoHelpers::ContractsAddresses = {{
 {contract_addresses}}};
-AGeneratedHelpers* AGeneratedHelpers::Instance = nullptr;
+ADojoHelpers* ADojoHelpers::Instance = nullptr;
 
-AGeneratedHelpers::AGeneratedHelpers()
+ADojoHelpers::ADojoHelpers()
 {{
     Instance = this;
     subscribed = false;
 }}
 
-AGeneratedHelpers::~AGeneratedHelpers()
+ADojoHelpers::~ADojoHelpers()
 {{
     if (subscribed) {{
         FDojoModule::SubscriptionCancel(subscription);
     }}
 }}
 
-void AGeneratedHelpers::Connect(const FString& torii_url, const FString& world)
+void ADojoHelpers::Connect(const FString& torii_url, const FString& world)
 {{
     std::string torii_url_string = std::string(TCHAR_TO_UTF8(*torii_url));
     std::string world_string = std::string(TCHAR_TO_UTF8(*world));
     toriiClient = FDojoModule::CreateToriiClient(torii_url_string.c_str(), world_string.c_str());
-    UE_LOG(LogTemp, Log, TEXT(\"Torii Client initialized.\"));
+    UE_LOG(LogTemp, Log, TEXT("Torii Client initialized."));
 }}
 
-FAccount AGeneratedHelpers::CreateAccountDeprecated(const FString& rpc_url, const FString& \
+FAccount ADojoHelpers::CreateAccountDeprecated(const FString& rpc_url, const FString& \
              address, const FString& private_key)
 {{
     FAccount account;
@@ -1180,7 +1180,7 @@ FAccount AGeneratedHelpers::CreateAccountDeprecated(const FString& rpc_url, cons
     return account;
 }}
 
-FAccount AGeneratedHelpers::CreateBurnerDeprecated(const FString& rpc_url, const FString& address, \
+FAccount ADojoHelpers::CreateBurnerDeprecated(const FString& rpc_url, const FString& address, \
              const FString& private_key)
 {{
     FAccount account;
@@ -1191,19 +1191,19 @@ FAccount AGeneratedHelpers::CreateBurnerDeprecated(const FString& rpc_url, const
     Account *master_account = FDojoModule::CreateAccount(rpc_url_string.c_str(), \
              address_string.c_str(), private_key_string.c_str());
     if (master_account == nullptr) {{
-        account.Address = UTF8_TO_TCHAR(\"0x0\");
+        account.Address = UTF8_TO_TCHAR("0x0");
         return account;
     }}
     account.account = FDojoModule::CreateBurner(rpc_url_string.c_str(), master_account);
     if (account.account == nullptr) {{
-        account.Address = UTF8_TO_TCHAR(\"0x0\");
+        account.Address = UTF8_TO_TCHAR("0x0");
         return account;
     }}
     account.Address = FDojoModule::AccountAddress(account.account);
     return account;
 }}
 
-void AGeneratedHelpers::ControllerGetAccountOrConnect(const FString& rpc_url, const FString& \
+void ADojoHelpers::ControllerGetAccountOrConnect(const FString& rpc_url, const FString& \
              chain_id)
 {{
     std::string rpc_url_string = std::string(TCHAR_TO_UTF8(*rpc_url));
@@ -1215,13 +1215,13 @@ void AGeneratedHelpers::ControllerGetAccountOrConnect(const FString& rpc_url, co
              policies, nbPolicies, ControllerCallbackProxy);
 }}
 
-void AGeneratedHelpers::ControllerCallbackProxy(ControllerAccount *account)
+void ADojoHelpers::ControllerCallbackProxy(ControllerAccount *account)
 {{
     if (!Instance) return;
     Instance->ControllerAccountCallback(account);
 }}
 
-void AGeneratedHelpers::ControllerAccountCallback(ControllerAccount *account)
+void ADojoHelpers::ControllerAccountCallback(ControllerAccount *account)
 {{
     // Going back to Blueprint thread to broadcast the account
     Async(EAsyncExecution::TaskGraphMainThread, [this, account]() {{
@@ -1232,15 +1232,15 @@ void AGeneratedHelpers::ControllerAccountCallback(ControllerAccount *account)
     }});
 }}
 
-void AGeneratedHelpers::ExecuteRawDeprecated(const FAccount& account, const FString& to, const \
+void ADojoHelpers::ExecuteRawDeprecated(const FAccount& account, const FString& to, const \
              FString& selector, const FString& calldataParameter)
 {{
     Async(EAsyncExecution::Thread, [this, account, to, selector, calldataParameter]()
     {{
         std::vector<std::string> felts;
-        if (strcmp(TCHAR_TO_UTF8(*calldataParameter), \"\") != 0) {{
+        if (strcmp(TCHAR_TO_UTF8(*calldataParameter), "") != 0) {{
             TArray<FString> Out;
-            calldataParameter.ParseIntoArray(Out,TEXT(\",\"),true);
+            calldataParameter.ParseIntoArray(Out,TEXT(","),true);
             for (int i = 0; i < Out.Num(); i++) {{
                 std::string felt = TCHAR_TO_UTF8(*Out[i]);
                 felts.push_back(felt);
@@ -1251,15 +1251,15 @@ void AGeneratedHelpers::ExecuteRawDeprecated(const FAccount& account, const FStr
     }});
 }}
 
-void AGeneratedHelpers::ExecuteFromOutside(const FControllerAccount& account, const FString& to, \
+void ADojoHelpers::ExecuteFromOutside(const FControllerAccount& account, const FString& to, \
              const FString& selector, const FString& calldataParameter)
 {{
     Async(EAsyncExecution::Thread, [this, account, to, selector, calldataParameter]()
     {{
         std::vector<std::string> felts;
-        if (strcmp(TCHAR_TO_UTF8(*calldataParameter), \"\") != 0) {{
+        if (strcmp(TCHAR_TO_UTF8(*calldataParameter), "") != 0) {{
             TArray<FString> Out;
-            calldataParameter.ParseIntoArray(Out,TEXT(\",\"),true);
+            calldataParameter.ParseIntoArray(Out,TEXT(","),true);
             for (int i = 0; i < Out.Num(); i++) {{
                 std::string felt = TCHAR_TO_UTF8(*Out[i]);
                 felts.push_back(felt);
@@ -1270,14 +1270,14 @@ void AGeneratedHelpers::ExecuteFromOutside(const FControllerAccount& account, co
     }});
 }}
 
-void AGeneratedHelpers::FetchExistingModels()
+void ADojoHelpers::FetchExistingModels()
 {{
     Async(EAsyncExecution::Thread, [this]()
             {{
         ResultCArrayEntity resEntities =
-            FDojoModule::GetEntities(toriiClient, \"{{ not used }}\");
+            FDojoModule::GetEntities(toriiClient, "{{ not used }}");
         if (resEntities.tag == ErrCArrayEntity) {{
-            UE_LOG(LogTemp, Log, TEXT(\"Failed to fetch entities: %hs\"), \
+            UE_LOG(LogTemp, Log, TEXT("Failed to fetch entities: %hs"), \
              resEntities.err.message);
             return;
         }}
@@ -1291,24 +1291,24 @@ void AGeneratedHelpers::FetchExistingModels()
     }});
     }}
 
-void AGeneratedHelpers::SubscribeOnDojoModelUpdate()
+void ADojoHelpers::SubscribeOnDojoModelUpdate()
 {{
-    UE_LOG(LogTemp, Log, TEXT(\"Subscribing to entity update.\"));
+    UE_LOG(LogTemp, Log, TEXT("Subscribing to entity update."));
     if (subscribed) {{
-        UE_LOG(LogTemp, Log, TEXT(\"Warning: cancelled, already subscribed.\"));
+        UE_LOG(LogTemp, Log, TEXT("Warning: cancelled, already subscribed."));
         return;
     }}
     if (toriiClient == nullptr) {{
-        UE_LOG(LogTemp, Log, TEXT(\"Error: Torii Client is not initialized.\"));
+        UE_LOG(LogTemp, Log, TEXT("Error: Torii Client is not initialized."));
         return;
     }}
     subscribed = true;
     struct ResultSubscription res =
-        FDojoModule::OnEntityUpdate(toriiClient, \"{{}}\", nullptr, CallbackProxy);
+        FDojoModule::OnEntityUpdate(toriiClient, "{{}}", nullptr, CallbackProxy);
     subscription = res.ok;
 }}
 
-void AGeneratedHelpers::CallbackProxy(struct FieldElement key, struct CArrayStruct models)
+void ADojoHelpers::CallbackProxy(struct FieldElement key, struct CArrayStruct models)
 {{
     if (!Instance) return;
     Instance->ParseModelsAndSend(&models);
@@ -1322,7 +1322,7 @@ static void ConvertTyToUnrealEngineType(const Member* member, const char* expect
 
 {function_parse_models}
 {calls_functions_bodies}
-",
+"#,
             contract_addresses = contract_addresses,
             policies = policies,
             class_types_converter = class_types_converter,
@@ -1363,13 +1363,13 @@ impl BuiltinPlugin for UnrealEnginePlugin {
         // Sort contracts based on their tag to ensure deterministic output.
         contracts.sort_by(|(_, a), (_, b)| a.tag.cmp(&b.tag));
 
-        println!("Generating header: GeneratedHelpers.h");
+        println!("Generating header: DojoHelpers.hpp");
         let code = self.handle_header(&models, &contracts);
-        out.insert("GeneratedHelpers.h".into(), code.as_bytes().to_vec());
+        out.insert("DojoHelpers.hpp".into(), code.as_bytes().to_vec());
 
-        println!("Generating header: GeneratedHelpers.cpp");
+        println!("Generating cpp file: DojoHelpers.cpp");
         let code = self.handle_cppfile(&models, &contracts);
-        out.insert("GeneratedHelpers.cpp".into(), code.as_bytes().to_vec());
+        out.insert("DojoHelpers.cpp".into(), code.as_bytes().to_vec());
 
         Ok(out)
     }
