@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1742867461257,
+  "lastUpdate": 1742867651460,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -59695,6 +59695,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 44833485918,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ccadd92d45de01a279d291c94c41b73b77001ae2",
+          "message": "chore: bump to cairo `2.9.4` (#3128)\n\n* chore: bump scarb to 2.9.4 branch\n\n* chore: bump scarb\n\n* chore: check scarb locally\n\n* chore: bump scarb\n\n* chore: bump scarb\n\n* fix: rebuild test dbs\n\n* chore: bump tools for scarb 2.9.4\n\n* fix: update tests dbs",
+          "timestamp": "2025-03-24T19:35:02-06:00",
+          "tree_id": "b4b5fd23b3f3fe57c95b6e67a3c0406c6e364414",
+          "url": "https://github.com/dojoengine/dojo/commit/ccadd92d45de01a279d291c94c41b73b77001ae2"
+        },
+        "date": 1742867647681,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2635642,
+            "range": "± 35855",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 392969,
+            "range": "± 13551",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2843963101,
+            "range": "± 255966711",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 16955534,
+            "range": "± 1183577",
             "unit": "ns/iter"
           }
         ]
