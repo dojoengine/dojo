@@ -3893,6 +3893,7 @@ dependencies = [
 [[package]]
 name = "create-output-dir"
 version = "1.0.0"
+source = "git+https://github.com/remybar/scarb?rev=6279a8e#6279a8e287fc9666196c5b6964342fd0a0915c26"
 dependencies = [
  "anyhow",
  "core-foundation 0.10.0",
@@ -12583,6 +12584,7 @@ dependencies = [
 [[package]]
 name = "scarb"
 version = "2.9.2"
+source = "git+https://github.com/remybar/scarb?rev=6279a8e#6279a8e287fc9666196c5b6964342fd0a0915c26"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -12635,9 +12637,9 @@ dependencies = [
  "redb",
  "reqwest 0.11.27",
  "scarb-build-metadata",
- "scarb-metadata 1.13.0",
- "scarb-proc-macro-server-types 0.1.0",
- "scarb-stable-hash 1.0.0",
+ "scarb-metadata 1.13.0 (git+https://github.com/remybar/scarb?rev=6279a8e)",
+ "scarb-proc-macro-server-types 0.1.0 (git+https://github.com/remybar/scarb?rev=6279a8e)",
+ "scarb-stable-hash 1.0.0 (git+https://github.com/remybar/scarb?rev=6279a8e)",
  "scarb-ui",
  "semver 1.0.23",
  "serde",
@@ -12667,20 +12669,9 @@ dependencies = [
 [[package]]
 name = "scarb-build-metadata"
 version = "2.9.2"
+source = "git+https://github.com/remybar/scarb?rev=6279a8e#6279a8e287fc9666196c5b6964342fd0a0915c26"
 dependencies = [
  "cargo_metadata",
-]
-
-[[package]]
-name = "scarb-metadata"
-version = "1.13.0"
-dependencies = [
- "camino",
- "derive_builder",
- "semver 1.0.23",
- "serde",
- "serde_json",
- "thiserror 2.0.11",
 ]
 
 [[package]]
@@ -12697,12 +12688,16 @@ dependencies = [
 ]
 
 [[package]]
-name = "scarb-proc-macro-server-types"
-version = "0.1.0"
+name = "scarb-metadata"
+version = "1.13.0"
+source = "git+https://github.com/remybar/scarb?rev=6279a8e#6279a8e287fc9666196c5b6964342fd0a0915c26"
 dependencies = [
- "cairo-lang-macro",
+ "camino",
+ "derive_builder",
+ "semver 1.0.23",
  "serde",
  "serde_json",
+ "thiserror 2.0.11",
 ]
 
 [[package]]
@@ -12717,11 +12712,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "scarb-stable-hash"
-version = "1.0.0"
+name = "scarb-proc-macro-server-types"
+version = "0.1.0"
+source = "git+https://github.com/remybar/scarb?rev=6279a8e#6279a8e287fc9666196c5b6964342fd0a0915c26"
 dependencies = [
- "data-encoding",
- "xxhash-rust",
+ "cairo-lang-macro",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -12735,15 +12732,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "scarb-stable-hash"
+version = "1.0.0"
+source = "git+https://github.com/remybar/scarb?rev=6279a8e#6279a8e287fc9666196c5b6964342fd0a0915c26"
+dependencies = [
+ "data-encoding",
+ "xxhash-rust",
+]
+
+[[package]]
 name = "scarb-ui"
 version = "0.1.5"
+source = "git+https://github.com/remybar/scarb?rev=6279a8e#6279a8e287fc9666196c5b6964342fd0a0915c26"
 dependencies = [
  "anyhow",
  "camino",
  "clap",
  "console",
  "indicatif",
- "scarb-metadata 1.13.0",
+ "scarb-metadata 1.13.0 (git+https://github.com/remybar/scarb?rev=6279a8e)",
  "serde",
  "serde_json",
  "tracing-core",
@@ -13456,7 +13463,7 @@ dependencies = [
  "reqwest 0.11.27",
  "resolve-path",
  "scarb",
- "scarb-metadata 1.13.0",
+ "scarb-metadata 1.13.0 (git+https://github.com/remybar/scarb?rev=6279a8e)",
  "scarb-ui",
  "semver 1.0.23",
  "serde",
