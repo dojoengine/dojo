@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use async_trait::async_trait;
 use cainome::parser::tokens::{Composite, CompositeType, FunctionOutputKind, Token};
-use dojo_world::contracts::naming::{self, get_name_from_tag, get_namespace_from_tag};
+use dojo_world::contracts::naming::{get_name_from_tag, get_namespace_from_tag};
 
 use crate::error::BindgenResult;
 use crate::plugins::BuiltinPlugin;
@@ -17,7 +17,7 @@ impl UnrealEnginePlugin {
         Self {}
     }
 
-    // Maps cairo types to C#/Unity SDK defined types
+    // Maps cairo types to cpp/UnrealEngine SDK defined types
     fn map_type(token: &Token) -> String {
         match token.type_name().as_str() {
             "i8" => "int".to_string(),
@@ -134,7 +134,7 @@ public:
 
     // Token should be a struct
     // This will be formatted into a C# struct
-    // using C# and unity SDK types
+    // using cpp and UnrealEngine SDK types
     fn format_struct(token: &Composite) -> String {
         let fields = token
             .inners
@@ -205,9 +205,6 @@ struct F{}
         result
     }
 
-    // Token should be a model
-    // This will be formatted into a C# class inheriting from ModelInstance
-    // Fields are mapped using C# and unity SDK types
     fn format_model(namespace: &str, model: &Composite) -> String {
         let fields = model
             .inners
@@ -270,7 +267,7 @@ public:
                     continue;
                 }
                 handled_tokens.insert(token.type_path(), token.to_composite().unwrap().to_owned());
-                if token.type_name() == naming::get_name_from_tag(&model.tag) {
+                if token.type_name() == get_name_from_tag(&model.tag) {
                     model_struct = Some(token.to_composite().unwrap());
                     continue;
                 }
@@ -342,7 +339,7 @@ public:
                         .tokens
                         .structs
                         .iter()
-                        .find(|t| t.type_name() == naming::get_name_from_tag(&model.tag))
+                        .find(|t| t.type_name() == get_name_from_tag(&model.tag))
                         .expect("model struct not found")
                         .type_name()
                 )
@@ -374,9 +371,8 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Controller Calls")
     void CallController{namespace}{system}{selector}(const FControllerAccount& account{args});
 "#,
-                    namespace =
-                        Self::to_pascal_case(&naming::get_namespace_from_tag(&contract.tag)),
-                    system = Self::to_pascal_case(&naming::get_name_from_tag(&contract.tag)),
+                    namespace = Self::to_pascal_case(&get_namespace_from_tag(&contract.tag)),
+                    system = Self::to_pascal_case(&get_name_from_tag(&contract.tag)),
                     selector = Self::to_pascal_case(&system_token.to_function().unwrap().name),
                     args = if args.is_empty() { String::from("") } else { format!(", {}", args) }
                 );
@@ -392,7 +388,8 @@ class ADojoHelpers : public AActor
 private:
     ToriiClient *toriiClient;
 
-    static const TMap<FString, FString> ContractsAddresses;
+    // To initialize using SetContractsAddresses
+    TMap<FString, FString> ContractsAddresses;
 
     bool subscribed;
 
@@ -429,6 +426,9 @@ public:
 
     UFUNCTION(BlueprintCallable)
     void Connect(const FString& torii_url, const FString& world);
+
+    UFUNCTION(BlueprintCallable)
+    void SetContractsAddresses(const TMap<FString,FString>& addresses);
 
     UFUNCTION(BlueprintCallable)
     void FetchExistingModels();
@@ -476,8 +476,8 @@ public:
             .iter()
             .map(|(_, model)| {
                 format!(
-                    "UDojoModel* ADojoHelpers::parse{namespace}{model_name}Model(struct \
-                     Struct* model)
+                    "UDojoModel* ADojoHelpers::parse{namespace}{model_name}Model(struct Struct* \
+                     model)
 {{
     UDojoModel{namespace}{model_name}* Model = NewObject<UDojoModel{namespace}{model_name}>();
     CArrayMember* members = &model->children;
@@ -496,14 +496,14 @@ public:
                         .tokens
                         .structs
                         .iter()
-                        .find(|t| t.type_name() == naming::get_name_from_tag(&model.tag))
+                        .find(|t| t.type_name() == get_name_from_tag(&model.tag))
                         .expect("model struct not found")
                         .type_name(),
                     process_members = model
                         .tokens
                         .structs
                         .iter()
-                        .find(|t| t.type_name() == naming::get_name_from_tag(&model.tag))
+                        .find(|t| t.type_name() == get_name_from_tag(&model.tag))
                         .expect("model struct not found")
                         .to_composite()
                         .unwrap()
@@ -542,7 +542,7 @@ public:
                         .tokens
                         .structs
                         .iter()
-                        .find(|t| t.type_name() == naming::get_name_from_tag(&model.tag))
+                        .find(|t| t.type_name() == get_name_from_tag(&model.tag))
                         .expect("model struct not found")
                         .type_name(),
                     namespaceCamelCase = Self::to_pascal_case(&get_namespace_from_tag(&model.tag)),
@@ -624,18 +624,17 @@ void ADojoHelpers::ParseModelsAndSend(struct CArrayStruct* models)
         let mut policies: String = String::new();
         let mut nb_policies = 0;
         for (_, contract) in contracts {
-            let contract_name =
-                Self::to_pascal_case(&naming::get_namespace_from_tag(&contract.tag))
-                    + &Self::to_pascal_case(&naming::get_name_from_tag(&contract.tag));
+            let contract_name = Self::to_pascal_case(&get_namespace_from_tag(&contract.tag))
+                + &Self::to_pascal_case(&get_name_from_tag(&contract.tag));
             let raw_contract_name = &format!(
                 "{}-{}",
-                &naming::get_namespace_from_tag(&contract.tag),
-                &naming::get_name_from_tag(&contract.tag)
+                &get_namespace_from_tag(&contract.tag),
+                &get_name_from_tag(&contract.tag)
             );
             policies_addresses += &format!(
-                r#"FieldElement {name}Contract;\n    \
-                 FDojoModule::string_to_bytes(std::string(TCHAR_TO_UTF8(*\
-                 this->ContractsAddresses["{raw_contract_name}"])), {name}Contract.data, 32);"#,
+                r#"FieldElement {name}Contract;
+    FDojoModule::string_to_bytes(std::string(TCHAR_TO_UTF8(*\
+    this->ContractsAddresses["{raw_contract_name}"])), {name}Contract.data, 32);"#,
                 name = contract_name,
                 raw_contract_name = raw_contract_name,
             );
@@ -671,18 +670,9 @@ void ADojoHelpers::ParseModelsAndSend(struct CArrayStruct* models)
         )
     }
 
-    fn generate_contract_addresses_and_calls_functions(
-        contracts: &Vec<(&String, &DojoContract)>,
-    ) -> (String, String) {
-        let mut contract_addresses: String = String::new();
+    fn generate_calls_functions(contracts: &Vec<(&String, &DojoContract)>) -> String {
         let mut calls_functions: String = String::new();
         for (_, contract) in contracts {
-            contract_addresses += &format!(
-                r#"    {{TEXT("{}-{}"), TEXT("{}")}},\n"#,
-                &get_namespace_from_tag(&contract.tag),
-                &get_name_from_tag(&contract.tag),
-                "COPY_ADDRESS_HERE"
-            );
             for system_token in contract.systems.iter().filter(|s| {
                 s.to_function().unwrap().get_output_kind() as u8
                     == FunctionOutputKind::NoOutput as u8
@@ -733,22 +723,21 @@ void ADojoHelpers::CallController{namespace}{system}{selector}(const FController
                      TEXT("{selector_raw}"), FString::Join(args, TEXT(",")));
 }}
 "#,
-                    namespace =
-                        Self::to_pascal_case(&naming::get_namespace_from_tag(&contract.tag)),
-                    system = Self::to_pascal_case(&naming::get_name_from_tag(&contract.tag)),
+                    namespace = Self::to_pascal_case(&get_namespace_from_tag(&contract.tag)),
+                    system = Self::to_pascal_case(&get_name_from_tag(&contract.tag)),
                     selector = Self::to_pascal_case(&system_token.to_function().unwrap().name),
                     selector_raw = system_token.to_function().unwrap().name,
                     contract_name = format!(
                         "{}-{}",
-                        naming::get_namespace_from_tag(&contract.tag),
-                        naming::get_name_from_tag(&contract.tag)
+                        get_namespace_from_tag(&contract.tag),
+                        get_name_from_tag(&contract.tag)
                     ),
                     args = if args.is_empty() { String::from("") } else { format!(", {}", args) },
                     args_body = args_body,
                 );
             }
         }
-        (contract_addresses, calls_functions)
+        calls_functions
     }
 
     fn generate_converters(models: &Vec<(&String, &DojoModel)>) -> String {
@@ -776,7 +765,7 @@ void ADojoHelpers::CallController{namespace}{system}{selector}(const FController
                     continue;
                 }
                 handled_tokens.insert(token.type_path(), token.to_composite().unwrap().to_owned());
-                if token.type_name() == naming::get_name_from_tag(&model.tag) {
+                if token.type_name() == get_name_from_tag(&model.tag) {
                     model_struct = Some(token.to_composite().unwrap());
                 }
             }
@@ -1023,21 +1012,16 @@ static TArray<FString> ConvertToFeltHexa(const T& value, const char* valueType) 
             strcmp(valueType, "u8") == 0 ||
             strcmp(valueType, "u16") == 0 ||
             strcmp(valueType, "u32") == 0) {{
-
-            FString hexValue = FString::Printf(TEXT("%X"), value);
-
-            // Pad with leading zeros to make it 64 characters
+            FString hexValue = FString::Printf(TEXT("%X"), static_cast<int>(value));
             while (hexValue.Len() < 64) {{
                 hexValue = TEXT("0") + hexValue;
             }}
-
             return TArray<FString>{{TEXT("0x") + hexValue}};
         }}
     }}
     else if constexpr (std::is_same_v<T, bool>) {{
         if (strcmp(valueType, "bool") == 0) {{
             FString hexValue = FString::Printf(TEXT("%X"), value ? 1 : 0);
-            // Pad with leading zeros to make it 64 characters
             while (hexValue.Len() < 64) {{
                 hexValue = TEXT("0") + hexValue;
             }}
@@ -1047,14 +1031,11 @@ static TArray<FString> ConvertToFeltHexa(const T& value, const char* valueType) 
     else if constexpr (std::is_same_v<T, TArray<int>>) {{
         if (strcmp(valueType, "array") == 0) {{
             TArray<FString> strings;
-
-            // Add array length
             FString hexValue = FString::Printf(TEXT("%X"), static_cast<int>(value.Num()));
             while (hexValue.Len() < 64) {{
                 hexValue = TEXT("0") + hexValue;
             }}
-            hexValue = TEXT("0x") + hexValue;
-            strings.Add(hexValue);
+            strings.Add(TEXT("0x") + hexValue);
 
             // Add array elements
             for (const int& element : value) {{
@@ -1062,8 +1043,7 @@ static TArray<FString> ConvertToFeltHexa(const T& value, const char* valueType) 
                 while (elementHexValue.Len() < 64) {{
                     elementHexValue = TEXT("0") + elementHexValue;
                 }}
-                elementHexValue = TEXT("0x") + elementHexValue;
-                strings.Add(elementHexValue);
+                strings.Add(TEXT("0x") + elementHexValue);
             }}
 
             return strings;
@@ -1137,12 +1117,10 @@ static void ConvertTyToUnrealEngineType(const Member* member, const char* expect
         let class_types_converter = Self::generate_converters(models);
         let function_parse_models = Self::generate_parse_models_functions(models);
         let policies = Self::generate_policies(contracts);
-        let (contract_addresses, calls_functions_bodies) =
-            Self::generate_contract_addresses_and_calls_functions(contracts);
+        let calls_functions_bodies = Self::generate_calls_functions(contracts);
 
         out += &format!(
-            r#"const TMap<FString, FString> ADojoHelpers::ContractsAddresses = {{
-{contract_addresses}}};
+            r#"
 ADojoHelpers* ADojoHelpers::Instance = nullptr;
 
 ADojoHelpers::ADojoHelpers()
@@ -1164,6 +1142,11 @@ void ADojoHelpers::Connect(const FString& torii_url, const FString& world)
     std::string world_string = std::string(TCHAR_TO_UTF8(*world));
     toriiClient = FDojoModule::CreateToriiClient(torii_url_string.c_str(), world_string.c_str());
     UE_LOG(LogTemp, Log, TEXT("Torii Client initialized."));
+}}
+
+void ADojoHelpers::SetContractsAddresses(const TMap<FString,FString>& addresses)
+{{
+    ContractsAddresses = addresses;
 }}
 
 FAccount ADojoHelpers::CreateAccountDeprecated(const FString& rpc_url, const FString& \
@@ -1323,7 +1306,6 @@ static void ConvertTyToUnrealEngineType(const Member* member, const char* expect
 {function_parse_models}
 {calls_functions_bodies}
 "#,
-            contract_addresses = contract_addresses,
             policies = policies,
             class_types_converter = class_types_converter,
             function_parse_models = function_parse_models,
@@ -1363,9 +1345,9 @@ impl BuiltinPlugin for UnrealEnginePlugin {
         // Sort contracts based on their tag to ensure deterministic output.
         contracts.sort_by(|(_, a), (_, b)| a.tag.cmp(&b.tag));
 
-        println!("Generating header: DojoHelpers.hpp");
+        println!("Generating header: DojoHelpers.h");
         let code = self.handle_header(&models, &contracts);
-        out.insert("DojoHelpers.hpp".into(), code.as_bytes().to_vec());
+        out.insert("DojoHelpers.h".into(), code.as_bytes().to_vec());
 
         println!("Generating cpp file: DojoHelpers.cpp");
         let code = self.handle_cppfile(&models, &contracts);
