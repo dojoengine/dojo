@@ -475,6 +475,12 @@ public:
         let parse_models_functions_bodies = models
             .iter()
             .map(|(_, model)| {
+                let structs = model
+                    .tokens
+                    .structs
+                    .iter()
+                    .find(|t| t.type_name() == get_name_from_tag(&model.tag))
+                    .expect("model struct not found");
                 format!(
                     "UDojoModel* ADojoHelpers::parse{namespace}{model_name}Model(struct Struct* \
                      model)
@@ -492,19 +498,8 @@ public:
 }}
 ",
                     namespace = Self::to_pascal_case(&get_namespace_from_tag(&model.tag)),
-                    model_name = model
-                        .tokens
-                        .structs
-                        .iter()
-                        .find(|t| t.type_name() == get_name_from_tag(&model.tag))
-                        .expect("model struct not found")
-                        .type_name(),
-                    process_members = model
-                        .tokens
-                        .structs
-                        .iter()
-                        .find(|t| t.type_name() == get_name_from_tag(&model.tag))
-                        .expect("model struct not found")
+                    model_name = structs.type_name(),
+                    process_members = structs
                         .to_composite()
                         .unwrap()
                         .inners
