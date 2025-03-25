@@ -134,7 +134,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: software-mansion/setup-scarb@v1
         with:
-          scarb-version: "2.9.2"
+          scarb-version: "2.9.4"
       - run: |
           scarb --manifest-path examples/spawn-and-move/Scarb.toml fmt --check
           scarb --manifest-path examples/simple/Scarb.toml fmt --check
@@ -147,7 +147,7 @@ jobs:
     steps:
       - uses: software-mansion/setup-scarb@v1
         with:
-          scarb-version: "2.9.2"
+          scarb-version: "2.9.4"
       - uses: actions/download-artifact@v4
         with:
           name: dojo-bins
@@ -164,7 +164,7 @@ jobs:
     steps:
       - uses: software-mansion/setup-scarb@v1
         with:
-          scarb-version: "2.9.2"
+          scarb-version: "2.9.4"
       - uses: actions/download-artifact@v4
         with:
           name: dojo-bins

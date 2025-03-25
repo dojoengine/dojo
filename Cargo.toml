@@ -152,28 +152,28 @@ auto_impl = "1.2.0"
 base64 = "0.21.2"
 bigdecimal = "0.4.1"
 bytes = "1.6"
-cairo-lang-compiler = "=2.9.2"
-cairo-lang-debug = "=2.9.2"
-cairo-lang-defs = "=2.9.2"
-cairo-lang-diagnostics = "=2.9.2"
-cairo-lang-filesystem = "=2.9.2"
-cairo-lang-formatter = "=2.9.2"
-cairo-lang-language-server = "=2.9.2"
-cairo-lang-lowering = "=2.9.2"
-cairo-lang-parser = "=2.9.2"
-cairo-lang-plugins = { version = "=2.9.2", features = [ "testing" ] }
-cairo-lang-project = "=2.9.2"
-cairo-lang-semantic = "=2.9.2"
-cairo-lang-sierra = "=2.9.2"
-cairo-lang-sierra-generator = "=2.9.2"
-cairo-lang-sierra-to-casm = "=2.9.2"
-cairo-lang-starknet = "=2.9.2"
-cairo-lang-starknet-classes = "=2.9.2"
-cairo-lang-syntax = "=2.9.2"
-cairo-lang-test-plugin = "=2.9.2"
-cairo-lang-test-runner = "=2.9.2"
-cairo-lang-test-utils = "=2.9.2"
-cairo-lang-utils = "=2.9.2"
+cairo-lang-compiler = "=2.9.4"
+cairo-lang-debug = "=2.9.4"
+cairo-lang-defs = "=2.9.4"
+cairo-lang-diagnostics = "=2.9.4"
+cairo-lang-filesystem = "=2.9.4"
+cairo-lang-formatter = "=2.9.4"
+cairo-lang-language-server = "=2.9.4"
+cairo-lang-lowering = "=2.9.4"
+cairo-lang-parser = "=2.9.4"
+cairo-lang-plugins = { version = "=2.9.4", features = [ "testing" ] }
+cairo-lang-project = "=2.9.4"
+cairo-lang-semantic = "=2.9.4"
+cairo-lang-sierra = "=2.9.4"
+cairo-lang-sierra-generator = "=2.9.4"
+cairo-lang-sierra-to-casm = "=2.9.4"
+cairo-lang-starknet = "=2.9.4"
+cairo-lang-starknet-classes = "=2.9.4"
+cairo-lang-syntax = "=2.9.4"
+cairo-lang-test-plugin = "=2.9.4"
+cairo-lang-test-runner = "=2.9.4"
+cairo-lang-test-utils = "=2.9.4"
+cairo-lang-utils = "=2.9.4"
 cairo-vm = "1.0.0-rc4"
 camino = { version = "1.1.2", features = [ "serde1" ] }
 chrono = { version = "0.4.24", features = [ "serde" ] }
@@ -220,9 +220,9 @@ rpassword = "7.2.0"
 rstest = "0.18.2"
 rstest_reuse = "0.6.0"
 salsa = "0.16.1"
-scarb = { git = "https://github.com/dojoengine/scarb", rev = "22aa38f53de205af25bf73b3ffc2c5334999d480" }
-scarb-metadata = { git = "https://github.com/dojoengine/scarb", rev = "22aa38f53de205af25bf73b3ffc2c5334999d480" }
-scarb-ui = { git = "https://github.com/dojoengine/scarb", rev = "22aa38f53de205af25bf73b3ffc2c5334999d480" }
+scarb = { git = "https://github.com/dojoengine/scarb", rev = "8a60513c03e72b8a84f3ac266c61aac40c565aca" }
+scarb-metadata = { git = "https://github.com/dojoengine/scarb", rev = "8a60513c03e72b8a84f3ac266c61aac40c565aca" }
+scarb-ui = { git = "https://github.com/dojoengine/scarb", rev = "8a60513c03e72b8a84f3ac266c61aac40c565aca" }
 semver = "1.0.5"
 serde = { version = "1.0", features = [ "derive" ] }
 serde_json = { version = "1.0", features = [ "arbitrary_precision" ] }
