@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1742867651460,
+  "lastUpdate": 1742977059697,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -59743,6 +59743,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 16955534,
             "range": "± 1183577",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "35ace892d0b5b2d31ec42d6622ae9776160ca1e9",
+          "message": "fix(torii-grpc): token balance subscription strict bytes length (#3129)",
+          "timestamp": "2025-03-26T08:01:26Z",
+          "tree_id": "36c235cd2ceab0bcba471e711c6b523c8e02b1cf",
+          "url": "https://github.com/dojoengine/dojo/commit/35ace892d0b5b2d31ec42d6622ae9776160ca1e9"
+        },
+        "date": 1742977056670,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 46269501557,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
