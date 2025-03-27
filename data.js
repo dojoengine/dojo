@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1743085738743,
+  "lastUpdate": 1743085937648,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -59851,6 +59851,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 47836827216,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "corentin.cailleaud@caillef.com",
+            "name": "Corentin CAILLEAUD",
+            "username": "caillef"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ecf68897a09adb097ed279f310fdcf1e35dd1ffe",
+          "message": "feat(sozo): add unreal engine bindgen (#3113)\n\n* feat: unreal engine bindgen\n\nfeat: generate custom types wrapper\n\nfeat: handle policies\n\nfix: policies format\n\nfix: types issue\n\nfeat: add convert to felt string\n\nfix: format\n\nfix: struct not showing in header file\n\nfix: enhance code quality\n\nfix: style\n\nfix: refactor code\n\nfix: style\n\n* fix: use r# and rename helper files\n\n* fix: review\n\n* fix: refacto",
+          "timestamp": "2025-03-27T08:12:33-06:00",
+          "tree_id": "8ea82ced8ff36ee243b6469cb0132c66729b25a5",
+          "url": "https://github.com/dojoengine/dojo/commit/ecf68897a09adb097ed279f310fdcf1e35dd1ffe"
+        },
+        "date": 1743085933658,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2656163,
+            "range": "± 39496",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 397301,
+            "range": "± 23994",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2952112678,
+            "range": "± 284152570",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 18183191,
+            "range": "± 720296",
             "unit": "ns/iter"
           }
         ]
