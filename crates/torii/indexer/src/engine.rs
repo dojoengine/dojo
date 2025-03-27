@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::sync::Arc;
@@ -9,7 +9,6 @@ use async_recursion::async_recursion;
 use bitflags::bitflags;
 use dojo_utils::provider as provider_utils;
 use dojo_world::contracts::world::WorldContractReader;
-use futures_util::future::join_all;
 use hashlink::LinkedHashMap;
 use starknet::core::types::requests::{GetBlockWithTxHashesRequest, GetEventsRequest};
 use starknet::core::types::{
@@ -23,8 +22,6 @@ use starknet::providers::{Provider, ProviderRequestData, ProviderResponseData};
 use starknet_crypto::Felt;
 use tokio::sync::broadcast::Sender;
 use tokio::sync::mpsc::Sender as BoundedSender;
-use tokio::sync::Semaphore;
-use tokio::task::JoinSet;
 use tokio::time::{sleep, Instant};
 use torii_sqlite::cache::ContractClassCache;
 use torii_sqlite::types::{Contract, ContractType};
@@ -926,37 +923,6 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
 
         Ok(())
     }
-}
-
-async fn get_all_events<P>(
-    provider: &P,
-    events_filter: EventFilter,
-    events_chunk_size: u64,
-) -> Result<(Option<Felt>, Vec<EventsPage>)>
-where
-    P: Provider + Sync,
-{
-    let mut events_pages = Vec::new();
-    let mut continuation_token = None;
-
-    loop {
-        debug!(
-            "Fetching events page with continuation token: {:?}, for contract: {:?}",
-            continuation_token, events_filter.address
-        );
-        let events_page = provider
-            .get_events(events_filter.clone(), continuation_token.clone(), events_chunk_size)
-            .await?;
-
-        continuation_token = events_page.continuation_token.clone();
-        events_pages.push(events_page);
-
-        if continuation_token.is_none() {
-            break;
-        }
-    }
-
-    Ok((events_filter.address, events_pages))
 }
 
 async fn get_block_timestamp<P>(provider: &P, block_number: u64) -> Result<u64>
