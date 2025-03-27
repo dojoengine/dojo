@@ -35,6 +35,10 @@ pub struct BuildArgs {
     pub unity: bool,
 
     #[arg(long)]
+    #[arg(help = "Generate Unreal Engine bindings.")]
+    pub unrealengine: bool,
+
+    #[arg(long)]
     #[arg(help = "Output directory.", default_value = "bindings")]
     pub bindings_output: String,
 
@@ -130,6 +134,10 @@ impl BuildArgs {
             builtin_plugins.push(BuiltinPlugins::Unity);
         }
 
+        if self.unrealengine {
+            builtin_plugins.push(BuiltinPlugins::UnrealEngine);
+        }
+
         // Custom plugins are always empty for now.
         let bindgen = PluginManager {
             profile_name: ws.current_profile().expect("Profile expected").to_string(),
@@ -214,6 +222,7 @@ impl Default for BuildArgs {
             typescript_v2: false,
             recs: false,
             unity: false,
+            unrealengine: false,
             bindings_output: "bindings".to_string(),
             stats: StatOptions::default(),
             packages: None,
