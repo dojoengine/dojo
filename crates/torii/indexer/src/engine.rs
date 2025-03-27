@@ -10,14 +10,15 @@ use dojo_utils::provider as provider_utils;
 use dojo_world::contracts::world::WorldContractReader;
 use futures_util::future::join_all;
 use hashlink::LinkedHashMap;
+use starknet::core::types::requests::{GetBlockWithTxHashesRequest, GetEventsRequest};
 use starknet::core::types::{
-    BlockHashAndNumber, BlockId, BlockTag, EmittedEvent, Event, EventFilter, EventFilterWithPage, EventsPage, MaybePendingBlockWithReceipts, MaybePendingBlockWithTxHashes, PendingBlockWithReceipts, ResultPageRequest, Transaction, TransactionReceipt, TransactionWithReceipt
+    BlockHashAndNumber, BlockId, BlockTag, EmittedEvent, Event, EventFilter, EventFilterWithPage,
+    EventsPage, MaybePendingBlockWithReceipts, MaybePendingBlockWithTxHashes,
+    PendingBlockWithReceipts, ResultPageRequest, Transaction, TransactionReceipt,
+    TransactionWithReceipt,
 };
-use starknet::core::types::requests::{GetEventsRequest, GetBlockWithTxHashesRequest};
 use starknet::core::utils::get_selector_from_name;
-use starknet::providers::{
-    Provider, ProviderRequestData, ProviderResponseData,
-};
+use starknet::providers::{Provider, ProviderRequestData, ProviderResponseData};
 use starknet_crypto::Felt;
 use tokio::sync::broadcast::Sender;
 use tokio::sync::mpsc::Sender as BoundedSender;
@@ -398,21 +399,22 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
             };
 
             // First fetch to get continuation token
-            let events_page = self.provider
+            let events_page = self
+                .provider
                 .get_events(events_filter.clone(), None, self.config.events_chunk_size)
                 .await?;
-            
+
             // Process the first page
             for event in events_page.events {
                 let last_contract_tx = cursor_map.get(&contract.0).cloned();
-                
+
                 // Skip if we haven't reached the last processed transaction
                 if let Some(last_tx) = last_contract_tx {
                     if event.transaction_hash == last_tx {
                         continue;
                     }
                 }
-                
+
                 events.push(event);
             }
 
@@ -433,7 +435,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         // Execute all event requests in batch if we have any
         if !event_requests.is_empty() {
             let batch_results = self.provider.batch_requests(event_requests).await?;
-            
+
             // Process batch results
             for result in batch_results {
                 match result {
@@ -444,7 +446,9 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                     }
                     _ => {
                         error!(target: LOG_TARGET, "Unexpected response type from batch events request");
-                        return Err(anyhow::anyhow!("Unexpected response type from batch events request"));
+                        return Err(anyhow::anyhow!(
+                            "Unexpected response type from batch events request"
+                        ));
                     }
                 }
             }
@@ -474,15 +478,15 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         // Batch request block timestamps
         let mut timestamp_requests = Vec::new();
         for block_number in &block_numbers {
-            timestamp_requests.push(ProviderRequestData::GetBlockWithTxHashes(GetBlockWithTxHashesRequest {
-                block_id: BlockId::Number(*block_number),
-            }));
+            timestamp_requests.push(ProviderRequestData::GetBlockWithTxHashes(
+                GetBlockWithTxHashesRequest { block_id: BlockId::Number(*block_number) },
+            ));
         }
 
         // Execute timestamp requests in batch
         if !timestamp_requests.is_empty() {
             let timestamp_results = self.provider.batch_requests(timestamp_requests).await?;
-            
+
             // Process timestamp results
             for (block_number, result) in block_numbers.iter().zip(timestamp_results) {
                 match result {
@@ -495,7 +499,9 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                     }
                     _ => {
                         error!(target: LOG_TARGET, "Unexpected response type from batch timestamp request");
-                        return Err(anyhow::anyhow!("Unexpected response type from batch timestamp request"));
+                        return Err(anyhow::anyhow!(
+                            "Unexpected response type from batch timestamp request"
+                        ));
                     }
                 }
             }
