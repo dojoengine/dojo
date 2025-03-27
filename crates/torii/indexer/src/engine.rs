@@ -433,6 +433,9 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                 .push(event);
         }
 
+        // Always ensure the latest block number is included
+        block_numbers.insert(to);
+
         // Batch request block timestamps
         let mut timestamp_requests = Vec::new();
         for block_number in &block_numbers {
@@ -457,9 +460,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                     }
                     _ => {
                         error!(target: LOG_TARGET, "Unexpected response type from batch timestamp request");
-                        return Err(anyhow::anyhow!(
-                            "Unexpected response type from batch timestamp request"
-                        ));
+                        return Err(anyhow::anyhow!("Unexpected response type from batch timestamp request"));
                     }
                 }
             }
@@ -662,11 +663,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         // Process parallelized events
         self.task_manager.process_tasks().await?;
 
-        let last_block_timestamp = data
-            .blocks
-            .get(&data.latest_block_number)
-            .copied()
-            .unwrap_or(get_block_timestamp(&self.provider, data.latest_block_number).await?);
+        let last_block_timestamp = data.blocks[&data.latest_block_number];
         self.db.update_cursors(data.latest_block_number, last_block_timestamp, None, cursor_map)?;
 
         Ok(())
@@ -929,16 +926,6 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         }
 
         Ok(())
-    }
-}
-
-async fn get_block_timestamp<P>(provider: &P, block_number: u64) -> Result<u64>
-where
-    P: Provider + Sync,
-{
-    match provider.get_block_with_tx_hashes(BlockId::Number(block_number)).await? {
-        MaybePendingBlockWithTxHashes::Block(block) => Ok(block.timestamp),
-        MaybePendingBlockWithTxHashes::PendingBlock(block) => Ok(block.timestamp),
     }
 }
 
