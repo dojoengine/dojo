@@ -5,6 +5,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Result;
+use async_recursion::async_recursion;
 use bitflags::bitflags;
 use dojo_utils::provider as provider_utils;
 use dojo_world::contracts::world::WorldContractReader;
@@ -386,73 +387,37 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         to: u64,
         cursor_map: &HashMap<Felt, Felt>,
     ) -> Result<FetchRangeResult> {
-        // Create batch requests for events from all contracts
         let mut events = vec![];
-        let mut event_requests = Vec::new();
 
-        for contract in self.contracts.iter() {
+        // Create initial batch requests for all contracts
+        let mut event_requests = Vec::new();
+        for (contract_address, _) in self.contracts.iter() {
             let events_filter = EventFilter {
                 from_block: Some(BlockId::Number(from)),
                 to_block: Some(BlockId::Number(to)),
-                address: Some(*contract.0),
+                address: Some(*contract_address),
                 keys: None,
             };
 
-            // First fetch to get continuation token
-            let events_page = self
-                .provider
-                .get_events(events_filter.clone(), None, self.config.events_chunk_size)
-                .await?;
-
-            // Process the first page
-            for event in events_page.events {
-                let last_contract_tx = cursor_map.get(&contract.0).cloned();
-
-                // Skip if we haven't reached the last processed transaction
-                if let Some(last_tx) = last_contract_tx {
-                    if event.transaction_hash == last_tx {
-                        continue;
-                    }
-                }
-
-                events.push(event);
-            }
-
-            // Add subsequent pages to batch requests if there are more
-            if let Some(continuation_token) = events_page.continuation_token {
-                event_requests.push(ProviderRequestData::GetEvents(GetEventsRequest {
+            event_requests.push((
+                *contract_address,
+                ProviderRequestData::GetEvents(GetEventsRequest {
                     filter: EventFilterWithPage {
                         event_filter: events_filter,
                         result_page_request: ResultPageRequest {
-                            continuation_token: Some(continuation_token),
+                            continuation_token: None,
                             chunk_size: self.config.events_chunk_size,
                         },
                     },
-                }));
-            }
+                }),
+            ));
         }
 
-        // Execute all event requests in batch if we have any
-        if !event_requests.is_empty() {
-            let batch_results = self.provider.batch_requests(event_requests).await?;
-
-            // Process batch results
-            for result in batch_results {
-                match result {
-                    ProviderResponseData::GetEvents(events_page) => {
-                        for event in events_page.events {
-                            events.push(event);
-                        }
-                    }
-                    _ => {
-                        error!(target: LOG_TARGET, "Unexpected response type from batch events request");
-                        return Err(anyhow::anyhow!(
-                            "Unexpected response type from batch events request"
-                        ));
-                    }
-                }
-            }
-        }
+        // Recursively fetch all events using batch requests
+        events.extend(
+            self.fetch_events_recursive(event_requests, cursor_map)
+                .await?
+        );
 
         // Process events to get unique blocks and transactions
         let mut blocks = BTreeMap::new();
@@ -499,9 +464,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                     }
                     _ => {
                         error!(target: LOG_TARGET, "Unexpected response type from batch timestamp request");
-                        return Err(anyhow::anyhow!(
-                            "Unexpected response type from batch timestamp request"
-                        ));
+                        return Err(anyhow::anyhow!("Unexpected response type from batch timestamp request"));
                     }
                 }
             }
@@ -511,6 +474,64 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         debug!("Blocks: {}", &blocks.len());
 
         Ok(FetchRangeResult { transactions, blocks, latest_block_number: to })
+    }
+
+    #[async_recursion]
+    async fn fetch_events_recursive(
+        &self,
+        requests: Vec<(Felt, ProviderRequestData)>,
+        cursor_map: &HashMap<Felt, Felt>,
+    ) -> Result<Vec<EmittedEvent>> {
+        if requests.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let mut events = Vec::new();
+        let mut next_requests = Vec::new();
+
+        // Extract just the requests without the contract addresses
+        let batch_requests: Vec<ProviderRequestData> = requests.iter().map(|(_, req)| req.clone()).collect();
+        let batch_results = self.provider.batch_requests(batch_requests).await?;
+
+        // Process results and prepare next batch of requests if needed
+        for ((contract_address, original_request), result) in requests.into_iter().zip(batch_results) {
+            match result {
+                ProviderResponseData::GetEvents(events_page) => {
+                    // Process events for this page
+                    for event in events_page.events {
+                        let last_contract_tx = cursor_map.get(&contract_address).cloned();
+
+                        // Skip if we haven't reached the last processed transaction
+                        if let Some(last_tx) = last_contract_tx {
+                            if event.transaction_hash == last_tx {
+                                continue;
+                            }
+                        }
+
+                        events.push(event);
+                    }
+
+                    // If there's a continuation token, prepare next request
+                    if let Some(continuation_token) = events_page.continuation_token {
+                        if let ProviderRequestData::GetEvents(mut next_request) = original_request {
+                            next_request.filter.result_page_request.continuation_token = Some(continuation_token);
+                            next_requests.push((contract_address, ProviderRequestData::GetEvents(next_request)));
+                        }
+                    }
+                }
+                _ => {
+                    error!(target: LOG_TARGET, "Unexpected response type from batch events request");
+                    return Err(anyhow::anyhow!("Unexpected response type from batch events request"));
+                }
+            }
+        }
+
+        // Recursively fetch next batch if there are any continuation tokens
+        if !next_requests.is_empty() {
+            events.extend(self.fetch_events_recursive(next_requests, cursor_map).await?);
+        }
+
+        Ok(events)
     }
 
     async fn fetch_pending(
