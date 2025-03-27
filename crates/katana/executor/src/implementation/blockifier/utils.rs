@@ -587,11 +587,11 @@ pub fn to_exec_info(exec_info: TransactionExecutionInfo, r#type: TxType) -> TxEx
             ),
             n_reverted_steps: exec_info.transaction_receipt.resources.n_reverted_steps,
             data_availability: L1Gas {
-                l1_gas: exec_info.transaction_receipt.da_gas.l1_data_gas,
+                l1_gas: exec_info.transaction_receipt.da_gas.l1_gas,
                 l1_data_gas: exec_info.transaction_receipt.da_gas.l1_data_gas,
             },
             total_gas_consumed: L1Gas {
-                l1_gas: exec_info.transaction_receipt.gas.l1_data_gas,
+                l1_gas: exec_info.transaction_receipt.gas.l1_gas,
                 l1_data_gas: exec_info.transaction_receipt.gas.l1_data_gas,
             },
         },
