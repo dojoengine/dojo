@@ -1,4 +1,4 @@
-// Might not be necessary from Cairo 2.11
+// TODO: Might not be necessary from Cairo 2.11
 pub impl ContractAddressDefault of Default<core::starknet::ContractAddress> {
     fn default() -> core::starknet::ContractAddress {
         core::starknet::contract_address_const::<0>()

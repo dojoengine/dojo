@@ -2,60 +2,60 @@ use dojo::meta::introspect::{Introspect, Struct, Enum, Member, Ty, TyCompareTrai
 use dojo::meta::{Layout, FieldLayout};
 use crate::utils::GasCounterTrait;
 
-#[derive(Drop, Introspect, Serde, Default)]
+#[derive(Drop, Introspect, Default)]
 struct Base {
     value: u32,
 }
 
-#[derive(Drop, Introspect, Serde)]
+#[derive(Drop, Introspect)]
 struct WithArray {
     value: u32,
     arr: Array<u8>,
 }
 
-#[derive(Drop, Introspect, Serde)]
+#[derive(Drop, Introspect)]
 struct WithByteArray {
     value: u32,
     arr: ByteArray,
 }
 
-#[derive(Drop, Introspect, Serde)]
+#[derive(Drop, Introspect)]
 struct WithTuple {
     value: u32,
     arr: (u8, u16, u32),
 }
 
-#[derive(Drop, Introspect, Serde)]
+#[derive(Drop, Introspect)]
 struct WithNestedTuple {
     value: u32,
     arr: (u8, (u16, u128, u256), u32),
 }
 
-#[derive(Drop, Introspect, Serde)]
+#[derive(Drop, Introspect)]
 struct WithNestedArrayInTuple {
     value: u32,
     arr: (u8, (u16, Array<u128>, u256), u32),
 }
 
-#[derive(Drop, IntrospectPacked, Serde, Default)]
+#[derive(Drop, IntrospectPacked, Default)]
 struct Vec3 {
     x: u32,
     y: u32,
     z: u32,
 }
 
-#[derive(IntrospectPacked, Serde)]
+#[derive(IntrospectPacked)]
 struct Translation {
     from: Vec3,
     to: Vec3,
 }
 
-#[derive(Drop, IntrospectPacked, Serde)]
+#[derive(Drop, IntrospectPacked)]
 struct StructInnerNotPacked {
     x: Base,
 }
 
-#[derive(Drop, Introspect, Serde, Default)]
+#[derive(Drop, Introspect, Default)]
 enum EnumNoData {
     #[default]
     One,
@@ -63,7 +63,7 @@ enum EnumNoData {
     Three,
 }
 
-#[derive(Drop, Introspect, Serde, Default)]
+#[derive(Drop, Introspect, Default)]
 enum EnumWithSameData {
     #[default]
     One: u256,
@@ -71,7 +71,7 @@ enum EnumWithSameData {
     Three: u256,
 }
 
-#[derive(Drop, Introspect, Serde, Default)]
+#[derive(Drop, Introspect, Default)]
 enum EnumWithSameTupleData {
     #[default]
     One: (u256, u32),
@@ -79,7 +79,7 @@ enum EnumWithSameTupleData {
     Three: (u256, u32),
 }
 
-#[derive(Drop, Introspect, Serde, Default)]
+#[derive(Drop, Introspect, Default)]
 enum EnumWithVariousData {
     #[default]
     One: u32,
@@ -88,38 +88,38 @@ enum EnumWithVariousData {
 }
 
 
-#[derive(Drop, IntrospectPacked, Serde, Default)]
+#[derive(Drop, IntrospectPacked, Default)]
 enum EnumPacked {
     #[default]
     A: u32,
     B: u32,
 }
 
-#[derive(Drop, IntrospectPacked, Serde, Default)]
+#[derive(Drop, IntrospectPacked, Default)]
 enum EnumInnerPacked {
     #[default]
     A: (EnumPacked, Vec3),
     B: (EnumPacked, Vec3),
 }
 
-#[derive(Drop, IntrospectPacked, Serde, Default)]
+#[derive(Drop, IntrospectPacked, Default)]
 enum EnumInnerNotPacked {
     #[default]
     A: (EnumPacked, Base),
     B: (EnumPacked, Base),
 }
 
-#[derive(Drop, Introspect, Serde)]
+#[derive(Drop, Introspect)]
 struct StructWithOption {
     x: Option<u16>,
 }
 
-#[derive(Drop, Introspect, Serde)]
+#[derive(Drop, Introspect)]
 struct GenericStruct<T> {
     value: T,
 }
 
-#[derive(Drop, Introspect, Serde, Default)]
+#[derive(Drop, Introspect, Default)]
 enum GenericEnum<T> {
     #[default]
     A: T,

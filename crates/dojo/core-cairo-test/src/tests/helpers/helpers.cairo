@@ -53,6 +53,15 @@ pub struct WithOptionAndEnums {
     pub b: Option<u32>,
 }
 
+#[derive(Drop, Serde, Debug, DojoLegacyStorage)]
+#[dojo::model]
+pub struct WithOptionAndEnumsLegacy {
+    #[key]
+    pub id: u32,
+    pub a: EnumOne,
+    pub b: Option<u32>,
+}
+
 #[starknet::contract]
 pub mod foo_invalid_name {
     use dojo::model::IModel;

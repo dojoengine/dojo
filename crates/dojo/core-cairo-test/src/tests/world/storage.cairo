@@ -1,6 +1,8 @@
 use dojo::model::ModelStorage;
 
-use crate::tests::helpers::{deploy_world_and_foo, Foo, NotCopiable, EnumOne, WithOptionAndEnums};
+use crate::tests::helpers::{
+    deploy_world_and_foo, Foo, NotCopiable, EnumOne, WithOptionAndEnums, WithOptionAndEnumsLegacy,
+};
 
 #[test]
 fn write_simple() {
@@ -129,7 +131,18 @@ fn write_read_option_enums() {
 
     let key: u32 = 1;
 
+    // with DojoStore:
+    // - wo.a should be equal to the default variant of EnumOne
+    // - wo.b should be equal to Option::default() which is None
     let wo: WithOptionAndEnums = world.read_model(key);
     assert_eq!(wo.a, EnumOne::Two(0));
     assert_eq!(wo.b, Option::None);
+
+    // with Dojo legacy storage:
+    // - wo.a should be equal to the first variant of EnumOne which is One
+    // - wo.b should be equal to the first variant of Option which is Some,
+    //   and variant data should be set to 0, so Some(0)
+    let wo: WithOptionAndEnumsLegacy = world.read_model(key);
+    assert_eq!(wo.a, EnumOne::One);
+    assert_eq!(wo.b, Option::Some(0));
 }
