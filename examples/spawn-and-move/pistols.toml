@@ -1,0 +1,26 @@
+#
+# torii config for profile [staging]
+#
+world_address = "0x2ea88c9a6314a10e7d8b6e557d01d68cf72d962707086aa242bc4805071f34d"
+rpc = "https://api.cartridge.gg/x/starknet/sepolia"
+
+[events]
+raw = true
+
+[sql]
+historical = [
+  "pistols-PlayerActivity",
+  "pistols-TrophyProgression",
+]
+
+[indexing]
+pending = true
+transactions = false
+contracts = [
+  "erc721:0x2f6572117075285c6e3124a3e13b6923329ef7ce6ec31c8ba3b6023d7ebc6ba", # duel_token
+  "erc721:0x43f800e9f5f6e290a798379029fcb28ba7c34e9669f7b5fc77fce8a4ebdc893", # duelist_token
+  "erc721:0x335f20596a8cc613cfe2c463443513beee082ce84ceee8dbf18f993f1959e8b", # pack_token
+  "erc20:0x7fb9183f47540f7700cad6c17ca9db615fc9fe26edae9409f7b56294a6d1b17", # fame_coin
+  "erc20:0x34b5a7d8c147efbd5e4178b2cab770fd9c4b121faad88df9cbc916b5db99961", # fools_coin
+  "erc20:0x044e6bcc627e6201ce09f781d1aae44ea4c21c2fdef299e34fce55bef2d02210", # lords
+]

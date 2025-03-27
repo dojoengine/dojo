@@ -11,9 +11,7 @@ use dojo_world::contracts::world::WorldContractReader;
 use futures_util::future::join_all;
 use hashlink::LinkedHashMap;
 use starknet::core::types::{
-    BlockHashAndNumber, BlockId, BlockTag, EmittedEvent, Event, EventFilter, EventsPage,
-    MaybePendingBlockWithReceipts, MaybePendingBlockWithTxHashes, PendingBlockWithReceipts,
-    Transaction, TransactionReceipt, TransactionWithReceipt,
+    BlockHashAndNumber, BlockId, BlockTag, EmittedEvent, Event, EventFilter, EventFilterWithPage, EventsPage, MaybePendingBlockWithReceipts, MaybePendingBlockWithTxHashes, PendingBlockWithReceipts, ResultPageRequest, Transaction, TransactionReceipt, TransactionWithReceipt
 };
 use starknet::core::types::requests::{GetEventsRequest, GetBlockWithTxHashesRequest};
 use starknet::core::utils::get_selector_from_name;
@@ -421,9 +419,13 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
             // Add subsequent pages to batch requests if there are more
             if let Some(continuation_token) = events_page.continuation_token {
                 event_requests.push(ProviderRequestData::GetEvents(GetEventsRequest {
-                    filter: events_filter,
-                    continuation_token: Some(continuation_token),
-                    chunk_size: self.config.events_chunk_size,
+                    filter: EventFilterWithPage {
+                        event_filter: events_filter,
+                        result_page_request: ResultPageRequest {
+                            continuation_token: Some(continuation_token),
+                            chunk_size: self.config.events_chunk_size,
+                        },
+                    },
                 }));
             }
         }
