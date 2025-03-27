@@ -460,7 +460,9 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                     }
                     _ => {
                         error!(target: LOG_TARGET, "Unexpected response type from batch timestamp request");
-                        return Err(anyhow::anyhow!("Unexpected response type from batch timestamp request"));
+                        return Err(anyhow::anyhow!(
+                            "Unexpected response type from batch timestamp request"
+                        ));
                     }
                 }
             }
