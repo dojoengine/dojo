@@ -13,9 +13,8 @@ use hashlink::LinkedHashMap;
 use starknet::core::types::requests::{GetBlockWithTxHashesRequest, GetEventsRequest};
 use starknet::core::types::{
     BlockHashAndNumber, BlockId, BlockTag, EmittedEvent, Event, EventFilter, EventFilterWithPage,
-    EventsPage, MaybePendingBlockWithReceipts, MaybePendingBlockWithTxHashes,
-    PendingBlockWithReceipts, ResultPageRequest, Transaction, TransactionReceipt,
-    TransactionWithReceipt,
+    MaybePendingBlockWithReceipts, MaybePendingBlockWithTxHashes, PendingBlockWithReceipts,
+    ResultPageRequest, Transaction, TransactionReceipt, TransactionWithReceipt,
 };
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::{Provider, ProviderRequestData, ProviderResponseData};
@@ -411,10 +410,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         }
 
         // Recursively fetch all events using batch requests
-        events.extend(
-            self.fetch_events_recursive(event_requests, cursor_map)
-                .await?
-        );
+        events.extend(self.fetch_events_recursive(event_requests, cursor_map).await?);
 
         // Process events to get unique blocks and transactions
         let mut blocks = BTreeMap::new();
@@ -461,7 +457,9 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                     }
                     _ => {
                         error!(target: LOG_TARGET, "Unexpected response type from batch timestamp request");
-                        return Err(anyhow::anyhow!("Unexpected response type from batch timestamp request"));
+                        return Err(anyhow::anyhow!(
+                            "Unexpected response type from batch timestamp request"
+                        ));
                     }
                 }
             }
@@ -487,11 +485,14 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         let mut next_requests = Vec::new();
 
         // Extract just the requests without the contract addresses
-        let batch_requests: Vec<ProviderRequestData> = requests.iter().map(|(_, req)| req.clone()).collect();
+        let batch_requests: Vec<ProviderRequestData> =
+            requests.iter().map(|(_, req)| req.clone()).collect();
         let batch_results = self.provider.batch_requests(batch_requests).await?;
 
         // Process results and prepare next batch of requests if needed
-        for ((contract_address, original_request), result) in requests.into_iter().zip(batch_results) {
+        for ((contract_address, original_request), result) in
+            requests.into_iter().zip(batch_results)
+        {
             match result {
                 ProviderResponseData::GetEvents(events_page) => {
                     // Process events for this page
@@ -511,14 +512,20 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                     // If there's a continuation token, prepare next request
                     if let Some(continuation_token) = events_page.continuation_token {
                         if let ProviderRequestData::GetEvents(mut next_request) = original_request {
-                            next_request.filter.result_page_request.continuation_token = Some(continuation_token);
-                            next_requests.push((contract_address, ProviderRequestData::GetEvents(next_request)));
+                            next_request.filter.result_page_request.continuation_token =
+                                Some(continuation_token);
+                            next_requests.push((
+                                contract_address,
+                                ProviderRequestData::GetEvents(next_request),
+                            ));
                         }
                     }
                 }
                 _ => {
                     error!(target: LOG_TARGET, "Unexpected response type from batch events request");
-                    return Err(anyhow::anyhow!("Unexpected response type from batch events request"));
+                    return Err(anyhow::anyhow!(
+                        "Unexpected response type from batch events request"
+                    ));
                 }
             }
         }
