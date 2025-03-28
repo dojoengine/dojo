@@ -10,7 +10,7 @@ use starknet::core::types::{BlockId, BlockTag, FunctionCall, U256};
 use starknet::core::utils::{get_selector_from_name, parse_cairo_short_string};
 use starknet::providers::Provider;
 use starknet_crypto::Felt;
-use tracing::{debug, warn};
+use tracing::{debug, info, warn};
 
 use super::{ApplyBalanceDiffQuery, BrokerMessage, Executor};
 use crate::constants::{SQL_FELT_DELIMITER, TOKEN_BALANCE_TABLE};
@@ -319,6 +319,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
             .with_context(|| format!("Failed to execute721Token query: {:?}", result))?;
 
         if let Some(token) = token {
+            info!(target: LOG_TARGET, name = %result.name, symbol = %result.symbol, contract_address = %token.contract_address, token_id = %result.query.token_id, "NFT token registered.");
             SimpleBroker::publish(unsafe {
                 std::mem::transmute::<Token, OptimisticToken>(token.clone())
             });
