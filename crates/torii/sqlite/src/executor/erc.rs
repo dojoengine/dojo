@@ -3,8 +3,8 @@ use std::sync::Arc;
 
 use anyhow::{Context, Result};
 use cainome::cairo_serde::{ByteArray, CairoSerde};
-use data_url::DataUrl;
 use data_url::mime::Mime;
+use data_url::DataUrl;
 use reqwest::Client;
 use starknet::core::types::{BlockId, BlockTag, FunctionCall, U256};
 use starknet::core::utils::{get_selector_from_name, parse_cairo_short_string};
@@ -18,8 +18,8 @@ use crate::executor::LOG_TARGET;
 use crate::simple_broker::SimpleBroker;
 use crate::types::{ContractType, OptimisticToken, OptimisticTokenBalance, Token, TokenBalance};
 use crate::utils::{
-    I256, felt_and_u256_to_sql_string, felt_to_sql_string, fetch_content_from_ipfs,
-    sanitize_json_string, sql_string_to_u256, u256_to_sql_string,
+    felt_and_u256_to_sql_string, felt_to_sql_string, fetch_content_from_ipfs, sanitize_json_string,
+    sql_string_to_u256, u256_to_sql_string, I256,
 };
 
 #[derive(Debug, Clone)]

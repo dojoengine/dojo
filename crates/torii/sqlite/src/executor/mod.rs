@@ -14,8 +14,8 @@ use starknet::core::types::{BlockId, BlockTag, Felt, FunctionCall};
 use starknet::core::utils::{get_selector_from_name, parse_cairo_short_string};
 use starknet::providers::{Provider, ProviderRequestData, ProviderResponseData};
 use tokio::sync::broadcast::{Receiver, Sender};
-use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender, unbounded_channel};
-use tokio::sync::{Semaphore, oneshot};
+use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
+use tokio::sync::{oneshot, Semaphore};
 use tokio::task::JoinSet;
 use tokio::time::Instant;
 use tracing::{debug, error, info, warn};
@@ -27,7 +27,7 @@ use crate::types::{
     EventMessage as EventMessageUpdated, Model as ModelRegistered, OptimisticEntity,
     OptimisticEventMessage, ParsedCall, Token, TokenBalance, Transaction,
 };
-use crate::utils::{I256, felt_to_sql_string, felts_to_sql_string};
+use crate::utils::{felt_to_sql_string, felts_to_sql_string, I256};
 
 pub mod erc;
 pub use erc::{RegisterErc20TokenQuery, RegisterNftTokenQuery};

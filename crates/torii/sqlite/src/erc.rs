@@ -197,12 +197,10 @@ impl Sql {
             ProviderResponseData::Call(name) if name.len() == 1 => {
                 parse_cairo_short_string(&name[0]).unwrap()
             }
-            ProviderResponseData::Call(name) => {
-                ByteArray::cairo_deserialize(name, 0)
-                    .expect("Return value not ByteArray")
-                    .to_string()
-                    .expect("Return value not String")
-            }
+            ProviderResponseData::Call(name) => ByteArray::cairo_deserialize(name, 0)
+                .expect("Return value not ByteArray")
+                .to_string()
+                .expect("Return value not String"),
             _ => return Err(anyhow::anyhow!("Invalid response for name")),
         };
 
@@ -211,12 +209,10 @@ impl Sql {
             ProviderResponseData::Call(symbol) if symbol.len() == 1 => {
                 parse_cairo_short_string(&symbol[0]).unwrap()
             }
-            ProviderResponseData::Call(symbol) => {
-                ByteArray::cairo_deserialize(symbol, 0)
-                    .expect("Return value not ByteArray")
-                    .to_string()
-                    .expect("Return value not String")
-            }
+            ProviderResponseData::Call(symbol) => ByteArray::cairo_deserialize(symbol, 0)
+                .expect("Return value not ByteArray")
+                .to_string()
+                .expect("Return value not String"),
             _ => return Err(anyhow::anyhow!("Invalid response for symbol")),
         };
 
