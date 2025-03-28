@@ -17,6 +17,7 @@ pub use world::{
 mod tests {
     mod meta {
         mod introspect;
+        mod layout;
     }
 
     mod event {
@@ -29,8 +30,10 @@ mod tests {
 
     mod storage {
         mod database;
+        mod dojo_store;
         mod packing;
         mod storage;
+        mod layout;
     }
 
     mod contract;

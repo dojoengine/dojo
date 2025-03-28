@@ -1,7 +1,7 @@
 use starknet::{ContractAddress, get_caller_address};
 
 // TODO import all this when complex benchmarks are merged
-#[derive(Introspect, Copy, Drop, Serde)]
+#[derive(Introspect, Copy, Drop)]
 #[dojo::model]
 struct Character {
     #[key]
@@ -13,7 +13,7 @@ struct Character {
     gold: u32,
 }
 
-#[derive(Introspect, Copy, Drop, Serde)]
+#[derive(Introspect, Copy, Drop)]
 struct Abilities {
     strength: u8,
     dexterity: u8,
@@ -23,7 +23,7 @@ struct Abilities {
     charisma: u8,
 }
 
-#[derive(Introspect, Copy, Drop, Serde)]
+#[derive(Introspect, Copy, Drop)]
 struct Stats {
     kills: u128,
     deaths: u16,
@@ -36,19 +36,20 @@ struct Stats {
     romances: u16,
 }
 
-#[derive(Introspect, Copy, Drop, Serde)]
+#[derive(Introspect, Copy, Drop, Default)]
 enum Weapon {
+    #[default]
     DualWield: (Sword, Sword),
     Fists: (Sword, Sword),
 }
 
-#[derive(Introspect, Copy, Drop, Serde)]
+#[derive(Introspect, Copy, Drop, Default)]
 struct Sword {
     swordsmith: ContractAddress,
     damage: u32,
 }
 
-#[derive(Introspect, Copy, Drop, Serde)]
+#[derive(Introspect, Copy, Drop)]
 #[dojo::model]
 struct Case {
     #[key]
@@ -57,7 +58,7 @@ struct Case {
     material: felt252,
 }
 
-#[derive(Introspect, Copy, Drop, Serde)]
+#[derive(Introspect, Copy, Drop)]
 #[dojo::model]
 struct Alias {
     #[key]

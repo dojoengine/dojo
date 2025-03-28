@@ -26,8 +26,14 @@ pub mod m_$model_type$_definition {
 
         #[inline(always)]
         fn layout() -> dojo::meta::Layout {
-            dojo::meta::Introspect::<$model_type$>::layout()
+            $model_layout$
         }
+
+        #[inline(always)]
+        fn use_legacy_storage() -> bool {
+            $use_legacy_storage$
+        }
+
 
         #[inline(always)]
         fn schema() -> dojo::meta::introspect::Struct {
@@ -50,6 +56,9 @@ pub impl $model_type$Definition = m_$model_type$_definition::$model_type$Definit
 pub impl $model_type$ModelValueDefinition = m_$model_type$_definition::$model_type$DefinitionImpl<$model_type$Value>;
 
 pub impl $model_type$ModelParser of dojo::model::model::ModelParser<$model_type$>{
+    fn deserialize(ref values: Span<felt252>) -> Option<$model_type$> {
+        $model_deserialize_path$::<$model_type$>::deserialize(ref values)
+    }
     fn serialize_keys(self: @$model_type$) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         $serialized_keys$
@@ -63,10 +72,26 @@ pub impl $model_type$ModelParser of dojo::model::model::ModelParser<$model_type$
 } 
 
 pub impl $model_type$ModelValueParser of dojo::model::model_value::ModelValueParser<$model_type$Value>{
+    fn deserialize(ref values: Span<felt252>) -> Option<$model_type$Value> {
+        $model_deserialize_path$::<$model_type$Value>::deserialize(ref values)
+    }
     fn serialize_values(self: @$model_type$Value) -> Span<felt252> {
         let mut serialized = core::array::ArrayTrait::new();
         $serialized_values$
         core::array::ArrayTrait::span(@serialized)
+    }
+}
+
+// Note that $model_type$DojoStore is implemented through the Introspect derive attribute
+// as any structs.
+
+pub impl $model_type$ValueDojoStore of dojo::storage::DojoStore<$model_type$Value> {
+    fn serialize(self: @$model_type$Value, ref serialized: Array<felt252>) {
+        $serialized_values$
+    }
+    fn deserialize(ref values: Span<felt252>) -> Option<$model_type$Value> {
+        $deserialized_values$
+        $deserialized_modelvalue$
     }
 }
 

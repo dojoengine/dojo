@@ -220,9 +220,19 @@ rpassword = "7.2.0"
 rstest = "0.18.2"
 rstest_reuse = "0.6.0"
 salsa = "0.16.1"
-scarb = { git = "https://github.com/dojoengine/scarb", rev = "8a60513c03e72b8a84f3ac266c61aac40c565aca" }
-scarb-metadata = { git = "https://github.com/dojoengine/scarb", rev = "8a60513c03e72b8a84f3ac266c61aac40c565aca" }
-scarb-ui = { git = "https://github.com/dojoengine/scarb", rev = "8a60513c03e72b8a84f3ac266c61aac40c565aca" }
+
+#scarb = { git = "https://github.com/dojoengine/scarb", rev = "22aa38f53de205af25bf73b3ffc2c5334999d480" }
+#scarb-metadata = { git = "https://github.com/dojoengine/scarb", rev = "22aa38f53de205af25bf73b3ffc2c5334999d480" }
+#scarb-ui = { git = "https://github.com/dojoengine/scarb", rev = "22aa38f53de205af25bf73b3ffc2c5334999d480" }
+
+scarb = { git = "https://github.com/remybar/scarb", rev = "4e3109d81d345cd66ce828d9fd6bfe8a8b774eb2" }
+scarb-metadata = { git = "https://github.com/remybar/scarb", rev = "4e3109d81d345cd66ce828d9fd6bfe8a8b774eb2" }
+scarb-ui = { git = "https://github.com/remybar/scarb", rev = "4e3109d81d345cd66ce828d9fd6bfe8a8b774eb2" }
+
+#scarb = { path = "/Users/remybaranx/pro/projets/contribs/scarb/scarb" }
+#scarb-metadata = { path = "/Users/remybaranx/pro/projets/contribs/scarb/scarb-metadata" }
+#scarb-ui = { path = "/Users/remybaranx/pro/projets/contribs/scarb/utils/scarb-ui" }
+
 semver = "1.0.5"
 serde = { version = "1.0", features = [ "derive" ] }
 serde_json = { version = "1.0", features = [ "arbitrary_precision" ] }
