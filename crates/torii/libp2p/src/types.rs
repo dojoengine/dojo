@@ -1,8 +1,7 @@
-use serde::{Deserialize, Serialize};
-use starknet::core::types::Felt;
-use torii_typed_data::TypedData;
+use serde::{Deserialize};
+use starknet::core::types::{Felt, TypedData};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Message {
     pub message: TypedData,
     pub signature: Vec<Felt>,
