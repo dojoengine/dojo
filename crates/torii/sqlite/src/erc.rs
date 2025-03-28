@@ -3,9 +3,10 @@ use std::mem;
 
 use anyhow::{Context, Result};
 use cainome::cairo_serde::{ByteArray, CairoSerde};
+use starknet::core::types::requests::CallRequest;
 use starknet::core::types::{BlockId, BlockTag, Felt, FunctionCall, U256};
 use starknet::core::utils::{get_selector_from_name, parse_cairo_short_string};
-use starknet::providers::Provider;
+use starknet::providers::{Provider, ProviderRequestData, ProviderResponseData};
 
 use super::utils::{u256_to_sql_string, I256};
 use super::{Sql, SQL_FELT_DELIMITER};
@@ -160,60 +161,72 @@ impl Sql {
         token_id: &str,
         provider: &P,
     ) -> Result<()> {
-        // Fetch token information from the chain
-        let name = provider
-            .call(
-                FunctionCall {
+        // Prepare batch requests for name, symbol, and decimals
+        let block_id = BlockId::Tag(BlockTag::Pending);
+        let requests = vec![
+            ProviderRequestData::Call(CallRequest {
+                request: FunctionCall {
                     contract_address,
                     entry_point_selector: get_selector_from_name("name").unwrap(),
                     calldata: vec![],
                 },
-                BlockId::Tag(BlockTag::Pending),
-            )
-            .await?;
-
-        // len = 1 => return value felt (i.e. legacy erc20 token)
-        // len > 1 => return value ByteArray (i.e. new erc20 token)
-        let name = if name.len() == 1 {
-            parse_cairo_short_string(&name[0]).unwrap()
-        } else {
-            ByteArray::cairo_deserialize(&name, 0)
-                .expect("Return value not ByteArray")
-                .to_string()
-                .expect("Return value not String")
-        };
-
-        let symbol = provider
-            .call(
-                FunctionCall {
+                block_id,
+            }),
+            ProviderRequestData::Call(CallRequest {
+                request: FunctionCall {
                     contract_address,
                     entry_point_selector: get_selector_from_name("symbol").unwrap(),
                     calldata: vec![],
                 },
-                BlockId::Tag(BlockTag::Pending),
-            )
-            .await?;
-
-        let symbol = if symbol.len() == 1 {
-            parse_cairo_short_string(&symbol[0]).unwrap()
-        } else {
-            ByteArray::cairo_deserialize(&symbol, 0)
-                .expect("Return value not ByteArray")
-                .to_string()
-                .expect("Return value not String")
-        };
-
-        let decimals = provider
-            .call(
-                FunctionCall {
+                block_id,
+            }),
+            ProviderRequestData::Call(CallRequest {
+                request: FunctionCall {
                     contract_address,
                     entry_point_selector: get_selector_from_name("decimals").unwrap(),
                     calldata: vec![],
                 },
-                BlockId::Tag(BlockTag::Pending),
-            )
-            .await?;
-        let decimals = u8::cairo_deserialize(&decimals, 0).expect("Return value not u8");
+                block_id,
+            }),
+        ];
+
+        let results = provider.batch_requests(requests).await?;
+
+        // Parse name
+        let name = match &results[0] {
+            ProviderResponseData::Call(name) if name.len() == 1 => {
+                parse_cairo_short_string(&name[0]).unwrap()
+            }
+            ProviderResponseData::Call(name) => {
+                ByteArray::cairo_deserialize(name, 0)
+                    .expect("Return value not ByteArray")
+                    .to_string()
+                    .expect("Return value not String")
+            }
+            _ => return Err(anyhow::anyhow!("Invalid response for name")),
+        };
+
+        // Parse symbol
+        let symbol = match &results[1] {
+            ProviderResponseData::Call(symbol) if symbol.len() == 1 => {
+                parse_cairo_short_string(&symbol[0]).unwrap()
+            }
+            ProviderResponseData::Call(symbol) => {
+                ByteArray::cairo_deserialize(symbol, 0)
+                    .expect("Return value not ByteArray")
+                    .to_string()
+                    .expect("Return value not String")
+            }
+            _ => return Err(anyhow::anyhow!("Invalid response for symbol")),
+        };
+
+        // Parse decimals
+        let decimals = match &results[2] {
+            ProviderResponseData::Call(decimals) => {
+                u8::cairo_deserialize(decimals, 0).expect("Return value not u8")
+            }
+            _ => return Err(anyhow::anyhow!("Invalid response for decimals")),
+        };
 
         self.executor.send(QueryMessage::new(
             "".to_string(),
