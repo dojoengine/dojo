@@ -18,7 +18,7 @@ use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender, unbounded_channel};
 use tokio::sync::{Semaphore, oneshot};
 use tokio::task::JoinSet;
 use tokio::time::Instant;
-use tracing::{debug, error, warn};
+use tracing::{debug, error, info, warn};
 
 use crate::constants::TOKENS_TABLE;
 use crate::simple_broker::SimpleBroker;
@@ -757,6 +757,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 .bind(register_erc20_token.decimals);
 
                 let token = query.fetch_one(&mut **tx).await?;
+                info!(target: LOG_TARGET, name = %register_erc20_token.name, symbol = %register_erc20_token.symbol, contract_address = %token.contract_address, "Registered ERC20 token.");
 
                 self.publish_queue.push(BrokerMessage::TokenRegistered(token));
             }
