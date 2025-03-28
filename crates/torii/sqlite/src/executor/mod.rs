@@ -9,12 +9,13 @@ use cainome::cairo_serde::{ByteArray, CairoSerde};
 use dojo_types::schema::{Struct, Ty};
 use erc::{RegisterNftTokenMetadata, UpdateNftMetadataQuery};
 use sqlx::{FromRow, Pool, Sqlite, Transaction as SqlxTransaction};
+use starknet::core::types::requests::CallRequest;
 use starknet::core::types::{BlockId, BlockTag, Felt, FunctionCall};
 use starknet::core::utils::{get_selector_from_name, parse_cairo_short_string};
-use starknet::providers::Provider;
+use starknet::providers::{Provider, ProviderRequestData, ProviderResponseData};
 use tokio::sync::broadcast::{Receiver, Sender};
-use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
-use tokio::sync::{oneshot, Semaphore};
+use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender, unbounded_channel};
+use tokio::sync::{Semaphore, oneshot};
 use tokio::task::JoinSet;
 use tokio::time::Instant;
 use tracing::{debug, error, warn};
@@ -26,7 +27,7 @@ use crate::types::{
     EventMessage as EventMessageUpdated, Model as ModelRegistered, OptimisticEntity,
     OptimisticEventMessage, ParsedCall, Token, TokenBalance, Transaction,
 };
-use crate::utils::{felt_to_sql_string, felts_to_sql_string, I256};
+use crate::utils::{I256, felt_to_sql_string, felts_to_sql_string};
 
 pub mod erc;
 pub use erc::{RegisterErc20TokenQuery, RegisterNftTokenQuery};
@@ -658,6 +659,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 let metadata_semaphore = self.metadata_semaphore.clone();
                 let provider = self.provider.clone();
 
+                // Check if we already have the metadata for this contract
                 let res = sqlx::query_as::<_, (String, String)>(&format!(
                     "SELECT name, symbol FROM {TOKENS_TABLE} WHERE contract_address = ? LIMIT 1"
                 ))
@@ -676,53 +678,56 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                         (name, symbol)
                     }
                     Err(_) => {
-                        // Try to fetch name, use empty string if it fails
-                        let name = match provider
-                            .call(
-                                FunctionCall {
+                        // Prepare batch requests for name and symbol
+                        let block_id = BlockId::Tag(BlockTag::Pending);
+                        let requests = vec![
+                            ProviderRequestData::Call(CallRequest {
+                                request: FunctionCall {
                                     contract_address: register_nft_token.contract_address,
                                     entry_point_selector: get_selector_from_name("name").unwrap(),
                                     calldata: vec![],
                                 },
-                                BlockId::Tag(BlockTag::Pending),
-                            )
-                            .await
-                        {
-                            Ok(name) => {
-                                // len = 1 => return value felt (i.e. legacy erc721 token)
-                                // len > 1 => return value ByteArray (i.e. new erc721 token)
-                                if name.len() == 1 {
-                                    parse_cairo_short_string(&name[0])?
-                                } else {
-                                    ByteArray::cairo_deserialize(&name, 0)?.to_string()?
-                                }
-                            }
-                            Err(_) => "".to_string(),
-                        };
-
-                        // Try to fetch symbol, use empty string if it fails
-                        let symbol = match provider
-                            .call(
-                                FunctionCall {
+                                block_id,
+                            }),
+                            ProviderRequestData::Call(CallRequest {
+                                request: FunctionCall {
                                     contract_address: register_nft_token.contract_address,
                                     entry_point_selector: get_selector_from_name("symbol").unwrap(),
                                     calldata: vec![],
                                 },
-                                BlockId::Tag(BlockTag::Pending),
-                            )
-                            .await
-                        {
-                            Ok(symbol) => {
-                                if symbol.len() == 1 {
-                                    parse_cairo_short_string(&symbol[0])?
-                                } else {
-                                    ByteArray::cairo_deserialize(&symbol, 0)?.to_string()?
-                                }
-                            }
-                            Err(_) => "".to_string(),
-                        };
+                                block_id,
+                            }),
+                        ];
 
-                        (name, symbol)
+                        let results = provider.batch_requests(requests).await;
+                        match results {
+                            Ok(results) => {
+                                // Parse name
+                                let name = match &results[0] {
+                                    ProviderResponseData::Call(name) if name.len() == 1 => {
+                                        parse_cairo_short_string(&name[0])?
+                                    }
+                                    ProviderResponseData::Call(name) => {
+                                        ByteArray::cairo_deserialize(name, 0)?.to_string()?
+                                    }
+                                    _ => String::new(),
+                                };
+
+                                // Parse symbol
+                                let symbol = match &results[1] {
+                                    ProviderResponseData::Call(symbol) if symbol.len() == 1 => {
+                                        parse_cairo_short_string(&symbol[0])?
+                                    }
+                                    ProviderResponseData::Call(symbol) => {
+                                        ByteArray::cairo_deserialize(symbol, 0)?.to_string()?
+                                    }
+                                    _ => String::new(),
+                                };
+
+                                (name, symbol)
+                            }
+                            _ => (String::new(), String::new()),
+                        }
                     }
                 };
 
