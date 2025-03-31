@@ -707,6 +707,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         let mut unique_contracts = HashSet::new();
         if let Some(events) = events {
             for (event_idx, event) in events.iter().enumerate() {
+                // Skip events that are not from a contract we are indexing
                 let Some(&contract_type) = self.contracts.get(&event.from_address) else {
                     continue;
                 };
@@ -715,7 +716,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
 
                 // NOTE: erc* processors expect the event_id to be in this format to get
                 // transaction_hash:
-                let event_id =
+                let event_id: String =
                     format!("{:#064x}:{:#x}:{:#04x}", block_number, *transaction_hash, event_idx);
 
                 self.process_event(
@@ -729,7 +730,8 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                 .await?;
             }
 
-            if self.config.flags.contains(IndexingFlags::TRANSACTIONS) {
+            // Process transaction if we have at least one an event from a contract we are indexing
+            if self.config.flags.contains(IndexingFlags::TRANSACTIONS) && unique_contracts.len() > 0 {
                 self.process_transaction(
                     block_number,
                     block_timestamp,
