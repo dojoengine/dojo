@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1743439795531,
+  "lastUpdate": 1743442001132,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -59977,6 +59977,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 16987467,
             "range": "± 223051",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "38b33c2772ed6cbf4600af8971a0b3b7f04db9b4",
+          "message": "opt(torii-indexer): batching requests for ercs (#3132)\n\n* use batch request for erc20 name symbol etc\n\n* batch name symbol for erc721\n\n* token logs\n\n* f",
+          "timestamp": "2025-03-31T11:10:36-06:00",
+          "tree_id": "85df3b3cb6ce5acf355ff70fda7222babe5d88ed",
+          "url": "https://github.com/dojoengine/dojo/commit/38b33c2772ed6cbf4600af8971a0b3b7f04db9b4"
+        },
+        "date": 1743441998054,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 45995611556,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
