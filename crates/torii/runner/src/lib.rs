@@ -26,6 +26,8 @@ use sqlx::sqlite::{
 use sqlx::SqlitePool;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
+use starknet::providers::Provider;
+use starknet::core::types::{BlockId, BlockTag};
 use tempfile::{NamedTempFile, TempDir};
 use tokio::sync::broadcast;
 use tokio::sync::broadcast::Sender;
@@ -94,6 +96,14 @@ impl Runner {
         })
         .expect("Error setting Ctrl-C handler");
 
+        let provider: Arc<_> = JsonRpcClient::new(HttpTransport::new(self.args.rpc.clone())).into();
+
+        // Verify contracts are deployed
+        let undeployed = verify_contracts_deployed(&provider, &self.args.indexing.contracts).await?;
+        if !undeployed.is_empty() {
+            return Err(anyhow::anyhow!("The following contracts are not deployed: {:?}", undeployed));
+        }
+
         let tempfile = NamedTempFile::new()?;
         let database_path = if let Some(db_dir) = self.args.db_dir {
             // Create the directory if it doesn't exist
@@ -135,8 +145,6 @@ impl Runner {
             .await?;
 
         sqlx::migrate!("../migrations").run(&pool).await?;
-
-        let provider: Arc<_> = JsonRpcClient::new(HttpTransport::new(self.args.rpc)).into();
 
         // Get world address
         let world = WorldContractReader::new(world_address, provider.clone());
@@ -338,4 +346,26 @@ async fn spawn_rebuilding_graphql_server(
             tokio::time::sleep(Duration::from_secs(1)).await;
         }
     }
+}
+
+async fn verify_contracts_deployed(
+    provider: &JsonRpcClient<HttpTransport>,
+    contracts: &[Contract],
+) -> anyhow::Result<Vec<Contract>> {
+    let mut undeployed = Vec::new();
+    
+    for contract in contracts {
+        match provider.get_class_at(BlockId::Tag(BlockTag::Pending), contract.address).await {
+            Ok(_) => continue,
+            Err(e) => {
+                info!(
+                    target: LOG_TARGET,
+                    "Contract {} is not deployed: {}", contract.address, e
+                );
+                undeployed.push(contract.clone());
+            }
+        }
+    }
+    
+    Ok(undeployed)
 }
