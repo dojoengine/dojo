@@ -100,7 +100,7 @@ impl StoreTransactionProcessor {
         let contract_class = contract_class_cache
             .get(call.contract_address, BlockId::Tag(BlockTag::Pending))
             .await?;
-        
+
         let entrypoint = get_entrypoint_name_from_class(&contract_class, call.selector)
             .unwrap_or(format!("{:#x}", call.selector));
 
@@ -123,7 +123,7 @@ impl StoreTransactionProcessor {
         let contract_class = contract_class_cache
             .get(call.contract_address, BlockId::Tag(BlockTag::Pending))
             .await?;
-        
+
         let entrypoint = get_entrypoint_name_from_class(&contract_class, call.selector)
             .unwrap_or(format!("{:#x}", call.selector));
 
@@ -147,11 +147,10 @@ impl StoreTransactionProcessor {
         let calldata_offset = selector_offset + 2;
         let calldata_len: usize = calldata[selector_offset + 1].try_into().unwrap();
         let contract_address = calldata[to_offset];
-        
-        let contract_class = contract_class_cache
-            .get(contract_address, BlockId::Tag(BlockTag::Pending))
-            .await?;
-        
+
+        let contract_class =
+            contract_class_cache.get(contract_address, BlockId::Tag(BlockTag::Pending)).await?;
+
         let entrypoint = get_entrypoint_name_from_class(&contract_class, calldata[selector_offset])
             .unwrap_or(format!("{:#x}", calldata[selector_offset]));
 
@@ -179,7 +178,8 @@ impl StoreTransactionProcessor {
                         &call.calldata,
                         6,
                         call.contract_address,
-                    ).await?;
+                    )
+                    .await?;
                     outside_calls.push(outside_call);
                 }
             }
@@ -191,7 +191,8 @@ impl StoreTransactionProcessor {
                         &call.calldata,
                         5,
                         call.contract_address,
-                    ).await?;
+                    )
+                    .await?;
                     outside_calls.push(outside_call);
                 }
             }
@@ -216,7 +217,8 @@ impl StoreTransactionProcessor {
                         &call,
                         sender_address,
                         CallType::Execute,
-                    ).await?;
+                    )
+                    .await?;
                     calls.push(parsed_call);
                 }
             }
@@ -228,7 +230,8 @@ impl StoreTransactionProcessor {
                         &execute.calldata,
                         sender_address,
                         CallType::Execute,
-                    ).await?;
+                    )
+                    .await?;
                     calls.push(parsed_call);
                 }
             }
@@ -237,7 +240,8 @@ impl StoreTransactionProcessor {
         // Process any outside calls
         let mut all_calls = calls.clone();
         for call in calls {
-            let mut outside_calls = Self::process_outside_calls(contract_class_cache, &call).await?;
+            let mut outside_calls =
+                Self::process_outside_calls(contract_class_cache, &call).await?;
             all_calls.append(&mut outside_calls);
         }
 
@@ -246,7 +250,9 @@ impl StoreTransactionProcessor {
 }
 
 #[async_trait]
-impl<P: Provider + Send + Sync + std::fmt::Debug> TransactionProcessor<P> for StoreTransactionProcessor {
+impl<P: Provider + Send + Sync + std::fmt::Debug> TransactionProcessor<P>
+    for StoreTransactionProcessor
+{
     async fn process(
         &self,
         db: &mut Sql,
@@ -263,13 +269,16 @@ impl<P: Provider + Send + Sync + std::fmt::Debug> TransactionProcessor<P> for St
         };
 
         let calls = if tx_info.transaction_type == "INVOKE" {
-            let execute = if let Ok(execute) = ExecuteTransaction::cairo_deserialize(&tx_info.calldata, 0) {
-                Some(Execute::Execute(execute))
-            } else if let Ok(execute) = LegacyExecuteTransaction::cairo_deserialize(&tx_info.calldata, 0) {
-                Some(Execute::Legacy(execute))
-            } else {
-                None
-            };
+            let execute =
+                if let Ok(execute) = ExecuteTransaction::cairo_deserialize(&tx_info.calldata, 0) {
+                    Some(Execute::Execute(execute))
+                } else if let Ok(execute) =
+                    LegacyExecuteTransaction::cairo_deserialize(&tx_info.calldata, 0)
+                {
+                    Some(Execute::Legacy(execute))
+                } else {
+                    None
+                };
 
             if let Some(execute) = execute {
                 Self::parse_execute(execute, tx_info.sender_address, contract_class_cache).await?
