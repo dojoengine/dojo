@@ -357,11 +357,7 @@ async fn verify_contracts_deployed(
     for contract in contracts {
         match provider.get_class_at(BlockId::Tag(BlockTag::Pending), contract.address).await {
             Ok(_) => continue,
-            Err(e) => {
-                info!(
-                    target: LOG_TARGET,
-                    "Contract {} is not deployed: {}", contract.address, e
-                );
+            Err(_) => {
                 undeployed.push(contract.clone());
             }
         }
