@@ -731,7 +731,8 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
             }
 
             // Process transaction if we have at least one an event from a contract we are indexing
-            if self.config.flags.contains(IndexingFlags::TRANSACTIONS) && unique_contracts.len() > 0
+            if self.config.flags.contains(IndexingFlags::TRANSACTIONS)
+                && !unique_contracts.is_empty()
             {
                 self.process_transaction(
                     block_number,
