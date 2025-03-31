@@ -361,7 +361,7 @@ async fn verify_contracts_deployed(
         match provider.get_class_at(BlockId::Tag(BlockTag::Pending), contract.address).await {
             Ok(_) => continue,
             Err(_) => {
-                undeployed.push(contract.clone());
+                undeployed.push(*contract);
             }
         }
     }
