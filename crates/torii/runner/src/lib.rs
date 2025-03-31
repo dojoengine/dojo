@@ -24,10 +24,9 @@ use sqlx::sqlite::{
     SqliteAutoVacuum, SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteSynchronous,
 };
 use sqlx::SqlitePool;
-use starknet::providers::jsonrpc::HttpTransport;
-use starknet::providers::JsonRpcClient;
-use starknet::providers::Provider;
 use starknet::core::types::{BlockId, BlockTag};
+use starknet::providers::jsonrpc::HttpTransport;
+use starknet::providers::{JsonRpcClient, Provider};
 use tempfile::{NamedTempFile, TempDir};
 use tokio::sync::broadcast;
 use tokio::sync::broadcast::Sender;
@@ -99,9 +98,13 @@ impl Runner {
         let provider: Arc<_> = JsonRpcClient::new(HttpTransport::new(self.args.rpc.clone())).into();
 
         // Verify contracts are deployed
-        let undeployed = verify_contracts_deployed(&provider, &self.args.indexing.contracts).await?;
+        let undeployed =
+            verify_contracts_deployed(&provider, &self.args.indexing.contracts).await?;
         if !undeployed.is_empty() {
-            return Err(anyhow::anyhow!("The following contracts are not deployed: {:?}", undeployed));
+            return Err(anyhow::anyhow!(
+                "The following contracts are not deployed: {:?}",
+                undeployed
+            ));
         }
 
         let tempfile = NamedTempFile::new()?;
@@ -353,7 +356,7 @@ async fn verify_contracts_deployed(
     contracts: &[Contract],
 ) -> anyhow::Result<Vec<Contract>> {
     let mut undeployed = Vec::new();
-    
+
     for contract in contracts {
         match provider.get_class_at(BlockId::Tag(BlockTag::Pending), contract.address).await {
             Ok(_) => continue,
@@ -362,6 +365,6 @@ async fn verify_contracts_deployed(
             }
         }
     }
-    
+
     Ok(undeployed)
 }
