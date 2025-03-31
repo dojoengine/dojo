@@ -23,15 +23,15 @@ impl UnrealEnginePlugin {
             "i8" => "int".to_string(),
             "i16" => "int".to_string(),
             "i32" => "int".to_string(),
-            "i64" => "long".to_string(),
+            "i64" => "int64".to_string(),
             "i128" => "FString".to_string(),
             "u8" => "int".to_string(),
             "u16" => "int".to_string(),
             "u32" => "int".to_string(),
-            "u64" => "long".to_string(),
+            "u64" => "int64".to_string(),
             "u128" => "FString".to_string(),
             "u256" => "FString".to_string(),
-            "usize" => "long".to_string(),
+            "usize" => "int64".to_string(),
             "bool" => "bool".to_string(),
             "felt252" => "FString".to_string(),
             "bytes31" => "FString".to_string(),
@@ -941,7 +941,7 @@ public:
         }}
     }}
 
-    static long ConvertToLong(const Member* member) {{
+    static int64 ConvertToLong(const Member* member) {{
         switch(member->ty->primitive.tag) {{
             case Primitive_Tag::I64: return member->ty->primitive.i64;
             case Primitive_Tag::U64: return member->ty->primitive.u64;
@@ -1014,6 +1014,16 @@ static TArray<FString> ConvertToFeltHexa(const T& value, const char* valueType) 
             return TArray<FString>{{TEXT("0x") + hexValue}};
         }}
     }}
+    else if constexpr (std::is_same_v<T, int64>) {{
+        if (strcmp(valueType, "u64") == 0 ||
+            strcmp(valueType, "i64") == 0) {{
+            FString hexValue = FString::Printf(TEXT("%X"), static_cast<int64>(value));
+            while (hexValue.Len() < 64) {{
+                hexValue = TEXT("0") + hexValue;
+            }}
+            return TArray<FString>{TEXT("0x") + hexValue};
+        }}
+    }}
     else if constexpr (std::is_same_v<T, bool>) {{
         if (strcmp(valueType, "bool") == 0) {{
             FString hexValue = FString::Printf(TEXT("%X"), value ? 1 : 0);
@@ -1078,7 +1088,7 @@ static void ConvertTyToUnrealEngineType(const Member* member, const char* expect
             output = TypeConverter::ConvertToInt(member);
         }}
     }}
-    else if constexpr (std::is_same_v<T, long>) {{
+    else if constexpr (std::is_same_v<T, int64>) {{
         if (strcmp(expectedType, "i64") == 0 ||
         strcmp(expectedType, "u64") == 0 ||
         strcmp(expectedType, "usize") == 0) {{
