@@ -186,8 +186,16 @@ impl Default for EngineConfig {
 }
 
 #[derive(Debug)]
+pub struct EventChunk {
+    pub from: u64,
+    pub to: u64,
+    pub transactions: BTreeMap<u64, LinkedHashMap<Felt, Vec<EmittedEvent>>>,
+    pub blocks: BTreeMap<u64, u64>,
+}
+
+#[derive(Debug)]
 pub enum FetchDataResult {
-    Range(FetchRangeResult),
+    Range(Vec<EventChunk>),
     Pending(FetchPendingResult),
     None,
 }
@@ -195,9 +203,14 @@ pub enum FetchDataResult {
 impl FetchDataResult {
     pub fn block_id(&self) -> Option<BlockId> {
         match self {
-            FetchDataResult::Range(range) => Some(BlockId::Number(range.latest_block_number)),
+            FetchDataResult::Range(chunks) => {
+                if let Some(last_chunk) = chunks.last() {
+                    Some(BlockId::Number(last_chunk.to))
+                } else {
+                    None
+                }
+            }
             FetchDataResult::Pending(_pending) => Some(BlockId::Tag(BlockTag::Pending)),
-            // we dont require block_id when result is none, we return None
             FetchDataResult::None => None,
         }
     }
@@ -347,24 +360,24 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         }
     }
 
-    // TODO: since we now process blocks in chunks we can parallelize the fetching of data
     pub async fn fetch_data(&mut self, cursors: &Cursors) -> Result<FetchDataResult> {
         let latest_block = self.provider.block_hash_and_number().await?;
-
         let from = cursors.head.unwrap_or(self.config.world_block);
-        let total_remaining_blocks = latest_block.block_number - from;
-        let blocks_to_process = total_remaining_blocks.min(self.config.blocks_chunk_size);
-        let to = (from + blocks_to_process).min(latest_block.block_number);
 
         let instant = Instant::now();
         let result = if from < latest_block.block_number {
             let from = if from == 0 { from } else { from + 1 };
-            let data = self.fetch_range(from, to, &cursors.cursor_map).await?;
-            debug!(target: LOG_TARGET, duration = ?instant.elapsed(), from = %from, to = %to, "Fetched data for range.");
-            FetchDataResult::Range(data)
+            
+            // Fetch all events from 'from' to latest block in one go
+            let events_data = self.fetch_all_events(from, &cursors.cursor_map).await?;
+            
+            // Split into chunks based on block numbers
+            let chunks = self.chunk_events(from, latest_block.block_number, events_data)?;
+            
+            debug!(target: LOG_TARGET, duration = ?instant.elapsed(), from = %from, to = %latest_block.block_number, "Fetched and chunked data.");
+            FetchDataResult::Range(chunks)
         } else if self.config.flags.contains(IndexingFlags::PENDING_BLOCKS) {
-            let data =
-                self.fetch_pending(latest_block.clone(), cursors.last_pending_block_tx).await?;
+            let data = self.fetch_pending(latest_block.clone(), cursors.last_pending_block_tx).await?;
             debug!(target: LOG_TARGET, duration = ?instant.elapsed(), latest_block_number = %latest_block.block_number, "Fetched pending data.");
             if let Some(data) = data {
                 FetchDataResult::Pending(data)
@@ -378,26 +391,24 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         Ok(result)
     }
 
-    pub async fn fetch_range(
-        &mut self,
+    async fn fetch_all_events(
+        &self,
         from: u64,
-        _to: u64,
         cursor_map: &HashMap<Felt, Felt>,
     ) -> Result<FetchRangeResult> {
-        // Process all blocks from current to latest.
         let mut fetch_all_events_tasks = VecDeque::new();
 
+        // Fetch all events for each contract in parallel
         for contract in self.contracts.iter() {
             let events_filter = EventFilter {
                 from_block: Some(BlockId::Number(from)),
-                to_block: None, // Remove to_block to get all events up to latest
+                to_block: None, // Get all events up to latest
                 address: Some(*contract.0),
                 keys: None,
             };
             let token_events_pages =
                 get_all_events(&self.provider, events_filter, self.config.events_chunk_size);
 
-            // Prefer processing world events first
             match contract.1 {
                 ContractType::WORLD => fetch_all_events_tasks.push_front(token_events_pages),
                 _ => fetch_all_events_tasks.push_back(token_events_pages),
@@ -407,12 +418,12 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         let task_result = join_all(fetch_all_events_tasks).await;
 
         let mut events = vec![];
-        let mut latest_block_seen = 0;
+        let mut block_set = HashSet::new();
 
+        // Process all events from all contracts
         for result in task_result {
             let result = result?;
-            let contract_address =
-                result.0.expect("EventFilters that we use always have an address");
+            let contract_address = result.0.expect("EventFilters that we use always have an address");
             let events_pages = result.1;
             let last_contract_tx = cursor_map.get(&contract_address).cloned();
             let mut last_contract_tx_tmp = last_contract_tx;
@@ -420,67 +431,32 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
             debug!(target: LOG_TARGET, "Total events pages fetched for contract ({:#x}): {}", &contract_address, &events_pages.len());
 
             for events_page in events_pages {
-                debug!("Processing events page with events: {}", &events_page.events.len());
                 for event in events_page.events {
-                    // Then we skip all transactions until we reach the last pending processed
-                    // transaction (if any)
                     if let Some(last_contract_tx) = last_contract_tx_tmp {
                         if event.transaction_hash != last_contract_tx {
                             continue;
                         }
-
                         last_contract_tx_tmp = None;
                     }
 
-                    // Skip the latest pending block transaction events
-                    // * as we might have multiple events for the same transaction
                     if let Some(last_contract_tx) = last_contract_tx {
                         if event.transaction_hash == last_contract_tx {
                             continue;
                         }
                     }
 
-                    // Track the latest block number we've seen
                     if let Some(block_number) = event.block_number {
-                        latest_block_seen = latest_block_seen.max(block_number);
+                        block_set.insert(block_number);
                     }
-
-                    // Only include events within our chunk size
-                    if let Some(block_number) = event.block_number {
-                        if block_number <= from + self.config.blocks_chunk_size {
-                            events.push(event);
-                        }
-                    }
+                    events.push(event);
                 }
             }
         }
 
-        // Transactions & blocks to process
-        let mut blocks = BTreeMap::new();
-
-        // Flatten events pages and events according to the pending block cursor
-        // to array of (block_number, transaction_hash)
-        let mut transactions = BTreeMap::new();
-
-        let mut block_set = HashSet::new();
-        for event in events {
-            let block_number = match event.block_number {
-                Some(block_number) => block_number,
-                None => unreachable!("In fetch range all events should have block number"),
-            };
-
-            block_set.insert(block_number);
-
-            transactions
-                .entry(block_number)
-                .or_insert(LinkedHashMap::new())
-                .entry(event.transaction_hash)
-                .or_insert(vec![])
-                .push(event);
-        }
-
+        // Get timestamps for all blocks in parallel
         let semaphore = Arc::new(Semaphore::new(self.config.max_concurrent_tasks));
         let mut set: JoinSet<Result<(u64, u64), anyhow::Error>> = JoinSet::new();
+        let mut blocks = BTreeMap::new();
 
         for block_number in block_set {
             let semaphore = semaphore.clone();
@@ -498,13 +474,57 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
             blocks.insert(block_number, block_timestamp);
         }
 
+        // Organize events by block and transaction
+        let mut transactions = BTreeMap::new();
+        for event in events {
+            let block_number = event.block_number.expect("All events should have block number");
+            transactions
+                .entry(block_number)
+                .or_insert(LinkedHashMap::new())
+                .entry(event.transaction_hash)
+                .or_insert(vec![])
+                .push(event);
+        }
+
         debug!("Transactions: {}", &transactions.len());
         debug!("Blocks: {}", &blocks.len());
 
-        // Calculate the actual latest block number for this chunk
-        let latest_block_number = from + self.config.blocks_chunk_size.min(latest_block_seen - from);
+        Ok(FetchRangeResult { transactions, blocks, latest_block_number: 0 })
+    }
 
-        Ok(FetchRangeResult { transactions, blocks, latest_block_number })
+    fn chunk_events(&self, from: u64, to: u64, data: FetchRangeResult) -> Result<Vec<EventChunk>> {
+        let mut chunks = Vec::new();
+        let mut current_from = from;
+
+        while current_from < to {
+            let chunk_to = (current_from + self.config.blocks_chunk_size).min(to);
+            
+            // Filter events for this chunk
+            let mut chunk_transactions = BTreeMap::new();
+            let mut chunk_blocks = BTreeMap::new();
+            
+            for (&block_number, transactions) in &data.transactions {
+                if block_number >= current_from && block_number <= chunk_to {
+                    chunk_transactions.insert(block_number, transactions.clone());
+                    if let Some(&timestamp) = data.blocks.get(&block_number) {
+                        chunk_blocks.insert(block_number, timestamp);
+                    }
+                }
+            }
+            
+            if !chunk_transactions.is_empty() {
+                chunks.push(EventChunk {
+                    from: current_from,
+                    to: chunk_to,
+                    transactions: chunk_transactions,
+                    blocks: chunk_blocks,
+                });
+            }
+            
+            current_from = chunk_to + 1;
+        }
+
+        Ok(chunks)
     }
 
     async fn fetch_pending(
@@ -538,7 +558,11 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
 
     pub async fn process(&mut self, fetch_result: FetchDataResult) -> Result<()> {
         match fetch_result {
-            FetchDataResult::Range(data) => self.process_range(data).await?,
+            FetchDataResult::Range(chunks) => {
+                for chunk in chunks {
+                    self.process_chunk(chunk).await?;
+                }
+            }
             FetchDataResult::Pending(data) => self.process_pending(data).await?,
             FetchDataResult::None => {}
         };
@@ -592,11 +616,12 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         Ok(())
     }
 
-    pub async fn process_range(&mut self, data: FetchRangeResult) -> Result<()> {
-        // Process all transactions
+    async fn process_chunk(&mut self, chunk: EventChunk) -> Result<()> {
         let mut processed_blocks = HashSet::new();
         let mut cursor_map = HashMap::new();
-        for (block_number, transactions) in data.transactions {
+
+        // Process all transactions in the chunk
+        for (block_number, transactions) in chunk.transactions {
             for (transaction_hash, events) in transactions {
                 debug!("Processing transaction hash: {:#x}", transaction_hash);
                 // Process transaction
@@ -610,7 +635,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                     transaction_hash,
                     events.as_slice(),
                     block_number,
-                    data.blocks[&block_number],
+                    chunk.blocks[&block_number],
                     transaction,
                     &mut cursor_map,
                 )
@@ -623,7 +648,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                     block_tx.send(block_number).await?;
                 }
 
-                self.process_block(block_number, data.blocks[&block_number]).await?;
+                self.process_block(block_number, chunk.blocks[&block_number]).await?;
                 processed_blocks.insert(block_number);
             }
         }
@@ -631,12 +656,10 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         // Process parallelized events
         self.task_manager.process_tasks().await?;
 
-        let last_block_timestamp = data
-            .blocks
-            .get(&data.latest_block_number)
-            .copied()
-            .unwrap_or(get_block_timestamp(&self.provider, data.latest_block_number).await?);
-        self.db.update_cursors(data.latest_block_number, last_block_timestamp, None, cursor_map)?;
+        let last_block_timestamp = chunk.blocks.get(&chunk.to).copied()
+            .unwrap_or(get_block_timestamp(&self.provider, chunk.to).await?);
+        
+        self.db.update_cursors(chunk.to, last_block_timestamp, None, cursor_map)?;
 
         Ok(())
     }
