@@ -381,7 +381,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
     pub async fn fetch_range(
         &mut self,
         from: u64,
-        to: u64,
+        _to: u64,
         cursor_map: &HashMap<Felt, Felt>,
     ) -> Result<FetchRangeResult> {
         // Process all blocks from current to latest.
@@ -390,7 +390,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         for contract in self.contracts.iter() {
             let events_filter = EventFilter {
                 from_block: Some(BlockId::Number(from)),
-                to_block: Some(BlockId::Number(to)),
+                to_block: None, // Remove to_block to get all events up to latest
                 address: Some(*contract.0),
                 keys: None,
             };
@@ -407,6 +407,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         let task_result = join_all(fetch_all_events_tasks).await;
 
         let mut events = vec![];
+        let mut latest_block_seen = 0;
 
         for result in task_result {
             let result = result?;
@@ -439,7 +440,17 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                         }
                     }
 
-                    events.push(event);
+                    // Track the latest block number we've seen
+                    if let Some(block_number) = event.block_number {
+                        latest_block_seen = latest_block_seen.max(block_number);
+                    }
+
+                    // Only include events within our chunk size
+                    if let Some(block_number) = event.block_number {
+                        if block_number <= from + self.config.blocks_chunk_size {
+                            events.push(event);
+                        }
+                    }
                 }
             }
         }
@@ -490,7 +501,10 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         debug!("Transactions: {}", &transactions.len());
         debug!("Blocks: {}", &blocks.len());
 
-        Ok(FetchRangeResult { transactions, blocks, latest_block_number: to })
+        // Calculate the actual latest block number for this chunk
+        let latest_block_number = from + self.config.blocks_chunk_size.min(latest_block_seen - from);
+
+        Ok(FetchRangeResult { transactions, blocks, latest_block_number })
     }
 
     async fn fetch_pending(
