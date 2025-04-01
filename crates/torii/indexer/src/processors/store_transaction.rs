@@ -141,7 +141,7 @@ impl StoreTransactionProcessor {
         calldata: &[Felt],
         base_offset: usize,
         caller_address: Felt,
-    ) -> Result<ParsedCall> {
+    ) -> Result<(ParsedCall, usize)> {
         let to_offset = base_offset;
         let selector_offset = to_offset + 1;
         let calldata_offset = selector_offset + 2;
@@ -154,13 +154,16 @@ impl StoreTransactionProcessor {
         let entrypoint = get_entrypoint_name_from_class(&contract_class, calldata[selector_offset])
             .unwrap_or(format!("{:#x}", calldata[selector_offset]));
 
-        Ok(ParsedCall {
+        // Calculate next offset: current offset + contract_address + selector + calldata_len + calldata
+        let next_offset = calldata_offset + calldata_len;
+
+        Ok((ParsedCall {
             contract_address,
             entrypoint,
             calldata: calldata[calldata_offset..calldata_offset + calldata_len].to_vec(),
             call_type: CallType::ExecuteFromOutside,
             caller_address,
-        })
+        }, next_offset))
     }
 
     async fn process_outside_calls<P: Provider + Send + Sync + std::fmt::Debug>(
@@ -172,28 +175,32 @@ impl StoreTransactionProcessor {
         match call.entrypoint.as_str() {
             "execute_from_outside_v3" => {
                 let outside_calls_len: usize = call.calldata[5].try_into().unwrap();
+                let mut current_offset = 6;
+
                 for _ in 0..outside_calls_len {
-                    let outside_call = Self::parse_outside_call(
+                    let (outside_call, next_offset) = Self::parse_outside_call(
                         contract_class_cache,
                         &call.calldata,
-                        6,
+                        current_offset,
                         call.contract_address,
-                    )
-                    .await?;
+                    ).await?;
                     outside_calls.push(outside_call);
+                    current_offset = next_offset;
                 }
             }
             "execute_from_outside_v2" => {
                 let outside_calls_len: usize = call.calldata[4].try_into().unwrap();
+                let mut current_offset = 5;
+
                 for _ in 0..outside_calls_len {
-                    let outside_call = Self::parse_outside_call(
+                    let (outside_call, next_offset) = Self::parse_outside_call(
                         contract_class_cache,
                         &call.calldata,
-                        5,
+                        current_offset,
                         call.contract_address,
-                    )
-                    .await?;
+                    ).await?;
                     outside_calls.push(outside_call);
+                    current_offset = next_offset;
                 }
             }
             _ => {}
