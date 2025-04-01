@@ -154,16 +154,20 @@ impl StoreTransactionProcessor {
         let entrypoint = get_entrypoint_name_from_class(&contract_class, calldata[selector_offset])
             .unwrap_or(format!("{:#x}", calldata[selector_offset]));
 
-        // Calculate next offset: current offset + contract_address + selector + calldata_len + calldata
+        // Calculate next offset: current offset + contract_address + selector + calldata_len +
+        // calldata
         let next_offset = calldata_offset + calldata_len;
 
-        Ok((ParsedCall {
-            contract_address,
-            entrypoint,
-            calldata: calldata[calldata_offset..calldata_offset + calldata_len].to_vec(),
-            call_type: CallType::ExecuteFromOutside,
-            caller_address,
-        }, next_offset))
+        Ok((
+            ParsedCall {
+                contract_address,
+                entrypoint,
+                calldata: calldata[calldata_offset..calldata_offset + calldata_len].to_vec(),
+                call_type: CallType::ExecuteFromOutside,
+                caller_address,
+            },
+            next_offset,
+        ))
     }
 
     async fn process_outside_calls<P: Provider + Send + Sync + std::fmt::Debug>(
@@ -183,7 +187,8 @@ impl StoreTransactionProcessor {
                         &call.calldata,
                         current_offset,
                         call.contract_address,
-                    ).await?;
+                    )
+                    .await?;
                     outside_calls.push(outside_call);
                     current_offset = next_offset;
                 }
@@ -198,7 +203,8 @@ impl StoreTransactionProcessor {
                         &call.calldata,
                         current_offset,
                         call.contract_address,
-                    ).await?;
+                    )
+                    .await?;
                     outside_calls.push(outside_call);
                     current_offset = next_offset;
                 }
