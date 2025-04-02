@@ -195,7 +195,10 @@ pub enum FetchDataResult {
 impl FetchDataResult {
     pub fn block_id(&self) -> Option<BlockId> {
         match self {
-            FetchDataResult::Range(range) => Some(BlockId::Number(range.latest_block_number)),
+            FetchDataResult::Range(range) => range
+                .blocks
+                .last_key_value()
+                .map(|(block_number, _)| BlockId::Number(*block_number)),
             FetchDataResult::Pending(_pending) => Some(BlockId::Tag(BlockTag::Pending)),
             FetchDataResult::None => None,
         }
@@ -204,9 +207,9 @@ impl FetchDataResult {
 
 #[derive(Debug)]
 pub struct FetchRangeResult {
-    // (block_number, transaction_hash) -> events
-    // NOTE: LinkedList might contains blocks in different order
+    // block_number -> (transaction_hash -> events)
     pub transactions: BTreeMap<u64, LinkedHashMap<Felt, Vec<EmittedEvent>>>,
+    // block_number -> block_timestamp
     pub blocks: BTreeMap<u64, u64>,
     pub latest_block_number: u64,
 }
@@ -349,16 +352,16 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
     pub async fn fetch_data(&mut self, cursors: &Cursors) -> Result<FetchDataResult> {
         let latest_block = self.provider.block_hash_and_number().await?;
         let from = cursors.head.unwrap_or(self.config.world_block);
+        let to = latest_block.block_number.min(from + self.config.blocks_chunk_size);
 
         let instant = Instant::now();
         let result = if from < latest_block.block_number {
             let from = if from == 0 { from } else { from + 1 };
 
             // Fetch all events from 'from' to our blocks chunk size
-            let range =
-                self.fetch_range(from, &cursors.cursor_map, latest_block.block_number).await?;
-            debug!(target: LOG_TARGET, duration = ?instant.elapsed(), from = %from, to = %range.latest_block_number, "Fetched data for range.");
+            let range = self.fetch_range(from, to, &cursors.cursor_map).await?;
 
+            debug!(target: LOG_TARGET, duration = ?instant.elapsed(), from = %from, to = %to, "Fetched data for range.");
             FetchDataResult::Range(range)
         } else if self.config.flags.contains(IndexingFlags::PENDING_BLOCKS) {
             let data =
@@ -379,8 +382,8 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
     async fn fetch_range(
         &self,
         from: u64,
+        to: u64,
         cursor_map: &HashMap<Felt, Felt>,
-        last_block_number: u64,
     ) -> Result<FetchRangeResult> {
         let mut fetch_all_events_tasks = VecDeque::new();
 
@@ -392,12 +395,8 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                 address: Some(*contract.0),
                 keys: None,
             };
-            let token_events_pages = get_all_events(
-                &self.provider,
-                events_filter,
-                self.config.events_chunk_size,
-                from + self.config.blocks_chunk_size,
-            );
+            let token_events_pages =
+                get_all_events(&self.provider, events_filter, self.config.events_chunk_size, to);
 
             match contract.1 {
                 ContractType::WORLD => fetch_all_events_tasks.push_front(token_events_pages),
@@ -482,9 +481,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         debug!("Transactions: {}", &transactions.len());
         debug!("Blocks: {}", &blocks.len());
 
-        let latest_block_number =
-            blocks.last_key_value().map_or(last_block_number, |(block_number, _)| *block_number);
-        Ok(FetchRangeResult { transactions, blocks, latest_block_number })
+        Ok(FetchRangeResult { transactions, blocks, latest_block_number: to })
     }
 
     async fn fetch_pending(
@@ -617,13 +614,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
             .get(&range.latest_block_number)
             .copied()
             .unwrap_or(get_block_timestamp(&self.provider, range.latest_block_number).await?);
-
-        self.db.update_cursors(
-            range.latest_block_number,
-            last_block_timestamp,
-            None,
-            cursor_map,
-        )?;
+        self.db.update_cursors(range.latest_block_number, last_block_timestamp, None, cursor_map)?;
 
         Ok(())
     }
