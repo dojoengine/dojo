@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1743603081038,
+  "lastUpdate": 1743603233690,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -60319,6 +60319,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 47119667317,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d9957333cbe5b372aae00756ada5de00bfbee961",
+          "message": "fix: ensure correct usage of cartridge feature in all places (#3139)",
+          "timestamp": "2025-04-02T21:54:53+08:00",
+          "tree_id": "9ebcd575e6985b26a7fed14d28c50d94c4bba083",
+          "url": "https://github.com/dojoengine/dojo/commit/d9957333cbe5b372aae00756ada5de00bfbee961"
+        },
+        "date": 1743603230344,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2461309,
+            "range": "± 28449",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 405359,
+            "range": "± 16223",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2795358777,
+            "range": "± 194278812",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 17013178,
+            "range": "± 215480",
             "unit": "ns/iter"
           }
         ]
