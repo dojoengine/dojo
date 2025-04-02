@@ -105,13 +105,13 @@ katana-executor = { path = "crates/katana/executor" }
 katana-explorer = { path = "crates/katana/explorer" }
 katana-feeder-gateway = { path = "crates/katana/feeder-gateway" }
 katana-messaging = { path = "crates/katana/messaging" }
-katana-node = { path = "crates/katana/node", features = [ "cartridge" ] }
+katana-node = { path = "crates/katana/node" }
 katana-node-bindings = { path = "crates/katana/node-bindings" }
 katana-pipeline = { path = "crates/katana/sync/pipeline" }
 katana-pool = { path = "crates/katana/pool" }
 katana-primitives = { path = "crates/katana/primitives" }
 katana-provider = { path = "crates/katana/storage/provider", default-features = false }
-katana-rpc = { path = "crates/katana/rpc/rpc" }
+katana-rpc = { path = "crates/katana/rpc/rpc", default-features = false }
 katana-rpc-api = { path = "crates/katana/rpc/rpc-api", default-features = false }
 katana-rpc-types = { path = "crates/katana/rpc/rpc-types" }
 katana-rpc-types-builder = { path = "crates/katana/rpc/rpc-types-builder" }
