@@ -18,11 +18,11 @@ use starknet::core::types::{
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
 use starknet_crypto::Felt;
+use tokio::sync::Semaphore;
 use tokio::sync::broadcast::Sender;
 use tokio::sync::mpsc::Sender as BoundedSender;
-use tokio::sync::Semaphore;
 use tokio::task::JoinSet;
-use tokio::time::{sleep, Instant};
+use tokio::time::{Instant, sleep};
 use torii_sqlite::cache::ContractClassCache;
 use torii_sqlite::types::{Contract, ContractType};
 use torii_sqlite::{Cursors, Sql};
@@ -30,14 +30,14 @@ use tracing::{debug, error, info, trace, warn};
 
 use crate::constants::LOG_TARGET;
 use crate::processors::controller::ControllerProcessor;
-use crate::processors::erc1155_transfer_batch::Erc1155TransferBatchProcessor;
-use crate::processors::erc1155_transfer_single::Erc1155TransferSingleProcessor;
 use crate::processors::erc20_legacy_transfer::Erc20LegacyTransferProcessor;
 use crate::processors::erc20_transfer::Erc20TransferProcessor;
-use crate::processors::erc4906_batch_metadata_update::Erc4906BatchMetadataUpdateProcessor;
-use crate::processors::erc4906_metadata_update::Erc4906MetadataUpdateProcessor;
 use crate::processors::erc721_legacy_transfer::Erc721LegacyTransferProcessor;
 use crate::processors::erc721_transfer::Erc721TransferProcessor;
+use crate::processors::erc1155_transfer_batch::Erc1155TransferBatchProcessor;
+use crate::processors::erc1155_transfer_single::Erc1155TransferSingleProcessor;
+use crate::processors::erc4906_batch_metadata_update::Erc4906BatchMetadataUpdateProcessor;
+use crate::processors::erc4906_metadata_update::Erc4906MetadataUpdateProcessor;
 use crate::processors::event_message::EventMessageProcessor;
 use crate::processors::metadata_update::MetadataUpdateProcessor;
 use crate::processors::raw_event::RawEventProcessor;
@@ -184,7 +184,6 @@ impl Default for EngineConfig {
         }
     }
 }
-
 
 #[derive(Debug)]
 pub enum FetchDataResult {
@@ -356,7 +355,8 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
             let from = if from == 0 { from } else { from + 1 };
 
             // Fetch all events from 'from' to our blocks chunk size
-            let range = self.fetch_range(from, &cursors.cursor_map, latest_block.block_number).await?;
+            let range =
+                self.fetch_range(from, &cursors.cursor_map, latest_block.block_number).await?;
             debug!(target: LOG_TARGET, duration = ?instant.elapsed(), from = %from, to = %range.latest_block_number, "Fetched data for range.");
 
             FetchDataResult::Range(range)
@@ -392,8 +392,12 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                 address: Some(*contract.0),
                 keys: None,
             };
-            let token_events_pages =
-                get_all_events(&self.provider, events_filter, self.config.events_chunk_size, from + self.config.blocks_chunk_size);
+            let token_events_pages = get_all_events(
+                &self.provider,
+                events_filter,
+                self.config.events_chunk_size,
+                from + self.config.blocks_chunk_size,
+            );
 
             match contract.1 {
                 ContractType::WORLD => fetch_all_events_tasks.push_front(token_events_pages),
@@ -403,9 +407,12 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
 
         let task_result = join_all(fetch_all_events_tasks).await;
 
-        let mut events = vec![];
-        let mut block_set = HashSet::new();
+        // Get timestamps for all blocks in parallel
+        let semaphore = Arc::new(Semaphore::new(self.config.max_concurrent_tasks));
+        let mut set: JoinSet<Result<(u64, u64), anyhow::Error>> = JoinSet::new();
+        let mut blocks = BTreeMap::new();
 
+        let mut transactions = BTreeMap::new();
         // Process all events from all contracts
         for result in task_result {
             let result = result?;
@@ -418,7 +425,10 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
             debug!(target: LOG_TARGET, "Total events pages fetched for contract ({:#x}): {}", &contract_address, &events_pages.len());
 
             for events_page in events_pages {
+                debug!("Processing events page with events: {}", &events_page.events.len());
                 for event in events_page.events {
+                    // Then we skip all transactions until we reach the last pending processed
+                    // transaction (if any)
                     if let Some(last_contract_tx) = last_contract_tx_tmp {
                         if event.transaction_hash != last_contract_tx {
                             continue;
@@ -426,6 +436,8 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                         last_contract_tx_tmp = None;
                     }
 
+                    // Skip the latest pending block transaction events
+                    // * as we might have multiple events for the same transaction
                     if let Some(last_contract_tx) = last_contract_tx {
                         if event.transaction_hash == last_contract_tx {
                             continue;
@@ -433,27 +445,31 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                     }
 
                     if let Some(block_number) = event.block_number {
-                        block_set.insert(block_number);
+                        if !blocks.contains_key(&block_number) {
+                            let semaphore = semaphore.clone();
+                            let provider = self.provider.clone();
+                            set.spawn(async move {
+                                let _permit = semaphore.acquire().await.unwrap();
+                                debug!(
+                                    "Fetching block timestamp for block number: {}",
+                                    block_number
+                                );
+                                let block_timestamp =
+                                    get_block_timestamp(&provider, block_number).await?;
+                                Ok((block_number, block_timestamp))
+                            });
+                        }
+
+                        blocks.insert(block_number, 0);
+                        transactions
+                            .entry(block_number)
+                            .or_insert(LinkedHashMap::new())
+                            .entry(event.transaction_hash)
+                            .or_insert(vec![])
+                            .push(event);
                     }
-                    events.push(event);
                 }
             }
-        }
-
-        // Get timestamps for all blocks in parallel
-        let semaphore = Arc::new(Semaphore::new(self.config.max_concurrent_tasks));
-        let mut set: JoinSet<Result<(u64, u64), anyhow::Error>> = JoinSet::new();
-        let mut blocks = BTreeMap::new();
-
-        for block_number in block_set {
-            let semaphore = semaphore.clone();
-            let provider = self.provider.clone();
-            set.spawn(async move {
-                let _permit = semaphore.acquire().await.unwrap();
-                debug!("Fetching block timestamp for block number: {}", block_number);
-                let block_timestamp = get_block_timestamp(&provider, block_number).await?;
-                Ok((block_number, block_timestamp))
-            });
         }
 
         while let Some(result) = set.join_next().await {
@@ -461,22 +477,11 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
             blocks.insert(block_number, block_timestamp);
         }
 
-        // Organize events by block and transaction
-        let mut transactions = BTreeMap::new();
-        for event in events {
-            let block_number = event.block_number.expect("All events should have block number");
-            transactions
-                .entry(block_number)
-                .or_insert(LinkedHashMap::new())
-                .entry(event.transaction_hash)
-                .or_insert(vec![])
-                .push(event);
-        }
-
         debug!("Transactions: {}", &transactions.len());
         debug!("Blocks: {}", &blocks.len());
 
-        let latest_block_number = blocks.last_key_value().map_or(last_block_number, |(block_number, _)| *block_number);
+        let latest_block_number =
+            blocks.last_key_value().map_or(last_block_number, |(block_number, _)| *block_number);
         Ok(FetchRangeResult { transactions, blocks, latest_block_number })
     }
 
@@ -611,7 +616,12 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
             .copied()
             .unwrap_or(get_block_timestamp(&self.provider, range.latest_block_number).await?);
 
-        self.db.update_cursors(range.latest_block_number, last_block_timestamp, None, cursor_map)?;
+        self.db.update_cursors(
+            range.latest_block_number,
+            last_block_timestamp,
+            None,
+            cursor_map,
+        )?;
 
         Ok(())
     }
@@ -880,7 +890,7 @@ async fn get_all_events<P>(
     provider: &P,
     events_filter: EventFilter,
     events_chunk_size: u64,
-    to: u64
+    to: u64,
 ) -> Result<(Option<Felt>, Vec<EventsPage>)>
 where
     P: Provider + Sync,
