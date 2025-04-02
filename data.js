@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1743617423582,
+  "lastUpdate": 1743617601185,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -60475,6 +60475,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 49403794819,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8ad7ca65381fb7c758033de34d032762c7749b94",
+          "message": "opt(torii-runner): verify contracts deployment in parallel (#3140)\n\n* opt(torii-runner): verify contracts deployment in parallel\n\n* fmt\n\n* add flag in config to enable checks & move explorer to runner cstegory\n\n* check all runner options\n\n* conditionally check contracts deployemnt runner\n\n* fmt\n\n* clippy",
+          "timestamp": "2025-04-02T17:53:55Z",
+          "tree_id": "177bbcabbb31603604e237f88970894b8f6c075d",
+          "url": "https://github.com/dojoengine/dojo/commit/8ad7ca65381fb7c758033de34d032762c7749b94"
+        },
+        "date": 1743617597128,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2463832,
+            "range": "± 32052",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 398129,
+            "range": "± 13995",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2895125148,
+            "range": "± 226720426",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 17375938,
+            "range": "± 470850",
             "unit": "ns/iter"
           }
         ]
