@@ -208,13 +208,11 @@ mod test {
 
         assert_eq!(torii_args.db_dir, None);
 
-        assert!(!torii_args.runner.explorer);
-        assert!(!torii_args.runner.check_contracts);
-
         assert_eq!(torii_args.indexing, IndexingOptions::default());
         assert_eq!(torii_args.events, EventsOptions::default());
         assert_eq!(torii_args.erc, ErcOptions::default());
         assert_eq!(torii_args.sql, SqlOptions::default());
+        assert_eq!(torii_args.runner, RunnerOptions::default());
         assert_eq!(torii_args.server, ServerOptions::default());
         assert_eq!(torii_args.relay, RelayOptions::default());
         assert_eq!(torii_args.metrics, MetricsOptions::default());
