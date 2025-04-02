@@ -634,6 +634,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 let (name, symbol) = match res {
                     Ok((name, symbol)) => {
                         debug!(
+                            target: LOG_TARGET,
                             contract_address = %felt_to_sql_string(&register_nft_token.contract_address),
                             "Token already registered for contract_address, so reusing fetched data",
                         );
