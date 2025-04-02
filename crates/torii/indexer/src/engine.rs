@@ -18,11 +18,11 @@ use starknet::core::types::{
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
 use starknet_crypto::Felt;
+use tokio::sync::Semaphore;
 use tokio::sync::broadcast::Sender;
 use tokio::sync::mpsc::Sender as BoundedSender;
-use tokio::sync::Semaphore;
 use tokio::task::JoinSet;
-use tokio::time::{sleep, Instant};
+use tokio::time::{Instant, sleep};
 use torii_sqlite::cache::ContractClassCache;
 use torii_sqlite::types::{Contract, ContractType};
 use torii_sqlite::{Cursors, Sql};
@@ -30,14 +30,14 @@ use tracing::{debug, error, info, trace, warn};
 
 use crate::constants::LOG_TARGET;
 use crate::processors::controller::ControllerProcessor;
-use crate::processors::erc1155_transfer_batch::Erc1155TransferBatchProcessor;
-use crate::processors::erc1155_transfer_single::Erc1155TransferSingleProcessor;
 use crate::processors::erc20_legacy_transfer::Erc20LegacyTransferProcessor;
 use crate::processors::erc20_transfer::Erc20TransferProcessor;
-use crate::processors::erc4906_batch_metadata_update::Erc4906BatchMetadataUpdateProcessor;
-use crate::processors::erc4906_metadata_update::Erc4906MetadataUpdateProcessor;
 use crate::processors::erc721_legacy_transfer::Erc721LegacyTransferProcessor;
 use crate::processors::erc721_transfer::Erc721TransferProcessor;
+use crate::processors::erc1155_transfer_batch::Erc1155TransferBatchProcessor;
+use crate::processors::erc1155_transfer_single::Erc1155TransferSingleProcessor;
+use crate::processors::erc4906_batch_metadata_update::Erc4906BatchMetadataUpdateProcessor;
+use crate::processors::erc4906_metadata_update::Erc4906MetadataUpdateProcessor;
 use crate::processors::event_message::EventMessageProcessor;
 use crate::processors::metadata_update::MetadataUpdateProcessor;
 use crate::processors::raw_event::RawEventProcessor;
@@ -429,7 +429,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
             debug!(target: LOG_TARGET, "Total events pages fetched for contract ({:#x}): {}", &contract_address, &events_pages.len());
 
             for events_page in events_pages {
-                debug!("Processing events page with events: {}", &events_page.events.len());
+                debug!(target: LOG_TARGET, "Processing events page with events: {}", &events_page.events.len());
                 for event in events_page.events {
                     // Then we skip all transactions until we reach the last pending processed
                     // transaction (if any)
@@ -903,6 +903,7 @@ where
 
     loop {
         debug!(
+            target: LOG_TARGET,
             "Fetching events page with continuation token: {:?}, for contract: {:?}",
             continuation_token, events_filter.address
         );
