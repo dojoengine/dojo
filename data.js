@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1743603233690,
+  "lastUpdate": 1743612887516,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -60367,6 +60367,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 17013178,
             "range": "± 215480",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4c7757893aae852fbe8da87f1b03e71574db43ea",
+          "message": "opt(torii-indexer): batch requests contract events & block timestamps reqs (#3130)\n\n* opt(torii-indexer): batch requests when retrieving events & block timestampss\n\n* fix: event filter wiht page\n\n* rm pistols\n\n* fmt\n\n* recursive batch requests func\n\n* c\n\n* correct batching of events & block timstamps\n\n* always include  timestamp request in cashed block timestamps\n\n* f\n\n* rv",
+          "timestamp": "2025-04-02T10:38:46-06:00",
+          "tree_id": "b672f44fa6a21423ae94f422f374d0d340b83e93",
+          "url": "https://github.com/dojoengine/dojo/commit/4c7757893aae852fbe8da87f1b03e71574db43ea"
+        },
+        "date": 1743612884555,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 44748776058,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
