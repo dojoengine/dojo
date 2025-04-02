@@ -21,10 +21,10 @@ use constants::UDC_ADDRESS;
 use dojo_metrics::exporters::prometheus::PrometheusRecorder;
 use dojo_world::contracts::world::WorldContractReader;
 use futures::future::join_all;
+use sqlx::SqlitePool;
 use sqlx::sqlite::{
     SqliteAutoVacuum, SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteSynchronous,
 };
-use sqlx::SqlitePool;
 use starknet::core::types::{BlockId, BlockTag};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
@@ -42,7 +42,7 @@ use torii_sqlite::simple_broker::SimpleBroker;
 use torii_sqlite::types::{Contract, ContractType, Model};
 use torii_sqlite::{Sql, SqlConfig};
 use tracing::{error, info, warn};
-use tracing_subscriber::{fmt, EnvFilter};
+use tracing_subscriber::{EnvFilter, fmt};
 use url::form_urlencoded;
 
 mod constants;
@@ -99,13 +99,15 @@ impl Runner {
         let provider: Arc<_> = JsonRpcClient::new(HttpTransport::new(self.args.rpc.clone())).into();
 
         // Verify contracts are deployed
-        let undeployed =
-            verify_contracts_deployed(&provider, &self.args.indexing.contracts).await?;
-        if !undeployed.is_empty() {
-            return Err(anyhow::anyhow!(
-                "The following contracts are not deployed: {:?}",
-                undeployed
-            ));
+        if self.args.runner.check_contracts {
+            let undeployed =
+                verify_contracts_deployed(&provider, &self.args.indexing.contracts).await?;
+            if !undeployed.is_empty() {
+                return Err(anyhow::anyhow!(
+                    "The following contracts are not deployed: {:?}",
+                    undeployed
+                ));
+            }
         }
 
         let tempfile = NamedTempFile::new()?;
@@ -289,7 +291,7 @@ impl Runner {
         info!(target: LOG_TARGET, url = %explorer_url, "Serving World Explorer.");
         info!(target: LOG_TARGET, path = %artifacts_path, "Serving ERC artifacts at path");
 
-        if self.args.explorer {
+        if self.args.runner.explorer {
             if let Err(e) = webbrowser::open(&explorer_url) {
                 error!(target: LOG_TARGET, error = %e, "Opening World Explorer in the browser.");
             }
