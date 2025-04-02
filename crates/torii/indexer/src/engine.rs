@@ -457,6 +457,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                             set.spawn(async move {
                                 let _permit = semaphore.acquire().await.unwrap();
                                 trace!(
+                                    target: LOG_TARGET,
                                     "Fetching block timestamp for block number: {}",
                                     block_number
                                 );
@@ -483,8 +484,8 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
             blocks.insert(block_number, block_timestamp);
         }
 
-        trace!("Transactions: {}", &transactions.len());
-        trace!("Blocks: {}", &blocks.len());
+        trace!(target: LOG_TARGET, "Transactions: {}", &transactions.len());
+        trace!(target: LOG_TARGET, "Blocks: {}", &blocks.len());
 
         Ok(FetchRangeResult { transactions, blocks, latest_block_number: to })
     }
@@ -581,7 +582,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         // Process all transactions in the chunk
         for (block_number, transactions) in range.transactions {
             for (transaction_hash, events) in transactions {
-                trace!("Processing transaction hash: {:#x}", transaction_hash);
+                trace!(target: LOG_TARGET, "Processing transaction hash: {:#x}", transaction_hash);
                 // Process transaction
                 let transaction = if self.config.flags.contains(IndexingFlags::TRANSACTIONS) {
                     Some(self.provider.get_transaction_by_hash(transaction_hash).await?)
