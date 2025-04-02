@@ -10,7 +10,9 @@ pub mod version;
 use std::future::IntoFuture;
 use std::sync::Arc;
 
-use anyhow::{ensure, Context, Result};
+#[cfg(feature = "cartridge")]
+use anyhow::ensure;
+use anyhow::{Context, Result};
 use config::rpc::RpcModuleKind;
 use config::Config;
 use dojo_metrics::exporters::prometheus::PrometheusRecorder;
@@ -40,7 +42,9 @@ use katana_rpc::cors::Cors;
 use katana_rpc::dev::DevApi;
 use katana_rpc::saya::SayaApi;
 use katana_rpc::starknet::forking::ForkedClient;
-use katana_rpc::starknet::{PaymasterConfig, StarknetApi, StarknetApiConfig};
+#[cfg(feature = "cartridge")]
+use katana_rpc::starknet::PaymasterConfig;
+use katana_rpc::starknet::{StarknetApi, StarknetApiConfig};
 use katana_rpc::torii::ToriiApi;
 use katana_rpc::{RpcServer, RpcServerHandle};
 #[cfg(feature = "cartridge")]

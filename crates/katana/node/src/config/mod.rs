@@ -17,6 +17,7 @@ use katana_messaging::MessagingConfig;
 use metrics::MetricsConfig;
 use rpc::RpcConfig;
 use sequencing::SequencingConfig;
+#[cfg(feature = "cartridge")]
 use url::Url;
 
 /// Node configurations.
