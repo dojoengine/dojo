@@ -43,6 +43,7 @@ use torii_sqlite::{Sql, SqlConfig};
 use tracing::{error, info, warn};
 use tracing_subscriber::{fmt, EnvFilter};
 use url::form_urlencoded;
+use futures::future::join_all;
 
 mod constants;
 
@@ -355,16 +356,28 @@ async fn verify_contracts_deployed(
     provider: &JsonRpcClient<HttpTransport>,
     contracts: &[Contract],
 ) -> anyhow::Result<Vec<Contract>> {
-    let mut undeployed = Vec::new();
-
-    for contract in contracts {
-        match provider.get_class_at(BlockId::Tag(BlockTag::Pending), contract.address).await {
-            Ok(_) => continue,
-            Err(_) => {
-                undeployed.push(*contract);
-            }
+    // Create a future for each contract verification
+    let verification_futures = contracts.iter().map(|contract| {
+        let contract = *contract;
+        async move {
+            let result = provider.get_class_at(BlockId::Tag(BlockTag::Pending), contract.address).await;
+            (contract, result)
         }
-    }
+    });
+
+    // Run all verifications concurrently
+    let results = join_all(verification_futures).await;
+
+    // Collect undeployed contracts
+    let undeployed = results
+        .into_iter()
+        .filter_map(|(contract, result)| {
+            match result {
+                Ok(_) => None,
+                Err(_) => Some(contract),
+            }
+        })
+        .collect();
 
     Ok(undeployed)
 }
