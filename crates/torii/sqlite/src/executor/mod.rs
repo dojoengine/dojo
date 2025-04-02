@@ -4,7 +4,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use cainome::cairo_serde::{ByteArray, CairoSerde};
 use dojo_types::schema::{Struct, Ty};
 use erc::{RegisterNftTokenMetadata, UpdateNftMetadataQuery};
@@ -323,12 +323,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                     set_head.txns_count
                 };
 
-                query.execute(&mut **tx).await.with_context(|| {
-                    format!(
-                        "Failed to execute query: {:?}, args: {:?}",
-                        query_message.statement, query_message.arguments
-                    )
-                })?;
+                query.execute(&mut **tx).await?;
 
                 let row = sqlx::query("UPDATE contracts SET tps = ? WHERE id = ? RETURNING *")
                     .bind(tps as i64)
@@ -401,12 +396,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 }
             }
             QueryType::StoreTransaction(store_transaction) => {
-                let row = query.fetch_one(&mut **tx).await.with_context(|| {
-                    format!(
-                        "Failed to execute query: {:?}, args: {:?}",
-                        query_message.statement, query_message.arguments
-                    )
-                })?;
+                let row = query.fetch_one(&mut **tx).await?;
                 let mut transaction = Transaction::from_row(&row)?;
 
                 for contract_address in &store_transaction.contract_addresses {
@@ -443,12 +433,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 self.publish_queue.push(BrokerMessage::Transaction(transaction));
             }
             QueryType::SetEntity(entity) => {
-                let row = query.fetch_one(&mut **tx).await.with_context(|| {
-                    format!(
-                        "Failed to execute query: {:?}, args: {:?}",
-                        query_message.statement, query_message.arguments
-                    )
-                })?;
+                let row = query.fetch_one(&mut **tx).await?;
                 let mut entity_updated = EntityUpdated::from_row(&row)?;
                 entity_updated.updated_model = Some(entity.ty.clone());
                 entity_updated.deleted = false;
@@ -520,12 +505,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 self.publish_queue.push(broker_message);
             }
             QueryType::DeleteEntity(entity) => {
-                let delete_model = query.execute(&mut **tx).await.with_context(|| {
-                    format!(
-                        "Failed to execute query: {:?}, args: {:?}",
-                        query_message.statement, query_message.arguments
-                    )
-                })?;
+                let delete_model = query.execute(&mut **tx).await?;
                 if delete_model.rows_affected() == 0 {
                     return Ok(());
                 }
@@ -571,24 +551,13 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 self.publish_queue.push(BrokerMessage::EntityUpdated(entity_updated));
             }
             QueryType::RegisterModel => {
-                let row = query.fetch_one(&mut **tx).await.with_context(|| {
-                    format!(
-                        "Failed to execute query: {:?}, args: {:?}",
-                        query_message.statement, query_message.arguments
-                    )
-                })?;
+                let row = query.fetch_one(&mut **tx).await?;
                 let model_registered = ModelRegistered::from_row(&row)?;
                 self.publish_queue.push(BrokerMessage::ModelRegistered(model_registered));
             }
             QueryType::EventMessage(em_query) => {
                 // Must be executed first since other tables have foreign keys on event_messages.id.
-                let event_messages_row = query.fetch_one(&mut **tx).await.with_context(|| {
-                    format!(
-                        "Failed to execute query: {:?}, args: {:?}",
-                        query_message.statement, query_message.arguments
-                    )
-                })?;
-
+                let event_messages_row = query.fetch_one(&mut **tx).await?;
                 let mut event_counter: i64 = sqlx::query_scalar::<_, i64>(
                     "SELECT historical_counter FROM event_model WHERE entity_id = ? AND model_id \
                      = ?",
@@ -639,12 +608,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 self.publish_queue.push(BrokerMessage::EventMessageUpdated(event_message));
             }
             QueryType::StoreEvent => {
-                let row = query.fetch_one(&mut **tx).await.with_context(|| {
-                    format!(
-                        "Failed to execute query: {:?}, args: {:?}",
-                        query_message.statement, query_message.arguments
-                    )
-                })?;
+                let row = query.fetch_one(&mut **tx).await?;
                 let event = EventEmitted::from_row(&row)?;
                 self.publish_queue.push(BrokerMessage::EventEmitted(event));
             }
@@ -813,14 +777,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 debug!(target: LOG_TARGET, duration = ?instant.elapsed(), "Updated NFT metadata.");
             }
             QueryType::Other => {
-                query.execute(&mut **tx).await.map_err(|e| {
-                    anyhow::anyhow!(
-                        "Failed to execute query: {:?}, args: {:?}, error: {:?}",
-                        query_message.statement,
-                        query_message.arguments,
-                        e
-                    )
-                })?;
+                query.execute(&mut **tx).await?;
             }
         }
 
@@ -856,12 +813,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 };
             }
 
-            query.execute(&mut *self.transaction).await.with_context(|| {
-                format!(
-                    "Failed to execute query: {:?}, args: {:?}",
-                    query_message.statement, query_message.arguments
-                )
-            })?;
+            query.execute(&mut *self.transaction).await?;
         }
 
         Ok(())

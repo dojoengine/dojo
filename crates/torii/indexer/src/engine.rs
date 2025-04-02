@@ -18,11 +18,11 @@ use starknet::core::types::{
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
 use starknet_crypto::Felt;
-use tokio::sync::Semaphore;
 use tokio::sync::broadcast::Sender;
 use tokio::sync::mpsc::Sender as BoundedSender;
+use tokio::sync::Semaphore;
 use tokio::task::JoinSet;
-use tokio::time::{Instant, sleep};
+use tokio::time::{sleep, Instant};
 use torii_sqlite::cache::ContractClassCache;
 use torii_sqlite::types::{Contract, ContractType};
 use torii_sqlite::{Cursors, Sql};
@@ -30,14 +30,14 @@ use tracing::{debug, error, info, trace, warn};
 
 use crate::constants::LOG_TARGET;
 use crate::processors::controller::ControllerProcessor;
-use crate::processors::erc20_legacy_transfer::Erc20LegacyTransferProcessor;
-use crate::processors::erc20_transfer::Erc20TransferProcessor;
-use crate::processors::erc721_legacy_transfer::Erc721LegacyTransferProcessor;
-use crate::processors::erc721_transfer::Erc721TransferProcessor;
 use crate::processors::erc1155_transfer_batch::Erc1155TransferBatchProcessor;
 use crate::processors::erc1155_transfer_single::Erc1155TransferSingleProcessor;
+use crate::processors::erc20_legacy_transfer::Erc20LegacyTransferProcessor;
+use crate::processors::erc20_transfer::Erc20TransferProcessor;
 use crate::processors::erc4906_batch_metadata_update::Erc4906BatchMetadataUpdateProcessor;
 use crate::processors::erc4906_metadata_update::Erc4906MetadataUpdateProcessor;
+use crate::processors::erc721_legacy_transfer::Erc721LegacyTransferProcessor;
+use crate::processors::erc721_transfer::Erc721TransferProcessor;
 use crate::processors::event_message::EventMessageProcessor;
 use crate::processors::metadata_update::MetadataUpdateProcessor;
 use crate::processors::raw_event::RawEventProcessor;
@@ -364,9 +364,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
             // Fetch all events from 'from' to our blocks chunk size
             let range = self.fetch_range(from, to, &cursors.cursor_map).await?;
 
-            let latest_block_number =
-                range.blocks.last_key_value().map_or(to, |(block_number, _)| *block_number);
-            debug!(target: LOG_TARGET, duration = ?instant.elapsed(), from = %from, to = %latest_block_number, "Fetched data for range.");
+            debug!(target: LOG_TARGET, duration = ?instant.elapsed(), from = %from, to = %range.latest_block_number, "Fetched data for range.");
             FetchDataResult::Range(range)
         } else if self.config.flags.contains(IndexingFlags::PENDING_BLOCKS) {
             let data =
@@ -487,7 +485,9 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         trace!(target: LOG_TARGET, "Transactions: {}", &transactions.len());
         trace!(target: LOG_TARGET, "Blocks: {}", &blocks.len());
 
-        Ok(FetchRangeResult { transactions, blocks, latest_block_number: to })
+        let latest_block_number =
+            blocks.iter().last().map_or(to, |(block_number, _)| *block_number);
+        Ok(FetchRangeResult { transactions, blocks, latest_block_number })
     }
 
     async fn fetch_pending(
