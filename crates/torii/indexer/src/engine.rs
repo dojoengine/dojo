@@ -222,7 +222,6 @@ pub struct FetchRangeResult {
     // NOTE: LinkedList might contains blocks in different order
     pub transactions: BTreeMap<u64, LinkedHashMap<Felt, Vec<EmittedEvent>>>,
     pub blocks: BTreeMap<u64, u64>,
-    pub latest_block_number: u64,
 }
 
 #[derive(Debug)]
@@ -491,7 +490,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         debug!("Transactions: {}", &transactions.len());
         debug!("Blocks: {}", &blocks.len());
 
-        Ok(FetchRangeResult { transactions, blocks, latest_block_number: 0 })
+        Ok(FetchRangeResult { transactions, blocks })
     }
 
     fn chunk_events(&self, from: u64, to: u64, data: FetchRangeResult) -> Result<Vec<EventChunk>> {
