@@ -361,7 +361,8 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
             // Fetch all events from 'from' to our blocks chunk size
             let range = self.fetch_range(from, to, &cursors.cursor_map).await?;
 
-            debug!(target: LOG_TARGET, duration = ?instant.elapsed(), from = %from, to = %to, "Fetched data for range.");
+            let latest_block_number = range.blocks.last_key_value().map_or(to, |(block_number, _)| *block_number);
+            debug!(target: LOG_TARGET, duration = ?instant.elapsed(), from = %from, to = %latest_block_number, "Fetched data for range.");
             FetchDataResult::Range(range)
         } else if self.config.flags.contains(IndexingFlags::PENDING_BLOCKS) {
             let data =
@@ -451,7 +452,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                             let provider = self.provider.clone();
                             set.spawn(async move {
                                 let _permit = semaphore.acquire().await.unwrap();
-                                debug!(
+                                trace!(
                                     "Fetching block timestamp for block number: {}",
                                     block_number
                                 );
@@ -478,8 +479,8 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
             blocks.insert(block_number, block_timestamp);
         }
 
-        debug!("Transactions: {}", &transactions.len());
-        debug!("Blocks: {}", &blocks.len());
+        trace!("Transactions: {}", &transactions.len());
+        trace!("Blocks: {}", &blocks.len());
 
         Ok(FetchRangeResult { transactions, blocks, latest_block_number: to })
     }
@@ -576,7 +577,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         // Process all transactions in the chunk
         for (block_number, transactions) in range.transactions {
             for (transaction_hash, events) in transactions {
-                debug!("Processing transaction hash: {:#x}", transaction_hash);
+                trace!("Processing transaction hash: {:#x}", transaction_hash);
                 // Process transaction
                 let transaction = if self.config.flags.contains(IndexingFlags::TRANSACTIONS) {
                     Some(self.provider.get_transaction_by_hash(transaction_hash).await?)
@@ -614,7 +615,12 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
             .get(&range.latest_block_number)
             .copied()
             .unwrap_or(get_block_timestamp(&self.provider, range.latest_block_number).await?);
-        self.db.update_cursors(range.latest_block_number, last_block_timestamp, None, cursor_map)?;
+        self.db.update_cursors(
+            range.latest_block_number,
+            last_block_timestamp,
+            None,
+            cursor_map,
+        )?;
 
         Ok(())
     }
