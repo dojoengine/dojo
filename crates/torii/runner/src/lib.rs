@@ -20,6 +20,7 @@ use camino::Utf8PathBuf;
 use constants::UDC_ADDRESS;
 use dojo_metrics::exporters::prometheus::PrometheusRecorder;
 use dojo_world::contracts::world::WorldContractReader;
+use futures::future::join_all;
 use sqlx::sqlite::{
     SqliteAutoVacuum, SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteSynchronous,
 };
@@ -43,7 +44,6 @@ use torii_sqlite::{Sql, SqlConfig};
 use tracing::{error, info, warn};
 use tracing_subscriber::{fmt, EnvFilter};
 use url::form_urlencoded;
-use futures::future::join_all;
 
 mod constants;
 
@@ -360,7 +360,8 @@ async fn verify_contracts_deployed(
     let verification_futures = contracts.iter().map(|contract| {
         let contract = *contract;
         async move {
-            let result = provider.get_class_at(BlockId::Tag(BlockTag::Pending), contract.address).await;
+            let result =
+                provider.get_class_at(BlockId::Tag(BlockTag::Pending), contract.address).await;
             (contract, result)
         }
     });
@@ -371,11 +372,9 @@ async fn verify_contracts_deployed(
     // Collect undeployed contracts
     let undeployed = results
         .into_iter()
-        .filter_map(|(contract, result)| {
-            match result {
-                Ok(_) => None,
-                Err(_) => Some(contract),
-            }
+        .filter_map(|(contract, result)| match result {
+            Ok(_) => None,
+            Err(_) => Some(contract),
         })
         .collect();
 
