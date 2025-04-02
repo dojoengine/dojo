@@ -195,10 +195,7 @@ pub enum FetchDataResult {
 impl FetchDataResult {
     pub fn block_id(&self) -> Option<BlockId> {
         match self {
-            FetchDataResult::Range(range) => range
-                .blocks
-                .last_key_value()
-                .map(|(block_number, _)| BlockId::Number(*block_number)),
+            FetchDataResult::Range(range) => Some(BlockId::Number(range.latest_block_number)),
             FetchDataResult::Pending(_pending) => Some(BlockId::Tag(BlockTag::Pending)),
             FetchDataResult::None => None,
         }
