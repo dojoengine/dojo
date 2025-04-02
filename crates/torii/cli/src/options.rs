@@ -372,7 +372,7 @@ impl Default for SqlOptions {
     }
 }
 
-#[derive(Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq, MergeOptions)]
+#[derive(Default, Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq, MergeOptions)]
 #[serde(default)]
 #[command(next_help_heading = "Runner options")]
 pub struct RunnerOptions {
@@ -391,12 +391,6 @@ pub struct RunnerOptions {
         help = "Check if contracts are deployed before starting torii."
     )]
     pub check_contracts: bool,
-}
-
-impl Default for RunnerOptions {
-    fn default() -> Self {
-        Self { explorer: false, check_contracts: false }
-    }
 }
 
 // Parses clap cli argument which is expected to be in the format:
