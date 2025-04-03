@@ -60,6 +60,12 @@ impl Runner {
     }
 
     pub async fn run(mut self) -> anyhow::Result<()> {
+        if let Some(dump_config) = &self.args.dump_config {
+            let config = toml::to_string_pretty(&self.args)?;
+            std::fs::write(dump_config, config)?;
+            return Ok(());
+        }
+
         let world_address = if let Some(world_address) = self.args.world_address {
             world_address
         } else {
