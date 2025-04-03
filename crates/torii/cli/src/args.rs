@@ -106,17 +106,6 @@ impl ToriiArgs {
         // the CLI (self) takes precedence over the config file.
         self.merge(Some(&config));
 
-        // dump the config to the given path if it is provided
-        if let Some(dump_config) = &self.dump_config {
-            let mut dump = self.clone();
-            // remove the config and dump_config params from the dump
-            dump.config = None;
-            dump.dump_config = None;
-
-            let config = toml::to_string_pretty(&dump)?;
-            std::fs::write(dump_config, config)?;
-        }
-
         Ok(self)
     }
 }
