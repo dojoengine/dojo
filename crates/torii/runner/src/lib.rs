@@ -42,7 +42,6 @@ use torii_sqlite::simple_broker::SimpleBroker;
 use torii_sqlite::types::{Contract, ContractType, Model};
 use torii_sqlite::{Sql, SqlConfig};
 use tracing::{error, info, warn};
-use tracing_subscriber::{fmt, EnvFilter};
 use url::form_urlencoded;
 
 mod constants;
@@ -60,15 +59,6 @@ impl Runner {
     }
 
     pub async fn run(mut self) -> anyhow::Result<()> {
-        let filter_layer = EnvFilter::try_from_default_env()
-            .unwrap_or_else(|_| EnvFilter::new("torii=info"));
-
-        let subscriber = fmt::Subscriber::builder().with_env_filter(filter_layer).finish();
-
-        // Set the global subscriber
-        tracing::subscriber::set_global_default(subscriber)
-            .expect("Failed to set the global tracing subscriber");
-
         // dump the config to the given path if it is provided
         if let Some(dump_config) = &self.args.dump_config {
             let mut dump = self.args.clone();

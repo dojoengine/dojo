@@ -15075,6 +15075,8 @@ dependencies = [
  "tokio",
  "torii-cli",
  "torii-runner",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
