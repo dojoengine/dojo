@@ -832,7 +832,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                 .await?
         }
 
-        info!(target: LOG_TARGET, block_number = %block_number, "Processed block.");
+        trace!(target: LOG_TARGET, block_number = %block_number, "Processed block.");
         Ok(())
     }
 
