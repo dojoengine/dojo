@@ -20,12 +20,14 @@ use camino::Utf8PathBuf;
 use constants::UDC_ADDRESS;
 use dojo_metrics::exporters::prometheus::PrometheusRecorder;
 use dojo_world::contracts::world::WorldContractReader;
+use futures::future::join_all;
 use sqlx::sqlite::{
     SqliteAutoVacuum, SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteSynchronous,
 };
 use sqlx::SqlitePool;
+use starknet::core::types::{BlockId, BlockTag};
 use starknet::providers::jsonrpc::HttpTransport;
-use starknet::providers::JsonRpcClient;
+use starknet::providers::{JsonRpcClient, Provider};
 use tempfile::{NamedTempFile, TempDir};
 use tokio::sync::broadcast;
 use tokio::sync::broadcast::Sender;
@@ -94,6 +96,20 @@ impl Runner {
         })
         .expect("Error setting Ctrl-C handler");
 
+        let provider: Arc<_> = JsonRpcClient::new(HttpTransport::new(self.args.rpc.clone())).into();
+
+        // Verify contracts are deployed
+        if self.args.runner.check_contracts {
+            let undeployed =
+                verify_contracts_deployed(&provider, &self.args.indexing.contracts).await?;
+            if !undeployed.is_empty() {
+                return Err(anyhow::anyhow!(
+                    "The following contracts are not deployed: {:?}",
+                    undeployed
+                ));
+            }
+        }
+
         let tempfile = NamedTempFile::new()?;
         let database_path = if let Some(db_dir) = self.args.db_dir {
             // Create the directory if it doesn't exist
@@ -135,8 +151,6 @@ impl Runner {
             .await?;
 
         sqlx::migrate!("../migrations").run(&pool).await?;
-
-        let provider: Arc<_> = JsonRpcClient::new(HttpTransport::new(self.args.rpc)).into();
 
         // Get world address
         let world = WorldContractReader::new(world_address, provider.clone());
@@ -277,7 +291,7 @@ impl Runner {
         info!(target: LOG_TARGET, url = %explorer_url, "Serving World Explorer.");
         info!(target: LOG_TARGET, path = %artifacts_path, "Serving ERC artifacts at path");
 
-        if self.args.explorer {
+        if self.args.runner.explorer {
             if let Err(e) = webbrowser::open(&explorer_url) {
                 error!(target: LOG_TARGET, error = %e, "Opening World Explorer in the browser.");
             }
@@ -338,4 +352,33 @@ async fn spawn_rebuilding_graphql_server(
             tokio::time::sleep(Duration::from_secs(1)).await;
         }
     }
+}
+
+async fn verify_contracts_deployed(
+    provider: &JsonRpcClient<HttpTransport>,
+    contracts: &[Contract],
+) -> anyhow::Result<Vec<Contract>> {
+    // Create a future for each contract verification
+    let verification_futures = contracts.iter().map(|contract| {
+        let contract = *contract;
+        async move {
+            let result =
+                provider.get_class_at(BlockId::Tag(BlockTag::Pending), contract.address).await;
+            (contract, result)
+        }
+    });
+
+    // Run all verifications concurrently
+    let results = join_all(verification_futures).await;
+
+    // Collect undeployed contracts
+    let undeployed = results
+        .into_iter()
+        .filter_map(|(contract, result)| match result {
+            Ok(_) => None,
+            Err(_) => Some(contract),
+        })
+        .collect();
+
+    Ok(undeployed)
 }

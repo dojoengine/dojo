@@ -24,7 +24,7 @@ http.workspace = true
 jsonrpsee = { workspace = true, features = [ "server" ] }
 reqwest = { workspace = true, optional = true }
 metrics.workspace = true
-serde.workspace = true
+serde = { workspace = true, optional = true }
 serde_json.workspace = true
 starknet.workspace = true
 thiserror.workspace = true
@@ -62,4 +62,4 @@ tokio.workspace = true
 
 [features]
 default = [ "cartridge" ]
-cartridge = [ "katana-rpc-api/cartridge", "dep:reqwest", "dep:cainome", "dep:account_sdk" ]
+cartridge = [ "katana-rpc-api/cartridge", "dep:reqwest", "dep:cainome", "dep:account_sdk", "dep:serde" ]

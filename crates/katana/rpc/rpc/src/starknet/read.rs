@@ -1,13 +1,17 @@
+#[cfg(feature = "cartridge")]
 use std::sync::Arc;
 
+#[cfg(feature = "cartridge")]
 use anyhow::anyhow;
 use jsonrpsee::core::{async_trait, Error, RpcResult};
 use katana_executor::{EntryPointCall, ExecutorFactory};
 use katana_primitives::block::BlockIdOrTag;
 use katana_primitives::class::ClassHash;
+#[cfg(feature = "cartridge")]
 use katana_primitives::genesis::allocation::GenesisAccountAlloc;
 use katana_primitives::transaction::{ExecutableTx, ExecutableTxWithHash, TxHash};
 use katana_primitives::{ContractAddress, Felt};
+#[cfg(feature = "cartridge")]
 use katana_provider::traits::state::StateFactoryProvider;
 use katana_rpc_api::starknet::StarknetApiServer;
 use katana_rpc_types::block::{
@@ -26,6 +30,7 @@ use katana_rpc_types::{FeeEstimate, FeltAsHex, FunctionCall, SimulationFlagForEs
 use starknet::core::types::TransactionStatus;
 
 use super::StarknetApi;
+#[cfg(feature = "cartridge")]
 use crate::cartridge;
 
 #[async_trait]
