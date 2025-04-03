@@ -10,7 +10,9 @@ use bitflags::bitflags;
 use dojo_utils::provider as provider_utils;
 use dojo_world::contracts::world::WorldContractReader;
 use hashlink::LinkedHashMap;
-use starknet::core::types::requests::{GetBlockWithTxHashesRequest, GetEventsRequest};
+use starknet::core::types::requests::{
+    GetBlockWithTxHashesRequest, GetEventsRequest, GetTransactionByHashRequest,
+};
 use starknet::core::types::{
     BlockHashAndNumber, BlockId, BlockTag, EmittedEvent, Event, EventFilter, EventFilterWithPage,
     MaybePendingBlockWithReceipts, MaybePendingBlockWithTxHashes, PendingBlockWithReceipts,
@@ -204,9 +206,17 @@ impl FetchDataResult {
 }
 
 #[derive(Debug)]
+pub struct FetchRangeTransaction {
+    // this is Some if the transactions indexing flag
+    // is enabled
+    pub transaction: Option<Transaction>,
+    pub events: Vec<EmittedEvent>,
+}
+
+#[derive(Debug)]
 pub struct FetchRangeResult {
     // block_number -> (transaction_hash -> events)
-    pub transactions: BTreeMap<u64, LinkedHashMap<Felt, Vec<EmittedEvent>>>,
+    pub transactions: BTreeMap<u64, LinkedHashMap<Felt, FetchRangeTransaction>>,
     // block_number -> block_timestamp
     pub blocks: BTreeMap<u64, u64>,
 }
@@ -431,8 +441,37 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                 .entry(block_number)
                 .or_insert(LinkedHashMap::new())
                 .entry(event.transaction_hash)
-                .or_insert(vec![])
+                .or_insert(FetchRangeTransaction { transaction: None, events: vec![] })
+                .events
                 .push(event);
+        }
+
+        // If transactions indexing flag is enabled, we should batch request all
+        // of our recolted transactions
+        if self.config.flags.contains(IndexingFlags::TRANSACTIONS) {
+            let mut transaction_requests = Vec::with_capacity(transactions.len());
+            let mut block_numbers = Vec::with_capacity(transactions.len());
+            for (block_number, transactions) in &transactions {
+                for (transaction_hash, _) in transactions {
+                    transaction_requests.push(ProviderRequestData::GetTransactionByHash(
+                        GetTransactionByHashRequest { transaction_hash: *transaction_hash },
+                    ));
+                    block_numbers.push(*block_number);
+                }
+            }
+
+            let transaction_results = self.provider.batch_requests(transaction_requests).await?;
+            for (block_number, result) in block_numbers.into_iter().zip(transaction_results) {
+                match result {
+                    ProviderResponseData::GetTransactionByHash(transaction) => {
+                        transactions.entry(block_number).and_modify(|txns| {
+                            txns.entry(*transaction.transaction_hash())
+                                .and_modify(|tx| tx.transaction = Some(transaction));
+                        });
+                    }
+                    _ => unreachable!(),
+                }
+            }
         }
 
         // Always ensure the latest block number is included
@@ -460,12 +499,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                         };
                         blocks.insert(*block_number, timestamp);
                     }
-                    _ => {
-                        error!(target: LOG_TARGET, "Unexpected response type from batch timestamp request");
-                        return Err(anyhow::anyhow!(
-                            "Unexpected response type from batch timestamp request"
-                        ));
-                    }
+                    _ => unreachable!(),
                 }
             }
         }
@@ -655,21 +689,15 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
 
         // Process all transactions in the chunk
         for (block_number, transactions) in range.transactions {
-            for (transaction_hash, events) in transactions {
+            for (transaction_hash, tx) in transactions {
                 trace!(target: LOG_TARGET, "Processing transaction hash: {:#x}", transaction_hash);
-                // Process transaction
-                let transaction = if self.config.flags.contains(IndexingFlags::TRANSACTIONS) {
-                    Some(self.provider.get_transaction_by_hash(transaction_hash).await?)
-                } else {
-                    None
-                };
 
                 self.process_transaction_with_events(
                     transaction_hash,
-                    events.as_slice(),
+                    tx.events.as_slice(),
                     block_number,
                     range.blocks[&block_number],
-                    transaction,
+                    tx.transaction,
                     &mut cursor_map,
                 )
                 .await?;
