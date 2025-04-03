@@ -88,7 +88,6 @@ impl Runner {
                 .push(Contract { address: UDC_ADDRESS, r#type: ContractType::UDC });
         }
 
-
         // Setup cancellation for graceful shutdown
         let (shutdown_tx, _) = broadcast::channel(1);
 
