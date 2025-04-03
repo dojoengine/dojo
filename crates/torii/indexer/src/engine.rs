@@ -683,7 +683,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         Ok(())
     }
 
-    async fn process_range(&mut self, range: FetchRangeResult) -> Result<()> {
+    pub async fn process_range(&mut self, range: FetchRangeResult) -> Result<()> {
         let mut processed_blocks = HashSet::new();
         let mut cursor_map = HashMap::new();
 
