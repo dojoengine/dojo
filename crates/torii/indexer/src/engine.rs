@@ -389,7 +389,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         Ok(result)
     }
 
-    async fn fetch_range(
+    pub async fn fetch_range(
         &self,
         from: u64,
         to: u64,
