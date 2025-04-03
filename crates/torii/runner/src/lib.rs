@@ -42,7 +42,6 @@ use torii_sqlite::simple_broker::SimpleBroker;
 use torii_sqlite::types::{Contract, ContractType, Model};
 use torii_sqlite::{Sql, SqlConfig};
 use tracing::{error, info, warn};
-use tracing_subscriber::{fmt, EnvFilter};
 use url::form_urlencoded;
 
 mod constants;
@@ -60,6 +59,17 @@ impl Runner {
     }
 
     pub async fn run(mut self) -> anyhow::Result<()> {
+        // dump the config to the given path if it is provided
+        if let Some(dump_config) = &self.args.dump_config {
+            let mut dump = self.args.clone();
+            // remove the config and dump_config params from the dump
+            dump.config = None;
+            dump.dump_config = None;
+
+            let config = toml::to_string_pretty(&dump)?;
+            std::fs::write(dump_config, config)?;
+        }
+
         let world_address = if let Some(world_address) = self.args.world_address {
             world_address
         } else {
@@ -77,15 +87,6 @@ impl Runner {
                 .contracts
                 .push(Contract { address: UDC_ADDRESS, r#type: ContractType::UDC });
         }
-
-        let filter_layer = EnvFilter::try_from_default_env()
-            .unwrap_or_else(|_| EnvFilter::new("info,hyper_reverse_proxy=off"));
-
-        let subscriber = fmt::Subscriber::builder().with_env_filter(filter_layer).finish();
-
-        // Set the global subscriber
-        tracing::subscriber::set_global_default(subscriber)
-            .expect("Failed to set the global tracing subscriber");
 
         // Setup cancellation for graceful shutdown
         let (shutdown_tx, _) = broadcast::channel(1);

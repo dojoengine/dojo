@@ -40,6 +40,10 @@ pub struct ToriiArgs {
     #[arg(long, help = "Configuration file to setup Torii.")]
     pub config: Option<PathBuf>,
 
+    /// Optional path to dump config to
+    #[arg(long, help = "Optional path to dump config to")]
+    pub dump_config: Option<PathBuf>,
+
     #[command(flatten)]
     pub runner: RunnerOptions,
 
@@ -75,6 +79,7 @@ impl Default for ToriiArgs {
             rpc: Url::parse(DEFAULT_RPC_URL).unwrap(),
             db_dir: None,
             config: None,
+            dump_config: None,
             indexing: IndexingOptions::default(),
             events: EventsOptions::default(),
             erc: ErcOptions::default(),
