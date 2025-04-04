@@ -63,10 +63,10 @@ use crate::proto::world::{
     RetrieveEventMessagesRequest, RetrieveTokenBalancesRequest, RetrieveTokenBalancesResponse,
     RetrieveTokensRequest, RetrieveTokensResponse, SubscribeEntitiesRequest,
     SubscribeEntityResponse, SubscribeEventMessagesRequest, SubscribeEventsResponse,
-    SubscribeIndexerRequest, SubscribeIndexerResponse, SubscribeTokenBalancesResponse,
-    SubscribeTokensResponse, UpdateEventMessagesSubscriptionRequest,
-    UpdateTokenBalancesSubscriptionRequest, UpdateTokenSubscriptionRequest, WorldMetadataRequest,
-    WorldMetadataResponse,
+    SubscribeIndexerRequest, SubscribeIndexerResponse, SubscribeTokenBalancesRequest,
+    SubscribeTokenBalancesResponse, SubscribeTokensRequest, SubscribeTokensResponse,
+    UpdateEventMessagesSubscriptionRequest, UpdateTokenBalancesSubscriptionRequest,
+    UpdateTokenSubscriptionRequest, WorldMetadataRequest, WorldMetadataResponse,
 };
 use crate::proto::{self};
 use crate::types::schema::SchemaError;
@@ -266,8 +266,8 @@ impl DojoWorld {
         table: &str,
         model_relation_table: &str,
         entity_relation_column: &str,
-        limit: u32,
-        offset: u32,
+        limit: Option<u32>,
+        offset: Option<u32>,
         dont_include_hashed_keys: bool,
         order_by: Option<&str>,
         entity_models: Vec<String>,
@@ -278,28 +278,14 @@ impl DojoWorld {
             model_relation_table,
             entity_relation_column,
             None,
-            Some(limit),
-            Some(offset),
+            limit,
+            offset,
             dont_include_hashed_keys,
             order_by,
             entity_models,
             entity_updated_after,
         )
         .await
-    }
-
-    async fn events_all(&self, limit: u32, offset: u32) -> Result<Vec<proto::types::Event>, Error> {
-        let query = r#"
-            SELECT keys, data, transaction_hash
-            FROM events
-            ORDER BY id DESC
-            LIMIT ? OFFSET ?
-         "#
-        .to_string();
-
-        let row_events: Vec<(String, String, String)> =
-            sqlx::query_as(&query).bind(limit).bind(offset).fetch_all(&self.pool).await?;
-        row_events.iter().map(map_row_to_event).collect()
     }
 
     async fn fetch_historical_event_messages(
@@ -607,33 +593,6 @@ impl DojoWorld {
             .collect::<Result<Vec<_>, Error>>()?;
 
         Ok((entities, total_count))
-    }
-
-    pub(crate) async fn events_by_keys(
-        &self,
-        keys_clause: &proto::types::KeysClause,
-        limit: Option<u32>,
-        offset: Option<u32>,
-    ) -> Result<Vec<proto::types::Event>, Error> {
-        let keys_pattern = build_keys_pattern(keys_clause)?;
-
-        let events_query = r#"
-            SELECT keys, data, transaction_hash
-            FROM events
-            WHERE keys REGEXP ?
-            ORDER BY id DESC
-            LIMIT ? OFFSET ?
-        "#
-        .to_string();
-
-        let row_events: Vec<(String, String, String)> = sqlx::query_as(&events_query)
-            .bind(&keys_pattern)
-            .bind(limit)
-            .bind(offset)
-            .fetch_all(&self.pool)
-            .await?;
-
-        row_events.iter().map(map_row_to_event).collect()
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -1014,14 +973,17 @@ impl DojoWorld {
             ),
         };
 
+        let limit = if query.limit > 0 { Some(query.limit) } else { None };
+        let offset = if query.offset > 0 { Some(query.offset) } else { None };
+
         let (entities, total_count) = match query.clause {
             None => {
                 self.entities_all(
                     table,
                     model_relation_table,
                     entity_relation_column,
-                    query.limit,
-                    query.offset,
+                    limit,
+                    offset,
                     query.dont_include_hashed_keys,
                     order_by,
                     query.entity_models,
@@ -1044,8 +1006,8 @@ impl DojoWorld {
                             } else {
                                 Some(hashed_keys)
                             },
-                            Some(query.limit),
-                            Some(query.offset),
+                            limit,
+                            offset,
                             query.dont_include_hashed_keys,
                             order_by,
                             query.entity_models,
@@ -1059,8 +1021,8 @@ impl DojoWorld {
                             model_relation_table,
                             entity_relation_column,
                             &keys,
-                            Some(query.limit),
-                            Some(query.offset),
+                            limit,
+                            offset,
                             query.dont_include_hashed_keys,
                             order_by,
                             query.entity_models,
@@ -1074,8 +1036,8 @@ impl DojoWorld {
                             model_relation_table,
                             entity_relation_column,
                             member,
-                            Some(query.limit),
-                            Some(query.offset),
+                            limit,
+                            offset,
                             query.dont_include_hashed_keys,
                             order_by,
                             query.entity_models,
@@ -1089,8 +1051,8 @@ impl DojoWorld {
                             model_relation_table,
                             entity_relation_column,
                             composite,
-                            Some(query.limit),
-                            Some(query.offset),
+                            limit,
+                            offset,
                             query.dont_include_hashed_keys,
                             order_by,
                             query.entity_models,
@@ -1109,10 +1071,46 @@ impl DojoWorld {
         &self,
         query: &proto::types::EventQuery,
     ) -> Result<proto::world::RetrieveEventsResponse, Error> {
-        let events = match &query.keys {
-            None => self.events_all(query.limit, query.offset).await?,
-            Some(keys) => self.events_by_keys(keys, Some(query.limit), Some(query.offset)).await?,
+        let limit = if query.limit > 0 { Some(query.limit) } else { None };
+        let offset = if query.offset > 0 { Some(query.offset) } else { None };
+
+        let mut bind_values = Vec::new();
+        let keys_pattern = if let Some(keys_clause) = &query.keys {
+            build_keys_pattern(keys_clause)?
+        } else {
+            String::new()
         };
+
+        let mut events_query = r#"
+            SELECT keys, data, transaction_hash
+            FROM events
+        "#
+        .to_string();
+
+        if !keys_pattern.is_empty() {
+            events_query = format!("{} WHERE keys REGEXP ?", events_query);
+            bind_values.push(keys_pattern);
+        }
+
+        events_query = format!("{} ORDER BY id DESC", events_query);
+
+        if let Some(limit) = limit {
+            events_query = format!("{} LIMIT ?", events_query);
+            bind_values.push(limit.to_string());
+        }
+        if let Some(offset) = offset {
+            events_query = format!("{} OFFSET ?", events_query);
+            bind_values.push(offset.to_string());
+        }
+
+        let mut row_events = sqlx::query_as(&events_query);
+        for value in &bind_values {
+            row_events = row_events.bind(value);
+        }
+        let row_events = row_events.fetch_all(&self.pool).await?;
+
+        let events = row_events.iter().map(map_row_to_event).collect::<Result<Vec<_>, Error>>()?;
+
         Ok(RetrieveEventsResponse { events })
     }
 
@@ -1153,6 +1151,7 @@ fn process_event_field(data: &str) -> Result<Vec<Vec<u8>>, Error> {
     Ok(data
         .trim_end_matches('/')
         .split('/')
+        .filter(|&d| !d.is_empty())
         .map(|d| Felt::from_str(d).map_err(ParseError::FromStr).map(|f| f.to_bytes_be().to_vec()))
         .collect::<Result<Vec<_>, _>>()?)
 }
@@ -1411,7 +1410,8 @@ impl proto::world::world_server::World for DojoWorld {
         &self,
         request: Request<RetrieveTokensRequest>,
     ) -> Result<Response<RetrieveTokensResponse>, Status> {
-        let RetrieveTokensRequest { contract_addresses, token_ids } = request.into_inner();
+        let RetrieveTokensRequest { contract_addresses, token_ids, limit, offset } =
+            request.into_inner();
         let contract_addresses = contract_addresses
             .iter()
             .map(|address| Felt::from_bytes_be_slice(address))
@@ -1420,7 +1420,12 @@ impl proto::world::world_server::World for DojoWorld {
             token_ids.iter().map(|id| crypto_bigint::U256::from_be_slice(id)).collect::<Vec<_>>();
 
         let tokens = self
-            .retrieve_tokens(contract_addresses, token_ids)
+            .retrieve_tokens(
+                contract_addresses,
+                token_ids,
+                if limit > 0 { Some(limit) } else { None },
+                if offset > 0 { Some(offset) } else { None },
+            )
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
         Ok(Response::new(tokens))
@@ -1428,9 +1433,9 @@ impl proto::world::world_server::World for DojoWorld {
 
     async fn subscribe_tokens(
         &self,
-        request: Request<RetrieveTokensRequest>,
+        request: Request<SubscribeTokensRequest>,
     ) -> ServiceResult<Self::SubscribeTokensStream> {
-        let RetrieveTokensRequest { contract_addresses, token_ids } = request.into_inner();
+        let SubscribeTokensRequest { contract_addresses, token_ids } = request.into_inner();
         let contract_addresses = contract_addresses
             .iter()
             .map(|address| Felt::from_bytes_be_slice(address))
@@ -1465,8 +1470,13 @@ impl proto::world::world_server::World for DojoWorld {
         &self,
         request: Request<RetrieveTokenBalancesRequest>,
     ) -> Result<Response<RetrieveTokenBalancesResponse>, Status> {
-        let RetrieveTokenBalancesRequest { account_addresses, contract_addresses, token_ids } =
-            request.into_inner();
+        let RetrieveTokenBalancesRequest {
+            account_addresses,
+            contract_addresses,
+            token_ids,
+            limit,
+            offset,
+        } = request.into_inner();
         let account_addresses = account_addresses
             .iter()
             .map(|address| Felt::from_bytes_be_slice(address))
@@ -1478,7 +1488,13 @@ impl proto::world::world_server::World for DojoWorld {
         let token_ids = token_ids.iter().map(|id| U256::from_be_slice(id)).collect::<Vec<_>>();
 
         let balances = self
-            .retrieve_token_balances(account_addresses, contract_addresses, token_ids)
+            .retrieve_token_balances(
+                account_addresses,
+                contract_addresses,
+                token_ids,
+                if limit > 0 { Some(limit) } else { None },
+                if offset > 0 { Some(offset) } else { None },
+            )
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
         Ok(Response::new(balances))
@@ -1540,9 +1556,9 @@ impl proto::world::world_server::World for DojoWorld {
 
     async fn subscribe_token_balances(
         &self,
-        request: Request<RetrieveTokenBalancesRequest>,
+        request: Request<SubscribeTokenBalancesRequest>,
     ) -> ServiceResult<Self::SubscribeTokenBalancesStream> {
-        let RetrieveTokenBalancesRequest { contract_addresses, account_addresses, token_ids } =
+        let SubscribeTokenBalancesRequest { contract_addresses, account_addresses, token_ids } =
             request.into_inner();
         let contract_addresses = contract_addresses
             .iter()
