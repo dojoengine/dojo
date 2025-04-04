@@ -32,8 +32,12 @@ message ModelMetadata {
 message Entity {
     // The entity's hashed keys
     bytes hashed_keys = 1;
+    // The entity creation timestamp
+    uint64 created_at = 2;
+    // The entity update timestamp
+    uint64 updated_at = 3;
     // Models of the entity
-    repeated Struct models = 2;
+    repeated Struct models = 4;
 }
 
 message Event {
