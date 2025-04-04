@@ -119,7 +119,7 @@ async fn test_entities_queries(sequencer: &RunnerCtx) {
     );
 
     let to = provider.block_hash_and_number().await.unwrap().block_number;
-    let data = engine.fetch_range(0, to, &HashMap::new()).await.unwrap();
+    let data = engine.fetch_range(0, to, &HashMap::new(), to).await.unwrap();
     engine.process_range(data).await.unwrap();
 
     db.execute().await.unwrap();

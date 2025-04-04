@@ -369,7 +369,8 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
             let from = if from == 0 { from } else { from + 1 };
 
             // Fetch all events from 'from' to our blocks chunk size
-            let range = self.fetch_range(from, to, &cursors.cursor_map).await?;
+            let range =
+                self.fetch_range(from, to, &cursors.cursor_map, latest_block.block_number).await?;
 
             debug!(target: LOG_TARGET, duration = ?instant.elapsed(), from = %from, to = %range.blocks.keys().last().unwrap(), "Fetched data for range.");
             FetchDataResult::Range(range)
@@ -394,6 +395,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         from: u64,
         to: u64,
         cursor_map: &HashMap<Felt, Felt>,
+        latest_block_number: u64,
     ) -> Result<FetchRangeResult> {
         let mut events = vec![];
 
@@ -448,7 +450,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
 
         // If transactions indexing flag is enabled, we should batch request all
         // of our recolted transactions
-        if self.config.flags.contains(IndexingFlags::TRANSACTIONS) && transactions.len() > 0 {
+        if self.config.flags.contains(IndexingFlags::TRANSACTIONS) && !transactions.is_empty() {
             let mut transaction_requests = Vec::with_capacity(transactions.len());
             let mut block_numbers = Vec::with_capacity(transactions.len());
             for (block_number, transactions) in &transactions {
@@ -481,7 +483,13 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         let mut timestamp_requests = Vec::new();
         for block_number in &block_numbers {
             timestamp_requests.push(ProviderRequestData::GetBlockWithTxHashes(
-                GetBlockWithTxHashesRequest { block_id: BlockId::Number(*block_number) },
+                GetBlockWithTxHashesRequest {
+                    block_id: if *block_number == latest_block_number {
+                        BlockId::Tag(BlockTag::Latest)
+                    } else {
+                        BlockId::Number(*block_number)
+                    },
+                },
             ));
         }
 
