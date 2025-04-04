@@ -22,7 +22,7 @@ use libp2p::{
 };
 use libp2p_webrtc as webrtc;
 use rand::thread_rng;
-use starknet::core::types::{BlockId, BlockTag, Felt, FunctionCall};
+use starknet::core::types::{BlockId, BlockTag, Felt, FunctionCall, TypedData};
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
 use starknet_crypto::poseidon_hash_many;
@@ -37,7 +37,7 @@ use crate::error::Error;
 
 mod events;
 
-use torii_typed_data::typed_data::{parse_value_to_ty, PrimitiveType, TypedData};
+use torii_typed_data::typed_data::{parse_value_to_ty, PrimitiveType};
 
 use crate::server::events::ServerEvent;
 use crate::types::Message;
@@ -487,7 +487,7 @@ async fn validate_signature<P: Provider + Sync>(
     message: &TypedData,
     signature: &[Felt],
 ) -> Result<bool, Error> {
-    let message_hash = message.encode(entity_identity)?;
+    let message_hash = message.message_hash(entity_identity)?;
 
     let mut calldata = vec![message_hash, Felt::from(signature.len())];
     calldata.extend(signature);
