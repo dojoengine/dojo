@@ -845,6 +845,8 @@ impl DojoWorld {
         &self,
         contract_addresses: Vec<Felt>,
         token_ids: Vec<U256>,
+        limit: Option<u32>,
+        offset: Option<u32>,
     ) -> Result<RetrieveTokensResponse, Status> {
         let mut query = "SELECT * FROM tokens".to_string();
         let mut bind_values = Vec::new();
@@ -861,8 +863,16 @@ impl DojoWorld {
             bind_values.extend(token_ids.iter().map(|id| u256_to_sql_string(&(*id).into())));
         }
 
+        if let Some(limit) = limit {
+            query += &format!(" LIMIT {}", limit);
+        }
+
+        if let Some(offset) = offset {
+            query += &format!(" OFFSET {}", offset);
+        }
+
         if !conditions.is_empty() {
-            query += &format!(" WHERE {}", conditions.join(" AND "));
+            query += &format!(" WHERE {} ORDER BY id", conditions.join(" AND "));
         }
 
         let mut query = sqlx::query_as(&query);
@@ -882,6 +892,8 @@ impl DojoWorld {
         account_addresses: Vec<Felt>,
         contract_addresses: Vec<Felt>,
         token_ids: Vec<U256>,
+        limit: Option<u32>,
+        offset: Option<u32>,
     ) -> Result<RetrieveTokenBalancesResponse, Status> {
         let mut query = "SELECT * FROM token_balances".to_string();
         let mut bind_values = Vec::new();
@@ -906,8 +918,16 @@ impl DojoWorld {
             bind_values.extend(token_ids.iter().map(|id| u256_to_sql_string(&(*id).into())));
         }
 
+        if let Some(limit) = limit {
+            query += &format!(" LIMIT {}", limit);
+        }
+
+        if let Some(offset) = offset {
+            query += &format!(" OFFSET {}", offset);
+        }
+
         if !conditions.is_empty() {
-            query += &format!(" WHERE {}", conditions.join(" AND "));
+            query += &format!(" WHERE {} ORDER BY token_id", conditions.join(" AND "));
         }
 
         let mut query = sqlx::query_as(&query);
