@@ -372,7 +372,7 @@ pub async fn spinup_types_test(path: &str) -> Result<SqlitePool> {
     );
 
     let to = account.provider().block_hash_and_number().await?.block_number;
-    let data = engine.fetch_range(0, to, &HashMap::new()).await.unwrap();
+    let data = engine.fetch_range(0, to, &HashMap::new(), to).await.unwrap();
     engine.process_range(data).await.unwrap();
     db.execute().await.unwrap();
     Ok(pool)
