@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::future::Future;
 use std::pin::Pin;
 use std::str::FromStr;
@@ -36,6 +36,7 @@ pub struct EntitiesSubscriber {
 #[derive(Debug, Default)]
 pub struct EntityManager {
     subscribers: RwLock<HashMap<u64, EntitiesSubscriber>>,
+    optimistic_updates: RwLock<BTreeMap<u64, Vec<OptimisticEntity>>>,
 }
 
 impl EntityManager {
@@ -182,6 +183,8 @@ impl Future for Service {
         let this = self.get_mut();
 
         while let Poll::Ready(Some(entity)) = this.simple_broker.poll_next_unpin(cx) {
+            
+            
             if let Err(e) = this.entity_sender.send(entity) {
                 error!(target = LOG_TARGET, error = %e, "Sending entity update to processor.");
             }

@@ -19,6 +19,7 @@ use tokio::sync::{oneshot, Semaphore};
 use tokio::task::JoinSet;
 use tokio::time::Instant;
 use tracing::{debug, error, info, warn};
+use rand::Rng;
 
 use crate::constants::TOKENS_TABLE;
 use crate::simple_broker::SimpleBroker;
@@ -135,12 +136,15 @@ pub enum QueryType {
     Other,
 }
 
+type TransactionId = u64;
+
 #[derive(Debug)]
 pub struct Executor<'c, P: Provider + Sync + Send + 'static> {
     // Queries should use `transaction` instead of `pool`
     // This `pool` is only used to create a new `transaction`
     pool: Pool<Sqlite>,
-    transaction: SqlxTransaction<'c, Sqlite>,
+    // Unique identifier for the current transaction
+    transaction: (TransactionId, SqlxTransaction<'c, Sqlite>),
     publish_queue: Vec<BrokerMessage>,
     rx: UnboundedReceiver<QueryMessage>,
     shutdown_rx: Receiver<()>,
@@ -240,6 +244,8 @@ impl QueryMessage {
 }
 
 impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
+    fn start_transaction(&self) 
+
     pub async fn new(
         pool: Pool<Sqlite>,
         shutdown_tx: Sender<()>,
@@ -251,11 +257,12 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
         let publish_queue = Vec::new();
         let shutdown_rx = shutdown_tx.subscribe();
         let metadata_semaphore = Arc::new(Semaphore::new(max_metadata_tasks));
+        let transaction_id = Self::generate_transaction_id();
 
         Ok((
             Executor {
                 pool,
-                transaction,
+                transaction: (transaction_id, transaction),
                 publish_queue,
                 rx,
                 shutdown_rx,
@@ -293,7 +300,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
     }
 
     async fn handle_query_message(&mut self, query_message: QueryMessage) -> Result<()> {
-        let tx = &mut self.transaction;
+        let (tx_id, tx) = &mut self.transaction;
 
         let mut query = sqlx::query(&query_message.statement);
 
@@ -511,11 +518,6 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 .bind(entity_counter)
                 .execute(&mut **tx)
                 .await?;
-
-                let optimistic_entity = unsafe {
-                    std::mem::transmute::<EntityUpdated, OptimisticEntity>(entity_updated.clone())
-                };
-                SimpleBroker::publish(optimistic_entity);
 
                 let broker_message = BrokerMessage::EntityUpdated(entity_updated);
                 self.publish_queue.push(broker_message);
@@ -837,6 +839,9 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
         if new_transaction {
             let transaction = mem::replace(&mut self.transaction, self.pool.begin().await?);
             transaction.commit().await?;
+            
+            // Generate new transaction ID for the new transaction
+            self.transaction_id = Self::generate_transaction_id();
 
             for message in self.publish_queue.drain(..) {
                 send_broker_message(message);
