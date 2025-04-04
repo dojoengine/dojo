@@ -85,10 +85,12 @@ impl Client {
         &self,
         contract_addresses: Vec<Felt>,
         token_ids: Vec<U256>,
+        limit: Option<u32>,
+        offset: Option<u32>,
     ) -> Result<Vec<Token>, Error> {
         let mut grpc_client = self.inner.write().await;
         let RetrieveTokensResponse { tokens } =
-            grpc_client.retrieve_tokens(contract_addresses, token_ids).await?;
+            grpc_client.retrieve_tokens(contract_addresses, token_ids, limit, offset).await?;
         Ok(tokens.into_iter().map(TryInto::try_into).collect::<Result<Vec<Token>, _>>()?)
     }
 
@@ -98,10 +100,12 @@ impl Client {
         account_addresses: Vec<Felt>,
         contract_addresses: Vec<Felt>,
         token_ids: Vec<U256>,
+        limit: Option<u32>,
+        offset: Option<u32>,
     ) -> Result<Vec<TokenBalance>, Error> {
         let mut grpc_client = self.inner.write().await;
         let RetrieveTokenBalancesResponse { balances } = grpc_client
-            .retrieve_token_balances(account_addresses, contract_addresses, token_ids)
+            .retrieve_token_balances(account_addresses, contract_addresses, token_ids, limit, offset)
             .await?;
         Ok(balances.into_iter().map(TryInto::try_into).collect::<Result<Vec<TokenBalance>, _>>()?)
     }
