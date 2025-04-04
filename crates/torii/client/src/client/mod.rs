@@ -105,7 +105,13 @@ impl Client {
     ) -> Result<Vec<TokenBalance>, Error> {
         let mut grpc_client = self.inner.write().await;
         let RetrieveTokenBalancesResponse { balances } = grpc_client
-            .retrieve_token_balances(account_addresses, contract_addresses, token_ids, limit, offset)
+            .retrieve_token_balances(
+                account_addresses,
+                contract_addresses,
+                token_ids,
+                limit,
+                offset,
+            )
             .await?;
         Ok(balances.into_iter().map(TryInto::try_into).collect::<Result<Vec<TokenBalance>, _>>()?)
     }
