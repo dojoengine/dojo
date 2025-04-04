@@ -342,6 +342,14 @@ pub struct SqlOptions {
     )]
     pub historical: Vec<String>,
 
+    /// Whether to enable time_travel tracking for models
+    #[arg(
+        long = "sql.time_travel",
+        default_value_t = false,
+        help = "Whether to enable time_travel tracking for models."
+    )]
+    pub time_travel: bool,
+
     /// The page size to use for the database. The page size must be a power of two between 512 and
     /// 65536 inclusive.
     #[arg(
@@ -366,6 +374,7 @@ impl Default for SqlOptions {
             all_model_indices: false,
             model_indices: None,
             historical: vec![],
+            time_travel: false,
             page_size: DEFAULT_DATABASE_PAGE_SIZE,
             cache_size: DEFAULT_DATABASE_CACHE_SIZE,
         }

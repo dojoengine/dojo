@@ -183,6 +183,7 @@ impl Runner {
                 all_model_indices: self.args.sql.all_model_indices,
                 model_indices: self.args.sql.model_indices.unwrap_or_default(),
                 historical_models: self.args.sql.historical.clone().into_iter().collect(),
+                time_travel: self.args.sql.time_travel,
             },
         )
         .await?;

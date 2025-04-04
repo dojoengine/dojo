@@ -43,6 +43,7 @@ pub struct SqlConfig {
     pub all_model_indices: bool,
     pub model_indices: Vec<ModelIndices>,
     pub historical_models: HashSet<String>,
+    pub time_travel: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -760,6 +761,50 @@ impl Sql {
         // Create indices
         for index_query in indices {
             self.executor.send(QueryMessage::other(index_query, vec![]))?;
+        }
+
+        // Only create history tables and triggers if time_travel is enabled
+        if self.config.time_travel {
+            // Create the history table
+            let history_table_query = format!(
+                "CREATE TABLE IF NOT EXISTS [{table_id}_history] AS 
+                SELECT *, NULL AS _start_at, NULL AS _end_at FROM [{table_id}] WHERE 0;"
+            );
+
+            self.executor.send(QueryMessage::other(history_table_query, vec![]))?;
+
+            // Create the history_events
+            let history_events_query = format!(
+                "CREATE TRIGGER IF NOT EXISTS [{table_id}_insert_trigger]
+                AFTER INSERT ON [{table_id}]
+                BEGIN
+                    INSERT INTO [{table_id}_history]
+                    SELECT *, NEW.\"internal_executed_at\" AS _start_at, NULL AS _end_at 
+                    FROM [{table_id}] WHERE \"internal_id\" = NEW.\"internal_id\";
+                END;
+            
+                CREATE TRIGGER IF NOT EXISTS [{table_id}_update_trigger]
+                AFTER UPDATE ON [{table_id}]
+                BEGIN  
+                    UPDATE [{table_id}_history]
+                    SET _end_at = NEW.\"internal_executed_at\"
+                    WHERE \"internal_id\" = OLD.\"internal_id\";
+            
+                    INSERT INTO [{table_id}_history]
+                    SELECT *, NEW.\"internal_executed_at\" AS _start_at, NULL AS _end_at 
+                    FROM [{table_id}] WHERE \"internal_id\" = NEW.\"internal_id\";
+                END;
+            
+                CREATE TRIGGER IF NOT EXISTS [{table_id}_delete_trigger]
+                AFTER DELETE ON [{table_id}]
+                BEGIN   
+                    UPDATE [{table_id}_history]
+                    SET _end_at = OLD.\"internal_executed_at\"
+                    WHERE \"internal_id\" = OLD.\"internal_id\";
+                END;"
+            );
+
+            self.executor.send(QueryMessage::other(history_events_query, vec![]))?;
         }
 
         Ok(())
