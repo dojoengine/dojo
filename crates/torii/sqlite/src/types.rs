@@ -47,7 +47,7 @@ pub struct Entity {
     #[sqlx(skip)]
     pub deleted: bool,
     #[sqlx(skip)]
-    pub transaction_id: String,
+    pub transaction_id: u64,
 }
 
 #[derive(FromRow, Deserialize, Debug, Clone)]
@@ -66,7 +66,7 @@ pub struct OptimisticEntity {
     #[sqlx(skip)]
     pub deleted: bool,
     #[sqlx(skip)]
-    pub transaction_id: String,
+    pub transaction_id: u64,
 }
 
 #[derive(FromRow, Deserialize, Debug, Clone)]
@@ -83,7 +83,7 @@ pub struct EventMessage {
     #[sqlx(skip)]
     pub updated_model: Option<Ty>,
     #[sqlx(skip)]
-    pub transaction_id: String,
+    pub transaction_id: u64,
 }
 
 #[derive(FromRow, Deserialize, Debug, Clone)]
@@ -100,7 +100,7 @@ pub struct OptimisticEventMessage {
     #[sqlx(skip)]
     pub updated_model: Option<Ty>,
     #[sqlx(skip)]
-    pub transaction_id: String,
+    pub transaction_id: u64,
 }
 
 #[derive(FromRow, Deserialize, Debug, Clone)]
@@ -140,7 +140,7 @@ pub struct OptimisticToken {
     pub decimals: u8,
     pub metadata: String,
     #[sqlx(skip)]
-    pub transaction_id: String,
+    pub transaction_id: u64,
 }
 
 #[derive(FromRow, Deserialize, Debug, Clone)]
@@ -154,7 +154,7 @@ pub struct Token {
     pub decimals: u8,
     pub metadata: String,
     #[sqlx(skip)]
-    pub transaction_id: String,
+    pub transaction_id: u64,
 }
 
 #[derive(FromRow, Deserialize, Debug, Clone)]
@@ -166,7 +166,7 @@ pub struct OptimisticTokenBalance {
     pub contract_address: String,
     pub token_id: String,
     #[sqlx(skip)]
-    pub transaction_id: String,
+    pub transaction_id: u64,
 }
 
 #[derive(FromRow, Deserialize, Debug, Clone)]
@@ -178,7 +178,7 @@ pub struct TokenBalance {
     pub contract_address: String,
     pub token_id: String,
     #[sqlx(skip)]
-    pub transaction_id: String,
+    pub transaction_id: u64,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq)]

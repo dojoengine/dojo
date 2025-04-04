@@ -19,14 +19,11 @@ use tokio::sync::{oneshot, Semaphore};
 use tokio::task::JoinSet;
 use tokio::time::Instant;
 use tracing::{debug, error, info, warn};
-use rand::Rng;
 
 use crate::constants::TOKENS_TABLE;
 use crate::simple_broker::SimpleBroker;
 use crate::types::{
-    ContractCursor, ContractType, Entity as EntityUpdated, Event as EventEmitted,
-    EventMessage as EventMessageUpdated, Model as ModelRegistered, OptimisticEntity,
-    OptimisticEventMessage, ParsedCall, Token, TokenBalance, Transaction,
+    ContractCursor, ContractType, Entity as EntityUpdated, Event as EventEmitted, EventMessage as EventMessageUpdated, Model as ModelRegistered, OptimisticEntity, OptimisticEventMessage, OptimisticToken, ParsedCall, Token, TokenBalance, Transaction
 };
 use crate::utils::{felt_to_sql_string, felts_to_sql_string, I256};
 
@@ -244,7 +241,12 @@ impl QueryMessage {
 }
 
 impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
-    fn start_transaction(&self) 
+    /// Starts a new transaction and returns the last transaction
+    async fn start_transaction(&mut self) -> Result<(TransactionId, SqlxTransaction<'c, Sqlite>)> {
+        let last_transaction_id = self.transaction.0;
+        let transaction = self.pool.begin().await?;
+        Ok(std::mem::replace(&mut self.transaction, (last_transaction_id + 1, transaction)))
+    }
 
     pub async fn new(
         pool: Pool<Sqlite>,
@@ -257,12 +259,11 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
         let publish_queue = Vec::new();
         let shutdown_rx = shutdown_tx.subscribe();
         let metadata_semaphore = Arc::new(Semaphore::new(max_metadata_tasks));
-        let transaction_id = Self::generate_transaction_id();
 
         Ok((
             Executor {
                 pool,
-                transaction: (transaction_id, transaction),
+                transaction: (0, transaction),
                 publish_queue,
                 rx,
                 shutdown_rx,
@@ -300,7 +301,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
     }
 
     async fn handle_query_message(&mut self, query_message: QueryMessage) -> Result<()> {
-        let (tx_id, tx) = &mut self.transaction;
+        let (tx_id, tx) = (self.transaction.0, &mut self.transaction.1);
 
         let mut query = sqlx::query(&query_message.statement);
 
@@ -460,6 +461,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 let mut entity_updated = EntityUpdated::from_row(&row)?;
                 entity_updated.updated_model = Some(entity.ty.clone());
                 entity_updated.deleted = false;
+                entity_updated.transaction_id = tx_id;
 
                 if entity_updated.keys.is_empty() {
                     warn!(target: LOG_TARGET, "Entity has been updated without being set before. Keys are not known and non-updated values will be NULL.");
@@ -633,6 +635,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
 
                 let mut event_message = EventMessageUpdated::from_row(&event_messages_row)?;
                 event_message.updated_model = Some(em_query.ty);
+                event_message.transaction_id = tx_id;
 
                 SimpleBroker::publish(unsafe {
                     std::mem::transmute::<EventMessageUpdated, OptimisticEventMessage>(
@@ -758,7 +761,10 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 .bind(&register_erc20_token.symbol)
                 .bind(register_erc20_token.decimals);
 
-                let token = query.fetch_one(&mut **tx).await?;
+                let mut token = query.fetch_one(&mut **tx).await?;
+                token.transaction_id = tx_id;
+
+                SimpleBroker::publish(unsafe { std::mem::transmute::<Token, OptimisticToken>(token.clone()) });
                 info!(target: LOG_TARGET, name = %register_erc20_token.name, symbol = %register_erc20_token.symbol, contract_address = %token.contract_address, "Registered ERC20 token.");
 
                 self.publish_queue.push(BrokerMessage::TokenRegistered(token));
@@ -837,12 +843,9 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
 
     async fn execute(&mut self, new_transaction: bool) -> Result<()> {
         if new_transaction {
-            let transaction = mem::replace(&mut self.transaction, self.pool.begin().await?);
+            let (_, transaction) = self.start_transaction().await?;
             transaction.commit().await?;
             
-            // Generate new transaction ID for the new transaction
-            self.transaction_id = Self::generate_transaction_id();
-
             for message in self.publish_queue.drain(..) {
                 send_broker_message(message);
             }
@@ -867,7 +870,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 };
             }
 
-            query.execute(&mut *self.transaction).await.with_context(|| {
+            query.execute(&mut *self.transaction.1).await.with_context(|| {
                 format!(
                     "Failed to execute query: {:?}, args: {:?}",
                     query_message.statement, query_message.arguments
@@ -879,7 +882,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
     }
 
     async fn rollback(&mut self) -> Result<()> {
-        let transaction = mem::replace(&mut self.transaction, self.pool.begin().await?);
+        let (_, transaction) = self.start_transaction().await?;
         transaction.rollback().await?;
 
         // NOTE: clear doesn't reset the capacity

@@ -133,7 +133,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
         balance_diff: &I256,
         provider: Arc<P>,
     ) -> Result<()> {
-        let tx = &mut self.transaction;
+        let (tx_id, tx) = (self.transaction.0, &mut self.transaction.1);
         let balance: Option<(String,)> =
             sqlx::query_as(&format!("SELECT balance FROM {TOKEN_BALANCE_TABLE} WHERE id = ?"))
                 .bind(id)
@@ -182,7 +182,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
         }
 
         // write the new balance to the database
-        let token_balance: TokenBalance = sqlx::query_as(&format!(
+        let mut token_balance: TokenBalance = sqlx::query_as(&format!(
             "INSERT OR REPLACE INTO {TOKEN_BALANCE_TABLE} (id, contract_address, account_address, \
              token_id, balance) VALUES (?, ?, ?, ?, ?) RETURNING *",
         ))
@@ -193,6 +193,8 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
         .bind(u256_to_sql_string(&balance))
         .fetch_one(&mut **tx)
         .await?;
+
+        token_balance.transaction_id = tx_id;
 
         debug!(target: LOG_TARGET, token_balance = ?token_balance, "Applied balance diff");
         SimpleBroker::publish(unsafe {
@@ -303,7 +305,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
     ) -> Result<()> {
         let query = sqlx::query_as::<_, Token>(
             "INSERT INTO tokens (id, contract_address, token_id, name, symbol, decimals, \
-             metadata) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING RETURNING *",
+             metadata) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING *",
         )
         .bind(&result.query.id)
         .bind(felt_to_sql_string(&result.query.contract_address))
@@ -313,18 +315,17 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
         .bind(0)
         .bind(&result.metadata);
 
-        let token = query
-            .fetch_optional(&mut *self.transaction)
+        let mut token = query
+            .fetch_one(&mut *self.transaction.1)
             .await
             .with_context(|| format!("Failed to execute721Token query: {:?}", result))?;
 
-        if let Some(token) = token {
-            info!(target: LOG_TARGET, name = %result.name, symbol = %result.symbol, contract_address = %token.contract_address, token_id = %result.query.token_id, "NFT token registered.");
-            SimpleBroker::publish(unsafe {
+        token.transaction_id = self.transaction.0;
+        info!(target: LOG_TARGET, name = %result.name, symbol = %result.symbol, contract_address = %token.contract_address, token_id = %result.query.token_id, "NFT token registered.");
+        SimpleBroker::publish(unsafe {
                 std::mem::transmute::<Token, OptimisticToken>(token.clone())
             });
-            self.publish_queue.push(BrokerMessage::TokenRegistered(token));
-        }
+        self.publish_queue.push(BrokerMessage::TokenRegistered(token));
 
         Ok(())
     }
@@ -445,7 +446,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
         sqlx::query("UPDATE tokens SET metadata = ? WHERE id = ?")
             .bind(&metadata)
             .bind(id)
-            .execute(&mut *self.transaction)
+            .execute(&mut *self.transaction.1)
             .await?;
 
         Ok(())
