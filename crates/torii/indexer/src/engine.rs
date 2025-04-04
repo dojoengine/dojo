@@ -448,7 +448,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
 
         // If transactions indexing flag is enabled, we should batch request all
         // of our recolted transactions
-        if self.config.flags.contains(IndexingFlags::TRANSACTIONS) {
+        if self.config.flags.contains(IndexingFlags::TRANSACTIONS) && transactions.len() > 0 {
             let mut transaction_requests = Vec::with_capacity(transactions.len());
             let mut block_numbers = Vec::with_capacity(transactions.len());
             for (block_number, transactions) in &transactions {
