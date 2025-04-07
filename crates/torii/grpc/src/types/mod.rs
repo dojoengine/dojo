@@ -133,6 +133,8 @@ pub struct Query {
     /// The internal updated at timestamp in seconds (unix timestamp) from which entities are
     /// retrieved (inclusive). Use 0 to retrieve all entities.
     pub entity_updated_after: u64,
+    /// The cursor to start the query from.
+    pub cursor: Option<Felt>,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
@@ -306,6 +308,7 @@ impl From<Query> for proto::types::Query {
             order_by: value.order_by.into_iter().map(|o| o.into()).collect(),
             entity_models: value.entity_models,
             entity_updated_after: value.entity_updated_after,
+            cursor: value.cursor.map(|c| c.to_bytes_be().into()).unwrap_or(vec![]),
         }
     }
 }

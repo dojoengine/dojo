@@ -31,14 +31,14 @@ use sqlx::sqlite::SqliteRow;
 use sqlx::types::chrono::{DateTime, Utc};
 use sqlx::{Pool, Row, Sqlite};
 use starknet::core::types::Felt;
-use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
+use starknet::providers::jsonrpc::HttpTransport;
 use subscriptions::event::EventManager;
 use subscriptions::indexer::IndexerManager;
 use subscriptions::token::TokenManager;
 use subscriptions::token_balance::TokenBalanceManager;
 use tokio::net::TcpListener;
-use tokio::sync::mpsc::{channel, Receiver};
+use tokio::sync::mpsc::{Receiver, channel};
 use tokio_stream::wrappers::{ReceiverStream, TcpListenerStream};
 use tonic::codec::CompressionEncoding;
 use tonic::transport::Server;
@@ -54,9 +54,9 @@ use tower_http::cors::{AllowOrigin, CorsLayer};
 use self::subscriptions::entity::EntityManager;
 use self::subscriptions::event_message::EventMessageManager;
 use self::subscriptions::model_diff::{ModelDiffRequest, StateDiffManager};
+use crate::proto::types::LogicalOperator;
 use crate::proto::types::clause::ClauseType;
 use crate::proto::types::member_value::ValueType;
-use crate::proto::types::LogicalOperator;
 use crate::proto::world::world_server::WorldServer;
 use crate::proto::world::{
     RetrieveControllersRequest, RetrieveControllersResponse, RetrieveEntitiesStreamingResponse,
@@ -69,8 +69,8 @@ use crate::proto::world::{
     WorldMetadataResponse,
 };
 use crate::proto::{self};
-use crate::types::schema::SchemaError;
 use crate::types::ComparisonOperator;
+use crate::types::schema::SchemaError;
 
 pub(crate) static ENTITIES_TABLE: &str = "entities";
 pub(crate) static ENTITIES_MODEL_RELATION_TABLE: &str = "entity_model";
@@ -272,6 +272,7 @@ impl DojoWorld {
         order_by: Option<&str>,
         entity_models: Vec<String>,
         entity_updated_after: Option<String>,
+        cursor: Option<Felt>,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         self.query_by_hashed_keys(
             table,
@@ -284,6 +285,7 @@ impl DojoWorld {
             order_by,
             entity_models,
             entity_updated_after,
+            cursor,
         )
         .await
     }
@@ -350,40 +352,38 @@ impl DojoWorld {
         order_by: Option<&str>,
         entity_models: Vec<String>,
         entity_updated_after: Option<String>,
+        cursor: Option<Felt>,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
-        let where_clause = match &hashed_keys {
+        let mut where_clause = match &hashed_keys {
             Some(hashed_keys) => {
                 let ids =
                     hashed_keys.hashed_keys.iter().map(|_| "{table}.id = ?").collect::<Vec<_>>();
                 format!(
-                    "{} {}",
+                    "{}",
                     ids.join(" OR "),
-                    if entity_updated_after.is_some() {
-                        format!("AND {table}.updated_at >= ?")
-                    } else {
-                        String::new()
-                    }
                 )
             }
-            None => {
-                if entity_updated_after.is_some() {
-                    format!("{table}.updated_at >= ?")
-                } else {
-                    String::new()
-                }
-            }
+            None => String::new(),
         };
 
-        let mut bind_values = vec![];
-        if let Some(hashed_keys) = hashed_keys {
-            bind_values = hashed_keys
+        let mut bind_values = if let Some(hashed_keys) = hashed_keys {
+            hashed_keys
                 .hashed_keys
                 .iter()
                 .map(|key| format!("{:#x}", Felt::from_bytes_be_slice(key)))
-                .collect::<Vec<_>>();
-        }
+                .collect::<Vec<_>>()
+        } else {
+            vec![]
+        };
+
         if let Some(entity_updated_after) = entity_updated_after.clone() {
+            where_clause += &format!(" AND {table}.updated_at >= ?");
             bind_values.push(entity_updated_after);
+        }
+
+        if let Some(cursor) = cursor {
+            where_clause += &format!(" AND {table}.id > ?");
+            bind_values.push(format!("{:#x}", cursor));
         }
 
         let entity_models =
@@ -484,6 +484,7 @@ impl DojoWorld {
         order_by: Option<&str>,
         entity_models: Vec<String>,
         entity_updated_after: Option<String>,
+        cursor: Option<Felt>,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         let keys_pattern = build_keys_pattern(keys_clause)?;
         let model_selectors: Vec<String> = keys_clause
@@ -492,36 +493,29 @@ impl DojoWorld {
             .map(|model| format!("{:#x}", compute_selector_from_tag(model)))
             .collect();
 
-        let where_clause = if model_selectors.is_empty() {
-            format!(
-                "{table}.keys REGEXP ? {}",
-                if entity_updated_after.is_some() {
-                    format!("AND {table}.updated_at >= ?")
-                } else {
-                    String::new()
-                }
-            )
-        } else {
-            format!(
-                "({table}.keys REGEXP ? AND {model_relation_table}.model_id IN ({})) OR \
-                 {model_relation_table}.model_id NOT IN ({}) {}",
-                vec!["?"; model_selectors.len()].join(", "),
-                vec!["?"; model_selectors.len()].join(", "),
-                if entity_updated_after.is_some() {
-                    format!("AND {table}.updated_at >= ?")
-                } else {
-                    String::new()
-                }
-            )
-        };
-
         let mut bind_values = vec![keys_pattern];
-        if !model_selectors.is_empty() {
+        let mut where_clause = if model_selectors.is_empty() {
+            format!("{table}.keys REGEXP ?")
+        } else {
+            let model_selectors_len = model_selectors.len();
             bind_values.extend(model_selectors.clone());
             bind_values.extend(model_selectors);
-        }
+
+            format!(
+                "({table}.keys REGEXP ? AND {model_relation_table}.model_id IN ({})) OR \
+                 {model_relation_table}.model_id NOT IN ({})",
+                vec!["?"; model_selectors_len].join(", "),
+                vec!["?"; model_selectors_len].join(", "),
+            )
+        };
         if let Some(entity_updated_after) = entity_updated_after.clone() {
+            where_clause += &format!(" AND {table}.updated_at >= ?");
             bind_values.push(entity_updated_after);
+        }
+
+        if let Some(cursor) = cursor {
+            where_clause += &format!(" AND {table}.id > ?");
+            bind_values.push(format!("{:#x}", cursor));
         }
 
         let entity_models =
@@ -649,6 +643,7 @@ impl DojoWorld {
         order_by: Option<&str>,
         entity_models: Vec<String>,
         entity_updated_after: Option<String>,
+        cursor: Option<Felt>,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         let entity_models =
             entity_models.iter().map(|model| compute_selector_from_tag(model)).collect::<Vec<_>>();
@@ -740,6 +735,11 @@ impl DojoWorld {
             bind_values.push(entity_updated_after.unwrap());
         }
 
+        if let Some(cursor) = cursor {
+            where_clause += &format!(" AND {table}.id > ?");
+            bind_values.push(format!("{:#x}", cursor));
+        }
+
         let (rows, total_count) = fetch_entities(
             &self.pool,
             &schemas,
@@ -776,9 +776,10 @@ impl DojoWorld {
         order_by: Option<&str>,
         entity_models: Vec<String>,
         entity_updated_after: Option<String>,
+        cursor: Option<Felt>,
     ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
         let (where_clause, bind_values) =
-            build_composite_clause(table, model_relation_table, &composite, entity_updated_after)?;
+            build_composite_clause(table, model_relation_table, &composite, entity_updated_after, cursor)?;
 
         let entity_models =
             entity_models.iter().map(|model| compute_selector_from_tag(model)).collect::<Vec<_>>();
@@ -994,6 +995,12 @@ impl DojoWorld {
             ),
         };
 
+        let cursor = if query.cursor.is_empty() {
+            None
+        } else {
+            Some(Felt::from_bytes_be_slice(&query.cursor))
+        };
+
         let (entities, total_count) = match query.clause {
             None => {
                 self.entities_all(
@@ -1006,6 +1013,7 @@ impl DojoWorld {
                     order_by,
                     query.entity_models,
                     entity_updated_after,
+                    cursor,
                 )
                 .await?
             }
@@ -1030,6 +1038,7 @@ impl DojoWorld {
                             order_by,
                             query.entity_models,
                             entity_updated_after,
+                            cursor,
                         )
                         .await?
                     }
@@ -1045,6 +1054,7 @@ impl DojoWorld {
                             order_by,
                             query.entity_models,
                             entity_updated_after,
+                            cursor,
                         )
                         .await?
                     }
@@ -1060,6 +1070,7 @@ impl DojoWorld {
                             order_by,
                             query.entity_models,
                             entity_updated_after,
+                            cursor,
                         )
                         .await?
                     }
@@ -1075,6 +1086,7 @@ impl DojoWorld {
                             order_by,
                             query.entity_models,
                             entity_updated_after,
+                            cursor,
                         )
                         .await?
                     }
@@ -1212,6 +1224,7 @@ fn build_composite_clause(
     model_relation_table: &str,
     composite: &proto::types::CompositeClause,
     entity_updated_after: Option<String>,
+    cursor: Option<Felt>,
 ) -> Result<(String, Vec<String>), Error> {
     let is_or = composite.operator == LogicalOperator::Or as i32;
     let mut where_clauses = Vec::new();
@@ -1300,6 +1313,7 @@ fn build_composite_clause(
                     model_relation_table,
                     nested,
                     entity_updated_after.clone(),
+                    cursor.clone(),
                 )?;
 
                 if !nested_where.is_empty() {
@@ -1310,23 +1324,21 @@ fn build_composite_clause(
         }
     }
 
-    let where_clause = if !where_clauses.is_empty() {
-        format!(
-            "{} {}",
-            where_clauses.join(if is_or { " OR " } else { " AND " }),
-            if let Some(entity_updated_after) = entity_updated_after.clone() {
-                bind_values.push(entity_updated_after);
-                format!("AND {table}.updated_at >= ?")
-            } else {
-                String::new()
-            }
-        )
-    } else if let Some(entity_updated_after) = entity_updated_after.clone() {
-        bind_values.push(entity_updated_after);
-        format!("{table}.updated_at >= ?")
+    let mut where_clause = if !where_clauses.is_empty() {
+        where_clauses.join(if is_or { " OR " } else { " AND " })
     } else {
         String::new()
     };
+
+    if let Some(entity_updated_after) = entity_updated_after.clone() {
+        where_clause += &format!(" AND {table}.updated_at >= ?");
+        bind_values.push(entity_updated_after);
+    }
+
+    if let Some(cursor) = cursor {
+        where_clause += &format!(" AND {table}.id > ?");
+        bind_values.push(format!("{:#x}", cursor));
+    }
 
     Ok((where_clause, bind_values))
 }
