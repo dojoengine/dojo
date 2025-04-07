@@ -171,7 +171,9 @@ async fn handle(
     // Default response if no handler matches
     let json = json!({
         "service": "torii",
-        "success": true
+        "version": env!("CARGO_PKG_VERSION"),
+        "success": true,
+
     });
 
     Ok(Response::builder()
