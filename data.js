@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1744047700234,
+  "lastUpdate": 1744064336129,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -60679,6 +60679,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 16887495,
             "range": "± 282565",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "bcc3c456acbc72889f80d0cffc416a87f6f440f1",
+          "message": "feat(torii): add version in proxy response (#3146)",
+          "timestamp": "2025-04-07T16:02:48-06:00",
+          "tree_id": "d14a0fff3211daf4cbbf9b6f36ee5cbe409d08f0",
+          "url": "https://github.com/dojoengine/dojo/commit/bcc3c456acbc72889f80d0cffc416a87f6f440f1"
+        },
+        "date": 1744064333224,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 45742499407,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
