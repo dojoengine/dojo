@@ -51,7 +51,7 @@ where
         contracts,
     );
 
-    let data = engine.fetch_range(0, to, &HashMap::new()).await.unwrap();
+    let data = engine.fetch_range(0, to, &HashMap::new(), to).await.unwrap();
     engine.process_range(data).await.unwrap();
 
     db.flush().await.unwrap();
