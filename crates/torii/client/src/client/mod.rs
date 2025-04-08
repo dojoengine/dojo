@@ -88,12 +88,15 @@ impl Client {
         limit: Option<u32>,
         offset: Option<u32>,
         cursor: Option<String>,
-    ) -> Result<Vec<Token>, Error> {
+    ) -> Result<(Vec<Token>, String), Error> {
         let mut grpc_client = self.inner.write().await;
-        let RetrieveTokensResponse { tokens } = grpc_client
+        let RetrieveTokensResponse { tokens, next_cursor } = grpc_client
             .retrieve_tokens(contract_addresses, token_ids, limit, offset, cursor)
             .await?;
-        Ok(tokens.into_iter().map(TryInto::try_into).collect::<Result<Vec<Token>, _>>()?)
+        Ok((
+            tokens.into_iter().map(TryInto::try_into).collect::<Result<Vec<Token>, _>>()?,
+            next_cursor,
+        ))
     }
 
     /// Retrieves token balances for account addresses and contract addresses.
@@ -105,9 +108,9 @@ impl Client {
         limit: Option<u32>,
         offset: Option<u32>,
         cursor: Option<String>,
-    ) -> Result<Vec<TokenBalance>, Error> {
+    ) -> Result<(Vec<TokenBalance>, String), Error> {
         let mut grpc_client = self.inner.write().await;
-        let RetrieveTokenBalancesResponse { balances } = grpc_client
+        let RetrieveTokenBalancesResponse { balances, next_cursor } = grpc_client
             .retrieve_token_balances(
                 account_addresses,
                 contract_addresses,
@@ -117,7 +120,13 @@ impl Client {
                 cursor,
             )
             .await?;
-        Ok(balances.into_iter().map(TryInto::try_into).collect::<Result<Vec<TokenBalance>, _>>()?)
+        Ok((
+            balances
+                .into_iter()
+                .map(TryInto::try_into)
+                .collect::<Result<Vec<TokenBalance>, _>>()?,
+            next_cursor,
+        ))
     }
 
     /// Retrieves entities matching query parameter.
