@@ -825,7 +825,7 @@ impl DojoWorld {
 
         if let Some(cursor) = cursor {
             bind_values.push(cursor);
-            conditions.push(format!("id > ?"));
+            conditions.push("id > ?".to_string());
         }
 
         if !conditions.is_empty() {
@@ -891,7 +891,7 @@ impl DojoWorld {
 
         if let Some(cursor) = cursor {
             bind_values.push(cursor);
-            conditions.push(format!("id > ?"));
+            conditions.push("id > ?".to_string());
         }
 
         if !conditions.is_empty() {
@@ -901,11 +901,13 @@ impl DojoWorld {
         query += " ORDER BY id";
 
         if let Some(limit) = limit {
-            query += &format!(" LIMIT {}", limit);
+            query += " LIMIT ?";
+            bind_values.push(limit.to_string());
         }
 
         if let Some(offset) = offset {
-            query += &format!(" OFFSET {}", offset);
+            query += " OFFSET ?";
+            bind_values.push(offset.to_string());
         }
 
         let mut query = sqlx::query_as(&query);
