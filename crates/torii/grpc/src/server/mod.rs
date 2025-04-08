@@ -822,16 +822,18 @@ impl DojoWorld {
             bind_values.extend(token_ids.iter().map(|id| u256_to_sql_string(&(*id).into())));
         }
 
+        if !conditions.is_empty() {
+            query += &format!(" WHERE {}", conditions.join(" AND "));
+        }
+
+        query += " ORDER BY id";
+
         if let Some(limit) = limit {
             query += &format!(" LIMIT {}", limit);
         }
 
         if let Some(offset) = offset {
             query += &format!(" OFFSET {}", offset);
-        }
-
-        if !conditions.is_empty() {
-            query += &format!(" WHERE {} ORDER BY id", conditions.join(" AND "));
         }
 
         let mut query = sqlx::query_as(&query);
@@ -877,16 +879,18 @@ impl DojoWorld {
             bind_values.extend(token_ids.iter().map(|id| u256_to_sql_string(&(*id).into())));
         }
 
+        if !conditions.is_empty() {
+            query += &format!(" WHERE {}", conditions.join(" AND "));
+        }
+
+        query += " ORDER BY token_id";
+
         if let Some(limit) = limit {
             query += &format!(" LIMIT {}", limit);
         }
 
         if let Some(offset) = offset {
             query += &format!(" OFFSET {}", offset);
-        }
-
-        if !conditions.is_empty() {
-            query += &format!(" WHERE {} ORDER BY token_id", conditions.join(" AND "));
         }
 
         let mut query = sqlx::query_as(&query);
