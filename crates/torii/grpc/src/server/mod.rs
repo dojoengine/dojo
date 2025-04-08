@@ -806,6 +806,7 @@ impl DojoWorld {
         token_ids: Vec<U256>,
         limit: Option<u32>,
         offset: Option<u32>,
+        cursor: Option<String>,
     ) -> Result<RetrieveTokensResponse, Status> {
         let mut query = "SELECT * FROM tokens".to_string();
         let mut bind_values = Vec::new();
@@ -822,6 +823,11 @@ impl DojoWorld {
             bind_values.extend(token_ids.iter().map(|id| u256_to_sql_string(&(*id).into())));
         }
 
+        if let Some(cursor) = cursor {
+            bind_values.push(cursor);
+            conditions.push(format!("id > ?"));
+        }
+
         if !conditions.is_empty() {
             query += &format!(" WHERE {}", conditions.join(" AND "));
         }
@@ -829,11 +835,13 @@ impl DojoWorld {
         query += " ORDER BY id";
 
         if let Some(limit) = limit {
-            query += &format!(" LIMIT {}", limit);
+            query += " LIMIT ?";
+            bind_values.push(limit.to_string());
         }
 
         if let Some(offset) = offset {
-            query += &format!(" OFFSET {}", offset);
+            query += " OFFSET ?";
+            bind_values.push(offset.to_string());
         }
 
         let mut query = sqlx::query_as(&query);
@@ -843,9 +851,10 @@ impl DojoWorld {
 
         let tokens: Vec<Token> =
             query.fetch_all(&self.pool).await.map_err(|e| Status::internal(e.to_string()))?;
+        let next_cursor = tokens.last().map_or(String::new(), |token| token.id.clone());
 
         let tokens = tokens.iter().map(|token| token.clone().into()).collect();
-        Ok(RetrieveTokensResponse { tokens })
+        Ok(RetrieveTokensResponse { tokens, next_cursor })
     }
 
     async fn retrieve_token_balances(
@@ -855,6 +864,7 @@ impl DojoWorld {
         token_ids: Vec<U256>,
         limit: Option<u32>,
         offset: Option<u32>,
+        cursor: Option<String>,
     ) -> Result<RetrieveTokenBalancesResponse, Status> {
         let mut query = "SELECT * FROM token_balances".to_string();
         let mut bind_values = Vec::new();
@@ -879,11 +889,16 @@ impl DojoWorld {
             bind_values.extend(token_ids.iter().map(|id| u256_to_sql_string(&(*id).into())));
         }
 
+        if let Some(cursor) = cursor {
+            bind_values.push(cursor);
+            conditions.push(format!("id > ?"));
+        }
+
         if !conditions.is_empty() {
             query += &format!(" WHERE {}", conditions.join(" AND "));
         }
 
-        query += " ORDER BY token_id";
+        query += " ORDER BY id";
 
         if let Some(limit) = limit {
             query += &format!(" LIMIT {}", limit);
@@ -900,9 +915,10 @@ impl DojoWorld {
 
         let balances: Vec<TokenBalance> =
             query.fetch_all(&self.pool).await.map_err(|e| Status::internal(e.to_string()))?;
+        let next_cursor = balances.last().map_or(String::new(), |balance| balance.id.clone());
 
         let balances = balances.iter().map(|balance| balance.clone().into()).collect();
-        Ok(RetrieveTokenBalancesResponse { balances })
+        Ok(RetrieveTokenBalancesResponse { balances, next_cursor })
     }
 
     async fn subscribe_models(
@@ -1414,7 +1430,7 @@ impl proto::world::world_server::World for DojoWorld {
         &self,
         request: Request<RetrieveTokensRequest>,
     ) -> Result<Response<RetrieveTokensResponse>, Status> {
-        let RetrieveTokensRequest { contract_addresses, token_ids, limit, offset } =
+        let RetrieveTokensRequest { contract_addresses, token_ids, limit, offset, cursor } =
             request.into_inner();
         let contract_addresses = contract_addresses
             .iter()
@@ -1429,6 +1445,7 @@ impl proto::world::world_server::World for DojoWorld {
                 token_ids,
                 if limit > 0 { Some(limit) } else { None },
                 if offset > 0 { Some(offset) } else { None },
+                if !cursor.is_empty() { Some(cursor) } else { None },
             )
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
@@ -1480,6 +1497,7 @@ impl proto::world::world_server::World for DojoWorld {
             token_ids,
             limit,
             offset,
+            cursor,
         } = request.into_inner();
         let account_addresses = account_addresses
             .iter()
@@ -1498,6 +1516,7 @@ impl proto::world::world_server::World for DojoWorld {
                 token_ids,
                 if limit > 0 { Some(limit) } else { None },
                 if offset > 0 { Some(offset) } else { None },
+                if !cursor.is_empty() { Some(cursor) } else { None },
             )
             .await
             .map_err(|e| Status::internal(e.to_string()))?;

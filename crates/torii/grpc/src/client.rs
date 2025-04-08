@@ -120,6 +120,7 @@ impl WorldClient {
         token_ids: Vec<U256>,
         limit: Option<u32>,
         offset: Option<u32>,
+        cursor: Option<String>,
     ) -> Result<RetrieveTokensResponse, Error> {
         self.inner
             .retrieve_tokens(RetrieveTokensRequest {
@@ -128,8 +129,9 @@ impl WorldClient {
                     .map(|c| c.to_bytes_be().to_vec())
                     .collect(),
                 token_ids: token_ids.into_iter().map(|id| id.to_be_bytes().to_vec()).collect(),
-                limit: limit.unwrap_or(0),
-                offset: offset.unwrap_or(0),
+                limit: limit.unwrap_or_default(),
+                offset: offset.unwrap_or_default(),
+                cursor: cursor.unwrap_or_default()
             })
             .await
             .map_err(Error::Grpc)
@@ -199,6 +201,7 @@ impl WorldClient {
         token_ids: Vec<U256>,
         limit: Option<u32>,
         offset: Option<u32>,
+        cursor: Option<String>,
     ) -> Result<RetrieveTokenBalancesResponse, Error> {
         self.inner
             .retrieve_token_balances(RetrieveTokenBalancesRequest {
@@ -211,8 +214,9 @@ impl WorldClient {
                     .map(|c| c.to_bytes_be().to_vec())
                     .collect(),
                 token_ids: token_ids.into_iter().map(|id| id.to_be_bytes().to_vec()).collect(),
-                limit: limit.unwrap_or(0),
-                offset: offset.unwrap_or(0),
+                limit: limit.unwrap_or_default(),
+                offset: offset.unwrap_or_default(),
+                cursor: cursor.unwrap_or_default()
             })
             .await
             .map_err(Error::Grpc)

@@ -103,6 +103,8 @@ message RetrieveTokensRequest {
     uint32 limit = 3;
     // The offset to retrieve tokens from
     uint32 offset = 4;
+    // The cursor to start the query from
+    string cursor = 5;
 }
 
 // A request to subscribe to token updates
@@ -115,7 +117,8 @@ message SubscribeTokensRequest {
 
 // A response containing tokens
 message RetrieveTokensResponse {
-    repeated types.Token tokens = 1;
+    string next_cursor = 1;
+    repeated types.Token tokens = 2;
 }
 
 // A response containing token updates
@@ -148,6 +151,8 @@ message RetrieveTokenBalancesRequest {
     uint32 limit = 4;
     // The offset to retrieve token balances from
     uint32 offset = 5;
+    // The cursor to start the query from
+    string cursor = 6;
 }
 
 // A request to subscribe to token balance updates
@@ -162,7 +167,8 @@ message SubscribeTokenBalancesRequest {
 
 // A response containing token balances
 message RetrieveTokenBalancesResponse {
-    repeated types.TokenBalance balances = 1;
+    string next_cursor = 1;
+    repeated types.TokenBalance balances = 2;
 }
 
 // A request to subscribe to indexer updates.
