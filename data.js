@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1744064514902,
+  "lastUpdate": 1744107084483,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -60757,6 +60757,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 18036501,
             "range": "± 802104",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a7495f221f6bff33ad3fb3c680b4750b6a680e4d",
+          "message": "feat(torii-libp2p): add dns resolver (#3148)",
+          "timestamp": "2025-04-08T18:53:43+09:00",
+          "tree_id": "68f73c3f3c3e986f2c312bc68aea744d68bc7162",
+          "url": "https://github.com/dojoengine/dojo/commit/a7495f221f6bff33ad3fb3c680b4750b6a680e4d"
+        },
+        "date": 1744107080630,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 51039050796,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
