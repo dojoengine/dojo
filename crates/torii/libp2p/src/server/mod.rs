@@ -133,6 +133,8 @@ impl<P: Provider + Sync> Relay<P> {
                     .multiplex(yamux::Config::default())
             })
             .expect("Failed to create WebSocket transport")
+            .with_dns()
+            .expect("Failed to create DNS transport")
             .with_behaviour(|key| {
                 // Hash messages by their content. No two messages of the same content will be
                 // propagated.
