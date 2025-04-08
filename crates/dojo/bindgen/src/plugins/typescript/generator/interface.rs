@@ -40,6 +40,11 @@ impl BindgenModelGenerator for TsInterfaceGenerator {
 
         self.check_import(token, buffer);
 
+        // TODO: here if we inspect the type, we may have a token which is a composite, but the inner is a generic type.
+        if token.type_path_no_generic().contains("ActionMap") {
+            dbg!(&token);
+        }
+
         Ok(format!(
             "// Type definition for `{path}` struct
 export interface {name} {{

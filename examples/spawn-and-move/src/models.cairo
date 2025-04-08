@@ -21,6 +21,32 @@ impl DirectionIntoFelt252 of Into<Direction, felt252> {
     }
 }
 
+#[derive(Serde, Copy, Drop, Introspect, PartialEq, Debug)]
+pub enum InspectableActions {
+    set_visible,
+    read_description,
+}
+
+// Inspectable component
+#[derive(Clone, Drop, Serde, Introspect, Debug)]
+#[dojo::model]
+pub struct Inspectable {
+    #[key]
+    pub inst: felt252,
+    pub is_inspectable: bool,
+    // properties
+    pub is_visible: bool,
+    pub description: Array<ByteArray>,
+    pub action_map: Array<ActionMap<InspectableActions>>,
+}
+
+#[derive(Clone, Drop, Serde, Introspect, Debug)]
+pub struct ActionMap<T> {
+    pub action: ByteArray,
+    pub inst: felt252,
+    pub action_fn: T,
+}
+
 #[derive(Drop, Serde)]
 #[dojo::model]
 pub struct Message {

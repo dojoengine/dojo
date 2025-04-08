@@ -67,7 +67,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "auto_impl",
- "cainome 0.5.0",
+ "cainome 0.5.1",
  "cainome-cairo-serde 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures",
  "hex",
@@ -2462,7 +2462,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.4.2)",
- "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.4.2)",
+ "cainome-parser 0.1.0",
  "cainome-rs 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.4.2)",
  "cainome-rs-macro 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.4.2)",
  "camino",
@@ -2481,15 +2481,15 @@ dependencies = [
 
 [[package]]
 name = "cainome"
-version = "0.5.0"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5ba516760bbf73cc71c4a7ba07663b0a7d0f3882f011b28d87b25fbd17bf77f1"
+checksum = "7d5d94fa57317b42e011a2715a07ce8cadeb80ca2a471167cbd85f48ea4d0934"
 dependencies = [
  "anyhow",
  "async-trait",
  "cainome-cairo-serde 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "cainome-cairo-serde-derive",
- "cainome-parser 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cainome-parser 0.1.1",
  "cainome-rs 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "cainome-rs-macro 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "camino",
@@ -2544,26 +2544,26 @@ dependencies = [
 [[package]]
 name = "cainome-parser"
 version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "be5dfc1d658114948d2717612f4a666f3f84bf106b28e3a65ccad4d170ce46a9"
-dependencies = [
- "convert_case 0.6.0",
- "quote",
- "serde_json",
- "starknet 0.13.0",
- "syn 2.0.90",
- "thiserror 1.0.63",
-]
-
-[[package]]
-name = "cainome-parser"
-version = "0.1.0"
 source = "git+https://github.com/cartridge-gg/cainome?tag=v0.4.2#4e3924fb82b7299d56d3619aa5d7b9863f581e0a"
 dependencies = [
  "convert_case 0.6.0",
  "quote",
  "serde_json",
  "starknet 0.12.0",
+ "syn 2.0.90",
+ "thiserror 1.0.63",
+]
+
+[[package]]
+name = "cainome-parser"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8053124dfe40eacb6c78ffe44e4199fc0547b22b3a1e506431b1cd554812ef1c"
+dependencies = [
+ "convert_case 0.6.0",
+ "quote",
+ "serde_json",
+ "starknet 0.13.0",
  "syn 2.0.90",
  "thiserror 1.0.63",
 ]
@@ -2576,7 +2576,7 @@ checksum = "a0e16da812c3df59d3093df7dd7cfe7fd1ff051c870aae3807dee2180c511557"
 dependencies = [
  "anyhow",
  "cainome-cairo-serde 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "cainome-parser 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cainome-parser 0.1.1",
  "camino",
  "prettyplease",
  "proc-macro2",
@@ -2594,7 +2594,7 @@ source = "git+https://github.com/cartridge-gg/cainome?tag=v0.4.2#4e3924fb82b7299
 dependencies = [
  "anyhow",
  "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.4.2)",
- "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.4.2)",
+ "cainome-parser 0.1.0",
  "camino",
  "prettyplease",
  "proc-macro2",
@@ -2613,7 +2613,7 @@ checksum = "71009b935b7b3056c8032c2369d022beb629ea903f167e37bff0a2c84dd43675"
 dependencies = [
  "anyhow",
  "cainome-cairo-serde 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "cainome-parser 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cainome-parser 0.1.1",
  "cainome-rs 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "proc-macro-error",
  "proc-macro2",
@@ -2631,7 +2631,7 @@ source = "git+https://github.com/cartridge-gg/cainome?tag=v0.4.2#4e3924fb82b7299
 dependencies = [
  "anyhow",
  "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.4.2)",
- "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.4.2)",
+ "cainome-parser 0.1.0",
  "cainome-rs 0.1.0 (git+https://github.com/cartridge-gg/cainome?tag=v0.4.2)",
  "proc-macro-error",
  "proc-macro2",
@@ -4570,7 +4570,7 @@ dependencies = [
  "anyhow",
  "assert_matches",
  "async-trait",
- "cainome 0.5.0",
+ "cainome 0.5.1",
  "camino",
  "chrono",
  "convert_case 0.6.0",
@@ -4692,7 +4692,7 @@ version = "1.3.1"
 source = "git+https://github.com/dojoengine/dojo?rev=23c3a2d8720a08a651b7f339a04eec873dce1a5d#23c3a2d8720a08a651b7f339a04eec873dce1a5d"
 dependencies = [
  "anyhow",
- "cainome 0.5.0",
+ "cainome 0.5.1",
  "crypto-bigint",
  "hex",
  "indexmap 2.7.1",
@@ -4713,7 +4713,7 @@ name = "dojo-types"
 version = "1.4.0"
 dependencies = [
  "anyhow",
- "cainome 0.5.0",
+ "cainome 0.5.1",
  "crypto-bigint",
  "hex",
  "indexmap 2.7.1",
@@ -4753,7 +4753,7 @@ version = "1.4.0"
 dependencies = [
  "anyhow",
  "async-trait",
- "cainome 0.5.0",
+ "cainome 0.5.1",
  "cairo-lang-starknet-classes",
  "dojo-types 1.4.0",
  "futures",
@@ -4779,7 +4779,7 @@ name = "dojo-world-abigen"
 version = "1.4.0"
 dependencies = [
  "anyhow",
- "cainome 0.5.0",
+ "cainome 0.5.1",
  "cairo-lang-starknet",
  "cairo-lang-starknet-classes",
  "camino",
@@ -7195,7 +7195,7 @@ dependencies = [
  "iana-time-zone-haiku",
  "js-sys",
  "wasm-bindgen",
- "windows-core 0.52.0",
+ "windows-core 0.51.1",
 ]
 
 [[package]]
@@ -8001,7 +8001,7 @@ dependencies = [
  "assert_matches",
  "async-trait",
  "byte-unit",
- "cainome 0.5.0",
+ "cainome 0.5.1",
  "clap",
  "clap_complete",
  "comfy-table",
@@ -8439,7 +8439,7 @@ dependencies = [
  "alloy-primitives",
  "anyhow",
  "assert_matches",
- "cainome 0.5.0",
+ "cainome 0.5.1",
  "dojo-metrics",
  "dojo-test-utils",
  "dojo-utils",
@@ -8497,7 +8497,7 @@ version = "1.4.0"
 dependencies = [
  "alloy-primitives",
  "anyhow",
- "cainome 0.5.0",
+ "cainome 0.5.1",
  "cainome-cairo-serde 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "derive_more 0.99.18",
  "flate2",
@@ -10770,7 +10770,7 @@ name = "piltover"
 version = "0.1.0"
 source = "git+https://github.com/keep-starknet-strange/piltover.git?rev=4cdda5a#4cdda5a8818bac7df0996db409f357372d456e0f"
 dependencies = [
- "cainome 0.5.0",
+ "cainome 0.5.1",
  "starknet 0.12.0",
 ]
 
@@ -13443,7 +13443,7 @@ version = "1.4.0"
 dependencies = [
  "anyhow",
  "async-trait",
- "cainome 0.5.0",
+ "cainome 0.5.1",
  "cairo-lang-sierra",
  "cairo-lang-test-plugin",
  "cairo-lang-test-runner",
@@ -13491,7 +13491,7 @@ dependencies = [
  "anyhow",
  "assert_fs",
  "async-trait",
- "cainome 0.5.0",
+ "cainome 0.5.1",
  "colored",
  "colored_json",
  "dojo-test-utils",
@@ -15169,7 +15169,7 @@ dependencies = [
 name = "torii-grpc"
 version = "1.4.0"
 dependencies = [
- "cainome 0.5.0",
+ "cainome 0.5.1",
  "camino",
  "crypto-bigint",
  "dojo-test-utils",
@@ -15222,7 +15222,7 @@ dependencies = [
  "async-trait",
  "base64 0.21.7",
  "bitflags 2.6.0",
- "cainome 0.5.0",
+ "cainome 0.5.1",
  "cainome-cairo-serde 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "chrono",
  "crypto-bigint",
@@ -15394,7 +15394,7 @@ dependencies = [
  "async-trait",
  "base64 0.21.7",
  "bitflags 2.6.0",
- "cainome 0.5.0",
+ "cainome 0.5.1",
  "chrono",
  "crypto-bigint",
  "data-url",
@@ -15429,7 +15429,7 @@ dependencies = [
 name = "torii-typed-data"
 version = "1.4.0"
 dependencies = [
- "cainome 0.5.0",
+ "cainome 0.5.1",
  "crypto-bigint",
  "dojo-types 1.4.0",
  "indexmap 2.7.1",
@@ -16747,15 +16747,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f1f8cf84f35d2db49a46868f947758c7a1138116f7fac3bc844f43ade1292e64"
 dependencies = [
  "windows-targets 0.48.5",
-]
-
-[[package]]
-name = "windows-core"
-version = "0.52.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "33ab640c8d7e35bf8ba19b884ba838ceb4fba93a4e8c65a9059d08afcfc683d9"
-dependencies = [
- "windows-targets 0.52.6",
 ]
 
 [[package]]
