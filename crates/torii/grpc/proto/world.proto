@@ -35,13 +35,13 @@ service World {
     rpc UpdateEventMessagesSubscription (UpdateEventMessagesSubscriptionRequest) returns (google.protobuf.Empty);
 
     // Subscribe to token balance updates.
-    rpc SubscribeTokenBalances (RetrieveTokenBalancesRequest) returns (stream SubscribeTokenBalancesResponse);
+    rpc SubscribeTokenBalances (SubscribeTokenBalancesRequest) returns (stream SubscribeTokenBalancesResponse);
 
     // Update token balance subscription
     rpc UpdateTokenBalancesSubscription (UpdateTokenBalancesSubscriptionRequest) returns (google.protobuf.Empty);
 
     // Subscribe to token updates.
-    rpc SubscribeTokens (RetrieveTokensRequest) returns (stream SubscribeTokensResponse);
+    rpc SubscribeTokens (SubscribeTokensRequest) returns (stream SubscribeTokensResponse);
 
     // Update token subscription
     rpc UpdateTokensSubscription (UpdateTokenSubscriptionRequest) returns (google.protobuf.Empty);
@@ -99,11 +99,26 @@ message RetrieveTokensRequest {
     repeated bytes contract_addresses = 1;
     // The list of token IDs to retrieve tokens for
     repeated bytes token_ids = 2;
+    // The number of tokens to retrieve
+    uint32 limit = 3;
+    // The offset to retrieve tokens from
+    uint32 offset = 4;
+    // The cursor to start the query from
+    string cursor = 5;
+}
+
+// A request to subscribe to token updates
+message SubscribeTokensRequest {
+    // The list of contract addresses to subscribe to
+    repeated bytes contract_addresses = 1;
+    // The list of token IDs to subscribe to
+    repeated bytes token_ids = 2;
 }
 
 // A response containing tokens
 message RetrieveTokensResponse {
-    repeated types.Token tokens = 1;
+    string next_cursor = 1;
+    repeated types.Token tokens = 2;
 }
 
 // A response containing token updates
@@ -132,11 +147,28 @@ message RetrieveTokenBalancesRequest {
     repeated bytes contract_addresses = 2;
     // The list of token IDs to retrieve balances for
     repeated bytes token_ids = 3;
+    // The number of token balances to retrieve
+    uint32 limit = 4;
+    // The offset to retrieve token balances from
+    uint32 offset = 5;
+    // The cursor to start the query from
+    string cursor = 6;
+}
+
+// A request to subscribe to token balance updates
+message SubscribeTokenBalancesRequest {
+    // The account addresses to subscribe to
+    repeated bytes account_addresses = 1;
+    // The list of token contract addresses to subscribe to
+    repeated bytes contract_addresses = 2;
+    // The list of token IDs to subscribe to
+    repeated bytes token_ids = 3;
 }
 
 // A response containing token balances
 message RetrieveTokenBalancesResponse {
-    repeated types.TokenBalance balances = 1;
+    string next_cursor = 1;
+    repeated types.TokenBalance balances = 2;
 }
 
 // A request to subscribe to indexer updates.

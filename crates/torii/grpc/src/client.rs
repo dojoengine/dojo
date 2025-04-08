@@ -18,10 +18,10 @@ use crate::proto::world::{
     RetrieveTokensRequest, RetrieveTokensResponse, SubscribeEntitiesRequest,
     SubscribeEntityResponse, SubscribeEventMessagesRequest, SubscribeEventsRequest,
     SubscribeEventsResponse, SubscribeIndexerRequest, SubscribeIndexerResponse,
-    SubscribeModelsRequest, SubscribeModelsResponse, SubscribeTokenBalancesResponse,
-    SubscribeTokensResponse, UpdateEntitiesSubscriptionRequest,
-    UpdateEventMessagesSubscriptionRequest, UpdateTokenBalancesSubscriptionRequest,
-    UpdateTokenSubscriptionRequest, WorldMetadataRequest,
+    SubscribeModelsRequest, SubscribeModelsResponse, SubscribeTokenBalancesRequest,
+    SubscribeTokenBalancesResponse, SubscribeTokensRequest, SubscribeTokensResponse,
+    UpdateEntitiesSubscriptionRequest, UpdateEventMessagesSubscriptionRequest,
+    UpdateTokenBalancesSubscriptionRequest, UpdateTokenSubscriptionRequest, WorldMetadataRequest,
 };
 use crate::types::schema::{Entity, SchemaError};
 use crate::types::{
@@ -118,6 +118,9 @@ impl WorldClient {
         &mut self,
         contract_addresses: Vec<Felt>,
         token_ids: Vec<U256>,
+        limit: Option<u32>,
+        offset: Option<u32>,
+        cursor: Option<String>,
     ) -> Result<RetrieveTokensResponse, Error> {
         self.inner
             .retrieve_tokens(RetrieveTokensRequest {
@@ -126,6 +129,9 @@ impl WorldClient {
                     .map(|c| c.to_bytes_be().to_vec())
                     .collect(),
                 token_ids: token_ids.into_iter().map(|id| id.to_be_bytes().to_vec()).collect(),
+                limit: limit.unwrap_or_default(),
+                offset: offset.unwrap_or_default(),
+                cursor: cursor.unwrap_or_default(),
             })
             .await
             .map_err(Error::Grpc)
@@ -137,7 +143,7 @@ impl WorldClient {
         contract_addresses: Vec<Felt>,
         token_ids: Vec<U256>,
     ) -> Result<TokenUpdateStreaming, Error> {
-        let request = RetrieveTokensRequest {
+        let request = SubscribeTokensRequest {
             contract_addresses: contract_addresses
                 .into_iter()
                 .map(|c| c.to_bytes_be().to_vec())
@@ -193,6 +199,9 @@ impl WorldClient {
         account_addresses: Vec<Felt>,
         contract_addresses: Vec<Felt>,
         token_ids: Vec<U256>,
+        limit: Option<u32>,
+        offset: Option<u32>,
+        cursor: Option<String>,
     ) -> Result<RetrieveTokenBalancesResponse, Error> {
         self.inner
             .retrieve_token_balances(RetrieveTokenBalancesRequest {
@@ -205,6 +214,9 @@ impl WorldClient {
                     .map(|c| c.to_bytes_be().to_vec())
                     .collect(),
                 token_ids: token_ids.into_iter().map(|id| id.to_be_bytes().to_vec()).collect(),
+                limit: limit.unwrap_or_default(),
+                offset: offset.unwrap_or_default(),
+                cursor: cursor.unwrap_or_default(),
             })
             .await
             .map_err(Error::Grpc)
@@ -383,7 +395,7 @@ impl WorldClient {
         account_addresses: Vec<Felt>,
         token_ids: Vec<U256>,
     ) -> Result<TokenBalanceStreaming, Error> {
-        let request = RetrieveTokenBalancesRequest {
+        let request = SubscribeTokenBalancesRequest {
             contract_addresses: contract_addresses
                 .into_iter()
                 .map(|c| c.to_bytes_be().to_vec())
