@@ -138,7 +138,7 @@ impl Client {
     pub async fn entities(&self, query: Query, historical: bool) -> Result<Vec<Entity>, Error> {
         let mut grpc_client = self.inner.write().await;
         let RetrieveEntitiesResponse { entities, total_count: _ } =
-            grpc_client.retrieve_entities(query, historical).await?;
+            grpc_client.retrieve_entities(query, historical).await?;s
         Ok(entities.into_iter().map(TryInto::try_into).collect::<Result<Vec<Entity>, _>>()?)
     }
 
