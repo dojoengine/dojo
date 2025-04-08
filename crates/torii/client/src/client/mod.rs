@@ -17,7 +17,7 @@ use torii_grpc::proto::world::{
 };
 use torii_grpc::types::schema::Entity;
 use torii_grpc::types::{
-    Controller, EntityKeysClause, Event, EventQuery, Query, Token, TokenBalance,
+    Controller, EntityKeysClause, Event, EventQuery, Page, Query, Token, TokenBalance,
 };
 use torii_relay::client::EventLoop;
 use torii_relay::types::Message;
@@ -88,15 +88,15 @@ impl Client {
         limit: Option<u32>,
         offset: Option<u32>,
         cursor: Option<String>,
-    ) -> Result<(Vec<Token>, String), Error> {
+    ) -> Result<Page<Token>, Error> {
         let mut grpc_client = self.inner.write().await;
         let RetrieveTokensResponse { tokens, next_cursor } = grpc_client
             .retrieve_tokens(contract_addresses, token_ids, limit, offset, cursor)
             .await?;
-        Ok((
-            tokens.into_iter().map(TryInto::try_into).collect::<Result<Vec<Token>, _>>()?,
+        Ok(Page {
+            items: tokens.into_iter().map(TryInto::try_into).collect::<Result<Vec<Token>, _>>()?,
             next_cursor,
-        ))
+        })
     }
 
     /// Retrieves token balances for account addresses and contract addresses.
@@ -108,7 +108,7 @@ impl Client {
         limit: Option<u32>,
         offset: Option<u32>,
         cursor: Option<String>,
-    ) -> Result<(Vec<TokenBalance>, String), Error> {
+    ) -> Result<Page<TokenBalance>, Error> {
         let mut grpc_client = self.inner.write().await;
         let RetrieveTokenBalancesResponse { balances, next_cursor } = grpc_client
             .retrieve_token_balances(
@@ -120,13 +120,13 @@ impl Client {
                 cursor,
             )
             .await?;
-        Ok((
-            balances
+        Ok(Page {
+            items: balances
                 .into_iter()
                 .map(TryInto::try_into)
                 .collect::<Result<Vec<TokenBalance>, _>>()?,
             next_cursor,
-        ))
+        })
     }
 
     /// Retrieves entities matching query parameter.
