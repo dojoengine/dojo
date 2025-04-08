@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1744107084483,
+  "lastUpdate": 1744107213632,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -60787,6 +60787,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 51039050796,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a7495f221f6bff33ad3fb3c680b4750b6a680e4d",
+          "message": "feat(torii-libp2p): add dns resolver (#3148)",
+          "timestamp": "2025-04-08T18:53:43+09:00",
+          "tree_id": "68f73c3f3c3e986f2c312bc68aea744d68bc7162",
+          "url": "https://github.com/dojoengine/dojo/commit/a7495f221f6bff33ad3fb3c680b4750b6a680e4d"
+        },
+        "date": 1744107209867,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2477704,
+            "range": "± 117470",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 402877,
+            "range": "± 12594",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2948896474,
+            "range": "± 270919951",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 17460247,
+            "range": "± 549034",
             "unit": "ns/iter"
           }
         ]
