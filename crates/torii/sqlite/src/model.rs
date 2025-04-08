@@ -534,11 +534,13 @@ pub async fn fetch_entities(
             }
 
             if let Some(limit) = limit {
-                query += &format!(" LIMIT {}", limit);
+                query += " LIMIT ?";
+                bind_values.push(limit.to_string());
             }
 
             if let Some(offset) = offset {
-                query += &format!(" OFFSET {}", offset);
+                query += " OFFSET ?";
+                bind_values.push(offset.to_string());
             }
 
             // Execute main query
