@@ -131,7 +131,7 @@ impl WorldClient {
                 token_ids: token_ids.into_iter().map(|id| id.to_be_bytes().to_vec()).collect(),
                 limit: limit.unwrap_or_default(),
                 offset: offset.unwrap_or_default(),
-                cursor: cursor.unwrap_or_default()
+                cursor: cursor.unwrap_or_default(),
             })
             .await
             .map_err(Error::Grpc)
@@ -216,7 +216,7 @@ impl WorldClient {
                 token_ids: token_ids.into_iter().map(|id| id.to_be_bytes().to_vec()).collect(),
                 limit: limit.unwrap_or_default(),
                 offset: offset.unwrap_or_default(),
-                cursor: cursor.unwrap_or_default()
+                cursor: cursor.unwrap_or_default(),
             })
             .await
             .map_err(Error::Grpc)

@@ -90,8 +90,9 @@ impl Client {
         cursor: Option<String>,
     ) -> Result<Vec<Token>, Error> {
         let mut grpc_client = self.inner.write().await;
-        let RetrieveTokensResponse { tokens } =
-            grpc_client.retrieve_tokens(contract_addresses, token_ids, limit, offset, cursor).await?;
+        let RetrieveTokensResponse { tokens } = grpc_client
+            .retrieve_tokens(contract_addresses, token_ids, limit, offset, cursor)
+            .await?;
         Ok(tokens.into_iter().map(TryInto::try_into).collect::<Result<Vec<Token>, _>>()?)
     }
 
