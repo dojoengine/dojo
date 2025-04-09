@@ -13,6 +13,7 @@ use starknet::core::types::Felt;
 
 use super::error::{self, Error};
 use crate::error::ParseError;
+use crate::types::{OrderDirection, Page, Pagination, PaginationDirection};
 
 #[derive(Debug)]
 pub struct ModelSQLReader {
@@ -113,128 +114,6 @@ impl ModelReader<Error> for ModelSQLReader {
     async fn layout(&self) -> Result<Layout, Error> {
         Ok(self.layout.clone())
     }
-}
-
-/// Creates a query that fetches all models and their nested data.
-#[allow(clippy::too_many_arguments)]
-pub fn build_sql_query(
-    schemas: &Vec<Ty>,
-    table_name: &str,
-    model_relation_table: &str,
-    entity_relation_column: &str,
-    where_clause: Option<&str>,
-    having_clause: Option<&str>,
-    order_by: Option<&str>,
-    limit: Option<u32>,
-    offset: Option<u32>,
-) -> Result<(String, String), Error> {
-    fn collect_columns(table_prefix: &str, path: &str, ty: &Ty, selections: &mut Vec<String>) {
-        match ty {
-            Ty::Struct(s) => {
-                for child in &s.children {
-                    let new_path = if path.is_empty() {
-                        child.name.clone()
-                    } else {
-                        format!("{}.{}", path, child.name)
-                    };
-                    collect_columns(table_prefix, &new_path, &child.ty, selections);
-                }
-            }
-            Ty::Tuple(t) => {
-                for (i, child) in t.iter().enumerate() {
-                    let new_path =
-                        if path.is_empty() { format!("{}", i) } else { format!("{}.{}", path, i) };
-                    collect_columns(table_prefix, &new_path, child, selections);
-                }
-            }
-            Ty::Enum(e) => {
-                // Add the enum variant column with table prefix and alias
-                selections.push(format!("[{table_prefix}].[{path}] as \"{table_prefix}.{path}\"",));
-
-                // Add columns for each variant's value (if not empty tuple)
-                for option in &e.options {
-                    if let Ty::Tuple(t) = &option.ty {
-                        if t.is_empty() {
-                            continue;
-                        }
-                    }
-                    let variant_path = format!("{}.{}", path, option.name);
-                    collect_columns(table_prefix, &variant_path, &option.ty, selections);
-                }
-            }
-            Ty::Array(_) | Ty::Primitive(_) | Ty::ByteArray(_) => {
-                selections.push(format!("[{table_prefix}].[{path}] as \"{table_prefix}.{path}\"",));
-            }
-        }
-    }
-
-    let mut selections = Vec::new();
-    let mut joins = Vec::new();
-
-    // Add base table columns
-    selections.push(format!("{}.id", table_name));
-    selections.push(format!("{}.keys", table_name));
-    selections.push(format!("group_concat({model_relation_table}.model_id) as model_ids"));
-
-    // Process each model schema
-    for model in schemas {
-        let model_table = model.name();
-        joins.push(format!(
-            "LEFT JOIN [{model_table}] ON {table_name}.id = \
-             [{model_table}].{entity_relation_column}",
-        ));
-
-        // Collect columns with table prefix
-        collect_columns(&model_table, "", model, &mut selections);
-    }
-
-    joins.push(format!(
-        "JOIN {model_relation_table} ON {table_name}.id = {model_relation_table}.entity_id"
-    ));
-
-    let selections_clause = selections.join(", ");
-    let joins_clause = joins.join(" ");
-
-    let mut query = format!("SELECT {} FROM [{}] {}", selections_clause, table_name, joins_clause);
-
-    // Include model_ids in the subquery and put WHERE before GROUP BY
-    let mut count_query = format!(
-        "SELECT COUNT(*) FROM (SELECT {}.id, group_concat({}.model_id) as model_ids FROM [{}] {}",
-        table_name, model_relation_table, table_name, joins_clause
-    );
-
-    if let Some(where_clause) = where_clause {
-        query += &format!(" WHERE {}", where_clause);
-        count_query += &format!(" WHERE {}", where_clause);
-    }
-
-    query += &format!(" GROUP BY {table_name}.id");
-    count_query += &format!(" GROUP BY {table_name}.id");
-
-    if let Some(having_clause) = having_clause {
-        query += &format!(" HAVING {}", having_clause);
-        count_query += &format!(" HAVING {}", having_clause);
-    }
-
-    // Close the subquery
-    count_query += ") AS filtered_entities";
-
-    // Use custom order by if provided, otherwise default to event_id DESC
-    if let Some(order_clause) = order_by {
-        query += &format!(" ORDER BY {}", order_clause);
-    } else {
-        query += &format!(" ORDER BY {}.event_id DESC", table_name);
-    }
-
-    if let Some(limit) = limit {
-        query += &format!(" LIMIT {}", limit);
-    }
-
-    if let Some(offset) = offset {
-        query += &format!(" OFFSET {}", offset);
-    }
-
-    Ok((query, count_query))
 }
 
 /// Populate the values of a Ty (schema) from SQLite row.
@@ -405,7 +284,6 @@ pub fn map_row_to_ty(
     Ok(())
 }
 
-#[allow(clippy::too_many_arguments)]
 pub async fn fetch_entities(
     pool: &Pool<sqlx::Sqlite>,
     schemas: &[Ty],
@@ -414,12 +292,9 @@ pub async fn fetch_entities(
     entity_relation_column: &str,
     where_clause: Option<&str>,
     having_clause: Option<&str>,
-    order_by: Option<&str>,
-    limit: Option<u32>,
-    offset: Option<u32>,
+    pagination: Pagination,
     bind_values: Vec<String>,
-) -> Result<(Vec<sqlx::sqlite::SqliteRow>, u32), Error> {
-    // Helper function to collect columns (existing implementation)
+) -> Result<Page<sqlx::sqlite::SqliteRow>, Error> {
     fn collect_columns(table_prefix: &str, path: &str, ty: &Ty, selections: &mut Vec<String>) {
         match ty {
             Ty::Struct(s) => {
@@ -434,47 +309,54 @@ pub async fn fetch_entities(
             }
             Ty::Tuple(t) => {
                 for (i, child) in t.iter().enumerate() {
-                    let new_path =
-                        if path.is_empty() { format!("{}", i) } else { format!("{}.{}", path, i) };
+                    let new_path = if path.is_empty() { format!("{}", i) } else { format!("{}.{}", path, i) };
                     collect_columns(table_prefix, &new_path, child, selections);
                 }
             }
             Ty::Enum(e) => {
-                // Add the enum variant column with table prefix and alias
-                selections.push(format!("[{table_prefix}].[{path}] as \"{table_prefix}.{path}\"",));
-
-                // Add columns for each variant's value (if not empty tuple)
+                selections.push(format!("[{table_prefix}].[{path}] as \"{table_prefix}.{path}\""));
                 for option in &e.options {
                     if let Ty::Tuple(t) = &option.ty {
-                        if t.is_empty() {
-                            continue;
-                        }
+                        if t.is_empty() { continue; }
                     }
                     let variant_path = format!("{}.{}", path, option.name);
                     collect_columns(table_prefix, &variant_path, &option.ty, selections);
                 }
             }
             Ty::Array(_) | Ty::Primitive(_) | Ty::ByteArray(_) => {
-                selections.push(format!("[{table_prefix}].[{path}] as \"{table_prefix}.{path}\"",));
+                selections.push(format!("[{table_prefix}].[{path}] as \"{table_prefix}.{path}\""));
             }
         }
     }
 
     const MAX_JOINS: usize = 64;
     let schema_chunks = schemas.chunks(MAX_JOINS);
-    let mut total_count = 0;
-    let mut all_rows = Vec::new();
+    
+    let order_by_clause = if pagination.order_by.is_empty() {
+        format!("{}.event_id DESC, {}.id DESC", table_name, table_name)
+    } else {
+        pagination.order_by.iter()
+            .map(|order| {
+                let direction = match order.direction {
+                    OrderDirection::Asc => "ASC",
+                    OrderDirection::Desc => "DESC",
+                };
+                format!("[{}].[{}] {}", order.model, order.member, direction)
+            })
+            .collect::<Vec<_>>()
+            .join(", ")
+    };
 
+    let mut all_rows = Vec::new();    
     for chunk in schema_chunks {
         let mut selections = Vec::new();
         let mut joins = Vec::new();
 
-        // Add base table columns
         selections.push(format!("{}.id", table_name));
+        selections.push(format!("{}.event_id", table_name));
         selections.push(format!("{}.keys", table_name));
         selections.push(format!("group_concat({model_relation_table}.model_id) as model_ids"));
 
-        // Process each model schema in the chunk
         for model in chunk {
             let model_table = model.name();
             joins.push(format!(
@@ -491,69 +373,135 @@ pub async fn fetch_entities(
         let selections_clause = selections.join(", ");
         let joins_clause = joins.join(" ");
 
-        // Build count query
-        let count_query = format!(
-            "SELECT COUNT(*) FROM (SELECT {}.id, group_concat({}.model_id) as model_ids FROM [{}] \
-             {} {} GROUP BY {}.id {})",
-            table_name,
-            model_relation_table,
-            table_name,
-            joins_clause,
-            where_clause.map_or(String::new(), |w| format!(" WHERE {}", w)),
-            table_name,
-            having_clause.map_or(String::new(), |h| format!(" HAVING {}", h))
+        let mut query = format!(
+            "SELECT {} FROM [{}] {} ",
+            selections_clause, table_name, joins_clause
         );
 
-        // Execute count query
-        let mut count_stmt = sqlx::query_scalar(&count_query);
-        for value in &bind_values {
-            count_stmt = count_stmt.bind(value);
+        let mut bind_values = bind_values.clone();
+        if let Some(where_clause) = where_clause {
+            query += &format!("WHERE {} ", where_clause);
         }
-        let chunk_count: u32 = count_stmt.fetch_one(pool).await?;
-        total_count += chunk_count;
 
-        if chunk_count > 0 {
-            // Build main query
-            let mut query =
-                format!("SELECT {} FROM [{}] {}", selections_clause, table_name, joins_clause);
-
-            if let Some(where_clause) = where_clause {
-                query += &format!(" WHERE {}", where_clause);
-            }
-
-            query += &format!(" GROUP BY {table_name}.id");
-
-            if let Some(having_clause) = having_clause {
-                query += &format!(" HAVING {}", having_clause);
-            }
-
-            if let Some(order_clause) = order_by {
-                query += &format!(" ORDER BY {}", order_clause);
+        if pagination.limit.is_some() && pagination.cursor.is_some() {
+            let cursor = pagination.cursor.as_ref().unwrap();
+            let cursor_values: Vec<&str> = cursor.split(',').collect();
+            let mut conditions = Vec::new();
+            
+            if pagination.order_by.is_empty() {
+                let (event_id_op, id_op) = match pagination.direction {
+                    PaginationDirection::Forward => (">", ">"),
+                    PaginationDirection::Backward => ("<", "<"),
+                };
+                conditions.push(format!("{}.event_id {} ? OR ({}.event_id = ? AND {}.id {} ?)", 
+                    table_name, event_id_op, table_name, table_name, id_op));
+                bind_values.extend(vec![
+                    cursor_values[0].to_string(),
+                    cursor_values[0].to_string(),
+                    cursor_values[1].to_string(),
+                ]);
             } else {
-                query += &format!(" ORDER BY {}.event_id DESC", table_name);
-            }
+                let id_condition = match pagination.direction {
+                    PaginationDirection::Forward => format!("{}.id > ?", table_name),
+                    PaginationDirection::Backward => format!("{}.id < ?", table_name),
+                };
+                conditions.push(id_condition);
+                bind_values.push(cursor_values[0].to_string());
 
-            if let Some(limit) = limit {
-                query += " LIMIT ?";
-                bind_values.push(limit.to_string());
+                for (i, order) in pagination.order_by.iter().enumerate() {
+                    let operator = match (&pagination.direction, &order.direction) {
+                        (PaginationDirection::Forward, OrderDirection::Asc) => ">",
+                        (PaginationDirection::Forward, OrderDirection::Desc) => "<",
+                        (PaginationDirection::Backward, OrderDirection::Asc) => "<",
+                        (PaginationDirection::Backward, OrderDirection::Desc) => ">",
+                    };
+                    conditions.push(format!("[{}].[{}] {} ?", order.model, order.member, operator));
+                    bind_values.push(cursor_values[i + 1].to_string());
+                }
             }
-
-            if let Some(offset) = offset {
-                query += " OFFSET ?";
-                bind_values.push(offset.to_string());
+            
+            let cursor_condition = conditions.join(" AND ");
+            if !cursor_condition.is_empty() {
+                if where_clause.is_none() {
+                    query += "WHERE ";
+                } else {
+                    query += "AND ";
+                }
+                query += &cursor_condition;
             }
-
-            // Execute main query
-            let mut stmt = sqlx::query(&query);
-            for value in &bind_values {
-                stmt = stmt.bind(value);
-            }
-            let chunk_rows = stmt.fetch_all(pool).await?;
-            all_rows.extend(chunk_rows);
         }
+
+        query += &format!("GROUP BY {}.id ", table_name);
+
+        if let Some(having_clause) = having_clause {
+            query += &format!("HAVING {} ", having_clause);
+        }
+
+        if let Some(limit) = pagination.limit {
+            query += &format!("ORDER BY {}, {}.id DESC LIMIT {}", 
+                order_by_clause, table_name, limit
+            );
+        } else {
+            query += &format!("ORDER BY {}, {}.id DESC", 
+                order_by_clause, table_name
+            );
+        }
+
+        let mut stmt = sqlx::query(&query);
+        for value in &bind_values {
+            stmt = stmt.bind(value);
+        }
+        
+        let chunk_rows = stmt.fetch_all(pool).await?;
+        all_rows.extend(chunk_rows);
     }
 
-    Ok((all_rows, total_count))
+    if let Some(limit) = pagination.limit {
+        let requested_limit = limit - 1; // Number of rows user actually wants
+        let (items, next_cursor) = if all_rows.len() > requested_limit as usize {
+            let extra_row = all_rows.len() == limit as usize;
+            let items: Vec<_> = all_rows.drain(..requested_limit as usize).collect(); // Take only requested rows
+            
+            let next_cursor = if extra_row {
+                let last_row = &items[items.len() - 1]; // Last row of items (not extra row)
+                let cursor_values = if pagination.order_by.is_empty() {
+                    vec![
+                        last_row.get::<String, &str>("event_id").to_string(),
+                        last_row.get::<String, &str>("id").to_string(),
+                    ]
+                } else {
+                    let mut values = vec![last_row.get::<String, &str>("id").to_string()];
+                    values.extend(pagination.order_by.iter().map(|order| {
+                        let column = format!("{}.{}", order.model, order.member);
+                        last_row.get::<String, &str>(&column).to_string()
+                    }));
+                    values
+                };
+                Some(cursor_values.join(","))
+            } else {
+                None
+            };
+
+            match pagination.direction {
+                PaginationDirection::Forward => (items, next_cursor),
+                PaginationDirection::Backward => (items.into_iter().rev().collect(), next_cursor),
+            }
+        } else {
+            let items = all_rows; // Take all rows if fewer than requested
+            match pagination.direction {
+                PaginationDirection::Forward => (items, None),
+                PaginationDirection::Backward => (items.into_iter().rev().collect(), None),
+            }
+        };
+
+        Ok(Page { items, next_cursor })
+    } else {
+        let items = match pagination.direction {
+            PaginationDirection::Forward => all_rows,
+            PaginationDirection::Backward => all_rows.into_iter().rev().collect(),
+        };
+        Ok(Page { items, next_cursor: None })
+    }
 }
 
 #[cfg(test)]
