@@ -18,10 +18,20 @@ git clone https://github.com/dojoengine/dojo.git
 
 ### 2. Install Rust and dependencies
 
-Install Rust and run the test suite to confirm your setup:
+Install & update Rust:
 
 ```sh
-rustup override set stable && rustup update && cargo test
+rustup override set stable && rustup update
+```
+
+Now run the test suite to confirm your setup:
+
+```sh
+# First generate db artifacts for the tests
+bash scripts/rebuild_test_artifacts.sh
+
+# The run the tests
+cargo test
 ```
 
 Note: Depending on your Linux distribution, you may need to install additional dependencies.
@@ -37,6 +47,8 @@ Install the [Cairo 1.0](https://marketplace.visualstudio.com/items?itemName=star
 ## Testing
 
 Before you submit your pull request, you should run the test suite locally to make sure your changes haven't broken anything.
+
+We're using `nextest` as our test runner, which you can get at [https://nexte.st/](https://nexte.st/).
 
 To run the test, you can execute the same command that will be executed on the CI by checking the [`.github/workflows/ci.yml`](.github/workflows/ci.yml) file.
 
