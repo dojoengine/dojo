@@ -377,21 +377,24 @@ pub async fn fetch_entities(
     let order_clause = if adjusted_order_by.is_empty() {
         format!("{}.event_id DESC", table_name)
     } else {
-        adjusted_order_by
-            .iter()
-            .map(|ob| {
-                format!(
-                    "\"{}.{}\" {}",
-                    ob.model,
-                    ob.member,
-                    match ob.direction {
-                        OrderDirection::Asc => "ASC",
-                        OrderDirection::Desc => "DESC",
-                    }
-                )
-            })
-            .collect::<Vec<_>>()
-            .join(", ")
+        format!("{}, {}.event_id DESC",
+            adjusted_order_by
+                .iter()
+                .map(|ob| {
+                    format!(
+                        "\"{}.{}\" {}",
+                        ob.model,
+                        ob.member,
+                        match ob.direction {
+                            OrderDirection::Asc => "ASC",
+                            OrderDirection::Desc => "DESC",
+                        }
+                    )
+                })
+                .collect::<Vec<_>>()
+                .join(", "),
+            table_name
+        )
     };
 
     // Parse cursor into values
@@ -408,34 +411,53 @@ pub async fn fetch_entities(
     let mut where_conditions = Vec::new();
     let mut cursor_bind_values = Vec::new();
     if let Some(cursor_vals) = &cursor_values {
-        if cursor_vals.len() != pagination.order_by.len() {
+        let expected_len = if adjusted_order_by.is_empty() { 1 } else { pagination.order_by.len() + 1 };
+        if cursor_vals.len() != expected_len {
             return Err(Error::InvalidCursor);
         }
-        for (i, (ob, val)) in pagination.order_by.iter().zip(cursor_vals).enumerate() {
-            let operator = match (&ob.direction, &pagination.direction) {
-                (OrderDirection::Asc, PaginationDirection::Forward) => ">",
-                (OrderDirection::Asc, PaginationDirection::Backward) => "<",
-                (OrderDirection::Desc, PaginationDirection::Forward) => "<",
-                (OrderDirection::Desc, PaginationDirection::Backward) => ">",
+
+        if adjusted_order_by.is_empty() {
+            // When no explicit order by, use event_id for cursor
+            let operator = match pagination.direction {
+                PaginationDirection::Forward => "<",  // DESC order so < for forward
+                PaginationDirection::Backward => ">", // DESC order so > for backward
             };
-            let condition = if i == 0 {
-                format!("\"{}.{}\" {} ?", ob.model, ob.member, operator)
-            } else {
-                // Handle multi-column cursors with previous columns equality
-                let prev_conditions = (0..i)
-                    .map(|j| {
-                        let prev_ob = &pagination.order_by[j];
-                        format!("\"{}.{}\" = ?", prev_ob.model, prev_ob.member)
-                    })
-                    .collect::<Vec<_>>()
-                    .join(" AND ");
-                format!(
-                    "({} AND \"{}.{}\" {} ?)",
-                    prev_conditions, ob.model, ob.member, operator
-                )
+            where_conditions.push(format!("{}.event_id {} ?", table_name, operator));
+            cursor_bind_values.extend(cursor_vals.iter().cloned());
+        } else {
+            for (i, (ob, val)) in pagination.order_by.iter().zip(&cursor_vals[..cursor_vals.len()-1]).enumerate() {
+                let operator = match (&ob.direction, &pagination.direction) {
+                    (OrderDirection::Asc, PaginationDirection::Forward) => ">",
+                    (OrderDirection::Asc, PaginationDirection::Backward) => "<",
+                    (OrderDirection::Desc, PaginationDirection::Forward) => "<",
+                    (OrderDirection::Desc, PaginationDirection::Backward) => ">",
+                };
+                let condition = if i == 0 {
+                    format!("\"{}.{}\" {} ?", ob.model, ob.member, operator)
+                } else {
+                    // Handle multi-column cursors with previous columns equality
+                    let prev_conditions = (0..i)
+                        .map(|j| {
+                            let prev_ob = &pagination.order_by[j];
+                            format!("\"{}.{}\" = ?", prev_ob.model, prev_ob.member)
+                        })
+                        .collect::<Vec<_>>()
+                        .join(" AND ");
+                    format!(
+                        "({} AND \"{}.{}\" {} ?)",
+                        prev_conditions, ob.model, ob.member, operator
+                    )
+                };
+                where_conditions.push(format!("({})", condition));
+                cursor_bind_values.extend(cursor_vals[..=i].iter().cloned());
+            }
+            // Add event_id condition for uniqueness
+            let event_id_operator = match pagination.direction {
+                PaginationDirection::Forward => "<",
+                PaginationDirection::Backward => ">",
             };
-            where_conditions.push(condition);
-            cursor_bind_values.extend(cursor_vals[..=i].iter().cloned());
+            where_conditions.push(format!("{}.event_id {} ?", table_name, event_id_operator));
+            cursor_bind_values.push(cursor_vals.last().unwrap().clone());
         }
     }
 
@@ -455,17 +477,29 @@ pub async fn fetch_entities(
         // Add base table columns
         selections.push(format!("{}.id", table_name));
         selections.push(format!("{}.keys", table_name));
+        selections.push(format!("{}.event_id", table_name));
         selections.push(format!(
             "group_concat({}.model_id) as model_ids",
             model_relation_table
         ));
 
+        // Track which models are used in ordering for INNER JOIN
+        let ordered_models: std::collections::HashSet<String> = adjusted_order_by
+            .iter()
+            .map(|ob| ob.model.clone())
+            .collect();
+
         // Process each model schema in the chunk
         for model in chunk {
             let model_table = model.name();
+            let join_type = if ordered_models.contains(&model_table) {
+                "INNER JOIN"
+            } else {
+                "LEFT JOIN"
+            };
             joins.push(format!(
-                "LEFT JOIN [{}] ON {}.id = [{}].{}",
-                model_table, table_name, model_table, entity_relation_column
+                "{} [{}] ON {}.id = [{}].{}",
+                join_type, model_table, table_name, model_table, entity_relation_column
             ));
             collect_columns(&model_table, "", model, &mut selections);
         }
@@ -526,15 +560,23 @@ pub async fn fetch_entities(
     // Generate next cursor if we have more items
     if all_rows.len() >= original_limit as usize {
         if let Some(last_row) = all_rows.last() {
-            let cursor_values: Vec<String> = pagination
-                .order_by
-                .iter()
-                .map(|ob| {
-                    let col_name = format!("{}.{}", ob.model, ob.member);
-                    last_row
-                        .try_get::<String, &str>(&col_name)
-                })
-                .collect::<Result<Vec<String>, _>>()?;
+            let mut cursor_values: Vec<String> = if adjusted_order_by.is_empty() {
+                // When no explicit order by, use event_id for cursor
+                vec![last_row.try_get::<String, &str>("event_id")?]
+            } else {
+                let mut values: Vec<String> = pagination
+                    .order_by
+                    .iter()
+                    .map(|ob| {
+                        let col_name = format!("{}.{}", ob.model, ob.member);
+                        last_row
+                            .try_get::<String, &str>(&col_name)
+                    })
+                    .collect::<Result<Vec<String>, _>>()?;
+                // Always append the event_id
+                values.push(last_row.try_get::<String, &str>("event_id")?);
+                values
+            };
             let encoded = general_purpose::STANDARD.encode(serde_json::to_string(&cursor_values).map_err(|_| Error::InvalidCursor)?);
             next_cursor = Some(encoded);
         }
