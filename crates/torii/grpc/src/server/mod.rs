@@ -47,7 +47,7 @@ use tonic_web::GrpcWebLayer;
 use torii_sqlite::cache::ModelCache;
 use torii_sqlite::error::{Error, ParseError, QueryError};
 use torii_sqlite::model::{fetch_entities, map_row_to_ty};
-use torii_sqlite::types::{Token, TokenBalance};
+use torii_sqlite::types::{OrderBy, OrderDirection, Page, Pagination, PaginationDirection, Token, TokenBalance};
 use torii_sqlite::utils::u256_to_sql_string;
 use tower_http::cors::{AllowOrigin, CorsLayer};
 
@@ -137,6 +137,35 @@ impl From<TokenBalance> for proto::types::TokenBalance {
                 U256::from_be_hex(id[1].trim_start_matches("0x")).to_be_bytes().to_vec()
             } else {
                 U256::ZERO.to_be_bytes().to_vec()
+            },
+        }
+    }
+}
+
+impl From<proto::types::Pagination> for Pagination {
+    fn from(value: proto::types::Pagination) -> Self {
+        Pagination {
+            cursor: if value.cursor.is_empty() { None } else { Some(value.cursor) },
+            limit: if value.limit > 0 { Some(value.limit) } else { None },
+            direction: match value.direction {
+                0 => PaginationDirection::Forward,
+                1 => PaginationDirection::Backward,
+                _ => unreachable!(),
+            },
+            order_by: value.order_by.into_iter().map(|order_by| order_by.into()).collect(),
+        }
+    }
+}
+
+impl From<proto::types::OrderBy> for OrderBy {
+    fn from(value: proto::types::OrderBy) -> Self {
+        OrderBy {
+            model: value.model,
+            member: value.member,
+            direction: match value.direction {
+                0 => OrderDirection::Asc,
+                1 => OrderDirection::Desc,
+                _ => unreachable!(),
             },
         }
     }
@@ -266,26 +295,18 @@ impl DojoWorld {
         table: &str,
         model_relation_table: &str,
         entity_relation_column: &str,
-        limit: Option<u32>,
-        offset: Option<u32>,
-        dont_include_hashed_keys: bool,
-        order_by: Option<&str>,
-        entity_models: Vec<String>,
-        entity_updated_after: Option<String>,
-        cursor: Option<Felt>,
-    ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
+        pagination: Pagination,
+        no_hashed_keys: bool,
+        models: Vec<String>,
+    ) -> Result<Page<proto::types::Entity>, Error> {
         self.query_by_hashed_keys(
             table,
             model_relation_table,
             entity_relation_column,
             None,
-            limit,
-            offset,
-            dont_include_hashed_keys,
-            order_by,
-            entity_models,
-            entity_updated_after,
-            cursor,
+            pagination,
+            no_hashed_keys,
+            models,
         )
         .await
     }
@@ -332,14 +353,10 @@ impl DojoWorld {
         model_relation_table: &str,
         entity_relation_column: &str,
         hashed_keys: Option<proto::types::HashedKeysClause>,
-        limit: Option<u32>,
-        offset: Option<u32>,
-        dont_include_hashed_keys: bool,
-        order_by: Option<&str>,
-        entity_models: Vec<String>,
-        entity_updated_after: Option<String>,
-        cursor: Option<Felt>,
-    ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
+        pagination: Pagination,
+        no_hashed_keys: bool,
+        models: Vec<String>,
+    ) -> Result<Page<proto::types::Entity>, Error> {
         let mut where_clause = match &hashed_keys {
             Some(hashed_keys) => {
                 let ids =
@@ -359,55 +376,23 @@ impl DojoWorld {
             vec![]
         };
 
-        if let Some(entity_updated_after) = entity_updated_after.clone() {
-            where_clause += &format!(" AND {table}.updated_at >= ?");
-            bind_values.push(entity_updated_after);
-        }
-
-        if let Some(cursor) = cursor {
-            where_clause += &format!(" AND {table}.id > ?");
-            bind_values.push(format!("{:#x}", cursor));
-        }
-
-        let entity_models =
-            entity_models.iter().map(|model| compute_selector_from_tag(model)).collect::<Vec<_>>();
+        let models =
+            models.iter().map(|model| compute_selector_from_tag(model)).collect::<Vec<_>>();
         let schemas = self
             .model_cache
-            .models(&entity_models)
+            .models(&models)
             .await?
             .iter()
             .map(|m| m.schema.clone())
             .collect::<Vec<_>>();
 
-        let having_clause = entity_models
+        let having_clause = models
             .iter()
             .map(|model| format!("INSTR(model_ids, '{:#x}') > 0", model))
             .collect::<Vec<_>>()
             .join(" OR ");
 
         if table == EVENT_MESSAGES_HISTORICAL_TABLE || table == ENTITIES_HISTORICAL_TABLE {
-            let count_query = format!(
-                r#"
-                SELECT COUNT(*) FROM {table}
-                JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
-                {}
-                GROUP BY {table}.event_id
-            "#,
-                if where_clause.is_empty() {
-                    String::new()
-                } else {
-                    format!("WHERE {}", where_clause)
-                }
-            );
-            let mut total_count = sqlx::query_scalar(&count_query);
-            for value in &bind_values {
-                total_count = total_count.bind(value);
-            }
-            let total_count = total_count.fetch_optional(&self.pool).await?.unwrap_or(0);
-            if total_count == 0 {
-                return Ok((Vec::new(), 0));
-            }
-
             let entities = self.fetch_historical_event_messages(
                 &format!(
                     r#"
@@ -425,13 +410,16 @@ impl DojoWorld {
                 }
             ),
                 bind_values,
-                limit,
-                offset
+                None,
+                None
             ).await?;
-            return Ok((entities, total_count));
+            return Ok(Page {
+                items: entities,
+                next_cursor: None,
+            });
         }
 
-        let (rows, total_count) = fetch_entities(
+        let page = fetch_entities(
             &self.pool,
             &schemas,
             table,
@@ -439,19 +427,19 @@ impl DojoWorld {
             entity_relation_column,
             if !where_clause.is_empty() { Some(&where_clause) } else { None },
             if !having_clause.is_empty() { Some(&having_clause) } else { None },
-            order_by,
-            limit,
-            offset,
+            pagination,
             bind_values,
         )
         .await?;
 
-        let entities = rows
-            .par_iter()
-            .map(|row| map_row_to_entity(row, &schemas, dont_include_hashed_keys))
-            .collect::<Result<Vec<_>, Error>>()?;
-
-        Ok((entities, total_count))
+        Ok(Page {
+            items: page
+                .items
+                .par_iter()
+                .map(|row| map_row_to_entity(row, &schemas, no_hashed_keys))
+                .collect::<Result<Vec<_>, Error>>()?,
+            next_cursor: page.next_cursor,
+        })
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -461,14 +449,10 @@ impl DojoWorld {
         model_relation_table: &str,
         entity_relation_column: &str,
         keys_clause: &proto::types::KeysClause,
-        limit: Option<u32>,
-        offset: Option<u32>,
-        dont_include_hashed_keys: bool,
-        order_by: Option<&str>,
-        entity_models: Vec<String>,
-        entity_updated_after: Option<String>,
-        cursor: Option<Felt>,
-    ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
+        pagination: Pagination,
+        no_hashed_keys: bool,
+        models: Vec<String>,
+    ) -> Result<Page<proto::types::Entity>, Error> {
         let keys_pattern = build_keys_pattern(keys_clause)?;
         let model_selectors: Vec<String> = keys_clause
             .models
@@ -477,7 +461,7 @@ impl DojoWorld {
             .collect();
 
         let mut bind_values = vec![keys_pattern];
-        let mut where_clause = if model_selectors.is_empty() {
+        let where_clause = if model_selectors.is_empty() {
             format!("{table}.keys REGEXP ?")
         } else {
             let model_selectors_len = model_selectors.len();
@@ -491,55 +475,24 @@ impl DojoWorld {
                 vec!["?"; model_selectors_len].join(", "),
             )
         };
-        if let Some(entity_updated_after) = entity_updated_after.clone() {
-            where_clause += &format!(" AND {table}.updated_at >= ?");
-            bind_values.push(entity_updated_after);
-        }
 
-        if let Some(cursor) = cursor {
-            where_clause += &format!(" AND {table}.id > ?");
-            bind_values.push(format!("{:#x}", cursor));
-        }
-
-        let entity_models =
-            entity_models.iter().map(|model| compute_selector_from_tag(model)).collect::<Vec<_>>();
+        let models =
+            models.iter().map(|model| compute_selector_from_tag(model)).collect::<Vec<_>>();
         let schemas = self
             .model_cache
-            .models(&entity_models)
+            .models(&models)
             .await?
             .iter()
             .map(|m| m.schema.clone())
             .collect::<Vec<_>>();
 
-        let having_clause = entity_models
+        let having_clause = models
             .iter()
             .map(|model| format!("INSTR(model_ids, '{:#x}') > 0", model))
             .collect::<Vec<_>>()
             .join(" OR ");
 
         if table == EVENT_MESSAGES_HISTORICAL_TABLE || table == ENTITIES_HISTORICAL_TABLE {
-            let count_query = format!(
-                r#"
-                SELECT COUNT(*) FROM {table}
-                JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
-                {}
-                GROUP BY {table}.event_id
-            "#,
-                if where_clause.is_empty() {
-                    String::new()
-                } else {
-                    format!("WHERE {}", where_clause)
-                }
-            );
-            let mut total_count = sqlx::query_scalar(&count_query);
-            for value in &bind_values {
-                total_count = total_count.bind(value);
-            }
-            let total_count = total_count.fetch_optional(&self.pool).await?.unwrap_or(0);
-            if total_count == 0 {
-                return Ok((Vec::new(), 0));
-            }
-
             let entities = self.fetch_historical_event_messages(
                 &format!(
                     r#"
@@ -557,13 +510,16 @@ impl DojoWorld {
                     }
                 ),
                 bind_values,
-                limit,
-                offset
+                None,
+                None
             ).await?;
-            return Ok((entities, total_count));
+            return Ok(Page {
+                items: entities,
+                next_cursor: None,
+            });
         }
 
-        let (rows, total_count) = fetch_entities(
+        let page = fetch_entities(
             &self.pool,
             &schemas,
             table,
@@ -571,20 +527,21 @@ impl DojoWorld {
             entity_relation_column,
             Some(&where_clause),
             if !having_clause.is_empty() { Some(&having_clause) } else { None },
-            order_by,
-            limit,
-            offset,
+            pagination,
             bind_values,
         )
         .await?;
 
-        let entities = rows
-            .par_iter()
-            .map(|row| map_row_to_entity(row, &schemas, dont_include_hashed_keys))
-            .collect::<Result<Vec<_>, Error>>()?;
-
-        Ok((entities, total_count))
+        Ok(Page {
+            items: page
+                .items
+                .par_iter()
+                .map(|row| map_row_to_entity(row, &schemas, no_hashed_keys))
+                .collect::<Result<Vec<_>, Error>>()?,
+            next_cursor: page.next_cursor,
+        })
     }
+
 
     #[allow(clippy::too_many_arguments)]
     pub(crate) async fn query_by_member(
@@ -593,16 +550,12 @@ impl DojoWorld {
         model_relation_table: &str,
         entity_relation_column: &str,
         member_clause: proto::types::MemberClause,
-        limit: Option<u32>,
-        offset: Option<u32>,
-        dont_include_hashed_keys: bool,
-        order_by: Option<&str>,
-        entity_models: Vec<String>,
-        entity_updated_after: Option<String>,
-        cursor: Option<Felt>,
-    ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
-        let entity_models =
-            entity_models.iter().map(|model| compute_selector_from_tag(model)).collect::<Vec<_>>();
+        pagination: Pagination,
+        no_hashed_keys: bool,
+        models: Vec<String>,
+    ) -> Result<Page<proto::types::Entity>, Error> {
+        let models =
+            models.iter().map(|model| compute_selector_from_tag(model)).collect::<Vec<_>>();
         let comparison_operator = ComparisonOperator::from_repr(member_clause.operator as usize)
             .expect("invalid comparison operator");
 
@@ -652,7 +605,10 @@ impl DojoWorld {
         let models_str: Option<String> =
             sqlx::query_scalar(&models_query).fetch_optional(&self.pool).await?;
         if models_str.is_none() {
-            return Ok((Vec::new(), 0));
+            return Ok(Page {
+                items: Vec::new(),
+                next_cursor: None,
+            });
         }
 
         let models_str = models_str.unwrap();
@@ -661,7 +617,7 @@ impl DojoWorld {
             .split(',')
             .filter_map(|id| {
                 let model_id = Felt::from_str(id).unwrap();
-                if entity_models.is_empty() || entity_models.contains(&model_id) {
+                if models.is_empty() || models.contains(&model_id) {
                     Some(model_id)
                 } else {
                     None
@@ -686,17 +642,8 @@ impl DojoWorld {
             "[{}].[{}] {comparison_operator} {value}",
             member_clause.model, member_clause.member
         );
-        if entity_updated_after.is_some() {
-            where_clause += &format!(" AND {table}.updated_at >= ?");
-            bind_values.push(entity_updated_after.unwrap());
-        }
 
-        if let Some(cursor) = cursor {
-            where_clause += &format!(" AND {table}.id > ?");
-            bind_values.push(format!("{:#x}", cursor));
-        }
-
-        let (rows, total_count) = fetch_entities(
+        let page = fetch_entities(
             &self.pool,
             &schemas,
             table,
@@ -704,19 +651,19 @@ impl DojoWorld {
             entity_relation_column,
             Some(&where_clause),
             None,
-            order_by,
-            limit,
-            offset,
+            pagination,
             bind_values,
         )
         .await?;
 
-        let entities = rows
-            .par_iter()
-            .map(|row| map_row_to_entity(row, &schemas, dont_include_hashed_keys))
-            .collect::<Result<Vec<_>, Error>>()?;
-
-        Ok((entities, total_count))
+        Ok(Page {
+            items: page
+                .items
+                .par_iter()
+                .map(|row| map_row_to_entity(row, &schemas, no_hashed_keys))
+                .collect::<Result<Vec<_>, Error>>()?,
+            next_cursor: page.next_cursor,
+        })
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -726,39 +673,33 @@ impl DojoWorld {
         model_relation_table: &str,
         entity_relation_column: &str,
         composite: proto::types::CompositeClause,
-        limit: Option<u32>,
-        offset: Option<u32>,
-        dont_include_hashed_keys: bool,
-        order_by: Option<&str>,
-        entity_models: Vec<String>,
-        entity_updated_after: Option<String>,
-        cursor: Option<Felt>,
-    ) -> Result<(Vec<proto::types::Entity>, u32), Error> {
+        pagination: Pagination,
+        no_hashed_keys: bool,
+        models: Vec<String>,
+    ) -> Result<Page<proto::types::Entity>, Error> {
         let (where_clause, bind_values) = build_composite_clause(
             table,
             model_relation_table,
             &composite,
-            entity_updated_after,
-            cursor,
         )?;
 
-        let entity_models =
-            entity_models.iter().map(|model| compute_selector_from_tag(model)).collect::<Vec<_>>();
+        let models =
+            models.iter().map(|model| compute_selector_from_tag(model)).collect::<Vec<_>>();
         let schemas = self
             .model_cache
-            .models(&entity_models)
+            .models(&models)
             .await?
             .into_iter()
             .map(|m| m.schema)
             .collect::<Vec<_>>();
 
-        let having_clause = entity_models
+        let having_clause = models
             .iter()
             .map(|model| format!("INSTR(model_ids, '{:#x}') > 0", model))
             .collect::<Vec<_>>()
             .join(" OR ");
 
-        let (rows, total_count) = fetch_entities(
+        let page = fetch_entities(
             &self.pool,
             &schemas,
             table,
@@ -766,19 +707,19 @@ impl DojoWorld {
             entity_relation_column,
             if where_clause.is_empty() { None } else { Some(&where_clause) },
             if having_clause.is_empty() { None } else { Some(&having_clause) },
-            order_by,
-            limit,
-            offset,
+            pagination,
             bind_values,
         )
         .await?;
 
-        let entities = rows
-            .par_iter()
-            .map(|row| map_row_to_entity(row, &schemas, dont_include_hashed_keys))
-            .collect::<Result<Vec<_>, Error>>()?;
-
-        Ok((entities, total_count))
+        Ok(Page {
+            items: page
+                .items
+                .par_iter()
+                .map(|row| map_row_to_entity(row, &schemas, no_hashed_keys))
+                .collect::<Result<Vec<_>, Error>>()?,
+            next_cursor: page.next_cursor,
+        })
     }
 
     pub async fn model_metadata(
@@ -961,64 +902,18 @@ impl DojoWorld {
         entity_relation_column: &str,
         query: proto::types::Query,
     ) -> Result<proto::world::RetrieveEntitiesResponse, Error> {
-        let order_by = query
-            .order_by
-            .iter()
-            .map(|order_by| {
-                format!(
-                    "[{}].[{}] {}",
-                    order_by.model,
-                    order_by.member,
-                    match order_by.direction {
-                        0 => "ASC",
-                        1 => "DESC",
-                        _ => unreachable!(),
-                    }
-                )
-            })
-            .collect::<Vec<_>>()
-            .join(", ");
+        let pagination = query.pagination.ok_or(QueryError::MissingParam("pagination".into()))?;
+        let pagination: Pagination = pagination.into();
 
-        let order_by = if order_by.is_empty() { None } else { Some(order_by.as_str()) };
-
-        let entity_updated_after = match query.entity_updated_after {
-            0 => None,
-            _ => Some(
-                // This conversion would include a `UTC` suffix, which is not valid for the SQL
-                // query when comparing the timestamp with equality.
-                // To have `>=` working, we need to remove the `UTC` suffix.
-                DateTime::<Utc>::from_timestamp(query.entity_updated_after as i64, 0)
-                    .ok_or_else(|| {
-                        Error::from(QueryError::InvalidTimestamp(query.entity_updated_after))
-                    })?
-                    .to_string()
-                    .replace("UTC", "")
-                    .trim()
-                    .to_string(),
-            ),
-        };
-
-        let cursor = if query.cursor.is_empty() {
-            None
-        } else {
-            Some(Felt::from_bytes_be_slice(&query.cursor))
-        };
-        let limit = if query.limit > 0 { Some(query.limit) } else { None };
-        let offset = if query.offset > 0 { Some(query.offset) } else { None };
-
-        let (entities, total_count) = match query.clause {
+        let page = match query.clause {
             None => {
                 self.entities_all(
                     table,
                     model_relation_table,
                     entity_relation_column,
-                    limit,
-                    offset,
-                    query.dont_include_hashed_keys,
-                    order_by,
-                    query.entity_models,
-                    entity_updated_after,
-                    cursor,
+                    pagination,
+                    query.no_hashed_keys,
+                    query.models,
                 )
                 .await?
             }
@@ -1037,13 +932,9 @@ impl DojoWorld {
                             } else {
                                 Some(hashed_keys)
                             },
-                            limit,
-                            offset,
-                            query.dont_include_hashed_keys,
-                            order_by,
-                            query.entity_models,
-                            entity_updated_after,
-                            cursor,
+                            pagination,
+                            query.no_hashed_keys,
+                            query.models,
                         )
                         .await?
                     }
@@ -1053,13 +944,9 @@ impl DojoWorld {
                             model_relation_table,
                             entity_relation_column,
                             &keys,
-                            limit,
-                            offset,
-                            query.dont_include_hashed_keys,
-                            order_by,
-                            query.entity_models,
-                            entity_updated_after,
-                            cursor,
+                            pagination,
+                            query.no_hashed_keys,
+                            query.models,
                         )
                         .await?
                     }
@@ -1069,13 +956,9 @@ impl DojoWorld {
                             model_relation_table,
                             entity_relation_column,
                             member,
-                            limit,
-                            offset,
-                            query.dont_include_hashed_keys,
-                            order_by,
-                            query.entity_models,
-                            entity_updated_after,
-                            cursor,
+                            pagination,
+                            query.no_hashed_keys,
+                            query.models,
                         )
                         .await?
                     }
@@ -1085,13 +968,9 @@ impl DojoWorld {
                             model_relation_table,
                             entity_relation_column,
                             composite,
-                            limit,
-                            offset,
-                            query.dont_include_hashed_keys,
-                            order_by,
-                            query.entity_models,
-                            entity_updated_after,
-                            cursor,
+                            pagination,
+                            query.no_hashed_keys,
+                            query.models,
                         )
                         .await?
                     }
@@ -1099,7 +978,10 @@ impl DojoWorld {
             }
         };
 
-        Ok(RetrieveEntitiesResponse { entities, total_count })
+        Ok(RetrieveEntitiesResponse {
+            entities: page.items,
+            next_cursor: page.next_cursor.unwrap_or_default(),
+        })
     }
 
     async fn retrieve_events(
@@ -1265,8 +1147,6 @@ fn build_composite_clause(
     table: &str,
     model_relation_table: &str,
     composite: &proto::types::CompositeClause,
-    entity_updated_after: Option<String>,
-    cursor: Option<Felt>,
 ) -> Result<(String, Vec<String>), Error> {
     let is_or = composite.operator == LogicalOperator::Or as i32;
     let mut where_clauses = Vec::new();
@@ -1354,8 +1234,6 @@ fn build_composite_clause(
                     table,
                     model_relation_table,
                     nested,
-                    entity_updated_after.clone(),
-                    cursor.clone(),
                 )?;
 
                 if !nested_where.is_empty() {
@@ -1371,16 +1249,6 @@ fn build_composite_clause(
     } else {
         String::new()
     };
-
-    if let Some(entity_updated_after) = entity_updated_after.clone() {
-        where_clause += &format!(" AND {table}.updated_at >= ?");
-        bind_values.push(entity_updated_after);
-    }
-
-    if let Some(cursor) = cursor {
-        where_clause += &format!(" AND {table}.id > ?");
-        bind_values.push(format!("{:#x}", cursor));
-    }
 
     Ok((where_clause, bind_values))
 }
@@ -1685,7 +1553,7 @@ impl proto::world::world_server::World for DojoWorld {
             for (i, entity) in res.entities.iter().enumerate() {
                 tx.send(Ok(RetrieveEntitiesStreamingResponse {
                     entity: Some(entity.clone()),
-                    remaining_count: (res.total_count - (i + 1) as u32),
+                    remaining_count: (res.entities.len() - (i + 1)) as u32,
                 }))
                 .await
                 .unwrap();

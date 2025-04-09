@@ -1,6 +1,8 @@
 use std::str::FromStr;
 
 use async_trait::async_trait;
+use base64::engine::general_purpose;
+use base64::Engine;
 use crypto_bigint::U256;
 use dojo_types::primitive::{Primitive, PrimitiveError};
 use dojo_types::schema::Ty;
@@ -13,7 +15,7 @@ use starknet::core::types::Felt;
 
 use super::error::{self, Error};
 use crate::error::ParseError;
-use crate::types::{OrderDirection, Page, Pagination, PaginationDirection};
+use crate::types::{OrderBy, OrderDirection, Page, Pagination, PaginationDirection};
 
 #[derive(Debug)]
 pub struct ModelSQLReader {
@@ -284,6 +286,7 @@ pub fn map_row_to_ty(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn fetch_entities(
     pool: &Pool<sqlx::Sqlite>,
     schemas: &[Ty],
@@ -294,7 +297,8 @@ pub async fn fetch_entities(
     having_clause: Option<&str>,
     pagination: Pagination,
     bind_values: Vec<String>,
-) -> Result<Page<sqlx::sqlite::SqliteRow>, Error> {
+) -> Result<Page<SqliteRow>, Error> {
+    // Helper function to collect columns
     fn collect_columns(table_prefix: &str, path: &str, ty: &Ty, selections: &mut Vec<String>) {
         match ty {
             Ty::Struct(s) => {
@@ -309,199 +313,237 @@ pub async fn fetch_entities(
             }
             Ty::Tuple(t) => {
                 for (i, child) in t.iter().enumerate() {
-                    let new_path = if path.is_empty() { format!("{}", i) } else { format!("{}.{}", path, i) };
+                    let new_path = if path.is_empty() {
+                        format!("{}", i)
+                    } else {
+                        format!("{}.{}", path, i)
+                    };
                     collect_columns(table_prefix, &new_path, child, selections);
                 }
             }
             Ty::Enum(e) => {
-                selections.push(format!("[{table_prefix}].[{path}] as \"{table_prefix}.{path}\""));
+                selections.push(format!(
+                    "[{table_prefix}].[{path}] as \"{table_prefix}.{path}\"",
+                ));
+
                 for option in &e.options {
                     if let Ty::Tuple(t) = &option.ty {
-                        if t.is_empty() { continue; }
+                        if t.is_empty() {
+                            continue;
+                        }
                     }
                     let variant_path = format!("{}.{}", path, option.name);
                     collect_columns(table_prefix, &variant_path, &option.ty, selections);
                 }
             }
             Ty::Array(_) | Ty::Primitive(_) | Ty::ByteArray(_) => {
-                selections.push(format!("[{table_prefix}].[{path}] as \"{table_prefix}.{path}\""));
+                selections.push(format!(
+                    "[{table_prefix}].[{path}] as \"{table_prefix}.{path}\"",
+                ));
             }
         }
     }
 
     const MAX_JOINS: usize = 64;
     let schema_chunks = schemas.chunks(MAX_JOINS);
-    
-    let order_by_clause = if pagination.order_by.is_empty() {
-        format!("{}.event_id DESC, {}.id DESC", table_name, table_name)
+    let mut all_rows = Vec::new();
+    let mut next_cursor = None;
+
+    // Determine the actual limit and adjust for cursor-based pagination
+    let original_limit = pagination.limit.unwrap_or(100);
+    let fetch_limit = original_limit + 1; // Fetch one extra to check for next page
+
+    // Adjust order_by for backward pagination (reverse direction)
+    let adjusted_order_by: Vec<OrderBy> = pagination
+        .order_by
+        .iter()
+        .map(|ob| {
+            if pagination.direction == PaginationDirection::Backward {
+                OrderBy {
+                    model: ob.model.clone(),
+                    member: ob.member.clone(),
+                    direction: match ob.direction {
+                        OrderDirection::Asc => OrderDirection::Desc,
+                        OrderDirection::Desc => OrderDirection::Asc,
+                    },
+                }
+            } else {
+                ob.clone()
+            }
+        })
+        .collect();
+
+    // Generate ORDER BY clause
+    let order_clause = if adjusted_order_by.is_empty() {
+        format!("{}.event_id DESC", table_name)
     } else {
-        pagination.order_by.iter()
-            .map(|order| {
-                let direction = match order.direction {
-                    OrderDirection::Asc => "ASC",
-                    OrderDirection::Desc => "DESC",
-                };
-                format!("[{}].[{}] {}", order.model, order.member, direction)
+        adjusted_order_by
+            .iter()
+            .map(|ob| {
+                format!(
+                    "\"{}.{}\" {}",
+                    ob.model,
+                    ob.member,
+                    match ob.direction {
+                        OrderDirection::Asc => "ASC",
+                        OrderDirection::Desc => "DESC",
+                    }
+                )
             })
             .collect::<Vec<_>>()
             .join(", ")
     };
 
-    let mut all_rows = Vec::new();    
+    // Parse cursor into values
+    let cursor_values: Option<Vec<String>> = if let Some(cursor_str) = &pagination.cursor {
+        let decoded = general_purpose::STANDARD
+            .decode(cursor_str)
+            .map_err(|_| Error::InvalidCursor)?;
+        serde_json::from_slice(&decoded).map_err(|_| Error::InvalidCursor)?
+    } else {
+        None
+    };
+
+    // Build WHERE conditions for cursor
+    let mut where_conditions = Vec::new();
+    let mut cursor_bind_values = Vec::new();
+    if let Some(cursor_vals) = &cursor_values {
+        if cursor_vals.len() != pagination.order_by.len() {
+            return Err(Error::InvalidCursor);
+        }
+        for (i, (ob, val)) in pagination.order_by.iter().zip(cursor_vals).enumerate() {
+            let operator = match (&ob.direction, &pagination.direction) {
+                (OrderDirection::Asc, PaginationDirection::Forward) => ">",
+                (OrderDirection::Asc, PaginationDirection::Backward) => "<",
+                (OrderDirection::Desc, PaginationDirection::Forward) => "<",
+                (OrderDirection::Desc, PaginationDirection::Backward) => ">",
+            };
+            let condition = if i == 0 {
+                format!("\"{}.{}\" {} ?", ob.model, ob.member, operator)
+            } else {
+                // Handle multi-column cursors with previous columns equality
+                let prev_conditions = (0..i)
+                    .map(|j| {
+                        let prev_ob = &pagination.order_by[j];
+                        format!("\"{}.{}\" = ?", prev_ob.model, prev_ob.member)
+                    })
+                    .collect::<Vec<_>>()
+                    .join(" AND ");
+                format!(
+                    "({} AND \"{}.{}\" {} ?)",
+                    prev_conditions, ob.model, ob.member, operator
+                )
+            };
+            where_conditions.push(condition);
+            cursor_bind_values.extend(cursor_vals[..=i].iter().cloned());
+        }
+    }
+
+    // Combine WHERE clauses
+    let mut combined_where = where_clause.map(|s| s.to_string()).unwrap_or_default();
+    if !where_conditions.is_empty() {
+        if !combined_where.is_empty() {
+            combined_where.push_str(" AND ");
+        }
+        combined_where.push_str(&where_conditions.join(" AND "));
+    }
+
     for chunk in schema_chunks {
         let mut selections = Vec::new();
         let mut joins = Vec::new();
 
+        // Add base table columns
         selections.push(format!("{}.id", table_name));
-        selections.push(format!("{}.event_id", table_name));
         selections.push(format!("{}.keys", table_name));
-        selections.push(format!("group_concat({model_relation_table}.model_id) as model_ids"));
+        selections.push(format!(
+            "group_concat({}.model_id) as model_ids",
+            model_relation_table
+        ));
 
+        // Process each model schema in the chunk
         for model in chunk {
             let model_table = model.name();
             joins.push(format!(
-                "LEFT JOIN [{model_table}] ON {table_name}.id = \
-                 [{model_table}].{entity_relation_column}"
+                "LEFT JOIN [{}] ON {}.id = [{}].{}",
+                model_table, table_name, model_table, entity_relation_column
             ));
             collect_columns(&model_table, "", model, &mut selections);
         }
 
         joins.push(format!(
-            "JOIN {model_relation_table} ON {table_name}.id = {model_relation_table}.entity_id"
+            "JOIN {} ON {}.id = {}.entity_id",
+            model_relation_table, table_name, model_relation_table
         ));
 
-        let selections_clause = selections.join(", ");
-        let joins_clause = joins.join(" ");
-
+        // Build the final query
         let mut query = format!(
-            "SELECT {} FROM [{}] {} ",
-            selections_clause, table_name, joins_clause
+            "SELECT {} FROM [{}] {}",
+            selections.join(", "),
+            table_name,
+            joins.join(" ")
         );
 
-        let mut bind_values = bind_values.clone();
-        if let Some(where_clause) = where_clause {
-            query += &format!("WHERE {} ", where_clause);
+        if !combined_where.is_empty() {
+            query.push_str(&format!(" WHERE {}", combined_where));
         }
 
-        if pagination.limit.is_some() && pagination.cursor.is_some() {
-            let cursor = pagination.cursor.as_ref().unwrap();
-            let cursor_values: Vec<&str> = cursor.split(',').collect();
-            let mut conditions = Vec::new();
-            
-            if pagination.order_by.is_empty() {
-                let (event_id_op, id_op) = match pagination.direction {
-                    PaginationDirection::Forward => (">", ">"),
-                    PaginationDirection::Backward => ("<", "<"),
-                };
-                conditions.push(format!("{}.event_id {} ? OR ({}.event_id = ? AND {}.id {} ?)", 
-                    table_name, event_id_op, table_name, table_name, id_op));
-                bind_values.extend(vec![
-                    cursor_values[0].to_string(),
-                    cursor_values[0].to_string(),
-                    cursor_values[1].to_string(),
-                ]);
-            } else {
-                let id_condition = match pagination.direction {
-                    PaginationDirection::Forward => format!("{}.id > ?", table_name),
-                    PaginationDirection::Backward => format!("{}.id < ?", table_name),
-                };
-                conditions.push(id_condition);
-                bind_values.push(cursor_values[0].to_string());
+        query.push_str(&format!(" GROUP BY {}.id", table_name));
 
-                for (i, order) in pagination.order_by.iter().enumerate() {
-                    let operator = match (&pagination.direction, &order.direction) {
-                        (PaginationDirection::Forward, OrderDirection::Asc) => ">",
-                        (PaginationDirection::Forward, OrderDirection::Desc) => "<",
-                        (PaginationDirection::Backward, OrderDirection::Asc) => "<",
-                        (PaginationDirection::Backward, OrderDirection::Desc) => ">",
-                    };
-                    conditions.push(format!("[{}].[{}] {} ?", order.model, order.member, operator));
-                    bind_values.push(cursor_values[i + 1].to_string());
-                }
-            }
-            
-            let cursor_condition = conditions.join(" AND ");
-            if !cursor_condition.is_empty() {
-                if where_clause.is_none() {
-                    query += "WHERE ";
-                } else {
-                    query += "AND ";
-                }
-                query += &cursor_condition;
-            }
+        if let Some(having) = having_clause {
+            query.push_str(&format!(" HAVING {}", having));
         }
 
-        query += &format!("GROUP BY {}.id ", table_name);
+        query.push_str(&format!(" ORDER BY {}", order_clause));
+        query.push_str(" LIMIT ?");
+        cursor_bind_values.push(fetch_limit.to_string());
 
-        if let Some(having_clause) = having_clause {
-            query += &format!("HAVING {} ", having_clause);
-        }
-
-        if let Some(limit) = pagination.limit {
-            query += &format!("ORDER BY {}, {}.id DESC LIMIT {}", 
-                order_by_clause, table_name, limit
-            );
-        } else {
-            query += &format!("ORDER BY {}, {}.id DESC", 
-                order_by_clause, table_name
-            );
-        }
-
+        // Execute the query
         let mut stmt = sqlx::query(&query);
-        for value in &bind_values {
+        for value in bind_values.iter().chain(cursor_bind_values.iter()) {
             stmt = stmt.bind(value);
         }
-        
-        let chunk_rows = stmt.fetch_all(pool).await?;
+
+        let mut chunk_rows = stmt.fetch_all(pool).await?;
+
+        // Check if we have more rows than the original limit
+        let has_more = chunk_rows.len() >= fetch_limit as usize;
+        if has_more {
+            chunk_rows.truncate(original_limit as usize);
+        }
+
+        // Adjust for backward pagination
+        if pagination.direction == PaginationDirection::Backward {
+            chunk_rows.reverse();
+        }
+
         all_rows.extend(chunk_rows);
+
+        if has_more {
+            break;
+        }
     }
 
-    if let Some(limit) = pagination.limit {
-        let requested_limit = limit - 1; // Number of rows user actually wants
-        let (items, next_cursor) = if all_rows.len() > requested_limit as usize {
-            let extra_row = all_rows.len() == limit as usize;
-            let items: Vec<_> = all_rows.drain(..requested_limit as usize).collect(); // Take only requested rows
-            
-            let next_cursor = if extra_row {
-                let last_row = &items[items.len() - 1]; // Last row of items (not extra row)
-                let cursor_values = if pagination.order_by.is_empty() {
-                    vec![
-                        last_row.get::<String, &str>("event_id").to_string(),
-                        last_row.get::<String, &str>("id").to_string(),
-                    ]
-                } else {
-                    let mut values = vec![last_row.get::<String, &str>("id").to_string()];
-                    values.extend(pagination.order_by.iter().map(|order| {
-                        let column = format!("{}.{}", order.model, order.member);
-                        last_row.get::<String, &str>(&column).to_string()
-                    }));
-                    values
-                };
-                Some(cursor_values.join(","))
-            } else {
-                None
-            };
-
-            match pagination.direction {
-                PaginationDirection::Forward => (items, next_cursor),
-                PaginationDirection::Backward => (items.into_iter().rev().collect(), next_cursor),
-            }
-        } else {
-            let items = all_rows; // Take all rows if fewer than requested
-            match pagination.direction {
-                PaginationDirection::Forward => (items, None),
-                PaginationDirection::Backward => (items.into_iter().rev().collect(), None),
-            }
-        };
-
-        Ok(Page { items, next_cursor })
-    } else {
-        let items = match pagination.direction {
-            PaginationDirection::Forward => all_rows,
-            PaginationDirection::Backward => all_rows.into_iter().rev().collect(),
-        };
-        Ok(Page { items, next_cursor: None })
+    // Generate next cursor if we have more items
+    if all_rows.len() >= original_limit as usize {
+        if let Some(last_row) = all_rows.last() {
+            let cursor_values: Vec<String> = pagination
+                .order_by
+                .iter()
+                .map(|ob| {
+                    let col_name = format!("{}.{}", ob.model, ob.member);
+                    last_row
+                        .try_get::<String, &str>(&col_name)
+                })
+                .collect::<Result<Vec<String>, _>>()?;
+            let encoded = general_purpose::STANDARD.encode(serde_json::to_string(&cursor_values).map_err(|_| Error::InvalidCursor)?);
+            next_cursor = Some(encoded);
+        }
     }
+
+    Ok(Page {
+        items: all_rows,
+        next_cursor,
+    })
 }
 
 #[cfg(test)]

@@ -35,7 +35,7 @@ pub struct Pagination {
 impl From<Pagination> for proto::types::Pagination {
     fn from(value: Pagination) -> Self {
         Self {
-            cursor: value.cursor,
+            cursor: value.cursor.unwrap_or_default(),
             limit: value.limit,
             direction: value.direction as i32,
             order_by: value.order_by.into_iter().map(|o| o.into()).collect(),
@@ -323,7 +323,7 @@ impl From<Query> for proto::types::Query {
             clause: value.clause.map(|c| c.into()),
             no_hashed_keys: value.no_hashed_keys,
             models: value.models,
-            pagination: value.pagination.into(),
+            pagination: Some(value.pagination.into()),
         }
     }
 }
@@ -539,11 +539,12 @@ impl From<proto::types::Event> for Event {
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub struct EventQuery {
     pub keys: KeysClause,
-    pub pagination: Pagination,
+    pub limit: u32,
+    pub offset: u32,
 }
 
 impl From<EventQuery> for proto::types::EventQuery {
     fn from(value: EventQuery) -> Self {
-        Self { keys: Some(value.keys.into()), pagination: value.pagination.into() }
+        Self { keys: Some(value.keys.into()), limit: value.limit, offset: value.offset }
     }
 }

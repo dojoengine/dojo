@@ -20,6 +20,8 @@ pub enum Error {
     EnumError(#[from] EnumError),
     #[error(transparent)]
     ProviderError(#[from] ProviderError),
+    #[error("Invalid cursor")]
+    InvalidCursor,
 }
 
 #[derive(Debug, thiserror::Error)]

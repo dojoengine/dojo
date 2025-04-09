@@ -243,7 +243,7 @@ message RetrieveEventMessagesRequest {
 
 message RetrieveEntitiesResponse {
     repeated types.Entity entities = 1;
-    uint32 total_count = 2;
+    string next_cursor = 2;
 }
 
 message RetrieveEntitiesStreamingResponse {
