@@ -19,9 +19,28 @@ use crate::proto::{self};
 pub mod schema;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
-pub struct Page<T> {
-    pub items: Vec<T>,
-    pub next_cursor: String,
+pub enum PaginationDirection {
+    Forward,
+    Backward,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
+pub struct Pagination {
+    pub cursor: Option<String>,
+    pub limit: u32,
+    pub direction: PaginationDirection,
+    pub order_by: Vec<OrderBy>,
+}
+
+impl From<Pagination> for proto::types::Pagination {
+    fn from(value: Pagination) -> Self {
+        Self {
+            cursor: value.cursor,
+            limit: value.limit,
+            direction: value.direction as i32,
+            order_by: value.order_by.into_iter().map(|o| o.into()).collect(),
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
@@ -127,20 +146,14 @@ pub enum OrderDirection {
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub struct Query {
     pub clause: Option<Clause>,
-    pub limit: u32,
-    pub offset: u32,
+    pub pagination: Pagination,
     /// Whether or not to include the hashed keys (entity id) of the entities.
     /// This is useful for large queries compressed with GZIP to reduce the size of the response.
-    pub dont_include_hashed_keys: bool,
+    pub no_hashed_keys: bool,
     pub order_by: Vec<OrderBy>,
     /// If the array is not empty, only the given models are retrieved.
     /// All entities that don't have a model in the array are excluded.
-    pub entity_models: Vec<String>,
-    /// The internal updated at timestamp in seconds (unix timestamp) from which entities are
-    /// retrieved (inclusive). Use 0 to retrieve all entities.
-    pub entity_updated_after: u64,
-    /// The cursor to start the query from.
-    pub cursor: Option<Felt>,
+    pub models: Vec<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
@@ -308,13 +321,9 @@ impl From<Query> for proto::types::Query {
     fn from(value: Query) -> Self {
         Self {
             clause: value.clause.map(|c| c.into()),
-            limit: value.limit,
-            offset: value.offset,
-            dont_include_hashed_keys: value.dont_include_hashed_keys,
-            order_by: value.order_by.into_iter().map(|o| o.into()).collect(),
-            entity_models: value.entity_models,
-            entity_updated_after: value.entity_updated_after,
-            cursor: value.cursor.map(|c| c.to_bytes_be().into()).unwrap_or(vec![]),
+            no_hashed_keys: value.no_hashed_keys,
+            models: value.models,
+            pagination: value.pagination.into(),
         }
     }
 }
@@ -530,12 +539,11 @@ impl From<proto::types::Event> for Event {
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub struct EventQuery {
     pub keys: KeysClause,
-    pub limit: u32,
-    pub offset: u32,
+    pub pagination: Pagination,
 }
 
 impl From<EventQuery> for proto::types::EventQuery {
     fn from(value: EventQuery) -> Self {
-        Self { keys: Some(value.keys.into()), limit: value.limit, offset: value.offset }
+        Self { keys: Some(value.keys.into()), pagination: value.pagination.into() }
     }
 }

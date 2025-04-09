@@ -95,7 +95,7 @@ impl Client {
             .await?;
         Ok(Page {
             items: tokens.into_iter().map(TryInto::try_into).collect::<Result<Vec<Token>, _>>()?,
-            next_cursor,
+            next_cursor: if next_cursor.is_empty() { None } else { Some(next_cursor) },
         })
     }
 
@@ -125,7 +125,7 @@ impl Client {
                 .into_iter()
                 .map(TryInto::try_into)
                 .collect::<Result<Vec<TokenBalance>, _>>()?,
-            next_cursor,
+            next_cursor: if next_cursor.is_empty() { None } else { Some(next_cursor) },
         })
     }
 
