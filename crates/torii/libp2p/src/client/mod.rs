@@ -82,6 +82,8 @@ impl RelayClient {
                     .multiplex(yamux::Config::default())
             })
             .expect("Failed to create WebSocket transport")
+            .with_dns()
+            .expect("Failed to create DNS transport")
             .with_behaviour(|key| {
                 let gossipsub_config: gossipsub::Config = gossipsub::ConfigBuilder::default()
                     .heartbeat_interval(Duration::from_secs(
