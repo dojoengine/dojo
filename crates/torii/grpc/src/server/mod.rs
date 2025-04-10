@@ -13,8 +13,8 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 
-use base64::Engine;
 use base64::prelude::BASE64_STANDARD_NO_PAD;
+use base64::Engine;
 use crypto_bigint::{Encoding, U256};
 use dojo_types::naming::compute_selector_from_tag;
 use dojo_types::primitive::{Primitive, PrimitiveError};
@@ -33,14 +33,14 @@ use sqlx::sqlite::SqliteRow;
 use sqlx::types::chrono::{DateTime, Utc};
 use sqlx::{Pool, Row, Sqlite};
 use starknet::core::types::Felt;
-use starknet::providers::JsonRpcClient;
 use starknet::providers::jsonrpc::HttpTransport;
+use starknet::providers::JsonRpcClient;
 use subscriptions::event::EventManager;
 use subscriptions::indexer::IndexerManager;
 use subscriptions::token::TokenManager;
 use subscriptions::token_balance::TokenBalanceManager;
 use tokio::net::TcpListener;
-use tokio::sync::mpsc::{Receiver, channel};
+use tokio::sync::mpsc::{channel, Receiver};
 use tokio_stream::wrappers::{ReceiverStream, TcpListenerStream};
 use tonic::codec::CompressionEncoding;
 use tonic::transport::Server;
@@ -58,9 +58,9 @@ use tower_http::cors::{AllowOrigin, CorsLayer};
 use self::subscriptions::entity::EntityManager;
 use self::subscriptions::event_message::EventMessageManager;
 use self::subscriptions::model_diff::{ModelDiffRequest, StateDiffManager};
-use crate::proto::types::LogicalOperator;
 use crate::proto::types::clause::ClauseType;
 use crate::proto::types::member_value::ValueType;
+use crate::proto::types::LogicalOperator;
 use crate::proto::world::world_server::WorldServer;
 use crate::proto::world::{
     RetrieveControllersRequest, RetrieveControllersResponse, RetrieveEntitiesStreamingResponse,
@@ -73,8 +73,8 @@ use crate::proto::world::{
     UpdateTokenSubscriptionRequest, WorldMetadataRequest, WorldMetadataResponse,
 };
 use crate::proto::{self};
-use crate::types::ComparisonOperator;
 use crate::types::schema::SchemaError;
+use crate::types::ComparisonOperator;
 
 pub(crate) static ENTITIES_TABLE: &str = "entities";
 pub(crate) static ENTITIES_MODEL_RELATION_TABLE: &str = "entity_model";

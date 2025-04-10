@@ -451,9 +451,8 @@ pub async fn fetch_entities(
     if all_rows.len() >= original_limit as usize {
         if let Some(last_row) = all_rows.last() {
             let cursor_values = build_cursor_values(&pagination, last_row)?;
-            next_cursor = Some(general_purpose::STANDARD_NO_PAD.encode(
-                cursor_values.join("/").as_bytes()
-            ));
+            next_cursor =
+                Some(general_purpose::STANDARD_NO_PAD.encode(cursor_values.join("/").as_bytes()));
         }
     }
 
