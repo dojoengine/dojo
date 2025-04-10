@@ -7,7 +7,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use anyhow::Result;
 use cainome::cairo_serde::{ByteArray, CairoSerde};
 use dojo_types::schema::{Struct, Ty};
-use erc::{RegisterNftTokenMetadata, UpdateNftMetadataQuery};
+use erc::{RegisterNftTokenMetadata, UpdateNftMetadata, UpdateNftMetadataQuery};
 use sqlx::{FromRow, Pool, Sqlite, Transaction as SqlxTransaction};
 use starknet::core::types::requests::CallRequest;
 use starknet::core::types::{BlockId, BlockTag, Felt, FunctionCall};
@@ -27,7 +27,7 @@ use crate::types::{
     EventMessage as EventMessageUpdated, Model as ModelRegistered, OptimisticEntity,
     OptimisticEventMessage, ParsedCall, Token, TokenBalance, Transaction,
 };
-use crate::utils::{felt_to_sql_string, felts_to_sql_string, I256};
+use crate::utils::{felt_and_u256_to_sql_string, felt_to_sql_string, felts_to_sql_string, I256};
 
 pub mod erc;
 pub use erc::{RegisterErc20TokenQuery, RegisterNftTokenQuery};
@@ -147,6 +147,10 @@ pub struct Executor<'c, P: Provider + Sync + Send + 'static> {
     // These tasks are spawned to fetch ERC721 token metadata from the chain
     // to not block the main loop
     register_tasks: JoinSet<Result<RegisterNftTokenMetadata>>,
+    // Tasks for updating NFT metadata
+    metadata_update_tasks: JoinSet<Result<UpdateNftMetadata>>,
+    // Track which token IDs are currently being processed for metadata updates
+    metadata_update_tokens: HashSet<String>,
     // Some queries depends on the metadata being registered, so we defer them
     // until the metadata is fetched
     deferred_query_messages: Vec<QueryMessage>,
@@ -260,6 +264,8 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 rx,
                 shutdown_rx,
                 register_tasks: JoinSet::new(),
+                metadata_update_tasks: JoinSet::new(),
+                metadata_update_tokens: HashSet::new(),
                 deferred_query_messages: Vec::new(),
                 provider,
                 metadata_semaphore,
@@ -287,6 +293,10 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 Some(result) = self.register_tasks.join_next() => {
                     let result = result??;
                     self.handle_nft_token_metadata(result).await?;
+                }
+                Some(result) = self.metadata_update_tasks.join_next() => {
+                    let result = result??;
+                    self.handle_update_nft_metadata(result).await?;
                 }
             }
         }
@@ -775,12 +785,38 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
             QueryType::UpdateNftMetadata(update_metadata) => {
                 debug!(target: LOG_TARGET, "Updating NFT metadata.");
                 let instant = Instant::now();
-                self.update_nft_metadata(
-                    update_metadata.contract_address,
-                    update_metadata.token_id,
-                    self.provider.clone(),
-                )
-                .await?;
+
+                let metadata_semaphore = self.metadata_semaphore.clone();
+                let provider = self.provider.clone();
+
+                let token_id = felt_and_u256_to_sql_string(&update_metadata.contract_address, &update_metadata.token_id);
+                if self.metadata_update_tokens.contains(&token_id) {
+                    return Ok(());
+                }
+
+                self.metadata_update_tasks.spawn(async move {
+                    let permit = metadata_semaphore.acquire().await.unwrap();
+                    
+                    let token_uri = Self::fetch_token_uri(
+                        &provider,
+                        update_metadata.contract_address,
+                        update_metadata.token_id,
+                    )
+                    .await?;
+                    let metadata = Self::fetch_token_metadata(
+                        update_metadata.contract_address,
+                        update_metadata.token_id,
+                        &token_uri,
+                    )
+                    .await?;
+                    
+                    
+                    drop(permit);
+                    Ok(UpdateNftMetadata {
+                        token_id,
+                        metadata,
+                    })
+                });
                 debug!(target: LOG_TARGET, duration = ?instant.elapsed(), "Updated NFT metadata.");
             }
             QueryType::Other => {
@@ -804,6 +840,11 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
         while let Some(result) = self.register_tasks.join_next().await {
             let result = result??;
             self.handle_nft_token_metadata(result).await?;
+        }
+
+        while let Some(result) = self.metadata_update_tasks.join_next().await {
+            let result = result??;
+            self.handle_update_nft_metadata(result).await?;
         }
 
         let mut deferred_query_messages = mem::take(&mut self.deferred_query_messages);
