@@ -576,11 +576,14 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                         events.push(event);
                     }
 
-                    // Continue fetching pages if there are more events and we haven't seen all events up to our target block
+                    // Continue fetching pages if there are more events and we haven't seen all
+                    // events up to our target block
                     if let Some(continuation_token) = events_page.continuation_token {
                         // Only continue if we haven't seen all events up to our target block
                         if last_block_number < to {
-                            if let ProviderRequestData::GetEvents(mut next_request) = original_request {
+                            if let ProviderRequestData::GetEvents(mut next_request) =
+                                original_request
+                            {
                                 next_request.filter.result_page_request.continuation_token =
                                     Some(continuation_token);
                                 next_requests.push((
