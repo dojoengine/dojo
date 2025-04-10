@@ -13,16 +13,16 @@ use std::sync::Arc;
 #[cfg(feature = "cartridge")]
 use anyhow::ensure;
 use anyhow::{Context, Result};
-use config::rpc::RpcModuleKind;
 use config::Config;
+use config::rpc::RpcModuleKind;
 use dojo_metrics::exporters::prometheus::PrometheusRecorder;
 use dojo_metrics::{Report, Server as MetricsServer};
 use hyper::Method;
 use jsonrpsee::RpcModule;
 use katana_chain_spec::{ChainSpec, SettlementLayer};
+use katana_core::backend::Backend;
 use katana_core::backend::gas_oracle::GasOracle;
 use katana_core::backend::storage::Blockchain;
-use katana_core::backend::Backend;
 use katana_core::constants::{
     DEFAULT_ETH_L1_DATA_GAS_PRICE, DEFAULT_ETH_L1_GAS_PRICE, DEFAULT_STRK_L1_DATA_GAS_PRICE,
     DEFAULT_STRK_L1_GAS_PRICE,
@@ -30,10 +30,10 @@ use katana_core::constants::{
 use katana_core::env::BlockContextGenerator;
 use katana_core::service::block_producer::BlockProducer;
 use katana_db::mdbx::DbEnv;
-use katana_executor::implementation::blockifier::BlockifierFactory;
 use katana_executor::ExecutionFlags;
-use katana_pool::ordering::FiFo;
+use katana_executor::implementation::blockifier::BlockifierFactory;
 use katana_pool::TxPool;
+use katana_pool::ordering::FiFo;
 use katana_primitives::block::GasPrices;
 use katana_primitives::env::{CfgEnv, FeeTokenAddressses};
 #[cfg(feature = "cartridge")]
@@ -41,9 +41,9 @@ use katana_rpc::cartridge::CartridgeApi;
 use katana_rpc::cors::Cors;
 use katana_rpc::dev::DevApi;
 use katana_rpc::saya::SayaApi;
-use katana_rpc::starknet::forking::ForkedClient;
 #[cfg(feature = "cartridge")]
 use katana_rpc::starknet::PaymasterConfig;
+use katana_rpc::starknet::forking::ForkedClient;
 use katana_rpc::starknet::{StarknetApi, StarknetApiConfig};
 use katana_rpc::torii::ToriiApi;
 use katana_rpc::{RpcServer, RpcServerHandle};
@@ -351,8 +351,10 @@ pub async fn build(mut config: Config) -> Result<Node> {
         rpc_modules.merge(api.into_rpc())?;
     }
 
-    let rpc_server = RpcServer::new().metrics().health_check().cors(cors).module(rpc_modules);
-
+    let mut rpc_server = RpcServer::new().metrics().health_check().cors(cors).module(rpc_modules);
+    if let Some(timeout_ms) = config.rpc.timeout_ms {
+        rpc_server = rpc_server.timeout_ms(timeout_ms);
+    };
     Ok(Node {
         db,
         pool,

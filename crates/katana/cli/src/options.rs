@@ -149,7 +149,7 @@ pub struct RpcOptions {
     pub max_response_body_size: Option<u32>,
 
     /// Timeout for the RPC server.
-    #[arg(long = "rpc.timeout_ms", value_name = "TIMEOUT_MS")]
+    #[arg(long = "rpc.timeout-ms", value_name = "TIMEOUT_MS")]
     pub timeout_ms: Option<u64>,
 
     /// Maximum page size for event queries.

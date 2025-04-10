@@ -117,7 +117,7 @@ impl RpcServer {
     }
 
     /// Set the timeout for the server. Default is 20 seconds.
-    pub fn timeout(mut self, timeout_ms: u64) -> Self {
+    pub fn timeout_ms(mut self, timeout_ms: u64) -> Self {
         self.timeout_ms = timeout_ms;
         self
     }
