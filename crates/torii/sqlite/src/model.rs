@@ -287,6 +287,7 @@ pub fn map_row_to_ty(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn fetch_entities(
     pool: &Pool<sqlx::Sqlite>,
     schemas: &[Ty],
