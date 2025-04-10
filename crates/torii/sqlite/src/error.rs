@@ -46,8 +46,8 @@ pub enum ParseError {
 
 #[derive(Debug, thiserror::Error)]
 pub enum QueryError {
-    #[error("Unsupported query")]
-    UnsupportedQuery,
+    #[error("Unsupported query: {0}")]
+    UnsupportedQuery(String),
     #[error("Missing param: {0}")]
     MissingParam(String),
     #[error("Unsupported value for primitive: {0}")]

@@ -154,6 +154,8 @@ pub struct Query {
     /// If the array is not empty, only the given models are retrieved.
     /// All entities that don't have a model in the array are excluded.
     pub models: Vec<String>,
+    /// Whether or not we should retrieve historical entities.
+    pub historical: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
@@ -324,6 +326,7 @@ impl From<Query> for proto::types::Query {
             no_hashed_keys: value.no_hashed_keys,
             models: value.models,
             pagination: Some(value.pagination.into()),
+            historical: value.historical,
         }
     }
 }

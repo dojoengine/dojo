@@ -230,15 +230,11 @@ message SubscribeEntityResponse {
 message RetrieveEntitiesRequest {
     // The entities to retrieve
     types.Query query = 1;
-    // Should we retrieve historical entities?
-    bool historical = 2;
 }
 
 message RetrieveEventMessagesRequest {
     // The event messages to retrieve
     types.Query query = 1;
-    // Should we retrieve historical event messages?
-    bool historical = 2;
 }
 
 message RetrieveEntitiesResponse {

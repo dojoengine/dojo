@@ -226,18 +226,16 @@ impl WorldClient {
     pub async fn retrieve_entities(
         &mut self,
         query: Query,
-        historical: bool,
     ) -> Result<RetrieveEntitiesResponse, Error> {
-        let request = RetrieveEntitiesRequest { query: Some(query.into()), historical };
+        let request = RetrieveEntitiesRequest { query: Some(query.into()) };
         self.inner.retrieve_entities(request).await.map_err(Error::Grpc).map(|res| res.into_inner())
     }
 
     pub async fn retrieve_event_messages(
         &mut self,
         query: Query,
-        historical: bool,
     ) -> Result<RetrieveEntitiesResponse, Error> {
-        let request = RetrieveEventMessagesRequest { query: Some(query.into()), historical };
+        let request = RetrieveEventMessagesRequest { query: Some(query.into()) };
         self.inner
             .retrieve_event_messages(request)
             .await

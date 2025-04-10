@@ -311,39 +311,99 @@ impl DojoWorld {
         .await
     }
 
-    async fn fetch_historical_event_messages(
+    async fn fetch_historical_entities(
         &self,
-        query: &str,
-        bind_values: Vec<String>,
-        limit: Option<u32>,
-        offset: Option<u32>,
-    ) -> Result<Vec<proto::types::Entity>, Error> {
-        let mut query = sqlx::query_as(query);
+        table: &str,
+        model_relation_table: &str,
+        where_clause: &str,
+        mut bind_values: Vec<String>,
+        pagination: Pagination,
+    ) -> Result<Page<proto::types::Entity>, Error> {
+        if !pagination.order_by.is_empty() {
+            return Err(Error::QueryError(QueryError::UnsupportedQuery(
+                "Order by is not supported for historical entities".to_string(),
+            )));
+        }
+
+        let mut conditions = Vec::new();
+        if !where_clause.is_empty() {
+            conditions.push(where_clause.to_string());
+        }
+
+        // Add cursor condition if present
+        if let Some(ref cursor) = pagination.cursor {
+            match pagination.direction {
+                PaginationDirection::Forward => {
+                    conditions.push(format!("{table}.event_id > ?"));
+                }
+                PaginationDirection::Backward => {
+                    conditions.push(format!("{table}.event_id < ?"));
+                }
+            }
+            bind_values.push(cursor.clone());
+        }
+
+        let where_clause = if !conditions.is_empty() {
+            format!("WHERE {}", conditions.join(" AND "))
+        } else {
+            String::new()
+        };
+
+        let order_direction = match pagination.direction {
+            PaginationDirection::Forward => "ASC",
+            PaginationDirection::Backward => "DESC",
+        };
+
+        let mut query = format!(
+            "SELECT {table}.id, {table}.data, {table}.model_id, {table}.event_id, group_concat({model_relation_table}.model_id) as model_ids
+            FROM {table}
+            JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
+            {where_clause}
+            GROUP BY {table}.event_id
+            ORDER BY {table}.event_id {order_direction}
+            "
+        );
+
+        // Add 1 to limit to fetch an extra item for next_cursor
+        if let Some(limit) = pagination.limit {
+            query = format!("{} LIMIT ?", query);
+            bind_values.push((limit + 1).to_string());
+        }
+
+        let mut query = sqlx::query_as(&query);
         for value in bind_values {
             query = query.bind(value);
         }
-        let db_entities: Vec<(String, String, String, String)> =
-            query.bind(limit).bind(offset).fetch_all(&self.pool).await?;
 
-        let mut entities = HashMap::new();
-        for (id, data, model_id, _) in db_entities {
+        let db_entities: Vec<(String, String, String, String, String)> =
+            query.fetch_all(&self.pool).await?;
+
+        let mut entities = Vec::new();
+        for (id, data, model_id, _, _) in &db_entities[..db_entities.len().saturating_sub(1)] {
             let hashed_keys =
-                Felt::from_str(&id).map_err(ParseError::FromStr)?.to_bytes_be().to_vec();
+                Felt::from_str(id).map_err(ParseError::FromStr)?.to_bytes_be().to_vec();
             let model = self
                 .model_cache
-                .model(&Felt::from_str(&model_id).map_err(ParseError::FromStr)?)
+                .model(&Felt::from_str(model_id).map_err(ParseError::FromStr)?)
                 .await?;
             let mut schema = model.schema;
             schema
-                .from_json_value(serde_json::from_str(&data).map_err(ParseError::FromJsonStr)?)?;
+                .from_json_value(serde_json::from_str(data).map_err(ParseError::FromJsonStr)?)?;
 
-            let entity = entities
-                .entry(id)
-                .or_insert_with(|| proto::types::Entity { hashed_keys, models: vec![] });
-            entity.models.push(schema.as_struct().unwrap().clone().into());
+            entities.push(proto::types::Entity { hashed_keys, models: vec![schema.as_struct().unwrap().clone().into()] });
         }
 
-        Ok(entities.into_values().collect())
+        // Get the next cursor from the last item's event_id if we fetched an extra one
+        let next_cursor = if db_entities.len() > entities.len() {
+            Some(db_entities.last().unwrap().3.clone()) // event_id is at index 3
+        } else {
+            None
+        };
+
+        Ok(Page {
+            items: entities,
+            next_cursor,
+        })
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -392,31 +452,14 @@ impl DojoWorld {
             .collect::<Vec<_>>()
             .join(" OR ");
 
-        if table == EVENT_MESSAGES_HISTORICAL_TABLE || table == ENTITIES_HISTORICAL_TABLE {
-            let entities = self.fetch_historical_event_messages(
-                &format!(
-                    r#"
-                SELECT {table}.id, {table}.data, {table}.model_id, group_concat({model_relation_table}.model_id) as model_ids
-                FROM {table}
-                JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
-                {}
-                GROUP BY {table}.event_id
-                ORDER BY {table}.event_id DESC
-             "#,
-                if where_clause.is_empty() {
-                    String::new()
-                } else {
-                    format!("WHERE {}", where_clause)
-                }
-            ),
+        if table.ends_with("_historical") {
+            return self.fetch_historical_entities(
+                table,
+                model_relation_table,
+                &where_clause,
                 bind_values,
-                None,
-                None
-            ).await?;
-            return Ok(Page {
-                items: entities,
-                next_cursor: None,
-            });
+                pagination,
+            ).await;
         }
 
         let page = fetch_entities(
@@ -492,31 +535,14 @@ impl DojoWorld {
             .collect::<Vec<_>>()
             .join(" OR ");
 
-        if table == EVENT_MESSAGES_HISTORICAL_TABLE || table == ENTITIES_HISTORICAL_TABLE {
-            let entities = self.fetch_historical_event_messages(
-                &format!(
-                    r#"
-                    SELECT {table}.id, {table}.data, {table}.model_id, group_concat({model_relation_table}.model_id) as model_ids
-                    FROM {table}
-                    JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
-                    {}
-                    GROUP BY {table}.event_id
-                    ORDER BY {table}.event_id DESC
-                 "#,
-                    if where_clause.is_empty() {
-                        String::new()
-                    } else {
-                        format!("WHERE {}", where_clause)
-                    }
-                ),
+        if table.ends_with("_historical") {
+            return self.fetch_historical_entities(
+                table,
+                model_relation_table,
+                &where_clause,
                 bind_values,
-                None,
-                None
-            ).await?;
-            return Ok(Page {
-                items: entities,
-                next_cursor: None,
-            });
+                pagination,
+            ).await;
         }
 
         let page = fetch_entities(
@@ -689,8 +715,8 @@ impl DojoWorld {
             .model_cache
             .models(&models)
             .await?
-            .into_iter()
-            .map(|m| m.schema)
+            .iter()
+            .map(|m| m.schema.clone())
             .collect::<Vec<_>>();
 
         let having_clause = models
@@ -895,7 +921,7 @@ impl DojoWorld {
         self.state_diff_manager.add_subscriber(subs).await
     }
 
-    async fn retrieve_entities(
+    async fn retrieve_entities_internal(
         &self,
         table: &str,
         model_relation_table: &str,
@@ -984,7 +1010,7 @@ impl DojoWorld {
         })
     }
 
-    async fn retrieve_events(
+    async fn retrieve_events_internal(
         &self,
         query: &proto::types::EventQuery,
     ) -> Result<proto::world::RetrieveEventsResponse, Error> {
@@ -1292,6 +1318,61 @@ impl proto::world::world_server::World for DojoWorld {
         Ok(Response::new(WorldMetadataResponse { metadata }))
     }
 
+    async fn retrieve_entities(
+        &self,
+        request: Request<RetrieveEntitiesRequest>,
+    ) -> Result<Response<RetrieveEntitiesResponse>, Status> {
+        let RetrieveEntitiesRequest { query } = request.into_inner();
+        let query = query.ok_or_else(|| Status::invalid_argument("Missing query argument"))?;
+
+        let entities = self
+            .retrieve_entities_internal(
+                if query.historical { ENTITIES_HISTORICAL_TABLE } else { ENTITIES_TABLE },
+                ENTITIES_MODEL_RELATION_TABLE,
+                ENTITIES_ENTITY_RELATION_COLUMN,
+                query,
+            )
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        Ok(Response::new(entities))
+    }
+
+    async fn retrieve_event_messages(
+        &self,
+        request: Request<RetrieveEventMessagesRequest>,
+    ) -> Result<Response<RetrieveEntitiesResponse>, Status> {
+        let RetrieveEventMessagesRequest { query } = request.into_inner();
+        let query = query.ok_or_else(|| Status::invalid_argument("Missing query argument"))?;
+
+        let entities = self
+            .retrieve_entities_internal(
+                if query.historical { EVENT_MESSAGES_HISTORICAL_TABLE } else { EVENT_MESSAGES_TABLE },
+                EVENT_MESSAGES_MODEL_RELATION_TABLE,
+                EVENT_MESSAGES_ENTITY_RELATION_COLUMN,
+                query,
+            )
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        Ok(Response::new(entities))
+    }
+
+    async fn retrieve_events(
+        &self,
+        request: Request<RetrieveEventsRequest>,
+    ) -> Result<Response<RetrieveEventsResponse>, Status> {
+        let query = request
+            .into_inner()
+            .query
+            .ok_or_else(|| Status::invalid_argument("Missing query argument"))?;
+
+        let events =
+            self.retrieve_events_internal(&query).await.map_err(|e| Status::internal(e.to_string()))?;
+
+        Ok(Response::new(events))
+    }
+
     async fn retrieve_controllers(
         &self,
         request: Request<RetrieveControllersRequest>,
@@ -1510,26 +1591,6 @@ impl proto::world::world_server::World for DojoWorld {
         Ok(Response::new(()))
     }
 
-    async fn retrieve_entities(
-        &self,
-        request: Request<RetrieveEntitiesRequest>,
-    ) -> Result<Response<RetrieveEntitiesResponse>, Status> {
-        let RetrieveEntitiesRequest { query, historical } = request.into_inner();
-        let query = query.ok_or_else(|| Status::invalid_argument("Missing query argument"))?;
-
-        let entities = self
-            .retrieve_entities(
-                if historical { ENTITIES_HISTORICAL_TABLE } else { ENTITIES_TABLE },
-                ENTITIES_MODEL_RELATION_TABLE,
-                ENTITIES_ENTITY_RELATION_COLUMN,
-                query,
-            )
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
-
-        Ok(Response::new(entities))
-    }
-
     async fn retrieve_entities_streaming(
         &self,
         request: Request<RetrieveEntitiesRequest>,
@@ -1541,7 +1602,7 @@ impl proto::world::world_server::World for DojoWorld {
 
         let (tx, rx) = channel(100);
         let res = self
-            .retrieve_entities(
+            .retrieve_entities_internal(
                 ENTITIES_TABLE,
                 ENTITIES_MODEL_RELATION_TABLE,
                 ENTITIES_ENTITY_RELATION_COLUMN,
@@ -1560,11 +1621,9 @@ impl proto::world::world_server::World for DojoWorld {
             }
         });
 
-        Ok(
-            Response::new(
-                Box::pin(ReceiverStream::new(rx)) as Self::RetrieveEntitiesStreamingStream
-            ),
-        )
+        Ok(Response::new(
+            Box::pin(ReceiverStream::new(rx)) as Self::RetrieveEntitiesStreamingStream,
+        ))
     }
 
     async fn subscribe_event_messages(
@@ -1595,41 +1654,6 @@ impl proto::world::world_server::World for DojoWorld {
             .await;
 
         Ok(Response::new(()))
-    }
-
-    async fn retrieve_event_messages(
-        &self,
-        request: Request<RetrieveEventMessagesRequest>,
-    ) -> Result<Response<RetrieveEntitiesResponse>, Status> {
-        let RetrieveEventMessagesRequest { query, historical } = request.into_inner();
-        let query = query.ok_or_else(|| Status::invalid_argument("Missing query argument"))?;
-
-        let entities = self
-            .retrieve_entities(
-                if historical { EVENT_MESSAGES_HISTORICAL_TABLE } else { EVENT_MESSAGES_TABLE },
-                EVENT_MESSAGES_MODEL_RELATION_TABLE,
-                EVENT_MESSAGES_ENTITY_RELATION_COLUMN,
-                query,
-            )
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
-
-        Ok(Response::new(entities))
-    }
-
-    async fn retrieve_events(
-        &self,
-        request: Request<RetrieveEventsRequest>,
-    ) -> Result<Response<RetrieveEventsResponse>, Status> {
-        let query = request
-            .into_inner()
-            .query
-            .ok_or_else(|| Status::invalid_argument("Missing query argument"))?;
-
-        let events =
-            self.retrieve_events(&query).await.map_err(|e| Status::internal(e.to_string()))?;
-
-        Ok(Response::new(events))
     }
 
     async fn subscribe_events(

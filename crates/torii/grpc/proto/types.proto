@@ -74,6 +74,7 @@ message Query {
     bool no_hashed_keys = 2;
     repeated string models = 3;
     Pagination pagination = 4;
+    bool historical = 5;
 }
 
 message EventQuery {
