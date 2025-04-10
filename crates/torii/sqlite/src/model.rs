@@ -16,7 +16,7 @@ use starknet::core::types::Felt;
 
 use super::error::{self, Error};
 use crate::error::ParseError;
-use crate::types::{OrderBy, OrderDirection, Page, Pagination, PaginationDirection};
+use crate::types::{OrderDirection, Page, Pagination, PaginationDirection};
 
 #[derive(Debug)]
 pub struct ModelSQLReader {

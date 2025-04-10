@@ -4,7 +4,6 @@ pub mod subscriptions;
 #[cfg(test)]
 mod tests;
 
-use std::collections::HashMap;
 use std::future::Future;
 use std::net::SocketAddr;
 use std::pin::Pin;
@@ -40,7 +39,7 @@ use subscriptions::indexer::IndexerManager;
 use subscriptions::token::TokenManager;
 use subscriptions::token_balance::TokenBalanceManager;
 use tokio::net::TcpListener;
-use tokio::sync::mpsc::{channel, Receiver};
+use tokio::sync::mpsc::Receiver;
 use tokio_stream::wrappers::{ReceiverStream, TcpListenerStream};
 use tonic::codec::CompressionEncoding;
 use tonic::transport::Server;
@@ -63,14 +62,14 @@ use crate::proto::types::member_value::ValueType;
 use crate::proto::types::LogicalOperator;
 use crate::proto::world::world_server::WorldServer;
 use crate::proto::world::{
-    RetrieveControllersRequest, RetrieveControllersResponse, RetrieveEntitiesStreamingResponse,
-    RetrieveEventMessagesRequest, RetrieveTokenBalancesRequest, RetrieveTokenBalancesResponse,
-    RetrieveTokensRequest, RetrieveTokensResponse, SubscribeEntitiesRequest,
-    SubscribeEntityResponse, SubscribeEventMessagesRequest, SubscribeEventsResponse,
-    SubscribeIndexerRequest, SubscribeIndexerResponse, SubscribeTokenBalancesRequest,
-    SubscribeTokenBalancesResponse, SubscribeTokensRequest, SubscribeTokensResponse,
-    UpdateEventMessagesSubscriptionRequest, UpdateTokenBalancesSubscriptionRequest,
-    UpdateTokenSubscriptionRequest, WorldMetadataRequest, WorldMetadataResponse,
+    RetrieveControllersRequest, RetrieveControllersResponse, RetrieveEventMessagesRequest,
+    RetrieveTokenBalancesRequest, RetrieveTokenBalancesResponse, RetrieveTokensRequest,
+    RetrieveTokensResponse, SubscribeEntitiesRequest, SubscribeEntityResponse,
+    SubscribeEventMessagesRequest, SubscribeEventsResponse, SubscribeIndexerRequest,
+    SubscribeIndexerResponse, SubscribeTokenBalancesRequest, SubscribeTokenBalancesResponse,
+    SubscribeTokensRequest, SubscribeTokensResponse, UpdateEventMessagesSubscriptionRequest,
+    UpdateTokenBalancesSubscriptionRequest, UpdateTokenSubscriptionRequest, WorldMetadataRequest,
+    WorldMetadataResponse,
 };
 use crate::proto::{self};
 use crate::types::schema::SchemaError;
@@ -425,7 +424,7 @@ impl DojoWorld {
         no_hashed_keys: bool,
         models: Vec<String>,
     ) -> Result<Page<proto::types::Entity>, Error> {
-        let mut where_clause = match &hashed_keys {
+        let where_clause = match &hashed_keys {
             Some(hashed_keys) => {
                 let ids =
                     hashed_keys.hashed_keys.iter().map(|_| "{table}.id = ?").collect::<Vec<_>>();
@@ -434,7 +433,7 @@ impl DojoWorld {
             None => String::new(),
         };
 
-        let mut bind_values = if let Some(hashed_keys) = hashed_keys {
+        let bind_values = if let Some(hashed_keys) = hashed_keys {
             hashed_keys
                 .hashed_keys
                 .iter()
@@ -668,7 +667,7 @@ impl DojoWorld {
             &member_clause.value.clone().ok_or(QueryError::MissingParam("value".into()))?,
             &mut bind_values,
         )?;
-        let mut where_clause = format!(
+        let where_clause = format!(
             "[{}].[{}] {comparison_operator} {value}",
             member_clause.model, member_clause.member
         );
@@ -776,9 +775,8 @@ impl DojoWorld {
         contract_addresses: Vec<Felt>,
         token_ids: Vec<U256>,
         limit: Option<u32>,
-        offset: Option<u32>,
         cursor: Option<String>,
-    ) -> Result<RetrieveTokensResponse, Status> {
+    ) -> Result<RetrieveTokensResponse, Error> {
         let mut query = "SELECT * FROM tokens".to_string();
         let mut bind_values = Vec::new();
         let mut conditions = Vec::new();
@@ -795,7 +793,12 @@ impl DojoWorld {
         }
 
         if let Some(cursor) = cursor {
-            bind_values.push(cursor);
+            bind_values.push(
+                String::from_utf8(
+                    BASE64_STANDARD_NO_PAD.decode(cursor).map_err(|_| Error::InvalidCursor)?,
+                )
+                .map_err(|_| Error::InvalidCursor)?,
+            );
             conditions.push("id > ?".to_string());
         }
 
@@ -810,18 +813,12 @@ impl DojoWorld {
             bind_values.push(limit.to_string());
         }
 
-        if let Some(offset) = offset {
-            query += " OFFSET ?";
-            bind_values.push(offset.to_string());
-        }
-
         let mut query = sqlx::query_as(&query);
         for value in bind_values {
             query = query.bind(value);
         }
 
-        let tokens: Vec<Token> =
-            query.fetch_all(&self.pool).await.map_err(|e| Status::internal(e.to_string()))?;
+        let tokens: Vec<Token> = query.fetch_all(&self.pool).await?;
         let next_cursor = tokens.last().map_or(String::new(), |token| token.id.clone());
 
         let tokens = tokens.iter().map(|token| token.clone().into()).collect();
@@ -834,9 +831,8 @@ impl DojoWorld {
         contract_addresses: Vec<Felt>,
         token_ids: Vec<U256>,
         limit: Option<u32>,
-        offset: Option<u32>,
         cursor: Option<String>,
-    ) -> Result<RetrieveTokenBalancesResponse, Status> {
+    ) -> Result<RetrieveTokenBalancesResponse, Error> {
         let mut query = "SELECT * FROM token_balances".to_string();
         let mut bind_values = Vec::new();
         let mut conditions = Vec::new();
@@ -861,7 +857,12 @@ impl DojoWorld {
         }
 
         if let Some(cursor) = cursor {
-            bind_values.push(cursor);
+            bind_values.push(
+                String::from_utf8(
+                    BASE64_STANDARD_NO_PAD.decode(cursor).map_err(|_| Error::InvalidCursor)?,
+                )
+                .map_err(|_| Error::InvalidCursor)?,
+            );
             conditions.push("id > ?".to_string());
         }
 
@@ -876,18 +877,12 @@ impl DojoWorld {
             bind_values.push(limit.to_string());
         }
 
-        if let Some(offset) = offset {
-            query += " OFFSET ?";
-            bind_values.push(offset.to_string());
-        }
-
         let mut query = sqlx::query_as(&query);
         for value in bind_values {
             query = query.bind(value);
         }
 
-        let balances: Vec<TokenBalance> =
-            query.fetch_all(&self.pool).await.map_err(|e| Status::internal(e.to_string()))?;
+        let balances: Vec<TokenBalance> = query.fetch_all(&self.pool).await?;
         let next_cursor = balances.last().map_or(String::new(), |balance| balance.id.clone());
 
         let balances = balances.iter().map(|balance| balance.clone().into()).collect();
@@ -922,7 +917,7 @@ impl DojoWorld {
         self.state_diff_manager.add_subscriber(subs).await
     }
 
-    async fn retrieve_entities_internal(
+    async fn retrieve_entities(
         &self,
         table: &str,
         model_relation_table: &str,
@@ -1268,7 +1263,7 @@ fn build_composite_clause(
         }
     }
 
-    let mut where_clause = if !where_clauses.is_empty() {
+    let where_clause = if !where_clauses.is_empty() {
         where_clauses.join(if is_or { " OR " } else { " AND " })
     } else {
         String::new()
@@ -1286,8 +1281,6 @@ type SubscribeEventsResponseStream =
     Pin<Box<dyn Stream<Item = Result<SubscribeEventsResponse, Status>> + Send>>;
 type SubscribeIndexerResponseStream =
     Pin<Box<dyn Stream<Item = Result<SubscribeIndexerResponse, Status>> + Send>>;
-type RetrieveEntitiesStreamingResponseStream =
-    Pin<Box<dyn Stream<Item = Result<RetrieveEntitiesStreamingResponse, Status>> + Send>>;
 type SubscribeTokenBalancesResponseStream =
     Pin<Box<dyn Stream<Item = Result<SubscribeTokenBalancesResponse, Status>> + Send>>;
 type SubscribeTokensResponseStream =
@@ -1300,7 +1293,6 @@ impl proto::world::world_server::World for DojoWorld {
     type SubscribeEventMessagesStream = SubscribeEntitiesResponseStream;
     type SubscribeEventsStream = SubscribeEventsResponseStream;
     type SubscribeIndexerStream = SubscribeIndexerResponseStream;
-    type RetrieveEntitiesStreamingStream = RetrieveEntitiesStreamingResponseStream;
     type SubscribeTokenBalancesStream = SubscribeTokenBalancesResponseStream;
     type SubscribeTokensStream = SubscribeTokensResponseStream;
 
@@ -1324,7 +1316,7 @@ impl proto::world::world_server::World for DojoWorld {
         let query = query.ok_or_else(|| Status::invalid_argument("Missing query argument"))?;
 
         let entities = self
-            .retrieve_entities_internal(
+            .retrieve_entities(
                 if query.historical { ENTITIES_HISTORICAL_TABLE } else { ENTITIES_TABLE },
                 ENTITIES_MODEL_RELATION_TABLE,
                 ENTITIES_ENTITY_RELATION_COLUMN,
@@ -1344,7 +1336,7 @@ impl proto::world::world_server::World for DojoWorld {
         let query = query.ok_or_else(|| Status::invalid_argument("Missing query argument"))?;
 
         let entities = self
-            .retrieve_entities_internal(
+            .retrieve_entities(
                 if query.historical {
                     EVENT_MESSAGES_HISTORICAL_TABLE
                 } else {
@@ -1398,7 +1390,7 @@ impl proto::world::world_server::World for DojoWorld {
         &self,
         request: Request<RetrieveTokensRequest>,
     ) -> Result<Response<RetrieveTokensResponse>, Status> {
-        let RetrieveTokensRequest { contract_addresses, token_ids, limit, offset, cursor } =
+        let RetrieveTokensRequest { contract_addresses, token_ids, limit, cursor } =
             request.into_inner();
         let contract_addresses = contract_addresses
             .iter()
@@ -1412,7 +1404,6 @@ impl proto::world::world_server::World for DojoWorld {
                 contract_addresses,
                 token_ids,
                 if limit > 0 { Some(limit) } else { None },
-                if offset > 0 { Some(offset) } else { None },
                 if !cursor.is_empty() { Some(cursor) } else { None },
             )
             .await
@@ -1464,7 +1455,6 @@ impl proto::world::world_server::World for DojoWorld {
             contract_addresses,
             token_ids,
             limit,
-            offset,
             cursor,
         } = request.into_inner();
         let account_addresses = account_addresses
@@ -1483,7 +1473,6 @@ impl proto::world::world_server::World for DojoWorld {
                 contract_addresses,
                 token_ids,
                 if limit > 0 { Some(limit) } else { None },
-                if offset > 0 { Some(offset) } else { None },
                 if !cursor.is_empty() { Some(cursor) } else { None },
             )
             .await
@@ -1593,43 +1582,6 @@ impl proto::world::world_server::World for DojoWorld {
             .update_subscriber(subscription_id, contract_addresses, account_addresses, token_ids)
             .await;
         Ok(Response::new(()))
-    }
-
-    async fn retrieve_entities_streaming(
-        &self,
-        request: Request<RetrieveEntitiesRequest>,
-    ) -> ServiceResult<Self::RetrieveEntitiesStreamingStream> {
-        let query = request
-            .into_inner()
-            .query
-            .ok_or_else(|| Status::invalid_argument("Missing query argument"))?;
-
-        let (tx, rx) = channel(100);
-        let res = self
-            .retrieve_entities_internal(
-                ENTITIES_TABLE,
-                ENTITIES_MODEL_RELATION_TABLE,
-                ENTITIES_ENTITY_RELATION_COLUMN,
-                query,
-            )
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
-        tokio::spawn(async move {
-            for (i, entity) in res.entities.iter().enumerate() {
-                tx.send(Ok(RetrieveEntitiesStreamingResponse {
-                    entity: Some(entity.clone()),
-                    remaining_count: (res.entities.len() - (i + 1)) as u32,
-                }))
-                .await
-                .unwrap();
-            }
-        });
-
-        Ok(
-            Response::new(
-                Box::pin(ReceiverStream::new(rx)) as Self::RetrieveEntitiesStreamingStream
-            ),
-        )
     }
 
     async fn subscribe_event_messages(

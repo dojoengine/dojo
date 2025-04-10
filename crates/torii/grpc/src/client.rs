@@ -119,7 +119,6 @@ impl WorldClient {
         contract_addresses: Vec<Felt>,
         token_ids: Vec<U256>,
         limit: Option<u32>,
-        offset: Option<u32>,
         cursor: Option<String>,
     ) -> Result<RetrieveTokensResponse, Error> {
         self.inner
@@ -130,7 +129,6 @@ impl WorldClient {
                     .collect(),
                 token_ids: token_ids.into_iter().map(|id| id.to_be_bytes().to_vec()).collect(),
                 limit: limit.unwrap_or_default(),
-                offset: offset.unwrap_or_default(),
                 cursor: cursor.unwrap_or_default(),
             })
             .await
@@ -200,7 +198,6 @@ impl WorldClient {
         contract_addresses: Vec<Felt>,
         token_ids: Vec<U256>,
         limit: Option<u32>,
-        offset: Option<u32>,
         cursor: Option<String>,
     ) -> Result<RetrieveTokenBalancesResponse, Error> {
         self.inner
@@ -215,7 +212,6 @@ impl WorldClient {
                     .collect(),
                 token_ids: token_ids.into_iter().map(|id| id.to_be_bytes().to_vec()).collect(),
                 limit: limit.unwrap_or_default(),
-                offset: offset.unwrap_or_default(),
                 cursor: cursor.unwrap_or_default(),
             })
             .await
