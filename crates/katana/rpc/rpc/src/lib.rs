@@ -94,7 +94,7 @@ impl RpcServer {
             max_connections: 100,
             max_request_body_size: TEN_MB_SIZE_BYTES,
             max_response_body_size: TEN_MB_SIZE_BYTES,
-            timeout_ms: u64,
+            timeout_ms: 20000,
         }
     }
 
