@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1744294882805,
+  "lastUpdate": 1744294977109,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -60942,6 +60942,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 50241223958,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "contact@luca-steeb.com",
+            "name": "Luca Steeb",
+            "username": "steebchen"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7d90c6140f51a26e5ff4cff9050926f0cf085b6d",
+          "message": "ci(release): change preview tag format in release (#3153)\n\nEnsure the preview tag follows the format vX.Y.Z-preview.X and add\nstring input validation in the release workflow. Update logic to\nhandle invalid formats gracefully.",
+          "timestamp": "2025-04-10T08:06:24-06:00",
+          "tree_id": "456d9b5e118c1d2b9b3b30dfaf0c0838c451f95c",
+          "url": "https://github.com/dojoengine/dojo/commit/7d90c6140f51a26e5ff4cff9050926f0cf085b6d"
+        },
+        "date": 1744294973488,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 51368484129,
             "range": "± 0",
             "unit": "ns/iter"
           }
