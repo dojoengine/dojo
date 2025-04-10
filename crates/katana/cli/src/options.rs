@@ -201,8 +201,8 @@ impl RpcOptions {
             if self.max_response_body_size.is_none() {
                 self.max_response_body_size = other.max_response_body_size;
             }
-            if self.timeout.is_none() {
-                self.timeout = other.timeout;
+            if self.timeout_ms.is_none() {
+                self.timeout_ms = other.timeout_ms;
             }
             if self.max_event_page_size == DEFAULT_RPC_MAX_EVENT_PAGE_SIZE {
                 self.max_event_page_size = other.max_event_page_size;
