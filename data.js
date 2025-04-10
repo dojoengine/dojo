@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1744295192322,
+  "lastUpdate": 1744307749061,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -61069,6 +61069,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 19139843,
             "range": "± 373032",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "contact@luca-steeb.com",
+            "name": "Luca Steeb",
+            "username": "steebchen"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "80a19d7b11023c4731a04cccd9abd4761822c000",
+          "message": "chore(katana): bump explorer (#3156)",
+          "timestamp": "2025-04-11T00:40:11+07:00",
+          "tree_id": "c43426720180625bed7b3ead36c628b61f25223d",
+          "url": "https://github.com/dojoengine/dojo/commit/80a19d7b11023c4731a04cccd9abd4761822c000"
+        },
+        "date": 1744307746112,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 43925068570,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
