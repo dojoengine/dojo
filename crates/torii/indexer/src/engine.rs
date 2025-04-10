@@ -549,8 +549,13 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                     let last_block_number =
                         events_page.events.last().map_or(0, |e| e.block_number.unwrap());
 
-                    // Process events for this page
+                    // Process events for this page, only including events up to our target block
                     for event in events_page.events {
+                        let block_number = event.block_number.unwrap();
+                        if block_number > to {
+                            continue;
+                        }
+
                         // Then we skip all transactions until we reach the last pending processed
                         // transaction (if any)
                         if let Some(last_contract_tx) = last_contract_tx_tmp {
@@ -571,21 +576,18 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                         events.push(event);
                     }
 
-                    // If the last block number is greater than or equal to the to block number, we
-                    // dont want to fetch further pages
-                    if last_block_number >= to {
-                        continue;
-                    }
-
-                    // If there's a continuation token, prepare next request
+                    // Continue fetching pages if there are more events and we haven't seen all events up to our target block
                     if let Some(continuation_token) = events_page.continuation_token {
-                        if let ProviderRequestData::GetEvents(mut next_request) = original_request {
-                            next_request.filter.result_page_request.continuation_token =
-                                Some(continuation_token);
-                            next_requests.push((
-                                contract_address,
-                                ProviderRequestData::GetEvents(next_request),
-                            ));
+                        // Only continue if we haven't seen all events up to our target block
+                        if last_block_number < to {
+                            if let ProviderRequestData::GetEvents(mut next_request) = original_request {
+                                next_request.filter.result_page_request.continuation_token =
+                                    Some(continuation_token);
+                                next_requests.push((
+                                    contract_address,
+                                    ProviderRequestData::GetEvents(next_request),
+                                ));
+                            }
                         }
                     }
                 }
