@@ -428,7 +428,7 @@ impl DojoWorld {
             Some(hashed_keys) => {
                 let ids =
                     hashed_keys.hashed_keys.iter().map(|_| "{table}.id = ?").collect::<Vec<_>>();
-                format!("{}", ids.join(" OR "),)
+                ids.join(" OR ")
             }
             None => String::new(),
         };
