@@ -536,10 +536,13 @@ fn build_query(
     if !where_clause.is_empty() {
         query.push_str(&format!(" WHERE {}", where_clause));
     }
+
+    query.push_str(&format!(" GROUP BY {}.id", table_name));
+
     if let Some(having) = having_clause {
         query.push_str(&format!(" HAVING {}", having));
     }
-    query.push_str(&format!(" GROUP BY {}.id ORDER BY {} LIMIT ?", table_name, order_clause));
+    query.push_str(&format!(" ORDER BY {} LIMIT ?", order_clause));
     query
 }
 
