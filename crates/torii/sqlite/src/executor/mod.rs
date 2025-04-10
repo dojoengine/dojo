@@ -14,8 +14,8 @@ use starknet::core::types::{BlockId, BlockTag, Felt, FunctionCall};
 use starknet::core::utils::{get_selector_from_name, parse_cairo_short_string};
 use starknet::providers::{Provider, ProviderRequestData, ProviderResponseData};
 use tokio::sync::broadcast::{Receiver, Sender};
-use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
-use tokio::sync::{oneshot, Semaphore};
+use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender, unbounded_channel};
+use tokio::sync::{Semaphore, oneshot};
 use tokio::task::JoinSet;
 use tokio::time::Instant;
 use tracing::{debug, error, info, warn};
@@ -27,7 +27,7 @@ use crate::types::{
     EventMessage as EventMessageUpdated, Model as ModelRegistered, OptimisticEntity,
     OptimisticEventMessage, ParsedCall, Token, TokenBalance, Transaction,
 };
-use crate::utils::{felt_and_u256_to_sql_string, felt_to_sql_string, felts_to_sql_string, I256};
+use crate::utils::{I256, felt_and_u256_to_sql_string, felt_to_sql_string, felts_to_sql_string};
 
 pub mod erc;
 pub use erc::{RegisterErc20TokenQuery, RegisterNftTokenQuery};
@@ -709,15 +709,20 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 self.register_tasks.spawn(async move {
                     let permit = metadata_semaphore.acquire().await.unwrap();
 
-                    let result = Self::process_register_nft_token_query(
-                        register_nft_token,
+                    let metadata = Self::fetch_token_metadata(
+                        register_nft_token.contract_address,
+                        register_nft_token.token_id,
                         provider,
+                    )
+                    .await?;
+
+                    drop(permit);
+                    Ok(RegisterNftTokenMetadata {
+                        query: register_nft_token,
                         name,
                         symbol,
-                    )
-                    .await;
-                    drop(permit);
-                    result
+                        metadata,
+                    })
                 });
             }
             QueryType::RegisterErc20Token(register_erc20_token) => {
@@ -789,33 +794,26 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
                 let metadata_semaphore = self.metadata_semaphore.clone();
                 let provider = self.provider.clone();
 
-                let token_id = felt_and_u256_to_sql_string(&update_metadata.contract_address, &update_metadata.token_id);
+                let token_id = felt_and_u256_to_sql_string(
+                    &update_metadata.contract_address,
+                    &update_metadata.token_id,
+                );
                 if self.metadata_update_tokens.contains(&token_id) {
                     return Ok(());
                 }
 
                 self.metadata_update_tasks.spawn(async move {
                     let permit = metadata_semaphore.acquire().await.unwrap();
-                    
-                    let token_uri = Self::fetch_token_uri(
-                        &provider,
-                        update_metadata.contract_address,
-                        update_metadata.token_id,
-                    )
-                    .await?;
+
                     let metadata = Self::fetch_token_metadata(
                         update_metadata.contract_address,
                         update_metadata.token_id,
-                        &token_uri,
+                        provider,
                     )
                     .await?;
-                    
-                    
+
                     drop(permit);
-                    Ok(UpdateNftMetadata {
-                        token_id,
-                        metadata,
-                    })
+                    Ok(UpdateNftMetadata { token_id, metadata })
                 });
                 debug!(target: LOG_TARGET, duration = ?instant.elapsed(), "Updated NFT metadata.");
             }

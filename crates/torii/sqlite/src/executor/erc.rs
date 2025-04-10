@@ -209,29 +209,6 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
         Ok(())
     }
 
-    pub async fn process_register_nft_token_query(
-        register_nft_token: RegisterNftTokenQuery,
-        provider: Arc<P>,
-        name: String,
-        symbol: String,
-    ) -> Result<RegisterNftTokenMetadata> {
-        let token_uri = Self::fetch_token_uri(
-            &provider,
-            register_nft_token.contract_address,
-            register_nft_token.token_id,
-        )
-        .await?;
-
-        let metadata = Self::fetch_token_metadata(
-            register_nft_token.contract_address,
-            register_nft_token.token_id,
-            &token_uri,
-        )
-        .await?;
-
-        Ok(RegisterNftTokenMetadata { query: register_nft_token, metadata, name, symbol })
-    }
-
     // given a uri which can be either http/https url or data uri, fetch the metadata erc721
     // metadata json schema
     pub async fn fetch_metadata(token_uri: &str) -> Result<serde_json::Value> {
@@ -414,13 +391,15 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
     pub async fn fetch_token_metadata(
         contract_address: Felt,
         token_id: U256,
-        token_uri: &str,
+        provider: Arc<P>,
     ) -> Result<String> {
+        let token_uri = Self::fetch_token_uri(&provider, contract_address, token_id).await?;
+
         if token_uri.is_empty() {
             return Ok("".to_string());
         }
 
-        let metadata = Self::fetch_metadata(token_uri).await;
+        let metadata = Self::fetch_metadata(&token_uri).await;
         match metadata {
             Ok(metadata) => {
                 serde_json::to_string(&metadata).context("Failed to serialize metadata")
