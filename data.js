@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1744307959567,
+  "lastUpdate": 1744329092936,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -61147,6 +61147,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 17079908,
             "range": "± 501247",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "contact@luca-steeb.com",
+            "name": "Luca Steeb",
+            "username": "steebchen"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6d9b388f2314a6989de7c4efa578a499c60efe60",
+          "message": "ci(release): adjust conditions for Docker build and push (#3155)\n\nUpdate workflow to use 'contains' instead of 'startsWith'\nfor preview tags. Add separate Docker build step for\npreview tag images.",
+          "timestamp": "2025-04-10T17:35:02-06:00",
+          "tree_id": "9a1c8f5e1d28840110ded7856ad9cc3c306fa312",
+          "url": "https://github.com/dojoengine/dojo/commit/6d9b388f2314a6989de7c4efa578a499c60efe60"
+        },
+        "date": 1744329089208,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 50478145938,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
