@@ -425,6 +425,7 @@ impl NodeArgs {
         None
     }
 
+    #[cfg(feature = "cartridge")]
     fn cartridge_config(&self) -> Option<Paymaster> {
         if self.cartridge.paymaster {
             Some(Paymaster { cartridge_api_url: self.cartridge.api.clone() })

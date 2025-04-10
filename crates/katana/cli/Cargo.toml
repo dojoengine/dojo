@@ -39,4 +39,4 @@ starknet.workspace = true
 default = [ "server", "slot", "cartridge" ]
 server = [  ]
 slot = [ "dep:katana-slot-controller", "katana-chain-spec/controller" ]
-cartridge = [ "katana-rpc/cartridge", "katana-node/cartridge", "katana-primitives/controller" ]
+cartridge = [ "katana-rpc/cartridge", "katana-node/cartridge", "katana-primitives/controller", "katana-primitives/cartridge" ]

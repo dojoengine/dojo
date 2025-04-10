@@ -17,7 +17,7 @@ use torii_grpc::proto::world::{
 };
 use torii_grpc::types::schema::Entity;
 use torii_grpc::types::{
-    Controller, EntityKeysClause, Event, EventQuery, Query, Token, TokenBalance,
+    Controller, EntityKeysClause, Event, EventQuery, Page, Query, Token, TokenBalance,
 };
 use torii_relay::client::EventLoop;
 use torii_relay::types::Message;
@@ -85,11 +85,18 @@ impl Client {
         &self,
         contract_addresses: Vec<Felt>,
         token_ids: Vec<U256>,
-    ) -> Result<Vec<Token>, Error> {
+        limit: Option<u32>,
+        offset: Option<u32>,
+        cursor: Option<String>,
+    ) -> Result<Page<Token>, Error> {
         let mut grpc_client = self.inner.write().await;
-        let RetrieveTokensResponse { tokens } =
-            grpc_client.retrieve_tokens(contract_addresses, token_ids).await?;
-        Ok(tokens.into_iter().map(TryInto::try_into).collect::<Result<Vec<Token>, _>>()?)
+        let RetrieveTokensResponse { tokens, next_cursor } = grpc_client
+            .retrieve_tokens(contract_addresses, token_ids, limit, offset, cursor)
+            .await?;
+        Ok(Page {
+            items: tokens.into_iter().map(TryInto::try_into).collect::<Result<Vec<Token>, _>>()?,
+            next_cursor,
+        })
     }
 
     /// Retrieves token balances for account addresses and contract addresses.
@@ -98,12 +105,28 @@ impl Client {
         account_addresses: Vec<Felt>,
         contract_addresses: Vec<Felt>,
         token_ids: Vec<U256>,
-    ) -> Result<Vec<TokenBalance>, Error> {
+        limit: Option<u32>,
+        offset: Option<u32>,
+        cursor: Option<String>,
+    ) -> Result<Page<TokenBalance>, Error> {
         let mut grpc_client = self.inner.write().await;
-        let RetrieveTokenBalancesResponse { balances } = grpc_client
-            .retrieve_token_balances(account_addresses, contract_addresses, token_ids)
+        let RetrieveTokenBalancesResponse { balances, next_cursor } = grpc_client
+            .retrieve_token_balances(
+                account_addresses,
+                contract_addresses,
+                token_ids,
+                limit,
+                offset,
+                cursor,
+            )
             .await?;
-        Ok(balances.into_iter().map(TryInto::try_into).collect::<Result<Vec<TokenBalance>, _>>()?)
+        Ok(Page {
+            items: balances
+                .into_iter()
+                .map(TryInto::try_into)
+                .collect::<Result<Vec<TokenBalance>, _>>()?,
+            next_cursor,
+        })
     }
 
     /// Retrieves entities matching query parameter.

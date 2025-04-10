@@ -15075,6 +15075,8 @@ dependencies = [
  "tokio",
  "torii-cli",
  "torii-runner",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -15216,6 +15218,7 @@ name = "torii-indexer"
 version = "1.4.0"
 dependencies = [
  "anyhow",
+ "async-recursion",
  "async-trait",
  "base64 0.21.7",
  "bitflags 2.6.0",

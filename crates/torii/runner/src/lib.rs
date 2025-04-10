@@ -20,6 +20,7 @@ use camino::Utf8PathBuf;
 use constants::UDC_ADDRESS;
 use dojo_metrics::exporters::prometheus::PrometheusRecorder;
 use dojo_world::contracts::world::WorldContractReader;
+use futures::future::join_all;
 use sqlx::sqlite::{
     SqliteAutoVacuum, SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteSynchronous,
 };
@@ -41,7 +42,6 @@ use torii_sqlite::simple_broker::SimpleBroker;
 use torii_sqlite::types::{Contract, ContractType, Model};
 use torii_sqlite::{Sql, SqlConfig};
 use tracing::{error, info, warn};
-use tracing_subscriber::{fmt, EnvFilter};
 use url::form_urlencoded;
 
 mod constants;
@@ -59,6 +59,17 @@ impl Runner {
     }
 
     pub async fn run(mut self) -> anyhow::Result<()> {
+        // dump the config to the given path if it is provided
+        if let Some(dump_config) = &self.args.dump_config {
+            let mut dump = self.args.clone();
+            // remove the config and dump_config params from the dump
+            dump.config = None;
+            dump.dump_config = None;
+
+            let config = toml::to_string_pretty(&dump)?;
+            std::fs::write(dump_config, config)?;
+        }
+
         let world_address = if let Some(world_address) = self.args.world_address {
             world_address
         } else {
@@ -77,15 +88,6 @@ impl Runner {
                 .push(Contract { address: UDC_ADDRESS, r#type: ContractType::UDC });
         }
 
-        let filter_layer = EnvFilter::try_from_default_env()
-            .unwrap_or_else(|_| EnvFilter::new("info,hyper_reverse_proxy=off"));
-
-        let subscriber = fmt::Subscriber::builder().with_env_filter(filter_layer).finish();
-
-        // Set the global subscriber
-        tracing::subscriber::set_global_default(subscriber)
-            .expect("Failed to set the global tracing subscriber");
-
         // Setup cancellation for graceful shutdown
         let (shutdown_tx, _) = broadcast::channel(1);
 
@@ -98,13 +100,15 @@ impl Runner {
         let provider: Arc<_> = JsonRpcClient::new(HttpTransport::new(self.args.rpc.clone())).into();
 
         // Verify contracts are deployed
-        let undeployed =
-            verify_contracts_deployed(&provider, &self.args.indexing.contracts).await?;
-        if !undeployed.is_empty() {
-            return Err(anyhow::anyhow!(
-                "The following contracts are not deployed: {:?}",
-                undeployed
-            ));
+        if self.args.runner.check_contracts {
+            let undeployed =
+                verify_contracts_deployed(&provider, &self.args.indexing.contracts).await?;
+            if !undeployed.is_empty() {
+                return Err(anyhow::anyhow!(
+                    "The following contracts are not deployed: {:?}",
+                    undeployed
+                ));
+            }
         }
 
         let tempfile = NamedTempFile::new()?;
@@ -288,7 +292,7 @@ impl Runner {
         info!(target: LOG_TARGET, url = %explorer_url, "Serving World Explorer.");
         info!(target: LOG_TARGET, path = %artifacts_path, "Serving ERC artifacts at path");
 
-        if self.args.explorer {
+        if self.args.runner.explorer {
             if let Err(e) = webbrowser::open(&explorer_url) {
                 error!(target: LOG_TARGET, error = %e, "Opening World Explorer in the browser.");
             }
@@ -355,16 +359,27 @@ async fn verify_contracts_deployed(
     provider: &JsonRpcClient<HttpTransport>,
     contracts: &[Contract],
 ) -> anyhow::Result<Vec<Contract>> {
-    let mut undeployed = Vec::new();
-
-    for contract in contracts {
-        match provider.get_class_at(BlockId::Tag(BlockTag::Pending), contract.address).await {
-            Ok(_) => continue,
-            Err(_) => {
-                undeployed.push(*contract);
-            }
+    // Create a future for each contract verification
+    let verification_futures = contracts.iter().map(|contract| {
+        let contract = *contract;
+        async move {
+            let result =
+                provider.get_class_at(BlockId::Tag(BlockTag::Pending), contract.address).await;
+            (contract, result)
         }
-    }
+    });
+
+    // Run all verifications concurrently
+    let results = join_all(verification_futures).await;
+
+    // Collect undeployed contracts
+    let undeployed = results
+        .into_iter()
+        .filter_map(|(contract, result)| match result {
+            Ok(_) => None,
+            Err(_) => Some(contract),
+        })
+        .collect();
 
     Ok(undeployed)
 }

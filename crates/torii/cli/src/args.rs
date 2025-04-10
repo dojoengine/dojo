@@ -36,13 +36,16 @@ pub struct ToriiArgs {
     )]
     pub db_dir: Option<PathBuf>,
 
-    /// Open World Explorer on the browser.
-    #[arg(long, help = "Open World Explorer on the browser.")]
-    pub explorer: bool,
-
     /// Configuration file
     #[arg(long, help = "Configuration file to setup Torii.")]
     pub config: Option<PathBuf>,
+
+    /// Optional path to dump config to
+    #[arg(long, help = "Optional path to dump config to")]
+    pub dump_config: Option<PathBuf>,
+
+    #[command(flatten)]
+    pub runner: RunnerOptions,
 
     #[command(flatten)]
     pub indexing: IndexingOptions,
@@ -75,12 +78,13 @@ impl Default for ToriiArgs {
             world_address: None,
             rpc: Url::parse(DEFAULT_RPC_URL).unwrap(),
             db_dir: None,
-            explorer: false,
             config: None,
+            dump_config: None,
             indexing: IndexingOptions::default(),
             events: EventsOptions::default(),
             erc: ErcOptions::default(),
             sql: SqlOptions::default(),
+            runner: RunnerOptions::default(),
             #[cfg(feature = "server")]
             metrics: MetricsOptions::default(),
             #[cfg(feature = "server")]
@@ -209,12 +213,11 @@ mod test {
 
         assert_eq!(torii_args.db_dir, None);
 
-        assert!(!torii_args.explorer);
-
         assert_eq!(torii_args.indexing, IndexingOptions::default());
         assert_eq!(torii_args.events, EventsOptions::default());
         assert_eq!(torii_args.erc, ErcOptions::default());
         assert_eq!(torii_args.sql, SqlOptions::default());
+        assert_eq!(torii_args.runner, RunnerOptions::default());
         assert_eq!(torii_args.server, ServerOptions::default());
         assert_eq!(torii_args.relay, RelayOptions::default());
         assert_eq!(torii_args.metrics, MetricsOptions::default());

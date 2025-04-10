@@ -19,6 +19,12 @@ use crate::proto::{self};
 pub mod schema;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
+pub struct Page<T> {
+    pub items: Vec<T>,
+    pub next_cursor: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Hash, Eq, Clone)]
 pub struct Controller {
     pub address: Felt,
     pub username: String,

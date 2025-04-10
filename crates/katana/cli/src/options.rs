@@ -474,15 +474,20 @@ impl CartridgeOptions {
         }
     }
 }
+
+#[cfg(feature = "cartridge")]
 impl Default for CartridgeOptions {
     fn default() -> Self {
         CartridgeOptions { paymaster: default_paymaster(), api: default_api_url() }
     }
 }
+
+#[cfg(feature = "cartridge")]
 fn default_paymaster() -> bool {
     false
 }
 
+#[cfg(feature = "cartridge")]
 fn default_api_url() -> Url {
     Url::parse("https://api.cartridge.gg").expect("qed; invalid url")
 }

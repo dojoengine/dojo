@@ -372,6 +372,27 @@ impl Default for SqlOptions {
     }
 }
 
+#[derive(Default, Debug, clap::Args, Clone, Serialize, Deserialize, PartialEq, MergeOptions)]
+#[serde(default)]
+#[command(next_help_heading = "Runner options")]
+pub struct RunnerOptions {
+    /// Open World Explorer on the browser.
+    #[arg(
+        long = "runner.explorer",
+        default_value_t = false,
+        help = "Open World Explorer on the browser."
+    )]
+    pub explorer: bool,
+
+    /// Check if contracts are deployed before starting torii.
+    #[arg(
+        long = "runner.check_contracts",
+        default_value_t = false,
+        help = "Check if contracts are deployed before starting torii."
+    )]
+    pub check_contracts: bool,
+}
+
 // Parses clap cli argument which is expected to be in the format:
 // - model-tag:field1,field2;othermodel-tag:field3,field4
 fn parse_model_indices(part: &str) -> anyhow::Result<ModelIndices> {
