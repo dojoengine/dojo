@@ -2,8 +2,8 @@ use std::collections::HashSet;
 use std::str::FromStr;
 
 use async_trait::async_trait;
-use base64::Engine;
 use base64::engine::general_purpose;
+use base64::Engine;
 use crypto_bigint::U256;
 use dojo_types::primitive::{Primitive, PrimitiveError};
 use dojo_types::schema::Ty;
@@ -370,9 +370,12 @@ pub async fn fetch_entities(
         .cursor
         .as_ref()
         .map(|cursor_str| {
-            let decoded =
-                general_purpose::STANDARD.decode(cursor_str).map_err(|_| Error::InvalidCursor)?;
-            serde_json::from_slice(&decoded).map_err(|_| Error::InvalidCursor)
+            let decoded = general_purpose::STANDARD_NO_PAD
+                .decode(cursor_str)
+                .map_err(|_| Error::InvalidCursor)?;
+            String::from_utf8(decoded)
+                .map_err(|_| Error::InvalidCursor)
+                .map(|s| s.split('/').map(|s| s.to_string()).collect())
         })
         .transpose()?;
 
@@ -401,7 +404,8 @@ pub async fn fetch_entities(
             let model_table = model.name();
             let join_type = if order_by_models.contains(&model_table) { "INNER" } else { "LEFT" };
             joins.push(format!(
-                "{join_type} JOIN [{model_table}] ON {table_name}.id = [{model_table}].{entity_relation_column}",
+                "{join_type} JOIN [{model_table}] ON {table_name}.id = \
+                 [{model_table}].{entity_relation_column}",
             ));
             collect_columns(&model_table, "", model, &mut selections);
         }
@@ -447,10 +451,9 @@ pub async fn fetch_entities(
     if all_rows.len() >= original_limit as usize {
         if let Some(last_row) = all_rows.last() {
             let cursor_values = build_cursor_values(&pagination, last_row)?;
-            next_cursor =
-                Some(general_purpose::STANDARD.encode(
-                    serde_json::to_string(&cursor_values).map_err(|_| Error::InvalidCursor)?,
-                ));
+            next_cursor = Some(general_purpose::STANDARD_NO_PAD.encode(
+                cursor_values.join("/").as_bytes()
+            ));
         }
     }
 
@@ -677,7 +680,8 @@ mod tests {
         )
         .unwrap();
 
-        let expected_query = "SELECT entities.id, entities.keys, group_concat(entity_model.model_id) as model_ids, \
+        let expected_query =
+            "SELECT entities.id, entities.keys, group_concat(entity_model.model_id) as model_ids, \
              [Test-Position].[player] as \"Test-Position.player\", [Test-Position].[vec.x] as \
              \"Test-Position.vec.x\", [Test-Position].[vec.y] as \"Test-Position.vec.y\", \
              [Test-Position].[test_everything] as \"Test-Position.test_everything\", \

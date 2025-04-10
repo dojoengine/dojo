@@ -13,6 +13,8 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 
+use base64::Engine;
+use base64::prelude::BASE64_STANDARD_NO_PAD;
 use crypto_bigint::{Encoding, U256};
 use dojo_types::naming::compute_selector_from_tag;
 use dojo_types::primitive::{Primitive, PrimitiveError};
@@ -31,14 +33,14 @@ use sqlx::sqlite::SqliteRow;
 use sqlx::types::chrono::{DateTime, Utc};
 use sqlx::{Pool, Row, Sqlite};
 use starknet::core::types::Felt;
-use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
+use starknet::providers::jsonrpc::HttpTransport;
 use subscriptions::event::EventManager;
 use subscriptions::indexer::IndexerManager;
 use subscriptions::token::TokenManager;
 use subscriptions::token_balance::TokenBalanceManager;
 use tokio::net::TcpListener;
-use tokio::sync::mpsc::{channel, Receiver};
+use tokio::sync::mpsc::{Receiver, channel};
 use tokio_stream::wrappers::{ReceiverStream, TcpListenerStream};
 use tonic::codec::CompressionEncoding;
 use tonic::transport::Server;
@@ -47,16 +49,18 @@ use tonic_web::GrpcWebLayer;
 use torii_sqlite::cache::ModelCache;
 use torii_sqlite::error::{Error, ParseError, QueryError};
 use torii_sqlite::model::{fetch_entities, map_row_to_ty};
-use torii_sqlite::types::{OrderBy, OrderDirection, Page, Pagination, PaginationDirection, Token, TokenBalance};
+use torii_sqlite::types::{
+    OrderBy, OrderDirection, Page, Pagination, PaginationDirection, Token, TokenBalance,
+};
 use torii_sqlite::utils::u256_to_sql_string;
 use tower_http::cors::{AllowOrigin, CorsLayer};
 
 use self::subscriptions::entity::EntityManager;
 use self::subscriptions::event_message::EventMessageManager;
 use self::subscriptions::model_diff::{ModelDiffRequest, StateDiffManager};
+use crate::proto::types::LogicalOperator;
 use crate::proto::types::clause::ClauseType;
 use crate::proto::types::member_value::ValueType;
-use crate::proto::types::LogicalOperator;
 use crate::proto::world::world_server::WorldServer;
 use crate::proto::world::{
     RetrieveControllersRequest, RetrieveControllersResponse, RetrieveEntitiesStreamingResponse,
@@ -69,8 +73,8 @@ use crate::proto::world::{
     UpdateTokenSubscriptionRequest, WorldMetadataRequest, WorldMetadataResponse,
 };
 use crate::proto::{self};
-use crate::types::schema::SchemaError;
 use crate::types::ComparisonOperator;
+use crate::types::schema::SchemaError;
 
 pub(crate) static ENTITIES_TABLE: &str = "entities";
 pub(crate) static ENTITIES_MODEL_RELATION_TABLE: &str = "entity_model";
@@ -334,13 +338,18 @@ impl DojoWorld {
         if let Some(ref cursor) = pagination.cursor {
             match pagination.direction {
                 PaginationDirection::Forward => {
-                    conditions.push(format!("{table}.event_id > ?"));
+                    conditions.push(format!("{table}.event_id >= ?"));
                 }
                 PaginationDirection::Backward => {
-                    conditions.push(format!("{table}.event_id < ?"));
+                    conditions.push(format!("{table}.event_id <= ?"));
                 }
             }
-            bind_values.push(cursor.clone());
+            bind_values.push(
+                String::from_utf8(
+                    BASE64_STANDARD_NO_PAD.decode(cursor).map_err(|_| Error::InvalidCursor)?,
+                )
+                .map_err(|_| Error::InvalidCursor)?,
+            );
         }
 
         let where_clause = if !conditions.is_empty() {
@@ -354,26 +363,23 @@ impl DojoWorld {
             PaginationDirection::Backward => "DESC",
         };
 
-        let mut query = format!(
-            "SELECT {table}.id, {table}.data, {table}.model_id, {table}.event_id, group_concat({model_relation_table}.model_id) as model_ids
+        let query = format!(
+            "SELECT {table}.id, {table}.data, {table}.model_id, {table}.event_id, \
+             group_concat({model_relation_table}.model_id) as model_ids
             FROM {table}
             JOIN {model_relation_table} ON {table}.id = {model_relation_table}.entity_id
             {where_clause}
             GROUP BY {table}.event_id
             ORDER BY {table}.event_id {order_direction}
+            LIMIT ?
             "
         );
-
-        // Add 1 to limit to fetch an extra item for next_cursor
-        if let Some(limit) = pagination.limit {
-            query = format!("{} LIMIT ?", query);
-            bind_values.push((limit + 1).to_string());
-        }
 
         let mut query = sqlx::query_as(&query);
         for value in bind_values {
             query = query.bind(value);
         }
+        query = query.bind(pagination.limit.unwrap_or(100) + 1);
 
         let db_entities: Vec<(String, String, String, String, String)> =
             query.fetch_all(&self.pool).await?;
@@ -387,10 +393,12 @@ impl DojoWorld {
                 .model(&Felt::from_str(model_id).map_err(ParseError::FromStr)?)
                 .await?;
             let mut schema = model.schema;
-            schema
-                .from_json_value(serde_json::from_str(data).map_err(ParseError::FromJsonStr)?)?;
+            schema.from_json_value(serde_json::from_str(data).map_err(ParseError::FromJsonStr)?)?;
 
-            entities.push(proto::types::Entity { hashed_keys, models: vec![schema.as_struct().unwrap().clone().into()] });
+            entities.push(proto::types::Entity {
+                hashed_keys,
+                models: vec![schema.as_struct().unwrap().clone().into()],
+            });
         }
 
         // Get the next cursor from the last item's event_id if we fetched an extra one
@@ -402,7 +410,7 @@ impl DojoWorld {
 
         Ok(Page {
             items: entities,
-            next_cursor,
+            next_cursor: next_cursor.map(|cursor| BASE64_STANDARD_NO_PAD.encode(cursor)),
         })
     }
 
@@ -453,13 +461,15 @@ impl DojoWorld {
             .join(" OR ");
 
         if table.ends_with("_historical") {
-            return self.fetch_historical_entities(
-                table,
-                model_relation_table,
-                &where_clause,
-                bind_values,
-                pagination,
-            ).await;
+            return self
+                .fetch_historical_entities(
+                    table,
+                    model_relation_table,
+                    &where_clause,
+                    bind_values,
+                    pagination,
+                )
+                .await;
         }
 
         let page = fetch_entities(
@@ -536,13 +546,15 @@ impl DojoWorld {
             .join(" OR ");
 
         if table.ends_with("_historical") {
-            return self.fetch_historical_entities(
-                table,
-                model_relation_table,
-                &where_clause,
-                bind_values,
-                pagination,
-            ).await;
+            return self
+                .fetch_historical_entities(
+                    table,
+                    model_relation_table,
+                    &where_clause,
+                    bind_values,
+                    pagination,
+                )
+                .await;
         }
 
         let page = fetch_entities(
@@ -567,7 +579,6 @@ impl DojoWorld {
             next_cursor: page.next_cursor,
         })
     }
-
 
     #[allow(clippy::too_many_arguments)]
     pub(crate) async fn query_by_member(
@@ -631,10 +642,7 @@ impl DojoWorld {
         let models_str: Option<String> =
             sqlx::query_scalar(&models_query).fetch_optional(&self.pool).await?;
         if models_str.is_none() {
-            return Ok(Page {
-                items: Vec::new(),
-                next_cursor: None,
-            });
+            return Ok(Page { items: Vec::new(), next_cursor: None });
         }
 
         let models_str = models_str.unwrap();
@@ -643,11 +651,7 @@ impl DojoWorld {
             .split(',')
             .filter_map(|id| {
                 let model_id = Felt::from_str(id).unwrap();
-                if models.is_empty() || models.contains(&model_id) {
-                    Some(model_id)
-                } else {
-                    None
-                }
+                if models.is_empty() || models.contains(&model_id) { Some(model_id) } else { None }
             })
             .collect::<Vec<_>>();
         let schemas = self
@@ -703,11 +707,8 @@ impl DojoWorld {
         no_hashed_keys: bool,
         models: Vec<String>,
     ) -> Result<Page<proto::types::Entity>, Error> {
-        let (where_clause, bind_values) = build_composite_clause(
-            table,
-            model_relation_table,
-            &composite,
-        )?;
+        let (where_clause, bind_values) =
+            build_composite_clause(table, model_relation_table, &composite)?;
 
         let models =
             models.iter().map(|model| compute_selector_from_tag(model)).collect::<Vec<_>>();
@@ -1256,11 +1257,8 @@ fn build_composite_clause(
             }
             ClauseType::Composite(nested) => {
                 // Handle nested composite by recursively building the clause
-                let (nested_where, nested_values) = build_composite_clause(
-                    table,
-                    model_relation_table,
-                    nested,
-                )?;
+                let (nested_where, nested_values) =
+                    build_composite_clause(table, model_relation_table, nested)?;
 
                 if !nested_where.is_empty() {
                     where_clauses.push(nested_where);
@@ -1347,7 +1345,11 @@ impl proto::world::world_server::World for DojoWorld {
 
         let entities = self
             .retrieve_entities_internal(
-                if query.historical { EVENT_MESSAGES_HISTORICAL_TABLE } else { EVENT_MESSAGES_TABLE },
+                if query.historical {
+                    EVENT_MESSAGES_HISTORICAL_TABLE
+                } else {
+                    EVENT_MESSAGES_TABLE
+                },
                 EVENT_MESSAGES_MODEL_RELATION_TABLE,
                 EVENT_MESSAGES_ENTITY_RELATION_COLUMN,
                 query,
@@ -1367,8 +1369,10 @@ impl proto::world::world_server::World for DojoWorld {
             .query
             .ok_or_else(|| Status::invalid_argument("Missing query argument"))?;
 
-        let events =
-            self.retrieve_events_internal(&query).await.map_err(|e| Status::internal(e.to_string()))?;
+        let events = self
+            .retrieve_events_internal(&query)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(events))
     }
@@ -1621,9 +1625,11 @@ impl proto::world::world_server::World for DojoWorld {
             }
         });
 
-        Ok(Response::new(
-            Box::pin(ReceiverStream::new(rx)) as Self::RetrieveEntitiesStreamingStream,
-        ))
+        Ok(
+            Response::new(
+                Box::pin(ReceiverStream::new(rx)) as Self::RetrieveEntitiesStreamingStream
+            ),
+        )
     }
 
     async fn subscribe_event_messages(
