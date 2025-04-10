@@ -18,8 +18,8 @@ use crate::executor::LOG_TARGET;
 use crate::simple_broker::SimpleBroker;
 use crate::types::{ContractType, OptimisticToken, OptimisticTokenBalance, Token, TokenBalance};
 use crate::utils::{
-    felt_to_sql_string, fetch_content_from_ipfs, sanitize_json_string,
-    sql_string_to_u256, u256_to_sql_string, I256,
+    felt_to_sql_string, fetch_content_from_ipfs, sanitize_json_string, sql_string_to_u256,
+    u256_to_sql_string, I256,
 };
 
 #[derive(Debug, Clone)]
@@ -421,11 +421,12 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
         update_metadata: UpdateNftMetadata,
     ) -> Result<()> {
         // Update metadata in database
-        let token = sqlx::query_as::<_, Token>("UPDATE tokens SET metadata = ? WHERE id = ? RETURNING *")
-            .bind(&update_metadata.metadata)
-            .bind(&update_metadata.token_id)
-            .fetch_optional(&mut *self.transaction)
-            .await?;
+        let token =
+            sqlx::query_as::<_, Token>("UPDATE tokens SET metadata = ? WHERE id = ? RETURNING *")
+                .bind(&update_metadata.metadata)
+                .bind(&update_metadata.token_id)
+                .fetch_optional(&mut *self.transaction)
+                .await?;
 
         if let Some(token) = token {
             info!(target: LOG_TARGET, name = %token.name, symbol = %token.symbol, contract_address = %token.contract_address, token_id = %update_metadata.token_id, "NFT token metadata updated.");
