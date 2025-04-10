@@ -189,6 +189,7 @@ pub struct Katana {
     http_addr: Option<SocketAddr>,
     http_port: Option<u16>,
     rpc_max_connections: Option<u64>,
+    rpc_timeout_ms: Option<u64>,
     rpc_max_call_gas: Option<u64>,
     http_cors_domain: Option<String>,
 
@@ -329,6 +330,12 @@ impl Katana {
     /// Sets the maximum number of concurrent connections allowed.
     pub const fn rpc_max_connections(mut self, max_connections: u64) -> Self {
         self.rpc_max_connections = Some(max_connections);
+        self
+    }
+
+    /// Sets the maximum timeout for the RPC.
+    pub const fn rpc_timeout_ms(mut self, timeout_ms: u64) -> Self {
+        self.rpc_timeout_ms = Some(timeout_ms);
         self
     }
 
@@ -535,6 +542,10 @@ impl Katana {
 
         if let Some(max_connections) = self.rpc_max_connections {
             cmd.arg("--rpc.max-connections").arg(max_connections.to_string());
+        }
+
+        if let Some(timeout_ms) = self.rpc_timeout_ms {
+            cmd.arg("--rpc.timeout-ms").arg(timeout_ms.to_string());
         }
 
         if let Some(max_call_gas) = self.rpc_max_call_gas {

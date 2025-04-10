@@ -7,36 +7,36 @@ use std::sync::Arc;
 use alloy_primitives::U256;
 use anyhow::{Context, Result};
 use clap::Parser;
-use katana_chain_spec::rollup::ChainConfigDir;
 use katana_chain_spec::ChainSpec;
+use katana_chain_spec::rollup::ChainConfigDir;
 use katana_core::constants::DEFAULT_SEQUENCER_ADDRESS;
 use katana_explorer::Explorer;
 use katana_messaging::MessagingConfig;
+use katana_node::config::Config;
+#[cfg(feature = "cartridge")]
+use katana_node::config::Paymaster;
 use katana_node::config::db::DbConfig;
 use katana_node::config::dev::{DevConfig, FixedL1GasPriceConfig};
 use katana_node::config::execution::ExecutionConfig;
 use katana_node::config::fork::ForkingConfig;
 use katana_node::config::metrics::MetricsConfig;
-use katana_node::config::rpc::{RpcConfig, RpcModuleKind, RpcModulesList};
 #[cfg(not(feature = "server"))]
 use katana_node::config::rpc::{DEFAULT_RPC_ADDR, DEFAULT_RPC_PORT};
+use katana_node::config::rpc::{RpcConfig, RpcModuleKind, RpcModulesList};
 use katana_node::config::sequencing::SequencingConfig;
-use katana_node::config::Config;
-#[cfg(feature = "cartridge")]
-use katana_node::config::Paymaster;
 use katana_primitives::genesis::allocation::DevAllocationsGenerator;
 use katana_primitives::genesis::constant::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;
 #[cfg(feature = "server")]
 use katana_rpc::cors::HeaderValue;
 use serde::{Deserialize, Serialize};
-use tracing::{info, Subscriber};
+use tracing::{Subscriber, info};
 use tracing_log::LogTracer;
-use tracing_subscriber::{fmt, EnvFilter};
+use tracing_subscriber::{EnvFilter, fmt};
 use url::Url;
 
 use crate::file::NodeArgsConfig;
 use crate::options::*;
-use crate::utils::{self, parse_chain_config_dir, parse_seed, LogFormat};
+use crate::utils::{self, LogFormat, parse_chain_config_dir, parse_seed};
 
 pub(crate) const LOG_TARGET: &str = "katana::cli";
 
@@ -176,8 +176,7 @@ impl NodeArgs {
     }
 
     fn init_logging(&self) -> Result<()> {
-        const DEFAULT_LOG_FILTER: &str =
-            "info,executor=trace,pipeline=debug,stage=debug,tasks=debug,forking::backend=trace,\
+        const DEFAULT_LOG_FILTER: &str = "info,executor=trace,pipeline=debug,stage=debug,tasks=debug,forking::backend=trace,\
              blockifier=off,jsonrpsee_server=off,hyper=off,messaging=debug,node=error";
 
         let filter = if self.development.dev {
@@ -317,6 +316,7 @@ impl NodeArgs {
             cors_origins,
             max_request_body_size: None,
             max_response_body_size: None,
+            timeout_ms: self.rpc.timeout_ms,
             max_event_page_size: Some(self.rpc.max_event_page_size),
             max_proof_keys: Some(self.rpc.max_proof_keys),
             max_call_gas: Some(self.rpc.max_call_gas),
@@ -517,7 +517,7 @@ mod test {
         DEFAULT_INVOCATION_MAX_STEPS, DEFAULT_VALIDATION_MAX_STEPS,
     };
     use katana_primitives::chain::ChainId;
-    use katana_primitives::{address, felt, ContractAddress, Felt};
+    use katana_primitives::{ContractAddress, Felt, address, felt};
     use katana_rpc::cors::HeaderValue;
 
     use super::*;
