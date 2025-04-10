@@ -86,13 +86,11 @@ impl Client {
         contract_addresses: Vec<Felt>,
         token_ids: Vec<U256>,
         limit: Option<u32>,
-        offset: Option<u32>,
         cursor: Option<String>,
     ) -> Result<Page<Token>, Error> {
         let mut grpc_client = self.inner.write().await;
-        let RetrieveTokensResponse { tokens, next_cursor } = grpc_client
-            .retrieve_tokens(contract_addresses, token_ids, limit, offset, cursor)
-            .await?;
+        let RetrieveTokensResponse { tokens, next_cursor } =
+            grpc_client.retrieve_tokens(contract_addresses, token_ids, limit, cursor).await?;
         Ok(Page {
             items: tokens.into_iter().map(TryInto::try_into).collect::<Result<Vec<Token>, _>>()?,
             next_cursor: if next_cursor.is_empty() { None } else { Some(next_cursor) },
@@ -106,7 +104,6 @@ impl Client {
         contract_addresses: Vec<Felt>,
         token_ids: Vec<U256>,
         limit: Option<u32>,
-        offset: Option<u32>,
         cursor: Option<String>,
     ) -> Result<Page<TokenBalance>, Error> {
         let mut grpc_client = self.inner.write().await;
@@ -116,7 +113,6 @@ impl Client {
                 contract_addresses,
                 token_ids,
                 limit,
-                offset,
                 cursor,
             )
             .await?;
@@ -135,23 +131,31 @@ impl Client {
     /// entities, this is less efficient as it requires an additional query for each entity's
     /// model data. Specifying a clause can optimize the query by limiting the retrieval to specific
     /// type of entites matching keys and/or models.
-    pub async fn entities(&self, query: Query, historical: bool) -> Result<Vec<Entity>, Error> {
+    pub async fn entities(&self, query: Query) -> Result<Page<Entity>, Error> {
         let mut grpc_client = self.inner.write().await;
-        let RetrieveEntitiesResponse { entities, total_count: _ } =
-            grpc_client.retrieve_entities(query, historical).await?;
-        Ok(entities.into_iter().map(TryInto::try_into).collect::<Result<Vec<Entity>, _>>()?)
+        let RetrieveEntitiesResponse { entities, next_cursor } =
+            grpc_client.retrieve_entities(query).await?;
+        Ok(Page {
+            items: entities
+                .into_iter()
+                .map(TryInto::try_into)
+                .collect::<Result<Vec<Entity>, _>>()?,
+            next_cursor: if next_cursor.is_empty() { None } else { Some(next_cursor) },
+        })
     }
 
     /// Similary to entities, this function retrieves event messages matching the query parameter.
-    pub async fn event_messages(
-        &self,
-        query: Query,
-        historical: bool,
-    ) -> Result<Vec<Entity>, Error> {
+    pub async fn event_messages(&self, query: Query) -> Result<Page<Entity>, Error> {
         let mut grpc_client = self.inner.write().await;
-        let RetrieveEntitiesResponse { entities, total_count: _ } =
-            grpc_client.retrieve_event_messages(query, historical).await?;
-        Ok(entities.into_iter().map(TryInto::try_into).collect::<Result<Vec<Entity>, _>>()?)
+        let RetrieveEntitiesResponse { entities, next_cursor } =
+            grpc_client.retrieve_event_messages(query).await?;
+        Ok(Page {
+            items: entities
+                .into_iter()
+                .map(TryInto::try_into)
+                .collect::<Result<Vec<Entity>, _>>()?,
+            next_cursor: if next_cursor.is_empty() { None } else { Some(next_cursor) },
+        })
     }
 
     /// Retrieve raw starknet events matching the keys provided.
