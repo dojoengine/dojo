@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1744152511090,
+  "lastUpdate": 1744294882805,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -60913,6 +60913,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 17563681,
             "range": "± 549156",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "contact@luca-steeb.com",
+            "name": "Luca Steeb",
+            "username": "steebchen"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3fd39a5983514505e8ded910b6fd750dc2c3100b",
+          "message": "fix(Dockerfile): add curl installation and copy step (#3152)\n\nEnsure curl is available in the final image by installing\nand copying it during the build process.",
+          "timestamp": "2025-04-10T08:04:44-06:00",
+          "tree_id": "2af65289372282fe1725600dcc8c35dffeff3743",
+          "url": "https://github.com/dojoengine/dojo/commit/3fd39a5983514505e8ded910b6fd750dc2c3100b"
+        },
+        "date": 1744294879091,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 50241223958,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
