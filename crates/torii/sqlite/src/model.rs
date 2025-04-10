@@ -1,8 +1,9 @@
+use std::collections::HashSet;
 use std::str::FromStr;
 
 use async_trait::async_trait;
-use base64::engine::general_purpose;
 use base64::Engine;
+use base64::engine::general_purpose;
 use crypto_bigint::U256;
 use dojo_types::primitive::{Primitive, PrimitiveError};
 use dojo_types::schema::Ty;
@@ -286,7 +287,6 @@ pub fn map_row_to_ty(
     Ok(())
 }
 
-#[allow(clippy::too_many_arguments)]
 pub async fn fetch_entities(
     pool: &Pool<sqlx::Sqlite>,
     schemas: &[Ty],
@@ -313,18 +313,13 @@ pub async fn fetch_entities(
             }
             Ty::Tuple(t) => {
                 for (i, child) in t.iter().enumerate() {
-                    let new_path = if path.is_empty() {
-                        format!("{}", i)
-                    } else {
-                        format!("{}.{}", path, i)
-                    };
+                    let new_path =
+                        if path.is_empty() { format!("{}", i) } else { format!("{}.{}", path, i) };
                     collect_columns(table_prefix, &new_path, child, selections);
                 }
             }
             Ty::Enum(e) => {
-                selections.push(format!(
-                    "[{table_prefix}].[{path}] as \"{table_prefix}.{path}\"",
-                ));
+                selections.push(format!("[{table_prefix}].[{path}] as \"{table_prefix}.{path}\"",));
 
                 for option in &e.options {
                     if let Ty::Tuple(t) = &option.ty {
@@ -337,255 +332,226 @@ pub async fn fetch_entities(
                 }
             }
             Ty::Array(_) | Ty::Primitive(_) | Ty::ByteArray(_) => {
-                selections.push(format!(
-                    "[{table_prefix}].[{path}] as \"{table_prefix}.{path}\"",
-                ));
+                selections.push(format!("[{table_prefix}].[{path}] as \"{table_prefix}.{path}\"",));
             }
         }
     }
 
     const MAX_JOINS: usize = 64;
-    let schema_chunks = schemas.chunks(MAX_JOINS);
+    let original_limit = pagination.limit.unwrap_or(100);
+    let fetch_limit = original_limit + 1;
+
+    // Build order by clause with proper model joining
+    let order_by_models: HashSet<String> =
+        pagination.order_by.iter().map(|ob| ob.model.clone()).collect();
+
+    let order_clause = if pagination.order_by.is_empty() {
+        format!("{table_name}.event_id DESC")
+    } else {
+        pagination
+            .order_by
+            .iter()
+            .map(|ob| {
+                let direction = match (&ob.direction, &pagination.direction) {
+                    (OrderDirection::Asc, PaginationDirection::Forward) => "ASC",
+                    (OrderDirection::Asc, PaginationDirection::Backward) => "DESC",
+                    (OrderDirection::Desc, PaginationDirection::Forward) => "DESC",
+                    (OrderDirection::Desc, PaginationDirection::Backward) => "ASC",
+                };
+                format!("[{}].[{}] {direction}", ob.model, ob.member)
+            })
+            .chain(std::iter::once(format!("{table_name}.event_id DESC")))
+            .collect::<Vec<_>>()
+            .join(", ")
+    };
+
+    // Parse cursor
+    let cursor_values: Option<Vec<String>> = pagination
+        .cursor
+        .as_ref()
+        .map(|cursor_str| {
+            let decoded =
+                general_purpose::STANDARD.decode(cursor_str).map_err(|_| Error::InvalidCursor)?;
+            serde_json::from_slice(&decoded).map_err(|_| Error::InvalidCursor)
+        })
+        .transpose()?;
+
+    // Build cursor conditions
+    let (cursor_conditions, cursor_binds) =
+        build_cursor_conditions(&pagination, cursor_values.as_deref(), table_name)?;
+
+    // Combine WHERE clauses
+    let combined_where = combine_where_clauses(where_clause, &cursor_conditions);
+
+    // Process schemas in chunks
     let mut all_rows = Vec::new();
     let mut next_cursor = None;
 
-    // Determine the actual limit and adjust for cursor-based pagination
-    let original_limit = pagination.limit.unwrap_or(100);
-    let fetch_limit = original_limit + 1; // Fetch one extra to check for next page
+    for chunk in schemas.chunks(MAX_JOINS) {
+        let mut selections = vec![
+            format!("{}.id", table_name),
+            format!("{}.keys", table_name),
+            format!("{}.event_id", table_name),
+            format!("group_concat({}.model_id) as model_ids", model_relation_table),
+        ];
+        let mut joins = Vec::new();
 
-    // Adjust order_by for backward pagination (reverse direction)
-    let adjusted_order_by: Vec<OrderBy> = pagination
-        .order_by
-        .iter()
-        .map(|ob| {
-            if pagination.direction == PaginationDirection::Backward {
-                OrderBy {
-                    model: ob.model.clone(),
-                    member: ob.member.clone(),
-                    direction: match ob.direction {
-                        OrderDirection::Asc => OrderDirection::Desc,
-                        OrderDirection::Desc => OrderDirection::Asc,
-                    },
-                }
-            } else {
-                ob.clone()
-            }
-        })
-        .collect();
+        // Add schema joins
+        for model in chunk {
+            let model_table = model.name();
+            let join_type = if order_by_models.contains(&model_table) { "INNER" } else { "LEFT" };
+            joins.push(format!(
+                "{join_type} JOIN [{model_table}] ON {table_name}.id = [{model_table}].{entity_relation_column}",
+            ));
+            collect_columns(&model_table, "", model, &mut selections);
+        }
 
-    // Generate ORDER BY clause
-    let order_clause = if adjusted_order_by.is_empty() {
-        format!("{}.event_id DESC", table_name)
-    } else {
-        format!("{}, {}.event_id DESC",
-            adjusted_order_by
-                .iter()
-                .map(|ob| {
-                    format!(
-                        "\"{}.{}\" {}",
-                        ob.model,
-                        ob.member,
-                        match ob.direction {
-                            OrderDirection::Asc => "ASC",
-                            OrderDirection::Desc => "DESC",
-                        }
-                    )
-                })
-                .collect::<Vec<_>>()
-                .join(", "),
-            table_name
-        )
-    };
+        joins.push(format!(
+            "JOIN {model_relation_table} ON {table_name}.id = {model_relation_table}.entity_id",
+        ));
 
-    // Parse cursor into values
-    let cursor_values: Option<Vec<String>> = if let Some(cursor_str) = &pagination.cursor {
-        let decoded = general_purpose::STANDARD
-            .decode(cursor_str)
-            .map_err(|_| Error::InvalidCursor)?;
-        serde_json::from_slice(&decoded).map_err(|_| Error::InvalidCursor)?
-    } else {
-        None
-    };
+        // Build and execute query
+        let query = build_query(
+            &selections,
+            table_name,
+            &joins,
+            &combined_where,
+            having_clause,
+            &order_clause,
+        );
 
-    // Build WHERE conditions for cursor
-    let mut where_conditions = Vec::new();
-    let mut cursor_bind_values = Vec::new();
-    if let Some(cursor_vals) = &cursor_values {
-        let expected_len = if adjusted_order_by.is_empty() { 1 } else { pagination.order_by.len() + 1 };
-        if cursor_vals.len() != expected_len {
+        let mut stmt = sqlx::query(&query);
+        for value in bind_values.iter().chain(cursor_binds.iter()) {
+            stmt = stmt.bind(value);
+        }
+
+        stmt = stmt.bind(fetch_limit);
+
+        let mut rows = stmt.fetch_all(pool).await?;
+        let has_more = rows.len() >= fetch_limit as usize;
+
+        if pagination.direction == PaginationDirection::Backward {
+            rows.reverse();
+        }
+        if has_more {
+            rows.truncate(original_limit as usize);
+        }
+
+        all_rows.extend(rows);
+        if has_more {
+            break;
+        }
+    }
+
+    // Generate next cursor
+    if all_rows.len() >= original_limit as usize {
+        if let Some(last_row) = all_rows.last() {
+            let cursor_values = build_cursor_values(&pagination, last_row)?;
+            next_cursor =
+                Some(general_purpose::STANDARD.encode(
+                    serde_json::to_string(&cursor_values).map_err(|_| Error::InvalidCursor)?,
+                ));
+        }
+    }
+
+    Ok(Page { items: all_rows, next_cursor })
+}
+
+// Helper functions
+fn build_cursor_conditions(
+    pagination: &Pagination,
+    cursor_values: Option<&[String]>,
+    table_name: &str,
+) -> Result<(Vec<String>, Vec<String>), Error> {
+    let mut conditions = Vec::new();
+    let mut binds = Vec::new();
+
+    if let Some(values) = cursor_values {
+        let expected_len =
+            if pagination.order_by.is_empty() { 1 } else { pagination.order_by.len() + 1 };
+        if values.len() != expected_len {
             return Err(Error::InvalidCursor);
         }
 
-        if adjusted_order_by.is_empty() {
-            // When no explicit order by, use event_id for cursor
-            let operator = match pagination.direction {
-                PaginationDirection::Forward => "<",  // DESC order so < for forward
-                PaginationDirection::Backward => ">", // DESC order so > for backward
-            };
-            where_conditions.push(format!("{}.event_id {} ?", table_name, operator));
-            cursor_bind_values.extend(cursor_vals.iter().cloned());
+        if pagination.order_by.is_empty() {
+            let operator =
+                if pagination.direction == PaginationDirection::Forward { "<" } else { ">" };
+            conditions.push(format!("{}.event_id {} ?", table_name, operator));
+            binds.push(values[0].clone());
         } else {
-            for (i, (ob, val)) in pagination.order_by.iter().zip(&cursor_vals[..cursor_vals.len()-1]).enumerate() {
+            for (i, (ob, val)) in pagination.order_by.iter().zip(values).enumerate() {
                 let operator = match (&ob.direction, &pagination.direction) {
                     (OrderDirection::Asc, PaginationDirection::Forward) => ">",
                     (OrderDirection::Asc, PaginationDirection::Backward) => "<",
                     (OrderDirection::Desc, PaginationDirection::Forward) => "<",
                     (OrderDirection::Desc, PaginationDirection::Backward) => ">",
                 };
+
                 let condition = if i == 0 {
-                    format!("\"{}.{}\" {} ?", ob.model, ob.member, operator)
+                    format!("[{}.{}] {} ?", ob.model, ob.member, operator)
                 } else {
-                    // Handle multi-column cursors with previous columns equality
-                    let prev_conditions = (0..i)
+                    let prev = (0..i)
                         .map(|j| {
                             let prev_ob = &pagination.order_by[j];
-                            format!("\"{}.{}\" = ?", prev_ob.model, prev_ob.member)
+                            format!("[{}.{}] = ?", prev_ob.model, prev_ob.member)
                         })
                         .collect::<Vec<_>>()
                         .join(" AND ");
-                    format!(
-                        "({} AND \"{}.{}\" {} ?)",
-                        prev_conditions, ob.model, ob.member, operator
-                    )
+                    format!("({} AND [{}.{}] {} ?)", prev, ob.model, ob.member, operator)
                 };
-                where_conditions.push(format!("({})", condition));
-                cursor_bind_values.extend(cursor_vals[..=i].iter().cloned());
+                conditions.push(condition);
+                binds.push(val.clone());
             }
-            // Add event_id condition for uniqueness
-            let event_id_operator = match pagination.direction {
-                PaginationDirection::Forward => "<",
-                PaginationDirection::Backward => ">",
-            };
-            where_conditions.push(format!("{}.event_id {} ?", table_name, event_id_operator));
-            cursor_bind_values.push(cursor_vals.last().unwrap().clone());
+            let operator =
+                if pagination.direction == PaginationDirection::Forward { "<" } else { ">" };
+            conditions.push(format!("{}.event_id {} ?", table_name, operator));
+            binds.push(values.last().unwrap().clone());
         }
     }
+    Ok((conditions, binds))
+}
 
-    // Combine WHERE clauses
-    let mut combined_where = where_clause.map(|s| s.to_string()).unwrap_or_default();
-    if !where_conditions.is_empty() {
-        if !combined_where.is_empty() {
-            combined_where.push_str(" AND ");
-        }
-        combined_where.push_str(&where_conditions.join(" AND "));
+fn combine_where_clauses(base: Option<&str>, cursor_conditions: &[String]) -> String {
+    let mut parts = Vec::new();
+    if let Some(base_where) = base {
+        parts.push(base_where.to_string());
     }
+    parts.extend(cursor_conditions.iter().cloned());
+    parts.join(" AND ")
+}
 
-    for chunk in schema_chunks {
-        let mut selections = Vec::new();
-        let mut joins = Vec::new();
+fn build_query(
+    selections: &[String],
+    table_name: &str,
+    joins: &[String],
+    where_clause: &str,
+    having_clause: Option<&str>,
+    order_clause: &str,
+) -> String {
+    let mut query =
+        format!("SELECT {} FROM [{}] {}", selections.join(", "), table_name, joins.join(" "));
+    if !where_clause.is_empty() {
+        query.push_str(&format!(" WHERE {}", where_clause));
+    }
+    if let Some(having) = having_clause {
+        query.push_str(&format!(" HAVING {}", having));
+    }
+    query.push_str(&format!(" GROUP BY {}.id ORDER BY {} LIMIT ?", table_name, order_clause));
+    query
+}
 
-        // Add base table columns
-        selections.push(format!("{}.id", table_name));
-        selections.push(format!("{}.keys", table_name));
-        selections.push(format!("{}.event_id", table_name));
-        selections.push(format!(
-            "group_concat({}.model_id) as model_ids",
-            model_relation_table
-        ));
-
-        // Track which models are used in ordering for INNER JOIN
-        let ordered_models: std::collections::HashSet<String> = adjusted_order_by
+fn build_cursor_values(pagination: &Pagination, row: &SqliteRow) -> Result<Vec<String>, Error> {
+    if pagination.order_by.is_empty() {
+        Ok(vec![row.try_get("event_id")?])
+    } else {
+        let mut values: Vec<String> = pagination
+            .order_by
             .iter()
-            .map(|ob| ob.model.clone())
-            .collect();
-
-        // Process each model schema in the chunk
-        for model in chunk {
-            let model_table = model.name();
-            let join_type = if ordered_models.contains(&model_table) {
-                "INNER JOIN"
-            } else {
-                "LEFT JOIN"
-            };
-            joins.push(format!(
-                "{} [{}] ON {}.id = [{}].{}",
-                join_type, model_table, table_name, model_table, entity_relation_column
-            ));
-            collect_columns(&model_table, "", model, &mut selections);
-        }
-
-        joins.push(format!(
-            "JOIN {} ON {}.id = {}.entity_id",
-            model_relation_table, table_name, model_relation_table
-        ));
-
-        // Build the final query
-        let mut query = format!(
-            "SELECT {} FROM [{}] {}",
-            selections.join(", "),
-            table_name,
-            joins.join(" ")
-        );
-
-        if !combined_where.is_empty() {
-            query.push_str(&format!(" WHERE {}", combined_where));
-        }
-
-        query.push_str(&format!(" GROUP BY {}.id", table_name));
-
-        if let Some(having) = having_clause {
-            query.push_str(&format!(" HAVING {}", having));
-        }
-
-        query.push_str(&format!(" ORDER BY {}", order_clause));
-        query.push_str(" LIMIT ?");
-        cursor_bind_values.push(fetch_limit.to_string());
-
-        // Execute the query
-        let mut stmt = sqlx::query(&query);
-        for value in bind_values.iter().chain(cursor_bind_values.iter()) {
-            stmt = stmt.bind(value);
-        }
-
-        let mut chunk_rows = stmt.fetch_all(pool).await?;
-
-        // Check if we have more rows than the original limit
-        let has_more = chunk_rows.len() >= fetch_limit as usize;
-        if has_more {
-            chunk_rows.truncate(original_limit as usize);
-        }
-
-        // Adjust for backward pagination
-        if pagination.direction == PaginationDirection::Backward {
-            chunk_rows.reverse();
-        }
-
-        all_rows.extend(chunk_rows);
-
-        if has_more {
-            break;
-        }
+            .map(|ob| row.try_get::<String, &str>(&format!("{}.{}", ob.model, ob.member)))
+            .collect::<Result<Vec<_>, _>>()?;
+        values.push(row.try_get("event_id")?);
+        Ok(values)
     }
-
-    // Generate next cursor if we have more items
-    if all_rows.len() >= original_limit as usize {
-        if let Some(last_row) = all_rows.last() {
-            let mut cursor_values: Vec<String> = if adjusted_order_by.is_empty() {
-                // When no explicit order by, use event_id for cursor
-                vec![last_row.try_get::<String, &str>("event_id")?]
-            } else {
-                let mut values: Vec<String> = pagination
-                    .order_by
-                    .iter()
-                    .map(|ob| {
-                        let col_name = format!("{}.{}", ob.model, ob.member);
-                        last_row
-                            .try_get::<String, &str>(&col_name)
-                    })
-                    .collect::<Result<Vec<String>, _>>()?;
-                // Always append the event_id
-                values.push(last_row.try_get::<String, &str>("event_id")?);
-                values
-            };
-            let encoded = general_purpose::STANDARD.encode(serde_json::to_string(&cursor_values).map_err(|_| Error::InvalidCursor)?);
-            next_cursor = Some(encoded);
-        }
-    }
-
-    Ok(Page {
-        items: all_rows,
-        next_cursor,
-    })
 }
 
 #[cfg(test)]
@@ -711,8 +677,7 @@ mod tests {
         )
         .unwrap();
 
-        let expected_query =
-            "SELECT entities.id, entities.keys, group_concat(entity_model.model_id) as model_ids, \
+        let expected_query = "SELECT entities.id, entities.keys, group_concat(entity_model.model_id) as model_ids, \
              [Test-Position].[player] as \"Test-Position.player\", [Test-Position].[vec.x] as \
              \"Test-Position.vec.x\", [Test-Position].[vec.y] as \"Test-Position.vec.y\", \
              [Test-Position].[test_everything] as \"Test-Position.test_everything\", \
