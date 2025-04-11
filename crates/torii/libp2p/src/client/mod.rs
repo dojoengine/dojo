@@ -4,10 +4,10 @@ use std::time::Duration;
 use futures::channel::mpsc::{UnboundedReceiver, UnboundedSender};
 use futures::channel::oneshot;
 use futures::lock::Mutex;
-use futures::{select, StreamExt};
+use futures::{StreamExt, select};
 use libp2p::gossipsub::{self, IdentTopic, MessageId};
 use libp2p::swarm::{NetworkBehaviour, Swarm, SwarmEvent};
-use libp2p::{identify, identity, noise, ping, yamux, Multiaddr, PeerId};
+use libp2p::{Multiaddr, PeerId, identify, identity, noise, ping, yamux};
 use tracing::info;
 
 pub mod events;
@@ -48,7 +48,7 @@ impl RelayClient {
     pub fn new(relay_addr: String) -> Result<Self, Error> {
         use libp2p::core::muxing::StreamMuxerBox;
         use libp2p::core::upgrade::Version;
-        use libp2p::{dns, tcp, websocket, Transport};
+        use libp2p::{Transport, dns, tcp, websocket};
         use libp2p_webrtc as webrtc;
         use libp2p_webrtc::tokio::Certificate;
         use rand::thread_rng;
@@ -124,63 +124,97 @@ impl RelayClient {
 
     #[cfg(target_arch = "wasm32")]
     pub fn new(relay_addr: String) -> Result<Self, Error> {
-        use libp2p::core::upgrade::Version;
         use libp2p::core::Transport;
-        use wasm_bindgen::JsCast;
-        use web_sys::Window;
+        use libp2p::core::upgrade::Version;
 
         let local_key = identity::Keypair::generate_ed25519();
         let peer_id = PeerId::from(local_key.public());
 
         info!(target: LOG_TARGET, peer_id = %peer_id, "Local peer id.");
 
-        let mut builder = libp2p::SwarmBuilder::with_existing_identity(local_key).with_wasm_bindgen();
-
         // WebRTC transport is not natively supported in NodeJS, so we need to check if we are in a browser environment
-        if let Some(window) = web_sys::window() {
-            builder = builder
+        let mut swarm = match web_sys::window() {
+            Some(_) => libp2p::SwarmBuilder::with_existing_identity(local_key.clone())
+                .with_wasm_bindgen()
                 .with_other_transport(|key| {
                     libp2p_webrtc_websys::Transport::new(libp2p_webrtc_websys::Config::new(&key))
                 })
-                .expect("Failed to create WebRTC transport");
-        }
+                .expect("Failed to create WebRTC transport")
+                // NodeJS natively implements WebSocket transport, so we should be able to use it.
+                .with_other_transport(|key| {
+                    libp2p_websocket_websys::Transport::default()
+                        .upgrade(Version::V1)
+                        .authenticate(noise::Config::new(&key).unwrap())
+                        .multiplex(yamux::Config::default())
+                        .boxed()
+                })
+                .expect("Failed to create WebSocket transport")
+                .with_behaviour(|key| {
+                    let gossipsub_config: gossipsub::Config = gossipsub::ConfigBuilder::default()
+                        .heartbeat_interval(Duration::from_secs(
+                            constants::GOSSIPSUB_HEARTBEAT_INTERVAL_SECS,
+                        ))
+                        .build()
+                        .expect("Gossipsup config is invalid");
 
-        let mut swarm = builder
-            .with_other_transport(|key| {
-                libp2p_websocket_websys::Transport::default()
-                    .upgrade(Version::V1)
-                    .authenticate(noise::Config::new(&key).unwrap())
-                    .multiplex(yamux::Config::default())
-                    .boxed()
-            })
-            .expect("Failed to create WebSocket transport")
-            .with_behaviour(|key| {
-                let gossipsub_config: gossipsub::Config = gossipsub::ConfigBuilder::default()
-                    .heartbeat_interval(Duration::from_secs(
-                        constants::GOSSIPSUB_HEARTBEAT_INTERVAL_SECS,
+                    Behaviour {
+                        gossipsub: gossipsub::Behaviour::new(
+                            gossipsub::MessageAuthenticity::Signed(key.clone()),
+                            gossipsub_config,
+                        )
+                        .expect("Gossipsub behaviour is invalid"),
+                        identify: identify::Behaviour::new(identify::Config::new(
+                            format!("/torii-client/{}", env!("CARGO_PKG_VERSION")),
+                            key.public(),
+                        )),
+                        ping: ping::Behaviour::new(ping::Config::default()),
+                    }
+                })?
+                .with_swarm_config(|cfg| {
+                    cfg.with_idle_connection_timeout(Duration::from_secs(
+                        constants::IDLE_CONNECTION_TIMEOUT_SECS,
                     ))
-                    .build()
-                    .expect("Gossipsup config is invalid");
+                })
+                .build(),
+            None => libp2p::SwarmBuilder::with_existing_identity(local_key)
+                .with_wasm_bindgen()
+                // NodeJS natively implements WebSocket transport, so we should be able to use it.
+                .with_other_transport(|key| {
+                    libp2p_websocket_websys::Transport::default()
+                        .upgrade(Version::V1)
+                        .authenticate(noise::Config::new(&key).unwrap())
+                        .multiplex(yamux::Config::default())
+                        .boxed()
+                })
+                .expect("Failed to create WebSocket transport")
+                .with_behaviour(|key| {
+                    let gossipsub_config: gossipsub::Config = gossipsub::ConfigBuilder::default()
+                        .heartbeat_interval(Duration::from_secs(
+                            constants::GOSSIPSUB_HEARTBEAT_INTERVAL_SECS,
+                        ))
+                        .build()
+                        .expect("Gossipsup config is invalid");
 
-                Behaviour {
-                    gossipsub: gossipsub::Behaviour::new(
-                        gossipsub::MessageAuthenticity::Signed(key.clone()),
-                        gossipsub_config,
-                    )
-                    .expect("Gossipsub behaviour is invalid"),
-                    identify: identify::Behaviour::new(identify::Config::new(
-                        format!("/torii-client/{}", env!("CARGO_PKG_VERSION")),
-                        key.public(),
-                    )),
-                    ping: ping::Behaviour::new(ping::Config::default()),
-                }
-            })?
-            .with_swarm_config(|cfg| {
-                cfg.with_idle_connection_timeout(Duration::from_secs(
-                    constants::IDLE_CONNECTION_TIMEOUT_SECS,
-                ))
-            })
-            .build();
+                    Behaviour {
+                        gossipsub: gossipsub::Behaviour::new(
+                            gossipsub::MessageAuthenticity::Signed(key.clone()),
+                            gossipsub_config,
+                        )
+                        .expect("Gossipsub behaviour is invalid"),
+                        identify: identify::Behaviour::new(identify::Config::new(
+                            format!("/torii-client/{}", env!("CARGO_PKG_VERSION")),
+                            key.public(),
+                        )),
+                        ping: ping::Behaviour::new(ping::Config::default()),
+                    }
+                })?
+                .with_swarm_config(|cfg| {
+                    cfg.with_idle_connection_timeout(Duration::from_secs(
+                        constants::IDLE_CONNECTION_TIMEOUT_SECS,
+                    ))
+                })
+                .build(),
+        };
 
         info!(target: LOG_TARGET, addr = %relay_addr, "Dialing relay.");
         swarm.dial(relay_addr.parse::<Multiaddr>()?)?;
