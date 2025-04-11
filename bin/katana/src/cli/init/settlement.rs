@@ -49,6 +49,10 @@ impl SettlementChainProvider {
         Self { fact_registry, client, url }
     }
 
+    pub fn set_fact_registry(&mut self, fact_registry: Felt) {
+        self.fact_registry = fact_registry;
+    }
+
     /// Returns the address of the fact registry contract.
     pub fn fact_registry(&self) -> Felt {
         self.fact_registry
@@ -366,6 +370,8 @@ mod provider {
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
     use rstest::rstest;
     use starknet::core::types::{BlockId, BlockTag};
     use starknet::providers::Provider;
@@ -384,5 +390,16 @@ mod tests {
             .unwrap();
 
         assert!(result != Felt::ZERO);
+    }
+
+    #[rstest]
+    #[case(SettlementChainProvider::sn_mainnet())]
+    #[case(SettlementChainProvider::sn_sepolia())]
+    #[tokio::test]
+    async fn test_set_custom_fact_registry(#[case] mut provider: SettlementChainProvider) {
+        provider.set_fact_registry(Felt::from_str("0x123").unwrap());
+        let facts_registry = provider.fact_registry();
+
+        assert!(facts_registry == Felt::from_str("0x123").unwrap());
     }
 }

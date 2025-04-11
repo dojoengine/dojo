@@ -503,12 +503,11 @@ pub struct ExplorerOptions {
     pub explorer_addr: IpAddr,
 
     /// The port to run the explorer frontend on.
-    ///
-    /// NOTE(@kariy):
-    // Right now we prevent the port from being 0 because that would mean the actual port would only
-    // be available after the server has been started. And due to some limitations with how the
-    // explorer requires that the node is started first (to get the actual socket address) and
-    // that we also need to pass the explorer address as CORS to the node server.
+    // NOTE(@kariy):
+    // Right now we prevent the port from being 0 because that would mean the actual port would
+    // only be available after the server has been started. And due to some limitations with
+    // how the explorer requires that the node is started first (to get the actual socket
+    // address) and that we also need to pass the explorer address as CORS to the node server.
     #[arg(long = "explorer.port", value_name = "PORT")]
     #[arg(default_value_t = DEFAULT_EXPLORER_PORT)]
     #[arg(value_parser = clap::value_parser!(u16).range(1..))]
