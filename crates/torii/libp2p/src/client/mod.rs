@@ -126,18 +126,26 @@ impl RelayClient {
     pub fn new(relay_addr: String) -> Result<Self, Error> {
         use libp2p::core::upgrade::Version;
         use libp2p::core::Transport;
+        use wasm_bindgen::JsCast;
+        use web_sys::Window;
 
         let local_key = identity::Keypair::generate_ed25519();
         let peer_id = PeerId::from(local_key.public());
 
         info!(target: LOG_TARGET, peer_id = %peer_id, "Local peer id.");
 
-        let mut swarm = libp2p::SwarmBuilder::with_existing_identity(local_key)
-            .with_wasm_bindgen()
-            .with_other_transport(|key| {
-                libp2p_webrtc_websys::Transport::new(libp2p_webrtc_websys::Config::new(&key))
-            })
-            .expect("Failed to create WebRTC transport")
+        let mut builder = libp2p::SwarmBuilder::with_existing_identity(local_key).with_wasm_bindgen();
+
+        // WebRTC transport is not natively supported in NodeJS, so we need to check if we are in a browser environment
+        if let Some(window) = web_sys::window() {
+            builder = builder
+                .with_other_transport(|key| {
+                    libp2p_webrtc_websys::Transport::new(libp2p_webrtc_websys::Config::new(&key))
+                })
+                .expect("Failed to create WebRTC transport");
+        }
+
+        let mut swarm = builder
             .with_other_transport(|key| {
                 libp2p_websocket_websys::Transport::default()
                     .upgrade(Version::V1)
