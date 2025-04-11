@@ -10,7 +10,6 @@ set -e
 
 HOME_DIR=${XDG_CONFIG_HOME:-$HOME}
 BASE_DIR=${DOJO_DIR-"$HOME_DIR/.dojo"}
-LOCAL_VERSION_REGISTRY="$BASE_DIR/versions.json"
 
 DEFAULT_TOOLCHAIN_DIR="$BASE_DIR/bin"
 INSTALLATION_DIR="$BASE_DIR/installed"
@@ -262,12 +261,10 @@ install_dojo() {
   TMP_VERSIONS_FILE=$(mktemp)
   EXTRACT_DIR=""
 
+  say "syncing dojo toolchain..."
+
   # Try to download the latest versions.json
-  if download "$VERSIONS_JSON_URL" "$TMP_VERSIONS_FILE" 2>/dev/null; then
-      say "syncing dojo toolchain..."
-      # If download successful, update local copy
-      cp $TMP_VERSIONS_FILE $LOCAL_VERSION_REGISTRY
-  else
+  if ! download "$VERSIONS_JSON_URL" "$TMP_VERSIONS_FILE" 2>/dev/null; then
       # If no local copy exists either, error out
       rm -f "$TMP_VERSIONS_FILE"
       err "failed to sync toolchain versions."
@@ -388,17 +385,20 @@ install_dojo() {
     fi
   done
 
-  # Clean up temporary files
-  if [ -n "$EXTRACT_DIR" ] && [ -d "$EXTRACT_DIR" ]; then
-      rm -rf "$EXTRACT_DIR"
-  fi
-  rm -f "$TMP_VERSIONS_FILE"
-
   # Set the global version to the one we just installed
   set_active_version "$DOJO_VERSION_NO_V"
 
   say "done!"
   welcome_msg
+
+  # Clean up temporary files
+  if [ -n "$EXTRACT_DIR" ] && [ -d "$EXTRACT_DIR" ]; then
+    rm -rf "$EXTRACT_DIR"
+  fi
+
+  if [ -f "$TMP_VERSIONS_FILE" ]; then
+    rm -f "$TMP_VERSIONS_FILE"
+  fi
 }
 
 usage_install() {
