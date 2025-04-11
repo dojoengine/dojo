@@ -119,7 +119,6 @@ impl WorldClient {
         contract_addresses: Vec<Felt>,
         token_ids: Vec<U256>,
         limit: Option<u32>,
-        offset: Option<u32>,
         cursor: Option<String>,
     ) -> Result<RetrieveTokensResponse, Error> {
         self.inner
@@ -130,7 +129,6 @@ impl WorldClient {
                     .collect(),
                 token_ids: token_ids.into_iter().map(|id| id.to_be_bytes().to_vec()).collect(),
                 limit: limit.unwrap_or_default(),
-                offset: offset.unwrap_or_default(),
                 cursor: cursor.unwrap_or_default(),
             })
             .await
@@ -200,7 +198,6 @@ impl WorldClient {
         contract_addresses: Vec<Felt>,
         token_ids: Vec<U256>,
         limit: Option<u32>,
-        offset: Option<u32>,
         cursor: Option<String>,
     ) -> Result<RetrieveTokenBalancesResponse, Error> {
         self.inner
@@ -215,7 +212,6 @@ impl WorldClient {
                     .collect(),
                 token_ids: token_ids.into_iter().map(|id| id.to_be_bytes().to_vec()).collect(),
                 limit: limit.unwrap_or_default(),
-                offset: offset.unwrap_or_default(),
                 cursor: cursor.unwrap_or_default(),
             })
             .await
@@ -226,18 +222,16 @@ impl WorldClient {
     pub async fn retrieve_entities(
         &mut self,
         query: Query,
-        historical: bool,
     ) -> Result<RetrieveEntitiesResponse, Error> {
-        let request = RetrieveEntitiesRequest { query: Some(query.into()), historical };
+        let request = RetrieveEntitiesRequest { query: Some(query.into()) };
         self.inner.retrieve_entities(request).await.map_err(Error::Grpc).map(|res| res.into_inner())
     }
 
     pub async fn retrieve_event_messages(
         &mut self,
         query: Query,
-        historical: bool,
     ) -> Result<RetrieveEntitiesResponse, Error> {
-        let request = RetrieveEventMessagesRequest { query: Some(query.into()), historical };
+        let request = RetrieveEventMessagesRequest { query: Some(query.into()) };
         self.inner
             .retrieve_event_messages(request)
             .await

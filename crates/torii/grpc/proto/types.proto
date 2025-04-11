@@ -71,18 +71,16 @@ message ModelUpdate {
 
 message Query {
     Clause clause = 1;
-    uint32 limit = 2;
-    uint32 offset = 3;
-    bool dont_include_hashed_keys = 4;
-    repeated OrderBy order_by = 5;
-    repeated string entity_models = 6;
-	uint64 entity_updated_after = 7;
+    bool no_hashed_keys = 2;
+    repeated string models = 3;
+    Pagination pagination = 4;
+    bool historical = 5;
 }
 
 message EventQuery {
     KeysClause keys = 1;
     uint32 limit = 2;
-    uint32 offset = 3;
+    string cursor = 3;
 }
 
 message Clause {
@@ -192,4 +190,16 @@ message Controller {
     bytes address = 1;
     string username = 2;
     uint64 deployed_at_timestamp = 3;
+}
+
+enum PaginationDirection {
+    FORWARD = 0;
+    BACKWARD = 1;
+}
+
+message Pagination {
+    string cursor = 1;
+    uint32 limit = 2;
+    PaginationDirection direction = 3;
+    repeated OrderBy order_by = 4;
 }

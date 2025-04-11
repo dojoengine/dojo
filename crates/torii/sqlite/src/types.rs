@@ -274,3 +274,36 @@ pub struct ModelIndices {
     pub model_tag: String,
     pub fields: Vec<String>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Page<T> {
+    pub items: Vec<T>,
+    pub next_cursor: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum PaginationDirection {
+    Forward,
+    Backward,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Pagination {
+    pub cursor: Option<String>,
+    pub limit: Option<u32>,
+    pub direction: PaginationDirection,
+    pub order_by: Vec<OrderBy>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum OrderDirection {
+    Asc,
+    Desc,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct OrderBy {
+    pub model: String,
+    pub member: String,
+    pub direction: OrderDirection,
+}

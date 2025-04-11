@@ -15169,6 +15169,7 @@ dependencies = [
 name = "torii-grpc"
 version = "1.4.0"
 dependencies = [
+ "base64 0.21.7",
  "cainome 0.5.0",
  "camino",
  "crypto-bigint",
