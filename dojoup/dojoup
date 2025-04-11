@@ -18,7 +18,7 @@ DOJO_DIR=${DOJO_DIR-"$BASE_DIR/.dojo"}
 DOJO_REPO="dojoengine/dojo"
 KATANA_REPO="dojoengine/katana"
 
-# Define binaries and their repositories without associative arrays
+# Define binaries and their repositories using simple arrays
 # Format: binary_name:repo_name
 BIN_REPO_MAPPING=(
   "sozo:$DOJO_REPO"
@@ -279,6 +279,7 @@ main() {
     # Local copy of versions.json
     LOCAL_VERSIONS_FILE="$DOJO_DIR/versions.json"
     TMP_VERSIONS_FILE=$(mktemp)
+    EXTRACT_DIR=""
 
     # Try to download the latest versions.json
     if download "$VERSIONS_JSON_URL" "$TMP_VERSIONS_FILE" 2>/dev/null; then
@@ -325,6 +326,9 @@ main() {
       fi
     }
 
+    # Track which archives we've already downloaded to avoid redundancy
+    DOWNLOADED_ARCHIVES=""
+
     # Install each binary
     for bin in "${BINS[@]}"; do
       repo=$(get_repo_for_bin "$bin")
@@ -347,24 +351,68 @@ main() {
 
       # Compute the URL of the release tarball
       RELEASE_URL="https://github.com/${repo}/releases/download/${bin_tag}/"
-      BIN_ARCHIVE_URL="${RELEASE_URL}${bin}_${bin_tag}_${PLATFORM}_${ARCHITECTURE}.$EXT"
 
-      say "downloading from $BIN_ARCHIVE_URL"
+      if [ "$repo" = "$DOJO_REPO" ]; then
+        # For dojo repo, all binaries are in a single archive
+        ARCHIVE_NAME="dojo_${bin_tag}_${PLATFORM}_${ARCHITECTURE}.$EXT"
+        BIN_ARCHIVE_URL="${RELEASE_URL}${ARCHIVE_NAME}"
 
-      # Check if the version exists in the repository
-      if ! curl --output /dev/null --silent --head --fail "$BIN_ARCHIVE_URL"; then
-        warn "Version ${bin_tag} for ${bin} does not exist. Skipping..."
-        continue
-      fi
+        # Check if we've already downloaded this archive
+        if [[ "$DOWNLOADED_ARCHIVES" != *"$ARCHIVE_NAME"* ]]; then
+          EXTRACT_DIR=$(mktemp -d)
 
-      # Download and extract the binaries archive
-      if [ "$PLATFORM" = "win32" ]; then
-        tmp="$(mktemp -d 2>/dev/null || echo ".")/dojo.zip"
-        ensure download "$BIN_ARCHIVE_URL" "$tmp"
-        ensure unzip "$tmp" -d "$bin_dir"
-        rm -f "$tmp"
+          say "downloading from $BIN_ARCHIVE_URL"
+
+          # Check if the version exists in the repository
+          if ! curl --output /dev/null --silent --head --fail "$BIN_ARCHIVE_URL"; then
+            warn "Version ${bin_tag} does not exist. Skipping..."
+            continue
+          fi
+
+          # Download and extract the binaries archive
+          if [ "$PLATFORM" = "win32" ]; then
+            tmp="$(mktemp -d 2>/dev/null || echo ".")/dojo.zip"
+            ensure download "$BIN_ARCHIVE_URL" "$tmp"
+            ensure unzip "$tmp" -d "$EXTRACT_DIR"
+            rm -f "$tmp"
+          else
+            ensure download "$BIN_ARCHIVE_URL" | ensure tar -xzC "$EXTRACT_DIR"
+          fi
+
+          # Remember that we've downloaded this archive
+          DOWNLOADED_ARCHIVES="$DOWNLOADED_ARCHIVES $ARCHIVE_NAME"
+        else
+          say "using already downloaded archive $ARCHIVE_NAME"
+        fi
+
+        # Move only this binary to its version directory
+        if [ -f "$EXTRACT_DIR/$bin" ]; then
+          ensure cp "$EXTRACT_DIR/$bin" "$bin_dir/"
+        else
+          warn "Binary $bin not found in archive. Skipping..."
+          continue
+        fi
       else
-        ensure download "$BIN_ARCHIVE_URL" | ensure tar -xzC "$bin_dir"
+        # For other repos like katana, each binary has its own archive
+        BIN_ARCHIVE_URL="${RELEASE_URL}${bin}_${bin_tag}_${PLATFORM}_${ARCHITECTURE}.$EXT"
+
+        say "downloading from $BIN_ARCHIVE_URL"
+
+        # Check if the version exists in the repository
+        if ! curl --output /dev/null --silent --head --fail "$BIN_ARCHIVE_URL"; then
+          warn "Version ${bin_tag} for ${bin} does not exist. Skipping..."
+          continue
+        fi
+
+        # Download and extract the binaries archive
+        if [ "$PLATFORM" = "win32" ]; then
+          tmp="$(mktemp -d 2>/dev/null || echo ".")/dojo.zip"
+          ensure download "$BIN_ARCHIVE_URL" "$tmp"
+          ensure unzip "$tmp" -d "$bin_dir"
+          rm -f "$tmp"
+        else
+          ensure download "$BIN_ARCHIVE_URL" | ensure tar -xzC "$bin_dir"
+        fi
       fi
 
       # Create symlinks for direct access
@@ -374,7 +422,10 @@ main() {
       say "installed - $(ensure "$bin_dir/$bin" --version)"
     done
 
-    # Clean up temporary file
+    # Clean up temporary files
+    if [ -n "$EXTRACT_DIR" ] && [ -d "$EXTRACT_DIR" ]; then
+      rm -rf "$EXTRACT_DIR"
+    fi
     rm -f "$TMP_VERSIONS_FILE"
 
     # Extracting the scarb version from the output of 'sozo --version'
