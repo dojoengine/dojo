@@ -68,6 +68,12 @@ pub struct InitArgs {
     #[arg(requires = "settlement_contract")]
     settlement_contract_deployed_block: Option<BlockNumber>,
 
+    /// The address of the facts registry contract on the settlement chain.
+    /// If not provided, the default facts registry contract for that chain will be used.
+    #[arg(long = "settlement-facts-registry-contract")]
+    #[arg(requires_all = ["id", "settlement_chain", "settlement_account"])]
+    pub settlement_facts_registry_contract: Option<ContractAddress>,
+
     /// Initialize a sovereign chain with no settlement layer, by only publishing the state updates
     /// and proofs on a Data Availability Layer. By using this flag, no settlement option is
     /// required.
@@ -150,18 +156,23 @@ impl InitArgs {
             let settlement_account_address = self.settlement_account.expect("must present");
             let settlement_private_key = self.settlement_account_private_key.expect("must present");
 
-            let settlement_provider = match settlement_chain {
+            let mut settlement_provider = match settlement_chain {
                 SettlementChain::Mainnet => SettlementChainProvider::sn_mainnet(),
                 SettlementChain::Sepolia => SettlementChainProvider::sn_sepolia(),
                 #[cfg(feature = "init-custom-settlement-chain")]
                 SettlementChain::Custom(url) => {
                     use katana_primitives::felt;
 
-                    // TODO: make this configurable
+                    // Default placeholder for the fact registry.
                     let facts_registry_placeholder = felt!("0x1337");
                     SettlementChainProvider::new(url, facts_registry_placeholder)
                 }
             };
+
+            // If a custom fact registry is provided, set it on the settlement provider.
+            if let Some(fact_registry) = self.settlement_facts_registry_contract {
+                settlement_provider.set_fact_registry(*fact_registry);
+            }
 
             let l1_chain_id = settlement_provider.chain_id().await.unwrap();
 
@@ -397,5 +408,77 @@ mod tests {
         }
 
         Cli::parse_from(["init", "--id", "bruh", "--sovereign"]);
+    }
+
+    #[test]
+    fn cli_accept_custom_fact_registry() {
+        #[derive(Parser)]
+        struct Cli {
+            #[command(flatten)]
+            args: InitArgs,
+        }
+
+        let custom_settlement_fact_registry = "0x1234567890123456789012345678901234567890";
+        let result = Cli::parse_from([
+            "init",
+            "--id",
+            "wot",
+            "--settlement-chain",
+            "sepolia",
+            "--settlement-account-address",
+            "0x1234567890123456789012345678901234567890",
+            "--settlement-account-private-key",
+            "0x1234567890123456789012345678901234567890",
+            "--settlement-facts-registry-contract",
+            custom_settlement_fact_registry,
+        ]);
+        assert_eq!(
+            result.args.settlement_facts_registry_contract,
+            Some(ContractAddress::from_str(custom_settlement_fact_registry).unwrap())
+        );
+    }
+
+    #[test]
+    fn cli_required_settlement_args_with_custom_fact_registry() {
+        #[derive(Parser)]
+        struct Cli {
+            #[command(flatten)]
+            args: InitArgs,
+        }
+
+        // This should fail with the expected error message:-
+        //
+        // ```
+        // error: the following required arguments were not provided:
+        //   --settlement-chain <SETTLEMENT_CHAIN>
+        //   --settlement-account-address <SETTLEMENT_ACCOUNT>
+        //   --settlement-account-private-key <SETTLEMENT_ACCOUNT_PRIVATE_KEY>
+        // ```
+        match Cli::try_parse_from([
+            "init",
+            "--id",
+            "wot",
+            "--settlement-facts-registry-contract",
+            "0x1234567890123456789012345678901234567890",
+        ]) {
+            Ok(..) => panic!("Expected parsing to fail with missing required arguments"),
+            Err(err) => {
+                if let ContextValue::Strings(values) = err.get(ContextKind::InvalidArg).unwrap() {
+                    // Assert that the error message contains all the required arguments
+                    assert!(values.contains(&"--settlement-chain <SETTLEMENT_CHAIN>".to_string()));
+                    assert!(values.contains(
+                        &"--settlement-account-address <SETTLEMENT_ACCOUNT>".to_string()
+                    ));
+                    assert!(
+                        values.contains(
+                            &"--settlement-account-private-key <SETTLEMENT_ACCOUNT_PRIVATE_KEY>"
+                                .to_string()
+                        )
+                    );
+                } else {
+                    panic!("Expected InvalidArg context with Strings value");
+                }
+            }
+        }
     }
 }
