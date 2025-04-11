@@ -335,17 +335,13 @@ install_dojo() {
 
   # Try to download the latest versions.json
   if download "$VERSIONS_JSON_URL" "$TMP_VERSIONS_FILE" 2>/dev/null; then
-      say "Syncing Dojo toolchain..."
+      say "syncing dojo toolchain..."
       # If download successful, update local copy
       cp "$TMP_VERSIONS_FILE" "$LOCAL_VERSIONS_FILE"
-  elif [ -f "$LOCAL_VERSIONS_FILE" ]; then
-      # If download fails but local copy exists, use that
-      cp "$LOCAL_VERSIONS_FILE" "$TMP_VERSIONS_FILE"
-      say "Using cached versions.json"
   else
       # If no local copy exists either, error out
       rm -f "$TMP_VERSIONS_FILE"
-      err "Failed to sync toolchain versions."
+      err "failed to sync toolchain versions."
   fi
 
   # Parse the versions.json file to get compatible versions
@@ -354,10 +350,13 @@ install_dojo() {
 
   # Track which archives we've already downloaded to avoid redundancy
   DOWNLOADED_ARCHIVES=""
+  INSTALLED_BINARIES=()
 
-  # Install each binary
+  # Install binary
   for component in "${COMPONENT_BINARY[@]}"; do
     repo=$(get_repo_for_component "$component")
+
+    say "installing $component"
 
     # Determine the version of each component that is compatible with the given Dojo version
     if [ "$repo" = "$DOJO_REPO" ]; then
@@ -370,15 +369,15 @@ install_dojo() {
       bin_tag="v$bin_version"
     fi
 
-    # say "installing $component (version $bin_version)"
-
     # Create directory for this binary version
     bin_dir="$DOJO_DIR/$component/$bin_version"
     ensure mkdir -p "$bin_dir"
 
     # Compute the URL of the release tarball
     RELEASE_URL="https://github.com/${repo}/releases/download/${bin_tag}/"
+    local bin_path
 
+    # Download the component binary
     if [ "$repo" = "$DOJO_REPO" ]; then
        # For dojo repo, all binaries are in a single archive
        ARCHIVE_NAME="dojo_${bin_tag}_${PLATFORM}_${ARCHITECTURE}.$EXT"
@@ -387,8 +386,6 @@ install_dojo() {
        # Check if we've already downloaded this archive
        if [[ "$DOWNLOADED_ARCHIVES" != *"$ARCHIVE_NAME"* ]]; then
          EXTRACT_DIR=$(mktemp -d)
-
-         # say "downloading from $BIN_ARCHIVE_URL"
 
          # Check if the version exists in the repository
          if ! curl --output /dev/null --silent --head --fail "$BIN_ARCHIVE_URL"; then
@@ -413,14 +410,13 @@ install_dojo() {
        if [ -f "$EXTRACT_DIR/$component" ]; then
          ensure cp "$EXTRACT_DIR/$component" "$bin_dir/"
        else
-       err "Version ${bin_tag} for ${component} is not found in the downloaded archive file."
-         continue
+         err "Version ${bin_tag} for ${component} is not found in the downloaded archive file."
        fi
+
+       bin_path="$bin_dir/$component"
     else
        # For other repos like katana, each binary has its own archive
        BIN_ARCHIVE_URL="${RELEASE_URL}${component}_${bin_tag}_${PLATFORM}_${ARCHITECTURE}.$EXT"
-
-       # say "downloading from $BIN_ARCHIVE_URL"
 
        # Check if the version exists in the repository
        if ! curl --output /dev/null --silent --head --fail "$BIN_ARCHIVE_URL"; then
@@ -436,35 +432,30 @@ install_dojo() {
        else
          ensure download "$BIN_ARCHIVE_URL" | ensure tar -xzC "$bin_dir"
        fi
+
+       bin_path="$bin_dir/$component"
     fi
+
+    INSTALLED_BINARIES+=("$bin_path:$component")
 
     # Only check for Scarb version if we're installing sozo
     if [ "$component" = "sozo" ]; then
-      # Extracting the scarb version from the output of 'sozo --version'
-      sozo_path=$(get_component_bin_path "sozo")
-      if [ -n "$sozo_path" ] && [ -f "$sozo_path" ]; then
-          scarb_version=$(echo "$($sozo_path --version)" | grep -o 'scarb: [0-9.]*' | cut -d ' ' -f 2)
+      check_scarb $bin_path
+    fi
+  done
 
-          # Check if scarb is already installed
-          if [ -n "$scarb_version" ] && [ "$(scarb --version 2>/dev/null)" != "scarb $scarb_version" ]; then
-            # Check if scarb is managed by asdf
-            if command -v asdf &> /dev/null; then
-              if asdf list | grep -q "scarb"; then
-                # Check if default version is set
-                if ! asdf current scarb &> /dev/null; then
-                  asdf global scarb $scarb_version
-                fi
-              else
-                # Install scarb using asdf
-                asdf plugin add scarb
-                asdf install scarb $scarb_version
-              fi
-            else
-              # Install scarb using the install script
-              curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | sh -s -- -v $scarb_version
-            fi
-          fi
-      fi
+  # Create version-specific directory in BASE_DIR for symlinks
+  VERSION_BIN_DIR="$BASE_DIR/$DOJO_VERSION_NO_V"
+  ensure mkdir -p "$VERSION_BIN_DIR"
+
+  # Create symlinks for all installed binaries in the version-specific directory
+  for binary_entry in "${INSTALLED_BINARIES[@]}"; do
+    bin_path="${binary_entry%%:*}"
+    bin_name="${binary_entry##*:}"
+
+    # Create symlink to the binary
+    if [ -f "$bin_path" ]; then
+      ln -sf "$bin_path" "$VERSION_BIN_DIR/$bin_name"
     fi
   done
 
@@ -479,7 +470,6 @@ install_dojo() {
 
   say "done!"
   welcome_msg
-
 }
 
 usage_install() {
@@ -622,6 +612,33 @@ For more info on how to get started, check out the Dojo Getting Started Guide: h
 ═════════════════════════════════════════════════════════════════════════
 
 "
+}
+
+check_scarb() {
+  local sozo_path=$1
+  # Extracting the scarb version from the output of 'sozo --version'
+  if [ -n "$sozo_path" ] && [ -f "$sozo_path" ]; then
+    scarb_version=$(echo "$($sozo_path --version)" | grep -o 'scarb: [0-9.]*' | cut -d ' ' -f 2)
+    # Check if scarb is already installed
+    if [ -n "$scarb_version" ] && [ "$(scarb --version 2>/dev/null)" != "scarb $scarb_version" ]; then
+      # Check if scarb is managed by asdf
+      if command -v asdf &> /dev/null; then
+        if asdf list | grep -q "scarb"; then
+          # Check if default version is set
+          if ! asdf current scarb &> /dev/null; then
+            asdf global scarb $scarb_version
+          fi
+        else
+          # Install scarb using asdf
+          asdf plugin add scarb
+          asdf install scarb $scarb_version
+        fi
+      else
+        # Install scarb using the install script
+        curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | sh -s -- -v $scarb_version
+      fi
+    fi
+  fi
 }
 
 main() {
