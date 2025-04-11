@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1744400857346,
+  "lastUpdate": 1744401018688,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -61411,6 +61411,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 46911922423,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "23054115+cwkang1998@users.noreply.github.com",
+            "name": "Chen Wen Kang",
+            "username": "cwkang1998"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "03791d1a5fc9c80d17edbf0116fc67f1defc353b",
+          "message": "docs: update dev docs for running tests (#3157)\n\n* docs: update dev docs for running tests\n\n* chore: restore tar gz to origin db",
+          "timestamp": "2025-04-12T03:31:04+08:00",
+          "tree_id": "2cba9062d8aab3dc6c007dd0f70e44549c35a8cc",
+          "url": "https://github.com/dojoengine/dojo/commit/03791d1a5fc9c80d17edbf0116fc67f1defc353b"
+        },
+        "date": 1744401015045,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2476564,
+            "range": "± 26647",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 391099,
+            "range": "± 16434",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2803704399,
+            "range": "± 219735683",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 16959387,
+            "range": "± 424016",
             "unit": "ns/iter"
           }
         ]
