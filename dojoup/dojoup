@@ -1,4 +1,7 @@
-#!/usr/bin/env bash
+# Versions json URL (assuming version.json is hosted in the dojo repo)
+VERSIONS_JSON_URL="https://raw.githubusercontent.com/kariy/dojo/kariy/main/versions.json"
+
+export RUSTFLAGS="-C target-cpu=native"#!/usr/bin/env bash
 
 # Check if the platform is Windows
 if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]]; then
@@ -43,10 +46,27 @@ get_repo_for_bin() {
   return 1
 }
 
-# Versions json URL (assuming version.json is hosted in the dojo repo)
-VERSIONS_JSON_URL="https://raw.githubusercontent.com/kariy/dojo/kariy/main/versions.json"
+# Global version configuration file
+GLOBAL_VERSION_FILE="$DOJO_DIR/current_version"
 
-export RUSTFLAGS="-C target-cpu=native"
+# Function to set the global Dojo version
+set_global_version() {
+  local version=$1
+  echo "$version" > "$GLOBAL_VERSION_FILE"
+  say "Set global Dojo version to $version"
+}
+
+# Function to get the global Dojo version
+get_global_version() {
+  if [ -f "$GLOBAL_VERSION_FILE" ]; then
+    cat "$GLOBAL_VERSION_FILE"
+    return 0
+  else
+    # If no version is set, return empty
+    echo ""
+    return 1
+  fi
+}
 
 main() {
   need_cmd git
@@ -69,6 +89,8 @@ main() {
       -p|--path)        shift; DOJOUP_LOCAL_REPO=$1;;
       -P|--pr)          shift; DOJOUP_PR=$1;;
       -c|--commit)      shift; DOJOUP_COMMIT=$1;;
+      -u|--use)        shift; USE_VERSION=$1;;
+      -l|--list)       LIST_VERSIONS=1;;
       -h|--help)
         usage
         exit 0
@@ -84,6 +106,59 @@ main() {
     if ! command -v rustc &> /dev/null; then
       err "Rust is required for building from source. Please install Rust from https://www.rust-lang.org/tools/install."
     fi
+  fi
+
+  # Check if the user wants to list installed versions
+  if [ -n "$LIST_VERSIONS" ]; then
+    say "Installed versions:"
+
+    # Get current global version
+    local global_version=$(get_global_version)
+    if [ -n "$global_version" ]; then
+      say "Current global version: $global_version"
+    else
+      say "No global version set"
+    fi
+
+    # List all installed versions of each binary
+    for bin in "${BINS[@]}"; do
+      say "Installed versions of $bin:"
+      for version in $(ls -1 "$DOJO_DIR/$bin" 2>/dev/null); do
+        # Skip directories that don't actually contain the binary
+        if [ -f "$DOJO_DIR/$bin/$version/$bin" ]; then
+          # Mark current version with an asterisk
+          if [ "$version" = "$global_version" ]; then
+            say "  * $version"
+          else
+            say "    $version"
+          fi
+        fi
+      done
+    done
+
+    exit 0
+  fi
+
+  # Check if the user wants to switch to a specific version
+  if [ -n "$USE_VERSION" ]; then
+    # Check if this version exists for at least one binary
+    found=0
+    for bin in "${BINS[@]}"; do
+      if [ -d "$DOJO_DIR/$bin/$USE_VERSION" ]; then
+        found=1
+        break
+      fi
+    done
+
+    if [ "$found" -eq 0 ]; then
+      err "Version $USE_VERSION is not installed for any binary"
+    fi
+
+    # Set global version and update symlinks
+    set_global_version "$USE_VERSION"
+    update_version_symlinks
+
+    exit 0
   fi
 
   REMOTE_OPTION=$(check_exclusive_options DOJOUP_BRANCH DOJOUP_USER_TAG DOJOUP_PR)
@@ -214,11 +289,12 @@ main() {
         # If download fails but local copy exists, use that
         cp "$LOCAL_VERSIONS_FILE" "$TMP_VERSIONS_FILE"
         say "Using cached versions.json"
-        else
-            # If no local copy exists either, error out
-            rm -f "$TMP_VERSIONS_FILE"
-            err "Could not resolve compatible toolchain versions."
-        fi
+    else
+        # If no local copy exists either, warn but continue
+        # Create a minimal versions file as fallback
+        echo "{\"$DOJO_VERSION_NO_V\":{}}" > "$TMP_VERSIONS_FILE"
+        warn "Could not download versions.json and no local copy exists"
+    fi
 
     # Parse the versions.json file to get compatible versions
     # Remove the 'v' prefix from DOJOUP_VERSION for json lookup
@@ -326,6 +402,12 @@ main() {
         fi
       fi
     fi
+
+    # Set the global version to the one we just installed
+    set_global_version "$DOJO_VERSION_NO_V"
+
+    # Update symlinks to point to the new version
+    update_version_symlinks
 
     say "done!"
     welcome_msg
@@ -435,6 +517,49 @@ create_bin_symlink() {
   fi
 }
 
+# Helper to create symlinks based on global version
+update_version_symlinks() {
+  local global_version=$(get_global_version)
+
+  # If no global version is set, skip
+  if [ -z "$global_version" ]; then
+    return 0
+  fi
+
+  say "Updating symlinks for global version: $global_version"
+
+  # For each binary, create symlinks to the version specified by global version
+  for bin in "${BINS[@]}"; do
+    local bin_version=""
+    local repo=$(get_repo_for_bin "$bin")
+
+    if [ "$repo" = "$DOJO_REPO" ]; then
+      # Dojo repo binaries use the global version directly
+      bin_version="$global_version"
+    else
+      # Non-dojo binaries need to look up compatible version
+      # First check if versions.json exists
+      if [ -f "$DOJO_DIR/versions.json" ]; then
+        # Extract version using the same function used during installation
+        bin_version=$(DOJO_VERSION_NO_V="$global_version" TMP_VERSIONS_FILE="$DOJO_DIR/versions.json" extract_compatible_version "$bin")
+      else
+        # If no versions.json, assume same version
+        bin_version="$global_version"
+      fi
+    fi
+
+    # Check if this version exists
+    local version_bin="$DOJO_DIR/$bin/$bin_version/$bin"
+    if [ -f "$version_bin" ]; then
+      # Create symlink
+      create_bin_symlink "$bin" "$version_bin"
+      say "  → $bin: linked to version $bin_version"
+    else
+      warn "  → $bin: version $bin_version not found, symlink not updated"
+    fi
+  done
+}
+
 usage() {
   cat 1>&2 <<'EOF'
 The installer for Dojo.
@@ -452,6 +577,8 @@ OPTIONS:
     -c, --commit    Install a specific commit (e.g., `dojoup -c 94bfdb2`)
     -r, --repo      Install from a remote GitHub repo (uses default branch if no other options are set) (e.g., `dojoup --repo tarrencev/dojo`)
     -p, --path      Install a local repository (e.g., `dojoup --path ./git/dojo`)
+    -u, --use       Switch to a specific installed version (e.g., `dojoup --use 1.4.0`)
+    -l, --list      List all installed versions of each binary
 EOF
 }
 
