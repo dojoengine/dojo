@@ -242,6 +242,7 @@ message RetrieveEventsRequest {
 
 message RetrieveEventsResponse {
     repeated types.Event events = 1;
+    string next_cursor = 2;
 }
 
 message SubscribeEventsRequest {

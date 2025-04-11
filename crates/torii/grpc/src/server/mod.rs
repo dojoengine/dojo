@@ -12,8 +12,8 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 
-use base64::prelude::BASE64_STANDARD_NO_PAD;
 use base64::Engine;
+use base64::prelude::BASE64_STANDARD_NO_PAD;
 use crypto_bigint::{Encoding, U256};
 use dojo_types::naming::compute_selector_from_tag;
 use dojo_types::primitive::{Primitive, PrimitiveError};
@@ -32,8 +32,8 @@ use sqlx::sqlite::SqliteRow;
 use sqlx::types::chrono::{DateTime, Utc};
 use sqlx::{Pool, Row, Sqlite};
 use starknet::core::types::Felt;
-use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
+use starknet::providers::jsonrpc::HttpTransport;
 use subscriptions::event::EventManager;
 use subscriptions::indexer::IndexerManager;
 use subscriptions::token::TokenManager;
@@ -57,9 +57,9 @@ use tower_http::cors::{AllowOrigin, CorsLayer};
 use self::subscriptions::entity::EntityManager;
 use self::subscriptions::event_message::EventMessageManager;
 use self::subscriptions::model_diff::{ModelDiffRequest, StateDiffManager};
+use crate::proto::types::LogicalOperator;
 use crate::proto::types::clause::ClauseType;
 use crate::proto::types::member_value::ValueType;
-use crate::proto::types::LogicalOperator;
 use crate::proto::world::world_server::WorldServer;
 use crate::proto::world::{
     RetrieveControllersRequest, RetrieveControllersResponse, RetrieveEventMessagesRequest,
@@ -72,8 +72,8 @@ use crate::proto::world::{
     WorldMetadataResponse,
 };
 use crate::proto::{self};
-use crate::types::schema::SchemaError;
 use crate::types::ComparisonOperator;
+use crate::types::schema::SchemaError;
 
 pub(crate) static ENTITIES_TABLE: &str = "entities";
 pub(crate) static ENTITIES_MODEL_RELATION_TABLE: &str = "entity_model";
@@ -799,19 +799,15 @@ impl DojoWorld {
                 )
                 .map_err(|_| Error::InvalidCursor)?,
             );
-            conditions.push("id > ?".to_string());
+            conditions.push("id >= ?".to_string());
         }
 
         if !conditions.is_empty() {
             query += &format!(" WHERE {}", conditions.join(" AND "));
         }
 
-        query += " ORDER BY id";
-
-        if let Some(limit) = limit {
-            query += " LIMIT ?";
-            bind_values.push(limit.to_string());
-        }
+        query += " ORDER BY id LIMIT ?";
+        bind_values.push((limit.unwrap_or(100) + 1).to_string());
 
         let mut query = sqlx::query_as(&query);
         for value in bind_values {
@@ -819,7 +815,11 @@ impl DojoWorld {
         }
 
         let tokens: Vec<Token> = query.fetch_all(&self.pool).await?;
-        let next_cursor = tokens.last().map_or(String::new(), |token| token.id.clone());
+        let next_cursor = if tokens.len() > limit.unwrap_or(100) as usize {
+            BASE64_STANDARD_NO_PAD.encode(tokens.pop().unwrap().id.to_string().as_bytes())
+        } else {
+            String::new()
+        };
 
         let tokens = tokens.iter().map(|token| token.clone().into()).collect();
         Ok(RetrieveTokensResponse { tokens, next_cursor })
@@ -870,12 +870,8 @@ impl DojoWorld {
             query += &format!(" WHERE {}", conditions.join(" AND "));
         }
 
-        query += " ORDER BY id";
-
-        if let Some(limit) = limit {
-            query += " LIMIT ?";
-            bind_values.push(limit.to_string());
-        }
+        query += " ORDER BY id LIMIT ?";
+        bind_values.push((limit.unwrap_or(100) + 1).to_string());
 
         let mut query = sqlx::query_as(&query);
         for value in bind_values {
@@ -883,7 +879,11 @@ impl DojoWorld {
         }
 
         let balances: Vec<TokenBalance> = query.fetch_all(&self.pool).await?;
-        let next_cursor = balances.last().map_or(String::new(), |balance| balance.id.clone());
+        let next_cursor = if balances.len() > limit.unwrap_or(100) as usize {
+            BASE64_STANDARD_NO_PAD.encode(balances.pop().unwrap().id.to_string().as_bytes())
+        } else {
+            String::new()
+        };
 
         let balances = balances.iter().map(|balance| balance.clone().into()).collect();
         Ok(RetrieveTokenBalancesResponse { balances, next_cursor })
@@ -1006,12 +1006,11 @@ impl DojoWorld {
         })
     }
 
-    async fn retrieve_events_internal(
+    async fn retrieve_events(
         &self,
         query: &proto::types::EventQuery,
     ) -> Result<proto::world::RetrieveEventsResponse, Error> {
-        let limit = if query.limit > 0 { Some(query.limit) } else { None };
-        let offset = if query.offset > 0 { Some(query.offset) } else { None };
+        let limit = if query.limit > 0 { query.limit + 1 } else { 100 + 1 };
 
         let mut bind_values = Vec::new();
         let keys_pattern = if let Some(keys_clause) = &query.keys {
@@ -1021,7 +1020,7 @@ impl DojoWorld {
         };
 
         let mut events_query = r#"
-            SELECT keys, data, transaction_hash
+            SELECT id, keys, data, transaction_hash
             FROM events
         "#
         .to_string();
@@ -1031,26 +1030,42 @@ impl DojoWorld {
             bind_values.push(keys_pattern);
         }
 
-        events_query = format!("{} ORDER BY id DESC", events_query);
+        events_query = format!("{} ORDER BY id DESC LIMIT ?", events_query);
+        bind_values.push(limit.to_string());
 
-        if let Some(limit) = limit {
-            events_query = format!("{} LIMIT ?", events_query);
-            bind_values.push(limit.to_string());
-        }
-        if let Some(offset) = offset {
-            events_query = format!("{} OFFSET ?", events_query);
-            bind_values.push(offset.to_string());
+        if !query.cursor.is_empty() {
+            events_query = format!("{} WHERE id >= ?", events_query);
+            bind_values.push(
+                String::from_utf8(
+                    BASE64_STANDARD_NO_PAD
+                        .decode(query.cursor)
+                        .map_err(|_| Error::InvalidCursor)?,
+                )
+                .map_err(|_| Error::InvalidCursor)?,
+            );
         }
 
         let mut row_events = sqlx::query_as(&events_query);
         for value in &bind_values {
             row_events = row_events.bind(value);
         }
-        let row_events = row_events.fetch_all(&self.pool).await?;
+        let mut row_events: Vec<(String, String, String, String)> =
+            row_events.fetch_all(&self.pool).await?;
 
-        let events = row_events.iter().map(map_row_to_event).collect::<Result<Vec<_>, Error>>()?;
+        let next_cursor = if row_events.len() > (limit - 1) as usize {
+            BASE64_STANDARD_NO_PAD.encode(row_events.pop().unwrap().0.to_string().as_bytes())
+        } else {
+            String::new()
+        };
 
-        Ok(RetrieveEventsResponse { events })
+        let events = row_events
+            .iter()
+            .map(|(_, keys, data, transaction_hash)| {
+                map_row_to_event(&(keys, data, transaction_hash))
+            })
+            .collect::<Result<Vec<_>, Error>>()?;
+
+        Ok(RetrieveEventsResponse { events, next_cursor })
     }
 
     async fn retrieve_controllers(
@@ -1095,7 +1110,7 @@ fn process_event_field(data: &str) -> Result<Vec<Vec<u8>>, Error> {
         .collect::<Result<Vec<_>, _>>()?)
 }
 
-fn map_row_to_event(row: &(String, String, String)) -> Result<proto::types::Event, Error> {
+fn map_row_to_event(row: &(&str, &str, &str)) -> Result<proto::types::Event, Error> {
     let keys = process_event_field(&row.0)?;
     let data = process_event_field(&row.1)?;
     let transaction_hash =
@@ -1361,10 +1376,8 @@ impl proto::world::world_server::World for DojoWorld {
             .query
             .ok_or_else(|| Status::invalid_argument("Missing query argument"))?;
 
-        let events = self
-            .retrieve_events_internal(&query)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+        let events =
+            self.retrieve_events(&query).await.map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(events))
     }

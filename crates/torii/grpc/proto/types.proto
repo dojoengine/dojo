@@ -80,7 +80,7 @@ message Query {
 message EventQuery {
     KeysClause keys = 1;
     uint32 limit = 2;
-    uint32 offset = 3;
+    string cursor = 3;
 }
 
 message Clause {
