@@ -8,11 +8,14 @@ fi
 
 set -e
 
-BASE_DIR=${XDG_CONFIG_HOME:-$HOME}
-DOJO_DIR=${DOJO_DIR-"$BASE_DIR/.dojo"}
-ACTIVE_DIR="$DOJO_DIR/bin"
-COMPONENT_DIR="$DOJO_DIR/component"
-VERSION_REGISTRY="$DOJO_DIR/versions.json"
+HOME_DIR=${XDG_CONFIG_HOME:-$HOME}
+BASE_DIR=${DOJO_DIR-"$HOME_DIR/.dojo"}
+LOCAL_VERSION_REGISTRY="$BASE_DIR/versions.json"
+
+ACTIVE_DIR="$BASE_DIR/bin"
+INSTALLATION_DIR="$BASE_DIR/installed"
+TOOLCHAIN_DIR="$INSTALLATION_DIR/toolchain"
+COMPONENTS_DIR="$INSTALLATION_DIR/components"
 
 # Repository information
 DOJO_REPO="dojoengine/dojo"
@@ -20,9 +23,6 @@ KATANA_REPO="dojoengine/katana"
 
 # Toolchain versions compatibility registry
 VERSIONS_JSON_URL="https://raw.githubusercontent.com/kariy/dojo/kariy/main/versions.json"
-
-# active version configuration file
-DOJO_ACTIVE_VERSION_FILE="$DOJO_DIR/active"
 
 # All components
 COMPONENT_BINARY=("sozo" "torii" "dojo-language-server" "katana")
@@ -52,79 +52,28 @@ get_repo_for_component() {
 
 set_active_version() {
   local version=$1
-  echo "$version" > "$DOJO_ACTIVE_VERSION_FILE"
-  update_version_symlinks $version
-}
 
-# Helper to create symlinks based on global version
-update_version_symlinks() {
-  local version=$1
-
-  # If no version is set, skip
-  if [ -z "$version" ]; then
-    return 0
-  fi
-
-  # For each binary, create symlinks to the version specified by global version
-  for component in "${COMPONENT_BINARY[@]}"; do
-    local bin_version=""
-    local repo=$(get_repo_for_component "$component")
-
-    if [ "$repo" = "$DOJO_REPO" ]; then
-      # Dojo repo binaries use the global version directly
-      bin_version="$version"
-    else
-      # Non-dojo binaries need to look up compatible version
-      # First check if the version registry file exists
-      if [ -f "$VERSION_REGISTRY" ]; then
-        # Extract version using the same function used during installation
-        bin_version=$(DOJO_VERSION_NO_V="$version" TMP_VERSIONS_FILE="$VERSION_REGISTRY" extract_compatible_version "$component")
-      else
-        # If the version registry file is not found, assume same version
-        bin_version="$version"
-      fi
+  toolchain_version_dir=$TOOLCHAIN_DIR/$version
+  if [[ -d "$toolchain_version_dir" ]]; then
+    # Check if ACTIVE_DIR already points to the correct path
+    if [[ ! -L "$ACTIVE_DIR" ]] || [[ "$(readlink -f "$ACTIVE_DIR")" != "$toolchain_version_dir" ]]; then
+      ln -sF "$toolchain_version_dir" "$ACTIVE_DIR"
     fi
-
-    # Check if this version exists
-    local version_bin="$DOJO_DIR/$component/$bin_version/$component"
-    if [ -f "$version_bin" ]; then
-      create_active_component_symlink "$component" "$version_bin"
-      else
-        err "  → $component: version $bin_version not found, "
-      fi
-  done
-}
-
-create_active_component_symlink() {
-  local component=$1
-  local component_target_bin_path=$2
-
-  # Create bin directory in $ACTIVE_DIR if it doesn't exist
-  local bin_dir="$ACTIVE_DIR"
-  ensure mkdir -p "$bin_dir"
-
-  # Remove existing symlink or binary
-  if [ -f "$bin_dir/$component" ] || [ -L "$bin_dir/$component" ]; then
-    rm -f "$bin_dir/$component"
-  fi
-
-  # Create a new symlink
-  ensure ln -s "$component_target_bin_path" "$bin_dir/$component"
-
-  # Check if the bin directory is in PATH
-  if [[ ":$PATH:" != *":$bin_dir:"* ]]; then
-    warn "$bin_dir is not in your PATH. You may need to add it to access installed binaries directly."
+  else
+    err "Toolchain $version is not installed."
   fi
 }
 
 # Function to get the active Dojo version
 get_active_version() {
-  if [ -f "$DOJO_ACTIVE_VERSION_FILE" ]; then
-    cat "$DOJO_ACTIVE_VERSION_FILE"
+  if [ -d "$ACTIVE_DIR" ] && [ -L "$ACTIVE_DIR" ]; then
+    # Read the link and get the last segment of the path (the version)
+    # eg .dojo/installed/toolchain/1.4.0
+    active_path=$(readlink -f "$ACTIVE_DIR")
+    version=$(basename "$active_path")
+    echo "$version"
     return 0
   else
-    # If no version is set, return empty
-    echo ""
     return 1
   fi
 }
@@ -202,9 +151,9 @@ list_versions() {
   # List all installed versions of each binary
   for component in "${COMPONENT_BINARY[@]}"; do
     say "Installed versions of $component:"
-    for version in $(ls -1 "$DOJO_DIR/$component" 2>/dev/null); do
+    for version in $(ls -1 "$BASE_DIR/$component" 2>/dev/null); do
       # Skip directories that don't actually contain the binary
-      if [ -f "$DOJO_DIR/$component/$version/$component" ]; then
+      if [ -f "$BASE_DIR/$component/$version/$component" ]; then
         # Mark current version with an asterisk
         if [ "$version" = "$global_version" ]; then
           say "  * $version"
@@ -228,7 +177,7 @@ use_version() {
   # Check if this version exists for at least one binary
   found=0
   for component in "${COMPONENT_BINARY[@]}"; do
-    if [ -d "$DOJO_DIR/$component/$version" ]; then
+    if [ -d "$TOOLCHAIN_DIR/$version" ]; then
       found=1
       break
     fi
@@ -240,7 +189,6 @@ use_version() {
 
   # Set global version and update symlinks
   set_active_version "$version"
-  update_version_symlinks
 
   say "Now using Dojo version: $version"
 }
@@ -328,8 +276,6 @@ install_dojo() {
      ARCHITECTURE="amd64" # Amd.
   fi
 
-  # Local copy of versions.json
-  LOCAL_VERSIONS_FILE="$DOJO_DIR/versions.json"
   TMP_VERSIONS_FILE=$(mktemp)
   EXTRACT_DIR=""
 
@@ -337,7 +283,7 @@ install_dojo() {
   if download "$VERSIONS_JSON_URL" "$TMP_VERSIONS_FILE" 2>/dev/null; then
       say "syncing dojo toolchain..."
       # If download successful, update local copy
-      cp "$TMP_VERSIONS_FILE" "$LOCAL_VERSIONS_FILE"
+      cp $TMP_VERSIONS_FILE $LOCAL_VERSION_REGISTRY
   else
       # If no local copy exists either, error out
       rm -f "$TMP_VERSIONS_FILE"
@@ -370,7 +316,7 @@ install_dojo() {
     fi
 
     # Create directory for this binary version
-    bin_dir="$DOJO_DIR/$component/$bin_version"
+    bin_dir="$COMPONENTS_DIR/$component/$bin_version"
     ensure mkdir -p "$bin_dir"
 
     # Compute the URL of the release tarball
@@ -444,9 +390,9 @@ install_dojo() {
     fi
   done
 
-  # Create version-specific directory in BASE_DIR for symlinks
-  VERSION_BIN_DIR="$BASE_DIR/$DOJO_VERSION_NO_V"
-  ensure mkdir -p "$VERSION_BIN_DIR"
+  # Create version-specific directory in DOJO_DIR for symlinks
+  TOOLCHAIN_VER_DIR="$TOOLCHAIN_DIR/$DOJO_VERSION_NO_V"
+  ensure mkdir -p "$TOOLCHAIN_VER_DIR"
 
   # Create symlinks for all installed binaries in the version-specific directory
   for binary_entry in "${INSTALLED_BINARIES[@]}"; do
@@ -455,7 +401,7 @@ install_dojo() {
 
     # Create symlink to the binary
     if [ -f "$bin_path" ]; then
-      ln -sf "$bin_path" "$VERSION_BIN_DIR/$bin_name"
+      ln -sf "$bin_path" "$TOOLCHAIN_VER_DIR/$bin_name"
     fi
   done
 
@@ -642,17 +588,15 @@ check_scarb() {
 }
 
 main() {
-  # Create base directories if they don't exist
-  ensure mkdir -p "$DOJO_DIR"
-  for component in "${COMPONENT_BINARY[@]}"; do
-    ensure mkdir -p "$DOJO_DIR/$component"
-  done
-
   # Process commands
   if [ $# -eq 0 ]; then
     # No arguments provided, show help
     usage
     exit 0
+  fi
+
+  if [ ! -d "$BASE_DIR" ]; then
+    ensure mkdir -p "$BASE_DIR"
   fi
 
   # First argument is the command
