@@ -18,8 +18,8 @@ use crate::executor::LOG_TARGET;
 use crate::simple_broker::SimpleBroker;
 use crate::types::{ContractType, OptimisticToken, OptimisticTokenBalance, Token, TokenBalance};
 use crate::utils::{
-    felt_and_u256_to_sql_string, felt_to_sql_string, fetch_content_from_ipfs, sanitize_json_string,
-    sql_string_to_u256, u256_to_sql_string, I256,
+    felt_to_sql_string, fetch_content_from_ipfs, sanitize_json_string, sql_string_to_u256,
+    u256_to_sql_string, I256,
 };
 
 #[derive(Debug, Clone)]
@@ -34,6 +34,12 @@ pub struct RegisterNftTokenMetadata {
     pub query: RegisterNftTokenQuery,
     pub name: String,
     pub symbol: String,
+    pub metadata: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct UpdateNftMetadata {
+    pub token_id: String,
     pub metadata: String,
 }
 
@@ -203,29 +209,6 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
         Ok(())
     }
 
-    pub async fn process_register_nft_token_query(
-        register_nft_token: RegisterNftTokenQuery,
-        provider: Arc<P>,
-        name: String,
-        symbol: String,
-    ) -> Result<RegisterNftTokenMetadata> {
-        let token_uri = Self::fetch_token_uri(
-            &provider,
-            register_nft_token.contract_address,
-            register_nft_token.token_id,
-        )
-        .await?;
-
-        let metadata = Self::fetch_token_metadata(
-            register_nft_token.contract_address,
-            register_nft_token.token_id,
-            &token_uri,
-        )
-        .await?;
-
-        Ok(RegisterNftTokenMetadata { query: register_nft_token, metadata, name, symbol })
-    }
-
     // given a uri which can be either http/https url or data uri, fetch the metadata erc721
     // metadata json schema
     pub async fn fetch_metadata(token_uri: &str) -> Result<serde_json::Value> {
@@ -329,7 +312,7 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
         Ok(())
     }
 
-    async fn fetch_token_uri(
+    pub async fn fetch_token_uri(
         provider: &P,
         contract_address: Felt,
         token_id: U256,
@@ -405,16 +388,18 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
         Ok(token_uri)
     }
 
-    async fn fetch_token_metadata(
+    pub async fn fetch_token_metadata(
         contract_address: Felt,
         token_id: U256,
-        token_uri: &str,
+        provider: Arc<P>,
     ) -> Result<String> {
+        let token_uri = Self::fetch_token_uri(&provider, contract_address, token_id).await?;
+
         if token_uri.is_empty() {
             return Ok("".to_string());
         }
 
-        let metadata = Self::fetch_metadata(token_uri).await;
+        let metadata = Self::fetch_metadata(&token_uri).await;
         match metadata {
             Ok(metadata) => {
                 serde_json::to_string(&metadata).context("Failed to serialize metadata")
@@ -431,22 +416,24 @@ impl<'c, P: Provider + Sync + Send + 'static> Executor<'c, P> {
         }
     }
 
-    pub async fn update_nft_metadata(
+    pub async fn handle_update_nft_metadata(
         &mut self,
-        contract_address: Felt,
-        token_id: U256,
-        provider: Arc<P>,
+        update_metadata: UpdateNftMetadata,
     ) -> Result<()> {
-        let id = felt_and_u256_to_sql_string(&contract_address, &token_id);
-        let token_uri = Self::fetch_token_uri(&provider, contract_address, token_id).await?;
-        let metadata = Self::fetch_token_metadata(contract_address, token_id, &token_uri).await?;
-
         // Update metadata in database
-        sqlx::query("UPDATE tokens SET metadata = ? WHERE id = ?")
-            .bind(&metadata)
-            .bind(id)
-            .execute(&mut *self.transaction)
-            .await?;
+        let token =
+            sqlx::query_as::<_, Token>("UPDATE tokens SET metadata = ? WHERE id = ? RETURNING *")
+                .bind(&update_metadata.metadata)
+                .bind(&update_metadata.token_id)
+                .fetch_optional(&mut *self.transaction)
+                .await?;
+
+        if let Some(token) = token {
+            info!(target: LOG_TARGET, name = %token.name, symbol = %token.symbol, contract_address = %token.contract_address, token_id = %update_metadata.token_id, "NFT token metadata updated.");
+            SimpleBroker::publish(unsafe {
+                std::mem::transmute::<Token, OptimisticToken>(token.clone())
+            });
+        }
 
         Ok(())
     }
