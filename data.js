@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1744338295315,
+  "lastUpdate": 1744400857346,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -61381,6 +61381,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 17200263,
             "range": "± 213720",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "23054115+cwkang1998@users.noreply.github.com",
+            "name": "Chen Wen Kang",
+            "username": "cwkang1998"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "03791d1a5fc9c80d17edbf0116fc67f1defc353b",
+          "message": "docs: update dev docs for running tests (#3157)\n\n* docs: update dev docs for running tests\n\n* chore: restore tar gz to origin db",
+          "timestamp": "2025-04-12T03:31:04+08:00",
+          "tree_id": "2cba9062d8aab3dc6c007dd0f70e44549c35a8cc",
+          "url": "https://github.com/dojoengine/dojo/commit/03791d1a5fc9c80d17edbf0116fc67f1defc353b"
+        },
+        "date": 1744400854292,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 46911922423,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
