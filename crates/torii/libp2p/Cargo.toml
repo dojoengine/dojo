@@ -52,3 +52,4 @@ rand.workspace = true
 libp2p = { git = "https://github.com/libp2p/rust-libp2p", features = [ "ed25519", "gossipsub", "identify", "macros", "noise", "ping", "tcp", "wasm-bindgen", "yamux" ], rev = "cdc9638" }
 libp2p-webrtc-websys = { git = "https://github.com/libp2p/rust-libp2p", rev = "cdc9638" }
 libp2p-websocket-websys = { git = "https://github.com/libp2p/rust-libp2p", rev = "cdc9638" }
+web-sys = "0.3.77"
