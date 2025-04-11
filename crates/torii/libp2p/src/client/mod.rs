@@ -4,10 +4,10 @@ use std::time::Duration;
 use futures::channel::mpsc::{UnboundedReceiver, UnboundedSender};
 use futures::channel::oneshot;
 use futures::lock::Mutex;
-use futures::{StreamExt, select};
+use futures::{select, StreamExt};
 use libp2p::gossipsub::{self, IdentTopic, MessageId};
 use libp2p::swarm::{NetworkBehaviour, Swarm, SwarmEvent};
-use libp2p::{Multiaddr, PeerId, identify, identity, noise, ping, yamux};
+use libp2p::{identify, identity, noise, ping, yamux, Multiaddr, PeerId};
 use tracing::info;
 
 pub mod events;
@@ -48,7 +48,7 @@ impl RelayClient {
     pub fn new(relay_addr: String) -> Result<Self, Error> {
         use libp2p::core::muxing::StreamMuxerBox;
         use libp2p::core::upgrade::Version;
-        use libp2p::{Transport, dns, tcp, websocket};
+        use libp2p::{dns, tcp, websocket, Transport};
         use libp2p_webrtc as webrtc;
         use libp2p_webrtc::tokio::Certificate;
         use rand::thread_rng;
@@ -124,15 +124,16 @@ impl RelayClient {
 
     #[cfg(target_arch = "wasm32")]
     pub fn new(relay_addr: String) -> Result<Self, Error> {
-        use libp2p::core::Transport;
         use libp2p::core::upgrade::Version;
+        use libp2p::core::Transport;
 
         let local_key = identity::Keypair::generate_ed25519();
         let peer_id = PeerId::from(local_key.public());
 
         info!(target: LOG_TARGET, peer_id = %peer_id, "Local peer id.");
 
-        // WebRTC transport is not natively supported in NodeJS, so we need to check if we are in a browser environment
+        // WebRTC transport is not natively supported in NodeJS, so we need to check if we are in a
+        // browser environment
         let mut swarm = match web_sys::window() {
             Some(_) => libp2p::SwarmBuilder::with_existing_identity(local_key.clone())
                 .with_wasm_bindgen()
