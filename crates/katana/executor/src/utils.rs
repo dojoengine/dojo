@@ -29,7 +29,7 @@ pub fn log_resources(resources: &TxResources, receipt: &Receipt) {
     mapped_strings.push(format!("DA L1: {}", resources.data_availability.l1_gas));
     mapped_strings.push(format!("DA L1 Data: {}", resources.data_availability.l1_data_gas));
 
-    mapped_strings.push(format!("Gas consumed: {}", receipt.fee().gas_consumed));
+    mapped_strings.push(format!("Total consumed: {}", receipt.fee().gas_consumed));
     mapped_strings.push(format!(
         "Overall Fee: {:.8} {}",
         receipt.fee().overall_fee as f64 / 100.0 / 10_f64.powf(18.0),
