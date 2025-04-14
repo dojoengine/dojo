@@ -863,7 +863,7 @@ impl DojoWorld {
                 )
                 .map_err(|_| Error::InvalidCursor)?,
             );
-            conditions.push("id > ?".to_string());
+            conditions.push("id >= ?".to_string());
         }
 
         if !conditions.is_empty() {
@@ -1048,7 +1048,7 @@ impl DojoWorld {
             events_query = format!("{} WHERE {}", events_query, conditions.join(" AND "));
         }
 
-        events_query = format!("{} ORDER BY id DESC LIMIT ?", events_query);
+        events_query = format!("{} ORDER BY id LIMIT ?", events_query);
         bind_values.push(limit.to_string());
 
         let mut row_events = sqlx::query_as(&events_query);
