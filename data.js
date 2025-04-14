@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1744665274590,
+  "lastUpdate": 1744665471892,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -61567,6 +61567,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 46136003953,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "122404722+notV4l@users.noreply.github.com",
+            "name": "notV4l",
+            "username": "notV4l"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "cb2ee126263164f775c71755a9a1fff9590974da",
+          "message": "feat(katana): print trace gas usage (#3133)\n\n* trace gas usage\n\n* rename field\n\n---------\n\nCo-authored-by: Ammar Arif <evergreenkary@gmail.com>",
+          "timestamp": "2025-04-14T20:58:21Z",
+          "tree_id": "b3483fbefa18766b0572790c92c769e47aeeb8ec",
+          "url": "https://github.com/dojoengine/dojo/commit/cb2ee126263164f775c71755a9a1fff9590974da"
+        },
+        "date": 1744665468445,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2483494,
+            "range": "± 37756",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 392542,
+            "range": "± 13667",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2957202027,
+            "range": "± 220710027",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 18196526,
+            "range": "± 725064",
             "unit": "ns/iter"
           }
         ]
