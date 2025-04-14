@@ -1,4 +1,5 @@
-use std::{env, error::Error};
+use std::env;
+use std::error::Error;
 
 use vergen::{BuildBuilder, Emitter};
 use vergen_gitcl::GitclBuilder;
