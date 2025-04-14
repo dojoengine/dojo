@@ -17,6 +17,10 @@ torii-sqlite.workspace = true
 url.workspace = true
 merge-options.workspace = true
 
+[build-dependencies]
+vergen = "9.0.6"
+vergen-gitcl = "1.0.8"
+
 [dev-dependencies]
 assert_matches.workspace = true
 camino.workspace = true
