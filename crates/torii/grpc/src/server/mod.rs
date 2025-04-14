@@ -1013,28 +1013,21 @@ impl DojoWorld {
         let limit = if query.limit > 0 { query.limit + 1 } else { 100 + 1 };
 
         let mut bind_values = Vec::new();
+        let mut conditions = Vec::new();
+
         let keys_pattern = if let Some(keys_clause) = &query.keys {
             build_keys_pattern(keys_clause)?
         } else {
             String::new()
         };
 
-        let mut events_query = r#"
-            SELECT id, keys, data, transaction_hash
-            FROM events
-        "#
-        .to_string();
-
         if !keys_pattern.is_empty() {
-            events_query = format!("{} WHERE keys REGEXP ?", events_query);
+            conditions.push("keys REGEXP ?");
             bind_values.push(keys_pattern);
         }
 
-        events_query = format!("{} ORDER BY id DESC LIMIT ?", events_query);
-        bind_values.push(limit.to_string());
-
         if !query.cursor.is_empty() {
-            events_query = format!("{} WHERE id >= ?", events_query);
+            conditions.push("id >= ?");
             bind_values.push(
                 String::from_utf8(
                     BASE64_STANDARD_NO_PAD
@@ -1044,6 +1037,19 @@ impl DojoWorld {
                 .map_err(|_| Error::InvalidCursor)?,
             );
         }
+
+        let mut events_query = r#"
+            SELECT id, keys, data, transaction_hash
+            FROM events
+        "#
+        .to_string();
+
+        if !conditions.is_empty() {
+            events_query = format!("{} WHERE {}", events_query, conditions.join(" AND "));
+        }
+
+        events_query = format!("{} ORDER BY id DESC LIMIT ?", events_query);
+        bind_values.push(limit.to_string());
 
         let mut row_events = sqlx::query_as(&events_query);
         for value in &bind_values {
