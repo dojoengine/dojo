@@ -30,7 +30,7 @@ async fn main() -> anyhow::Result<()> {
         .expect("Failed to set the global tracing subscriber");
 
     let args = Cli::parse().args.with_config_file()?;
-    let runner = Runner::new(args);
+    let runner = Runner::new(args, env!("TORII_VERSION_SPEC").to_string());
     runner.run().await?;
     Ok(())
 }

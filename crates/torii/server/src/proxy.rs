@@ -65,6 +65,7 @@ pub struct Proxy {
     addr: SocketAddr,
     allowed_origins: Option<Vec<String>>,
     handlers: Arc<RwLock<Vec<Box<dyn Handler>>>>,
+    version_spec: String,
 }
 
 impl Proxy {
@@ -75,6 +76,7 @@ impl Proxy {
         graphql_addr: Option<SocketAddr>,
         artifacts_addr: Option<SocketAddr>,
         pool: Arc<SqlitePool>,
+        version_spec: String,
     ) -> Self {
         let handlers: Arc<RwLock<Vec<Box<dyn Handler>>>> = Arc::new(RwLock::new(vec![
             Box::new(GraphQLHandler::new(graphql_addr)),
@@ -84,7 +86,7 @@ impl Proxy {
             Box::new(StaticHandler::new(artifacts_addr)),
         ]));
 
-        Self { addr, allowed_origins, handlers }
+        Self { addr, allowed_origins, handlers, version_spec }
     }
 
     pub async fn set_graphql_addr(&self, addr: SocketAddr) {
@@ -136,11 +138,13 @@ impl Proxy {
                 });
 
             let handlers = self.handlers.clone();
+            let version_spec = self.version_spec.clone();
             let service = ServiceBuilder::new().option_layer(cors).service_fn(move |req| {
                 let handlers = handlers.clone();
+                let version_spec = version_spec.clone();
                 async move {
                     let handlers = handlers.read().await;
-                    handle(remote_addr, req, &handlers).await
+                    handle(remote_addr, req, &handlers, version_spec).await
                 }
             });
 
@@ -161,6 +165,7 @@ async fn handle(
     client_ip: IpAddr,
     req: Request<Body>,
     handlers: &[Box<dyn Handler>],
+    version_spec: String,
 ) -> Result<Response<Body>, Infallible> {
     for handler in handlers.iter() {
         if handler.should_handle(&req) {
@@ -171,7 +176,7 @@ async fn handle(
     // Default response if no handler matches
     let json = json!({
         "service": "torii",
-        "version": env!("CARGO_PKG_VERSION"),
+        "version": version_spec,
         "success": true,
 
     });

@@ -12,16 +12,9 @@ use super::options::*;
 
 pub const DEFAULT_RPC_URL: &str = "http://0.0.0.0:5050";
 
-pub const VERSION: &str = env!("CARGO_PKG_VERSION");
-pub const GIT_BRANCH: &str = env!("VERGEN_GIT_BRANCH");
-pub const GIT_SHA: &str = env!("VERGEN_GIT_SHA");
-pub const GIT_DESCRIBE: &str = env!("VERGEN_GIT_DESCRIBE");
-
 /// Dojo World Indexer
 #[derive(Parser, Debug, Serialize, Deserialize, Clone, MergeOptions)]
 #[serde(default)]
-#[command(name = "torii", author, about, long_about = None, version = format!("{} ({} {}{})", VERSION, GIT_BRANCH, GIT_SHA, if GIT_DESCRIBE.contains(GIT_SHA) || GIT_DESCRIBE.contains("dirty") { " dev" } else { "" }))]
-#[command(next_help_heading = "Torii general options")]
 pub struct ToriiArgs {
     /// The world to index
     #[arg(short, long = "world", env = "DOJO_WORLD_ADDRESS")]

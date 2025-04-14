@@ -15085,6 +15085,8 @@ dependencies = [
  "torii-runner",
  "tracing",
  "tracing-subscriber",
+ "vergen",
+ "vergen-gitcl",
 ]
 
 [[package]]
@@ -15102,8 +15104,6 @@ dependencies = [
  "toml 0.8.19",
  "torii-sqlite",
  "url",
- "vergen",
- "vergen-gitcl",
 ]
 
 [[package]]

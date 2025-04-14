@@ -11,3 +11,8 @@ anyhow.workspace = true
 clap.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
+
+
+[build-dependencies]
+vergen = "9.0.6"
+vergen-gitcl = "1.0.8"
