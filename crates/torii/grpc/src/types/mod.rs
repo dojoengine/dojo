@@ -549,11 +549,15 @@ impl From<proto::types::Event> for Event {
 pub struct EventQuery {
     pub keys: KeysClause,
     pub limit: u32,
-    pub offset: u32,
+    pub cursor: Option<String>,
 }
 
 impl From<EventQuery> for proto::types::EventQuery {
     fn from(value: EventQuery) -> Self {
-        Self { keys: Some(value.keys.into()), limit: value.limit, offset: value.offset }
+        Self {
+            keys: Some(value.keys.into()),
+            limit: value.limit,
+            cursor: value.cursor.unwrap_or_default(),
+        }
     }
 }

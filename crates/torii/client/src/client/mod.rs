@@ -160,10 +160,14 @@ impl Client {
 
     /// Retrieve raw starknet events matching the keys provided.
     /// If the keys are empty, it will return all events.
-    pub async fn starknet_events(&self, query: EventQuery) -> Result<Vec<Event>, Error> {
+    pub async fn starknet_events(&self, query: EventQuery) -> Result<Page<Event>, Error> {
         let mut grpc_client = self.inner.write().await;
-        let RetrieveEventsResponse { events } = grpc_client.retrieve_events(query).await?;
-        Ok(events.into_iter().map(Event::from).collect::<Vec<Event>>())
+        let RetrieveEventsResponse { events, next_cursor } =
+            grpc_client.retrieve_events(query).await?;
+        Ok(Page {
+            items: events.into_iter().map(Event::from).collect::<Vec<Event>>(),
+            next_cursor: if next_cursor.is_empty() { None } else { Some(next_cursor) },
+        })
     }
 
     /// A direct stream to grpc subscribe entities

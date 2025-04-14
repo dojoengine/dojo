@@ -814,7 +814,7 @@ impl DojoWorld {
             query = query.bind(value);
         }
 
-        let tokens: Vec<Token> = query.fetch_all(&self.pool).await?;
+        let mut tokens: Vec<Token> = query.fetch_all(&self.pool).await?;
         let next_cursor = if tokens.len() > limit.unwrap_or(100) as usize {
             BASE64_STANDARD_NO_PAD.encode(tokens.pop().unwrap().id.to_string().as_bytes())
         } else {
@@ -878,7 +878,7 @@ impl DojoWorld {
             query = query.bind(value);
         }
 
-        let balances: Vec<TokenBalance> = query.fetch_all(&self.pool).await?;
+        let mut balances: Vec<TokenBalance> = query.fetch_all(&self.pool).await?;
         let next_cursor = if balances.len() > limit.unwrap_or(100) as usize {
             BASE64_STANDARD_NO_PAD.encode(balances.pop().unwrap().id.to_string().as_bytes())
         } else {
@@ -1038,7 +1038,7 @@ impl DojoWorld {
             bind_values.push(
                 String::from_utf8(
                     BASE64_STANDARD_NO_PAD
-                        .decode(query.cursor)
+                        .decode(query.cursor.clone())
                         .map_err(|_| Error::InvalidCursor)?,
                 )
                 .map_err(|_| Error::InvalidCursor)?,
@@ -1111,10 +1111,10 @@ fn process_event_field(data: &str) -> Result<Vec<Vec<u8>>, Error> {
 }
 
 fn map_row_to_event(row: &(&str, &str, &str)) -> Result<proto::types::Event, Error> {
-    let keys = process_event_field(&row.0)?;
-    let data = process_event_field(&row.1)?;
+    let keys = process_event_field(row.0)?;
+    let data = process_event_field(row.1)?;
     let transaction_hash =
-        Felt::from_str(&row.2).map_err(ParseError::FromStr)?.to_bytes_be().to_vec();
+        Felt::from_str(row.2).map_err(ParseError::FromStr)?.to_bytes_be().to_vec();
 
     Ok(proto::types::Event { keys, data, transaction_hash })
 }
