@@ -156,7 +156,6 @@ pub struct Query {
     /// Whether or not to include the hashed keys (entity id) of the entities.
     /// This is useful for large queries compressed with GZIP to reduce the size of the response.
     pub no_hashed_keys: bool,
-    pub order_by: Vec<OrderBy>,
     /// If the array is not empty, only the given models are retrieved.
     /// All entities that don't have a model in the array are excluded.
     pub models: Vec<String>,
