@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1744664170528,
+  "lastUpdate": 1744665274590,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -61537,6 +61537,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 18077922,
             "range": "± 883594",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "122404722+notV4l@users.noreply.github.com",
+            "name": "notV4l",
+            "username": "notV4l"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "cb2ee126263164f775c71755a9a1fff9590974da",
+          "message": "feat(katana): print trace gas usage (#3133)\n\n* trace gas usage\n\n* rename field\n\n---------\n\nCo-authored-by: Ammar Arif <evergreenkary@gmail.com>",
+          "timestamp": "2025-04-14T20:58:21Z",
+          "tree_id": "b3483fbefa18766b0572790c92c769e47aeeb8ec",
+          "url": "https://github.com/dojoengine/dojo/commit/cb2ee126263164f775c71755a9a1fff9590974da"
+        },
+        "date": 1744665271125,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 46136003953,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
