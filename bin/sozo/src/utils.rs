@@ -11,7 +11,6 @@ use dojo_world::config::ProfileConfig;
 use dojo_world::contracts::ContractInfo;
 use dojo_world::diff::WorldDiff;
 use dojo_world::local::WorldLocal;
-use katana_rpc_api::starknet::RPC_SPEC_VERSION;
 use scarb::core::{TomlManifest, Workspace};
 use semver::Version;
 use sozo_ops::migration_ui::MigrationUi;
@@ -32,6 +31,8 @@ use crate::commands::LOG_TARGET;
 /// event fetching, which if too high will cause the event fetching to fail in most of the node
 /// providers.
 pub const MAX_BLOCK_RANGE: u64 = 200_000;
+
+pub const RPC_SPEC_VERSION: &str = "0.7.1";
 
 pub const CALLDATA_DOC: &str = "
 Space separated values e.g., 0x12345 128 u256:9999999999 str:'hello world'.

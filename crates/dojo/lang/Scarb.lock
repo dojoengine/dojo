@@ -3,4 +3,4 @@ version = 1
 
 [[package]]
 name = "dojo_plugin"
-version = "2.9.4"
+version = "2.10.1"

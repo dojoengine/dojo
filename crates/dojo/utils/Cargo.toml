@@ -20,3 +20,4 @@ colored_json.workspace = true
 [dev-dependencies]
 assert_matches.workspace = true
 dojo-test-utils.workspace = true
+katana-runner = { path = "/Users/glihm/cgg/katana/crates/runner" }

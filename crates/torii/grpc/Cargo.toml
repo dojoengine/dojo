@@ -34,7 +34,7 @@ cainome.workspace = true
 camino.workspace = true
 dojo-test-utils.workspace = true
 dojo-utils.workspace = true
-katana-runner.workspace = true
+katana-runner = { path = "/Users/glihm/cgg/katana/crates/runner" }
 scarb.workspace = true
 tempfile.workspace = true
 sozo-scarbext.workspace = true

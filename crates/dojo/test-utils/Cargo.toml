@@ -6,13 +6,6 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
-katana-chain-spec.workspace = true
-katana-core = { workspace = true }
-katana-executor = { workspace = true, features = [ "blockifier" ] }
-katana-node.workspace = true
-katana-primitives = { workspace = true }
-katana-rpc.workspace = true
-
 anyhow.workspace = true
 assert_fs.workspace = true
 async-trait.workspace = true
