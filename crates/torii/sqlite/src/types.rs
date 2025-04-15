@@ -274,3 +274,19 @@ pub struct ModelIndices {
     pub model_tag: String,
     pub fields: Vec<String>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Lambda {
+    pub event: LambdaEvent,
+    pub statement: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum LambdaEvent {
+    ModelRegistered {
+        model_tag: String,
+    },
+    ModelUpdated {
+        model_tag: String,
+    },
+}

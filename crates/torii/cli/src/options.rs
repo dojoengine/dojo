@@ -7,7 +7,7 @@ use merge_options::MergeOptions;
 use serde::ser::SerializeSeq;
 use serde::{Deserialize, Serialize};
 use starknet::core::types::Felt;
-use torii_sqlite::types::{Contract, ContractType, ModelIndices};
+use torii_sqlite::types::{Contract, ContractType, Lambda, LambdaEvent, ModelIndices};
 
 pub const DEFAULT_HTTP_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::LOCALHOST);
 pub const DEFAULT_HTTP_PORT: u16 = 8080;
@@ -358,6 +358,16 @@ pub struct SqlOptions {
         help = "The cache size to use for the database. A positive value determines a number of pages, a negative value determines a number of KiB."
     )]
     pub cache_size: i64,
+
+    /// A set of SQL statements to execute after some specific events.
+    /// Like after a model has been registered, or after an entity model has been updated etc...
+    #[arg(
+        long = "sql.lambdas",
+        value_delimiter = ',',
+        value_parser = parse_lambda_event,
+        help = "A set of SQL statements to execute after some specific events."
+    )]
+    pub lambdas: Vec<Lambda>,
 }
 
 impl Default for SqlOptions {
@@ -368,6 +378,7 @@ impl Default for SqlOptions {
             historical: vec![],
             page_size: DEFAULT_DATABASE_PAGE_SIZE,
             cache_size: DEFAULT_DATABASE_CACHE_SIZE,
+            lambdas: vec![],
         }
     }
 }
@@ -405,6 +416,50 @@ fn parse_model_indices(part: &str) -> anyhow::Result<ModelIndices> {
     let fields = parts[1].split(',').map(|s| s.to_string()).collect::<Vec<_>>();
 
     Ok(ModelIndices { model_tag, fields })
+}
+
+// Parses clap cli argument which is expected to be in the format:
+// - event:event_data:statement
+fn parse_lambda_event(part: &str) -> anyhow::Result<Lambda> {
+    let parts: Vec<&str> = part.split(':').collect();
+    if parts.len() != 3 {
+        return Err(anyhow::anyhow!("Invalid lambda event format. Expected 'event:event_data:statement'"));
+    }
+
+    let event_type = parts[0];
+    let event_data: Vec<String> = parts[1].split(',')
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .collect();
+
+    if event_data.is_empty() {
+        return Err(anyhow::anyhow!("Event data cannot be empty"));
+    }
+
+    let event = match event_type {
+        "model_registered" => {
+            if event_data.len() != 1 {
+                return Err(anyhow::anyhow!("model_registered event requires exactly one model tag"));
+            }
+            LambdaEvent::ModelRegistered {
+                model_tag: event_data[0].clone(),
+            }
+        },
+        "model_updated" => {
+            if event_data.len() != 1 {
+                return Err(anyhow::anyhow!("model_updated event requires exactly one model tag"));
+            }
+            LambdaEvent::ModelUpdated {
+                model_tag: event_data[0].clone(),
+            }
+        },
+        _ => return Err(anyhow::anyhow!("Invalid event type. Expected 'model_registered' or 'model_updated'")),
+    };
+
+    Ok(Lambda {
+        event,
+        statement: parts[2].to_string(),
+    })
 }
 
 // Parses clap cli argument which is expected to be in the format:
