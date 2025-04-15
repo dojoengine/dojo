@@ -5,7 +5,6 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Result;
-use async_recursion::async_recursion;
 use bitflags::bitflags;
 use dojo_utils::provider as provider_utils;
 use dojo_world::contracts::world::WorldContractReader;
@@ -548,15 +547,16 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                         let last_block_number =
                             events_page.events.last().map_or(0, |e| e.block_number.unwrap());
 
-                        // Process events for this page, only including events up to our target block
+                        // Process events for this page, only including events up to our target
+                        // block
                         for event in events_page.events {
                             let block_number = event.block_number.unwrap();
                             if block_number > to {
                                 continue;
                             }
 
-                            // Then we skip all transactions until we reach the last pending processed
-                            // transaction (if any)
+                            // Then we skip all transactions until we reach the last pending
+                            // processed transaction (if any)
                             if let Some(last_contract_tx) = last_contract_tx_tmp {
                                 if event.transaction_hash != last_contract_tx {
                                     continue;
