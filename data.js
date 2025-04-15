@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1744684173358,
+  "lastUpdate": 1744684285499,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -61645,6 +61645,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 46154868285,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2a0060019d55755c56c6177ce6a66e3cf51c1f1d",
+          "message": "refactor(torii-libp2p): non browser environments without webrtc (#3159)\n\n* refactor(torii-libp2p): non browser environments without webrtc\n\n* condiitonal swarm\n\n* fmt\n\n* websys only for wasm\n\n* f\n\n* build behaviour fn\n\n* chore",
+          "timestamp": "2025-04-15T02:12:58Z",
+          "tree_id": "1d181925ee9cbfaec6b8dee89655dc8ee8af7b3d",
+          "url": "https://github.com/dojoengine/dojo/commit/2a0060019d55755c56c6177ce6a66e3cf51c1f1d"
+        },
+        "date": 1744684282123,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2632703,
+            "range": "± 38546",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 394016,
+            "range": "± 20359",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2617128341,
+            "range": "± 223786515",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 16734575,
+            "range": "± 256347",
             "unit": "ns/iter"
           }
         ]
