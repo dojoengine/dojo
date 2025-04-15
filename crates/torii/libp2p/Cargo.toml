@@ -32,7 +32,7 @@ libp2p-webrtc = { git = "https://github.com/libp2p/rust-libp2p", features = [ "p
 
 [dev-dependencies]
 indexmap.workspace = true
-katana-runner.workspace = true
+katana-runner = { git = "https://github.com/dojoengine/katana", rev = "5cb249c0fa59fa6b7c88b32557e7baf8944cdb3d" }
 tempfile.workspace = true
 tokio.workspace = true
 tracing-subscriber.workspace = true

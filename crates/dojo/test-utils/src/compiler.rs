@@ -8,8 +8,7 @@ use assert_fs::TempDir;
 use camino::{Utf8Path, Utf8PathBuf};
 use scarb::compiler::{CompilationUnit, Profile};
 use scarb::core::{Config, TargetKind};
-use scarb::ops;
-use scarb::ops::{CompileOpts, FeaturesOpts, FeaturesSelector};
+use scarb::ops::{self, CompilationUnitsOpts, CompileOpts, FeaturesOpts, FeaturesSelector};
 use scarb_ui::Verbosity;
 use toml::{Table, Value};
 
@@ -320,8 +319,10 @@ pub fn corelib() -> PathBuf {
     let features_opts =
         FeaturesOpts { features: FeaturesSelector::AllFeatures, no_default_features: false };
 
+    let cu_opts = CompilationUnitsOpts { ignore_cairo_version: false, load_prebuilt_macros: false };
+
     let compilation_units =
-        ops::generate_compilation_units(&resolve, &features_opts, true, &ws).unwrap();
+        ops::generate_compilation_units(&resolve, &features_opts, &ws, cu_opts).unwrap();
 
     if let CompilationUnit::Cairo(unit) = &compilation_units[0] {
         unit.core_package_component().expect("should have component").targets[0]

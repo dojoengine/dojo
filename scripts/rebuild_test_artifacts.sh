@@ -4,7 +4,6 @@
 # cairo artifacts ONLY if they don't exist.
 # This script gives an easy way to remove those artifacts.
 
-cargo build -r --bin katana
 cargo build -r --bin sozo
 
 # Some formatting.
@@ -37,7 +36,7 @@ cargo +nightly-2024-08-28 fmt --all -- "$@"
 ./target/release/sozo test --manifest-path crates/dojo/core-cairo-test/Scarb.toml
 
 # Generates the database for testing by migrating the spawn and move example.
-KATANA_RUNNER_BIN=./target/release/katana cargo generate-test-db
+KATANA_RUNNER_BIN=/tmp/katana cargo generate-test-db
 
 # Extracts the database for testing.
 bash ./scripts/extract_test_db.sh

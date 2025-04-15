@@ -39,7 +39,7 @@ camino.workspace = true
 dojo-test-utils = { workspace = true, features = [ "build-examples" ] }
 dojo-utils.workspace = true
 dojo-world = { workspace = true, features = [ "ipfs" ] }
-katana-runner.workspace = true
+katana-runner = { git = "https://github.com/dojoengine/katana", rev = "5cb249c0fa59fa6b7c88b32557e7baf8944cdb3d" }
 scarb.workspace = true
 serial_test = "2.0.0"
 starknet.workspace = true
