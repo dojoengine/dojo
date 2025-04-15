@@ -7,7 +7,9 @@ edition.workspace = true
 
 [dependencies]
 starknet.workspace = true
-openzeppelin.workspace = true
+openzeppelin_account.workspace = true
+openzeppelin_introspection.workspace = true
+openzeppelin_upgrades.workspace = true
 
 [[target.starknet-contract]]
 sierra = true

@@ -45,6 +45,7 @@ trait IUpgradeable<T> {
 #[starknet::contract]
 mod appchain_messaging {
     use starknet::{ContractAddress, ClassHash};
+    use starknet::storage::Map;
     use debug::PrintTrait;
 
     use super::{IAppchainMessaging, IUpgradeable};
@@ -59,10 +60,10 @@ mod appchain_messaging {
         // The nonce for messages sent from Starknet.
         sn_to_appc_nonce: felt252,
         // Ledger of messages hashes sent from Starknet to the appchain.
-        sn_to_appc_messages: LegacyMap::<felt252, felt252>,
+        sn_to_appc_messages: Map::<felt252, felt252>,
         // Ledger of messages hashes registered from the appchain and a refcount
         // associated to it.
-        appc_to_sn_messages: LegacyMap::<felt252, felt252>,
+        appc_to_sn_messages: Map::<felt252, felt252>,
     }
 
     #[event]
@@ -151,7 +152,7 @@ mod appchain_messaging {
     ///
     /// The hash of the message from the Appchain to Starknet.
     fn compute_hash_appc_to_sn(
-        from_address: ContractAddress, to_address: ContractAddress, payload: Span<felt252>
+        from_address: ContractAddress, to_address: ContractAddress, payload: Span<felt252>,
     ) -> felt252 {
         let mut hash_data: Array<felt252> = array![
             from_address.into(), to_address.into(), payload.len().into(),
@@ -190,7 +191,7 @@ mod appchain_messaging {
         to_address: ContractAddress,
         selector: felt252,
         payload: Span<felt252>,
-        nonce: felt252
+        nonce: felt252,
     ) -> felt252 {
         let mut hash_data = array![
             from_address.into(), to_address.into(), nonce, selector, payload.len().into(),
@@ -212,7 +213,7 @@ mod appchain_messaging {
     impl AppchainMessagingUpgradeImpl of IUpgradeable<ContractState> {
         fn upgrade(ref self: ContractState, class_hash: ClassHash) {
             assert(
-                starknet::get_caller_address() == self.owner.read(), 'Unauthorized replace class'
+                starknet::get_caller_address() == self.owner.read(), 'Unauthorized replace class',
             );
 
             match starknet::replace_class_syscall(class_hash) {
@@ -225,7 +226,7 @@ mod appchain_messaging {
     #[abi(embed_v0)]
     impl AppchainMessagingImpl of IAppchainMessaging<ContractState> {
         fn update_appchain_account_address(
-            ref self: ContractState, appchain_address: ContractAddress
+            ref self: ContractState, appchain_address: ContractAddress,
         ) {
             assert(starknet::get_caller_address() == self.owner.read(), 'Unauthorized update');
 
@@ -236,13 +237,15 @@ mod appchain_messaging {
             ref self: ContractState,
             to_address: ContractAddress,
             selector: felt252,
-            payload: Span<felt252>
+            payload: Span<felt252>,
         ) -> (felt252, felt252) {
             let from_address = starknet::get_caller_address();
             let nonce = self.sn_to_appc_nonce.read() + 1;
             self.sn_to_appc_nonce.write(nonce);
 
-            let msg_hash = compute_hash_sn_to_appc(from_address, to_address, selector, payload, nonce);
+            let msg_hash = compute_hash_sn_to_appc(
+                from_address, to_address, selector, payload, nonce,
+            );
 
             self
                 .emit(
@@ -253,7 +256,7 @@ mod appchain_messaging {
                         selector,
                         nonce,
                         payload,
-                    }
+                    },
                 );
 
             self.sn_to_appc_messages.write(msg_hash, nonce);
@@ -261,7 +264,7 @@ mod appchain_messaging {
         }
 
         fn add_messages_hashes_from_appchain(
-            ref self: ContractState, messages_hashes: Span<felt252>
+            ref self: ContractState, messages_hashes: Span<felt252>,
         ) {
             assert(
                 self.appchain_account.read() == starknet::get_caller_address(),
@@ -286,7 +289,7 @@ mod appchain_messaging {
         }
 
         fn consume_message_from_appchain(
-            ref self: ContractState, from_address: ContractAddress, payload: Span<felt252>
+            ref self: ContractState, from_address: ContractAddress, payload: Span<felt252>,
         ) -> felt252 {
             let to_address = starknet::get_caller_address();
 
@@ -299,7 +302,7 @@ mod appchain_messaging {
                 .emit(
                     MessageConsumed {
                         message_hash: msg_hash, from: from_address, to: to_address, payload,
-                    }
+                    },
                 );
 
             self.appc_to_sn_messages.write(msg_hash, count - 1);

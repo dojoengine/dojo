@@ -8,6 +8,7 @@
 #[starknet::contract(account)]
 pub mod Account {
     use openzeppelin_account::AccountComponent;
+    use openzeppelin_account::extensions::SRC9Component;
     use openzeppelin_introspection::src5::SRC5Component;
     use openzeppelin_upgrades::UpgradeableComponent;
     use openzeppelin_upgrades::interface::IUpgradeable;
@@ -15,15 +16,18 @@ pub mod Account {
 
     component!(path: AccountComponent, storage: account, event: AccountEvent);
     component!(path: SRC5Component, storage: src5, event: SRC5Event);
+    component!(path: SRC9Component, storage: src9, event: SRC9Event);
     component!(path: UpgradeableComponent, storage: upgradeable, event: UpgradeableEvent);
 
     // Account Mixin
     #[abi(embed_v0)]
     pub(crate) impl AccountMixinImpl =
         AccountComponent::AccountMixinImpl<ContractState>;
-    impl AccountInternalImpl = AccountComponent::InternalImpl<ContractState>;
+    #[abi(embed_v0)]
+    impl OutsideExecutionV2Impl = SRC9Component::OutsideExecutionV2Impl<ContractState>;
 
-    // Upgradeable
+    impl AccountInternalImpl = AccountComponent::InternalImpl<ContractState>;
+    impl OutsideExecutionInternalImpl = SRC9Component::InternalImpl<ContractState>;
     impl UpgradeableInternalImpl = UpgradeableComponent::InternalImpl<ContractState>;
 
     #[storage]
@@ -32,6 +36,8 @@ pub mod Account {
         pub account: AccountComponent::Storage,
         #[substorage(v0)]
         pub src5: SRC5Component::Storage,
+        #[substorage(v0)]
+        src9: SRC9Component::Storage,
         #[substorage(v0)]
         pub upgradeable: UpgradeableComponent::Storage
     }
@@ -44,12 +50,15 @@ pub mod Account {
         #[flat]
         SRC5Event: SRC5Component::Event,
         #[flat]
+        SRC9Event: SRC9Component::Event,
+        #[flat]
         UpgradeableEvent: UpgradeableComponent::Event
     }
 
     #[constructor]
     pub fn constructor(ref self: ContractState, public_key: felt252) {
         self.account.initializer(public_key);
+        self.src9.initializer();
     }
 
     #[abi(embed_v0)]

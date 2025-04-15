@@ -1,5 +1,5 @@
 [workspace]
-members = [ "account", "messaging/cairo", "misc"]
+members = ["account", "messaging/cairo", "misc"]
 
 [workspace.package]
 version = "0.1.0"
@@ -8,6 +8,8 @@ edition = "2023_11"
 # See more keys and their definitions at https://docs.swmansion.com/scarb/docs/reference/manifest.html
 
 [workspace.dependencies]
-starknet = "2.8.2"
-openzeppelin = { git = "https://github.com/OpenZeppelin/cairo-contracts.git", tag = "v0.17.0" }
+starknet = "2.9.4"
+openzeppelin_account = { git = "https://github.com/OpenZeppelin/cairo-contracts.git", tag = "v1.0.0" }
+openzeppelin_introspection = { git = "https://github.com/OpenZeppelin/cairo-contracts.git", tag = "v1.0.0" }
+openzeppelin_upgrades = { git = "https://github.com/OpenZeppelin/cairo-contracts.git", tag = "v1.0.0" }
 snforge_std = "0.30.0"
