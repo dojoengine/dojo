@@ -6,9 +6,9 @@
 use std::net::SocketAddr;
 use std::time::Duration;
 
-use jsonrpsee::RpcModule;
 use jsonrpsee::core::TEN_MB_SIZE_BYTES;
 use jsonrpsee::server::{AllowHosts, ServerBuilder, ServerHandle};
+use jsonrpsee::RpcModule;
 use tower::ServiceBuilder;
 use tracing::info;
 

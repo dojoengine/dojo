@@ -13,12 +13,12 @@ use clap::Args;
 use katana_node::config::execution::{DEFAULT_INVOCATION_MAX_STEPS, DEFAULT_VALIDATION_MAX_STEPS};
 #[cfg(feature = "server")]
 use katana_node::config::metrics::{DEFAULT_METRICS_ADDR, DEFAULT_METRICS_PORT};
+use katana_node::config::rpc::{
+    RpcModulesList, DEFAULT_RPC_MAX_CALL_GAS, DEFAULT_RPC_MAX_EVENT_PAGE_SIZE,
+    DEFAULT_RPC_MAX_PROOF_KEYS,
+};
 #[cfg(feature = "server")]
 use katana_node::config::rpc::{DEFAULT_RPC_ADDR, DEFAULT_RPC_PORT};
-use katana_node::config::rpc::{
-    DEFAULT_RPC_MAX_CALL_GAS, DEFAULT_RPC_MAX_EVENT_PAGE_SIZE, DEFAULT_RPC_MAX_PROOF_KEYS,
-    RpcModulesList,
-};
 use katana_primitives::block::BlockHashOrNumber;
 use katana_primitives::chain::ChainId;
 use katana_primitives::genesis::Genesis;
@@ -27,9 +27,9 @@ use katana_rpc::cors::HeaderValue;
 use serde::{Deserialize, Serialize};
 use url::Url;
 
-use crate::utils::{LogFormat, parse_block_hash_or_number, parse_genesis};
 #[cfg(feature = "server")]
 use crate::utils::{deserialize_cors_origins, serialize_cors_origins};
+use crate::utils::{parse_block_hash_or_number, parse_genesis, LogFormat};
 
 const DEFAULT_DEV_SEED: &str = "0";
 const DEFAULT_DEV_ACCOUNTS: u16 = 10;
