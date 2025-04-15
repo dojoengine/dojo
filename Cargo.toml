@@ -165,14 +165,9 @@ rpassword = "7.2.0"
 rstest = "0.18.2"
 rstest_reuse = "0.6.0"
 salsa = "0.16.1"
-#scarb = { git = "https://github.com/dojoengine/scarb", rev = "8a60513c03e72b8a84f3ac266c61aac40c565aca" }
-#scarb-metadata = { git = "https://github.com/dojoengine/scarb", rev = "8a60513c03e72b8a84f3ac266c61aac40c565aca" }
-#scarb-ui = { git = "https://github.com/dojoengine/scarb", rev = "8a60513c03e72b8a84f3ac266c61aac40c565aca" }
-
-scarb = { path = "/Users/glihm/swm/scarb/scarb" }
-scarb-metadata = { path = "/Users/glihm/swm/scarb/scarb-metadata" }
-scarb-ui = { path = "/Users/glihm/swm/scarb/utils/scarb-ui" }
-
+scarb = { git = "https://github.com/dojoengine/scarb", rev = "8b249d18f8b9f5e36d9de48cb11b4a287ac4e08d" }
+scarb-metadata = { git = "https://github.com/dojoengine/scarb", rev = "8b249d18f8b9f5e36d9de48cb11b4a287ac4e08d" }
+scarb-ui = { git = "https://github.com/dojoengine/scarb", rev = "8b249d18f8b9f5e36d9de48cb11b4a287ac4e08d" }
 semver = "1.0.5"
 serde = { version = "1.0", features = [ "derive" ] }
 serde_json = { version = "1.0", features = [ "arbitrary_precision" ] }
