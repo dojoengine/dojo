@@ -121,7 +121,6 @@ impl RelayClient {
                     libp2p_webrtc_websys::Transport::new(libp2p_webrtc_websys::Config::new(&key))
                 })
                 .expect("Failed to create WebRTC transport")
-                // NodeJS natively implements WebSocket transport, so we should be able to use it.
                 .with_other_transport(|key| {
                     libp2p_websocket_websys::Transport::default()
                         .upgrade(Version::V1)
