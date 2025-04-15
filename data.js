@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1744665471892,
+  "lastUpdate": 1744684173358,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -61615,6 +61615,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 18196526,
             "range": "± 725064",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2a0060019d55755c56c6177ce6a66e3cf51c1f1d",
+          "message": "refactor(torii-libp2p): non browser environments without webrtc (#3159)\n\n* refactor(torii-libp2p): non browser environments without webrtc\n\n* condiitonal swarm\n\n* fmt\n\n* websys only for wasm\n\n* f\n\n* build behaviour fn\n\n* chore",
+          "timestamp": "2025-04-15T02:12:58Z",
+          "tree_id": "1d181925ee9cbfaec6b8dee89655dc8ee8af7b3d",
+          "url": "https://github.com/dojoengine/dojo/commit/2a0060019d55755c56c6177ce6a66e3cf51c1f1d"
+        },
+        "date": 1744684169914,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 46154868285,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
