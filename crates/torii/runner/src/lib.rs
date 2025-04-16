@@ -151,9 +151,28 @@ impl Runner {
             .connect_with(readonly_options)
             .await?;
 
-        sqlx::migrate!("../migrations").run(&pool).await?;
         if let Some(migrations) = self.args.sql.migrations {
-            let migrator = sqlx::migrate::Migrator::new(migrations).await?;
+            // Create a temporary directory to combine migrations
+            let temp_migrations = TempDir::new()?;
+            
+            // Copy default migrations first
+            let default_migrations_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("../migrations");
+            for entry in std::fs::read_dir(default_migrations_dir)? {
+                let entry = entry?;
+                let target = temp_migrations.path().join(entry.file_name());
+                std::fs::copy(entry.path(), target)?;
+            }
+            
+            // Copy custom migrations
+            for entry in std::fs::read_dir(&migrations)? {
+                let entry = entry?;
+                let target = temp_migrations.path().join(entry.file_name());
+                std::fs::copy(entry.path(), target)?;
+            }
+
+            // Run combined migrations
+            let migrator = sqlx::migrate::Migrator::new(temp_migrations.path()).await?;
             migrator.run(&pool).await?;
         }
 
