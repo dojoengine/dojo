@@ -154,16 +154,16 @@ impl Runner {
         if let Some(migrations) = self.args.sql.migrations {
             // Create a temporary directory to combine migrations
             let temp_migrations = TempDir::new()?;
-            
+
             // Copy default migrations first
-            let default_migrations_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-                .join("../migrations");
+            let default_migrations_dir =
+                std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../migrations");
             for entry in std::fs::read_dir(default_migrations_dir)? {
                 let entry = entry?;
                 let target = temp_migrations.path().join(entry.file_name());
                 std::fs::copy(entry.path(), target)?;
             }
-            
+
             // Copy custom migrations
             for entry in std::fs::read_dir(&migrations)? {
                 let entry = entry?;
