@@ -494,6 +494,17 @@ impl Sql {
             }),
         ))?;
 
+        for hook in self.config.hooks.iter() {
+            match &hook.event {
+                HookEvent::ModelDeleted { model_tag } => {
+                    if model_table == *model_tag {
+                        self.executor.send(QueryMessage::other(hook.statement.clone(), vec![]))?;
+                    }
+                }
+                _ => {}
+            }
+        }
+
         Ok(())
     }
 
