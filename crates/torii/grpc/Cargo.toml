@@ -14,7 +14,7 @@ rayon.workspace = true
 starknet.workspace = true
 starknet-crypto.workspace = true
 thiserror.workspace = true
-torii-sqlite = { path = "../sqlite", optional = true }
+torii-sqlite = { workspace = true, optional = true }
 
 crypto-bigint.workspace = true
 serde.workspace = true
