@@ -7,7 +7,7 @@ use starknet::core::types::{Event, Felt, Transaction};
 use starknet::providers::Provider;
 use torii_sqlite::cache::ContractClassCache;
 use torii_sqlite::Sql;
-use torii_sqlite::types::Lambda;
+use torii_sqlite::types::Hook;
 use crate::task_manager::{TaskId, TaskPriority};
 
 pub mod controller;
@@ -36,7 +36,7 @@ pub mod upgrade_model;
 pub struct EventProcessorConfig {
     pub namespaces: HashSet<String>,
     pub strict_model_reader: bool,
-    pub lambdas: Vec<Lambda>,
+    pub hooks: Vec<Hook>,
 }
 
 impl EventProcessorConfig {

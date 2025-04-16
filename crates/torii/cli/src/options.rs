@@ -373,6 +373,7 @@ pub struct SqlOptions {
     /// A directory containing custom migrations to run.
     #[arg(
         long = "sql.migrations",
+        value_name = "PATH",
         help = "A directory containing custom migrations to run."
     )]
     pub migrations: Option<PathBuf>,

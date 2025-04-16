@@ -152,7 +152,10 @@ impl Runner {
             .await?;
 
         sqlx::migrate!("../migrations").run(&pool).await?;
-        sqlx::migrate::Migrator::new(source)::
+        if let Some(migrations) = self.args.sql.migrations {
+            let migrator = sqlx::migrate::Migrator::new(migrations).await?;
+            migrator.run(&pool).await?;
+        }
 
         // Get world address
         let world = WorldContractReader::new(world_address, provider.clone());
@@ -217,6 +220,7 @@ impl Runner {
                 event_processor_config: EventProcessorConfig {
                     strict_model_reader: self.args.indexing.strict_model_reader,
                     namespaces: self.args.indexing.namespaces.into_iter().collect(),
+                    hooks: self.args.sql.hooks,
                 },
                 world_block: self.args.indexing.world_block,
             },
