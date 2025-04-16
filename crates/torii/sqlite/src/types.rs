@@ -276,13 +276,13 @@ pub struct ModelIndices {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct Lambda {
-    pub event: LambdaEvent,
+pub struct Hook {
+    pub event: HookEvent,
     pub statement: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub enum LambdaEvent {
+pub enum HookEvent {
     ModelRegistered {
         model_tag: String,
     },

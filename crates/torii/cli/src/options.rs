@@ -1,4 +1,5 @@
 use std::net::{IpAddr, Ipv4Addr};
+use std::path::PathBuf;
 use std::str::FromStr;
 
 use anyhow::Context;
@@ -7,7 +8,7 @@ use merge_options::MergeOptions;
 use serde::ser::SerializeSeq;
 use serde::{Deserialize, Serialize};
 use starknet::core::types::Felt;
-use torii_sqlite::types::{Contract, ContractType, Lambda, LambdaEvent, ModelIndices};
+use torii_sqlite::types::{Contract, ContractType, Hook, HookEvent, ModelIndices};
 
 pub const DEFAULT_HTTP_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::LOCALHOST);
 pub const DEFAULT_HTTP_PORT: u16 = 8080;
@@ -362,12 +363,19 @@ pub struct SqlOptions {
     /// A set of SQL statements to execute after some specific events.
     /// Like after a model has been registered, or after an entity model has been updated etc...
     #[arg(
-        long = "sql.lambdas",
+        long = "sql.hooks",
         value_delimiter = ',',
-        value_parser = parse_lambda_event,
+        value_parser = parse_hook,
         help = "A set of SQL statements to execute after some specific events."
     )]
-    pub lambdas: Vec<Lambda>,
+    pub hooks: Vec<Hook>,
+
+    /// A directory containing custom migrations to run.
+    #[arg(
+        long = "sql.migrations",
+        help = "A directory containing custom migrations to run."
+    )]
+    pub migrations: Option<PathBuf>,
 }
 
 impl Default for SqlOptions {
@@ -378,7 +386,8 @@ impl Default for SqlOptions {
             historical: vec![],
             page_size: DEFAULT_DATABASE_PAGE_SIZE,
             cache_size: DEFAULT_DATABASE_CACHE_SIZE,
-            lambdas: vec![],
+            hooks: vec![],
+            migrations: None,
         }
     }
 }
@@ -420,10 +429,10 @@ fn parse_model_indices(part: &str) -> anyhow::Result<ModelIndices> {
 
 // Parses clap cli argument which is expected to be in the format:
 // - event:event_data:statement
-fn parse_lambda_event(part: &str) -> anyhow::Result<Lambda> {
+fn parse_hook(part: &str) -> anyhow::Result<Hook> {
     let parts: Vec<&str> = part.split(':').collect();
     if parts.len() != 3 {
-        return Err(anyhow::anyhow!("Invalid lambda event format. Expected 'event:event_data:statement'"));
+        return Err(anyhow::anyhow!("Invalid hook format. Expected 'event:event_data:statement'"));
     }
 
     let event_type = parts[0];
@@ -441,7 +450,7 @@ fn parse_lambda_event(part: &str) -> anyhow::Result<Lambda> {
             if event_data.len() != 1 {
                 return Err(anyhow::anyhow!("model_registered event requires exactly one model tag"));
             }
-            LambdaEvent::ModelRegistered {
+            HookEvent::ModelRegistered {
                 model_tag: event_data[0].clone(),
             }
         },
@@ -449,14 +458,14 @@ fn parse_lambda_event(part: &str) -> anyhow::Result<Lambda> {
             if event_data.len() != 1 {
                 return Err(anyhow::anyhow!("model_updated event requires exactly one model tag"));
             }
-            LambdaEvent::ModelUpdated {
+            HookEvent::ModelUpdated {
                 model_tag: event_data[0].clone(),
             }
         },
         _ => return Err(anyhow::anyhow!("Invalid event type. Expected 'model_registered' or 'model_updated'")),
     };
 
-    Ok(Lambda {
+    Ok(Hook {
         event,
         statement: parts[2].to_string(),
     })

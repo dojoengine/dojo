@@ -152,6 +152,7 @@ impl Runner {
             .await?;
 
         sqlx::migrate!("../migrations").run(&pool).await?;
+        sqlx::migrate::Migrator::new(source)::
 
         // Get world address
         let world = WorldContractReader::new(world_address, provider.clone());
