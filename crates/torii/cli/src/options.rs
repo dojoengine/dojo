@@ -459,9 +459,15 @@ fn parse_hook(part: &str) -> anyhow::Result<Hook> {
             }
             HookEvent::ModelUpdated { model_tag: event_data[0].clone() }
         }
+        "model_deleted" => {
+            if event_data.len() != 1 {
+                return Err(anyhow::anyhow!("model_deleted event requires exactly one model tag"));
+            }
+            HookEvent::ModelDeleted { model_tag: event_data[0].clone() }
+        }
         _ => {
             return Err(anyhow::anyhow!(
-                "Invalid event type. Expected 'model_registered' or 'model_updated'"
+                "Invalid event type. Expected 'model_registered', 'model_updated' or 'model_deleted'"
             ));
         }
     };
