@@ -317,7 +317,10 @@ impl Sql {
             match &hook.event {
                 HookEvent::ModelRegistered { model_tag } => {
                     if namespaced_name == *model_tag {
-                        self.executor.send(QueryMessage::other(hook.statement.clone(), vec![Argument::FieldElement(selector)]))?;
+                        self.executor.send(QueryMessage::other(
+                            hook.statement.clone(),
+                            vec![Argument::FieldElement(selector)],
+                        ))?;
                     }
                 }
                 _ => {}
