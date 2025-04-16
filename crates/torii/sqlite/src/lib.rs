@@ -390,7 +390,7 @@ impl Sql {
             match &hook.event {
                 HookEvent::ModelUpdated { model_tag } => {
                     if namespaced_name == *model_tag {
-                        self.executor.send(QueryMessage::other(hook.statement.clone(), vec![]))?;
+                        self.executor.send(QueryMessage::other(hook.statement.clone(), vec![Argument::String(entity_id.clone())]))?;
                     }
                 }
                 _ => {}
@@ -460,7 +460,7 @@ impl Sql {
             match &hook.event {
                 HookEvent::ModelUpdated { model_tag } => {
                     if namespaced_name == *model_tag {
-                        self.executor.send(QueryMessage::other(hook.statement.clone(), vec![]))?;
+                        self.executor.send(QueryMessage::other(hook.statement.clone(), vec![Argument::String(entity_id.clone())]))?;
                     }
                 }
                 _ => {}
@@ -498,7 +498,7 @@ impl Sql {
             match &hook.event {
                 HookEvent::ModelDeleted { model_tag } => {
                     if model_table == *model_tag {
-                        self.executor.send(QueryMessage::other(hook.statement.clone(), vec![]))?;
+                        self.executor.send(QueryMessage::other(hook.statement.clone(), vec![Argument::String(entity_id.clone())]))?;
                     }
                 }
                 _ => {}
