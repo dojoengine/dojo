@@ -15,7 +15,7 @@ use sqlx::{Pool, Sqlite};
 use starknet::core::types::{Event, Felt};
 use starknet_crypto::poseidon_hash_many;
 use tokio::sync::mpsc::UnboundedSender;
-use types::ParsedCall;
+use types::{HookEvent, ParsedCall};
 use utils::felts_to_sql_string;
 
 use crate::constants::SQL_FELT_DELIMITER;
@@ -23,7 +23,7 @@ use crate::executor::{
     Argument, DeleteEntityQuery, EventMessageQuery, QueryMessage, QueryType, SetHeadQuery,
     UpdateCursorsQuery,
 };
-use crate::types::{Contract, ModelIndices};
+use crate::types::{Contract, Hook, ModelIndices};
 use crate::utils::utc_dt_string_from_timestamp;
 
 pub mod cache;
@@ -43,6 +43,7 @@ pub struct SqlConfig {
     pub all_model_indices: bool,
     pub model_indices: Vec<ModelIndices>,
     pub historical_models: HashSet<String>,
+    pub hooks: Vec<Hook>,
 }
 
 #[derive(Debug, Clone)]
@@ -312,6 +313,17 @@ impl Sql {
             )
             .await;
 
+        for hook in self.config.hooks.iter() {
+            match &hook.event {
+                HookEvent::ModelRegistered { model_tag } => {
+                    if namespaced_name == *model_tag {
+                        self.executor.send(QueryMessage::other(hook.statement.clone(), vec![]))?;
+                    }
+                }
+                _ => {}
+            }
+        }
+
         Ok(())
     }
 
@@ -374,6 +386,17 @@ impl Sql {
 
         self.set_entity_model(&namespaced_name, event_id, &entity_id, &entity, block_timestamp)?;
 
+        for hook in self.config.hooks.iter() {
+            match &hook.event {
+                HookEvent::ModelUpdated { model_tag } => {
+                    if namespaced_name == *model_tag {
+                        self.executor.send(QueryMessage::other(hook.statement.clone(), vec![]))?;
+                    }
+                }
+                _ => {}
+            }
+        }
+        
         Ok(())
     }
 
@@ -397,7 +420,7 @@ impl Sql {
         let (model_namespace, model_name) = namespaced_name.split_once('-').unwrap();
 
         let entity_id = format!("{:#x}", poseidon_hash_many(&keys));
-        let model_id = format!("{:#x}", compute_selector_from_names(model_namespace, model_name));
+        let model_id = format!("{:#x}", compute_selector_from_names(model_namespace, &model_name));
 
         let keys_str = felts_to_sql_string(&keys);
         let block_timestamp_str = utc_dt_string_from_timestamp(block_timestamp);
@@ -432,6 +455,17 @@ impl Sql {
             &entity,
             block_timestamp,
         )?;
+
+        for hook in self.config.hooks.iter() {
+            match &hook.event {
+                HookEvent::ModelUpdated { model_tag } => {
+                    if namespaced_name == *model_tag {
+                        self.executor.send(QueryMessage::other(hook.statement.clone(), vec![]))?;
+                    }
+                }
+                _ => {}
+            }
+        }
 
         Ok(())
     }

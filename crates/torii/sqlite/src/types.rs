@@ -285,4 +285,5 @@ pub struct Hook {
 pub enum HookEvent {
     ModelRegistered { model_tag: String },
     ModelUpdated { model_tag: String },
+    ModelDeleted { model_tag: String },
 }

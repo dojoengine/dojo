@@ -187,6 +187,7 @@ impl Runner {
                 all_model_indices: self.args.sql.all_model_indices,
                 model_indices: self.args.sql.model_indices.unwrap_or_default(),
                 historical_models: self.args.sql.historical.clone().into_iter().collect(),
+                hooks: self.args.sql.hooks,
             },
         )
         .await?;
@@ -220,7 +221,6 @@ impl Runner {
                 event_processor_config: EventProcessorConfig {
                     strict_model_reader: self.args.indexing.strict_model_reader,
                     namespaces: self.args.indexing.namespaces.into_iter().collect(),
-                    hooks: self.args.sql.hooks,
                 },
                 world_block: self.args.indexing.world_block,
             },
