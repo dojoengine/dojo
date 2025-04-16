@@ -275,11 +275,11 @@ impl Sql {
              packed_size=EXCLUDED.packed_size, unpacked_size=EXCLUDED.unpacked_size, \
              executed_at=EXCLUDED.executed_at RETURNING *";
         let arguments = vec![
-            Argument::String(format!("{:#x}", selector)),
+            Argument::FieldElement(selector),
             Argument::String(namespace.to_string()),
             Argument::String(model.name().to_string()),
-            Argument::String(format!("{class_hash:#x}")),
-            Argument::String(format!("{contract_address:#x}")),
+            Argument::FieldElement(class_hash),
+            Argument::FieldElement(contract_address),
             Argument::String(serde_json::to_string(&layout)?),
             Argument::String(serde_json::to_string(&namespaced_schema)?),
             Argument::Int(packed_size as i64),
@@ -317,7 +317,7 @@ impl Sql {
             match &hook.event {
                 HookEvent::ModelRegistered { model_tag } => {
                     if namespaced_name == *model_tag {
-                        self.executor.send(QueryMessage::other(hook.statement.clone(), vec![]))?;
+                        self.executor.send(QueryMessage::other(hook.statement.clone(), vec![Argument::FieldElement(selector)]))?;
                     }
                 }
                 _ => {}
