@@ -10,7 +10,6 @@ set -e
 
 HOME_DIR=${XDG_CONFIG_HOME:-$HOME}
 BASE_DIR=${DOJO_DIR-"$HOME_DIR/.dojo"}
-LOCAL_VERSION_REGISTRY="$BASE_DIR/versions.json"
 
 DEFAULT_TOOLCHAIN_DIR="$BASE_DIR/bin"
 INSTALLATION_DIR="$BASE_DIR/installed"
@@ -26,6 +25,9 @@ VERSIONS_JSON_URL="https://raw.githubusercontent.com/dojoengine/dojo/new-dojoup/
 
 # All components
 COMPONENT_BINARY=("sozo" "torii" "katana" "dojo-language-server")
+
+# The last dojo version that is still using the 'legacy' format ie all binaries are included in the monorepo
+MAX_LEGACY_DOJO_VERSION=1.4.0
 
 get_repo_for_component() {
   local component=$1
@@ -50,18 +52,21 @@ get_repo_for_component() {
   return 1
 }
 
-set_active_version() {
-  local version=$1
+set_default_version() {
+	local version=$1
+	requested_toolchain_path=$TOOLCHAIN_DIR/$version
 
-  toolchain_version_dir=$TOOLCHAIN_DIR/$version
-  if [[ -d "$toolchain_version_dir" ]]; then
-    # Check if ACTIVE_DIR already points to the correct path
-    if [[ ! -L "$DEFAULT_TOOLCHAIN_DIR" ]] || [[ "$(readlink -f "$DEFAULT_TOOLCHAIN_DIR")" != "$toolchain_version_dir" ]]; then
-      ln -sF "$toolchain_version_dir" "$DEFAULT_TOOLCHAIN_DIR"
-    fi
-  else
-    err "Toolchain $version is not installed."
-  fi
+	# Return error if the directory path to the requested toolchain doesn't exist
+	if [[ ! -d "$requested_toolchain_path" ]]; then
+		err "The requested toolchain \`$version\` is not installed."
+	fi
+
+	# Do nothing if DEFAULT_TOOLCHAIN_DIR is already pointing to the requested toolchain
+	if [[ -L "$DEFAULT_TOOLCHAIN_DIR" ]] && [[ "$(readlink -f "$DEFAULT_TOOLCHAIN_DIR")" == "$requested_toolchain_path" ]]; then
+		return
+	fi
+
+	ln -sfh "$requested_toolchain_path" "$DEFAULT_TOOLCHAIN_DIR"
 }
 
 # Function to get the active Dojo version
@@ -157,260 +162,329 @@ use_version() {
     return 0
   fi
 
-  # Check if this version exists for at least one binary
-  found=0
-  for component in "${COMPONENT_BINARY[@]}"; do
-    if [ -d "$TOOLCHAIN_DIR/$version" ]; then
-      found=1
-      break
-    fi
-  done
+  # Set default version and update symlinks
+  set_default_version "$version"
 
-  if [ "$found" -eq 0 ]; then
-    err "Version $version is not installed for any binary"
-  fi
-
-  # Set global version and update symlinks
-  set_active_version "$version"
-
-  say "Now using Dojo version: $version"
+  say "now using dojo toolchain: $version"
 }
 
 install_dojo() {
-  need_cmd git
-  need_cmd curl
+	need_cmd jq
+	need_cmd curl
 
-  # Process options for installation
-  while [[ $1 ]]; do
-    case $1 in
-      --)               shift; break;;
-      -v|--version)     shift; DOJOUP_VERSION=$1;;
-      -h|--help)
-        usage_install
-        exit 0
-        ;;
-      *)
-        warn "unknown install option: $1"
-        usage_install
-        exit 1
-        ;;
-    esac
-    shift
-  done
+	# Process options for installation
+	# If the first argument is provided and doesn't start with a dash, treat it as the version
+	if [[ $1 && ! $1 =~ ^- ]]; then
+		DOJOUP_VERSION=$1
+		shift
+	fi
 
-  # Default to the main dojo repo
-  DOJOUP_REPO=${DOJOUP_REPO-$DOJO_REPO}
-  # Store user specified version separately
-  DOJOUP_USER_VERSION=${DOJOUP_VERSION}
+	# Process any remaining options
+	while [[ $1 ]]; do
+	case $1 in
+	    --)               shift; break;;
+	    -h|--help)
+	    usage_install
+	    exit 0
+	    ;;
+	    *)
+	    warn "unknown install option: $1"
+	    usage_install
+	    exit 1
+	    ;;
+	esac
+	shift
+	done
 
-  # Install by downloading binaries
-  DOJOUP_VERSION=${DOJOUP_VERSION-stable}
-  DOJOUP_TAG=$DOJOUP_VERSION
+	# Default to the main dojo repo
+	DOJOUP_REPO=${DOJOUP_REPO-$DOJO_REPO}
+	# Store user specified version separately
+	DOJOUP_USER_VERSION=${DOJOUP_VERSION}
 
-  # Normalize versions (handle channels, versions without v prefix)
-  if [[ "$DOJOUP_VERSION" == "stable" ]]; then
-    # Fetch the list of releases from the GitHub API and filter out `prerelease`` releases and `alpha`` releases
-    DOJOUP_TAG=$(curl -s "https://api.github.com/repos/${DOJO_REPO}/releases" \
-      | grep -oE '"tag_name": "[^"]*"|"prerelease": (true|false)' \
-      | grep -B1 '"prerelease": false' \
-      | grep '"tag_name":' \
-      | grep -oE '"v[0-9]*\.[0-9]*\.[0-9]*(-rc\.[0-9]*)?"' \
-      | tr -d '"' \
-      | head -n 1)
-    DOJOUP_VERSION=$DOJOUP_TAG
-  elif [[ "$DOJOUP_VERSION" == [[:digit:]]* ]]; then
-    # Add v prefix
-    DOJOUP_VERSION="v${DOJOUP_VERSION}"
-    DOJOUP_TAG="${DOJOUP_VERSION}"
-  fi
+	# Install by downloading binaries
+	DOJOUP_VERSION=${DOJOUP_VERSION-stable}
+	DOJOUP_TAG=$DOJOUP_VERSION
 
-  say "installing dojo (version ${DOJOUP_VERSION}, tag ${DOJOUP_TAG})"
+	# Normalize versions (handle channels, versions without v prefix)
+	if [[ "$DOJOUP_VERSION" == "stable" ]]; then
+		# Fetch the list of releases from the GitHub API and filter out `prerelease`` releases and `alpha`` releases
+		DOJOUP_TAG=$(curl -s "https://api.github.com/repos/${DOJO_REPO}/releases" \
+		    | grep -oE '"tag_name": "[^"]*"|"prerelease": (true|false)' \
+		    | grep -B1 '"prerelease": false' \
+		    | grep '"tag_name":' \
+		    | grep -oE '"v[0-9]*\.[0-9]*\.[0-9]*(-rc\.[0-9]*)?"' \
+		    | tr -d '"' \
+		    | head -n 1)
+		DOJOUP_VERSION=$DOJOUP_TAG
+	elif [[ "$DOJOUP_VERSION" == [[:digit:]]* ]]; then
+		# Add v prefix
+		DOJOUP_VERSION="v${DOJOUP_VERSION}"
+		DOJOUP_TAG="${DOJOUP_VERSION}"
+	fi
 
-  # Determine platform and architecture
-  PLATFORM="$(uname -s)"
-  EXT="tar.gz"
-  case $PLATFORM in
-     Linux)
-       PLATFORM="linux"
-       ;;
-     Darwin)
-       PLATFORM="darwin"
-       ;;
-     MINGW*)
-       EXT="zip"
-       PLATFORM="win32"
-       ;;
-     *)
-       err "unsupported platform: $PLATFORM"
-       ;;
-  esac
+	say "installing dojo (version ${DOJOUP_VERSION}, tag ${DOJOUP_TAG})"
 
-  ARCHITECTURE="$(uname -m)"
-  if [ "${ARCHITECTURE}" = "x86_64" ]; then
-     # Redirect stderr to /dev/null to avoid printing errors if non Rosetta.
-     if [ "$(sysctl -n sysctl.proc_translated 2>/dev/null)" = "1" ]; then
-       ARCHITECTURE="arm64" # Rosetta.
-     else
-       ARCHITECTURE="amd64" # Intel.
-     fi
-  elif [ "${ARCHITECTURE}" = "arm64" ] ||[ "${ARCHITECTURE}" = "aarch64" ] ; then
-     ARCHITECTURE="arm64" # Arm.
-  else
-     ARCHITECTURE="amd64" # Amd.
-  fi
+	# Determine platform and architecture
+	PLATFORM="$(uname -s)"
+	EXT="tar.gz"
+	case $PLATFORM in
+	    Linux)
+	    PLATFORM="linux"
+	    ;;
+	    Darwin)
+	    PLATFORM="darwin"
+	    ;;
+	    MINGW*)
+	    EXT="zip"
+	    PLATFORM="win32"
+	    ;;
+	    *)
+	    err "unsupported platform: $PLATFORM"
+	    ;;
+	esac
 
-  TMP_VERSIONS_FILE=$(mktemp)
-  EXTRACT_DIR=""
+	ARCHITECTURE="$(uname -m)"
+	if [ "${ARCHITECTURE}" = "x86_64" ]; then
+	    # Redirect stderr to /dev/null to avoid printing errors if non Rosetta.
+	    if [ "$(sysctl -n sysctl.proc_translated 2>/dev/null)" = "1" ]; then
+	    ARCHITECTURE="arm64" # Rosetta.
+	    else
+	    ARCHITECTURE="amd64" # Intel.
+	    fi
+	elif [ "${ARCHITECTURE}" = "arm64" ] ||[ "${ARCHITECTURE}" = "aarch64" ] ; then
+	    ARCHITECTURE="arm64" # Arm.
+	else
+	    ARCHITECTURE="amd64" # Amd.
+	fi
 
-  # Try to download the latest versions.json
-  if download "$VERSIONS_JSON_URL" "$TMP_VERSIONS_FILE" 2>/dev/null; then
-      say "syncing dojo toolchain..."
-      # If download successful, update local copy
-      cp $TMP_VERSIONS_FILE $LOCAL_VERSION_REGISTRY
-  else
-      # If no local copy exists either, error out
-      rm -f "$TMP_VERSIONS_FILE"
-      err "failed to sync toolchain versions."
-  fi
+	VERSIONS_REGISTRY=$(mktemp)
 
-  # Parse the versions.json file to get compatible versions
-  # Remove the 'v' prefix from DOJOUP_VERSION for json lookup
-  DOJO_VERSION_NO_V=$(echo "$DOJOUP_VERSION" | sed 's/^v//')
+	# Try to download the latest versions.json
+	say "syncing dojo toolchain..."
+	if ! download "$VERSIONS_JSON_URL" "$VERSIONS_REGISTRY" 2>/dev/null; then
+	    # If no local copy exists either, error out
+	    rm -f "$VERSIONS_REGISTRY"
+	    err "failed to sync toolchain versions."
+	fi
 
-  # Track which archives we've already downloaded to avoid redundancy
-  DOWNLOADED_ARCHIVES=""
-  INSTALLED_BINARIES=()
+	# Parse the versions.json file to get compatible versions
+	# Remove the 'v' prefix from DOJOUP_VERSION for json lookup
+	DOJO_VERSION_NO_V=$(echo "$DOJOUP_VERSION" | sed 's/^v//')
 
-  # Install binary
-  for component in "${COMPONENT_BINARY[@]}"; do
-    repo=$(get_repo_for_component "$component")
+	# Track which archives we've already downloaded to avoid redundancy
+	DOWNLOADED_ARCHIVES=""
+	INSTALLED_BINARIES=()
 
-    say "installing $component"
+	# get the latest component version that is compatible with the given dojo version
+	get_compatible_version() {
+		local binary=$1
+		compatible_version=$(jq -r ".[\"$DOJO_VERSION_NO_V\"][\"$binary\"][0]" "$VERSIONS_REGISTRY")
+		if [ "$compatible_version" = "null" ]; then
+		err "No compatible version found for ${binary}"
+		else
+		echo "$compatible_version"
+		fi
+	}
 
-    # Determine the version of each component that is compatible with the given Dojo version
-    if [ "$repo" = "$DOJO_REPO" ]; then
-      # Dojo repo binaries use dojo version
-      bin_version=$DOJO_VERSION_NO_V
-      bin_tag=$DOJOUP_TAG
-    else
-      # Other repo binaries need their compatible version from versions.json
-      bin_version=$(extract_compatible_version "$component")
-      bin_tag="v$bin_version"
-    fi
+	# for backward compatibitliy with the legacy monorepo format
+	do_legacy_install() {
+		# Dojo repo binaries use dojo version
+		bin_version=$DOJO_VERSION_NO_V
+		bin_tag=$DOJOUP_TAG
 
-    # Create directory for this binary version
-    bin_dir="$COMPONENTS_DIR/$component/$bin_version"
-    ensure mkdir -p "$bin_dir"
+		RELEASE_URL="https://github.com/${DOJO_REPO}/releases/download/${bin_tag}/"
+		local bin_path
 
-    # Compute the URL of the release tarball
-    RELEASE_URL="https://github.com/${repo}/releases/download/${bin_tag}/"
-    local bin_path
+		ARCHIVE_NAME="dojo_${bin_tag}_${PLATFORM}_${ARCHITECTURE}.$EXT"
+		BIN_ARCHIVE_URL="${RELEASE_URL}${ARCHIVE_NAME}"
+		EXTRACT_DIR=$(mktemp -d)
 
-    # Download the component binary
-    if [ "$repo" = "$DOJO_REPO" ]; then
-       # For dojo repo, all binaries are in a single archive
-       ARCHIVE_NAME="dojo_${bin_tag}_${PLATFORM}_${ARCHITECTURE}.$EXT"
-       BIN_ARCHIVE_URL="${RELEASE_URL}${ARCHIVE_NAME}"
+		# Check if the version exists in the repository
+		if ! curl --output /dev/null --silent --head --fail "$BIN_ARCHIVE_URL"; then
+			err "Version ${bin_tag} for ${component} does not exist."
+		fi
 
-       # Check if we've already downloaded this archive
-       if [[ "$DOWNLOADED_ARCHIVES" != *"$ARCHIVE_NAME"* ]]; then
-         EXTRACT_DIR=$(mktemp -d)
+		# Download and extract the binaries archive
+		if [ "$PLATFORM" = "win32" ]; then
+			tmp="$(mktemp -d 2>/dev/null || echo ".")/dojo.zip"
+			ensure download "$BIN_ARCHIVE_URL" "$tmp"
+			ensure unzip "$tmp" -d "$EXTRACT_DIR"
+			rm -f "$tmp"
+		else
+			ensure download "$BIN_ARCHIVE_URL" | ensure tar -xzC "$EXTRACT_DIR"
+		fi
 
-         # Check if the version exists in the repository
-         if ! curl --output /dev/null --silent --head --fail "$BIN_ARCHIVE_URL"; then
-           err "Version ${bin_tag} for ${component} does not exist."
-         fi
+		for component in "${COMPONENT_BINARY[@]}"; do
+			say "installing $component"
 
-         # Download and extract the binaries archive
-         if [ "$PLATFORM" = "win32" ]; then
-           tmp="$(mktemp -d 2>/dev/null || echo ".")/dojo.zip"
-           ensure download "$BIN_ARCHIVE_URL" "$tmp"
-           ensure unzip "$tmp" -d "$EXTRACT_DIR"
-           rm -f "$tmp"
-         else
-           ensure download "$BIN_ARCHIVE_URL" | ensure tar -xzC "$EXTRACT_DIR"
-         fi
+			# the path to the extracted the component binary
+			extracted_bin_dir="$EXTRACT_DIR/$component"
+			component_bin_path="$COMPONENTS_DIR/$component/$bin_version"
 
-         # Remember that we've downloaded this archive
-         DOWNLOADED_ARCHIVES="$DOWNLOADED_ARCHIVES $ARCHIVE_NAME"
-       fi
+			# Create directory for this binary version
+			ensure mkdir -p "$component_bin_path"
 
-       # Move only this binary to its version directory
-       if [ -f "$EXTRACT_DIR/$component" ]; then
-         ensure cp "$EXTRACT_DIR/$component" "$bin_dir/"
-       else
-         err "Version ${bin_tag} for ${component} is not found in the downloaded archive file."
-       fi
+			# Move only this binary to its version directory
+			if [ -f "$extracted_bin_dir" ]; then
+				ensure cp "$extracted_bin_dir" "$component_bin_path/"
+			else
+				err "Version ${bin_tag} for ${component} is not found in the downloaded archive file."
+			fi
 
-       bin_path="$bin_dir/$component"
-    else
-       # For other repos like katana, each binary has its own archive
-       BIN_ARCHIVE_URL="${RELEASE_URL}${component}_${bin_tag}_${PLATFORM}_${ARCHITECTURE}.$EXT"
+			# Only check for Scarb version if we're installing sozo
+			if [ "$component" = "sozo" ]; then
+				check_scarb $component_bin_path
+			fi
 
-       # Check if the version exists in the repository
-       if ! curl --output /dev/null --silent --head --fail "$BIN_ARCHIVE_URL"; then
-         err "Version ${bin_tag} for ${component} does not exist."
-       fi
+			bin_path="$component_bin_path/$component"
+			INSTALLED_BINARIES+=("$bin_path:$component")
+		done
+	}
 
-       # Download and extract the binaries archive
-       if [ "$PLATFORM" = "win32" ]; then
-         tmp="$(mktemp -d 2>/dev/null || echo ".")/dojo.zip"
-         ensure download "$BIN_ARCHIVE_URL" "$tmp"
-         ensure unzip "$tmp" -d "$bin_dir"
-         rm -f "$tmp"
-       else
-         ensure download "$BIN_ARCHIVE_URL" | ensure tar -xzC "$bin_dir"
-       fi
+	do_install() {
+		for component in "${COMPONENT_BINARY[@]}"; do
+			say "installing $component"
 
-       bin_path="$bin_dir/$component"
-    fi
+			# Determine the version of each component that is compatible with the given Dojo version
+			repo=$(get_repo_for_component "$component")
+			if [ "$repo" = "$DOJO_REPO" ]; then
+				# Dojo repo binaries use dojo version
+				bin_version=$DOJO_VERSION_NO_V
+				bin_tag=$DOJOUP_TAG
+			else
+				bin_version=$(get_compatible_version "$component")
+				bin_tag="v$bin_version"
+			fi
 
-    INSTALLED_BINARIES+=("$bin_path:$component")
+			# Create directory for this binary version
+			component_bin_path="$COMPONENTS_DIR/$component/$bin_version"
+			ensure mkdir -p "$component_bin_path"
 
-    # Only check for Scarb version if we're installing sozo
-    if [ "$component" = "sozo" ]; then
-      check_scarb $bin_path
-    fi
-  done
+			# Compute the URL of the release tarball
+			RELEASE_URL="https://github.com/${repo}/releases/download/${bin_tag}/"
+			local bin_path
 
-  # Create version-specific directory in DOJO_DIR for symlinks
-  TOOLCHAIN_VER_DIR="$TOOLCHAIN_DIR/$DOJO_VERSION_NO_V"
-  ensure mkdir -p "$TOOLCHAIN_VER_DIR"
+			# Download the component binary
+			if [ "$repo" = "$DOJO_REPO" ]; then
+				# For dojo repo, all binaries are in a single archive
+				ARCHIVE_NAME="dojo_${bin_tag}_${PLATFORM}_${ARCHITECTURE}.$EXT"
+				BIN_ARCHIVE_URL="${RELEASE_URL}${ARCHIVE_NAME}"
 
-  # Create symlinks for all installed binaries in the version-specific directory
-  for binary_entry in "${INSTALLED_BINARIES[@]}"; do
-    bin_path="${binary_entry%%:*}"
-    bin_name="${binary_entry##*:}"
+				    # Check if we've already downloaded this archive
+				if [[ "$DOWNLOADED_ARCHIVES" != *"$ARCHIVE_NAME"* ]]; then
+				    EXTRACT_DIR=$(mktemp -d)
 
-    # Create symlink to the binary
-    if [ -f "$bin_path" ]; then
-      ln -sf "$bin_path" "$TOOLCHAIN_VER_DIR/$bin_name"
-    fi
-  done
+				    # Check if the version exists in the repository
+				    if ! curl --output /dev/null --silent --head --fail "$BIN_ARCHIVE_URL"; then
+				        err "Version ${bin_tag} for ${component} does not exist."
+				    fi
 
-  # Clean up temporary files
-  if [ -n "$EXTRACT_DIR" ] && [ -d "$EXTRACT_DIR" ]; then
-      rm -rf "$EXTRACT_DIR"
-  fi
-  rm -f "$TMP_VERSIONS_FILE"
+				    # Download and extract the binaries archive
+				    if [ "$PLATFORM" = "win32" ]; then
+				        tmp="$(mktemp -d 2>/dev/null || echo ".")/dojo.zip"
+				        ensure download "$BIN_ARCHIVE_URL" "$tmp"
+				        ensure unzip "$tmp" -d "$EXTRACT_DIR"
+				        rm -f "$tmp"
+				    else
+				        ensure download "$BIN_ARCHIVE_URL" | ensure tar -xzC "$EXTRACT_DIR"
+				    fi
 
-  # Set the global version to the one we just installed
-  set_active_version "$DOJO_VERSION_NO_V"
+				    # Remember that we've downloaded this archive
+				    DOWNLOADED_ARCHIVES="$DOWNLOADED_ARCHIVES $ARCHIVE_NAME"
+				fi
 
-  say "done!"
-  welcome_msg
+				    # Move only this binary to its version directory
+				if [ -f "$EXTRACT_DIR/$component" ]; then
+				    ensure cp "$EXTRACT_DIR/$component" "$component_bin_path/"
+				else
+				    err "Version ${bin_tag} for ${component} is not found in the downloaded archive file."
+				fi
+
+				bin_path="$component_bin_path/$component"
+			else
+			    # For other repos like katana, each binary has its own archive
+			    BIN_ARCHIVE_URL="${RELEASE_URL}${component}_${bin_tag}_${PLATFORM}_${ARCHITECTURE}.$EXT"
+
+			    # Check if the version exists in the repository
+				if ! curl --output /dev/null --silent --head --fail "$BIN_ARCHIVE_URL"; then
+				    err "Version ${bin_tag} for ${component} does not exist."
+				fi
+
+			    # Download and extract the binaries archive
+				if [ "$PLATFORM" = "win32" ]; then
+				    tmp="$(mktemp -d 2>/dev/null || echo ".")/dojo.zip"
+				    ensure download "$BIN_ARCHIVE_URL" "$tmp"
+				    ensure unzip "$tmp" -d "$component_bin_path"
+				    rm -f "$tmp"
+				else
+				    ensure download "$BIN_ARCHIVE_URL" | ensure tar -xzC "$component_bin_path"
+				fi
+
+			    bin_path="$component_bin_path/$component"
+			fi
+
+			INSTALLED_BINARIES+=("$bin_path:$component")
+
+			# Only check for Scarb version if we're installing sozo
+			if [ "$component" = "sozo" ]; then
+				check_scarb $bin_path
+			fi
+		done
+	}
+
+	if [ "$(version_is_bigger_than "$DOJO_VERSION_NO_V" "$MAX_LEGACY_DOJO_VERSION" )" -eq -1 ]; then
+		do_legacy_install
+	else
+		do_install
+	fi
+
+	# Create version-specific directory in DOJO_DIR for symlinks
+	TOOLCHAIN_VER_DIR="$TOOLCHAIN_DIR/$DOJO_VERSION_NO_V"
+	ensure mkdir -p "$TOOLCHAIN_VER_DIR"
+
+	# Create symlinks for all installed binaries in the version-specific directory
+	for binary_entry in "${INSTALLED_BINARIES[@]}"; do
+		bin_path="${binary_entry%%:*}"
+		bin_name="${binary_entry##*:}"
+
+		# Create symlink to the binary
+		if [ -f "$bin_path" ]; then
+		    ln -sf "$bin_path" "$TOOLCHAIN_VER_DIR/$bin_name"
+		fi
+	done
+
+	# Set the global version to the one we just installed
+	set_default_version "$DOJO_VERSION_NO_V"
+
+	say "done!"
+	welcome_msg
+
+	cleanup() {
+		# Clean up temporary files
+		if [ -n "$EXTRACT_DIR" ] && [ -d "$EXTRACT_DIR" ]; then
+			rm -rf "$EXTRACT_DIR"
+		fi
+
+		if [ -f "$VERSIONS_REGISTRY" ]; then
+			rm -f "$VERSIONS_REGISTRY"
+		fi
+	}
+
+	cleanup
 }
 
 usage_install() {
   cat 1>&2 <<'EOF'
-Install a specific version of Dojo.
+Install the Dojo toolchain.
 
 USAGE:
-    dojoup install [OPTIONS]
+    dojoup install [VERSION]
+
+ARGS:
+    VERSION             The version to install (if not specified, defaults to the latest stable version)
 
 OPTIONS:
     -h, --help          Print help information
-    -v, --version       Install a specific version (e.g., `dojoup install --version 1.4.0`)
 EOF
 }
 
@@ -459,31 +533,6 @@ download() {
       curl -#L "$1"
     else
       wget --show-progress -qO- "$1"
-    fi
-  fi
-}
-
-# Function to extract version from JSON
-extract_compatible_version() {
-  local binary=$1
-
-  # Prefer jq for proper JSON parsing if available
-  if command -v jq &> /dev/null; then
-    compatible_version=$(jq -r ".[\"$DOJO_VERSION_NO_V\"][\"$binary\"][0]" "$TMP_VERSIONS_FILE")
-    if [ "$compatible_version" = "null" ]; then
-      # Fallback to the same version as dojo if not found in versions.json
-      echo "$DOJO_VERSION_NO_V"
-    else
-      echo "$compatible_version"
-    fi
-  else
-    # Fallback method without jq (very basic)
-    compatible_version=$(grep -o "\"$DOJO_VERSION_NO_V\":{[^}]*\"$binary\":\\[\"[0-9.]*\"" "$TMP_VERSIONS_FILE" | grep -o "[0-9.]*\"" | tr -d '"')
-    if [ -z "$compatible_version" ]; then
-      # If not found, use the dojo version
-      echo "$DOJO_VERSION_NO_V"
-    else
-      echo "$compatible_version"
     fi
   fi
 }
@@ -568,6 +617,53 @@ check_scarb() {
       fi
     fi
   fi
+}
+
+# Function to compare version strings (like "1.2.3" vs "1.3.0")
+# Takes two version strings as input and compares them semantically
+# Returns: -1 if version1 < version2, 0 if equal, 1 if version1 > version2
+# This is useful for determining if a newer version is available or for sorting versions
+version_is_bigger_than() {
+    if [[ $# -ne 2 ]]; then
+        echo "Usage: compare_versions version1 version2"
+        echo "Returns: -1 if version1 < version2, 0 if equal, 1 if version1 > version2"
+        return 2
+    fi
+
+    local v1=($1)
+    local v2=($2)
+
+    # Split versions by dots
+    IFS='.' read -ra v1_parts <<< "$1"
+    IFS='.' read -ra v2_parts <<< "$2"
+
+    # Compare each component
+    for i in "${!v1_parts[@]}"; do
+        # If we've reached the end of v2 but v1 has more parts, v1 is greater
+        if [[ -z "${v2_parts[i]}" ]]; then
+            echo 1
+            return 0
+        fi
+
+        # Compare the numeric values
+        if (( v1_parts[i] > v2_parts[i] )); then
+            echo 1
+            return 0
+        elif (( v1_parts[i] < v2_parts[i] )); then
+            echo -1
+            return 0
+        fi
+    done
+
+    # If we get here and v2 has more parts, v2 is greater
+    if [[ "${#v1_parts[@]}" -lt "${#v2_parts[@]}" ]]; then
+        echo -1
+        return 0
+    fi
+
+    # Versions are equal
+    echo 0
+    return 0
 }
 
 main() {

@@ -124,6 +124,15 @@ jobs:
       - name: Build binaries
         run: cargo build --release --bins --target ${{ matrix.job.target }}
 
+      - name: Download component (Katana)
+        uses: ./.github/workflows/download-component
+        with:
+          component: katana
+          dojo_version: ${{ needs.prepare.outputs.tag_name }}
+          platform: ${{ env.PLATFORM_NAME }}
+          arch: ${{ env.ARCH }}
+          target_dir: ./target/${{ env.TARGET }}/release/
+
       - name: Archive binaries
         id: artifacts
         env:

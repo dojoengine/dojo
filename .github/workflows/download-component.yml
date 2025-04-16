@@ -1,0 +1,70 @@
+name: Download Component
+
+on:
+  workflow_call:
+    inputs:
+      component:
+        required: true
+        type: string
+        description: "Name of the component to download (e.g., katana)"
+      dojo_version:
+        required: true
+        type: string
+        description: "Dojo version to use (e.g., v0.3.0 or v0.3.0-preview.1)"
+      platform:
+        required: true
+        type: string
+        description: "Platform to download for (linux, darwin, win32)"
+      arch:
+        required: true
+        type: string
+        description: "Architecture to download for (amd64, arm64)"
+      target_dir:
+        required: true
+        type: string
+        description: "Directory to place the downloaded binary"
+    outputs:
+      component_version:
+        description: "The resolved component version"
+        value: ${{ jobs.download.outputs.component_version }}
+
+jobs:
+  download:
+    runs-on: ubuntu-latest
+    outputs:
+      component_version: ${{ steps.resolve_version.outputs.version }}
+
+    steps:
+      - uses: actions/checkout@v3
+
+      # resolve the compatible component version from the version register (ie versions.json file)
+      - name: Resolve component version
+        id: resolve_version
+        shell: bash
+        run: |
+          DOJO_VERSION=$(echo "${{ inputs.dojo_version }}" | sed 's/^v//')
+          # Remove preview suffix if present
+          DOJO_VERSION=$(echo $DOJO_VERSION | sed 's/-preview\.[0-9]*//')
+
+          # Read component version from versions.json
+          COMPONENT_VERSION=$(jq -r ".[\"$DOJO_VERSION\"].${{ inputs.component }}[0]" versions.json)
+          echo "version=v$COMPONENT_VERSION" >> $GITHUB_OUTPUT
+          echo "Using ${{ inputs.component }} version v$COMPONENT_VERSION for Dojo version $DOJO_VERSION"
+
+      - name: Download component
+        env:
+          VERSION_NAME: ${{ steps.resolve_version.outputs.version }}
+          COMPONENT_NAME: ${{ inputs.component }}
+          PLATFORM_NAME: ${{ inputs.platform }}
+          ARCH: ${{ inputs.arch }}
+          TARGET_DIR: ${{ inputs.target_dir }}
+        run: |
+          if [ "$PLATFORM_NAME" == "linux" ] || [ "$PLATFORM_NAME" == "darwin" ]; then
+            curl -L -o ${COMPONENT_NAME}.tar.gz "https://github.com/dojoengine/${COMPONENT_NAME}/releases/download/${VERSION_NAME}/${COMPONENT_NAME}_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz"
+            mkdir -p ${TARGET_DIR}
+            tar -xzvf ${COMPONENT_NAME}.tar.gz -C ${TARGET_DIR}
+          else
+            curl -L -o ${COMPONENT_NAME}.zip "https://github.com/dojoengine/${COMPONENT_NAME}/releases/download/${VERSION_NAME}/${COMPONENT_NAME}_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.zip"
+            mkdir -p ${TARGET_DIR}
+            unzip -o ${COMPONENT_NAME}.zip -d ${TARGET_DIR}
+          fi
