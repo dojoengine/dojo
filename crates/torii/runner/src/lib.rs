@@ -174,6 +174,8 @@ impl Runner {
             // Run combined migrations
             let migrator = sqlx::migrate::Migrator::new(temp_migrations.path()).await?;
             migrator.run(&pool).await?;
+        } else {
+            sqlx::migrate!("../migrations").run(&pool).await?;
         }
 
         // Get world address
