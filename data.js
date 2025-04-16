@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1744728775898,
+  "lastUpdate": 1744839614464,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -61849,6 +61849,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 16855059,
             "range": "± 212147",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a64d6ad7b4121d27baed03ed28da1b6519a344ef",
+          "message": "refactor(torii-sqlite): move types into its own crate (#3170)\n\n* move out\n\n* fmt",
+          "timestamp": "2025-04-16T21:23:44Z",
+          "tree_id": "aa402427f3e3d8ff02097c8bcef3338e5270025a",
+          "url": "https://github.com/dojoengine/dojo/commit/a64d6ad7b4121d27baed03ed28da1b6519a344ef"
+        },
+        "date": 1744839611206,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 47422570012,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
