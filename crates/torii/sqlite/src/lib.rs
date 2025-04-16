@@ -314,16 +314,13 @@ impl Sql {
             .await;
 
         for hook in self.config.hooks.iter() {
-            match &hook.event {
-                HookEvent::ModelRegistered { model_tag } => {
-                    if namespaced_name == *model_tag {
-                        self.executor.send(QueryMessage::other(
-                            hook.statement.clone(),
-                            vec![Argument::FieldElement(selector)],
-                        ))?;
-                    }
+            if let HookEvent::ModelRegistered { model_tag } = &hook.event {
+                if namespaced_name == *model_tag {
+                    self.executor.send(QueryMessage::other(
+                        hook.statement.clone(),
+                        vec![Argument::FieldElement(selector)],
+                    ))?;
                 }
-                _ => {}
             }
         }
 
@@ -390,16 +387,13 @@ impl Sql {
         self.set_entity_model(&namespaced_name, event_id, &entity_id, &entity, block_timestamp)?;
 
         for hook in self.config.hooks.iter() {
-            match &hook.event {
-                HookEvent::ModelUpdated { model_tag } => {
-                    if namespaced_name == *model_tag {
-                        self.executor.send(QueryMessage::other(
-                            hook.statement.clone(),
-                            vec![Argument::String(entity_id.clone())],
-                        ))?;
-                    }
+            if let HookEvent::ModelUpdated { model_tag } = &hook.event {
+                if namespaced_name == *model_tag {
+                    self.executor.send(QueryMessage::other(
+                        hook.statement.clone(),
+                        vec![Argument::String(entity_id.clone())],
+                    ))?;
                 }
-                _ => {}
             }
         }
 
@@ -463,16 +457,13 @@ impl Sql {
         )?;
 
         for hook in self.config.hooks.iter() {
-            match &hook.event {
-                HookEvent::ModelUpdated { model_tag } => {
-                    if namespaced_name == *model_tag {
-                        self.executor.send(QueryMessage::other(
-                            hook.statement.clone(),
-                            vec![Argument::String(entity_id.clone())],
-                        ))?;
-                    }
+            if let HookEvent::ModelUpdated { model_tag } = &hook.event {
+                if namespaced_name == *model_tag {
+                    self.executor.send(QueryMessage::other(
+                        hook.statement.clone(),
+                        vec![Argument::String(entity_id.clone())],
+                    ))?;
                 }
-                _ => {}
             }
         }
 
@@ -504,16 +495,13 @@ impl Sql {
         ))?;
 
         for hook in self.config.hooks.iter() {
-            match &hook.event {
-                HookEvent::ModelDeleted { model_tag } => {
-                    if model_table == *model_tag {
-                        self.executor.send(QueryMessage::other(
-                            hook.statement.clone(),
-                            vec![Argument::String(entity_id.clone())],
-                        ))?;
-                    }
+            if let HookEvent::ModelDeleted { model_tag } = &hook.event {
+                if model_table == *model_tag {
+                    self.executor.send(QueryMessage::other(
+                        hook.statement.clone(),
+                        vec![Argument::String(entity_id.clone())],
+                    ))?;
                 }
-                _ => {}
             }
         }
 
