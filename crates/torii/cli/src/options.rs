@@ -467,7 +467,8 @@ fn parse_hook(part: &str) -> anyhow::Result<Hook> {
         }
         _ => {
             return Err(anyhow::anyhow!(
-                "Invalid event type. Expected 'model_registered', 'model_updated' or 'model_deleted'"
+                "Invalid event type. Expected 'model_registered', 'model_updated' or \
+                 'model_deleted'"
             ));
         }
     };
