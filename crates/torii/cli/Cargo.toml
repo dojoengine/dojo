@@ -13,7 +13,7 @@ dojo-utils.workspace = true
 serde.workspace = true
 starknet.workspace = true
 toml.workspace = true
-torii-sqlite.workspace = true
+torii-sqlite-types.workspace = true
 url.workspace = true
 merge-options.workspace = true
 

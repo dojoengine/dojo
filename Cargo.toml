@@ -25,7 +25,7 @@ members = [
 	"crates/torii/types-test",
 	"examples/spawn-and-move",
 	"scripts/verify_db_balances",
-	"xtask/generate-test-db",
+	"xtask/generate-test-db", "crates/torii/sqlite/types",
 ]
 
 [workspace.package]
@@ -77,7 +77,8 @@ torii-mcp = { path = "crates/torii/mcp" }
 torii-relay = { path = "crates/torii/libp2p" }
 torii-runner = { path = "crates/torii/runner" }
 torii-server = { path = "crates/torii/server" }
-torii-sqlite = { path = "crates/torii/sqlite" }
+torii-sqlite = { path = "crates/torii/sqlite/sqlite" }
+torii-sqlite-types = { path = "crates/torii/sqlite/types" }
 torii-typed-data = { path = "crates/torii/typed-data" }
 
 # sozo

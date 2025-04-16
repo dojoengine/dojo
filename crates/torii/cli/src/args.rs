@@ -115,7 +115,7 @@ mod test {
     use std::net::{IpAddr, Ipv4Addr};
     use std::str::FromStr;
 
-    use torii_sqlite::types::{Contract, ContractType, ModelIndices};
+    use torii_sqlite_types::{Contract, ContractType, ModelIndices};
 
     use super::*;
 

@@ -12353,7 +12353,7 @@ dependencies = [
  "serde",
  "starknet 0.14.0",
  "toml 0.8.19",
- "torii-sqlite",
+ "torii-sqlite-types",
  "url",
 ]
 
@@ -12684,7 +12684,20 @@ dependencies = [
  "tokio",
  "tokio-util",
  "torii-indexer",
+ "torii-sqlite-types",
  "tracing",
+]
+
+[[package]]
+name = "torii-sqlite-types"
+version = "1.4.1"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "dojo-types 1.4.1",
+ "serde",
+ "sqlx",
+ "starknet 0.12.0",
 ]
 
 [[package]]
