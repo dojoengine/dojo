@@ -8,16 +8,10 @@ version.workspace = true
 [dependencies]
 anyhow.workspace = true
 assert_fs.workspace = true
-async-trait.workspace = true
 camino.workspace = true
 scarb.workspace = true
 scarb-ui.workspace = true
-serde.workspace = true
-serde_json.workspace = true
-starknet.workspace = true
-thiserror.workspace = true
 toml.workspace = true
-url.workspace = true
 
 [build-dependencies]
 assert_fs.workspace = true
