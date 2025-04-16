@@ -6229,6 +6229,7 @@ dependencies = [
 [[package]]
 name = "katana-node-bindings"
 version = "1.2.3"
+source = "git+https://github.com/dojoengine/katana?rev=5cb249c0fa59fa6b7c88b32557e7baf8944cdb3d#5cb249c0fa59fa6b7c88b32557e7baf8944cdb3d"
 dependencies = [
  "regex",
  "serde",
@@ -6242,7 +6243,7 @@ dependencies = [
 [[package]]
 name = "katana-node-bindings"
 version = "1.2.3"
-source = "git+https://github.com/dojoengine/katana?rev=5cb249c0fa59fa6b7c88b32557e7baf8944cdb3d#5cb249c0fa59fa6b7c88b32557e7baf8944cdb3d"
+source = "git+https://github.com/dojoengine/katana#b522e3fcdbd7918589ba0266e69b6b38ff345fe6"
 dependencies = [
  "regex",
  "serde",
@@ -6251,18 +6252,6 @@ dependencies = [
  "thiserror 1.0.63",
  "tracing",
  "url",
-]
-
-[[package]]
-name = "katana-runner"
-version = "1.2.3"
-dependencies = [
- "anyhow",
- "assert_fs",
- "katana-node-bindings 1.2.3",
- "katana-runner-macro 1.2.3",
- "starknet 0.12.0",
- "tokio",
 ]
 
 [[package]]
@@ -6279,8 +6268,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "katana-runner"
+version = "1.2.3"
+source = "git+https://github.com/dojoengine/katana#b522e3fcdbd7918589ba0266e69b6b38ff345fe6"
+dependencies = [
+ "anyhow",
+ "assert_fs",
+ "katana-node-bindings 1.2.3 (git+https://github.com/dojoengine/katana)",
+ "katana-runner-macro 1.2.3 (git+https://github.com/dojoengine/katana)",
+ "starknet 0.12.0",
+ "tokio",
+]
+
+[[package]]
 name = "katana-runner-macro"
 version = "1.2.3"
+source = "git+https://github.com/dojoengine/katana?rev=5cb249c0fa59fa6b7c88b32557e7baf8944cdb3d#5cb249c0fa59fa6b7c88b32557e7baf8944cdb3d"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -6290,7 +6293,7 @@ dependencies = [
 [[package]]
 name = "katana-runner-macro"
 version = "1.2.3"
-source = "git+https://github.com/dojoengine/katana?rev=5cb249c0fa59fa6b7c88b32557e7baf8944cdb3d#5cb249c0fa59fa6b7c88b32557e7baf8944cdb3d"
+source = "git+https://github.com/dojoengine/katana#b522e3fcdbd7918589ba0266e69b6b38ff345fe6"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -13917,7 +13920,7 @@ dependencies = [
  "dojo-test-utils",
  "dojo-utils",
  "dojo-world",
- "katana-runner 1.2.3",
+ "katana-runner 1.2.3 (git+https://github.com/dojoengine/katana)",
  "reqwest 0.11.27",
  "scarb",
  "sozo-ops",
