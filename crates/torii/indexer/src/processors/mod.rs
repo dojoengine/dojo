@@ -6,8 +6,9 @@ use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::{Event, Felt, Transaction};
 use starknet::providers::Provider;
 use torii_sqlite::cache::ContractClassCache;
-use torii_sqlite::Sql;
 use torii_sqlite::types::Hook;
+use torii_sqlite::Sql;
+
 use crate::task_manager::{TaskId, TaskPriority};
 
 pub mod controller;

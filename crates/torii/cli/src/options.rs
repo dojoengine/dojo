@@ -437,10 +437,8 @@ fn parse_hook(part: &str) -> anyhow::Result<Hook> {
     }
 
     let event_type = parts[0];
-    let event_data: Vec<String> = parts[1].split(',')
-        .map(|s| s.trim().to_string())
-        .filter(|s| !s.is_empty())
-        .collect();
+    let event_data: Vec<String> =
+        parts[1].split(',').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect();
 
     if event_data.is_empty() {
         return Err(anyhow::anyhow!("Event data cannot be empty"));
@@ -449,27 +447,26 @@ fn parse_hook(part: &str) -> anyhow::Result<Hook> {
     let event = match event_type {
         "model_registered" => {
             if event_data.len() != 1 {
-                return Err(anyhow::anyhow!("model_registered event requires exactly one model tag"));
+                return Err(anyhow::anyhow!(
+                    "model_registered event requires exactly one model tag"
+                ));
             }
-            HookEvent::ModelRegistered {
-                model_tag: event_data[0].clone(),
-            }
-        },
+            HookEvent::ModelRegistered { model_tag: event_data[0].clone() }
+        }
         "model_updated" => {
             if event_data.len() != 1 {
                 return Err(anyhow::anyhow!("model_updated event requires exactly one model tag"));
             }
-            HookEvent::ModelUpdated {
-                model_tag: event_data[0].clone(),
-            }
-        },
-        _ => return Err(anyhow::anyhow!("Invalid event type. Expected 'model_registered' or 'model_updated'")),
+            HookEvent::ModelUpdated { model_tag: event_data[0].clone() }
+        }
+        _ => {
+            return Err(anyhow::anyhow!(
+                "Invalid event type. Expected 'model_registered' or 'model_updated'"
+            ));
+        }
     };
 
-    Ok(Hook {
-        event,
-        statement: parts[2].to_string(),
-    })
+    Ok(Hook { event, statement: parts[2].to_string() })
 }
 
 // Parses clap cli argument which is expected to be in the format:

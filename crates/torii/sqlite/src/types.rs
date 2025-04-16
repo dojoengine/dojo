@@ -283,10 +283,6 @@ pub struct Hook {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum HookEvent {
-    ModelRegistered {
-        model_tag: String,
-    },
-    ModelUpdated {
-        model_tag: String,
-    },
+    ModelRegistered { model_tag: String },
+    ModelUpdated { model_tag: String },
 }
