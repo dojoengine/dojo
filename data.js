@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1744906433122,
+  "lastUpdate": 1744906578937,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -62113,6 +62113,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 51913433471,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "contact@luca-steeb.com",
+            "name": "Luca Steeb",
+            "username": "steebchen"
+          },
+          "committer": {
+            "email": "contact@luca-steeb.com",
+            "name": "Luca Steeb",
+            "username": "steebchen"
+          },
+          "distinct": true,
+          "id": "cf19cf349388caee05b9bae7ecdc7a16a6092c43",
+          "message": "ci(workflows): update runner to ubuntu-latest-32-cores\n\nOptimized workflow by increasing runner cores and using the\nlatest Ubuntu version for release and docker build jobs.",
+          "timestamp": "2025-04-17T22:56:51+07:00",
+          "tree_id": "a9d5c42ce2b665cb4c3771419a713f59ec949971",
+          "url": "https://github.com/dojoengine/dojo/commit/cf19cf349388caee05b9bae7ecdc7a16a6092c43"
+        },
+        "date": 1744906575536,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2514481,
+            "range": "± 50514",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 391881,
+            "range": "± 10164",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2883751700,
+            "range": "± 221560001",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 17898555,
+            "range": "± 938660",
             "unit": "ns/iter"
           }
         ]
