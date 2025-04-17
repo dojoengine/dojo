@@ -19,9 +19,10 @@ FROM ubuntu:24.04 AS base
 RUN apt-get update && \
     apt-get install -y curl ca-certificates tini && \
     apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* && \
+    cp /usr/bin/tini /tini
 
-ENTRYPOINT ["/usr/bin/tini", "--"]
+ENTRYPOINT ["/tini", "--"]
 
 ARG TARGETPLATFORM
 
