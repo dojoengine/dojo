@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1744898058230,
+  "lastUpdate": 1744898238259,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -62035,6 +62035,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 49714925814,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "contact@luca-steeb.com",
+            "name": "Luca Steeb",
+            "username": "steebchen"
+          },
+          "committer": {
+            "email": "contact@luca-steeb.com",
+            "name": "Luca Steeb",
+            "username": "steebchen"
+          },
+          "distinct": true,
+          "id": "6b582df57c25f9246721c3a4cae012760898be92",
+          "message": "ci(release): update runner to ubuntu-22.04 for docker build",
+          "timestamp": "2025-04-17T20:37:51+07:00",
+          "tree_id": "5fc23154fa86bd984e22874d11331efb2c1f61ea",
+          "url": "https://github.com/dojoengine/dojo/commit/6b582df57c25f9246721c3a4cae012760898be92"
+        },
+        "date": 1744898234205,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2578066,
+            "range": "± 26492",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 394598,
+            "range": "± 12288",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2869354608,
+            "range": "± 248910930",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 17033243,
+            "range": "± 177422",
             "unit": "ns/iter"
           }
         ]
