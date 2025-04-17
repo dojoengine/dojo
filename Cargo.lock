@@ -3420,7 +3420,7 @@ checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
 
 [[package]]
 name = "dojo-bindgen"
-version = "1.4.1"
+version = "1.4.2"
 dependencies = [
  "anyhow",
  "assert_matches",
@@ -3443,32 +3443,11 @@ dependencies = [
 
 [[package]]
 name = "dojo-contracts"
-version = "1.4.1"
+version = "1.4.2"
 
 [[package]]
 name = "dojo-examples-spawn-and-move"
-version = "1.4.1"
-
-[[package]]
-name = "dojo-lang"
-version = "1.4.1"
-dependencies = [
- "anyhow",
- "cairo-lang-defs",
- "cairo-lang-diagnostics",
- "cairo-lang-filesystem",
- "cairo-lang-plugins",
- "cairo-lang-semantic",
- "cairo-lang-syntax",
- "cairo-lang-utils",
- "dojo-types 1.4.1",
- "itertools 0.12.1",
- "serde",
- "smol_str",
- "starknet 0.14.0",
- "starknet-crypto 0.7.4",
- "tracing",
-]
+version = "1.4.2"
 
 [[package]]
 name = "dojo-lang"
@@ -3483,7 +3462,7 @@ dependencies = [
  "cairo-lang-semantic",
  "cairo-lang-syntax",
  "cairo-lang-utils",
- "dojo-types 1.4.1 (git+https://github.com/dojoengine/dojo?rev=ee5cbda7fedf69a372559d158b9c4d8aa892d7b9)",
+ "dojo-types 1.4.1",
  "itertools 0.12.1",
  "serde",
  "smol_str",
@@ -3493,16 +3472,37 @@ dependencies = [
 ]
 
 [[package]]
+name = "dojo-lang"
+version = "1.4.2"
+dependencies = [
+ "anyhow",
+ "cairo-lang-defs",
+ "cairo-lang-diagnostics",
+ "cairo-lang-filesystem",
+ "cairo-lang-plugins",
+ "cairo-lang-semantic",
+ "cairo-lang-syntax",
+ "cairo-lang-utils",
+ "dojo-types 1.4.2",
+ "itertools 0.12.1",
+ "serde",
+ "smol_str",
+ "starknet 0.14.0",
+ "starknet-crypto 0.7.4",
+ "tracing",
+]
+
+[[package]]
 name = "dojo-language-server"
-version = "1.4.1"
+version = "1.4.2"
 dependencies = [
  "clap",
- "dojo-lang 1.4.1",
+ "dojo-lang 1.4.2",
 ]
 
 [[package]]
 name = "dojo-metrics"
-version = "1.4.1"
+version = "1.4.2"
 dependencies = [
  "hyper 0.14.30",
  "jemalloc-ctl",
@@ -3518,7 +3518,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-test-utils"
-version = "1.4.1"
+version = "1.4.2"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -3526,27 +3526,6 @@ dependencies = [
  "scarb",
  "scarb-ui",
  "toml 0.8.19",
-]
-
-[[package]]
-name = "dojo-types"
-version = "1.4.1"
-dependencies = [
- "anyhow",
- "cainome 0.6.0 (git+https://github.com/kariy/cainome?branch=relax-version)",
- "crypto-bigint",
- "hex",
- "indexmap 2.7.1",
- "itertools 0.12.1",
- "num-traits 0.2.19",
- "regex",
- "serde",
- "serde_json",
- "starknet 0.14.0",
- "starknet-crypto 0.7.4",
- "strum 0.25.0",
- "strum_macros 0.25.3",
- "thiserror 1.0.63",
 ]
 
 [[package]]
@@ -3572,8 +3551,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "dojo-types"
+version = "1.4.2"
+dependencies = [
+ "anyhow",
+ "cainome 0.6.0 (git+https://github.com/kariy/cainome?branch=relax-version)",
+ "crypto-bigint",
+ "hex",
+ "indexmap 2.7.1",
+ "itertools 0.12.1",
+ "num-traits 0.2.19",
+ "regex",
+ "serde",
+ "serde_json",
+ "starknet 0.14.0",
+ "starknet-crypto 0.7.4",
+ "strum 0.25.0",
+ "strum_macros 0.25.3",
+ "thiserror 1.0.63",
+]
+
+[[package]]
 name = "dojo-utils"
-version = "1.4.1"
+version = "1.4.2"
 dependencies = [
  "anyhow",
  "assert_matches",
@@ -3592,13 +3592,13 @@ dependencies = [
 
 [[package]]
 name = "dojo-world"
-version = "1.4.1"
+version = "1.4.2"
 dependencies = [
  "anyhow",
  "async-trait",
  "cainome 0.6.0 (git+https://github.com/kariy/cainome?branch=relax-version)",
  "cairo-lang-starknet-classes",
- "dojo-types 1.4.1",
+ "dojo-types 1.4.2",
  "futures",
  "hex",
  "hex-literal",
@@ -3619,7 +3619,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-world-abigen"
-version = "1.4.1"
+version = "1.4.2"
 dependencies = [
  "anyhow",
  "cainome 0.6.0 (git+https://github.com/kariy/cainome?branch=relax-version)",
@@ -7386,7 +7386,7 @@ dependencies = [
 
 [[package]]
 name = "merge-options"
-version = "1.4.1"
+version = "1.4.2"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -7395,7 +7395,7 @@ dependencies = [
 
 [[package]]
 name = "merge-options-macro-test"
-version = "1.4.1"
+version = "1.4.2"
 dependencies = [
  "merge-options",
 ]
@@ -10055,7 +10055,7 @@ dependencies = [
  "derive_builder",
  "dialoguer",
  "directories",
- "dojo-lang 1.4.1 (git+https://github.com/dojoengine/dojo?rev=ee5cbda7fedf69a372559d158b9c4d8aa892d7b9)",
+ "dojo-lang 1.4.1",
  "dunce",
  "flate2",
  "fs4",
@@ -10777,7 +10777,7 @@ dependencies = [
 
 [[package]]
 name = "sozo"
-version = "1.4.1"
+version = "1.4.2"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -10791,7 +10791,7 @@ dependencies = [
  "colored",
  "dojo-bindgen",
  "dojo-test-utils",
- "dojo-types 1.4.1",
+ "dojo-types 1.4.2",
  "dojo-utils",
  "dojo-world",
  "katana-runner",
@@ -10823,7 +10823,7 @@ dependencies = [
 
 [[package]]
 name = "sozo-ops"
-version = "1.4.1"
+version = "1.4.2"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -10832,7 +10832,7 @@ dependencies = [
  "colored",
  "colored_json",
  "dojo-test-utils",
- "dojo-types 1.4.1",
+ "dojo-types 1.4.2",
  "dojo-utils",
  "dojo-world",
  "futures",
@@ -10855,7 +10855,7 @@ dependencies = [
 
 [[package]]
 name = "sozo-scarbext"
-version = "1.4.1"
+version = "1.4.2"
 dependencies = [
  "anyhow",
  "camino",
@@ -10868,7 +10868,7 @@ dependencies = [
 
 [[package]]
 name = "sozo-signers"
-version = "1.4.1"
+version = "1.4.2"
 dependencies = [
  "anyhow",
  "starknet 0.14.0",
@@ -10876,7 +10876,7 @@ dependencies = [
 
 [[package]]
 name = "sozo-walnut"
-version = "1.4.1"
+version = "1.4.2"
 dependencies = [
  "anyhow",
  "clap",
@@ -12329,7 +12329,7 @@ dependencies = [
 
 [[package]]
 name = "torii"
-version = "1.4.1"
+version = "1.4.2"
 dependencies = [
  "anyhow",
  "clap",
@@ -12342,7 +12342,7 @@ dependencies = [
 
 [[package]]
 name = "torii-cli"
-version = "1.4.1"
+version = "1.4.2"
 dependencies = [
  "anyhow",
  "assert_matches",
@@ -12359,12 +12359,12 @@ dependencies = [
 
 [[package]]
 name = "torii-client"
-version = "1.4.1"
+version = "1.4.2"
 dependencies = [
  "async-trait",
  "camino",
  "crypto-bigint",
- "dojo-types 1.4.1",
+ "dojo-types 1.4.2",
  "dojo-world",
  "futures",
  "futures-util",
@@ -12387,7 +12387,7 @@ dependencies = [
 
 [[package]]
 name = "torii-graphql"
-version = "1.4.1"
+version = "1.4.2"
 dependencies = [
  "anyhow",
  "async-graphql",
@@ -12398,7 +12398,7 @@ dependencies = [
  "chrono",
  "convert_case 0.6.0",
  "dojo-test-utils",
- "dojo-types 1.4.1",
+ "dojo-types 1.4.2",
  "dojo-utils",
  "dojo-world",
  "katana-runner",
@@ -12428,13 +12428,13 @@ dependencies = [
 
 [[package]]
 name = "torii-grpc"
-version = "1.4.1"
+version = "1.4.2"
 dependencies = [
  "cainome 0.6.0 (git+https://github.com/kariy/cainome?branch=relax-version)",
  "camino",
  "crypto-bigint",
  "dojo-test-utils",
- "dojo-types 1.4.1",
+ "dojo-types 1.4.2",
  "dojo-utils",
  "dojo-world",
  "futures",
@@ -12476,7 +12476,7 @@ dependencies = [
 
 [[package]]
 name = "torii-indexer"
-version = "1.4.1"
+version = "1.4.2"
 dependencies = [
  "anyhow",
  "async-recursion",
@@ -12489,7 +12489,7 @@ dependencies = [
  "crypto-bigint",
  "data-url",
  "dojo-test-utils",
- "dojo-types 1.4.1",
+ "dojo-types 1.4.2",
  "dojo-utils",
  "dojo-world",
  "futures-channel",
@@ -12519,7 +12519,7 @@ dependencies = [
 
 [[package]]
 name = "torii-mcp"
-version = "1.4.1"
+version = "1.4.2"
 dependencies = [
  "serde",
  "serde_json",
@@ -12530,11 +12530,11 @@ dependencies = [
 
 [[package]]
 name = "torii-relay"
-version = "1.4.1"
+version = "1.4.2"
 dependencies = [
  "anyhow",
  "chrono",
- "dojo-types 1.4.1",
+ "dojo-types 1.4.2",
  "dojo-world",
  "futures",
  "indexmap 2.7.1",
@@ -12565,7 +12565,7 @@ dependencies = [
 
 [[package]]
 name = "torii-runner"
-version = "1.4.1"
+version = "1.4.2"
 dependencies = [
  "anyhow",
  "assert_matches",
@@ -12575,7 +12575,7 @@ dependencies = [
  "chrono",
  "ctrlc",
  "dojo-metrics",
- "dojo-types 1.4.1",
+ "dojo-types 1.4.2",
  "dojo-utils",
  "dojo-world",
  "either",
@@ -12613,7 +12613,7 @@ dependencies = [
 
 [[package]]
 name = "torii-server"
-version = "1.4.1"
+version = "1.4.2"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -12650,7 +12650,7 @@ dependencies = [
 
 [[package]]
 name = "torii-sqlite"
-version = "1.4.1"
+version = "1.4.2"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -12661,7 +12661,7 @@ dependencies = [
  "crypto-bigint",
  "data-url",
  "dojo-test-utils",
- "dojo-types 1.4.1",
+ "dojo-types 1.4.2",
  "dojo-utils",
  "dojo-world",
  "futures-channel",
@@ -12690,23 +12690,23 @@ dependencies = [
 
 [[package]]
 name = "torii-sqlite-types"
-version = "1.4.1"
+version = "1.4.2"
 dependencies = [
  "anyhow",
  "chrono",
- "dojo-types 1.4.1",
+ "dojo-types 1.4.2",
  "serde",
  "sqlx",
- "starknet 0.12.0",
+ "starknet 0.14.0",
 ]
 
 [[package]]
 name = "torii-typed-data"
-version = "1.4.1"
+version = "1.4.2"
 dependencies = [
  "cainome 0.6.0 (git+https://github.com/kariy/cainome?branch=relax-version)",
  "crypto-bigint",
- "dojo-types 1.4.1",
+ "dojo-types 1.4.2",
  "indexmap 2.7.1",
  "serde",
  "serde_json",
@@ -13028,7 +13028,7 @@ checksum = "42ff0bf0c66b8238c6f3b578df37d0b7848e55df8577b3f74f92a69acceeb825"
 
 [[package]]
 name = "types-test"
-version = "1.4.1"
+version = "1.4.2"
 
 [[package]]
 name = "u256-literal"
@@ -13288,7 +13288,7 @@ checksum = "accd4ea62f7bb7a82fe23066fb0957d48ef677f6eeb8215f372f52e48bb32426"
 
 [[package]]
 name = "verify_db_balances"
-version = "1.4.1"
+version = "1.4.2"
 dependencies = [
  "clap",
  "num-traits 0.2.19",
@@ -14386,7 +14386,7 @@ checksum = "9d422e8e38ec76e2f06ee439ccc765e9c6a9638b9e7c9f2e8255e4d41e8bd852"
 
 [[package]]
 name = "xtask-generate-test-db"
-version = "1.4.1"
+version = "1.4.2"
 dependencies = [
  "anyhow",
  "dojo-test-utils",
