@@ -156,23 +156,38 @@ impl InitArgs {
             let settlement_account_address = self.settlement_account.expect("must present");
             let settlement_private_key = self.settlement_account_private_key.expect("must present");
 
-            let mut settlement_provider = match settlement_chain {
-                SettlementChain::Mainnet => SettlementChainProvider::sn_mainnet(),
-                SettlementChain::Sepolia => SettlementChainProvider::sn_sepolia(),
-                #[cfg(feature = "init-custom-settlement-chain")]
-                SettlementChain::Custom(url) => {
-                    use katana_primitives::felt;
-
-                    // Default placeholder for the fact registry.
-                    let facts_registry_placeholder = felt!("0x1337");
-                    SettlementChainProvider::new(url, facts_registry_placeholder)
+            let settlement_provider_result = match settlement_chain {
+                SettlementChain::Mainnet => {
+                    let provider = SettlementChainProvider::sn_mainnet();
+                    Ok(match self.settlement_facts_registry_contract {
+                        Some(fact_registry) => {
+                            SettlementChainProvider::new(provider.url().clone(), *fact_registry)
+                        }
+                        None => provider,
+                    })
                 }
+                SettlementChain::Sepolia => {
+                    let provider = SettlementChainProvider::sn_sepolia();
+                    Ok(match self.settlement_facts_registry_contract {
+                        Some(fact_registry) => {
+                            SettlementChainProvider::new(provider.url().clone(), *fact_registry)
+                        }
+                        None => provider,
+                    })
+                }
+                #[cfg(feature = "init-custom-settlement-chain")]
+                SettlementChain::Custom(url) => match self.settlement_facts_registry_contract {
+                    Some(fact_registry) => Ok(SettlementChainProvider::new(url, *fact_registry)),
+                    None => Err(anyhow::anyhow!(
+                        "Fact registry contract address is required for custom settlement chain"
+                    )),
+                },
             };
 
-            // If a custom fact registry is provided, set it on the settlement provider.
-            if let Some(fact_registry) = self.settlement_facts_registry_contract {
-                settlement_provider.set_fact_registry(*fact_registry);
-            }
+            let settlement_provider = match settlement_provider_result {
+                Ok(settlement_provider) => settlement_provider,
+                Err(e) => return Some(Err(e)),
+            };
 
             let l1_chain_id = settlement_provider.chain_id().await.unwrap();
 
@@ -480,5 +495,36 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[tokio::test]
+    async fn cli_required_custom_fact_registry_for_custom_init_chain() {
+        #[derive(Parser)]
+        struct Cli {
+            #[command(flatten)]
+            args: InitArgs,
+        }
+
+        let result = Cli::parse_from([
+            "init",
+            "--id",
+            "wot",
+            "--settlement-chain",
+            "http://localhost:5050",
+            "--settlement-account-address",
+            "0x1234567890123456789012345678901234567890",
+            "--settlement-account-private-key",
+            "0x1234567890123456789012345678901234567890",
+        ]);
+        assert_eq!(result.args.settlement_facts_registry_contract, None);
+
+        let configure_result = result.args.configure_from_args().await;
+        assert!(configure_result.is_some());
+        let configure_result = configure_result.unwrap();
+        assert!(configure_result.is_err());
+        assert_eq!(
+            configure_result.unwrap_err().to_string(),
+            "Fact registry contract address is required for custom settlement chain"
+        );
     }
 }

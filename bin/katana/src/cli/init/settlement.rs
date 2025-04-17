@@ -366,8 +366,6 @@ mod provider {
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
-
     use rstest::rstest;
     use starknet::core::types::{BlockId, BlockTag};
     use starknet::providers::Provider;
