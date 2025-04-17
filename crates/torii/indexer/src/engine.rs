@@ -853,7 +853,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                     block_timestamp,
                     *transaction_hash,
                     &unique_contracts,
-                    &transaction_with_receipt_to_transaction(&transaction_with_receipt),
+                    &transaction_with_receipt_to_transaction(transaction_with_receipt),
                 )
                 .await?;
             }

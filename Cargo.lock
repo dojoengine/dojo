@@ -10680,7 +10680,7 @@ dependencies = [
 [[package]]
 name = "slot"
 version = "0.39.3"
-source = "git+https://github.com/cartridge-gg/slot?rev=42c3bb0#42c3bb035cd173c8f71d453e6cfaa2af6eedca70"
+source = "git+https://github.com/cartridge-gg/slot?rev=adac33e#adac33ec683cca888ed9a5f449531b5467a84667"
 dependencies = [
  "account_sdk",
  "anyhow",

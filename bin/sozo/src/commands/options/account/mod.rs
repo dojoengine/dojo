@@ -1,11 +1,14 @@
 use std::collections::HashMap;
 use std::str::FromStr;
+use std::sync::Arc;
 
 use anyhow::{anyhow, Context, Result};
 use clap::Args;
 use dojo_utils::env::DOJO_ACCOUNT_ADDRESS_ENV_VAR;
 use dojo_world::config::Environment;
 use dojo_world::contracts::ContractInfo;
+#[cfg(feature = "controller")]
+use slot::account_sdk::provider::CartridgeJsonRpcProvider;
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::types::{BlockId, BlockTag, Felt};
 use starknet::providers::Provider;
@@ -18,10 +21,11 @@ use super::starknet::StarknetOptions;
 
 #[cfg(feature = "controller")]
 pub mod controller;
+pub mod provider;
 mod r#type;
 
 #[cfg(feature = "controller")]
-use controller::ControllerSessionAccount;
+use controller::ControllerAccount;
 pub use r#type::*;
 
 // INVARIANT:
@@ -54,28 +58,11 @@ pub struct AccountOptions {
 }
 
 impl AccountOptions {
-    /// Create a new Catridge Controller account based on session key.
-    #[cfg(feature = "controller")]
-    pub async fn controller<P>(
-        &self,
-        rpc_url: Url,
-        provider: P,
-        contracts: &HashMap<String, ContractInfo>,
-    ) -> Result<ControllerSessionAccount<P>>
-    where
-        P: Provider,
-        P: Send + Sync,
-    {
-        controller::create_controller(rpc_url, provider, contracts)
-            .await
-            .context("Failed to create a Controller account")
-    }
-
     /// Creates a [`SozoAccount`] from the given parameters.
     ///
     /// # Arguments
     ///
-    /// * `provider` - Starknet provider.
+    /// * `provider` - Starknet provider (only if you're NOT creating a Controller account).
     /// * `env_metadata` - Environment pulled from configuration.
     /// * `starknet` - Starknet options.
     /// * `contracts` - The [`ContractInfo`] mappings. This one could have been gated behind the
@@ -95,19 +82,34 @@ impl AccountOptions {
         #[cfg(feature = "controller")]
         if self.controller {
             let url = starknet.url(env_metadata)?;
-            let account = self.controller(url, provider, contracts).await?;
-            return Ok(SozoAccount::Controller(account));
+            let cartridge_provider = CartridgeJsonRpcProvider::new(url.clone());
+            let account = self.controller(url, cartridge_provider.clone(), contracts).await?;
+            Ok(SozoAccount::new_controller(cartridge_provider, account))
+        } else {
+            let provider = Arc::new(provider);
+            let account = self.std_account(provider.clone(), env_metadata).await?;
+            Ok(SozoAccount::new_standard(provider, account))
         }
+    }
 
-        let account = self.std_account(provider, env_metadata).await?;
-        Ok(SozoAccount::Standard(account))
+    /// Create a new Catridge Controller account based on session key.
+    #[cfg(feature = "controller")]
+    pub async fn controller(
+        &self,
+        rpc_url: Url,
+        rpc_provider: CartridgeJsonRpcProvider,
+        contracts: &HashMap<String, ContractInfo>,
+    ) -> Result<ControllerAccount> {
+        controller::create_controller(rpc_url, rpc_provider, contracts)
+            .await
+            .context("Failed to create a Controller account")
     }
 
     pub async fn std_account<P>(
         &self,
-        provider: P,
+        provider: Arc<P>,
         env_metadata: Option<&Environment>,
-    ) -> Result<SingleOwnerAccount<P, LocalWallet>>
+    ) -> Result<SingleOwnerAccount<Arc<P>, LocalWallet>>
     where
         P: Provider,
         P: Send + Sync,
@@ -149,6 +151,8 @@ impl AccountOptions {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
     use clap::Parser;
     use katana_runner::RunnerCtx;
     use starknet::accounts::ExecutionEncoder;
@@ -230,7 +234,7 @@ mod tests {
 
         // HACK: SingleOwnerAccount doesn't expose a way to check `encoding` type used in struct, so
         // checking it by encoding a dummy call and checking which method it used to encode the call
-        let account = cmd.account.std_account(runner.provider(), None).await.unwrap();
+        let account = cmd.account.std_account(Arc::new(runner.provider()), None).await.unwrap();
         let result = account.encode_calls(&dummy_call);
         // 0x0 is the data offset.
         assert!(*result.get(3).unwrap() == Felt::from_hex("0x0").unwrap());
@@ -248,7 +252,7 @@ mod tests {
 
         // HACK: SingleOwnerAccount doesn't expose a way to check `encoding` type used in struct, so
         // checking it by encoding a dummy call and checking which method it used to encode the call
-        let account = cmd.account.std_account(runner.provider(), None).await.unwrap();
+        let account = cmd.account.std_account(Arc::new(runner.provider()), None).await.unwrap();
         let result = account.encode_calls(&dummy_call);
         // 0x2 is the Calldata len.
         assert!(*result.get(3).unwrap() == Felt::from_hex("0x2").unwrap());
