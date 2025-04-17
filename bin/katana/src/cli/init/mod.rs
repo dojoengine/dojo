@@ -157,24 +157,14 @@ impl InitArgs {
             let settlement_private_key = self.settlement_account_private_key.expect("must present");
 
             let settlement_provider_result = match settlement_chain {
-                SettlementChain::Mainnet => {
-                    let provider = SettlementChainProvider::sn_mainnet();
-                    Ok(match self.settlement_facts_registry_contract {
-                        Some(fact_registry) => {
-                            SettlementChainProvider::new(provider.url().clone(), *fact_registry)
-                        }
-                        None => provider,
-                    })
-                }
-                SettlementChain::Sepolia => {
-                    let provider = SettlementChainProvider::sn_sepolia();
-                    Ok(match self.settlement_facts_registry_contract {
-                        Some(fact_registry) => {
-                            SettlementChainProvider::new(provider.url().clone(), *fact_registry)
-                        }
-                        None => provider,
-                    })
-                }
+                SettlementChain::Mainnet => create_settlement_provider(
+                    SettlementChainProvider::sn_mainnet(),
+                    self.settlement_facts_registry_contract,
+                ),
+                SettlementChain::Sepolia => create_settlement_provider(
+                    SettlementChainProvider::sn_sepolia(),
+                    self.settlement_facts_registry_contract,
+                ),
                 #[cfg(feature = "init-custom-settlement-chain")]
                 SettlementChain::Custom(url) => match self.settlement_facts_registry_contract {
                     Some(fact_registry) => Ok(SettlementChainProvider::new(url, *fact_registry)),
@@ -294,6 +284,16 @@ fn generate_genesis() -> Genesis {
     let mut genesis = Genesis::default();
     genesis.extend_allocations(accounts.into_iter().map(|(k, v)| (k, v.into())));
     genesis
+}
+
+fn create_settlement_provider(
+    provider: SettlementChainProvider,
+    facts_registry: Option<ContractAddress>,
+) -> Result<SettlementChainProvider, anyhow::Error> {
+    Ok(match facts_registry {
+        Some(fact_registry) => SettlementChainProvider::new(provider.url().clone(), *fact_registry),
+        None => provider,
+    })
 }
 
 #[derive(Debug, thiserror::Error)]
