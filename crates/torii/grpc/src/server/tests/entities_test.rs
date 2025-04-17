@@ -77,7 +77,7 @@ async fn test_entities_queries(sequencer: &RunnerCtx) {
 
     // spawn
     let tx = account
-        .execute_v1(vec![Call {
+        .execute_v3(vec![Call {
             to: actions_address,
             selector: get_selector_from_name("spawn").unwrap(),
             calldata: vec![],

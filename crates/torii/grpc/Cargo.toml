@@ -34,10 +34,10 @@ cainome.workspace = true
 camino.workspace = true
 dojo-test-utils.workspace = true
 dojo-utils.workspace = true
-katana-runner = { git = "https://github.com/dojoengine/katana", rev = "5cb249c0fa59fa6b7c88b32557e7baf8944cdb3d" }
+katana-runner.workspace = true
 scarb.workspace = true
-tempfile.workspace = true
 sozo-scarbext.workspace = true
+tempfile.workspace = true
 torii-indexer.workspace = true
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
@@ -46,15 +46,15 @@ wasm-prost.workspace = true
 wasm-tonic.workspace = true
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-prost.workspace = true
-tower-http.workspace = true
 http.workspace = true
+prost.workspace = true
 sqlx.workspace = true
 tokio.workspace = true
 tokio-stream = "0.1.14"
 tonic.workspace = true
 tonic-reflection.workspace = true
 tonic-web.workspace = true
+tower-http.workspace = true
 
 [build-dependencies]
 tonic-build.workspace = true

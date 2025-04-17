@@ -14,9 +14,14 @@ use starknet::core::types::requests::{
     GetBlockWithTxHashesRequest, GetEventsRequest, GetTransactionByHashRequest,
 };
 use starknet::core::types::{
-    BlockHashAndNumber, BlockId, BlockTag, EmittedEvent, Event, EventFilter, EventFilterWithPage,
-    MaybePendingBlockWithReceipts, MaybePendingBlockWithTxHashes, PendingBlockWithReceipts,
-    ResultPageRequest, Transaction, TransactionReceipt, TransactionWithReceipt,
+    BlockHashAndNumber, BlockId, BlockTag, DeclareTransaction, DeclareTransactionContent,
+    DeclareTransactionV0, DeclareTransactionV1, DeclareTransactionV2, DeclareTransactionV3,
+    DeployAccountTransaction, DeployAccountTransactionContent, DeployAccountTransactionV1,
+    DeployAccountTransactionV3, DeployTransaction, EmittedEvent, Event, EventFilter,
+    EventFilterWithPage, InvokeTransaction, InvokeTransactionContent, InvokeTransactionV0,
+    InvokeTransactionV1, InvokeTransactionV3, L1HandlerTransaction, MaybePendingBlockWithReceipts,
+    MaybePendingBlockWithTxHashes, PendingBlockWithReceipts, ResultPageRequest, Transaction,
+    TransactionContent, TransactionReceipt, TransactionWithReceipt,
 };
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::{Provider, ProviderRequestData, ProviderResponseData};
@@ -661,7 +666,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
 
         let mut cursor_map = HashMap::new();
         for t in data.pending_block.transactions {
-            let transaction_hash = t.transaction.transaction_hash();
+            let transaction_hash = t.receipt.transaction_hash();
             if let Some(tx) = last_pending_block_tx_cursor {
                 if transaction_hash != &tx {
                     continue;
@@ -806,7 +811,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         block_timestamp: u64,
         cursor_map: &mut HashMap<Felt, (Felt, u64)>,
     ) -> Result<()> {
-        let transaction_hash = transaction_with_receipt.transaction.transaction_hash();
+        let transaction_hash = transaction_with_receipt.receipt.transaction_hash();
         let events = match &transaction_with_receipt.receipt {
             TransactionReceipt::Invoke(receipt) => Some(&receipt.events),
             TransactionReceipt::L1Handler(receipt) => Some(&receipt.events),
@@ -848,7 +853,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
                     block_timestamp,
                     *transaction_hash,
                     &unique_contracts,
-                    &transaction_with_receipt.transaction,
+                    &transaction_with_receipt_to_transaction(&transaction_with_receipt),
                 )
                 .await?;
             }
@@ -1003,4 +1008,141 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
 // event_id format: block_number:transaction_hash:event_idx
 pub fn get_transaction_hash_from_event_id(event_id: &str) -> String {
     event_id.split(':').nth(1).unwrap().to_string()
+}
+
+// Conversion function due type changes when bumping `starknet` to 0.14.0. Prior to 0.14.0, the
+// `transaction` field in `TransactionWithReceipt` was of type `Transaction`.
+fn transaction_with_receipt_to_transaction(
+    tx_with_receipt: &TransactionWithReceipt,
+) -> Transaction {
+    match &tx_with_receipt.transaction {
+        TransactionContent::Invoke(invoke) => match invoke {
+            InvokeTransactionContent::V0(content) => {
+                Transaction::Invoke(InvokeTransaction::V0(InvokeTransactionV0 {
+                    max_fee: content.max_fee,
+                    calldata: content.calldata.clone(),
+                    signature: content.signature.clone(),
+                    contract_address: content.contract_address,
+                    entry_point_selector: content.entry_point_selector,
+                    transaction_hash: *tx_with_receipt.receipt.transaction_hash(),
+                }))
+            }
+            InvokeTransactionContent::V1(content) => {
+                Transaction::Invoke(InvokeTransaction::V1(InvokeTransactionV1 {
+                    nonce: content.nonce,
+                    max_fee: content.max_fee,
+                    calldata: content.calldata.clone(),
+                    signature: content.signature.clone(),
+                    sender_address: content.sender_address,
+                    transaction_hash: *tx_with_receipt.receipt.transaction_hash(),
+                }))
+            }
+            InvokeTransactionContent::V3(content) => {
+                Transaction::Invoke(InvokeTransaction::V3(InvokeTransactionV3 {
+                    tip: content.tip,
+                    nonce: content.nonce,
+                    calldata: content.calldata.clone(),
+                    signature: content.signature.clone(),
+                    sender_address: content.sender_address,
+                    paymaster_data: content.paymaster_data.clone(),
+                    resource_bounds: content.resource_bounds.clone(),
+                    transaction_hash: *tx_with_receipt.receipt.transaction_hash(),
+                    fee_data_availability_mode: content.fee_data_availability_mode,
+                    account_deployment_data: content.account_deployment_data.clone(),
+                    nonce_data_availability_mode: content.nonce_data_availability_mode,
+                }))
+            }
+        },
+        TransactionContent::Declare(declare) => match declare {
+            DeclareTransactionContent::V0(content) => {
+                Transaction::Declare(DeclareTransaction::V0(DeclareTransactionV0 {
+                    max_fee: content.max_fee,
+                    class_hash: content.class_hash,
+                    signature: content.signature.clone(),
+                    sender_address: content.sender_address,
+                    transaction_hash: *tx_with_receipt.receipt.transaction_hash(),
+                }))
+            }
+            DeclareTransactionContent::V1(content) => {
+                Transaction::Declare(DeclareTransaction::V1(DeclareTransactionV1 {
+                    nonce: content.nonce,
+                    max_fee: content.max_fee,
+                    class_hash: content.class_hash,
+                    signature: content.signature.clone(),
+                    sender_address: content.sender_address,
+                    transaction_hash: *tx_with_receipt.receipt.transaction_hash(),
+                }))
+            }
+            DeclareTransactionContent::V2(content) => {
+                Transaction::Declare(DeclareTransaction::V2(DeclareTransactionV2 {
+                    nonce: content.nonce,
+                    max_fee: content.max_fee,
+                    class_hash: content.class_hash,
+                    signature: content.signature.clone(),
+                    sender_address: content.sender_address,
+                    compiled_class_hash: content.compiled_class_hash,
+                    transaction_hash: *tx_with_receipt.receipt.transaction_hash(),
+                }))
+            }
+            DeclareTransactionContent::V3(content) => {
+                Transaction::Declare(DeclareTransaction::V3(DeclareTransactionV3 {
+                    tip: content.tip,
+                    nonce: content.nonce,
+                    class_hash: content.class_hash,
+                    signature: content.signature.clone(),
+                    sender_address: content.sender_address,
+                    paymaster_data: content.paymaster_data.clone(),
+                    compiled_class_hash: content.compiled_class_hash,
+                    resource_bounds: content.resource_bounds.clone(),
+                    transaction_hash: *tx_with_receipt.receipt.transaction_hash(),
+                    fee_data_availability_mode: content.fee_data_availability_mode,
+                    account_deployment_data: content.account_deployment_data.clone(),
+                    nonce_data_availability_mode: content.nonce_data_availability_mode,
+                }))
+            }
+        },
+        TransactionContent::DeployAccount(deploy_account) => match deploy_account {
+            DeployAccountTransactionContent::V1(content) => Transaction::DeployAccount(
+                DeployAccountTransaction::V1(DeployAccountTransactionV1 {
+                    nonce: content.nonce,
+                    max_fee: content.max_fee,
+                    class_hash: content.class_hash,
+                    signature: content.signature.clone(),
+                    contract_address_salt: content.contract_address_salt,
+                    constructor_calldata: content.constructor_calldata.clone(),
+                    transaction_hash: *tx_with_receipt.receipt.transaction_hash(),
+                }),
+            ),
+            DeployAccountTransactionContent::V3(content) => Transaction::DeployAccount(
+                DeployAccountTransaction::V3(DeployAccountTransactionV3 {
+                    tip: content.tip,
+                    nonce: content.nonce,
+                    class_hash: content.class_hash,
+                    signature: content.signature.clone(),
+                    paymaster_data: content.paymaster_data.clone(),
+                    resource_bounds: content.resource_bounds.clone(),
+                    contract_address_salt: content.contract_address_salt,
+                    constructor_calldata: content.constructor_calldata.clone(),
+                    transaction_hash: *tx_with_receipt.receipt.transaction_hash(),
+                    fee_data_availability_mode: content.fee_data_availability_mode,
+                    nonce_data_availability_mode: content.nonce_data_availability_mode,
+                }),
+            ),
+        },
+        TransactionContent::Deploy(content) => Transaction::Deploy(DeployTransaction {
+            version: content.version,
+            class_hash: content.class_hash,
+            contract_address_salt: content.contract_address_salt,
+            constructor_calldata: content.constructor_calldata.clone(),
+            transaction_hash: *tx_with_receipt.receipt.transaction_hash(),
+        }),
+        TransactionContent::L1Handler(content) => Transaction::L1Handler(L1HandlerTransaction {
+            nonce: content.nonce,
+            version: content.version,
+            calldata: content.calldata.clone(),
+            contract_address: content.contract_address,
+            entry_point_selector: content.entry_point_selector,
+            transaction_hash: *tx_with_receipt.receipt.transaction_hash(),
+        }),
+    }
 }

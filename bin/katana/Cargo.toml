@@ -25,7 +25,7 @@ comfy-table = "7.1.1"
 dojo-utils.workspace = true
 inquire = "0.7.5"
 # This revision is not published for Scarb issue only, it's just a binding change...
-piltover = { git = "https://github.com/keep-starknet-strange/piltover.git", rev = "4cdda5a" }
+piltover = { git = "https://github.com/keep-starknet-strange/piltover.git", rev = "45263e8" }
 rand.workspace = true
 shellexpand = "3.1.0"
 spinoff.workspace = true

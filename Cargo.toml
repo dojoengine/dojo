@@ -46,8 +46,10 @@ debug = true
 inherits = "release"
 
 [workspace.dependencies]
-cainome = { version = "0.5.0", features = [ "abigen-rs" ] }
-cainome-cairo-serde = { version = "0.1.0" }
+# cainome = { version = "0.6.0", features = [ "abigen-rs" ] }
+# cainome-cairo-serde = { version = "0.1.0" }
+cainome = { git = "https://github.com/kariy/cainome", branch = "relax-version", features = [ "abigen-rs" ] }
+cainome-cairo-serde = { git = "https://github.com/kariy/cainome", branch = "relax-version" }
 
 dojo-utils = { path = "crates/dojo/utils" }
 
@@ -71,12 +73,12 @@ torii-client = { path = "crates/torii/client" }
 torii-graphql = { path = "crates/torii/graphql" }
 torii-grpc = { path = "crates/torii/grpc" }
 torii-indexer = { path = "crates/torii/indexer" }
+torii-mcp = { path = "crates/torii/mcp" }
 torii-relay = { path = "crates/torii/libp2p" }
 torii-runner = { path = "crates/torii/runner" }
 torii-server = { path = "crates/torii/server" }
 torii-sqlite = { path = "crates/torii/sqlite" }
 torii-typed-data = { path = "crates/torii/typed-data" }
-torii-mcp = { path = "crates/torii/mcp" }
 
 # sozo
 sozo-ops = { path = "crates/sozo/ops" }
@@ -86,6 +88,8 @@ sozo-walnut = { path = "crates/sozo/walnut" }
 
 # macros
 merge-options = { path = "crates/macros/merge-options" }
+
+katana-runner = { git = "https://github.com/dojoengine/katana", rev = "9c48b91" }
 
 anyhow = "1.0.89"
 arbitrary = { version = "1.3.2", features = [ "derive" ] }
@@ -196,7 +200,6 @@ walkdir = "2.5.0"
 ipfs-api-backend-hyper = { git = "https://github.com/ferristseng/rust-ipfs-api", rev = "af2c17f7b19ef5b9898f458d97a90055c3605633", features = [ "with-hyper-rustls", "with-send-sync" ] }
 mime_guess = "2.0"
 
-
 # server
 hyper = "0.14.27"
 warp = "0.3"
@@ -218,7 +221,7 @@ criterion = "0.5.1"
 pprof = { version = "0.13.0", features = [ "criterion", "flamegraph" ] }
 
 # Slot integration. Dojo don't need to manually include `account_sdk` as dependency as `slot` already re-exports it.
-slot = { git = "https://github.com/cartridge-gg/slot", rev = "1298a30" }
+slot = { git = "https://github.com/cartridge-gg/slot", rev = "42c3bb0" }
 
 # alloy core
 alloy-primitives = { version = "0.8", default-features = false }
@@ -233,7 +236,7 @@ alloy-rpc-types-eth = { version = "0.4", default-features = false }
 alloy-signer = { version = "0.4", default-features = false }
 alloy-transport = { version = "0.4", default-features = false }
 
-starknet = "0.12.0"
+starknet = "0.14.0"
 starknet-crypto = "0.7.1"
 starknet-types-core = { version = "0.1.7", features = [ "arbitrary", "hash" ] }
 

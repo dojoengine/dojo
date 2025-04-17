@@ -16,23 +16,23 @@ futures.workspace = true
 serde.workspace = true
 # preserve order
 anyhow.workspace = true
-serde_json.workspace = true
-starknet.workspace = true
-thiserror.workspace = true
-torii-typed-data.workspace = true
-tracing.workspace = true
-sqlx = { workspace = true, optional = true }
-torii-sqlite = { workspace = true, optional = true }
+chrono = { workspace = true, optional = true }
 dojo-types = { workspace = true, optional = true }
 dojo-world = { workspace = true, optional = true }
-rand = { workspace = true, optional = true }
-starknet-crypto = { workspace = true, optional = true }
-chrono = { workspace = true, optional = true }
 libp2p-webrtc = { git = "https://github.com/libp2p/rust-libp2p", features = [ "pem", "tokio" ], rev = "cdc9638", optional = true }
+rand = { workspace = true, optional = true }
+serde_json.workspace = true
+sqlx = { workspace = true, optional = true }
+starknet.workspace = true
+starknet-crypto = { workspace = true, optional = true }
+thiserror.workspace = true
+torii-sqlite = { workspace = true, optional = true }
+torii-typed-data.workspace = true
+tracing.workspace = true
 
 [dev-dependencies]
 indexmap.workspace = true
-katana-runner = { git = "https://github.com/dojoengine/katana", rev = "5cb249c0fa59fa6b7c88b32557e7baf8944cdb3d" }
+katana-runner.workspace = true
 tempfile.workspace = true
 tokio.workspace = true
 tracing-subscriber.workspace = true

@@ -2,11 +2,9 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use starknet::accounts::{
-    single_owner, Account, ConnectedAccount, DeclarationV2, DeclarationV3, ExecutionEncoder,
-    ExecutionV1, ExecutionV3, LegacyDeclaration, RawDeclarationV2, RawDeclarationV3,
-    RawExecutionV1, RawExecutionV3, RawLegacyDeclaration, SingleOwnerAccount,
+    single_owner, Account, ConnectedAccount, DeclarationV3, ExecutionEncoder, ExecutionV3,
+    RawDeclarationV3, RawExecutionV3, SingleOwnerAccount,
 };
-use starknet::core::types::contract::legacy::LegacyContractClass;
 use starknet::core::types::{BlockId, Call, Felt, FlattenedSierraClass};
 use starknet::providers::Provider;
 use starknet::signers::{local_wallet, LocalWallet, SignerInteractivityContext};
@@ -74,29 +72,6 @@ where
         }
     }
 
-    fn declare_legacy(
-        &self,
-        contract_class: Arc<LegacyContractClass>,
-    ) -> LegacyDeclaration<'_, Self> {
-        LegacyDeclaration::new(contract_class, self)
-    }
-
-    fn declare(
-        &self,
-        contract_class: Arc<FlattenedSierraClass>,
-        compiled_class_hash: Felt,
-    ) -> DeclarationV2<'_, Self> {
-        DeclarationV2::new(contract_class, compiled_class_hash, self)
-    }
-
-    fn declare_v2(
-        &self,
-        contract_class: Arc<FlattenedSierraClass>,
-        compiled_class_hash: Felt,
-    ) -> DeclarationV2<'_, Self> {
-        DeclarationV2::new(contract_class, compiled_class_hash, self)
-    }
-
     fn declare_v3(
         &self,
         contract_class: Arc<FlattenedSierraClass>,
@@ -105,29 +80,8 @@ where
         DeclarationV3::new(contract_class, compiled_class_hash, self)
     }
 
-    fn execute(&self, calls: Vec<Call>) -> ExecutionV1<'_, Self> {
-        ExecutionV1::new(calls, self)
-    }
-
-    fn execute_v1(&self, calls: Vec<Call>) -> ExecutionV1<'_, Self> {
-        ExecutionV1::new(calls, self)
-    }
-
     fn execute_v3(&self, calls: Vec<Call>) -> ExecutionV3<'_, Self> {
         ExecutionV3::new(calls, self)
-    }
-
-    async fn sign_execution_v1(
-        &self,
-        execution: &RawExecutionV1,
-        query_only: bool,
-    ) -> Result<Vec<Felt>, Self::SignError> {
-        let result = match self {
-            Self::Standard(account) => account.sign_execution_v1(execution, query_only).await?,
-            #[cfg(feature = "controller")]
-            Self::Controller(account) => account.sign_execution_v1(execution, query_only).await?,
-        };
-        Ok(result)
     }
 
     async fn sign_execution_v3(
@@ -139,40 +93,6 @@ where
             Self::Standard(account) => account.sign_execution_v3(execution, query_only).await?,
             #[cfg(feature = "controller")]
             Self::Controller(account) => account.sign_execution_v3(execution, query_only).await?,
-        };
-        Ok(result)
-    }
-
-    async fn sign_legacy_declaration(
-        &self,
-        declaration: &RawLegacyDeclaration,
-        query_only: bool,
-    ) -> Result<Vec<Felt>, Self::SignError> {
-        match self {
-            Self::Standard(account) => {
-                let result = account.sign_legacy_declaration(declaration, query_only).await?;
-                Ok(result)
-            }
-            #[cfg(feature = "controller")]
-            Self::Controller(account) => {
-                let result = account.sign_legacy_declaration(declaration, query_only).await?;
-                Ok(result)
-            }
-        }
-    }
-
-    async fn sign_declaration_v2(
-        &self,
-        declaration: &RawDeclarationV2,
-        query_only: bool,
-    ) -> Result<Vec<Felt>, Self::SignError> {
-        let result = match self {
-            Self::Standard(account) => account.sign_declaration_v2(declaration, query_only).await?,
-
-            #[cfg(feature = "controller")]
-            Self::Controller(account) => {
-                account.sign_declaration_v2(declaration, query_only).await?
-            }
         };
         Ok(result)
     }

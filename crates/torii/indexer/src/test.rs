@@ -91,7 +91,7 @@ async fn test_load_from_remote(sequencer: &RunnerCtx) {
 
     // spawn
     let tx = &account
-        .execute_v1(vec![Call {
+        .execute_v3(vec![Call {
             to: actions_address,
             selector: get_selector_from_name("spawn").unwrap(),
             calldata: vec![],
@@ -104,7 +104,7 @@ async fn test_load_from_remote(sequencer: &RunnerCtx) {
 
     // move
     let tx = &account
-        .execute_v1(vec![Call {
+        .execute_v3(vec![Call {
             to: actions_address,
             selector: get_selector_from_name("move").unwrap(),
             calldata: vec![Felt::ONE],
@@ -230,7 +230,7 @@ async fn test_load_from_remote_erc20(sequencer: &RunnerCtx) {
 
     // mint 123456789 wei tokens
     let tx = &account
-        .execute_v1(vec![Call {
+        .execute_v3(vec![Call {
             to: actions_address,
             selector: get_selector_from_name("mint").unwrap(),
             calldata: vec![Felt::from(123456789), Felt::ZERO],
@@ -244,7 +244,7 @@ async fn test_load_from_remote_erc20(sequencer: &RunnerCtx) {
 
     // transfer 12345 tokens to some other address
     let tx = &account
-        .execute_v1(vec![Call {
+        .execute_v3(vec![Call {
             to: actions_address,
             selector: get_selector_from_name("transfer").unwrap(),
             calldata: vec![Felt::ONE, Felt::from(12345), Felt::ZERO],
@@ -338,7 +338,7 @@ async fn test_load_from_remote_erc721(sequencer: &RunnerCtx) {
     // Mint multiple NFTs with different IDs
     for token_id in 1..=5 {
         let tx = &account
-            .execute_v1(vec![Call {
+            .execute_v3(vec![Call {
                 to: badge_address,
                 selector: get_selector_from_name("mint").unwrap(),
                 calldata: vec![Felt::from(token_id), Felt::ZERO],
@@ -353,7 +353,7 @@ async fn test_load_from_remote_erc721(sequencer: &RunnerCtx) {
     // Transfer NFT ID 1 and 2 to another address
     for token_id in 1..=2 {
         let tx = &account
-            .execute_v1(vec![Call {
+            .execute_v3(vec![Call {
                 to: badge_address,
                 selector: get_selector_from_name("transfer_from").unwrap(),
                 calldata: vec![account.address(), Felt::ONE, Felt::from(token_id), Felt::ZERO],
@@ -504,7 +504,7 @@ async fn test_load_from_remote_erc1155(sequencer: &RunnerCtx) {
 
     for (token_id, amount) in &token_amounts {
         let tx = &account
-            .execute_v1(vec![Call {
+            .execute_v3(vec![Call {
                 to: rewards_address,
                 selector: get_selector_from_name("mint").unwrap(),
                 calldata: vec![Felt::from(*token_id), Felt::ZERO, Felt::from(*amount), Felt::ZERO],
@@ -519,7 +519,7 @@ async fn test_load_from_remote_erc1155(sequencer: &RunnerCtx) {
     // Transfer half of each token amount to another address
     for (token_id, amount) in &token_amounts {
         let tx = &account
-            .execute_v1(vec![Call {
+            .execute_v3(vec![Call {
                 to: rewards_address,
                 selector: get_selector_from_name("transfer_from").unwrap(),
                 calldata: vec![
@@ -660,7 +660,7 @@ async fn test_load_from_remote_del(sequencer: &RunnerCtx) {
 
     // spawn
     let res = account
-        .execute_v1(vec![Call {
+        .execute_v3(vec![Call {
             to: actions_address,
             selector: get_selector_from_name("spawn").unwrap(),
             calldata: vec![],
@@ -673,7 +673,7 @@ async fn test_load_from_remote_del(sequencer: &RunnerCtx) {
 
     // Set player config.
     let res = account
-        .execute_v1(vec![Call {
+        .execute_v3(vec![Call {
             to: actions_address,
             selector: get_selector_from_name("set_player_config").unwrap(),
             // Empty ByteArray.
@@ -686,7 +686,7 @@ async fn test_load_from_remote_del(sequencer: &RunnerCtx) {
     TransactionWaiter::new(res.transaction_hash, &provider).await.unwrap();
 
     let res = account
-        .execute_v1(vec![Call {
+        .execute_v3(vec![Call {
             to: actions_address,
             selector: get_selector_from_name("reset_player_config").unwrap(),
             calldata: vec![],
@@ -780,7 +780,7 @@ async fn test_update_with_set_record(sequencer: &RunnerCtx) {
 
     // Send spawn transaction
     let spawn_res = account
-        .execute_v1(vec![Call {
+        .execute_v3(vec![Call {
             to: actions_address,
             selector: get_selector_from_name("spawn").unwrap(),
             calldata: vec![],
@@ -793,7 +793,7 @@ async fn test_update_with_set_record(sequencer: &RunnerCtx) {
 
     // Send move transaction
     let move_res = account
-        .execute_v1(vec![Call {
+        .execute_v3(vec![Call {
             to: actions_address,
             selector: get_selector_from_name("move").unwrap(),
             calldata: vec![Felt::ZERO],
@@ -857,7 +857,7 @@ async fn test_load_from_remote_update(sequencer: &RunnerCtx) {
 
     // spawn
     let res = account
-        .execute_v1(vec![Call {
+        .execute_v3(vec![Call {
             to: actions_address,
             selector: get_selector_from_name("spawn").unwrap(),
             calldata: vec![],
@@ -870,7 +870,7 @@ async fn test_load_from_remote_update(sequencer: &RunnerCtx) {
 
     // Set player config.
     let res = account
-        .execute_v1(vec![Call {
+        .execute_v3(vec![Call {
             to: actions_address,
             selector: get_selector_from_name("set_player_config").unwrap(),
             // Empty ByteArray.
@@ -884,7 +884,7 @@ async fn test_load_from_remote_update(sequencer: &RunnerCtx) {
 
     let name = ByteArray::from_string("mimi").unwrap();
     let res = account
-        .execute_v1(vec![Call {
+        .execute_v3(vec![Call {
             to: actions_address,
             selector: get_selector_from_name("update_player_config_name").unwrap(),
             calldata: ByteArray::cairo_serialize(&name),
@@ -964,7 +964,7 @@ async fn test_update_token_metadata_erc1155(sequencer: &RunnerCtx) {
     TransactionWaiter::new(res.transaction_hash, &provider).await.unwrap();
 
     let tx = &account
-        .execute_v1(vec![Call {
+        .execute_v3(vec![Call {
             to: rewards_address,
             selector: get_selector_from_name("mint").unwrap(),
             calldata: vec![Felt::from(1), Felt::ZERO, Felt::from(1), Felt::ZERO],
@@ -977,7 +977,7 @@ async fn test_update_token_metadata_erc1155(sequencer: &RunnerCtx) {
 
     let owner_account = sequencer.account(3);
     let tx = &owner_account
-        .execute_v1(vec![Call {
+        .execute_v3(vec![Call {
             to: rewards_address,
             selector: get_selector_from_name("update_token_metadata").unwrap(),
             calldata: vec![Felt::from(1), Felt::ZERO],

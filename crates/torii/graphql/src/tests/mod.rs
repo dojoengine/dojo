@@ -316,7 +316,7 @@ pub async fn spinup_types_test(path: &str) -> Result<SqlitePool> {
     tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 
     let InvokeTransactionResult { transaction_hash } = account
-        .execute_v1(vec![Call {
+        .execute_v3(vec![Call {
             calldata: vec![Felt::from_str("0xa").unwrap()],
             to: records_address.into(),
             selector: selector!("create"),
@@ -329,7 +329,7 @@ pub async fn spinup_types_test(path: &str) -> Result<SqlitePool> {
 
     // Execute `delete` and delete Record with id 20
     let InvokeTransactionResult { transaction_hash } = account
-        .execute_v1(vec![Call {
+        .execute_v3(vec![Call {
             calldata: vec![Felt::from_str("0x14").unwrap()],
             to: records_address.into(),
             selector: selector!("delete"),
