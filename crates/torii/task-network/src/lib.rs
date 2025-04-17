@@ -239,14 +239,24 @@ mod tests {
                 
                 // Record execution state
                 {
-                    let current = currently_executing.lock().await;
-                    let mut executed = executed_levels.lock().await;
-                    executed.push((id, current.clone()));
+                    // First, get the current executing tasks
+                    let current_executing = {
+                        let current = currently_executing.lock().await;
+                        current.clone() // Clone the data so we can release the lock
+                    };
                     
-                    // Remove from currently executing
-                    let mut current = currently_executing.lock().await;
-                    if let Some(pos) = current.iter().position(|&x| x == id) {
-                        current.remove(pos);
+                    // Now update the executed_levels with the captured state
+                    {
+                        let mut executed = executed_levels.lock().await;
+                        executed.push((id, current_executing));
+                    }
+                    
+                    // Finally, remove this task from currently executing
+                    {
+                        let mut current = currently_executing.lock().await;
+                        if let Some(pos) = current.iter().position(|&x| x == id) {
+                            current.remove(pos);
+                        }
                     }
                 }
                 
