@@ -6,23 +6,43 @@ use dojo_world::contracts::abigen::world::Event as WorldEvent;
 use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::Event;
 use starknet::providers::Provider;
+use torii_sqlite::types::ContractType;
 use torii_sqlite::utils::felts_to_sql_string;
 use torii_sqlite::Sql;
 use tracing::{debug, info};
 
-use super::{EventProcessor, EventProcessorConfig};
-use crate::task_manager::{TaskId, TaskPriority};
+use crate::{EventProcessor, EventProcessorConfig, TaskProcessor};
+use crate::TaskId;
 
 pub(crate) const LOG_TARGET: &str = "torii::indexer::processors::store_set_record";
 
 #[derive(Default, Debug)]
 pub struct StoreSetRecordProcessor;
 
+impl TaskProcessor for StoreSetRecordProcessor {
+    fn dependencies(&self) -> Vec<TaskId> {
+        vec![]
+    }
+
+    fn identifier(&self, event: &Event) -> TaskId {
+        let mut hasher = DefaultHasher::new();
+        // model selector
+        event.keys[1].hash(&mut hasher);
+        // entity id
+        event.keys[2].hash(&mut hasher);
+        hasher.finish()
+    }
+}
+
 #[async_trait]
 impl<P> EventProcessor<P> for StoreSetRecordProcessor
 where
     P: Provider + Send + Sync + std::fmt::Debug,
 {
+    fn contract_type(&self) -> ContractType {
+        ContractType::World
+    }
+
     fn event_key(&self) -> String {
         "StoreSetRecord".to_string()
     }
@@ -30,18 +50,7 @@ where
     fn validate(&self, _event: &Event) -> bool {
         true
     }
-
-    fn task_priority(&self) -> TaskPriority {
-        2
-    }
-
-    fn task_identifier(&self, event: &Event) -> TaskId {
-        let mut hasher = DefaultHasher::new();
-        event.keys[1].hash(&mut hasher);
-        event.keys[2].hash(&mut hasher);
-        hasher.finish()
-    }
-
+    
     async fn process(
         &self,
         _world: &WorldContractReader<P>,

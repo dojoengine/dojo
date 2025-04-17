@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::hash::DefaultHasher;
 
 use anyhow::Result;
 use async_trait::async_trait;
@@ -10,7 +11,7 @@ use torii_sqlite::cache::{get_entrypoint_name_from_class, ContractClassCache};
 use torii_sqlite::types::{CallType, ParsedCall};
 use torii_sqlite::Sql;
 
-use super::TransactionProcessor;
+use crate::{TaskId, TaskProcessor, TransactionProcessor};
 
 #[derive(CairoSerde, Debug, Clone)]
 pub struct ExecuteCall {
@@ -56,6 +57,18 @@ struct TransactionInfo {
 
 #[derive(Default, Debug)]
 pub struct StoreTransactionProcessor;
+
+impl<Transaction> TaskProcessor<Transaction> for StoreTransactionProcessor {
+    fn dependencies(&self, transaction: &Transaction) -> Vec<TaskId> {
+        vec![]
+    }
+
+    fn identifier(&self, transaction: &Transaction) -> TaskId {
+        let mut hasher = DefaultHasher::new();
+        transaction.transaction_hash.hash(&mut hasher);
+        hasher.finish()
+    }
+}
 
 impl StoreTransactionProcessor {
     fn extract_transaction_info(transaction: &Transaction) -> Option<TransactionInfo> {

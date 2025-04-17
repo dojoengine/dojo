@@ -15,3 +15,5 @@ async-trait.workspace = true
 tokio.workspace = true
 tracing.workspace = true
 cainome.workspace = true
+dojo-types.workspace = true
+cainome-cairo-serde.workspace = true

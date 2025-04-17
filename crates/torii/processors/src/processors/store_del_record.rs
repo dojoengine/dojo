@@ -6,22 +6,45 @@ use dojo_world::contracts::abigen::world::Event as WorldEvent;
 use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::Event;
 use starknet::providers::Provider;
-use torii_sqlite::Sql;
+use torii_sqlite::{types::ContractType, Sql};
 use tracing::{debug, info};
 
-use super::{EventProcessor, EventProcessorConfig};
-use crate::task_manager::{TaskId, TaskPriority};
+use crate::{EventProcessor, EventProcessorConfig, TaskProcessor};
+use crate::TaskId;
 
 pub(crate) const LOG_TARGET: &str = "torii::indexer::processors::store_del_record";
 
 #[derive(Default, Debug)]
 pub struct StoreDelRecordProcessor;
 
+impl TaskProcessor for StoreDelRecordProcessor {
+    fn dependencies(&self, event: &Event) -> Vec<TaskId> {
+        let mut hasher = DefaultHasher::new();
+        // model selector
+        event.keys[0].hash(&mut hasher);
+
+        vec![hasher.finish()]
+    }
+
+    fn identifier(&self, event: &Event) -> TaskId {
+        let mut hasher = DefaultHasher::new();
+        // model selector
+        event.keys[1].hash(&mut hasher);
+        // entity id
+        event.keys[2].hash(&mut hasher);
+        hasher.finish()
+    }
+}
+
 #[async_trait]
 impl<P> EventProcessor<P> for StoreDelRecordProcessor
 where
     P: Provider + Send + Sync + std::fmt::Debug,
 {
+    fn contract_type(&self) -> ContractType {
+        ContractType::World
+    }
+
     fn event_key(&self) -> String {
         "StoreDelRecord".to_string()
     }

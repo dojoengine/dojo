@@ -7,11 +7,12 @@ use dojo_world::contracts::model::{ModelRPCReader, ModelReader};
 use dojo_world::contracts::world::WorldContractReader;
 use starknet::core::types::{BlockId, Event};
 use starknet::providers::Provider;
+use torii_sqlite::types::ContractType;
 use torii_sqlite::Sql;
 use tracing::{debug, info};
 
-use super::{EventProcessor, EventProcessorConfig};
-use crate::task_manager::{TaskId, TaskPriority};
+use crate::{EventProcessor};
+use crate::EventProcessorConfig;
 
 pub(crate) const LOG_TARGET: &str = "torii::indexer::processors::upgrade_model";
 
@@ -23,6 +24,10 @@ impl<P> EventProcessor<P> for UpgradeModelProcessor
 where
     P: Provider + Send + Sync + std::fmt::Debug,
 {
+    fn contract_type(&self) -> ContractType {
+        ContractType::World
+    }
+
     fn event_key(&self) -> String {
         "ModelUpgraded".to_string()
     }
@@ -33,15 +38,6 @@ where
         true
     }
 
-    fn task_priority(&self) -> TaskPriority {
-        1
-    }
-
-    fn task_identifier(&self, event: &Event) -> TaskId {
-        let mut hasher = DefaultHasher::new();
-        event.keys.iter().for_each(|k| k.hash(&mut hasher));
-        hasher.finish()
-    }
 
     async fn process(
         &self,
