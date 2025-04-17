@@ -193,7 +193,7 @@ jobs:
       - run: gh release create ${{ steps.version_info.outputs.version }} ./artifacts/*.{gz,zip} --generate-notes --draft
 
   docker-build-and-push:
-    runs-on: ubuntu-20.04-4-cores
+    runs-on: ubuntu-22.04-4-cores
     needs: [prepare, release]
 
     steps:
