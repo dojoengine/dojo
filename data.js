@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1744839743340,
+  "lastUpdate": 1744893341611,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -61927,6 +61927,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 16835186,
             "range": "± 338086",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "contact@luca-steeb.com",
+            "name": "Luca Steeb",
+            "username": "steebchen"
+          },
+          "committer": {
+            "email": "contact@luca-steeb.com",
+            "name": "Luca Steeb",
+            "username": "steebchen"
+          },
+          "distinct": true,
+          "id": "7b51ad9d43f8efc5bb7807e09bf81f6df5ebb3da",
+          "message": "ci(release): update workflow to use Ubuntu 22.04",
+          "timestamp": "2025-04-17T19:19:20+07:00",
+          "tree_id": "0faa4c55fabbe9d5c07ef50de48ae76f3d3fbc3b",
+          "url": "https://github.com/dojoengine/dojo/commit/7b51ad9d43f8efc5bb7807e09bf81f6df5ebb3da"
+        },
+        "date": 1744893338550,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 47057010857,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
