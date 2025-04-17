@@ -70,7 +70,7 @@ pub struct InitArgs {
 
     /// The address of the facts registry contract on the settlement chain.
     /// If not provided, the default facts registry contract for that chain will be used.
-    #[arg(long = "settlement-facts-registry-contract")]
+    #[arg(long = "settlement-facts-registry")]
     #[arg(requires_all = ["id", "settlement_chain", "settlement_account"])]
     pub settlement_facts_registry_contract: Option<ContractAddress>,
 
@@ -429,7 +429,7 @@ mod tests {
             "0x1234567890123456789012345678901234567890",
             "--settlement-account-private-key",
             "0x1234567890123456789012345678901234567890",
-            "--settlement-facts-registry-contract",
+            "--settlement-facts-registry",
             custom_settlement_fact_registry,
         ]);
         assert_eq!(
@@ -458,7 +458,7 @@ mod tests {
             "init",
             "--id",
             "wot",
-            "--settlement-facts-registry-contract",
+            "--settlement-facts-registry",
             "0x1234567890123456789012345678901234567890",
         ]) {
             Ok(..) => panic!("Expected parsing to fail with missing required arguments"),
