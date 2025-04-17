@@ -85,11 +85,7 @@ impl RelayClient {
             .with_dns()
             .expect("Failed to create DNS transport")
             .with_behaviour(build_behaviour)?
-            .with_swarm_config(|cfg| {
-                cfg.with_idle_connection_timeout(Duration::from_secs(
-                    constants::IDLE_CONNECTION_TIMEOUT_SECS,
-                ))
-            })
+            .with_swarm_config(build_swarm_config)
             .build();
 
         info!(target: LOG_TARGET, addr = %relay_addr, "Dialing relay.");
@@ -134,11 +130,7 @@ impl RelayClient {
                 })
                 .expect("Failed to create WebSocket transport")
                 .with_behaviour(build_behaviour)?
-                .with_swarm_config(|cfg| {
-                    cfg.with_idle_connection_timeout(Duration::from_secs(
-                        constants::IDLE_CONNECTION_TIMEOUT_SECS,
-                    ))
-                })
+                .with_swarm_config(build_swarm_config)
                 .build(),
             None => libp2p::SwarmBuilder::with_existing_identity(local_key)
                 .with_wasm_bindgen()
@@ -152,11 +144,7 @@ impl RelayClient {
                 })
                 .expect("Failed to create WebSocket transport")
                 .with_behaviour(build_behaviour)?
-                .with_swarm_config(|cfg| {
-                    cfg.with_idle_connection_timeout(Duration::from_secs(
-                        constants::IDLE_CONNECTION_TIMEOUT_SECS,
-                    ))
-                })
+                .with_swarm_config(build_swarm_config)
                 .build(),
         };
 
@@ -279,4 +267,9 @@ fn build_behaviour(key: &libp2p::identity::Keypair) -> Behaviour {
         )),
         ping: ping::Behaviour::new(ping::Config::default()),
     }
+}
+
+fn build_swarm_config(config: libp2p::swarm::Config) -> libp2p::swarm::Config {
+    config
+        .with_idle_connection_timeout(Duration::from_secs(constants::IDLE_CONNECTION_TIMEOUT_SECS))
 }
