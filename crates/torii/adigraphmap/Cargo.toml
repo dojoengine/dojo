@@ -1,0 +1,12 @@
+[package]
+name = "torii-adigraphmap"
+version = "0.1.0"
+edition = "2021"
+description = "Generic acyclic directed graph data structure with dependency management"
+
+[dependencies]
+petgraph = "0.6"
+thiserror.workspace = true
+tracing.workspace = true
+futures-util.workspace = true
+tokio.workspace = true
