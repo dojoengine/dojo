@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1744912559306,
+  "lastUpdate": 1744912693338,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -62191,6 +62191,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 45816081603,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "contact@luca-steeb.com",
+            "name": "Luca Steeb",
+            "username": "steebchen"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "374fd38f03db9449c92247b0009872ce0144e9ac",
+          "message": "fix(Dockerfile): move dependencies in base image (#3173)\n\n* fix(Dockerfile): move dependencies in base image\n\nMoved installation of curl, ca-certificates, and tini to the\nbase image stage. Cleaned up apt cache to reduce image size.\n\n* fix(Dockerfile): adjust tini installation and entrypoint path\n\nEnsure tini is copied to a new path and update the entrypoint\naccordingly to prevent runtime issues.",
+          "timestamp": "2025-04-18T00:39:27+07:00",
+          "tree_id": "9bf483805812e0f5cc7049af8bbd1c78f252df94",
+          "url": "https://github.com/dojoengine/dojo/commit/374fd38f03db9449c92247b0009872ce0144e9ac"
+        },
+        "date": 1744912689971,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2586780,
+            "range": "± 36691",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 390435,
+            "range": "± 5530",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2756171362,
+            "range": "± 252529947",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 16949358,
+            "range": "± 232669",
             "unit": "ns/iter"
           }
         ]
