@@ -1,0 +1,17 @@
+[package]
+name = "torii-task-network"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+torii-sqlite = { path = "../sqlite/sqlite" }
+torii-adigraphmap = { path = "../adigraphmap" }
+tracing.workspace = true
+anyhow.workspace = true
+futures-util.workspace = true
+tokio.workspace = true
+starknet.workspace = true
+dojo-world.workspace = true
+thiserror.workspace = true
