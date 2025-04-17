@@ -1,4 +1,4 @@
-use error::DigraphMapError;
+use error::AcyclicDigraphMapError;
 use petgraph::graph::{DiGraph, NodeIndex};
 use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
@@ -6,7 +6,7 @@ use std::hash::Hash;
 pub mod error;
 
 /// Result type for DigraphMap operations
-pub type Result<T> = std::result::Result<T, DigraphMapError>;
+pub type Result<T> = std::result::Result<T, AcyclicDigraphMapError>;
 
 /// A directed graph that maps dependencies between nodes with values of type `V`.
 /// Each node has a unique key of type `K` that can be used to identify it.
@@ -50,7 +50,7 @@ where
     /// Add a node to the graph with the given key and value
     pub fn add_node(&mut self, key: K, value: V) -> Result<NodeIndex> {
         if self.node_indices.contains_key(&key) {
-            return Err(DigraphMapError::DuplicateKey(format!("{:?}", key)));
+            return Err(AcyclicDigraphMapError::DuplicateKey(format!("{:?}", key)));
         }
 
         let node_idx = self.graph.add_node(value);
@@ -66,7 +66,7 @@ where
 
         // Check if adding this edge would create a cycle
         if self.would_create_cycle(from_idx, to_idx) {
-            return Err(DigraphMapError::CycleDetected);
+            return Err(AcyclicDigraphMapError::CycleDetected);
         }
 
         self.graph.add_edge(from_idx, to_idx, ());
@@ -89,7 +89,7 @@ where
         self.node_indices
             .get(key)
             .cloned()
-            .ok_or_else(|| DigraphMapError::NodeNotFound(format!("{:?}", key)))
+            .ok_or_else(|| AcyclicDigraphMapError::NodeNotFound(format!("{:?}", key)))
     }
 
     /// Check if adding an edge from `from` to `to` would create a cycle

@@ -1,8 +1,9 @@
 [package]
+edition.workspace = true
+license.workspace = true
 name = "torii-adigraphmap"
-version = "0.1.0"
-edition = "2021"
-description = "Generic acyclic directed graph data structure with dependency management"
+repository.workspace = true
+version.workspace = true
 
 [dependencies]
 petgraph = "0.6"

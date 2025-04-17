@@ -2,7 +2,7 @@ use thiserror::Error;
 
 /// Errors that can occur when working with a DigraphMap
 #[derive(Error, Debug)]
-pub enum DigraphMapError {
+pub enum AcyclicDigraphMapError {
     #[error("Node with key {0:?} not found")]
     NodeNotFound(String),
     #[error("Adding edge would create a cycle")]
