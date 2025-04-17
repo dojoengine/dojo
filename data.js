@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1744893506822,
+  "lastUpdate": 1744898058230,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -62005,6 +62005,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 17143043,
             "range": "± 353900",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "contact@luca-steeb.com",
+            "name": "Luca Steeb",
+            "username": "steebchen"
+          },
+          "committer": {
+            "email": "contact@luca-steeb.com",
+            "name": "Luca Steeb",
+            "username": "steebchen"
+          },
+          "distinct": true,
+          "id": "6b582df57c25f9246721c3a4cae012760898be92",
+          "message": "ci(release): update runner to ubuntu-22.04 for docker build",
+          "timestamp": "2025-04-17T20:37:51+07:00",
+          "tree_id": "5fc23154fa86bd984e22874d11331efb2c1f61ea",
+          "url": "https://github.com/dojoengine/dojo/commit/6b582df57c25f9246721c3a4cae012760898be92"
+        },
+        "date": 1744898054327,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 49714925814,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
