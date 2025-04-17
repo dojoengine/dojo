@@ -69,7 +69,7 @@ impl RelayClient {
             })
             .expect("Failed to create WebRTC transport")
             .with_other_transport(|key| {
-                let transport = websocket::WsConfig::new(
+                let transport = websocket::Config::new(
                     dns::tokio::Transport::system(tcp::tokio::Transport::new(
                         tcp::Config::default(),
                     ))

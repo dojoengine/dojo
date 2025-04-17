@@ -120,7 +120,7 @@ impl<P: Provider + Sync> Relay<P> {
             })
             .expect("Failed to create WebRTC transport")
             .with_other_transport(|key| {
-                let transport = websocket::WsConfig::new(
+                let transport = websocket::Config::new(
                     dns::tokio::Transport::system(tcp::tokio::Transport::new(
                         tcp::Config::default(),
                     ))
@@ -420,7 +420,7 @@ impl<P: Provider + Sync> Relay<P> {
                                     target: LOG_TARGET,
                                     "Forwarded message to peers."
                                 ),
-                                Err(Error::PublishError(PublishError::InsufficientPeers)) => {}
+                                Err(Error::PublishError(PublishError::NoPeersSubscribedToTopic)) => {}
                                 Err(e) => warn!(
                                     target: LOG_TARGET,
                                     error = %e,
