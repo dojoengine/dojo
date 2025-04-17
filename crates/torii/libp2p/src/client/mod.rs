@@ -108,13 +108,15 @@ impl RelayClient {
 
         info!(target: LOG_TARGET, peer_id = %peer_id, "Local peer id.");
 
-        // WebRTC transport and WebTransport are not natively supported in NodeJS, so we need to check if we are in a
-        // browser environment
+        // WebRTC transport and WebTransport are not natively supported in NodeJS, so we need to
+        // check if we are in a browser environment
         let mut swarm = match web_sys::window() {
             Some(_) => libp2p::SwarmBuilder::with_existing_identity(local_key.clone())
                 .with_wasm_bindgen()
                 .with_other_transport(|key| {
-                    libp2p_webtransport_websys::Transport::new(libp2p_webtransport_websys::Config::new(&key))
+                    libp2p_webtransport_websys::Transport::new(
+                        libp2p_webtransport_websys::Config::new(&key),
+                    )
                 })
                 .expect("Failed to create WebTransport transport")
                 .with_other_transport(|key| {

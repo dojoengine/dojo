@@ -420,7 +420,9 @@ impl<P: Provider + Sync> Relay<P> {
                                     target: LOG_TARGET,
                                     "Forwarded message to peers."
                                 ),
-                                Err(Error::PublishError(PublishError::NoPeersSubscribedToTopic)) => {}
+                                Err(Error::PublishError(
+                                    PublishError::NoPeersSubscribedToTopic,
+                                )) => {}
                                 Err(e) => warn!(
                                     target: LOG_TARGET,
                                     error = %e,
