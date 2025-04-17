@@ -5,6 +5,7 @@ pub use error::TaskNetworkError;
 pub type Result<T> = std::result::Result<T, TaskNetworkError>;
 
 use std::future::Future;
+use std::hash::Hash;
 use std::sync::Arc;
 
 use futures_util::future::try_join_all;
@@ -14,19 +15,19 @@ use tracing::{debug, error};
 
 const LOG_TARGET: &str = "torii::task_network";
 
-pub type TaskId = u64;
-
 /// A generic task manager that can execute tasks in parallel with dependency handling.
-pub struct TaskNetwork<T>
+pub struct TaskNetwork<K, T>
 where
+    K: Eq + Hash + Clone + std::fmt::Debug + Send + Sync + 'static,
     T: Clone + Send + Sync + 'static,
 {
-    tasks: AcyclicDigraphMap<TaskId, T>,
+    tasks: AcyclicDigraphMap<K, T>,
     max_concurrent_tasks: usize,
 }
 
-impl<T> TaskNetwork<T>
+impl<K, T> TaskNetwork<K, T>
 where
+    K: Eq + Hash + Clone + std::fmt::Debug + Send + Sync + 'static,
     T: Clone + Send + Sync + 'static,
 {
     /// Create a new task manager with the specified maximum number of concurrent tasks.
@@ -38,20 +39,20 @@ where
     }
 
     /// Add a task to the manager.
-    pub fn add_task(&mut self, task_id: TaskId, task: T) -> Result<()> {
+    pub fn add_task(&mut self, task_id: K, task: T) -> Result<()> {
         self.tasks.add_node(task_id, task).map_err(|e| TaskNetworkError::GraphError(e))?;
         Ok(())
     }
 
     /// Add a task with dependencies to the manager.
-    pub fn add_task_with_dependencies(&mut self, task_id: TaskId, task: T, dependencies: Vec<TaskId>) -> Result<()> {
+    pub fn add_task_with_dependencies(&mut self, task_id: K, task: T, dependencies: Vec<K>) -> Result<()> {
         self.tasks.add_node_with_dependencies(task_id, task, dependencies)
             .map_err(|e| TaskNetworkError::GraphError(e))?;
         Ok(())
     }
 
     /// Add a dependency between two tasks.
-    pub fn add_dependency(&mut self, from: TaskId, to: TaskId) -> Result<()> {
+    pub fn add_dependency(&mut self, from: K, to: K) -> Result<()> {
         self.tasks.add_dependency(&from, &to).map_err(|e| TaskNetworkError::GraphError(e))
     }
 
@@ -60,9 +61,9 @@ where
     /// Tasks at different topological levels are executed sequentially.
     pub async fn process_tasks<F, Fut, O>(&mut self, task_handler: F) -> Result<()>
     where
-        F: Fn(TaskId, T) -> Fut + Clone + Send + Sync + 'static,
+        F: Fn(K, T) -> Fut + Clone + Send + Sync + 'static,
         Fut: Future<Output = anyhow::Result<O>> + Send,
-        O: Send + 'static,
+        O: Send,
     {
         if self.tasks.is_empty() {
             return Ok(());
@@ -88,25 +89,25 @@ where
                 let task_handler = task_handler.clone();
                 let semaphore = semaphore.clone();
                 let task_clone = task.clone();
-                let task_id = *task_id;
+                let task_id = task_id.clone();
                 
                 handles.push(tokio::spawn(async move {
                     let _permit = semaphore.acquire().await.map_err(|e| TaskNetworkError::SemaphoreError(e))?;
                     
                     debug!(
                         target: LOG_TARGET,
-                        task_id = %task_id,
+                        task_id = ?task_id,
                         level = level_idx,
                         "Processing task."
                     );
                     
-                    match task_handler(task_id, task_clone).await {
+                    match task_handler(task_id.clone(), task_clone).await {
                         Ok(_) => Ok(()),
                         Err(e) => {
                             error!(
                                 target: LOG_TARGET,
                                 error = %e,
-                                task_id = %task_id,
+                                task_id = ?task_id,
                                 "Error processing task."
                             );
                             Err(e)
@@ -136,9 +137,10 @@ where
     }
 }
 
-impl<T> Default for TaskNetwork<T>
+impl<K, T> Default for TaskNetwork<K, T>
 where
-    T: Clone + Send + Sync + 'static,
+    K: Eq + Hash + Clone + std::fmt::Debug + Send + Sync,
+    T: Clone + Send + Sync,
 {
     fn default() -> Self {
         Self::new(std::thread::available_parallelism().map_or(4, |p| p.get()))
@@ -151,7 +153,7 @@ mod tests {
     
     #[tokio::test]
     async fn test_basic_task_execution() {
-        let mut manager = TaskNetwork::<String>::new(4);
+        let mut manager = TaskNetwork::<u64, String>::new(4);
         
         manager.add_task(1, "Task 1".to_string()).unwrap();
         manager.add_task(2, "Task 2".to_string()).unwrap();
@@ -174,7 +176,7 @@ mod tests {
     
     #[tokio::test]
     async fn test_dependency_ordering() {
-        let mut manager = TaskNetwork::<String>::new(4);
+        let mut manager = TaskNetwork::<u64, String>::new(4);
         
         manager.add_task(1, "Task 1".to_string()).unwrap();
         manager.add_task(2, "Task 2".to_string()).unwrap();
@@ -199,7 +201,7 @@ mod tests {
     
     #[tokio::test]
     async fn test_level_parallel_execution() {
-        let mut manager = TaskNetwork::<String>::new(4);
+        let mut manager = TaskNetwork::<u64, String>::new(4);
         
         // Create a task graph with multiple levels:
         // Level 0: 1, 2 (no dependencies)
@@ -283,5 +285,35 @@ mod tests {
         
         // Check that task 3 and 4 were potentially running in parallel (level 1)
         assert!(task_3_execution.1.contains(&4) || task_4_execution.1.contains(&3));
+    }
+    
+    // Test with a custom TaskId type
+    #[tokio::test]
+    async fn test_custom_task_id_type() {
+        #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+        struct CustomTaskId(String);
+        
+        let mut manager = TaskNetwork::<CustomTaskId, String>::new(4);
+        
+        manager.add_task(CustomTaskId("task1".to_string()), "Task 1".to_string()).unwrap();
+        manager.add_task(CustomTaskId("task2".to_string()), "Task 2".to_string()).unwrap();
+        manager.add_dependency(CustomTaskId("task1".to_string()), CustomTaskId("task2".to_string())).unwrap();
+        
+        let executed = Arc::new(tokio::sync::Mutex::new(Vec::new()));
+        
+        let executed_clone = executed.clone();
+        manager.process_tasks(move |id, _task| {
+            let executed = executed_clone.clone();
+            async move {
+                let mut locked = executed.lock().await;
+                locked.push(id);
+                Ok::<_, anyhow::Error>(())
+            }
+        }).await.unwrap();
+        
+        let result = executed.lock().await;
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0], CustomTaskId("task1".to_string()));
+        assert_eq!(result[1], CustomTaskId("task2".to_string()));
     }
 }
