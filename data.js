@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1744898238259,
+  "lastUpdate": 1744906433122,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -62083,6 +62083,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 17033243,
             "range": "± 177422",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "contact@luca-steeb.com",
+            "name": "Luca Steeb",
+            "username": "steebchen"
+          },
+          "committer": {
+            "email": "contact@luca-steeb.com",
+            "name": "Luca Steeb",
+            "username": "steebchen"
+          },
+          "distinct": true,
+          "id": "cf19cf349388caee05b9bae7ecdc7a16a6092c43",
+          "message": "ci(workflows): update runner to ubuntu-latest-32-cores\n\nOptimized workflow by increasing runner cores and using the\nlatest Ubuntu version for release and docker build jobs.",
+          "timestamp": "2025-04-17T22:56:51+07:00",
+          "tree_id": "a9d5c42ce2b665cb4c3771419a713f59ec949971",
+          "url": "https://github.com/dojoengine/dojo/commit/cf19cf349388caee05b9bae7ecdc7a16a6092c43"
+        },
+        "date": 1744906429410,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 51913433471,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
