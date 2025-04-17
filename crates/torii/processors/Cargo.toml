@@ -1,0 +1,17 @@
+[package]
+name = "torii-processors"
+edition.workspace = true
+license.workspace = true
+license-file.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+torii-sqlite = { path = "../sqlite/sqlite" }
+dojo-world.workspace = true
+starknet.workspace = true
+anyhow.workspace = true
+async-trait.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+cainome.workspace = true
