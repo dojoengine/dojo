@@ -1,6 +1,6 @@
-FROM ubuntu:24.04 as builder
+FROM ubuntu:24.04 AS builder
 
-RUN apt-get update && apt install -y git libtool automake autoconf make tini ca-certificates curl
+RUN apt-get update && apt install -y git libtool automake autoconf make
 
 RUN git clone https://github.com/Comcast/Infinite-File-Curtailer.git curtailer \
     && cd curtailer \
@@ -14,12 +14,14 @@ RUN git clone https://github.com/Comcast/Infinite-File-Curtailer.git curtailer \
     && make install \
     && curtail --version
 
-FROM ubuntu:24.04 as base
+FROM ubuntu:24.04 AS base
 
-COPY --from=builder /etc/ssl/certs /etc/ssl/certs
-COPY --from=builder /usr/bin/curl /usr/bin/curl
+RUN apt-get update && \
+    apt-get install -y curl ca-certificates tini && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* && \
+    cp /usr/bin/tini /tini
 
-COPY --from=builder /usr/bin/tini /tini
 ENTRYPOINT ["/tini", "--"]
 
 ARG TARGETPLATFORM
