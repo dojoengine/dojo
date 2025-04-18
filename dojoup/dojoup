@@ -27,7 +27,7 @@ VERSIONS_JSON_URL="https://raw.githubusercontent.com/dojoengine/dojo/new-dojoup/
 COMPONENT_BINARY=("sozo" "torii" "katana" "dojo-language-server")
 
 # The last dojo version that is still using the 'legacy' format ie all binaries are included in the monorepo
-MAX_LEGACY_DOJO_VERSION=1.4.0
+MAX_LEGACY_DOJO_VERSION=1.4.2
 
 get_repo_for_component() {
   local component=$1
