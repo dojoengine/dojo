@@ -121,11 +121,9 @@ jobs:
         shell: bash
         run: |
           DOJO_VERSION=$(echo "${{ needs.prepare.outputs.tag_name }}" | sed 's/^v//')
-          # Remove preview suffix if present
-          DOJO_VERSION=$(echo $DOJO_VERSION | sed 's/-preview\.[0-9]*//')
 
           # Read component version from versions.json
-          COMPONENT_VERSION=$(jq -r ".[$DOJO_VERSION].katana[0]" versions.json)
+          COMPONENT_VERSION=$(jq -r ".[\"$DOJO_VERSION\"].katana[0]" versions.json)
           VERSION_NAME="v$COMPONENT_VERSION"
           COMPONENT_NAME="katana"
           PLATFORM_NAME="${{ env.PLATFORM_NAME }}"
