@@ -37,6 +37,10 @@ pub struct InitArgs {
     id: Option<String>,
 
     /// The settlement chain to be used, where the core contract is deployed.
+    ///
+    /// If a custom settlement chain is provided, setting a custom facts registry is required using
+    /// the `--settlement-facts-registry` option. Otherwise, setting a custom facts registry
+    /// with a known chain is a no-op.
     #[arg(long = "settlement-chain")]
     #[arg(required_unless_present = "sovereign")]
     #[arg(requires_all = ["id", "settlement_account", "settlement_account_private_key"])]
@@ -69,7 +73,8 @@ pub struct InitArgs {
     settlement_contract_deployed_block: Option<BlockNumber>,
 
     /// The address of the facts registry contract on the settlement chain.
-    /// If not provided, the default facts registry contract for that chain will be used.
+    ///
+    /// Required if a custom settlement chain is specified.
     #[arg(long = "settlement-facts-registry")]
     #[arg(requires_all = ["id", "settlement_chain", "settlement_account"])]
     pub settlement_facts_registry_contract: Option<ContractAddress>,
@@ -156,27 +161,32 @@ impl InitArgs {
             let settlement_account_address = self.settlement_account.expect("must present");
             let settlement_private_key = self.settlement_account_private_key.expect("must present");
 
-            let settlement_provider_result = match settlement_chain {
-                SettlementChain::Mainnet => create_settlement_provider(
-                    SettlementChainProvider::sn_mainnet(),
-                    self.settlement_facts_registry_contract,
-                ),
-                SettlementChain::Sepolia => create_settlement_provider(
-                    SettlementChainProvider::sn_sepolia(),
-                    self.settlement_facts_registry_contract,
-                ),
+            let settlement_provider = match settlement_chain {
+                SettlementChain::Mainnet => {
+                    let mut provider = SettlementChainProvider::sn_mainnet();
+                    if let Some(fact_registry) = self.settlement_facts_registry_contract {
+                        provider.set_fact_registry(*fact_registry);
+                    }
+                    provider
+                }
+                SettlementChain::Sepolia => {
+                    let mut provider = SettlementChainProvider::sn_sepolia();
+                    if let Some(fact_registry) = self.settlement_facts_registry_contract {
+                        provider.set_fact_registry(*fact_registry);
+                    }
+                    provider
+                }
                 #[cfg(feature = "init-custom-settlement-chain")]
-                SettlementChain::Custom(url) => match self.settlement_facts_registry_contract {
-                    Some(fact_registry) => Ok(SettlementChainProvider::new(url, *fact_registry)),
-                    None => Err(anyhow::anyhow!(
-                        "Fact registry contract address is required for custom settlement chain"
-                    )),
-                },
-            };
-
-            let settlement_provider = match settlement_provider_result {
-                Ok(settlement_provider) => settlement_provider,
-                Err(e) => return Some(Err(e)),
+                SettlementChain::Custom(url) => {
+                    let Some(fact_registry) = self.settlement_facts_registry_contract else {
+                        return Some(Err(anyhow::anyhow!(
+                            "Specifying the facts registry contract (using \
+                             `--settlement-facts-registry`) is required when settling on a custom \
+                             chain"
+                        )));
+                    };
+                    SettlementChainProvider::new(url, *fact_registry)
+                }
             };
 
             let l1_chain_id = settlement_provider.chain_id().await.unwrap();
@@ -284,16 +294,6 @@ fn generate_genesis() -> Genesis {
     let mut genesis = Genesis::default();
     genesis.extend_allocations(accounts.into_iter().map(|(k, v)| (k, v.into())));
     genesis
-}
-
-fn create_settlement_provider(
-    provider: SettlementChainProvider,
-    facts_registry: Option<ContractAddress>,
-) -> Result<SettlementChainProvider, anyhow::Error> {
-    Ok(match facts_registry {
-        Some(fact_registry) => SettlementChainProvider::new(provider.url().clone(), *fact_registry),
-        None => provider,
-    })
 }
 
 #[derive(Debug, thiserror::Error)]
