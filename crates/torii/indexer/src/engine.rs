@@ -5,7 +5,6 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Result;
-use async_recursion::async_recursion;
 use bitflags::bitflags;
 use dojo_utils::provider as provider_utils;
 use dojo_world::contracts::world::WorldContractReader;
@@ -429,7 +428,7 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         }
 
         // Recursively fetch all events using batch requests
-        events.extend(self.fetch_events_recursive(event_requests, cursor_map, to).await?);
+        events.extend(self.fetch_events(event_requests, cursor_map, to).await?);
 
         // Process events to get unique blocks and transactions
         let mut blocks = BTreeMap::new();
@@ -523,97 +522,93 @@ impl<P: Provider + Send + Sync + std::fmt::Debug + 'static> Engine<P> {
         Ok(FetchRangeResult { transactions, blocks })
     }
 
-    #[async_recursion]
-    async fn fetch_events_recursive(
+    async fn fetch_events(
         &self,
-        requests: Vec<(Felt, ProviderRequestData)>,
+        initial_requests: Vec<(Felt, ProviderRequestData)>,
         cursor_map: &HashMap<Felt, Felt>,
         to: u64,
     ) -> Result<Vec<EmittedEvent>> {
-        if requests.is_empty() {
-            return Ok(Vec::new());
-        }
+        let mut all_events = Vec::new();
+        let mut current_requests = initial_requests;
 
-        let mut events = Vec::new();
-        let mut next_requests = Vec::new();
+        while !current_requests.is_empty() {
+            let mut next_requests = Vec::new();
+            let mut events = Vec::new();
 
-        // Extract just the requests without the contract addresses
-        let batch_requests: Vec<ProviderRequestData> =
-            requests.iter().map(|(_, req)| req.clone()).collect();
-        let batch_results = self.provider.batch_requests(batch_requests).await?;
+            // Extract just the requests without the contract addresses
+            let batch_requests: Vec<ProviderRequestData> =
+                current_requests.iter().map(|(_, req)| req.clone()).collect();
+            let batch_results = self.provider.batch_requests(batch_requests).await?;
 
-        // Process results and prepare next batch of requests if needed
-        for ((contract_address, original_request), result) in
-            requests.into_iter().zip(batch_results)
-        {
-            let last_contract_tx = cursor_map.get(&contract_address).cloned();
-            let mut last_contract_tx_tmp = last_contract_tx;
+            // Process results and prepare next batch of requests if needed
+            for ((contract_address, original_request), result) in
+                current_requests.into_iter().zip(batch_results)
+            {
+                let last_contract_tx = cursor_map.get(&contract_address).cloned();
+                let mut last_contract_tx_tmp = last_contract_tx;
 
-            match result {
-                ProviderResponseData::GetEvents(events_page) => {
-                    let last_block_number =
-                        events_page.events.last().map_or(0, |e| e.block_number.unwrap());
+                match result {
+                    ProviderResponseData::GetEvents(events_page) => {
+                        let last_block_number =
+                            events_page.events.last().map_or(0, |e| e.block_number.unwrap());
 
-                    // Process events for this page, only including events up to our target block
-                    for event in events_page.events {
-                        let block_number = event.block_number.unwrap();
-                        if block_number > to {
-                            continue;
-                        }
-
-                        // Then we skip all transactions until we reach the last pending processed
-                        // transaction (if any)
-                        if let Some(last_contract_tx) = last_contract_tx_tmp {
-                            if event.transaction_hash != last_contract_tx {
+                        // Process events for this page, only including events up to our target
+                        // block
+                        for event in events_page.events {
+                            let block_number = event.block_number.unwrap();
+                            if block_number > to {
                                 continue;
                             }
-                            last_contract_tx_tmp = None;
+
+                            // Then we skip all transactions until we reach the last pending
+                            // processed transaction (if any)
+                            if let Some(last_contract_tx) = last_contract_tx_tmp {
+                                if event.transaction_hash != last_contract_tx {
+                                    continue;
+                                }
+                                last_contract_tx_tmp = None;
+                            }
+
+                            // Skip the latest pending block transaction events
+                            // * as we might have multiple events for the same transaction
+                            if let Some(last_contract_tx) = last_contract_tx {
+                                if event.transaction_hash == last_contract_tx {
+                                    continue;
+                                }
+                            }
+
+                            events.push(event);
                         }
 
-                        // Skip the latest pending block transaction events
-                        // * as we might have multiple events for the same transaction
-                        if let Some(last_contract_tx) = last_contract_tx {
-                            if event.transaction_hash == last_contract_tx {
-                                continue;
+                        // Add continuation request to next_requests instead of recursing
+                        if let Some(continuation_token) = events_page.continuation_token {
+                            if last_block_number < to {
+                                if let ProviderRequestData::GetEvents(mut next_request) =
+                                    original_request
+                                {
+                                    next_request.filter.result_page_request.continuation_token =
+                                        Some(continuation_token);
+                                    next_requests.push((
+                                        contract_address,
+                                        ProviderRequestData::GetEvents(next_request),
+                                    ));
+                                }
                             }
                         }
-
-                        events.push(event);
                     }
-
-                    // Continue fetching pages if there are more events and we haven't seen all
-                    // events up to our target block
-                    if let Some(continuation_token) = events_page.continuation_token {
-                        // Only continue if we haven't seen all events up to our target block
-                        if last_block_number < to {
-                            if let ProviderRequestData::GetEvents(mut next_request) =
-                                original_request
-                            {
-                                next_request.filter.result_page_request.continuation_token =
-                                    Some(continuation_token);
-                                next_requests.push((
-                                    contract_address,
-                                    ProviderRequestData::GetEvents(next_request),
-                                ));
-                            }
-                        }
+                    _ => {
+                        return Err(anyhow::anyhow!(
+                            "Unexpected response type from batch events request"
+                        ));
                     }
-                }
-                _ => {
-                    error!(target: LOG_TARGET, "Unexpected response type from batch events request");
-                    return Err(anyhow::anyhow!(
-                        "Unexpected response type from batch events request"
-                    ));
                 }
             }
+
+            all_events.extend(events);
+            current_requests = next_requests;
         }
 
-        // Recursively fetch next batch if there are any continuation tokens
-        if !next_requests.is_empty() {
-            events.extend(self.fetch_events_recursive(next_requests, cursor_map, to).await?);
-        }
-
-        Ok(events)
+        Ok(all_events)
     }
 
     async fn fetch_pending(
