@@ -455,6 +455,9 @@ public:
     UFUNCTION(BlueprintCallable)
     void ControllerGetAccountOrConnect(const FString& rpc_url, const FString& chain_id);
 
+    UFUNCTION(BlueprintCallable)
+    void ControllerConnect(const FString& rpc_url);
+
     DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnDojoControllerAccount,
                                                 struct FControllerAccount,
                                                 Account);
@@ -1198,6 +1201,16 @@ void ADojoHelpers::ControllerGetAccountOrConnect(const FString& rpc_url, const F
 
     FDojoModule::ControllerGetAccountOrConnect(rpc_url_string.c_str(), chain_id_string.c_str(), \
              policies, nbPolicies, ControllerCallbackProxy);
+}}
+
+
+void ADojoHelpers::ControllerConnect(const FString& rpc_url)
+{{
+    std::string rpc_url_string = std::string(TCHAR_TO_UTF8(*rpc_url));
+
+    {policies}
+
+    FDojoModule::ControllerConnect(rpc_url_string.c_str(), policies, nbPolicies, ControllerCallbackProxy);
 }}
 
 void ADojoHelpers::ControllerCallbackProxy(ControllerAccount *account)
