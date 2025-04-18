@@ -840,8 +840,7 @@ void ADojoHelpers::CallController{namespace}{system}{selector}(const FController
                             .iter()
                             .map(|field| {
                                 format!(
-                                    r#"strings.Append(ConvertToFeltHexa<{cpp_type}>(value.{name}, \
-                                     "{type_name}"));"#,
+                                    r#"strings.Append(ConvertToFeltHexa<{cpp_type}>(value.{name}, "{type_name}"));"#,
                                     cpp_type = Self::map_type(&field.token),
                                     name = Self::to_pascal_case(&field.name),
                                     type_name = &field.token.type_name(),
@@ -1021,7 +1020,7 @@ static TArray<FString> ConvertToFeltHexa(const T& value, const char* valueType) 
             while (hexValue.Len() < 64) {{
                 hexValue = TEXT("0") + hexValue;
             }}
-            return TArray<FString>{TEXT("0x") + hexValue};
+            return TArray<FString>{{TEXT("0x") + hexValue}};
         }}
     }}
     else if constexpr (std::is_same_v<T, bool>) {{
@@ -1060,8 +1059,7 @@ static TArray<FString> ConvertToFeltHexa(const T& value, const char* valueType) 
 }}
 
 template<typename T>
-static void ConvertTyToUnrealEngineType(const Member* member, const char* expectedName, const \
-             char* expectedType, T& output) {{
+static void ConvertTyToUnrealEngineType(const Member* member, const char* expectedName, const char* expectedType, T& output) {{
     if (strcmp(member->name, expectedName) != 0) {{
         return;
     }}
@@ -1154,8 +1152,7 @@ void ADojoHelpers::SetContractsAddresses(const TMap<FString,FString>& addresses)
     ContractsAddresses = addresses;
 }}
 
-FAccount ADojoHelpers::CreateAccountDeprecated(const FString& rpc_url, const FString& \
-             address, const FString& private_key)
+FAccount ADojoHelpers::CreateAccountDeprecated(const FString& rpc_url, const FString& address, const FString& private_key)
 {{
     FAccount account;
 
