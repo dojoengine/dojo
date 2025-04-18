@@ -524,7 +524,8 @@ mod tests {
         assert!(configure_result.is_err());
         assert_eq!(
             configure_result.unwrap_err().to_string(),
-            "Fact registry contract address is required for custom settlement chain"
+            "Specifying the facts registry contract (using `--settlement-facts-registry`) is \
+             required when settling on a custom chain"
         );
     }
 }
