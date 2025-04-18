@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1744926779118,
+  "lastUpdate": 1744950182440,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -62395,6 +62395,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 18881887,
             "range": "± 168108",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4ef0e2dccc5c076f5dec425d0392348e30176d78",
+          "message": "fix(torii-indexer): stack overflow when dealing with a high number of… (#3164)\n\n* fix(torii-indexer): stack overflow when dealing with a high number of events pages\n\n* get rid of recursive func\n\n* chore",
+          "timestamp": "2025-04-17T22:07:08-06:00",
+          "tree_id": "84e01e878490d0345591a8b02ae1d7ba8a61ba22",
+          "url": "https://github.com/dojoengine/dojo/commit/4ef0e2dccc5c076f5dec425d0392348e30176d78"
+        },
+        "date": 1744950179145,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 44835455164,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
