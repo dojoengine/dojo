@@ -72,10 +72,6 @@ jobs:
             platform: darwin
             target: aarch64-apple-darwin
             arch: arm64
-          - os: windows-latest
-            platform: win32
-            target: x86_64-pc-windows-msvc
-            arch: amd64
 
     steps:
       - uses: actions/checkout@v3
@@ -121,9 +117,6 @@ jobs:
           # See: https://github.com/jemalloc/jemalloc/issues/467
           echo "JEMALLOC_SYS_WITH_LG_PAGE=16" >> $GITHUB_ENV
 
-      - name: Build binaries
-        run: cargo build --release --bins --target ${{ matrix.job.target }}
-
       - name: Download component (Katana)
         uses: ./.github/workflows/download-component
         with:
@@ -132,6 +125,9 @@ jobs:
           platform: ${{ env.PLATFORM_NAME }}
           arch: ${{ env.ARCH }}
           target_dir: ./target/${{ env.TARGET }}/release/
+
+      - name: Build binaries
+        run: cargo build --release --bins --target ${{ matrix.job.target }}
 
       - name: Archive binaries
         id: artifacts
