@@ -27,7 +27,7 @@ VERSIONS_JSON_URL="https://raw.githubusercontent.com/dojoengine/dojo/new-dojoup/
 COMPONENT_BINARY=("sozo" "torii" "katana" "dojo-language-server")
 
 # The last dojo version that is still using the 'legacy' format ie all binaries are included in the monorepo
-MAX_LEGACY_DOJO_VERSION=1.4.2
+MIN_NEW_DOJO_VERSION=1.5.0
 
 get_repo_for_component() {
   local component=$1
@@ -432,10 +432,10 @@ install_dojo() {
 		done
 	}
 
-	if [ "$(version_is_bigger_than "$DOJO_VERSION_NO_V" "$MAX_LEGACY_DOJO_VERSION" )" -eq -1 ]; then
-		do_legacy_install
-	else
+	if [ "$(version_is_bigger_than "$DOJO_VERSION_NO_V" "$MIN_NEW_DOJO_VERSION" )" -ne -1 ]; then
 		do_install
+	else
+		do_legacy_install
 	fi
 
 	# Create version-specific directory in DOJO_DIR for symlinks
