@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       preview:
-        description: 'Preview tag if not empty. Needs to be in format vX.Y.Z-preview.X'
+        description: "Preview tag if not empty. Needs to be in format vX.Y.Z-preview.X"
         type: string
   pull_request:
     types: [closed]
