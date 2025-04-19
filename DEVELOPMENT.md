@@ -28,7 +28,7 @@ Now run the test suite to confirm your setup:
 
 ```sh
 # First generate db artifacts for the tests
-bash scripts/rebuild_test_artifacts.sh
+bash scripts/extract_test_db.sh
 
 # The run the tests
 cargo test
