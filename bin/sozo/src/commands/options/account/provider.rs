@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 use async_trait::async_trait;
 use starknet::core::types::{
     BlockHashAndNumber, BlockId, BroadcastedDeclareTransaction,
@@ -12,11 +14,7 @@ use starknet::core::types::{
 use starknet::providers::{Provider, ProviderError, ProviderRequestData, ProviderResponseData};
 
 #[derive(Debug, Clone)]
-pub enum EitherProvider<P, Q>
-where
-    P: Provider,
-    Q: Provider,
-{
+pub enum EitherProvider<P, Q> {
     Left(P),
     Right(Q),
 }
