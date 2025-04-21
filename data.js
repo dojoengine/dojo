@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1745242850670,
+  "lastUpdate": 1745267267411,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -62551,6 +62551,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 16891264,
             "range": "± 208061",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "corentin.cailleaud@caillef.com",
+            "name": "Corentin Cailleaud",
+            "username": "caillef"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4e9622c187263836615122512e695c32c8f79f20",
+          "message": "feat(sozo): unreal bindings handle int64 and ControllerConnect (#3178)\n\n* feat: handle long values (int64)\n\n* fix: array escape error\n\n* feat: add ControllerConnect",
+          "timestamp": "2025-04-21T14:11:33-06:00",
+          "tree_id": "be76a0b5cc276420e43284a429b234887ce9f18c",
+          "url": "https://github.com/dojoengine/dojo/commit/4e9622c187263836615122512e695c32c8f79f20"
+        },
+        "date": 1745267264122,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 47042108482,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
