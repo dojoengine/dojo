@@ -14,22 +14,29 @@ ENV _RJEM_MALLOC_CONF="abort_conf:true,junk:false"
 
 # Install additional packages potentially not in the base image
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    protobuf-compiler \
-    libprotobuf-dev \
-    libclang-dev \
-    libgmp3-dev \
-    libssl-dev \
-    libzstd-dev \
-    gcc \
-    git \
-    gh \
-    make \
-    pkg-config \
-    software-properties-common \
-    unzip \
-    && rm -rf /var/lib/apt/lists/*
+	protobuf-compiler \
+	libprotobuf-dev \
+	libclang-dev \
+	libgmp3-dev \
+	libssl-dev \
+	libzstd-dev \
+	gcc \
+	git \
+	gh \
+	make \
+	pkg-config \
+	software-properties-common \
+	unzip \
+	&& rm -rf /var/lib/apt/lists/*
 
-ENV OPENSSL_DIR=/usr
+# https://github.com/sfackler/rust-openssl/issues/2217#issuecomment-2230398481
+RUN if [ "$TARGETPLATFORM" = "linux/arm64" ] ; then \
+	ln -s /usr/include/aarch64-linux-gnu/openssl/opensslconf.h /usr/include/openssl/opensslconf.h && \
+	ln -s /usr/include/aarch64-linux-gnu/openssl/configuration.h /usr/include/openssl/configuration.h; \
+	else \
+	ln -s /usr/include/x86_64-linux-gnu/openssl/opensslconf.h /usr/include/openssl/opensslconf.h && \
+	ln -s /usr/include/x86_64-linux-gnu/openssl/configuration.h /usr/include/openssl/configuration.h; \
+	fi
 
 RUN curl -fsSL https://bun.sh/install | bash && . /root/.bashrc
 
