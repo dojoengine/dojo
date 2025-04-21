@@ -100,6 +100,9 @@ impl AccountOptions {
             return Ok(SozoAccount::Controller(account));
         }
 
+        let _ = starknet;
+        let _ = contracts;
+
         let account = self.std_account(provider, env_metadata).await?;
         Ok(SozoAccount::Standard(account))
     }
