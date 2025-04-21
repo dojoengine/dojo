@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1745242689005,
+  "lastUpdate": 1745242850670,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -62503,6 +62503,54 @@ window.BENCHMARK_DATA = {
             "name": "build/Sozo.Cold",
             "value": 50054145768,
             "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "23054115+cwkang1998@users.noreply.github.com",
+            "name": "Chen Wen Kang",
+            "username": "cwkang1998"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0a7895fd515319000b9b8162fd0ff965eae28da6",
+          "message": "feat(katana): add fact registry arg for `init` (#3158)\n\n* feat(katana): add fact registry arg for `init`\n\nThis PR adds a new optional argument\n`--settlement-facts-registry-contract` to `katana init`\nwhich allows passing a custom fact registry contract.\n\nCloses #3034\n\n* fix: remove fact registry setter\n\n* feat: error in custom init w/ no fact registry\n\n* chore: refactor according to ai reviews\n\n* use setter function\n\n* fix test\n\n* chore: remove unneccessary changes\n\n---------\n\nCo-authored-by: Ammar Arif <evergreenkary@gmail.com>",
+          "timestamp": "2025-04-21T21:21:30+08:00",
+          "tree_id": "115cd39b31dedd807d8be89c4ffb97644b6436ef",
+          "url": "https://github.com/dojoengine/dojo/commit/0a7895fd515319000b9b8162fd0ff965eae28da6"
+        },
+        "date": 1745242847380,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "decompress world contract",
+            "value": 2671119,
+            "range": "± 34987",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1",
+            "value": 397070,
+            "range": "± 10398",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Concurrent.Simulate/Blockifier.1000",
+            "value": 2861835093,
+            "range": "± 235712092",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "Invoke.ERC20.transfer/Blockifier.Cold",
+            "value": 16891264,
+            "range": "± 208061",
             "unit": "ns/iter"
           }
         ]
