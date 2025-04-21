@@ -49,6 +49,10 @@ impl SettlementChainProvider {
         Self { fact_registry, client, url }
     }
 
+    pub fn set_fact_registry(&mut self, fact_registry: Felt) {
+        self.fact_registry = fact_registry;
+    }
+
     /// Returns the address of the fact registry contract.
     pub fn fact_registry(&self) -> Felt {
         self.fact_registry
