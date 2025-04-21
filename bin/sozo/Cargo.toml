@@ -44,7 +44,7 @@ tracing-log.workspace = true
 tracing-subscriber.workspace = true
 url.workspace = true
 
-reqwest = { workspace = true, features = [ "json" ], optional = true }
+reqwest = { workspace = true, features = [ "json" ] }
 
 [dev-dependencies]
 dojo-test-utils = { workspace = true, features = [ "build-examples" ] }
@@ -55,7 +55,7 @@ tokio.workspace = true
 [features]
 default = [ "controller", "walnut" ]
 
-controller = [ "dep:reqwest", "dep:slot" ]
+controller = [ "dep:slot" ]
 walnut = [ "dep:sozo-walnut", "sozo-ops/walnut" ]
 
 [[bench]]

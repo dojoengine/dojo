@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
+#[cfg(feature = "controller")]
 use slot::account_sdk::provider::CartridgeJsonRpcProvider;
 use starknet::accounts::{
     single_owner, Account, ConnectedAccount, ExecutionEncoder, RawDeclarationV3, RawExecutionV3,
@@ -12,7 +13,13 @@ use starknet::signers::{local_wallet, LocalWallet, SignerInteractivityContext};
 
 #[cfg(feature = "controller")]
 use super::controller::ControllerAccount;
+#[cfg(feature = "controller")]
 use super::provider::EitherProvider;
+
+#[cfg(feature = "controller")]
+type RpcProvider<P> = EitherProvider<Arc<P>, CartridgeJsonRpcProvider>;
+#[cfg(not(feature = "controller"))]
+type RpcProvider<P> = Arc<P>;
 
 #[derive(Debug, thiserror::Error)]
 pub enum SozoAccountSignError {
@@ -34,7 +41,6 @@ where
     P: Provider + Send + Sync,
 {
     Standard(SingleOwnerAccount<Arc<P>, LocalWallet>),
-
     #[cfg(feature = "controller")]
     Controller(ControllerAccount),
 }
@@ -44,7 +50,7 @@ where
     P: Provider + Send + Sync,
 {
     account: SozoAccountKind<P>,
-    provider: EitherProvider<Arc<P>, CartridgeJsonRpcProvider>,
+    provider: RpcProvider<P>,
 }
 
 impl<P> SozoAccount<P>
@@ -55,11 +61,15 @@ where
         provider: Arc<P>,
         account: SingleOwnerAccount<Arc<P>, LocalWallet>,
     ) -> Self {
-        let provider = EitherProvider::Left(provider);
         let account = SozoAccountKind::Standard(account);
+        #[cfg(feature = "controller")]
+        let provider = EitherProvider::Left(provider);
+        #[cfg(not(feature = "controller"))]
+        let provider = provider;
         Self { account, provider }
     }
 
+    #[cfg(feature = "controller")]
     pub fn new_controller(
         provider: CartridgeJsonRpcProvider,
         controller: ControllerAccount,
@@ -157,7 +167,7 @@ where
     P: Provider,
     P: Send + Sync,
 {
-    type Provider = EitherProvider<Arc<P>, CartridgeJsonRpcProvider>;
+    type Provider = RpcProvider<P>;
 
     fn provider(&self) -> &Self::Provider {
         &self.provider

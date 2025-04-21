@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, Result};
 use clap::Args;
 use dojo_utils::env::DOJO_ACCOUNT_ADDRESS_ENV_VAR;
 use dojo_world::config::Environment;
@@ -14,7 +14,6 @@ use starknet::core::types::{BlockId, BlockTag, Felt};
 use starknet::providers::Provider;
 use starknet::signers::LocalWallet;
 use tracing::trace;
-use url::Url;
 
 use super::signer::SignerOptions;
 use super::starknet::StarknetOptions;
@@ -84,22 +83,26 @@ impl AccountOptions {
             let url = starknet.url(env_metadata)?;
             let cartridge_provider = CartridgeJsonRpcProvider::new(url.clone());
             let account = self.controller(url, cartridge_provider.clone(), contracts).await?;
-            Ok(SozoAccount::new_controller(cartridge_provider, account))
-        } else {
-            let provider = Arc::new(provider);
-            let account = self.std_account(provider.clone(), env_metadata).await?;
-            Ok(SozoAccount::new_standard(provider, account))
+            return Ok(SozoAccount::new_controller(cartridge_provider, account));
         }
+
+        let _ = starknet;
+        let _ = contracts;
+
+        let provider = Arc::new(provider);
+        let account = self.std_account(provider.clone(), env_metadata).await?;
+        Ok(SozoAccount::new_standard(provider, account))
     }
 
     /// Create a new Catridge Controller account based on session key.
     #[cfg(feature = "controller")]
     pub async fn controller(
         &self,
-        rpc_url: Url,
+        rpc_url: url::Url,
         rpc_provider: CartridgeJsonRpcProvider,
         contracts: &HashMap<String, ContractInfo>,
     ) -> Result<ControllerAccount> {
+        use anyhow::Context;
         controller::create_controller(rpc_url, rpc_provider, contracts)
             .await
             .context("Failed to create a Controller account")
