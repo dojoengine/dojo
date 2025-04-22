@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1745339527775,
+  "lastUpdate": 1745340442764,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -62658,6 +62658,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 51233110848,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "distinct": true,
+          "id": "b5f98547cc43d7018aee9e83b2e55fe6243c9cbc",
+          "message": "fix(ci): remove katana bench",
+          "timestamp": "2025-04-22T10:34:20-06:00",
+          "tree_id": "6557397130728f2a1771e6a0976322530e8ceff2",
+          "url": "https://github.com/dojoengine/dojo/commit/b5f98547cc43d7018aee9e83b2e55fe6243c9cbc"
+        },
+        "date": 1745340439521,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 50870098991,
             "range": "± 0",
             "unit": "ns/iter"
           }
