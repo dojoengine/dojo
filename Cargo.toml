@@ -4,7 +4,6 @@ resolver = "2"
 members = [
 	"bin/dojo-language-server",
 	"bin/sozo",
-	"bin/torii",
 	"crates/dojo/bindgen",
 	"crates/dojo/core",
 	"crates/dojo/lang",
@@ -19,13 +18,9 @@ members = [
 	"crates/sozo/scarbext",
 	"crates/sozo/signers",
 	"crates/sozo/walnut",
-	"crates/torii/cli",
-	"crates/torii/client",
-	"crates/torii/server",
-	"crates/torii/types-test",
 	"examples/spawn-and-move",
 	"scripts/verify_db_balances",
-	"xtask/generate-test-db", "crates/torii/sqlite/types",
+	"xtask/generate-test-db",
 ]
 
 [workspace.package]

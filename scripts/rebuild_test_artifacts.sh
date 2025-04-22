@@ -16,7 +16,6 @@ scarb --manifest-path crates/dojo/core-cairo-test/Scarb.toml fmt
 
 # Manual forced cleanup.
 rm -rf examples/spawn-and-move/target
-rm -rf crates/torii/types-test/target
 rm -rf crates/dojo/lang/src/manifest_test_data/compiler_cairo/target
 
 # Ensure the world bindings are up to date.
@@ -32,7 +31,6 @@ cargo +nightly-2024-08-28 fmt --all -- "$@"
 ./target/release/sozo build --manifest-path examples/simple/Scarb.toml
 ./target/release/sozo build --manifest-path examples/spawn-and-move/Scarb.toml
 ./target/release/sozo build --manifest-path examples/spawn-and-move/Scarb.toml -P release
-./target/release/sozo build --manifest-path crates/torii/types-test/Scarb.toml
 ./target/release/sozo test --manifest-path crates/dojo/core-cairo-test/Scarb.toml
 
 # Generates the database for testing by migrating the spawn and move example.

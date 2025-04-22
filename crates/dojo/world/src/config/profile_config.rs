@@ -36,13 +36,13 @@ pub struct ProfileConfig {
     pub namespace: NamespaceConfig,
     pub env: Option<Environment>,
     pub migration: Option<MigrationConfig>,
-    /// A mapping <name_or_tag, <tags>> of writers to be set on the world.
+    /// A mapping `<name_or_tag, <tags>>` of writers to be set on the world.
     pub writers: Option<HashMap<String, HashSet<String>>>,
-    /// A mapping <name_or_tag, <tags>> of owners to be set on the world.
+    /// A mapping `<name_or_tag, <tags>>` of owners to be set on the world.
     pub owners: Option<HashMap<String, HashSet<String>>>,
-    /// A mapping <tag, <values>> of init call arguments to be passed to the contract.
+    /// A mapping `<tag, <values>>` of init call arguments to be passed to the contract.
     pub init_call_args: Option<HashMap<String, Vec<String>>>,
-    /// A mapping <tag, version> of libraries
+    /// A mapping `<tag, version>` of libraries
     pub lib_versions: Option<HashMap<String, String>>,
 }
 
@@ -101,8 +101,8 @@ impl ProfileConfig {
     ///
     /// Rules:
     /// - for a same external contract name we should have:
-    ///   + only one [[external_contracts]] block if instance name is not set OR,
-    ///   + one or several [[external_contracts]] blocks with different instance names.
+    ///   + only one external_contracts block if instance name is not set OR,
+    ///   + one or several external_contracts blocks with different instance names.
     pub fn validate(&self) -> Result<()> {
         if let Some(contracts) = &self.external_contracts {
             let mut map = HashMap::<String, Vec<Option<String>>>::new();

@@ -362,7 +362,7 @@ mod tests {
     #[tokio::test(flavor = "multi_thread")]
     #[katana_runner::test(accounts = 10)]
     async fn should_timeout_on_nonexistant_transaction(sequencer: &RunnerCtx) {
-        let provider = JsonRpcClient::new(HttpTransport::new(sequencer.url()));
+        let provider = sequencer.provider();
 
         let hash = felt!("0x1234");
         let result = TransactionWaiter::new(hash, &provider)
