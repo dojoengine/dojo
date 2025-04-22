@@ -24,18 +24,16 @@ RUN apt-get update && \
 
 ENTRYPOINT ["/tini", "--"]
 
-ARG TARGETPLATFORM
+ARG DOJO_VERSION
 
 LABEL description="Dojo is a provable game engine and toolchain for building onchain games and autonomous worlds with Cairo" \
     authors="tarrence <tarrence@cartridge.gg>" \
     source="https://github.com/dojoengine/dojo" \
     documentation="https://book.dojoengine.org/"
 
-COPY --from=artifacts --chmod=755 $TARGETPLATFORM/sozo /usr/local/bin/
-
-# We may not want to install sozo via dojoup though, only Katana and Torii?
-# Or we can let the use decide.
 COPY dojoup/dojoup /usr/local/bin/dojoup
+RUN echo "DOJO_VERSION: $DOJO_VERSION"
+# Once new dojoup is ok, use the DOJO_VERSION input from the workflow to install the correct version.
 # RUN dojoup -v $DOJO_VERSION
 
 COPY --from=builder /usr/local/bin/curtail /usr/local/bin/curtail
