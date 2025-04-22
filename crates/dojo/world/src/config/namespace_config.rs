@@ -21,7 +21,7 @@ use serde::{Deserialize, Serialize};
 pub struct NamespaceConfig {
     /// The default namespace to use if none is specified.
     pub default: String,
-    /// A mapping <Namespace, <LocalNames>>
+    /// A mapping `<Namespace, <LocalNames>>`
     pub mappings: Option<HashMap<String, Vec<String>>>,
 }
 
