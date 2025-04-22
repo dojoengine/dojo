@@ -37,8 +37,8 @@ jobs:
           path: bins
 
   test:
-    needs: [ensure-docker]
     runs-on: ubuntu-latest-32-cores
+    needs: build
     container:
       image: ghcr.io/dojoengine/dojo-dev:v1.4.2
     steps:
@@ -65,7 +65,7 @@ jobs:
           cargo nextest run --all-features --workspace --build-jobs 20
 
   ensure-windows:
-    needs: [ensure-docker]
+    needs: build
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v3
