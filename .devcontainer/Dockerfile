@@ -49,7 +49,7 @@ RUN rustup component add llvm-tools-preview
 RUN rustup target add x86_64-pc-windows-msvc && \
     rustup target add wasm32-unknown-unknown
 
-RUN cargo install cargo-llvm-cov
+RUN cargo install cargo-nextest cargo-llvm-cov
 
 # Platform specific tooling (hurl, llvm-tools)
 ARG TARGETPLATFORM
