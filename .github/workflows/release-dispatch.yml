@@ -25,16 +25,12 @@ jobs:
           VERSION=${{ inputs.version }}
           VERSION=${VERSION#v}
           cargo release version $VERSION --execute --no-confirm && cargo release replace --execute --no-confirm
-      - id: version_info
-        run: |
-          cargo install cargo-get
-          echo "version=$(cargo get workspace.package.version)" >> $GITHUB_OUTPUT
       - uses: peter-evans/create-pull-request@v5
         with:
           # We have to use a PAT in order to trigger ci
           token: ${{ secrets.CREATE_PR_TOKEN }}
-          title: "Prepare release: v${{ steps.version_info.outputs.version }}"
-          commit-message: "Prepare release: v${{ steps.version_info.outputs.version }}"
+          title: "release(prepare): v${VERSION}"
+          commit-message: "Prepare release: v${VERSION}"
           branch: prepare-release
           base: main
           delete-branch: true

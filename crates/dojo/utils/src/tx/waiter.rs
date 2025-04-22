@@ -305,7 +305,7 @@ fn finality_status_from_receipt(receipt: &TransactionReceipt) -> TransactionFina
 #[cfg(test)]
 mod tests {
     use assert_matches::assert_matches;
-    use dojo_test_utils::sequencer::{get_default_test_config, TestSequencer};
+    use katana_runner::RunnerCtx;
     use starknet::core::types::ExecutionResult::{Reverted, Succeeded};
     use starknet::core::types::TransactionFinalityStatus::{self, AcceptedOnL1, AcceptedOnL2};
     use starknet::core::types::{
@@ -319,12 +319,6 @@ mod tests {
 
     use super::{Duration, TransactionWaiter};
     use crate::TransactionWaitingError;
-
-    async fn create_test_sequencer() -> (TestSequencer, JsonRpcClient<HttpTransport>) {
-        let sequencer = TestSequencer::start(get_default_test_config(Default::default())).await;
-        let provider = JsonRpcClient::new(HttpTransport::new(sequencer.url()));
-        (sequencer, provider)
-    }
 
     const EXECUTION_RESOURCES: ExecutionResources = ExecutionResources {
         computation_resources: ComputationResources {
@@ -381,9 +375,10 @@ mod tests {
         TransactionReceiptWithBlockInfo { receipt, block: ReceiptBlock::Pending }
     }
 
-    #[tokio::test]
-    async fn should_timeout_on_nonexistant_transaction() {
-        let (_sequencer, provider) = create_test_sequencer().await;
+    #[tokio::test(flavor = "multi_thread")]
+    #[katana_runner::test(accounts = 10)]
+    async fn should_timeout_on_nonexistant_transaction(sequencer: &RunnerCtx) {
+        let provider = sequencer.provider();
 
         let hash = felt!("0x1234");
         let result = TransactionWaiter::new(hash, &provider)

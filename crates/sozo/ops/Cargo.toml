@@ -28,16 +28,15 @@ toml.workspace = true
 tracing.workspace = true
 
 dojo-test-utils = { workspace = true, features = [ "build-examples" ], optional = true }
-katana-runner = { workspace = true, optional = true }
 
 [dev-dependencies]
 assert_fs.workspace = true
 dojo-test-utils = { workspace = true, features = [ "build-examples" ] }
-katana-runner.workspace = true
+katana-runner = { git = "https://github.com/dojoengine/katana", rev = "5cb249c0fa59fa6b7c88b32557e7baf8944cdb3d" }
 scarb.workspace = true
 sozo-scarbext.workspace = true
 tokio.workspace = true
 
 [features]
-test-utils = [ "dep:dojo-test-utils", "dep:katana-runner" ]
+test-utils = [ "dep:dojo-test-utils" ]
 walnut = [ "dep:sozo-walnut" ]

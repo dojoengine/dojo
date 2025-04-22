@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::str::FromStr;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, Result};
 use clap::Args;
 use dojo_utils::env::DOJO_ACCOUNT_ADDRESS_ENV_VAR;
 use dojo_world::config::Environment;
@@ -11,7 +11,6 @@ use starknet::core::types::{BlockId, BlockTag, Felt};
 use starknet::providers::Provider;
 use starknet::signers::LocalWallet;
 use tracing::trace;
-use url::Url;
 
 use super::signer::SignerOptions;
 use super::starknet::StarknetOptions;
@@ -58,7 +57,7 @@ impl AccountOptions {
     #[cfg(feature = "controller")]
     pub async fn controller<P>(
         &self,
-        rpc_url: Url,
+        rpc_url: url::Url,
         provider: P,
         contracts: &HashMap<String, ContractInfo>,
     ) -> Result<ControllerSessionAccount<P>>
@@ -66,6 +65,8 @@ impl AccountOptions {
         P: Provider,
         P: Send + Sync,
     {
+        use anyhow::Context;
+
         controller::create_controller(rpc_url, provider, contracts)
             .await
             .context("Failed to create a Controller account")
@@ -98,6 +99,9 @@ impl AccountOptions {
             let account = self.controller(url, provider, contracts).await?;
             return Ok(SozoAccount::Controller(account));
         }
+
+        let _ = starknet;
+        let _ = contracts;
 
         let account = self.std_account(provider, env_metadata).await?;
         Ok(SozoAccount::Standard(account))
