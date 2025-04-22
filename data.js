@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1745340442764,
+  "lastUpdate": 1745344974464,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -62688,6 +62688,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 50870098991,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "distinct": true,
+          "id": "6437aaa4e7715e282fc519810e3971e9059b8253",
+          "message": "fix(sozo): avoid spurious logs from external crates",
+          "timestamp": "2025-04-22T11:47:07-06:00",
+          "tree_id": "f8b3cd17e4cd98c7890ed15cac186402a08ef7b6",
+          "url": "https://github.com/dojoengine/dojo/commit/6437aaa4e7715e282fc519810e3971e9059b8253"
+        },
+        "date": 1745344971103,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 54665002660,
             "range": "± 0",
             "unit": "ns/iter"
           }
