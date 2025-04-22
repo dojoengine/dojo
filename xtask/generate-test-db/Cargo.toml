@@ -9,11 +9,11 @@ version.workspace = true
 anyhow.workspace = true
 dojo-test-utils.workspace = true
 dojo-utils.workspace = true
-katana-runner.workspace = true
+dojo-world.workspace = true
+katana-runner = { git = "https://github.com/dojoengine/katana" }
 reqwest = { workspace = true, features = [ "json" ] }
 scarb.workspace = true
 sozo-ops = { workspace = true, features = [ "test-utils" ] }
+sozo-scarbext.workspace = true
 starknet.workspace = true
 tokio.workspace = true
-sozo-scarbext.workspace = true
-dojo-world.workspace = true

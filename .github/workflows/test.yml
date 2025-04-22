@@ -1,0 +1,179 @@
+name: test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_VERSION: 1.85.0
+
+jobs:
+  build:
+    runs-on: ubuntu-latest-4-cores
+    needs: [fmt, cairofmt, clippy]
+    container:
+      image: ghcr.io/dojoengine/dojo-dev:ubuntu24
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          fetch-depth: 0
+      # Workaround for https://github.com/actions/runner-images/issues/6775
+      - run: git config --global --add safe.directory "*"
+      - uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+      - uses: Swatinem/rust-cache@v2
+      - run: |
+          cargo build -r --bin sozo
+          mkdir -p bins
+          cp ./target/release/sozo bins/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dojo-bins
+          path: bins
+
+  test:
+    runs-on: ubuntu-latest-32-cores
+    needs: build
+    container:
+      image: ghcr.io/dojoengine/dojo-dev:ubuntu24
+    steps:
+      - uses: actions/checkout@v3
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/download-artifact@v4
+        with:
+          name: dojo-bins
+          path: /tmp/bins
+      # Workaround for https://github.com/actions/runner-images/issues/6775
+      - run: git config --global --add safe.directory "*"
+
+      # This puts Katana in the path for integration tests.
+      - name: Download Katana for integration tests
+        run: |
+          curl -L https://github.com/dojoengine/katana/releases/download/v1.5.0-alpha.2/katana_v1.5.0-alpha.2_linux_amd64.tar.gz -o katana.tar.gz;
+          tar -C /usr/local/bin -xzf katana.tar.gz
+
+      - run: |
+          export PATH=/tmp/bins:$PATH
+          chmod +x /tmp/bins/sozo
+          bash scripts/build_cairo_projects.sh /tmp/bins/sozo
+          bash scripts/extract_test_db.sh
+          cargo nextest run --all-features --workspace --build-jobs 20
+
+  ensure-windows:
+    needs: build
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ env.rust_version }}
+          target: x86_64-pc-windows-msvc
+      - uses: swatinem/rust-cache@v2
+      # Workaround for https://github.com/actions/runner-images/issues/6775
+      - run: git config --global --add safe.directory "*"
+      - uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+      - uses: arduino/setup-protoc@v2
+        with:
+          repo-token: ${{ secrets.github_token }}
+      # required for `aws-lc-rs` crate to compile on Windows; https://aws.github.io/aws-lc-rs/requirements/windows.html
+      - name: Install NASM
+        uses: ilammy/setup-nasm@v1
+        with:
+          version: "2.15.05"
+      - run: cargo build --target x86_64-pc-windows-msvc --bins
+
+  cairofmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: software-mansion/setup-scarb@v1
+        with:
+          scarb-version: "2.10.1"
+      - run: |
+          scarb --manifest-path examples/spawn-and-move/Scarb.toml fmt --check
+          scarb --manifest-path examples/simple/Scarb.toml fmt --check
+          scarb --manifest-path crates/dojo/core/Scarb.toml fmt --check
+          scarb --manifest-path crates/dojo/core-cairo-test/Scarb.toml fmt --check
+
+  dojo-core-test:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: software-mansion/setup-scarb@v1
+        with:
+          scarb-version: "2.10.1"
+      - uses: actions/download-artifact@v4
+        with:
+          name: dojo-bins
+          path: /tmp/bins
+      - uses: actions/checkout@v3
+      - run: |
+          chmod +x /tmp/bins/sozo
+          /tmp/bins/sozo --manifest-path crates/dojo/core/Scarb.toml test
+          /tmp/bins/sozo --manifest-path crates/dojo/core-cairo-test/Scarb.toml test
+
+  dojo-examples-test:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: software-mansion/setup-scarb@v1
+        with:
+          scarb-version: "2.10.1"
+      - uses: actions/download-artifact@v4
+        with:
+          name: dojo-bins
+          path: /tmp/bins
+      - uses: actions/checkout@v3
+      - run: |
+          chmod +x /tmp/bins/sozo
+          /tmp/bins/sozo --manifest-path examples/spawn-and-move/Scarb.toml build
+          /tmp/bins/sozo --manifest-path examples/spawn-and-move/Scarb.toml inspect ns-Flatbow
+          /tmp/bins/sozo --manifest-path examples/spawn-and-move/Scarb.toml inspect ns-RiverSkale
+          /tmp/bins/sozo --manifest-path examples/spawn-and-move/Scarb.toml test
+          /tmp/bins/sozo --manifest-path examples/simple/Scarb.toml test
+
+  clippy:
+    runs-on: ubuntu-latest-4-cores
+    needs: [fmt, cairofmt]
+    container:
+      image: ghcr.io/dojoengine/dojo-dev:ubuntu24
+    steps:
+      - uses: actions/checkout@v3
+      - uses: Swatinem/rust-cache@v2
+      # Workaround for https://github.com/actions/runner-images/issues/6775
+      - run: git config --global --add safe.directory "*"
+      - uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+      - run: scripts/clippy.sh
+
+  fmt:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/dojoengine/dojo-dev:ubuntu24
+    steps:
+      - uses: actions/checkout@v3
+      - uses: Swatinem/rust-cache@v2
+      - run: scripts/rust_fmt.sh --check
+
+  docs:
+    runs-on: ubuntu-latest
+    needs: [fmt, cairofmt, build]
+    container:
+      image: ghcr.io/dojoengine/dojo-dev:ubuntu24
+    steps:
+      - uses: actions/checkout@v3
+      - uses: Swatinem/rust-cache@v2
+      # Workaround for https://github.com/actions/runner-images/issues/6775
+      - run: git config --global --add safe.directory "*"
+      - uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+      - run: scripts/docs.sh

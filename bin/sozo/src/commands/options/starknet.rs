@@ -22,7 +22,7 @@ pub struct StarknetOptions {
 
 impl StarknetOptions {
     /// The default request timeout in milliseconds. This is not the transaction inclusion timeout.
-    /// Refer to [`dojo_utils::tx::waiter::TransactionWaiter::DEFAULT_TIMEOUT`] for the transaction
+    /// Refer to [dojo_utils::TransactionWaiter::DEFAULT_TIMEOUT] for the transaction
     /// inclusion timeout.
     const DEFAULT_REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
 

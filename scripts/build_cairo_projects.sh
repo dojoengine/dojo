@@ -7,4 +7,3 @@ sozo_path=$1
 $sozo_path build --manifest-path examples/spawn-and-move/Scarb.toml
 $sozo_path build --manifest-path examples/spawn-and-move/Scarb.toml -P release
 $sozo_path build --manifest-path examples/simple/Scarb.toml
-$sozo_path build --manifest-path crates/torii/types-test/Scarb.toml

@@ -3,9 +3,7 @@ resolver = "2"
 
 members = [
 	"bin/dojo-language-server",
-	"bin/katana",
 	"bin/sozo",
-	"bin/torii",
 	"crates/dojo/bindgen",
 	"crates/dojo/core",
 	"crates/dojo/lang",
@@ -14,46 +12,15 @@ members = [
 	"crates/dojo/utils",
 	"crates/dojo/world",
 	"crates/dojo/world/abigen",
-	"crates/katana/chain-spec",
-	"crates/katana/cli",
-	"crates/katana/controller",
-	"crates/katana/core",
-	"crates/katana/explorer",
-	"crates/katana/executor",
-	"crates/katana/feeder-gateway",
-	"crates/katana/grpc",
-	"crates/katana/messaging",
-	"crates/katana/node",
-	"crates/katana/node-bindings",
-	"crates/katana/pool",
-	"crates/katana/primitives",
-	"crates/katana/rpc/rpc",
-	"crates/katana/rpc/rpc-api",
-	"crates/katana/rpc/rpc-types",
-	"crates/katana/rpc/rpc-types-builder",
-	"crates/katana/runner",
-	"crates/katana/runner/macro",
-	"crates/katana/storage/codecs",
-	"crates/katana/storage/codecs/derive",
-	"crates/katana/storage/db",
-	"crates/katana/storage/provider",
-	"crates/katana/sync/pipeline",
-	"crates/katana/sync/stage",
-	"crates/katana/tasks",
-	"crates/katana/trie",
 	"crates/macros/merge-options",
 	"crates/macros/merge-options/macro_test",
 	"crates/metrics",
 	"crates/sozo/scarbext",
 	"crates/sozo/signers",
 	"crates/sozo/walnut",
-	"crates/torii/cli",
-	"crates/torii/client",
-	"crates/torii/server",
-	"crates/torii/types-test",
 	"examples/spawn-and-move",
 	"scripts/verify_db_balances",
-	"xtask/generate-test-db", "crates/torii/sqlite/types",
+	"xtask/generate-test-db",
 ]
 
 [workspace.package]
@@ -93,34 +60,6 @@ dojo-world = { path = "crates/dojo/world" }
 # dojo-world
 topological-sort = "0.2"
 
-# katana
-katana-cairo = { path = "crates/katana/cairo" }
-katana-chain-spec = { path = "crates/katana/chain-spec" }
-katana-cli = { path = "crates/katana/cli" }
-katana-codecs = { path = "crates/katana/storage/codecs" }
-katana-codecs-derive = { path = "crates/katana/storage/codecs/derive" }
-katana-core = { path = "crates/katana/core", default-features = false }
-katana-db = { path = "crates/katana/storage/db" }
-katana-executor = { path = "crates/katana/executor" }
-katana-explorer = { path = "crates/katana/explorer" }
-katana-feeder-gateway = { path = "crates/katana/feeder-gateway" }
-katana-messaging = { path = "crates/katana/messaging" }
-katana-node = { path = "crates/katana/node" }
-katana-node-bindings = { path = "crates/katana/node-bindings" }
-katana-pipeline = { path = "crates/katana/sync/pipeline" }
-katana-pool = { path = "crates/katana/pool" }
-katana-primitives = { path = "crates/katana/primitives" }
-katana-provider = { path = "crates/katana/storage/provider", default-features = false }
-katana-rpc = { path = "crates/katana/rpc/rpc", default-features = false }
-katana-rpc-api = { path = "crates/katana/rpc/rpc-api", default-features = false }
-katana-rpc-types = { path = "crates/katana/rpc/rpc-types" }
-katana-rpc-types-builder = { path = "crates/katana/rpc/rpc-types-builder" }
-katana-runner = { path = "crates/katana/runner" }
-katana-slot-controller = { path = "crates/katana/controller" }
-katana-stage = { path = "crates/katana/sync/stage" }
-katana-tasks = { path = "crates/katana/tasks" }
-katana-trie = { path = "crates/katana/trie" }
-
 # torii
 torii-cli = { path = "crates/torii/cli" }
 torii-client = { path = "crates/torii/client" }
@@ -153,28 +92,28 @@ auto_impl = "1.2.0"
 base64 = "0.21.2"
 bigdecimal = "0.4.1"
 bytes = "1.6"
-cairo-lang-compiler = "=2.9.4"
-cairo-lang-debug = "=2.9.4"
-cairo-lang-defs = "=2.9.4"
-cairo-lang-diagnostics = "=2.9.4"
-cairo-lang-filesystem = "=2.9.4"
-cairo-lang-formatter = "=2.9.4"
-cairo-lang-language-server = "=2.9.4"
-cairo-lang-lowering = "=2.9.4"
-cairo-lang-parser = "=2.9.4"
-cairo-lang-plugins = { version = "=2.9.4", features = [ "testing" ] }
-cairo-lang-project = "=2.9.4"
-cairo-lang-semantic = "=2.9.4"
-cairo-lang-sierra = "=2.9.4"
-cairo-lang-sierra-generator = "=2.9.4"
-cairo-lang-sierra-to-casm = "=2.9.4"
-cairo-lang-starknet = "=2.9.4"
-cairo-lang-starknet-classes = "=2.9.4"
-cairo-lang-syntax = "=2.9.4"
-cairo-lang-test-plugin = "=2.9.4"
-cairo-lang-test-runner = "=2.9.4"
-cairo-lang-test-utils = "=2.9.4"
-cairo-lang-utils = "=2.9.4"
+cairo-lang-compiler = "=2.10.1"
+cairo-lang-debug = "=2.10.1"
+cairo-lang-defs = "=2.10.1"
+cairo-lang-diagnostics = "=2.10.1"
+cairo-lang-filesystem = "=2.10.1"
+cairo-lang-formatter = "=2.10.1"
+#cairo-language-server = "=2.10.0"
+cairo-lang-lowering = "=2.10.1"
+cairo-lang-parser = "=2.10.1"
+cairo-lang-plugins = { version = "=2.10.1", features = [ "testing" ] }
+cairo-lang-project = "=2.10.1"
+cairo-lang-semantic = "=2.10.1"
+cairo-lang-sierra = "=2.10.1"
+cairo-lang-sierra-generator = "=2.10.1"
+cairo-lang-sierra-to-casm = "=2.10.1"
+cairo-lang-starknet = "=2.10.1"
+cairo-lang-starknet-classes = "=2.10.1"
+cairo-lang-syntax = "=2.10.1"
+cairo-lang-test-plugin = "=2.10.1"
+cairo-lang-test-runner = "=2.10.1"
+cairo-lang-test-utils = "=2.10.1"
+cairo-lang-utils = "=2.10.1"
 cairo-vm = "1.0.0-rc4"
 camino = { version = "1.1.2", features = [ "serde1" ] }
 chrono = { version = "0.4.24", features = [ "serde" ] }
@@ -184,9 +123,6 @@ clap_complete = "4.3"
 colored = "2.0.0"
 colored_json = "3.2.0"
 console = "0.15.7"
-# Controller PR revision until merged.
-# https://github.com/cartridge-gg/controller/pull/1454
-account_sdk = { git = "https://github.com/cartridge-gg/controller", rev = "dbbe0353d64de743739d425f8aab91ca3ac0e16f" }
 convert_case = "0.6.0"
 crypto-bigint = { version = "0.5.3", features = [ "serde" ] }
 data-url = "0.3"
@@ -221,9 +157,9 @@ rpassword = "7.2.0"
 rstest = "0.18.2"
 rstest_reuse = "0.6.0"
 salsa = "0.16.1"
-scarb = { git = "https://github.com/dojoengine/scarb", rev = "8a60513c03e72b8a84f3ac266c61aac40c565aca" }
-scarb-metadata = { git = "https://github.com/dojoengine/scarb", rev = "8a60513c03e72b8a84f3ac266c61aac40c565aca" }
-scarb-ui = { git = "https://github.com/dojoengine/scarb", rev = "8a60513c03e72b8a84f3ac266c61aac40c565aca" }
+scarb = { git = "https://github.com/dojoengine/scarb", rev = "d749b9545f5c50b078870a322a12efe7a17914b6" }
+scarb-metadata = { git = "https://github.com/dojoengine/scarb", rev = "d749b9545f5c50b078870a322a12efe7a17914b6" }
+scarb-ui = { git = "https://github.com/dojoengine/scarb", rev = "d749b9545f5c50b078870a322a12efe7a17914b6" }
 semver = "1.0.5"
 serde = { version = "1.0", features = [ "derive" ] }
 serde_json = { version = "1.0", features = [ "arbitrary_precision" ] }
