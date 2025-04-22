@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1745351371868,
+  "lastUpdate": 1745355109985,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -62748,6 +62748,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 49569607268,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "distinct": true,
+          "id": "895fc9a5ed1b21d952f769059c761801a9c7dc56",
+          "message": "fix(ci): remove torii and katana from release and add dojoup",
+          "timestamp": "2025-04-22T14:38:33-06:00",
+          "tree_id": "6200cc52208911277103ae97baea18167250bbb4",
+          "url": "https://github.com/dojoengine/dojo/commit/895fc9a5ed1b21d952f769059c761801a9c7dc56"
+        },
+        "date": 1745355106724,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 51239885756,
             "range": "± 0",
             "unit": "ns/iter"
           }
