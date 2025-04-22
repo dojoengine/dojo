@@ -37,6 +37,10 @@ pub struct InitArgs {
     id: Option<String>,
 
     /// The settlement chain to be used, where the core contract is deployed.
+    ///
+    /// If a custom settlement chain is provided, setting a custom facts registry is required using
+    /// the `--settlement-facts-registry` option. Otherwise, setting a custom facts registry
+    /// with a known chain is a no-op.
     #[arg(long = "settlement-chain")]
     #[arg(required_unless_present = "sovereign")]
     #[arg(requires_all = ["id", "settlement_account", "settlement_account_private_key"])]
@@ -67,6 +71,13 @@ pub struct InitArgs {
     #[arg(long = "settlement-contract-deployed-block")]
     #[arg(requires = "settlement_contract")]
     settlement_contract_deployed_block: Option<BlockNumber>,
+
+    /// The address of the facts registry contract on the settlement chain.
+    ///
+    /// Required if a custom settlement chain is specified.
+    #[arg(long = "settlement-facts-registry")]
+    #[arg(requires_all = ["id", "settlement_chain", "settlement_account"])]
+    pub settlement_facts_registry_contract: Option<ContractAddress>,
 
     /// Initialize a sovereign chain with no settlement layer, by only publishing the state updates
     /// and proofs on a Data Availability Layer. By using this flag, no settlement option is
@@ -151,15 +162,30 @@ impl InitArgs {
             let settlement_private_key = self.settlement_account_private_key.expect("must present");
 
             let settlement_provider = match settlement_chain {
-                SettlementChain::Mainnet => SettlementChainProvider::sn_mainnet(),
-                SettlementChain::Sepolia => SettlementChainProvider::sn_sepolia(),
+                SettlementChain::Mainnet => {
+                    let mut provider = SettlementChainProvider::sn_mainnet();
+                    if let Some(fact_registry) = self.settlement_facts_registry_contract {
+                        provider.set_fact_registry(*fact_registry);
+                    }
+                    provider
+                }
+                SettlementChain::Sepolia => {
+                    let mut provider = SettlementChainProvider::sn_sepolia();
+                    if let Some(fact_registry) = self.settlement_facts_registry_contract {
+                        provider.set_fact_registry(*fact_registry);
+                    }
+                    provider
+                }
                 #[cfg(feature = "init-custom-settlement-chain")]
                 SettlementChain::Custom(url) => {
-                    use katana_primitives::felt;
-
-                    // TODO: make this configurable
-                    let facts_registry_placeholder = felt!("0x1337");
-                    SettlementChainProvider::new(url, facts_registry_placeholder)
+                    let Some(fact_registry) = self.settlement_facts_registry_contract else {
+                        return Some(Err(anyhow::anyhow!(
+                            "Specifying the facts registry contract (using \
+                             `--settlement-facts-registry`) is required when settling on a custom \
+                             chain"
+                        )));
+                    };
+                    SettlementChainProvider::new(url, *fact_registry)
                 }
             };
 
@@ -397,5 +423,109 @@ mod tests {
         }
 
         Cli::parse_from(["init", "--id", "bruh", "--sovereign"]);
+    }
+
+    #[test]
+    fn cli_accept_custom_fact_registry() {
+        #[derive(Parser)]
+        struct Cli {
+            #[command(flatten)]
+            args: InitArgs,
+        }
+
+        let custom_settlement_fact_registry = "0x1234567890123456789012345678901234567890";
+        let result = Cli::parse_from([
+            "init",
+            "--id",
+            "wot",
+            "--settlement-chain",
+            "sepolia",
+            "--settlement-account-address",
+            "0x1234567890123456789012345678901234567890",
+            "--settlement-account-private-key",
+            "0x1234567890123456789012345678901234567890",
+            "--settlement-facts-registry",
+            custom_settlement_fact_registry,
+        ]);
+        assert_eq!(
+            result.args.settlement_facts_registry_contract,
+            Some(ContractAddress::from_str(custom_settlement_fact_registry).unwrap())
+        );
+    }
+
+    #[test]
+    fn cli_required_settlement_args_with_custom_fact_registry() {
+        #[derive(Parser)]
+        struct Cli {
+            #[command(flatten)]
+            args: InitArgs,
+        }
+
+        // This should fail with the expected error message:-
+        //
+        // ```
+        // error: the following required arguments were not provided:
+        //   --settlement-chain <SETTLEMENT_CHAIN>
+        //   --settlement-account-address <SETTLEMENT_ACCOUNT>
+        //   --settlement-account-private-key <SETTLEMENT_ACCOUNT_PRIVATE_KEY>
+        // ```
+        match Cli::try_parse_from([
+            "init",
+            "--id",
+            "wot",
+            "--settlement-facts-registry",
+            "0x1234567890123456789012345678901234567890",
+        ]) {
+            Ok(..) => panic!("Expected parsing to fail with missing required arguments"),
+            Err(err) => {
+                if let ContextValue::Strings(values) = err.get(ContextKind::InvalidArg).unwrap() {
+                    // Assert that the error message contains all the required arguments
+                    assert!(values.contains(&"--settlement-chain <SETTLEMENT_CHAIN>".to_string()));
+                    assert!(values.contains(
+                        &"--settlement-account-address <SETTLEMENT_ACCOUNT>".to_string()
+                    ));
+                    assert!(
+                        values.contains(
+                            &"--settlement-account-private-key <SETTLEMENT_ACCOUNT_PRIVATE_KEY>"
+                                .to_string()
+                        )
+                    );
+                } else {
+                    panic!("Expected InvalidArg context with Strings value");
+                }
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn cli_required_custom_fact_registry_for_custom_init_chain() {
+        #[derive(Parser)]
+        struct Cli {
+            #[command(flatten)]
+            args: InitArgs,
+        }
+
+        let result = Cli::parse_from([
+            "init",
+            "--id",
+            "wot",
+            "--settlement-chain",
+            "http://localhost:5050",
+            "--settlement-account-address",
+            "0x1234567890123456789012345678901234567890",
+            "--settlement-account-private-key",
+            "0x1234567890123456789012345678901234567890",
+        ]);
+        assert_eq!(result.args.settlement_facts_registry_contract, None);
+
+        let configure_result = result.args.configure_from_args().await;
+        assert!(configure_result.is_some());
+        let configure_result = configure_result.unwrap();
+        assert!(configure_result.is_err());
+        assert_eq!(
+            configure_result.unwrap_err().to_string(),
+            "Specifying the facts registry contract (using `--settlement-facts-registry`) is \
+             required when settling on a custom chain"
+        );
     }
 }

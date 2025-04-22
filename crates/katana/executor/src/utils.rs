@@ -9,7 +9,7 @@ use tracing::trace;
 
 pub(crate) const LOG_TARGET: &str = "executor";
 
-pub fn log_resources(resources: &TxResources) {
+pub fn log_resources(resources: &TxResources, receipt: &Receipt) {
     let mut mapped_strings = Vec::new();
 
     for (builtin, count) in &resources.vm_resources.builtin_instance_counter {
@@ -22,6 +22,24 @@ pub fn log_resources(resources: &TxResources) {
     mapped_strings.insert(1, format!("memory holes: {}", resources.vm_resources.n_memory_holes));
 
     trace!(target: LOG_TARGET, usage = mapped_strings.join(" | "), "Transaction resource usage.");
+
+    let mut mapped_strings = Vec::new();
+    mapped_strings.push(format!("L1: {}", resources.total_gas_consumed.l1_gas));
+    mapped_strings.push(format!("L1 Data: {}", resources.total_gas_consumed.l1_data_gas));
+    mapped_strings.push(format!("DA L1: {}", resources.data_availability.l1_gas));
+    mapped_strings.push(format!("DA L1 Data: {}", resources.data_availability.l1_data_gas));
+
+    mapped_strings.push(format!("Total consumed: {}", receipt.fee().gas_consumed));
+    mapped_strings.push(format!(
+        "Overall Fee: {:.8} {}",
+        receipt.fee().overall_fee as f64 / 100.0 / 10_f64.powf(18.0),
+        match receipt.fee().unit {
+            katana_primitives::fee::PriceUnit::Wei => "ETH",
+            katana_primitives::fee::PriceUnit::Fri => "STRK",
+        },
+    ));
+
+    trace!(target: LOG_TARGET, usage = mapped_strings.join(" | "), "Gas usage.");
 }
 
 pub(crate) fn build_receipt(tx: TxRef<'_>, fee: TxFeeInfo, info: &TxExecInfo) -> Receipt {
