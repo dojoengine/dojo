@@ -31,6 +31,11 @@ LABEL description="Dojo is a provable game engine and toolchain for building onc
     source="https://github.com/dojoengine/dojo" \
     documentation="https://book.dojoengine.org/"
 
-COPY --from=artifacts --chmod=755 $TARGETPLATFORM/katana $TARGETPLATFORM/sozo $TARGETPLATFORM/torii /usr/local/bin/
+COPY --from=artifacts --chmod=755 $TARGETPLATFORM/sozo /usr/local/bin/
+
+# We may not want to install sozo via dojoup though, only Katana and Torii?
+# Or we can let the use decide.
+COPY dojoup/dojoup /usr/local/bin/dojoup
+# RUN dojoup -v $DOJO_VERSION
 
 COPY --from=builder /usr/local/bin/curtail /usr/local/bin/curtail
