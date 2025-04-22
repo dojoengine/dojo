@@ -11,28 +11,6 @@ permissions:
   contents: write
 
 jobs:
-  bench-katana:
-    runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/dojoengine/dojo-dev:v1.4.2
-    steps:
-      - uses: actions/checkout@v3
-      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-      - name: Running Katana benchmarks
-        run: cargo bench --bench codec --bench execution --bench concurrent --bench startup -- --output-format bencher |sed 1d | tee output.txt
-      - uses: benchmark-action/github-action-benchmark@v1
-        with:
-          tool: "cargo"
-          output-file-path: output.txt
-          benchmark-data-dir-path: "."
-          # Access token to deploy GitHub Pages branch
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          # Push and deploy GitHub pages branch automatically
-          auto-push: true
-          alert-threshold: "130%"
-          comment-on-alert: true
-          alert-comment-cc-users: "@kariy,@glihm,@tarrencev"
-
   bench-sozo:
     runs-on: ubuntu-latest
     container:
