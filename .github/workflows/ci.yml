@@ -50,6 +50,13 @@ jobs:
           path: /tmp/bins
       # Workaround for https://github.com/actions/runner-images/issues/6775
       - run: git config --global --add safe.directory "*"
+
+      # This puts Katana in the path for integration tests.
+      - name: Download Katana for integration tests
+        run: |
+          curl -L https://github.com/dojoengine/katana/releases/download/v1.5.0-alpha.2/katana_v1.5.0-alpha.2_linux_amd64.tar.gz -o katana.tar.gz;
+          tar -C /usr/local/bin -xzf katana.tar.gz
+
       - run: |
           export PATH=/tmp/bins:$PATH
           chmod +x /tmp/bins/sozo
