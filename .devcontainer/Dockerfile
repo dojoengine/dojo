@@ -1,12 +1,6 @@
-ARG DOJO_VERSION=v1.5.0-preview.0
-FROM ghcr.io/dojoengine/dojo:${DOJO_VERSION}
-ARG DOJO_VERSION
+ARG RUST_VERSION=1.85.0
+FROM ubuntu:24.04
 ARG RUST_VERSION
-
-# Base image does not seem to expose rustup in PATH for subsequent RUN commands.
-# Explicitly install Rust using rustup.
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain ${RUST_VERSION}
-ENV PATH="/root/.cargo/bin:${PATH}"
 
 # Set non-interactive frontend for apt-get
 ENV DEBIAN_FRONTEND=noninteractive
@@ -27,7 +21,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 	pkg-config \
 	software-properties-common \
 	unzip \
+	curl \
 	&& rm -rf /var/lib/apt/lists/*
+
+# Base image does not seem to expose rustup in PATH for subsequent RUN commands.
+# Explicitly install Rust using rustup.
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain ${RUST_VERSION}
+ENV PATH="/root/.cargo/bin:${PATH}"
 
 # https://github.com/sfackler/rust-openssl/issues/2217#issuecomment-2230398481
 RUN if [ "$TARGETPLATFORM" = "linux/arm64" ] ; then \
