@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1745267450738,
+  "lastUpdate": 1745339527775,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -62629,6 +62629,36 @@ window.BENCHMARK_DATA = {
             "name": "Invoke.ERC20.transfer/Blockifier.Cold",
             "value": 16984250,
             "range": "± 494047",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "161461db7b7b701e14718ce1473552b222989ea5",
+          "message": "feat: bump cairo 2.10 and remove katana and torii dependencies (#3169)\n\n* remove katana and only keep katana-runner dependency\n\n* chore: bump scarb\n\n* chore: bump scarb + remove unuse deps\n\n* chore: use katana runner from git repo\n\n* update katana runner dep\n\n* remove test sequencer\n\n* remove rpc test utils\n\n* fix controller account\n\n* handle not controller feature\n\n* update\n\n* rebuild test db\n\n* refactor(torii): remove torii in favor of dedicated repo\n\n* fix(ci): download Katana for integration test\n\n* fix(ci): rename ci to test\n\n* fix(ci): fix yml file dependencies\n\n* fix(ci): run clippy before build\n\n* fix: remove types-test from built projects\n\n* fix(ci): bump scarb version\n\n* fix(docs): ensure docs can run without torii/katana\n\n* fix(ci): update dojo container\n\n* fix(ci): use ubuntu24 devcontainer\n\n---------\n\nCo-authored-by: Ammar Arif <evergreenkary@gmail.com>",
+          "timestamp": "2025-04-22T10:19:01-06:00",
+          "tree_id": "30e759d658e885a5bfb9f1297ad2be18d64234fc",
+          "url": "https://github.com/dojoengine/dojo/commit/161461db7b7b701e14718ce1473552b222989ea5"
+        },
+        "date": 1745339524559,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 51233110848,
+            "range": "± 0",
             "unit": "ns/iter"
           }
         ]
