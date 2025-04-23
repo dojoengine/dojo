@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1745421889858,
+  "lastUpdate": 1745422021372,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -62898,6 +62898,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 52412036614,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "41b919c81131d8e675f3ac6b0e876879308f1fd7",
+          "message": "fix(dojoup): wrong link to versions registry (#3187)\n\nfix wrong link",
+          "timestamp": "2025-04-23T23:13:26+08:00",
+          "tree_id": "2f15dd26fc449686f26e6d85b1d62431d8786bdc",
+          "url": "https://github.com/dojoengine/dojo/commit/41b919c81131d8e675f3ac6b0e876879308f1fd7"
+        },
+        "date": 1745422017869,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 53623146138,
             "range": "± 0",
             "unit": "ns/iter"
           }
