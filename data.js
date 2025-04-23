@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1745420995493,
+  "lastUpdate": 1745421562991,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -62838,6 +62838,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 53802264488,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "distinct": true,
+          "id": "a9321e36a23d86d682d042dbfa8e8185bc0cc5d3",
+          "message": "fix(ci): modify title and commit message for release dispatch",
+          "timestamp": "2025-04-23T09:06:18-06:00",
+          "tree_id": "99f47ba99206615305de0c7d505a07727a63b49e",
+          "url": "https://github.com/dojoengine/dojo/commit/a9321e36a23d86d682d042dbfa8e8185bc0cc5d3"
+        },
+        "date": 1745421559443,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 51767108562,
             "range": "± 0",
             "unit": "ns/iter"
           }
