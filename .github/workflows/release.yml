@@ -30,7 +30,7 @@ jobs:
     outputs:
       tag_name: ${{ steps.release_info.outputs.tag_name }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Get version
         id: release_info
         run: |
@@ -70,9 +70,13 @@ jobs:
             platform: darwin
             target: aarch64-apple-darwin
             arch: arm64
+          - os: windows-latest
+            platform: win32
+            target: x86_64-pc-windows-msvc
+            arch: amd64
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - uses: dtolnay/rust-toolchain@master
         name: Rust Toolchain Setup
@@ -84,59 +88,8 @@ jobs:
         with:
           cache-on-failure: true
 
-      # required for `aws-lc-rs` crate to compile on Windows; https://aws.github.io/aws-lc-rs/requirements/windows.html
-      - name: Install NASM
-        uses: ilammy/setup-nasm@v1
-        with:
-          version: "2.15.05"
-
-      - uses: arduino/setup-protoc@v2
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          version: "25.x"
-
-      - name: Apple M1 setup
-        if: ${{ matrix.job.target == 'aarch64-apple-darwin' }}
-        run: |
-          echo "SDKROOT=$(xcrun -sdk macosx --show-sdk-path)" >> $GITHUB_ENV
-          echo "MACOSX_DEPLOYMENT_TARGET=$(xcrun -sdk macosx --show-sdk-platform-version)" >> $GITHUB_ENV
-
-      - name: Linux ARM setup
-        if: ${{ matrix.job.target == 'aarch64-unknown-linux-gnu' }}
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install -y gcc-aarch64-linux-gnu libssl-dev
-          # We build jemalloc with 64KB pagesize so that it works for all linux/arm64 pagesize variants
-          # See: https://github.com/jemalloc/jemalloc/issues/467
-          echo "JEMALLOC_SYS_WITH_LG_PAGE=16" >> $GITHUB_ENV
-
-      - name: Download component (Katana)
-        shell: bash
-        run: |
-          DOJO_VERSION=$(echo "${{ needs.prepare.outputs.tag_name }}" | sed 's/^v//')
-
-          # Read component version from versions.json
-          COMPONENT_VERSION=$(jq -r ".[\"$DOJO_VERSION\"].katana[0]" versions.json)
-          VERSION_NAME="v$COMPONENT_VERSION"
-          COMPONENT_NAME="katana"
-          PLATFORM_NAME="${{ env.PLATFORM_NAME }}"
-          ARCH="${{ env.ARCH }}"
-          TARGET_DIR="./target/${{ env.TARGET }}/release/"
-
-          echo "Using $COMPONENT_NAME version $VERSION_NAME for Dojo version $DOJO_VERSION"
-
-          if [ "$PLATFORM_NAME" == "linux" ] || [ "$PLATFORM_NAME" == "darwin" ]; then
-            curl -L -o ${COMPONENT_NAME}.tar.gz "https://github.com/dojoengine/${COMPONENT_NAME}/releases/download/${VERSION_NAME}/${COMPONENT_NAME}_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz"
-            mkdir -p ${TARGET_DIR}
-            tar -xzvf ${COMPONENT_NAME}.tar.gz -C ${TARGET_DIR}
-          else
-            curl -L -o ${COMPONENT_NAME}.zip "https://github.com/dojoengine/${COMPONENT_NAME}/releases/download/${VERSION_NAME}/${COMPONENT_NAME}_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.zip"
-            mkdir -p ${TARGET_DIR}
-            unzip -o ${COMPONENT_NAME}.zip -d ${TARGET_DIR}
-          fi
-
       - name: Build binaries
-        run: cargo build --release --bin sozo --bin torii --bin dojo-language-server --target ${{ matrix.job.target }}
+        run: cargo build --release --bin sozo --bin dojo-language-server --target ${{ matrix.job.target }}
 
       - name: Archive binaries
         id: artifacts
@@ -173,7 +126,7 @@ jobs:
       GITHUB_USER: ${{ github.repository_owner }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           pattern: artifacts-*
