@@ -1,5 +1,6 @@
 {
-  "1.5.0-preview.0": {
-    "katana": ["1.5.0-alpha.1"]
+  "1.5.0-alpha.0": {
+    "katana": ["1.5.0-alpha.1"],
+    "torii": ["1.5.0-alpha.0"]
   }
 }

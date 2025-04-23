@@ -19,11 +19,13 @@ COMPONENTS_DIR="$INSTALLATION_DIR/components"
 # Repository information
 DOJO_REPO="dojoengine/dojo"
 KATANA_REPO="dojoengine/katana"
+TORII_REPO="dojoengine/torii"
 
 # Toolchain versions compatibility registry
 VERSIONS_JSON_URL="https://raw.githubusercontent.com/dojoengine/dojo/new-dojoup/versions.json"
 
 # All components
+#COMPONENT_BINARY=("sozo" "torii" "katana" "dojo-language-server")
 COMPONENT_BINARY=("sozo" "torii" "katana" "dojo-language-server")
 
 # The last dojo version that is still using the 'legacy' format ie all binaries are included in the monorepo
@@ -35,7 +37,7 @@ get_repo_for_component() {
   # Mapping of components and their repositories
   COMPONENT_REPO_MAPPING=(
     "sozo:$DOJO_REPO"
-    "torii:$DOJO_REPO"
+    "torii:$TORII_REPO"
     "dojo-language-server:$DOJO_REPO"
     "katana:$KATANA_REPO"
   )
