@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1745445888815,
+  "lastUpdate": 1745449794894,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -63138,6 +63138,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 51445838126,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "distinct": true,
+          "id": "4268c7d0ac720836b9031d1998c2427dcd9fb0a9",
+          "message": "fix(ci): bump runner for devcontainer and add retry for failing curl",
+          "timestamp": "2025-04-23T16:56:47-06:00",
+          "tree_id": "294414f0e916498845a992ae9fc202215baf4a58",
+          "url": "https://github.com/dojoengine/dojo/commit/4268c7d0ac720836b9031d1998c2427dcd9fb0a9"
+        },
+        "date": 1745449791660,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 50877240369,
             "range": "± 0",
             "unit": "ns/iter"
           }
