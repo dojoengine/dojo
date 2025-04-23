@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1745437592279,
+  "lastUpdate": 1745439447650,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -62988,6 +62988,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 53824959560,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tarrencev@users.noreply.github.com",
+            "name": "Tarrence van As",
+            "username": "tarrencev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "218a94067d11a9d8e791b2e5d94ace9161fead70",
+          "message": "release(prepare): v1.5.0-alpha.1 (#3192)\n\n* Prepare release: v1.5.0-alpha.1\n\n* chore: add alpha.1 versions registry\n\n---------\n\nCo-authored-by: glihm <glihm@users.noreply.github.com>\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2025-04-23T14:04:21-06:00",
+          "tree_id": "f109726b38659b28744d628333e493b32ff0b794",
+          "url": "https://github.com/dojoengine/dojo/commit/218a94067d11a9d8e791b2e5d94ace9161fead70"
+        },
+        "date": 1745439444435,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 51387994048,
             "range": "± 0",
             "unit": "ns/iter"
           }
