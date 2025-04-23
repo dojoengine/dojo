@@ -82,8 +82,5 @@ if ! grep -q "$SOURCE_COMMAND" $PROFILE; then
     . $PROFILE
 fi
 
-# echo && echo "Detected your preferred shell is ${PREF_SHELL} and added dojoup to PATH. Run 'source ${PROFILE}' or start a new terminal session to use dojoup."
-# echo "Then, simply run 'dojoup install' to install Dojo."
-
 echo && echo "Dojoup is installed now."
 echo "Simply run 'dojoup install' to install a Dojo toolchain."
