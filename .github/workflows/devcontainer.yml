@@ -7,11 +7,6 @@ on:
         description: Descriptive name of the devcontainer for the Docker tag
         required: true
         type: string
-  push:
-    paths:
-      - ".devcontainer/**"
-      - ".github/workflows/devcontainer.yml"
-      - "!.devcontainer/devcontainer.json"
   release:
     types: [published]
 
@@ -69,8 +64,7 @@ jobs:
           tags: ghcr.io/${{ github.repository }}-dev:latest,ghcr.io/${{ github.repository }}-dev:${{ env.DOCKER_TAG }}
           build-args: |
             RUST_VERSION=1.85.0
-            BUILD_TYPE=${{ github.event_name }}
-            DOJO_VERSION=${{ github.event.release.tag_name }}
+            DOJO_VERSION=${{ env.DOCKER_TAG }}
           platforms: linux/amd64,linux/arm64
           cache-from: type=registry,ref=ghcr.io/${{ github.repository }}-dev:latest
 

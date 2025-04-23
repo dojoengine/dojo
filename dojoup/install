@@ -50,4 +50,4 @@ if [[ ":$PATH:" != *":${DOJO_BIN_DIR}:"* ]]; then
 fi
 
 echo && echo "Detected your preferred shell is ${PREF_SHELL} and added dojoup to PATH. Run 'source ${PROFILE}' or start a new terminal session to use dojoup."
-echo "Then, simply run 'dojoup' to install Dojo."
+echo "Then, simply run 'dojoup install' to install Dojo."
