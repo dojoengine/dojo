@@ -31,6 +31,6 @@ LABEL description="Dojo is a provable game engine and toolchain for building onc
     source="https://github.com/dojoengine/dojo" \
     documentation="https://book.dojoengine.org/"
 
-COPY --from=artifacts --chmod=755 $TARGETPLATFORM/katana $TARGETPLATFORM/sozo $TARGETPLATFORM/torii /usr/local/bin/
+COPY --from=artifacts --chmod=755 $TARGETPLATFORM/katana $TARGETPLATFORM/sozo /usr/local/bin/
 
 COPY --from=builder /usr/local/bin/curtail /usr/local/bin/curtail
