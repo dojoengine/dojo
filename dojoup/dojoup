@@ -22,7 +22,7 @@ KATANA_REPO="dojoengine/katana"
 TORII_REPO="dojoengine/torii"
 
 # Toolchain versions compatibility registry
-VERSIONS_JSON_URL="https://raw.githubusercontent.com/dojoengine/dojo/new-dojoup/versions.json"
+VERSIONS_JSON_URL="https://raw.githubusercontent.com/dojoengine/dojo/refs/heads/main/versions.json"
 
 # All components
 COMPONENT_BINARY=("sozo" "torii" "katana" "dojo-language-server")
