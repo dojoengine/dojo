@@ -39,8 +39,8 @@ jobs:
         with:
           # We have to use a PAT in order to trigger ci
           token: ${{ secrets.CREATE_PR_TOKEN }}
-          title: "release(prepare): v${VERSION}"
-          commit-message: "Prepare release: v${VERSION}"
+          title: "release(prepare): v${{ inputs.version }}"
+          commit-message: "Prepare release: v${{ inputs.version }}"
           branch: prepare-release
           base: main
           delete-branch: true
