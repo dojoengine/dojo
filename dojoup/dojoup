@@ -71,7 +71,7 @@ set_default_version() {
 		rm -rf "$DEFAULT_TOOLCHAIN_DIR"
 	fi
 
-	ln -sfh "$requested_toolchain_path" "$DEFAULT_TOOLCHAIN_DIR"
+	ln -sf "$requested_toolchain_path" "$DEFAULT_TOOLCHAIN_DIR"
 }
 
 # Function to get the active Dojo version
