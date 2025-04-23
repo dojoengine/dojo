@@ -32,6 +32,7 @@ LABEL description="Dojo is a provable game engine and toolchain for building onc
     documentation="https://book.dojoengine.org/"
 
 RUN curl -L https://install.dojoengine.org | bash
+RUN source /root/.dojo/env
 RUN dojoup install $DOJO_VERSION
 
 COPY --from=builder /usr/local/bin/curtail /usr/local/bin/curtail
