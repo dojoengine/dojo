@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1745439447650,
+  "lastUpdate": 1745443873832,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -63018,6 +63018,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 51387994048,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0ca35700b3c1b7f6f19cd38620dccda2024bc2c8",
+          "message": "fix(dojoup): `-h` not available on linux (#3193)\n\nmake it portable to linux",
+          "timestamp": "2025-04-24T05:17:49+08:00",
+          "tree_id": "52e240e6ba9cd6a30f9c0dd1732c0eaa3719156e",
+          "url": "https://github.com/dojoengine/dojo/commit/0ca35700b3c1b7f6f19cd38620dccda2024bc2c8"
+        },
+        "date": 1745443869882,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 54477883400,
             "range": "± 0",
             "unit": "ns/iter"
           }
