@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1745445307888,
+  "lastUpdate": 1745445888815,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -63108,6 +63108,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 52825225418,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "distinct": true,
+          "id": "ae0aad11dcf10f4a9314085092b423de572962a1",
+          "message": "fix(docker): add missing jq and fix dojoup source",
+          "timestamp": "2025-04-23T15:51:51-06:00",
+          "tree_id": "d8f1b753f12408fac545b71e44af9dc4c910fe97",
+          "url": "https://github.com/dojoengine/dojo/commit/ae0aad11dcf10f4a9314085092b423de572962a1"
+        },
+        "date": 1745445885530,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 51445838126,
             "range": "± 0",
             "unit": "ns/iter"
           }
