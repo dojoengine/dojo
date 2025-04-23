@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1745437467818,
+  "lastUpdate": 1745437592279,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -62958,6 +62958,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 54842480049,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c79e7ce0dfb1f9da105ea7a9d84a20b8b5f2fcfe",
+          "message": "feat(dojoup): add to `PATH` thru script (#3190)\n\n* wip\n\n* wip\n\n* wip\n\n* wip\n\n* wip\n\n* fix branch\n\n* wip",
+          "timestamp": "2025-04-23T13:33:03-06:00",
+          "tree_id": "d27123682cf4d5141e8d09992742d0c769094df4",
+          "url": "https://github.com/dojoengine/dojo/commit/c79e7ce0dfb1f9da105ea7a9d84a20b8b5f2fcfe"
+        },
+        "date": 1745437588603,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 53824959560,
             "range": "± 0",
             "unit": "ns/iter"
           }
