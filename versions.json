@@ -2,5 +2,9 @@
   "1.5.0-alpha.0": {
     "katana": ["1.5.0-alpha.1"],
     "torii": ["1.5.0-alpha.0"]
+  },
+  "1.5.0-alpha.1": {
+    "katana": ["1.5.0-alpha.4"],
+    "torii": ["1.5.0-alpha.0"]
   }
 }
