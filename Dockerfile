@@ -32,8 +32,7 @@ LABEL description="Dojo is a provable game engine and toolchain for building onc
     documentation="https://book.dojoengine.org/"
 
 COPY dojoup/dojoup /usr/local/bin/dojoup
-RUN echo "DOJO_VERSION: $DOJO_VERSION"
-# Once new dojoup is ok, use the DOJO_VERSION input from the workflow to install the correct version.
-# RUN dojoup -v $DOJO_VERSION
+RUN chmod +x /usr/local/bin/dojoup
+RUN dojoup install $DOJO_VERSION
 
 COPY --from=builder /usr/local/bin/curtail /usr/local/bin/curtail
