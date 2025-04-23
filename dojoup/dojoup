@@ -67,6 +67,10 @@ set_default_version() {
 		return
 	fi
 
+	if [ -d "$DEFAULT_TOOLCHAIN_DIR" ]; then
+		rm -rf "$DEFAULT_TOOLCHAIN_DIR"
+	fi
+
 	ln -sfh "$requested_toolchain_path" "$DEFAULT_TOOLCHAIN_DIR"
 }
 
