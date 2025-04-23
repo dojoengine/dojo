@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1745443873832,
+  "lastUpdate": 1745444715440,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -63048,6 +63048,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 54477883400,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "distinct": true,
+          "id": "36f27e526d8e7fe04f0739f8efa0b6ccf091de14",
+          "message": "fix(ci): trigger docker on release and add dojoup to devcontainer",
+          "timestamp": "2025-04-23T15:31:44-06:00",
+          "tree_id": "a5f3ca38c55e819e629976968c7dd67ef952a84b",
+          "url": "https://github.com/dojoengine/dojo/commit/36f27e526d8e7fe04f0739f8efa0b6ccf091de14"
+        },
+        "date": 1745444711996,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 50176614051,
             "range": "± 0",
             "unit": "ns/iter"
           }
