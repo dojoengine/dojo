@@ -20,9 +20,8 @@ on:
         description: "The dojo version to install in the docker image"
         required: true
         type: string
-  push:
-    tags:
-      - 'v*'  
+  release:
+    types: [published]
 
 env:
   CARGO_TERM_COLOR: always
