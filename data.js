@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1745355109985,
+  "lastUpdate": 1745382377627,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -62778,6 +62778,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 51239885756,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "daae54dd14529b602b770cbe3c3f385ae0ad2542",
+          "message": "feat(dojoup): new commands + support for components fragmentation (#3160)\n\n* add versions file\n\n* initial mvp\n\n* fix\n\n* global active dojo version\n\n* skip redundant download\n\n* wip\n\n* wip\n\n* wip\n\n* update repo\n\n* wip\n\n* wip\n\n* update version registry\n\n* remove windows build temporarily\n\n* flip statement\n\n* fix ci\n\n* inline job\n\n* fix jq\n\n* dont build katana\n\n* Update devcontainer image to build from dojo image\n\n* add comment\n\n* fix: add missing cargo-nextest\n\n* fix: start from ubuntu 24.04 base image\n\n* add torii repo and alpha.0 versions\n\n* feat(dojoup): add component management for individual download\n\n* fix(dojoup): ensure backward compatible behavior when no command is provided\n\n---------\n\nCo-authored-by: Tarrence van As <tarrence@vanas.family>\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2025-04-22T22:13:17-06:00",
+          "tree_id": "3903e9122f71c343f6ccf34ccd6d666476fa577b",
+          "url": "https://github.com/dojoengine/dojo/commit/daae54dd14529b602b770cbe3c3f385ae0ad2542"
+        },
+        "date": 1745382374404,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 50708775177,
             "range": "± 0",
             "unit": "ns/iter"
           }
