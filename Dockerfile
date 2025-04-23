@@ -17,7 +17,7 @@ RUN git clone https://github.com/Comcast/Infinite-File-Curtailer.git curtailer \
 FROM ubuntu:24.04 AS base
 
 RUN apt-get update && \
-    apt-get install -y curl ca-certificates tini && \
+    apt-get install -y curl ca-certificates tini jq && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* && \
     cp /usr/bin/tini /tini
@@ -32,7 +32,6 @@ LABEL description="Dojo is a provable game engine and toolchain for building onc
     documentation="https://book.dojoengine.org/"
 
 RUN curl -L https://install.dojoengine.org | bash
-RUN source /root/.dojo/env
-RUN dojoup install $DOJO_VERSION
+RUN . ~/.dojo/env && dojoup install $DOJO_VERSION
 
 COPY --from=builder /usr/local/bin/curtail /usr/local/bin/curtail
