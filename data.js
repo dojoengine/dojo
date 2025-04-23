@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1745422021372,
+  "lastUpdate": 1745437467818,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -62928,6 +62928,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 53623146138,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "435261254fdbeb28918b0325f46a21ce5b4ad0db",
+          "message": "chore: remove katana leftover (#3191)",
+          "timestamp": "2025-04-24T03:30:53+08:00",
+          "tree_id": "fd737e3fd4449b879b77bacc79c1a6d55ada22ae",
+          "url": "https://github.com/dojoengine/dojo/commit/435261254fdbeb28918b0325f46a21ce5b4ad0db"
+        },
+        "date": 1745437464487,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 54842480049,
             "range": "± 0",
             "unit": "ns/iter"
           }
