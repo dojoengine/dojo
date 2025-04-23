@@ -1,4 +1,14 @@
+# Dojo release dispatch workflow.
+#
+# This workflow is used to manually trigger a release.
+#
+# The workflow will propose a release with the same version as the one passed as input to the workflow, taking care of updating Cargo.toml versions.
+#
+# The workflow will create a PR, which must be manually merged to trigger the release.
+# If the release triggered by the merged of this PR fails, the `release.yml` workflow can be used to be triggered again on main.
+#
 name: release-dispatch
+
 on:
   workflow_dispatch:
     inputs:
