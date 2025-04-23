@@ -69,7 +69,7 @@ set_default_version() {
 
 	if [ -d "$DEFAULT_TOOLCHAIN_DIR" ]; then
 		echo "deleting ahhh"
-		rm -rf "$DEFAULT_TOOLCHAIN_DIR"
+		rm -rdf "$DEFAULT_TOOLCHAIN_DIR"
 	fi
 
 	echo "setting ahh"
