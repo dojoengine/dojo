@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1745382377627,
+  "lastUpdate": 1745420995493,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -62808,6 +62808,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 50708775177,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "41f8c2942388cefaadcba42ab3a8a0ee1f15c8bb",
+          "message": "fix(ci): decouple release from docker image (#3182)\n\n* fix(ci): decouple release from docker image\n\n* fix: use dojo version and dojoup to sync binaries in docker",
+          "timestamp": "2025-04-23T08:56:32-06:00",
+          "tree_id": "47e431ebf3594ef8075fa3f4605ff8db275ec9e2",
+          "url": "https://github.com/dojoengine/dojo/commit/41f8c2942388cefaadcba42ab3a8a0ee1f15c8bb"
+        },
+        "date": 1745420991675,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 53802264488,
             "range": "± 0",
             "unit": "ns/iter"
           }
