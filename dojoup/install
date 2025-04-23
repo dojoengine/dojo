@@ -9,7 +9,7 @@ DOJO_BIN_DIR="$DOJO_DIR/bin"
 DOJO_DOJOUP_DIR="$DOJO_DIR/dojoup"
 DOJO_MAN_DIR="$DOJO_DIR/share/man/man1"
 
-BIN_URL="https://raw.githubusercontent.com/dojoengine/dojo/update-dojoup/dojoup/dojoup"
+BIN_URL="https://raw.githubusercontent.com/dojoengine/dojo/main/dojoup/dojoup"
 BIN_PATH="$DOJO_DOJOUP_DIR/dojoup"
 
 # Create the .dojo bin directory and dojoup binary if it doesn't exist.
