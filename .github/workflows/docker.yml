@@ -30,7 +30,7 @@ env:
 
 jobs:
   prepare:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-4-cores
     outputs:
       tag_name: ${{ steps.version_info.outputs.tag_name }}
       dojo_version: ${{ steps.version_info.outputs.dojo_version }}
