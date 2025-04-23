@@ -251,6 +251,7 @@ pub mod world {
         resources: Map::<felt252, Resource>,
         owners: Map::<(felt252, ContractAddress), bool>,
         writers: Map::<(felt252, ContractAddress), bool>,
+        owner_count: Map::<felt252, u64>,
         initialized_contracts: Map::<felt252, bool>,
     }
 
@@ -270,10 +271,10 @@ pub mod world {
         let (internal_ns, internal_ns_hash) = self.world_internal_namespace();
 
         self.resources.write(internal_ns_hash, Resource::Namespace(internal_ns));
-        self.owners.write((internal_ns_hash, creator), true);
+        self.write_ownership(internal_ns_hash, creator, true);
 
         self.resources.write(WORLD, Resource::World);
-        self.owners.write((WORLD, creator), true);
+        self.write_ownership(WORLD, creator, true);
 
         // This model doesn't need to have the class hash or the contract address
         // set since they are manually controlled by the world contract.
@@ -389,7 +390,7 @@ pub mod world {
 
             self.assert_caller_permissions(resource, Permission::Owner);
 
-            self.owners.write((resource, address), true);
+            self.write_ownership(resource, address, true);
 
             self.emit(OwnerUpdated { contract: address, resource, value: true });
         }
@@ -401,9 +402,13 @@ pub mod world {
 
             self.assert_caller_permissions(resource, Permission::Owner);
 
-            self.owners.write((resource, address), false);
+            self.write_ownership(resource, address, false);
 
             self.emit(OwnerUpdated { contract: address, resource, value: false });
+        }
+
+        fn get_number_of_owners(self: @ContractState, resource: felt252) -> u64 {
+            self.owner_count.read(resource)
         }
 
         fn is_writer(self: @ContractState, resource: felt252, contract: ContractAddress) -> bool {
@@ -467,7 +472,7 @@ pub mod world {
             self
                 .resources
                 .write(event_selector, Resource::Event((contract_address, namespace_hash)));
-            self.owners.write((event_selector, caller), true);
+            self.write_ownership(event_selector, caller, true);
 
             self
                 .emit(
@@ -573,7 +578,7 @@ pub mod world {
             self
                 .resources
                 .write(model_selector, Resource::Model((contract_address, namespace_hash)));
-            self.owners.write((model_selector, caller), true);
+            self.write_ownership(model_selector, caller, true);
 
             self
                 .emit(
@@ -659,7 +664,7 @@ pub mod world {
                 ),
                 Resource::Unregistered => {
                     self.resources.write(hash, Resource::Namespace(namespace.clone()));
-                    self.owners.write((hash, caller), true);
+                    self.write_ownership(hash, caller, true);
 
                     self.emit(NamespaceRegistered { namespace, hash });
                 },
@@ -700,7 +705,7 @@ pub mod world {
 
             self.assert_caller_permissions(namespace_hash, Permission::Owner);
 
-            self.owners.write((contract_selector, caller), true);
+            self.write_ownership(contract_selector, caller, true);
             self
                 .resources
                 .write(contract_selector, Resource::Contract((contract_address, namespace_hash)));
@@ -831,7 +836,7 @@ pub mod world {
 
             self.assert_caller_permissions(namespace_hash, Permission::Owner);
 
-            self.owners.write((contract_selector, caller), true);
+            self.write_ownership(contract_selector, caller, true);
             self
                 .resources
                 .write(contract_selector, Resource::Library((class_hash, namespace_hash)));
@@ -1037,6 +1042,30 @@ pub mod world {
 
     #[generate_trait]
     impl SelfImpl of SelfTrait {
+        /// Update the ownership stat of a resource owner.
+        ///
+        /// # Arguments
+        ///   * `resource` - The selector of the resource.
+        ///   * `owner` - The owner address.
+        ///   $ `is_owner` - true to set `owner` as a new resource owner,
+        ///                  false to remove the `owner` from the resource owners.
+        fn write_ownership(
+            ref self: ContractState, resource: felt252, owner: ContractAddress, is_owner: bool,
+        ) {
+            let was_owner = self.owners.read((resource, owner));
+
+            if was_owner != is_owner {
+                let new_count = if is_owner {
+                    self.owner_count.read(resource) + 1
+                } else {
+                    self.owner_count.read(resource) - 1
+                };
+
+                self.owner_count.write(resource, new_count);
+                self.owners.write((resource, owner), is_owner);
+            }
+        }
+
         #[inline(always)]
         /// Indicates if the caller is the owner of the world.
         fn is_caller_world_owner(self: @ContractState) -> bool {

@@ -2,10 +2,12 @@ use starknet::{ContractAddress};
 
 use dojo::world::{IWorldDispatcher, WorldStorage, WorldStorageTrait};
 use dojo::model::Model;
+use dojo::event::Event;
 
 use crate::world::{
     spawn_test_world, NamespaceDef, TestResource, ContractDefTrait, WorldStorageTestTrait,
 };
+use dojo::utils::selector_from_namespace_and_name;
 
 pub const DOJO_NSH: felt252 = 0x309e09669bc1fdc1dd6563a7ef862aa6227c97d099d08cc7b81bad58a7443fa;
 
@@ -219,12 +221,65 @@ pub mod bar {
     }
 }
 
+#[starknet::interface]
+pub trait IDojoLib<TContractState> {
+    fn sum(self: @TContractState, a: u64, b: u64) -> u128;
+}
+
+#[dojo::contract]
+pub mod dojo_lib {
+    use super::IWorldDispatcher;
+
+    #[storage]
+    struct Storage {
+        world: IWorldDispatcher,
+    }
+
+    #[abi(embed_v0)]
+    impl IDojoLibImpl of super::IDojoLib<ContractState> {
+        fn sum(self: @ContractState, a: u64, b: u64) -> u128 {
+            a.into() + b.into()
+        }
+    }
+}
+
 /// Deploys an empty world with the `dojo` namespace.
 pub fn deploy_world() -> WorldStorage {
     let namespace_def = NamespaceDef { namespace: "dojo", resources: [].span() };
 
     spawn_test_world([namespace_def].span())
 }
+
+
+/// Deploys a world with the `dojo` namespace and registers one resource
+/// of each kind.
+pub fn deploy_world_with_all_kind_of_resources() -> (WorldStorage, Span<felt252>) {
+    let namespace_def = NamespaceDef {
+        namespace: "dojo",
+        resources: [
+            TestResource::Model(m_Foo::TEST_CLASS_HASH),
+            TestResource::Event(e_SimpleEvent::TEST_CLASS_HASH),
+            TestResource::Contract(bar::TEST_CLASS_HASH),
+            TestResource::Library((dojo_lib::TEST_CLASS_HASH, @"dojolib", @"1")),
+        ]
+            .span(),
+    };
+
+    let world = spawn_test_world([namespace_def].span());
+
+    let resource_selectors = [
+        0, // world
+        Model::<Foo>::selector(DOJO_NSH), // model
+        Event::<SimpleEvent>::selector(DOJO_NSH), // event
+        selector_from_namespace_and_name(DOJO_NSH, @"bar"), // contract
+        selector_from_namespace_and_name(DOJO_NSH, @"dojolib_v1"), // library
+        DOJO_NSH // namespace
+    ]
+        .span();
+
+    (world, resource_selectors)
+}
+
 
 /// Deploys an empty world with the `dojo` namespace and registers the `foo` model.
 /// No permissions are granted.

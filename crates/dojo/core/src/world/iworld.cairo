@@ -273,6 +273,12 @@ pub trait IWorld<T> {
     fn revoke_owner(ref self: T, resource: felt252, address: ContractAddress);
 
 
+    /// Get the number of owners for a resource.
+    ///
+    /// # Arguments
+    ///   * `resource` - The selector of the resource.
+    fn get_number_of_owners(self: @T, resource: felt252) -> u64;
+
     /// Returns true if the provided contract has writer permission for the resource, false
     /// otherwise.
     ///
