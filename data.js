@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1745421562991,
+  "lastUpdate": 1745421889858,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -62868,6 +62868,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 51767108562,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "distinct": true,
+          "id": "f636d8ee2e988dc8c86aaed7ab44009b05766647",
+          "message": "fix(ci): remove torii reference and add win32 back",
+          "timestamp": "2025-04-23T09:11:34-06:00",
+          "tree_id": "dda8ae1410bee03a4357350f72e4b85b1de2509e",
+          "url": "https://github.com/dojoengine/dojo/commit/f636d8ee2e988dc8c86aaed7ab44009b05766647"
+        },
+        "date": 1745421886542,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 52412036614,
             "range": "± 0",
             "unit": "ns/iter"
           }
