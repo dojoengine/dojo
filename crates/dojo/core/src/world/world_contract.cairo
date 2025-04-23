@@ -1042,7 +1042,7 @@ pub mod world {
 
     #[generate_trait]
     impl SelfImpl of SelfTrait {
-        /// Update the ownership stat of a resource owner.
+        /// Update the ownership status of a resource owner.
         ///
         /// # Arguments
         ///   * `resource` - The selector of the resource.
