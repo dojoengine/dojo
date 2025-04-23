@@ -25,7 +25,6 @@ TORII_REPO="dojoengine/torii"
 VERSIONS_JSON_URL="https://raw.githubusercontent.com/dojoengine/dojo/new-dojoup/versions.json"
 
 # All components
-#COMPONENT_BINARY=("sozo" "torii" "katana" "dojo-language-server")
 COMPONENT_BINARY=("sozo" "torii" "katana" "dojo-language-server")
 
 # The last dojo version that is still using the 'legacy' format ie all binaries are included in the monorepo
@@ -171,7 +170,6 @@ use_version() {
   say "now using dojo toolchain: $version"
 }
 
-# Function to detect platform and architecture
 detect_platform_arch() {
   # Determine platform
   local platform="$(uname -s)"
@@ -839,9 +837,9 @@ EOF
 main() {
   # Process commands
   if [ $# -eq 0 ]; then
-    # No arguments provided, show help
-    usage
-    exit 0
+    # If no command provided, default to the backward compatible behavior
+	# which is installing the latest version of Dojo.
+    install_dojo "$@"
   fi
 
   if [ ! -d "$BASE_DIR" ]; then
