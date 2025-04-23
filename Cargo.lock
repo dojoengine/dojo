@@ -2608,7 +2608,7 @@ checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
 
 [[package]]
 name = "dojo-bindgen"
-version = "1.5.0-alpha.0"
+version = "1.5.0-alpha.1"
 dependencies = [
  "anyhow",
  "assert_matches",
@@ -2631,11 +2631,11 @@ dependencies = [
 
 [[package]]
 name = "dojo-contracts"
-version = "1.5.0-alpha.0"
+version = "1.5.0-alpha.1"
 
 [[package]]
 name = "dojo-examples-spawn-and-move"
-version = "1.5.0-alpha.0"
+version = "1.5.0-alpha.1"
 
 [[package]]
 name = "dojo-lang"
@@ -2661,7 +2661,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-lang"
-version = "1.5.0-alpha.0"
+version = "1.5.0-alpha.1"
 dependencies = [
  "anyhow",
  "cairo-lang-defs",
@@ -2671,7 +2671,7 @@ dependencies = [
  "cairo-lang-semantic",
  "cairo-lang-syntax",
  "cairo-lang-utils",
- "dojo-types 1.5.0-alpha.0",
+ "dojo-types 1.5.0-alpha.1",
  "itertools 0.12.1",
  "serde",
  "smol_str",
@@ -2682,15 +2682,15 @@ dependencies = [
 
 [[package]]
 name = "dojo-language-server"
-version = "1.5.0-alpha.0"
+version = "1.5.0-alpha.1"
 dependencies = [
  "clap",
- "dojo-lang 1.5.0-alpha.0",
+ "dojo-lang 1.5.0-alpha.1",
 ]
 
 [[package]]
 name = "dojo-metrics"
-version = "1.5.0-alpha.0"
+version = "1.5.0-alpha.1"
 dependencies = [
  "hyper 0.14.30",
  "jemalloc-ctl",
@@ -2706,7 +2706,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-test-utils"
-version = "1.5.0-alpha.0"
+version = "1.5.0-alpha.1"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -2740,7 +2740,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-types"
-version = "1.5.0-alpha.0"
+version = "1.5.0-alpha.1"
 dependencies = [
  "anyhow",
  "cainome 0.5.0",
@@ -2761,7 +2761,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-utils"
-version = "1.5.0-alpha.0"
+version = "1.5.0-alpha.1"
 dependencies = [
  "anyhow",
  "assert_matches",
@@ -2780,13 +2780,13 @@ dependencies = [
 
 [[package]]
 name = "dojo-world"
-version = "1.5.0-alpha.0"
+version = "1.5.0-alpha.1"
 dependencies = [
  "anyhow",
  "async-trait",
  "cainome 0.5.0",
  "cairo-lang-starknet-classes",
- "dojo-types 1.5.0-alpha.0",
+ "dojo-types 1.5.0-alpha.1",
  "futures",
  "hex",
  "hex-literal",
@@ -2807,7 +2807,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-world-abigen"
-version = "1.5.0-alpha.0"
+version = "1.5.0-alpha.1"
 dependencies = [
  "anyhow",
  "cainome 0.5.0",
@@ -5563,7 +5563,7 @@ dependencies = [
 
 [[package]]
 name = "merge-options"
-version = "1.5.0-alpha.0"
+version = "1.5.0-alpha.1"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -5572,7 +5572,7 @@ dependencies = [
 
 [[package]]
 name = "merge-options-macro-test"
-version = "1.5.0-alpha.0"
+version = "1.5.0-alpha.1"
 dependencies = [
  "merge-options",
 ]
@@ -7969,7 +7969,7 @@ dependencies = [
 
 [[package]]
 name = "sozo"
-version = "1.5.0-alpha.0"
+version = "1.5.0-alpha.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -7983,7 +7983,7 @@ dependencies = [
  "colored",
  "dojo-bindgen",
  "dojo-test-utils",
- "dojo-types 1.5.0-alpha.0",
+ "dojo-types 1.5.0-alpha.1",
  "dojo-utils",
  "dojo-world",
  "katana-runner 1.2.3",
@@ -8015,7 +8015,7 @@ dependencies = [
 
 [[package]]
 name = "sozo-ops"
-version = "1.5.0-alpha.0"
+version = "1.5.0-alpha.1"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -8024,7 +8024,7 @@ dependencies = [
  "colored",
  "colored_json",
  "dojo-test-utils",
- "dojo-types 1.5.0-alpha.0",
+ "dojo-types 1.5.0-alpha.1",
  "dojo-utils",
  "dojo-world",
  "futures",
@@ -8047,7 +8047,7 @@ dependencies = [
 
 [[package]]
 name = "sozo-scarbext"
-version = "1.5.0-alpha.0"
+version = "1.5.0-alpha.1"
 dependencies = [
  "anyhow",
  "camino",
@@ -8060,7 +8060,7 @@ dependencies = [
 
 [[package]]
 name = "sozo-signers"
-version = "1.5.0-alpha.0"
+version = "1.5.0-alpha.1"
 dependencies = [
  "anyhow",
  "starknet 0.12.0",
@@ -8068,7 +8068,7 @@ dependencies = [
 
 [[package]]
 name = "sozo-walnut"
-version = "1.5.0-alpha.0"
+version = "1.5.0-alpha.1"
 dependencies = [
  "anyhow",
  "clap",
@@ -9527,7 +9527,7 @@ checksum = "accd4ea62f7bb7a82fe23066fb0957d48ef677f6eeb8215f372f52e48bb32426"
 
 [[package]]
 name = "verify_db_balances"
-version = "1.5.0-alpha.0"
+version = "1.5.0-alpha.1"
 dependencies = [
  "clap",
  "num-traits 0.2.19",
@@ -10222,7 +10222,7 @@ checksum = "9d422e8e38ec76e2f06ee439ccc765e9c6a9638b9e7c9f2e8255e4d41e8bd852"
 
 [[package]]
 name = "xtask-generate-test-db"
-version = "1.5.0-alpha.0"
+version = "1.5.0-alpha.1"
 dependencies = [
  "anyhow",
  "dojo-test-utils",
