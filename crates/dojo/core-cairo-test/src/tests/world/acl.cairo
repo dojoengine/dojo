@@ -322,7 +322,7 @@ fn test_register_contract_namespace_not_owner() {
 }
 
 #[test]
-fn test_get_number_of_owners() {
+fn test_owners_count() {
     let owner = starknet::contract_address_const::<'owner'>();
     starknet::testing::set_account_contract_address(owner);
     starknet::testing::set_contract_address(owner);
@@ -332,32 +332,32 @@ fn test_get_number_of_owners() {
 
     let bob = starknet::contract_address_const::<0xb0b>();
 
-    assert(world.get_number_of_owners(0xa11ce) == 0, 'no owner for unknown resource');
+    assert(world.owners_count(0xa11ce) == 0, 'no owner for unknown resource');
 
     for resource in resources {
         let resource = *resource;
 
         // after world deployment, a resource has 1 owner
-        assert(world.get_number_of_owners(resource) == 1, 'resource should have 1 owner');
+        assert(world.owners_count(resource) == 1, 'resource should have 1 owner');
 
         // granting ownership for an existing owner should NOT increase the number of owners
         world.grant_owner(resource, owner);
-        assert(world.get_number_of_owners(resource) == 1, 'resource should have 1 owner');
+        assert(world.owners_count(resource) == 1, 'resource should have 1 owner');
 
         // granting ownership for new owner should increase the number of owners
         world.grant_owner(resource, bob);
-        assert(world.get_number_of_owners(resource) == 2, 'resource should have 2 owners');
+        assert(world.owners_count(resource) == 2, 'resource should have 2 owners');
 
         // revoking ownership should decrease the number of owners
         world.revoke_owner(resource, bob);
-        assert(world.get_number_of_owners(resource) == 1, 'resource should have 1 owner');
+        assert(world.owners_count(resource) == 1, 'resource should have 1 owner');
 
         // revoking ownership for an already revoked owner should NOT decrease the number of owners
         world.revoke_owner(resource, bob);
-        assert(world.get_number_of_owners(resource) == 1, 'resource should have 1 owner');
+        assert(world.owners_count(resource) == 1, 'resource should have 1 owner');
 
         // revoking the last owner should set the number of owners to 0
         world.revoke_owner(resource, owner);
-        assert(world.get_number_of_owners(resource) == 0, 'resource should have no owner');
+        assert(world.owners_count(resource) == 0, 'resource should have no owner');
     }
 }

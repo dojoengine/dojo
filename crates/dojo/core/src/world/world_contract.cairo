@@ -407,7 +407,7 @@ pub mod world {
             self.emit(OwnerUpdated { contract: address, resource, value: false });
         }
 
-        fn get_number_of_owners(self: @ContractState, resource: felt252) -> u64 {
+        fn owners_count(self: @ContractState, resource: felt252) -> u64 {
             self.owner_count.read(resource)
         }
 

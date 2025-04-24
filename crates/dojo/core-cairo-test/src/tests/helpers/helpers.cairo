@@ -268,7 +268,7 @@ pub fn deploy_world_with_all_kind_of_resources() -> (WorldStorage, Span<felt252>
     let world = spawn_test_world([namespace_def].span());
 
     let resource_selectors = [
-        0, // world
+        dojo::world::world::WORLD, // world
         Model::<Foo>::selector(DOJO_NSH), // model
         Event::<SimpleEvent>::selector(DOJO_NSH), // event
         selector_from_namespace_and_name(DOJO_NSH, @"bar"), // contract

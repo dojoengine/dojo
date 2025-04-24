@@ -277,7 +277,7 @@ pub trait IWorld<T> {
     ///
     /// # Arguments
     ///   * `resource` - The selector of the resource.
-    fn get_number_of_owners(self: @T, resource: felt252) -> u64;
+    fn owners_count(self: @T, resource: felt252) -> u64;
 
     /// Returns true if the provided contract has writer permission for the resource, false
     /// otherwise.
