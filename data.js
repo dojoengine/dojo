@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1745449794894,
+  "lastUpdate": 1745528112160,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -63168,6 +63168,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 50877240369,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "distinct": true,
+          "id": "b88c8e0325bcc3a31a07e6fe51c4ff8d66edb0e5",
+          "message": "fix(docker): add libssl to check curl download on arm64",
+          "timestamp": "2025-04-24T14:41:48-06:00",
+          "tree_id": "29043ea2ba4a563ae3e9463931ba27bf6fe6c00b",
+          "url": "https://github.com/dojoengine/dojo/commit/b88c8e0325bcc3a31a07e6fe51c4ff8d66edb0e5"
+        },
+        "date": 1745528108738,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 52110365404,
             "range": "± 0",
             "unit": "ns/iter"
           }
