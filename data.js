@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1745529827224,
+  "lastUpdate": 1745530521546,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -63228,6 +63228,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 50823265568,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "distinct": true,
+          "id": "269ec058de93a7516eeda6065cc5abb317f5a5a3",
+          "message": "chore: remove unused files",
+          "timestamp": "2025-04-24T15:22:15-06:00",
+          "tree_id": "0ac868d0fdb794aa4e24e387bfa542e5da2eedb3",
+          "url": "https://github.com/dojoengine/dojo/commit/269ec058de93a7516eeda6065cc5abb317f5a5a3"
+        },
+        "date": 1745530518224,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 51110533871,
             "range": "± 0",
             "unit": "ns/iter"
           }
