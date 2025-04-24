@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1745528112160,
+  "lastUpdate": 1745529827224,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -63198,6 +63198,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 52110365404,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "distinct": true,
+          "id": "52ae9709b65123235e042ed6c86faf56801a8018",
+          "message": "fix(ci): run tests only on paths and no network qemu arm64",
+          "timestamp": "2025-04-24T15:10:41-06:00",
+          "tree_id": "a6215bcac9ca2a58a45c06af32a0ec9a256a6eba",
+          "url": "https://github.com/dojoengine/dojo/commit/52ae9709b65123235e042ed6c86faf56801a8018"
+        },
+        "date": 1745529823894,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 50823265568,
             "range": "± 0",
             "unit": "ns/iter"
           }
