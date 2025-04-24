@@ -50,7 +50,15 @@ jobs:
               echo "tag_name is empty"
               exit 1
             fi
-            echo "tag_name=${{ inputs.tag_name }}" >> $GITHUB_OUTPUT
+
+            # The tag name must start with v to ensure consistency with tags.
+            TAG_NAME="${{ inputs.tag_name }}"
+            if [[ ! "$TAG_NAME" =~ ^v ]]; then
+              TAG_NAME="v$TAG_NAME"
+            fi
+            echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+
+            # Dojoup doesn't require the prefix v and automatically adds it.
             echo "dojo_version=${{ inputs.dojo_version }}" >> $GITHUB_OUTPUT
           fi
 
