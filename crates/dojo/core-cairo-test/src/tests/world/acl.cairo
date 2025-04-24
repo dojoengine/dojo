@@ -332,6 +332,8 @@ fn test_get_number_of_owners() {
 
     let bob = starknet::contract_address_const::<0xb0b>();
 
+    assert(world.get_number_of_owners(0xa11ce) == 0, 'no owner for unknown resource');
+
     for resource in resources {
         let resource = *resource;
 
