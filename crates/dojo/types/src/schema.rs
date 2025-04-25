@@ -53,6 +53,14 @@ pub enum Ty {
     ByteArray(String),
 }
 
+#[derive(Debug, Clone)]
+pub struct SchemaDiff {
+    /// The modified types.
+    pub ty: Ty,
+    /// The added members/variants that were not present in the previous schema.
+    pub added: Vec<String>,
+}
+
 impl Ty {
     pub fn name(&self) -> String {
         match self {
@@ -234,8 +242,10 @@ impl Ty {
         Ok(())
     }
 
-    /// Returns a new Ty containing only the differences between self and other
-    pub fn diff(&self, other: &Ty) -> Option<Ty> {
+    /// Returns a new SchemaDiff containing only the differences between self and other
+    pub fn diff(&self, other: &Ty) -> Option<SchemaDiff> {
+        let mut added = vec![];
+
         match (self, other) {
             (Ty::Struct(s1), Ty::Struct(s2)) => {
                 // Find members that exist in s1 but not in s2, or are different
@@ -247,11 +257,12 @@ impl Ty {
                             // Member exists in both - check if types are different
                             m1.ty.diff(&m2.ty).map(|diff_ty| Member {
                                 name: m1.name.clone(),
-                                ty: diff_ty,
+                                ty: diff_ty.ty,
                                 key: m1.key,
                             })
                         } else {
                             // Member doesn't exist in s2
+                            added.push(m1.name.clone());
                             Some(m1.clone())
                         }
                     })
@@ -260,7 +271,8 @@ impl Ty {
                 if diff_children.is_empty() {
                     None
                 } else {
-                    Some(Ty::Struct(Struct { name: s1.name.clone(), children: diff_children }))
+                    let ty = Ty::Struct(Struct { name: s1.name.clone(), children: diff_children });
+                    Some(SchemaDiff { ty, added })
                 }
             }
             (Ty::Enum(e1), Ty::Enum(e2)) => {
@@ -273,9 +285,10 @@ impl Ty {
                             // Option exists in both - check if types are different
                             o1.ty
                                 .diff(&o2.ty)
-                                .map(|diff_ty| EnumOption { name: o1.name.clone(), ty: diff_ty })
+                                .map(|diff_ty| EnumOption { name: o1.name.clone(), ty: diff_ty.ty })
                         } else {
                             // Option doesn't exist in e2
+                            added.push(o1.name.clone());
                             Some(o1.clone())
                         }
                     })
@@ -284,47 +297,66 @@ impl Ty {
                 if diff_options.is_empty() {
                     None
                 } else {
-                    Some(Ty::Enum(Enum {
+                    let ty = Ty::Enum(Enum {
                         name: e1.name.clone(),
                         option: e1.option,
                         options: diff_options,
-                    }))
+                    });
+                    Some(SchemaDiff { ty, added })
                 }
             }
             (Ty::Tuple(t1), Ty::Tuple(t2)) => {
                 if t1.len() != t2.len() {
-                    Some(Ty::Tuple(
+                    let ty = Ty::Tuple(
                         t1.iter()
-                            .filter_map(|ty| if !t2.contains(ty) { Some(ty.clone()) } else { None })
+                            .filter_map(|ty| {
+                                if !t2.contains(ty) {
+                                    added.push(ty.name().clone());
+                                    Some(ty.clone())
+                                } else {
+                                    None
+                                }
+                            })
                             .collect(),
-                    ))
+                    );
+
+                    Some(SchemaDiff { ty, added })
                 } else {
                     // Compare each tuple element recursively
-                    let diff_elements: Vec<Ty> =
+                    let diff_elements: Vec<SchemaDiff> =
                         t1.iter().zip(t2.iter()).filter_map(|(ty1, ty2)| ty1.diff(ty2)).collect();
 
-                    if diff_elements.is_empty() { None } else { Some(Ty::Tuple(diff_elements)) }
+                    if diff_elements.is_empty() {
+                        None
+                    } else {
+                        let ty =
+                            Ty::Tuple(diff_elements.iter().map(|diff| diff.ty.clone()).collect());
+                        Some(SchemaDiff { ty, added: vec![] })
+                    }
                 }
             }
             (Ty::Array(a1), Ty::Array(a2)) => {
                 if a1 == a2 {
                     None
                 } else {
-                    Some(Ty::Array(a1.clone()))
+                    let ty = Ty::Array(a1.clone());
+                    Some(SchemaDiff { ty, added: vec![] })
                 }
             }
             (Ty::ByteArray(b1), Ty::ByteArray(b2)) => {
                 if b1 == b2 {
                     None
                 } else {
-                    Some(Ty::ByteArray(b1.clone()))
+                    let ty = Ty::ByteArray(b1.clone());
+                    Some(SchemaDiff { ty, added: vec![] })
                 }
             }
             (Ty::Primitive(p1), Ty::Primitive(p2)) => {
                 if p1 == p2 {
                     None
                 } else {
-                    Some(Ty::Primitive(*p1))
+                    let ty = Ty::Primitive(*p1);
+                    Some(SchemaDiff { ty, added: vec![] })
                 }
             }
             // Different types entirely - we cannot diff them
@@ -914,7 +946,11 @@ mod tests {
 
         // Should show only field2 and field3 as differences
         let diff = struct1.diff(&struct2).unwrap();
-        if let Ty::Struct(s) = diff {
+        assert_eq!(diff.added.len(), 2);
+        assert_eq!(diff.added[0], "field2");
+        assert_eq!(diff.added[1], "field3");
+
+        if let Ty::Struct(s) = diff.ty {
             assert_eq!(s.children.len(), 2);
             assert_eq!(s.children[0].name, "field2");
             assert_eq!(s.children[1].name, "field3");
@@ -940,7 +976,9 @@ mod tests {
 
         // Should show only Option2 as difference
         let diff = enum1.diff(&enum2).unwrap();
-        if let Ty::Enum(e) = diff {
+        assert_eq!(diff.added.len(), 1);
+        assert_eq!(diff.added[0], "Option2");
+        if let Ty::Enum(e) = diff.ty {
             assert_eq!(e.options.len(), 1);
             assert_eq!(e.options[0].name, "Option2");
         } else {
