@@ -76,10 +76,10 @@ pub fn extract_composite_inner_type(ty: &str, prefix: &str, suffix: &str) -> Str
     ))
     .unwrap();
 
-    let caps = re
-        .captures(ty)
-        .unwrap_or_else(|| panic!("'{ty}' must contain the '{prefix}' prefix and the '{suffix}' suffix."));
- 
+    let caps = re.captures(ty).unwrap_or_else(|| {
+        panic!("'{ty}' must contain the '{prefix}' prefix and the '{suffix}' suffix.")
+    });
+
     caps[1].to_string().replace(" ", "")
 }
 
