@@ -32,7 +32,7 @@ jobs:
     runs-on: ubuntu-latest-4-cores
     needs: [fmt, cairofmt, clippy]
     container:
-      image: ghcr.io/dojoengine/dojo-dev:ubuntu24
+      image: ghcr.io/dojoengine/dojo-dev:v1.5.0-alpha.2
     steps:
       - uses: actions/checkout@v3
         with:
@@ -57,7 +57,7 @@ jobs:
     runs-on: ubuntu-latest-32-cores
     needs: build
     container:
-      image: ghcr.io/dojoengine/dojo-dev:ubuntu24
+      image: ghcr.io/dojoengine/dojo-dev:v1.5.0-alpha.2
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -160,7 +160,7 @@ jobs:
     runs-on: ubuntu-latest-4-cores
     needs: [fmt, cairofmt]
     container:
-      image: ghcr.io/dojoengine/dojo-dev:ubuntu24
+      image: ghcr.io/dojoengine/dojo-dev:v1.5.0-alpha.2
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -174,7 +174,7 @@ jobs:
   fmt:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:ubuntu24
+      image: ghcr.io/dojoengine/dojo-dev:v1.5.0-alpha.2
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
@@ -184,7 +184,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [fmt, cairofmt, build]
     container:
-      image: ghcr.io/dojoengine/dojo-dev:ubuntu24
+      image: ghcr.io/dojoengine/dojo-dev:v1.5.0-alpha.2
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2

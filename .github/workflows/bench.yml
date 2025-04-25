@@ -19,7 +19,7 @@ jobs:
   bench-sozo:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:v1.4.2
+      image: ghcr.io/dojoengine/dojo-dev:v1.5.0-alpha.2
     steps:
       - uses: actions/checkout@v3
       - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
