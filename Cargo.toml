@@ -157,9 +157,9 @@ rpassword = "7.2.0"
 rstest = "0.18.2"
 rstest_reuse = "0.6.0"
 salsa = "0.16.1"
-scarb = { git = "https://github.com/remybar/scarb", rev = "6dd858df6e35a4539d6d4d76a424f4f45dc394a0" }
-scarb-metadata = { git = "https://github.com/remybar/scarb", rev = "6dd858df6e35a4539d6d4d76a424f4f45dc394a0" }
-scarb-ui = { git = "https://github.com/remybar/scarb", rev = "6dd858df6e35a4539d6d4d76a424f4f45dc394a0" }
+scarb = { git = "https://github.com/remybar/scarb", rev = "a0fe9c520f4565c0309ead9efb6328ad5be97a11" }
+scarb-metadata = { git = "https://github.com/remybar/scarb", rev = "a0fe9c520f4565c0309ead9efb6328ad5be97a11" }
+scarb-ui = { git = "https://github.com/remybar/scarb", rev = "a0fe9c520f4565c0309ead9efb6328ad5be97a11" }
 semver = "1.0.5"
 serde = { version = "1.0", features = [ "derive" ] }
 serde_json = { version = "1.0", features = [ "arbitrary_precision" ] }
