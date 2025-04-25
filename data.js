@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1745535181838,
+  "lastUpdate": 1745588357017,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -63288,6 +63288,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 49978071296,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "bbee5cadf35454f937565e4bf69b3a0cc3f9df35",
+          "message": "refactor(dojo-types): derive ord and partial ord for primitive (#3198)",
+          "timestamp": "2025-04-25T07:25:45-06:00",
+          "tree_id": "c8c907c751f2cf0d7f2fee53aaa944ea8156e1d2",
+          "url": "https://github.com/dojoengine/dojo/commit/bbee5cadf35454f937565e4bf69b3a0cc3f9df35"
+        },
+        "date": 1745588353110,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 56674872309,
             "range": "± 0",
             "unit": "ns/iter"
           }
