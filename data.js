@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1745588357017,
+  "lastUpdate": 1745588462873,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -63318,6 +63318,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 56674872309,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "remy.baranx@gmail.com",
+            "name": "Rémy Baranx",
+            "username": "remybar"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "931e82b57469bd691830177063219c6448b45d35",
+          "message": "feat(core): add ownership counter in world contract (#3194)\n\n* feat: add owner count management in world contract\n\n* typo\n\n* add get_number_of_owners test case\n\n* update test artifacts\n\n* update after review",
+          "timestamp": "2025-04-25T07:28:07-06:00",
+          "tree_id": "5c20d005dfe13f1ec514b80d700b4eac01673eb5",
+          "url": "https://github.com/dojoengine/dojo/commit/931e82b57469bd691830177063219c6448b45d35"
+        },
+        "date": 1745588459505,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 51047315472,
             "range": "± 0",
             "unit": "ns/iter"
           }
