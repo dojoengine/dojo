@@ -1,5 +1,6 @@
-use regex;
 use std::collections::HashMap;
+
+use regex;
 
 #[derive(Clone, Default, Debug)]
 pub struct TypeIntrospection(pub usize, pub Vec<usize>);
@@ -65,9 +66,9 @@ pub fn get_array_item_type(ty: &str) -> String {
 /// # Examples
 ///    extract_composite_inner_type("Array<(u8, u16)", "Array<", ">") returns "u8, u16"
 pub fn extract_composite_inner_type(ty: &str, prefix: &str, suffix: &str) -> String {
-    // Note: Until at least 2.11, in cairo_lang_* crates, if there is a comment after a struct field type,
-    // without a comma, like `v1: Span<u32> // comment`, the comment is included in the type definition
-    // while reading it from the AST.
+    // Note: Until at least 2.11, in cairo_lang_* crates, if there is a comment after a struct field
+    // type, without a comma, like `v1: Span<u32> // comment`, the comment is included in the
+    // type definition while reading it from the AST.
     let re = regex::Regex::new(&format!(
         "{}\\s*(\\S*.*\\S+)\\s*{}",
         regex::escape(prefix),
@@ -77,8 +78,8 @@ pub fn extract_composite_inner_type(ty: &str, prefix: &str, suffix: &str) -> Str
 
     let caps = re
         .captures(ty)
-        .expect(&format!("'{ty}' must contain the '{prefix}' prefix and the '{suffix}' suffix."));
-
+        .unwrap_or_else(|| panic!("'{ty}' must contain the '{prefix}' prefix and the '{suffix}' suffix."));
+ 
     caps[1].to_string().replace(" ", "")
 }
 
