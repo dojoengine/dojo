@@ -385,214 +385,282 @@ pub trait Introspect<T> {
 }
 
 pub impl Introspect_felt252 of Introspect<felt252> {
+    #[inline(always)]
     fn size() -> Option<usize> {
         Option::Some(1)
     }
+    #[inline(always)]
     fn layout() -> Layout {
         Layout::Fixed([packing::PACKING_MAX_BITS].span())
     }
+    #[inline(always)]
     fn ty() -> Ty {
         Ty::Primitive('felt252')
     }
 }
 
-pub impl Introspect_bool of Introspect<bool> {
+pub impl Introspect_bytes31 of Introspect<bytes31> {
+    #[inline(always)]
     fn size() -> Option<usize> {
         Option::Some(1)
     }
+    #[inline(always)]
+    fn layout() -> Layout {
+        Layout::Fixed([248].span())
+    }
+    #[inline(always)]
+    fn ty() -> Ty {
+        Ty::Primitive('bytes31')
+    }
+}
+
+pub impl Introspect_bool of Introspect<bool> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::Some(1)
+    }
+    #[inline(always)]
     fn layout() -> Layout {
         Layout::Fixed([1].span())
     }
+    #[inline(always)]
     fn ty() -> Ty {
         Ty::Primitive('bool')
     }
 }
 
 pub impl Introspect_u8 of Introspect<u8> {
+    #[inline(always)]
     fn size() -> Option<usize> {
         Option::Some(1)
     }
+    #[inline(always)]
     fn layout() -> Layout {
         Layout::Fixed([8].span())
     }
+    #[inline(always)]
     fn ty() -> Ty {
         Ty::Primitive('u8')
     }
 }
 
 pub impl Introspect_u16 of Introspect<u16> {
+    #[inline(always)]
     fn size() -> Option<usize> {
         Option::Some(1)
     }
+    #[inline(always)]
     fn layout() -> Layout {
         Layout::Fixed([16].span())
     }
+    #[inline(always)]
     fn ty() -> Ty {
         Ty::Primitive('u16')
     }
 }
 
 pub impl Introspect_u32 of Introspect<u32> {
+    #[inline(always)]
     fn size() -> Option<usize> {
         Option::Some(1)
     }
+    #[inline(always)]
     fn layout() -> Layout {
         Layout::Fixed([32].span())
     }
+    #[inline(always)]
     fn ty() -> Ty {
         Ty::Primitive('u32')
     }
 }
 
 pub impl Introspect_u64 of Introspect<u64> {
+    #[inline(always)]
     fn size() -> Option<usize> {
         Option::Some(1)
     }
+    #[inline(always)]
     fn layout() -> Layout {
         Layout::Fixed([64].span())
     }
+    #[inline(always)]
     fn ty() -> Ty {
         Ty::Primitive('u64')
     }
 }
 
 pub impl Introspect_u128 of Introspect<u128> {
+    #[inline(always)]
     fn size() -> Option<usize> {
         Option::Some(1)
     }
+    #[inline(always)]
     fn layout() -> Layout {
         Layout::Fixed([128].span())
     }
+    #[inline(always)]
     fn ty() -> Ty {
         Ty::Primitive('u128')
     }
 }
 
 pub impl Introspect_u256 of Introspect<u256> {
+    #[inline(always)]
     fn size() -> Option<usize> {
         Option::Some(2)
     }
+    #[inline(always)]
     fn layout() -> Layout {
         Layout::Fixed([128, 128].span())
     }
+    #[inline(always)]
     fn ty() -> Ty {
         Ty::Primitive('u256')
     }
 }
 
 pub impl Introspect_i8 of Introspect<i8> {
+    #[inline(always)]
     fn size() -> Option<usize> {
         Option::Some(1)
     }
+    #[inline(always)]
     fn layout() -> Layout {
-        Layout::Fixed([packing::PACKING_MAX_BITS].span())
+        Layout::Fixed([8].span())
     }
+    #[inline(always)]
     fn ty() -> Ty {
         Ty::Primitive('i8')
     }
 }
 
 pub impl Introspect_i16 of Introspect<i16> {
+    #[inline(always)]
     fn size() -> Option<usize> {
         Option::Some(1)
     }
+    #[inline(always)]
     fn layout() -> Layout {
-        Layout::Fixed([packing::PACKING_MAX_BITS].span())
+        Layout::Fixed([16].span())
     }
+    #[inline(always)]
     fn ty() -> Ty {
         Ty::Primitive('i16')
     }
 }
 
 pub impl Introspect_i32 of Introspect<i32> {
+    #[inline(always)]
     fn size() -> Option<usize> {
         Option::Some(1)
     }
+    #[inline(always)]
     fn layout() -> Layout {
-        Layout::Fixed([packing::PACKING_MAX_BITS].span())
+        Layout::Fixed([32].span())
     }
+    #[inline(always)]
     fn ty() -> Ty {
         Ty::Primitive('i32')
     }
 }
 
 pub impl Introspect_i64 of Introspect<i64> {
+    #[inline(always)]
     fn size() -> Option<usize> {
         Option::Some(1)
     }
+    #[inline(always)]
     fn layout() -> Layout {
-        Layout::Fixed([packing::PACKING_MAX_BITS].span())
+        Layout::Fixed([64].span())
     }
+    #[inline(always)]
     fn ty() -> Ty {
         Ty::Primitive('i64')
     }
 }
 
 pub impl Introspect_i128 of Introspect<i128> {
+    #[inline(always)]
     fn size() -> Option<usize> {
         Option::Some(1)
     }
+    #[inline(always)]
     fn layout() -> Layout {
-        Layout::Fixed([packing::PACKING_MAX_BITS].span())
+        Layout::Fixed([128].span())
     }
+    #[inline(always)]
     fn ty() -> Ty {
         Ty::Primitive('i128')
     }
 }
 
 pub impl Introspect_address of Introspect<starknet::ContractAddress> {
+    #[inline(always)]
     fn size() -> Option<usize> {
         Option::Some(1)
     }
+    #[inline(always)]
     fn layout() -> Layout {
         Layout::Fixed([packing::PACKING_MAX_BITS].span())
     }
+    #[inline(always)]
     fn ty() -> Ty {
         Ty::Primitive('ContractAddress')
     }
 }
 
 pub impl Introspect_classhash of Introspect<starknet::ClassHash> {
+    #[inline(always)]
     fn size() -> Option<usize> {
         Option::Some(1)
     }
+    #[inline(always)]
     fn layout() -> Layout {
         Layout::Fixed([packing::PACKING_MAX_BITS].span())
     }
+    #[inline(always)]
     fn ty() -> Ty {
         Ty::Primitive('ClassHash')
     }
 }
 
 pub impl Introspect_ethaddress of Introspect<starknet::EthAddress> {
+    #[inline(always)]
     fn size() -> Option<usize> {
         Option::Some(1)
     }
+    #[inline(always)]
     fn layout() -> Layout {
         Layout::Fixed([packing::PACKING_MAX_BITS].span())
     }
+    #[inline(always)]
     fn ty() -> Ty {
         Ty::Primitive('EthAddress')
     }
 }
 
 pub impl Introspect_bytearray of Introspect<ByteArray> {
+    #[inline(always)]
     fn size() -> Option<usize> {
         Option::None
     }
+    #[inline(always)]
     fn layout() -> Layout {
         Layout::ByteArray
     }
+    #[inline(always)]
     fn ty() -> Ty {
         Ty::ByteArray
     }
 }
 
 pub impl Introspect_option<T, +Introspect<T>> of Introspect<Option<T>> {
+    #[inline(always)]
     fn size() -> Option<usize> {
         Option::None
     }
 
+    #[inline(always)]
     fn layout() -> Layout {
         Layout::Enum(
             [
@@ -605,6 +673,7 @@ pub impl Introspect_option<T, +Introspect<T>> of Introspect<Option<T>> {
         )
     }
 
+    #[inline(always)]
     fn ty() -> Ty {
         Ty::Enum(
             Enum {
@@ -618,26 +687,32 @@ pub impl Introspect_option<T, +Introspect<T>> of Introspect<Option<T>> {
 }
 
 pub impl Introspect_array<T, +Introspect<T>> of Introspect<Array<T>> {
+    #[inline(always)]
     fn size() -> Option<usize> {
         Option::None
     }
+    #[inline(always)]
     fn layout() -> Layout {
         Layout::Array([Introspect::<T>::layout()].span())
     }
 
+    #[inline(always)]
     fn ty() -> Ty {
         Ty::Array([Introspect::<T>::ty()].span())
     }
 }
 
 pub impl Introspect_span<T, +Introspect<T>> of Introspect<Span<T>> {
+    #[inline(always)]
     fn size() -> Option<usize> {
         Option::None
     }
+    #[inline(always)]
     fn layout() -> Layout {
         Layout::Array([Introspect::<T>::layout()].span())
     }
 
+    #[inline(always)]
     fn ty() -> Ty {
         Ty::Array([Introspect::<T>::ty()].span())
     }

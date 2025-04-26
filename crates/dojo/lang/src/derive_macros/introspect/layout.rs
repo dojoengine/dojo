@@ -3,12 +3,12 @@ use cairo_lang_diagnostics::Severity;
 use cairo_lang_syntax::node::ast::{Expr, ItemEnum, ItemStruct, OptionTypeClause, TypeClause};
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
-use cairo_lang_syntax::node::{ids, Terminal, TypedSyntaxNode};
+use cairo_lang_syntax::node::{Terminal, TypedSyntaxNode, ids};
 use starknet::core::utils::get_selector_from_name;
 
 use super::utils::{
     get_array_item_type, get_tuple_item_types, is_array, is_byte_array, is_tuple,
-    is_unsupported_option_type, primitive_type_introspection,
+    is_unsupported_option_type,
 };
 
 const CAIRO_DELIMITERS: [char; 7] = ['[', ']', '<', '>', '(', ')', ','];
@@ -376,16 +376,10 @@ pub fn get_packed_item_layout_from_type(
     } else if is_tuple(item_type) {
         get_packed_tuple_layout_from_type(diagnostics, diagnostic_item, item_type)
     } else {
-        let primitives = primitive_type_introspection();
-
-        if let Some(p) = primitives.get(item_type) {
-            vec![p.1.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(",")]
-        } else {
-            // as we cannot verify that an enum/struct custom type is packable,
-            // we suppose it is and let the user verify this.
-            // If it's not the case, the Dojo model layout function will panic.
-            vec![format!("dojo::meta::introspect::Introspect::<{}>::layout()", item_type)]
-        }
+        // as we cannot verify that an enum/struct custom type is packable,
+        // we suppose it is and let the user verify this.
+        // If it's not the case, the Dojo model layout function will panic.
+        vec![format!("dojo::meta::introspect::Introspect::<{}>::layout()", item_type)]
     }
 }
 

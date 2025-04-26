@@ -1,26 +1,3 @@
-use std::collections::HashMap;
-
-#[derive(Clone, Default, Debug)]
-pub struct TypeIntrospection(pub usize, pub Vec<usize>);
-
-// Provides type introspection information for primitive types
-pub fn primitive_type_introspection() -> HashMap<String, TypeIntrospection> {
-    HashMap::from([
-        ("bytes31".into(), TypeIntrospection(1, vec![248])),
-        ("felt252".into(), TypeIntrospection(1, vec![251])),
-        ("bool".into(), TypeIntrospection(1, vec![1])),
-        ("u8".into(), TypeIntrospection(1, vec![8])),
-        ("u16".into(), TypeIntrospection(1, vec![16])),
-        ("u32".into(), TypeIntrospection(1, vec![32])),
-        ("u64".into(), TypeIntrospection(1, vec![64])),
-        ("u128".into(), TypeIntrospection(1, vec![128])),
-        ("u256".into(), TypeIntrospection(2, vec![128, 128])),
-        ("usize".into(), TypeIntrospection(1, vec![32])),
-        ("ContractAddress".into(), TypeIntrospection(1, vec![251])),
-        ("ClassHash".into(), TypeIntrospection(1, vec![251])),
-    ])
-}
-
 /// Check if the provided type is an unsupported `Option<T>`,
 /// because tuples are not supported with Option.
 pub fn is_unsupported_option_type(ty: &str) -> bool {
