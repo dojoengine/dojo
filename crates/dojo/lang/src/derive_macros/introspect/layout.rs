@@ -3,7 +3,7 @@ use cairo_lang_diagnostics::Severity;
 use cairo_lang_syntax::node::ast::{Expr, ItemEnum, ItemStruct, OptionTypeClause, TypeClause};
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
-use cairo_lang_syntax::node::{Terminal, TypedSyntaxNode, ids};
+use cairo_lang_syntax::node::{ids, Terminal, TypedSyntaxNode};
 use starknet::core::utils::get_selector_from_name;
 
 use super::utils::{
