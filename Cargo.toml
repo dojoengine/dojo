@@ -141,7 +141,7 @@ indoc = "1.0.7"
 itertools = "0.12.1"
 jsonrpsee = { version = "0.16.2", default-features = false }
 lazy_static = "1.4.0"
-log = "0.4"
+log = "0.4.27"
 metrics = "0.23.0"
 num-bigint = "0.4.3"
 num-traits = { version = "0.2", default-features = false }
