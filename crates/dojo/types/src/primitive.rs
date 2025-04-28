@@ -22,6 +22,8 @@ use super::primitive_conversion::try_from_felt;
     PartialEq,
     Hash,
     Eq,
+    PartialOrd,
+    Ord,
 )]
 #[serde(tag = "scalar_type", content = "value")]
 #[strum(serialize_all = "lowercase")]

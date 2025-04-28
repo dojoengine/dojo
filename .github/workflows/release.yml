@@ -1,11 +1,18 @@
+# Dojo release workflow.
+#
+# The main goal of this workflow is to build in release mode the Dojo binaries for all supported platforms.
+# Those binaries are then uploaded to be available in `assets` section of the release.
+#
+# At the end of this workflow, a draft release is created on GitHub, which must be manually published by a maintainer.
+# This ensure the release can be reviewed before it is published.
+#
+# The Dojo docker image is not built during this workflow, to decouple the release of the binaries from the docker image,
+# which happens in the `docker.yml` workflow.
+#
 name: release
 
 on:
   workflow_dispatch:
-    inputs:
-      preview:
-        description: 'Preview tag if not empty. Needs to be in format vX.Y.Z-preview.X'
-        type: string
   pull_request:
     types: [closed]
     branches:
@@ -23,21 +30,12 @@ jobs:
     outputs:
       tag_name: ${{ steps.release_info.outputs.tag_name }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Get version
         id: release_info
         run: |
-          if [[ "${{ github.event.inputs.preview || 'false' }}" != "false" ]]; then
-            # check if valid
-            if [[ ! "${{ github.event.inputs.preview }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-preview\.[0-9]+$ ]]; then
-              echo "Invalid preview tag format. Needs to be in format vX.Y.Z-preview.X"
-              exit 1
-            fi
-            echo "tag_name=${{ github.event.inputs.preview }}" >> $GITHUB_OUTPUT
-          else
-            cargo install cargo-get
-            echo "tag_name=v$(cargo get workspace.package.version)" >> $GITHUB_OUTPUT
-          fi
+          cargo install cargo-get
+          echo "tag_name=v$(cargo get workspace.package.version)" >> $GITHUB_OUTPUT
 
   release:
     name: ${{ matrix.job.target }} (${{ matrix.job.os }})
@@ -78,7 +76,7 @@ jobs:
             arch: amd64
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - uses: dtolnay/rust-toolchain@master
         name: Rust Toolchain Setup
@@ -90,39 +88,8 @@ jobs:
         with:
           cache-on-failure: true
 
-      # Required to build Katana at the moment.
-      - uses: oven-sh/setup-bun@v1
-        with:
-          bun-version: latest
-
-      # required for `aws-lc-rs` crate to compile on Windows; https://aws.github.io/aws-lc-rs/requirements/windows.html
-      - name: Install NASM
-        uses: ilammy/setup-nasm@v1
-        with:
-          version: "2.15.05"
-
-      - uses: arduino/setup-protoc@v2
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          version: "25.x"
-
-      - name: Apple M1 setup
-        if: ${{ matrix.job.target == 'aarch64-apple-darwin' }}
-        run: |
-          echo "SDKROOT=$(xcrun -sdk macosx --show-sdk-path)" >> $GITHUB_ENV
-          echo "MACOSX_DEPLOYMENT_TARGET=$(xcrun -sdk macosx --show-sdk-platform-version)" >> $GITHUB_ENV
-
-      - name: Linux ARM setup
-        if: ${{ matrix.job.target == 'aarch64-unknown-linux-gnu' }}
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install -y gcc-aarch64-linux-gnu libssl-dev
-          # We build jemalloc with 64KB pagesize so that it works for all linux/arm64 pagesize variants
-          # See: https://github.com/jemalloc/jemalloc/issues/467
-          echo "JEMALLOC_SYS_WITH_LG_PAGE=16" >> $GITHUB_ENV
-
       - name: Build binaries
-        run: cargo build --release --bins --target ${{ matrix.job.target }}
+        run: cargo build --release --bin sozo --bin dojo-language-server --target ${{ matrix.job.target }}
 
       - name: Archive binaries
         id: artifacts
@@ -130,38 +97,20 @@ jobs:
           VERSION_NAME: ${{ needs.prepare.outputs.tag_name }}
         run: |
           if [ "$PLATFORM_NAME" == "linux" ]; then
-            tar -czvf "dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz" -C ./target/${TARGET}/release katana sozo torii dojo-language-server
+            tar -czvf "dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz" -C ./target/${TARGET}/release sozo dojo-language-server
             echo "file_name=dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz" >> $GITHUB_OUTPUT
           elif [ "$PLATFORM_NAME" == "darwin" ]; then
             # We need to use gtar here otherwise the archive is corrupt.
             # See: https://github.com/actions/virtual-environments/issues/2619
-            gtar -czvf "dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz" -C ./target/${TARGET}/release katana sozo torii dojo-language-server
+            gtar -czvf "dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz" -C ./target/${TARGET}/release sozo dojo-language-server
             echo "file_name=dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz" >> $GITHUB_OUTPUT
           else
             cd ./target/${TARGET}/release
-            7z a -tzip "dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.zip" katana.exe sozo.exe torii.exe dojo-language-server.exe
+            7z a -tzip "dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.zip" sozo.exe dojo-language-server.exe
             mv "dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.zip" ../../../
             echo "file_name=dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.zip" >> $GITHUB_OUTPUT
           fi
         shell: bash
-
-      # We move binaries so they match $TARGETPLATFORM in the Docker build
-      - name: Move Binaries
-        if: ${{ env.PLATFORM_NAME == 'linux' }}
-        run: |
-          mkdir -p $PLATFORM_NAME/$ARCH
-          mv target/$TARGET/release/katana $PLATFORM_NAME/$ARCH
-          mv target/$TARGET/release/sozo $PLATFORM_NAME/$ARCH
-          mv target/$TARGET/release/torii $PLATFORM_NAME/$ARCH
-        shell: bash
-
-      # Upload these for use with the Docker build later
-      - name: Upload docker binaries
-        uses: actions/upload-artifact@v4
-        with:
-          name: binaries-${{ matrix.job.target }}
-          path: ${{ env.PLATFORM_NAME }}
-          retention-days: 1
 
       - name: Upload release artifacts
         uses: actions/upload-artifact@v4
@@ -171,14 +120,13 @@ jobs:
           retention-days: 1
 
   create-draft-release:
-    runs-on: ubuntu-latest-32-cores
+    runs-on: ubuntu-latest
     needs: [prepare, release]
     env:
       GITHUB_USER: ${{ github.repository_owner }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    if: ${{ !contains(needs.prepare.outputs.tag_name, 'preview') }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           pattern: artifacts-*
@@ -191,48 +139,3 @@ jobs:
       - name: Display structure of downloaded files
         run: ls -R artifacts
       - run: gh release create ${{ steps.version_info.outputs.version }} ./artifacts/*.{gz,zip} --generate-notes --draft
-
-  docker-build-and-push:
-    runs-on: ubuntu-latest-32-cores
-    needs: [prepare, release]
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
-      - name: Download binaries
-        uses: actions/download-artifact@v4
-        with:
-          pattern: binaries-*
-          path: artifacts/linux
-          merge-multiple: true
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v1
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push docker image
-        if: ${{ contains(needs.prepare.outputs.tag_name, 'preview') }}
-        uses: docker/build-push-action@v3
-        with:
-          push: true
-          tags: ghcr.io/${{ github.repository }}:${{ needs.prepare.outputs.tag_name }}
-          platforms: linux/amd64,linux/arm64
-          build-contexts: |
-            artifacts=artifacts
-
-      - name: Build and push docker image
-        if: ${{ !contains(needs.prepare.outputs.tag_name, 'preview') }}
-        uses: docker/build-push-action@v3
-        with:
-          push: true
-          tags: ghcr.io/${{ github.repository }}:latest,ghcr.io/${{ github.repository }}:${{ needs.prepare.outputs.tag_name }}
-          platforms: linux/amd64,linux/arm64
-          build-contexts: |
-            artifacts=artifacts

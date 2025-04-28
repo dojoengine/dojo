@@ -1,0 +1,90 @@
+# Dojo docker image build and push workflow.
+#
+# This workflow is triggered by a workflow_dispatch event or when a new release with a tag starting with `v` is published.
+#
+# The docker image is built by using `dojoup` to bundle the Dojo binaries with the docker image, there is no heavy compilation
+# of the Dojo binaries during this workflow.
+#
+# The docker image is pushed to the GitHub Container Registry: https://github.com/dojoengine/dojo/pkgs/container/dojo
+#
+name: docker build and push
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: "The docker image tag name"
+        required: true
+        type: string
+      dojo_version:
+        description: "The dojo version to install in the docker image"
+        required: true
+        type: string
+  release:
+    types: [published]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_VERSION: 1.85.0
+  REGISTRY_IMAGE: ghcr.io/${{ github.repository }}
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest-4-cores
+    outputs:
+      tag_name: ${{ steps.version_info.outputs.tag_name }}
+      dojo_version: ${{ steps.version_info.outputs.dojo_version }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Extract version info
+        id: version_info
+        run: |
+         if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            # Extract tag name from ref
+            echo "tag_name=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+            echo "dojo_version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          else
+            # We're supposed to be in a workflow_dispatch here.
+            # A `if` is not used at the job level since the id of a step must be unique across the job.
+            if [ -z "${{ inputs.tag_name }}" ]; then
+              echo "tag_name is empty"
+              exit 1
+            fi
+
+            # The tag name must start with v to ensure consistency with tags.
+            TAG_NAME="${{ inputs.tag_name }}"
+            if [[ ! "$TAG_NAME" =~ ^v ]]; then
+              TAG_NAME="v$TAG_NAME"
+            fi
+            echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+
+            # Dojoup doesn't require the prefix v and automatically adds it.
+            echo "dojo_version=${{ inputs.dojo_version }}" >> $GITHUB_OUTPUT
+          fi
+
+  docker-build-and-push:
+    runs-on: ubuntu-latest-32-cores
+    needs: prepare
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push docker image
+        uses: docker/build-push-action@v3
+        with:
+          push: true
+          tags: ghcr.io/${{ github.repository }}:latest,ghcr.io/${{ github.repository }}:${{ needs.prepare.outputs.tag_name }}
+          platforms: linux/amd64,linux/arm64
+          build-args: |
+            DOJO_VERSION=${{ needs.prepare.outputs.dojo_version }}

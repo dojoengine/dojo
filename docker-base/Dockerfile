@@ -24,15 +24,9 @@ RUN apt-get update && \
 
 ENTRYPOINT ["/tini", "--"]
 
-ARG DOJO_VERSION
-
-LABEL description="Dojo is a provable game engine and toolchain for building onchain games and autonomous worlds with Cairo" \
+LABEL description="Dojo base image: Dojo is a provable game engine and toolchain for building onchain games and autonomous worlds with Cairo." \
     authors="tarrence <tarrence@cartridge.gg>" \
     source="https://github.com/dojoengine/dojo" \
     documentation="https://book.dojoengine.org/"
-
-COPY ./dojoup ./dojoup
-RUN bash ./dojoup/install
-RUN . ~/.dojo/env && dojoup install $DOJO_VERSION
 
 COPY --from=builder /usr/local/bin/curtail /usr/local/bin/curtail

@@ -1,0 +1,70 @@
+# Dojo base image to deploy on production environments like Slot.
+#
+# This workflow is triggered by a workflow_dispatch event only, since it is meant
+# to be built manually by the Dojo team with the tools required to run the Dojo
+# binaries in production environments like Slot.
+#
+# The docker image is pushed to the GitHub Container Registry: https://github.com/dojoengine/dojo/pkgs/container/dojo
+#
+name: docker base image
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: "The docker image tag name"
+        required: true
+        type: string
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_VERSION: 1.85.0
+  REGISTRY_IMAGE: ghcr.io/${{ github.repository }}
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest-4-cores
+    outputs:
+      tag_name: ${{ steps.version_info.outputs.tag_name }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Extract version info
+        id: version_info
+        run: |
+          if [ -z "${{ inputs.tag_name }}" ]; then
+            echo "tag_name is empty"
+            exit 1
+          fi
+
+          # The tag name must start with v to ensure consistency with tags.
+          TAG_NAME="${{ inputs.tag_name }}"
+          if [[ ! "$TAG_NAME" =~ ^v ]]; then
+            TAG_NAME="v$TAG_NAME"
+          fi
+          echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+
+  docker-build-and-push:
+    runs-on: ubuntu-latest-32-cores
+    needs: prepare
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push docker image
+        uses: docker/build-push-action@v3
+        with:
+          context: docker-base
+          push: true
+          tags: ghcr.io/${{ github.repository }}-base:latest,ghcr.io/${{ github.repository }}-base:${{ needs.prepare.outputs.tag_name }}
+          platforms: linux/amd64,linux/arm64

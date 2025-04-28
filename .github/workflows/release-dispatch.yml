@@ -1,4 +1,14 @@
+# Dojo release dispatch workflow.
+#
+# This workflow is used to manually trigger a release.
+#
+# The workflow will propose a release with the same version as the one passed as input to the workflow, taking care of updating Cargo.toml versions.
+#
+# The workflow will create a PR, which must be manually merged to trigger the release.
+# If the release triggered by the merged of this PR fails, the `release.yml` workflow can be used to be triggered again on main.
+#
 name: release-dispatch
+
 on:
   workflow_dispatch:
     inputs:
@@ -25,16 +35,12 @@ jobs:
           VERSION=${{ inputs.version }}
           VERSION=${VERSION#v}
           cargo release version $VERSION --execute --no-confirm && cargo release replace --execute --no-confirm
-      - id: version_info
-        run: |
-          cargo install cargo-get
-          echo "version=$(cargo get workspace.package.version)" >> $GITHUB_OUTPUT
       - uses: peter-evans/create-pull-request@v5
         with:
           # We have to use a PAT in order to trigger ci
           token: ${{ secrets.CREATE_PR_TOKEN }}
-          title: "Prepare release: v${{ steps.version_info.outputs.version }}"
-          commit-message: "Prepare release: v${{ steps.version_info.outputs.version }}"
+          title: "release(prepare): v${{ inputs.version }}"
+          commit-message: "Prepare release: v${{ inputs.version }}"
           branch: prepare-release
           base: main
           delete-branch: true

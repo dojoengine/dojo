@@ -61,6 +61,16 @@ struct FooSchema {
     v3: AStruct,
 }
 
+// to test the issue https://github.com/dojoengine/dojo/issues/3199
+// see `extract_composite_inner_type` function in dojo-lang.
+#[derive(Copy, Drop, Serde, Debug)]
+#[dojo::model]
+struct ModelWithCommentOnLastFied {
+    #[key]
+    k1: u8,
+    v1: Span<u32> // a comment without a comma 
+}
+
 fn namespace_def() -> NamespaceDef {
     NamespaceDef {
         namespace: "dojo_cairo_test",

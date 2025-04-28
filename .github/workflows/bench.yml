@@ -3,6 +3,11 @@ name: benchmark
 on:
   push:
     branches: [main]
+    paths:
+      - 'crates/**'
+      - 'bin/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
 
 permissions:
   # deployments permission to deploy GitHub pages website
