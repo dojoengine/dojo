@@ -10,9 +10,8 @@ use anyhow::{anyhow, Result};
 use colored_json::ToColoredJson;
 use reqwest::Url;
 use starknet::accounts::{
-    AccountDeploymentV1, AccountDeploymentV3, AccountError, AccountFactory, AccountFactoryError,
-    ConnectedAccount, DeclarationV2, DeclarationV3, ExecutionEncoding, ExecutionV1, ExecutionV3,
-    SingleOwnerAccount,
+    AccountDeploymentV3, AccountError, AccountFactory, AccountFactoryError, ConnectedAccount,
+    DeclarationV3, ExecutionEncoding, ExecutionV3, SingleOwnerAccount,
 };
 use starknet::core::types::{
     BlockId, BlockTag, DeclareTransactionResult, DeployAccountTransactionResult, Felt,
@@ -22,35 +21,12 @@ use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{AnyProvider, JsonRpcClient, Provider};
 use starknet::signers::{LocalWallet, SigningKey};
 
-#[derive(Debug, Copy, Clone, Default)]
-pub struct StrkFeeConfig {
+#[derive(Debug, Default, Copy, Clone)]
+pub struct FeeConfig {
     /// The maximum L1 gas amount.
     pub gas: Option<u64>,
     /// The maximum L1 gas price in STRK.
     pub gas_price: Option<u128>,
-}
-
-#[derive(Debug, Copy, Clone, Default)]
-pub struct EthFeeConfig {
-    /// The multiplier for how much the actual transaction max fee should be relative to the
-    /// estimated fee.
-    pub fee_estimate_multiplier: Option<f64>,
-    /// The maximum fee to pay for the transaction.
-    pub max_fee_raw: Option<Felt>,
-}
-
-#[derive(Debug, Copy, Clone)]
-pub enum FeeConfig {
-    /// The STRK fee configuration.
-    Strk(StrkFeeConfig),
-    /// The ETH fee configuration.
-    Eth(EthFeeConfig),
-}
-
-impl Default for FeeConfig {
-    fn default() -> Self {
-        Self::Strk(StrkFeeConfig::default())
-    }
 }
 
 /// The transaction configuration to use when sending a transaction.
@@ -123,81 +99,6 @@ pub trait TransactionExt<T> {
     async fn send_with_cfg(self, txn_config: &TxnConfig) -> Result<Self::R, Self::U>;
 }
 
-impl<T> TransactionExt<T> for ExecutionV1<'_, T>
-where
-    T: ConnectedAccount + Sync,
-{
-    type R = InvokeTransactionResult;
-    type U = AccountError<T::SignError>;
-
-    async fn send_with_cfg(
-        mut self,
-        txn_config: &TxnConfig,
-    ) -> Result<Self::R, AccountError<T::SignError>> {
-        if let FeeConfig::Eth(c) = txn_config.fee_config {
-            if let Some(fee_est_mul) = c.fee_estimate_multiplier {
-                self = self.fee_estimate_multiplier(fee_est_mul);
-            }
-
-            if let Some(max_raw_f) = c.max_fee_raw {
-                self = self.max_fee(max_raw_f);
-            }
-        }
-
-        self.send().await
-    }
-}
-
-impl<T> TransactionExt<T> for DeclarationV2<'_, T>
-where
-    T: ConnectedAccount + Sync,
-{
-    type R = DeclareTransactionResult;
-    type U = AccountError<T::SignError>;
-
-    async fn send_with_cfg(
-        mut self,
-        txn_config: &TxnConfig,
-    ) -> Result<Self::R, AccountError<T::SignError>> {
-        if let FeeConfig::Eth(c) = txn_config.fee_config {
-            if let Some(fee_est_mul) = c.fee_estimate_multiplier {
-                self = self.fee_estimate_multiplier(fee_est_mul);
-            }
-
-            if let Some(max_raw_f) = c.max_fee_raw {
-                self = self.max_fee(max_raw_f);
-            }
-        }
-
-        self.send().await
-    }
-}
-
-impl<T> TransactionExt<T> for AccountDeploymentV1<'_, T>
-where
-    T: AccountFactory + Sync,
-{
-    type R = DeployAccountTransactionResult;
-    type U = AccountFactoryError<T::SignError>;
-
-    async fn send_with_cfg(
-        mut self,
-        txn_config: &TxnConfig,
-    ) -> Result<Self::R, AccountFactoryError<<T>::SignError>> {
-        if let FeeConfig::Eth(c) = txn_config.fee_config {
-            if let Some(fee_est_mul) = c.fee_estimate_multiplier {
-                self = self.fee_estimate_multiplier(fee_est_mul);
-            }
-
-            if let Some(max_raw_f) = c.max_fee_raw {
-                self = self.max_fee(max_raw_f);
-            }
-        }
-
-        self.send().await
-    }
-}
-
 impl<T> TransactionExt<T> for ExecutionV3<'_, T>
 where
     T: ConnectedAccount + Sync,
@@ -209,14 +110,12 @@ where
         mut self,
         txn_config: &TxnConfig,
     ) -> Result<Self::R, AccountError<T::SignError>> {
-        if let FeeConfig::Strk(c) = txn_config.fee_config {
-            if let Some(g) = c.gas {
-                self = self.gas(g);
-            }
+        if let Some(g) = txn_config.fee_config.gas {
+            self = self.l1_gas(g);
+        }
 
-            if let Some(gp) = c.gas_price {
-                self = self.gas_price(gp);
-            }
+        if let Some(gp) = txn_config.fee_config.gas_price {
+            self = self.l1_gas_price(gp);
         }
 
         self.send().await
@@ -234,14 +133,12 @@ where
         mut self,
         txn_config: &TxnConfig,
     ) -> Result<Self::R, AccountError<T::SignError>> {
-        if let FeeConfig::Strk(c) = txn_config.fee_config {
-            if let Some(g) = c.gas {
-                self = self.gas(g);
-            }
+        if let Some(g) = txn_config.fee_config.gas {
+            self = self.l1_gas(g);
+        }
 
-            if let Some(gp) = c.gas_price {
-                self = self.gas_price(gp);
-            }
+        if let Some(gp) = txn_config.fee_config.gas_price {
+            self = self.l1_gas_price(gp);
         }
 
         self.send().await
@@ -259,14 +156,12 @@ where
         mut self,
         txn_config: &TxnConfig,
     ) -> Result<Self::R, AccountFactoryError<<T>::SignError>> {
-        if let FeeConfig::Strk(c) = txn_config.fee_config {
-            if let Some(g) = c.gas {
-                self = self.gas(g);
-            }
+        if let Some(g) = txn_config.fee_config.gas {
+            self = self.l1_gas(g);
+        }
 
-            if let Some(gp) = c.gas_price {
-                self = self.gas_price(gp);
-            }
+        if let Some(gp) = txn_config.fee_config.gas_price {
+            self = self.l1_gas_price(gp);
         }
 
         self.send().await

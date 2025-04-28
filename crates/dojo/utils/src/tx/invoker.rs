@@ -5,7 +5,6 @@ use starknet::core::types::Call;
 use tracing::trace;
 
 use super::TransactionResult;
-use crate::tx::FeeConfig;
 use crate::{TransactionError, TransactionExt, TransactionWaiter, TxnConfig};
 
 #[derive(Debug)]
@@ -55,16 +54,7 @@ where
     ) -> Result<TransactionResult, TransactionError<A::SignError>> {
         trace!(?call, "Invoke contract.");
 
-        let tx = match self.txn_config.fee_config {
-            FeeConfig::Strk(config) => {
-                trace!(?config, "Invoking with STRK.");
-                self.account.execute_v3(vec![call]).send_with_cfg(&self.txn_config).await?
-            }
-            FeeConfig::Eth(config) => {
-                trace!(?config, "Invoking with ETH.");
-                self.account.execute_v1(vec![call]).send_with_cfg(&self.txn_config).await?
-            }
-        };
+        let tx = self.account.execute_v3(vec![call]).send_with_cfg(&self.txn_config).await?;
 
         trace!(transaction_hash = format!("{:#066x}", tx.transaction_hash), "Invoke contract.");
 
@@ -88,16 +78,8 @@ where
 
         trace!(?self.calls, "Invoke contract multicall.");
 
-        let tx = match self.txn_config.fee_config {
-            FeeConfig::Strk(config) => {
-                trace!(?config, "Invoking with STRK.");
-                self.account.execute_v3(self.calls.clone()).send_with_cfg(&self.txn_config).await?
-            }
-            FeeConfig::Eth(config) => {
-                trace!(?config, "Invoking with ETH.");
-                self.account.execute_v1(self.calls.clone()).send_with_cfg(&self.txn_config).await?
-            }
-        };
+        let tx =
+            self.account.execute_v3(self.calls.clone()).send_with_cfg(&self.txn_config).await?;
 
         trace!(
             transaction_hash = format!("{:#066x}", tx.transaction_hash),

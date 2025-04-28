@@ -9,9 +9,7 @@ use starknet::macros::{felt, selector};
 use starknet::providers::{Provider, ProviderError};
 use tracing::trace;
 
-use crate::{
-    FeeConfig, TransactionError, TransactionExt, TransactionResult, TransactionWaiter, TxnConfig,
-};
+use crate::{TransactionError, TransactionExt, TransactionResult, TransactionWaiter, TxnConfig};
 
 const UDC_DEPLOY_SELECTOR: Felt = selector!("deployContract");
 const UDC_ADDRESS: Felt =
@@ -80,16 +78,8 @@ where
             None => return Ok(TransactionResult::Noop),
         };
 
-        let InvokeTransactionResult { transaction_hash } = match self.txn_config.fee_config {
-            FeeConfig::Strk(_) => {
-                trace!("Deploying with STRK.");
-                self.account.execute_v3(vec![call]).send_with_cfg(&self.txn_config).await?
-            }
-            FeeConfig::Eth(_) => {
-                trace!("Deploying with ETH.");
-                self.account.execute_v1(vec![call]).send_with_cfg(&self.txn_config).await?
-            }
-        };
+        let InvokeTransactionResult { transaction_hash } =
+            self.account.execute_v3(vec![call]).send_with_cfg(&self.txn_config).await?;
 
         trace!(
             transaction_hash = format!("{:#066x}", transaction_hash),

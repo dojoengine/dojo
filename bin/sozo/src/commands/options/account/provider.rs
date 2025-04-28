@@ -4,12 +4,13 @@ use async_trait::async_trait;
 use starknet::core::types::{
     BlockHashAndNumber, BlockId, BroadcastedDeclareTransaction,
     BroadcastedDeployAccountTransaction, BroadcastedInvokeTransaction, BroadcastedTransaction,
-    ContractClass, DeclareTransactionResult, DeployAccountTransactionResult, EventFilter,
-    EventsPage, FeeEstimate, Felt, FunctionCall, InvokeTransactionResult,
-    MaybePendingBlockWithReceipts, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs,
-    MaybePendingStateUpdate, MsgFromL1, SimulatedTransaction, SimulationFlag,
-    SimulationFlagForEstimateFee, SyncStatusType, Transaction, TransactionReceiptWithBlockInfo,
-    TransactionStatus, TransactionTrace, TransactionTraceWithHash,
+    ConfirmedBlockId, ContractClass, ContractStorageKeys, DeclareTransactionResult,
+    DeployAccountTransactionResult, EventFilter, EventsPage, FeeEstimate, Felt, FunctionCall,
+    Hash256, InvokeTransactionResult, MaybePendingBlockWithReceipts, MaybePendingBlockWithTxHashes,
+    MaybePendingBlockWithTxs, MaybePendingStateUpdate, MessageWithStatus, MsgFromL1,
+    SimulatedTransaction, SimulationFlag, SimulationFlagForEstimateFee, StorageProof,
+    SyncStatusType, Transaction, TransactionReceiptWithBlockInfo, TransactionStatus,
+    TransactionTrace, TransactionTraceWithHash,
 };
 use starknet::providers::{Provider, ProviderError, ProviderRequestData, ProviderResponseData};
 
@@ -99,6 +100,16 @@ where
         match self {
             Self::Left(p) => p.get_storage_at(contract_address, key, block_id).await,
             Self::Right(q) => q.get_storage_at(contract_address, key, block_id).await,
+        }
+    }
+
+    async fn get_messages_status(
+        &self,
+        transaction_hash: Hash256,
+    ) -> Result<Vec<MessageWithStatus>, ProviderError> {
+        match self {
+            Self::Left(p) => p.get_messages_status(transaction_hash).await,
+            Self::Right(q) => q.get_messages_status(transaction_hash).await,
         }
     }
 
@@ -301,6 +312,41 @@ where
         match self {
             Self::Left(p) => p.get_nonce(block_id, contract_address).await,
             Self::Right(q) => q.get_nonce(block_id, contract_address).await,
+        }
+    }
+
+    async fn get_storage_proof<B, H, A, K>(
+        &self,
+        block_id: B,
+        class_hashes: H,
+        contract_addresses: A,
+        contracts_storage_keys: K,
+    ) -> Result<StorageProof, ProviderError>
+    where
+        B: AsRef<ConfirmedBlockId> + Send + Sync,
+        H: AsRef<[Felt]> + Send + Sync,
+        A: AsRef<[Felt]> + Send + Sync,
+        K: AsRef<[ContractStorageKeys]> + Send + Sync,
+    {
+        match self {
+            Self::Left(p) => {
+                p.get_storage_proof(
+                    block_id,
+                    class_hashes,
+                    contract_addresses,
+                    contracts_storage_keys,
+                )
+                .await
+            }
+            Self::Right(q) => {
+                q.get_storage_proof(
+                    block_id,
+                    class_hashes,
+                    contract_addresses,
+                    contracts_storage_keys,
+                )
+                .await
+            }
         }
     }
 

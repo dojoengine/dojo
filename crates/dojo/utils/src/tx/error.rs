@@ -1,6 +1,6 @@
 use starknet::accounts::AccountError;
-use starknet::core::types::contract::{CompressProgramError, ComputeClassHashError};
-use starknet::core::types::StarknetError;
+use starknet::core::types::contract::ComputeClassHashError;
+use starknet::core::types::{StarknetError, TransactionExecutionErrorData};
 use starknet::providers::ProviderError;
 use thiserror::Error;
 
@@ -15,16 +15,14 @@ where
     SigningError(S),
     #[error(transparent)]
     Provider(ProviderError),
-    #[error("{0}")]
-    TransactionExecution(String),
+    #[error("Transaction execution error")]
+    TransactionExecution(TransactionExecutionErrorData),
     #[error("{0}")]
     TransactionValidation(String),
     #[error(transparent)]
     TransactionWaiting(#[from] TransactionWaitingError),
     #[error(transparent)]
     ComputeClassHash(#[from] ComputeClassHashError),
-    #[error(transparent)]
-    ClassCompression(#[from] CompressProgramError),
     #[error("Fee calculation overflow")]
     FeeOutOfRange,
 }
@@ -38,7 +36,6 @@ where
             AccountError::Signing(e) => TransactionError::SigningError(e),
             AccountError::Provider(e) => Self::from(e),
             AccountError::ClassHashCalculation(e) => TransactionError::ComputeClassHash(e),
-            AccountError::ClassCompression(e) => TransactionError::ClassCompression(e),
             AccountError::FeeOutOfRange => TransactionError::FeeOutOfRange,
         }
     }
@@ -49,12 +46,12 @@ where
     S: std::error::Error,
 {
     fn from(value: ProviderError) -> Self {
-        match &value {
+        match value {
             ProviderError::StarknetError(StarknetError::TransactionExecutionError(te)) => {
-                TransactionError::TransactionExecution(te.execution_error.clone())
+                TransactionError::TransactionExecution(te)
             }
             ProviderError::StarknetError(StarknetError::ValidationFailure(ve)) => {
-                TransactionError::TransactionExecution(ve.to_string())
+                TransactionError::TransactionValidation(ve)
             }
             _ => TransactionError::Provider(value),
         }
