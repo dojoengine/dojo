@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1745588462873,
+  "lastUpdate": 1745860901967,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -63348,6 +63348,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 51047315472,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "distinct": true,
+          "id": "10e8e4dcb5e1f7ce03d04b386195844e0d683ba6",
+          "message": "chore: bump scarb for dojo plugin",
+          "timestamp": "2025-04-28T11:07:06-06:00",
+          "tree_id": "61cd19a6ffbeb89ab98bf4c5a72b1f69b91e2f9e",
+          "url": "https://github.com/dojoengine/dojo/commit/10e8e4dcb5e1f7ce03d04b386195844e0d683ba6"
+        },
+        "date": 1745860898006,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 53786326817,
             "range": "± 0",
             "unit": "ns/iter"
           }
