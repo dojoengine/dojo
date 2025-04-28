@@ -85,7 +85,7 @@ sozo-walnut = { path = "crates/sozo/walnut" }
 # macros
 merge-options = { path = "crates/macros/merge-options" }
 
-katana-runner = { git = "https://github.com/dojoengine/katana", rev = "9c48b91" }
+katana-runner = { git = "https://github.com/dojoengine/katana", branch = "rpc-0.8.0" }
 
 anyhow = "1.0.89"
 arbitrary = { version = "1.3.2", features = [ "derive" ] }

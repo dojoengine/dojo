@@ -2993,7 +2993,7 @@ dependencies = [
  "colored_json",
  "dojo-test-utils",
  "futures",
- "katana-runner 1.2.3 (git+https://github.com/dojoengine/katana?rev=9c48b91)",
+ "katana-runner 1.2.3 (git+https://github.com/dojoengine/katana?branch=rpc-0.8.0)",
  "reqwest 0.11.27",
  "rpassword",
  "serde_json",
@@ -5419,6 +5419,20 @@ dependencies = [
 [[package]]
 name = "katana-node-bindings"
 version = "1.2.3"
+source = "git+https://github.com/dojoengine/katana?branch=rpc-0.8.0#f2937d1305f6c3934e3cbdb03db5e26b17d3a8c8"
+dependencies = [
+ "regex",
+ "serde",
+ "serde_json",
+ "starknet 0.14.0",
+ "thiserror 1.0.63",
+ "tracing",
+ "url",
+]
+
+[[package]]
+name = "katana-node-bindings"
+version = "1.2.3"
 source = "git+https://github.com/dojoengine/katana?rev=5cb249c0fa59fa6b7c88b32557e7baf8944cdb3d#5cb249c0fa59fa6b7c88b32557e7baf8944cdb3d"
 dependencies = [
  "regex",
@@ -5431,17 +5445,16 @@ dependencies = [
 ]
 
 [[package]]
-name = "katana-node-bindings"
+name = "katana-runner"
 version = "1.2.3"
-source = "git+https://github.com/dojoengine/katana?rev=9c48b91#9c48b91fad081acf11a7f6f3e808a0ff8e1daf5f"
+source = "git+https://github.com/dojoengine/katana?branch=rpc-0.8.0#f2937d1305f6c3934e3cbdb03db5e26b17d3a8c8"
 dependencies = [
- "regex",
- "serde",
- "serde_json",
+ "anyhow",
+ "assert_fs",
+ "katana-node-bindings 1.2.3 (git+https://github.com/dojoengine/katana?branch=rpc-0.8.0)",
+ "katana-runner-macro 1.2.3 (git+https://github.com/dojoengine/katana?branch=rpc-0.8.0)",
  "starknet 0.14.0",
- "thiserror 1.0.63",
- "tracing",
- "url",
+ "tokio",
 ]
 
 [[package]]
@@ -5458,22 +5471,9 @@ dependencies = [
 ]
 
 [[package]]
-name = "katana-runner"
-version = "1.2.3"
-source = "git+https://github.com/dojoengine/katana?rev=9c48b91#9c48b91fad081acf11a7f6f3e808a0ff8e1daf5f"
-dependencies = [
- "anyhow",
- "assert_fs",
- "katana-node-bindings 1.2.3 (git+https://github.com/dojoengine/katana?rev=9c48b91)",
- "katana-runner-macro 1.2.3 (git+https://github.com/dojoengine/katana?rev=9c48b91)",
- "starknet 0.14.0",
- "tokio",
-]
-
-[[package]]
 name = "katana-runner-macro"
 version = "1.2.3"
-source = "git+https://github.com/dojoengine/katana?rev=5cb249c0fa59fa6b7c88b32557e7baf8944cdb3d#5cb249c0fa59fa6b7c88b32557e7baf8944cdb3d"
+source = "git+https://github.com/dojoengine/katana?branch=rpc-0.8.0#f2937d1305f6c3934e3cbdb03db5e26b17d3a8c8"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -5483,7 +5483,7 @@ dependencies = [
 [[package]]
 name = "katana-runner-macro"
 version = "1.2.3"
-source = "git+https://github.com/dojoengine/katana?rev=9c48b91#9c48b91fad081acf11a7f6f3e808a0ff8e1daf5f"
+source = "git+https://github.com/dojoengine/katana?rev=5cb249c0fa59fa6b7c88b32557e7baf8944cdb3d#5cb249c0fa59fa6b7c88b32557e7baf8944cdb3d"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -8367,7 +8367,7 @@ dependencies = [
  "dojo-types 1.4.2",
  "dojo-utils",
  "dojo-world",
- "katana-runner 1.2.3 (git+https://github.com/dojoengine/katana?rev=9c48b91)",
+ "katana-runner 1.2.3 (git+https://github.com/dojoengine/katana?branch=rpc-0.8.0)",
  "notify",
  "reqwest 0.11.27",
  "resolve-path",
@@ -10745,7 +10745,7 @@ dependencies = [
  "dojo-test-utils",
  "dojo-utils",
  "dojo-world",
- "katana-runner 1.2.3 (git+https://github.com/dojoengine/katana?rev=9c48b91)",
+ "katana-runner 1.2.3 (git+https://github.com/dojoengine/katana?branch=rpc-0.8.0)",
  "reqwest 0.11.27",
  "scarb",
  "sozo-ops",
