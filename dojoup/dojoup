@@ -619,7 +619,10 @@ check_scarb() {
         if asdf list | grep -q "scarb"; then
           # Check if default version is set
           if ! asdf current scarb &> /dev/null; then
-            asdf global scarb $scarb_version
+            # Try newer asdf command first, fall back to older command if it fails.
+            if ! asdf set scarb $scarb_version &> /dev/null; then
+              asdf global scarb $scarb_version
+            fi
           fi
         else
           # Install scarb using asdf
