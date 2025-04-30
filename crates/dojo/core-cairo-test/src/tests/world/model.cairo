@@ -421,14 +421,7 @@ fn test_write_read_model_with_signed_int() {
 
     let addr = starknet::get_contract_address();
 
-    let mut model = ModelWithSignedInt {
-        caller: addr,
-        a: -1,
-        b: -2,
-        c: -3,
-        d: -4,
-        e: -5,
-    };
+    let mut model = ModelWithSignedInt { caller: addr, a: -1, b: -2, c: -3, d: -4, e: -5 };
 
     world.write_model(@model);
 
