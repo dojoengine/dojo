@@ -85,6 +85,19 @@ struct FooModelMemberIllegalChange {
     pub b: u128,
 }
 
+#[derive(Introspect, Copy, Drop, Serde)]
+#[dojo::model]
+pub struct ModelWithSignedInt {
+    #[key]
+    pub caller: ContractAddress,
+    pub a: i8,
+    pub b: i16,
+    pub c: i32,
+    pub d: i64,
+    pub e: i128,
+}
+
+
 #[test]
 fn test_register_model_for_namespace_owner() {
     let bob = starknet::contract_address_const::<0xb0b>();
@@ -119,7 +132,6 @@ fn test_register_model_for_namespace_owner() {
 
     assert(world.is_owner(Model::<Foo>::selector(DOJO_NSH), bob), 'bob is not the owner');
 }
-
 
 #[test]
 #[should_panic(
@@ -398,4 +410,32 @@ fn test_register_model_through_malicious_contract() {
     starknet::testing::set_account_contract_address(bob);
     starknet::testing::set_contract_address(malicious_contract);
     world.register_model("dojo", m_Foo::TEST_CLASS_HASH.try_into().unwrap());
+}
+
+#[test]
+fn test_write_read_model_with_signed_int() {
+    let mut world = deploy_world();
+    let world_d = world.dispatcher;
+
+    world_d.register_model("dojo", m_ModelWithSignedInt::TEST_CLASS_HASH.try_into().unwrap());
+
+    let addr = starknet::get_contract_address();
+
+    let mut model = ModelWithSignedInt {
+        caller: addr,
+        a: -1,
+        b: -2,
+        c: -3,
+        d: -4,
+        e: -5,
+    };
+
+    world.write_model(@model);
+
+    let read: ModelWithSignedInt = world.read_model(addr);
+    assert!(read.a == model.a);
+    assert!(read.b == model.b);
+    assert!(read.c == model.c);
+    assert!(read.d == model.d);
+    assert!(read.e == model.e);
 }

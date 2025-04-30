@@ -158,9 +158,13 @@ rstest = "0.18.2"
 rstest_reuse = "0.6.0"
 salsa = "0.16.1"
 
-scarb = { git = "https://github.com/remybar/scarb", rev = "863e79a048b8d251cebf00299dd4a1a830447be4" }
-scarb-metadata = { git = "https://github.com/remybar/scarb", rev = "863e79a048b8d251cebf00299dd4a1a830447be4" }
-scarb-ui = { git = "https://github.com/remybar/scarb", rev = "863e79a048b8d251cebf00299dd4a1a830447be4" }
+#scarb = { git = "https://github.com/dojoengine/scarb", rev = "e076fd90a08542dcb81192e6b3979326ea15fe36" }
+#scarb-metadata = { git = "https://github.com/dojoengine/scarb", rev = "e076fd90a08542dcb81192e6b3979326ea15fe36" }
+#scarb-ui = { git = "https://github.com/dojoengine/scarb", rev = "e076fd90a08542dcb81192e6b3979326ea15fe36" }
+
+scarb = { path = "/Users/glihm/swm/scarb/scarb" }
+scarb-metadata = { path = "/Users/glihm/swm/scarb/scarb-metadata" }
+scarb-ui = { path = "/Users/glihm/swm/scarb/utils/scarb-ui" }
 
 semver = "1.0.5"
 serde = { version = "1.0", features = [ "derive" ] }

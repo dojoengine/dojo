@@ -2238,7 +2238,6 @@ dependencies = [
 [[package]]
 name = "create-output-dir"
 version = "1.0.0"
-source = "git+https://github.com/remybar/scarb?rev=863e79a048b8d251cebf00299dd4a1a830447be4#863e79a048b8d251cebf00299dd4a1a830447be4"
 dependencies = [
  "anyhow",
  "core-foundation 0.10.0",
@@ -2649,30 +2648,9 @@ dependencies = [
  "cairo-lang-semantic",
  "cairo-lang-syntax",
  "cairo-lang-utils",
- "dojo-types 1.5.0-alpha.2",
+ "dojo-types",
  "itertools 0.12.1",
- "serde",
- "smol_str",
- "starknet 0.12.0",
- "starknet-crypto 0.7.4",
- "tracing",
-]
-
-[[package]]
-name = "dojo-lang"
-version = "1.5.0-alpha.2"
-source = "git+https://github.com/remybar/dojo?rev=bd77378ebc3b59caa460092de63009a9f35bbc03#bd77378ebc3b59caa460092de63009a9f35bbc03"
-dependencies = [
- "anyhow",
- "cairo-lang-defs",
- "cairo-lang-diagnostics",
- "cairo-lang-filesystem",
- "cairo-lang-plugins",
- "cairo-lang-semantic",
- "cairo-lang-syntax",
- "cairo-lang-utils",
- "dojo-types 1.5.0-alpha.2 (git+https://github.com/remybar/dojo?rev=bd77378ebc3b59caa460092de63009a9f35bbc03)",
- "itertools 0.12.1",
+ "regex",
  "serde",
  "smol_str",
  "starknet 0.12.0",
@@ -2685,7 +2663,7 @@ name = "dojo-language-server"
 version = "1.5.0-alpha.2"
 dependencies = [
  "clap",
- "dojo-lang 1.5.0-alpha.2",
+ "dojo-lang",
 ]
 
 [[package]]
@@ -2738,28 +2716,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "dojo-types"
-version = "1.5.0-alpha.2"
-source = "git+https://github.com/remybar/dojo?rev=bd77378ebc3b59caa460092de63009a9f35bbc03#bd77378ebc3b59caa460092de63009a9f35bbc03"
-dependencies = [
- "anyhow",
- "cainome 0.5.0",
- "crypto-bigint",
- "hex",
- "indexmap 2.7.1",
- "itertools 0.12.1",
- "num-traits 0.2.19",
- "regex",
- "serde",
- "serde_json",
- "starknet 0.12.0",
- "starknet-crypto 0.7.4",
- "strum",
- "strum_macros",
- "thiserror 1.0.63",
-]
-
-[[package]]
 name = "dojo-utils"
 version = "1.5.0-alpha.2"
 dependencies = [
@@ -2786,7 +2742,7 @@ dependencies = [
  "async-trait",
  "cainome 0.5.0",
  "cairo-lang-starknet-classes",
- "dojo-types 1.5.0-alpha.2",
+ "dojo-types",
  "futures",
  "hex",
  "hex-literal",
@@ -6059,7 +6015,6 @@ checksum = "3fdb12b2476b595f9358c5161aa467c2438859caa136dec86c26fdd2efe17b92"
 [[package]]
 name = "once_map"
 version = "0.0.1"
-source = "git+https://github.com/remybar/scarb?rev=863e79a048b8d251cebf00299dd4a1a830447be4#863e79a048b8d251cebf00299dd4a1a830447be4"
 dependencies = [
  "dashmap",
  "futures",
@@ -7337,7 +7292,6 @@ dependencies = [
 [[package]]
 name = "scarb"
 version = "2.10.1"
-source = "git+https://github.com/remybar/scarb?rev=863e79a048b8d251cebf00299dd4a1a830447be4#863e79a048b8d251cebf00299dd4a1a830447be4"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -7372,7 +7326,7 @@ dependencies = [
  "derive_builder",
  "dialoguer",
  "directories",
- "dojo-lang 1.5.0-alpha.2 (git+https://github.com/remybar/dojo?rev=bd77378ebc3b59caa460092de63009a9f35bbc03)",
+ "dojo-lang",
  "dunce",
  "flate2",
  "fs4",
@@ -7397,7 +7351,7 @@ dependencies = [
  "scarb-build-metadata",
  "scarb-metadata",
  "scarb-proc-macro-server-types",
- "scarb-stable-hash 1.0.0 (git+https://github.com/remybar/scarb?rev=863e79a048b8d251cebf00299dd4a1a830447be4)",
+ "scarb-stable-hash 1.0.0",
  "scarb-ui",
  "semver",
  "semver-pubgrub",
@@ -7430,7 +7384,6 @@ dependencies = [
 [[package]]
 name = "scarb-build-metadata"
 version = "2.10.1"
-source = "git+https://github.com/remybar/scarb?rev=863e79a048b8d251cebf00299dd4a1a830447be4#863e79a048b8d251cebf00299dd4a1a830447be4"
 dependencies = [
  "cargo_metadata",
 ]
@@ -7438,7 +7391,6 @@ dependencies = [
 [[package]]
 name = "scarb-metadata"
 version = "1.13.0"
-source = "git+https://github.com/remybar/scarb?rev=863e79a048b8d251cebf00299dd4a1a830447be4#863e79a048b8d251cebf00299dd4a1a830447be4"
 dependencies = [
  "camino",
  "derive_builder",
@@ -7451,11 +7403,18 @@ dependencies = [
 [[package]]
 name = "scarb-proc-macro-server-types"
 version = "0.1.0"
-source = "git+https://github.com/remybar/scarb?rev=863e79a048b8d251cebf00299dd4a1a830447be4#863e79a048b8d251cebf00299dd4a1a830447be4"
 dependencies = [
  "cairo-lang-macro",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "scarb-stable-hash"
+version = "1.0.0"
+dependencies = [
+ "data-encoding",
+ "xxhash-rust",
 ]
 
 [[package]]
@@ -7469,18 +7428,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "scarb-stable-hash"
-version = "1.0.0"
-source = "git+https://github.com/remybar/scarb?rev=863e79a048b8d251cebf00299dd4a1a830447be4#863e79a048b8d251cebf00299dd4a1a830447be4"
-dependencies = [
- "data-encoding",
- "xxhash-rust",
-]
-
-[[package]]
 name = "scarb-ui"
 version = "0.1.5"
-source = "git+https://github.com/remybar/scarb?rev=863e79a048b8d251cebf00299dd4a1a830447be4#863e79a048b8d251cebf00299dd4a1a830447be4"
 dependencies = [
  "anyhow",
  "camino",
@@ -7983,7 +7932,7 @@ dependencies = [
  "colored",
  "dojo-bindgen",
  "dojo-test-utils",
- "dojo-types 1.5.0-alpha.2",
+ "dojo-types",
  "dojo-utils",
  "dojo-world",
  "katana-runner 1.2.3",
@@ -8024,7 +7973,7 @@ dependencies = [
  "colored",
  "colored_json",
  "dojo-test-utils",
- "dojo-types 1.5.0-alpha.2",
+ "dojo-types",
  "dojo-utils",
  "dojo-world",
  "futures",

@@ -1,3 +1,8 @@
+/// This file contains the implementation of the `Introspect` trait.
+///
+/// The introspection is used to get the size and layout of a type.
+/// It is important to note that signed integers in Cairo are always using `252` bits.
+
 use dojo::meta::Layout;
 use dojo::storage::packing;
 use core::panics::panic_with_byte_array;
@@ -526,7 +531,7 @@ pub impl Introspect_i8 of Introspect<i8> {
     }
     #[inline(always)]
     fn layout() -> Layout {
-        Layout::Fixed([8].span())
+        Layout::Fixed([packing::PACKING_MAX_BITS].span())
     }
     #[inline(always)]
     fn ty() -> Ty {
@@ -541,7 +546,7 @@ pub impl Introspect_i16 of Introspect<i16> {
     }
     #[inline(always)]
     fn layout() -> Layout {
-        Layout::Fixed([16].span())
+        Layout::Fixed([packing::PACKING_MAX_BITS].span())
     }
     #[inline(always)]
     fn ty() -> Ty {
@@ -556,7 +561,7 @@ pub impl Introspect_i32 of Introspect<i32> {
     }
     #[inline(always)]
     fn layout() -> Layout {
-        Layout::Fixed([32].span())
+        Layout::Fixed([packing::PACKING_MAX_BITS].span())
     }
     #[inline(always)]
     fn ty() -> Ty {
@@ -571,7 +576,7 @@ pub impl Introspect_i64 of Introspect<i64> {
     }
     #[inline(always)]
     fn layout() -> Layout {
-        Layout::Fixed([64].span())
+        Layout::Fixed([packing::PACKING_MAX_BITS].span())
     }
     #[inline(always)]
     fn ty() -> Ty {
@@ -586,7 +591,7 @@ pub impl Introspect_i128 of Introspect<i128> {
     }
     #[inline(always)]
     fn layout() -> Layout {
-        Layout::Fixed([128].span())
+        Layout::Fixed([packing::PACKING_MAX_BITS].span())
     }
     #[inline(always)]
     fn ty() -> Ty {
