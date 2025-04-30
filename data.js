@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1746029441385,
+  "lastUpdate": 1746030076884,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -63408,6 +63408,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 54094616458,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "distinct": true,
+          "id": "556890fdbade0e1e3e706e25af1695a5cf614181",
+          "message": "chore: bump scarb to use scarb-210 branch",
+          "timestamp": "2025-04-30T10:07:53-06:00",
+          "tree_id": "fa89e31175eb9eeaef8fadf8b8ccde00c0c7fa5a",
+          "url": "https://github.com/dojoengine/dojo/commit/556890fdbade0e1e3e706e25af1695a5cf614181"
+        },
+        "date": 1746030072994,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 54109347626,
             "range": "± 0",
             "unit": "ns/iter"
           }
