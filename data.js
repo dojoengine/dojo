@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1746030076884,
+  "lastUpdate": 1746036031796,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -63438,6 +63438,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 54109347626,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tarrencev@users.noreply.github.com",
+            "name": "Tarrence van As",
+            "username": "tarrencev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "812f17c9c57fd057d0bf1e648a591ea0ca9ea718",
+          "message": "release(prepare): v1.5.0 (#3204)\n\n* Prepare release: v1.5.0\n\n* chore: update versions.json\n\n* fix(ci): update katana binary for tests\n\n---------\n\nCo-authored-by: glihm <glihm@users.noreply.github.com>\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2025-04-30T11:47:26-06:00",
+          "tree_id": "3e3a1063c3067d14afdad556597f8a7ab8e8f651",
+          "url": "https://github.com/dojoengine/dojo/commit/812f17c9c57fd057d0bf1e648a591ea0ca9ea718"
+        },
+        "date": 1746036028161,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 51872959131,
             "range": "± 0",
             "unit": "ns/iter"
           }
