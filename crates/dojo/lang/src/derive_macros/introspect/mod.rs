@@ -101,6 +101,7 @@ impl $name$Introspect<$generics$> of dojo::meta::introspect::Introspect<$name$<$
         $size$
     }
 
+    #[inline(always)]
     fn layout() -> dojo::meta::Layout {
         $layout$
     }

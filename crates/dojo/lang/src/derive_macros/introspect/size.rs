@@ -3,9 +3,7 @@ use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::TypedSyntaxNode;
 
-use super::utils::{
-    get_tuple_item_types, is_array, is_byte_array, is_tuple, primitive_type_introspection,
-};
+use super::utils::{get_tuple_item_types, is_array, is_byte_array, is_tuple};
 
 pub fn compute_struct_layout_size(
     db: &dyn SyntaxGroup,
@@ -182,13 +180,7 @@ pub fn compute_item_size_from_type(item_type: &String) -> Vec<String> {
     } else if is_tuple(item_type) {
         compute_tuple_size_from_type(item_type)
     } else {
-        let primitives = primitive_type_introspection();
-
-        if let Some(p) = primitives.get(item_type) {
-            vec![p.0.to_string()]
-        } else {
-            vec![format!("dojo::meta::introspect::Introspect::<{}>::size()", item_type)]
-        }
+        vec![format!("dojo::meta::introspect::Introspect::<{}>::size()", item_type)]
     }
 }
 
