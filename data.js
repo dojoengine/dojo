@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1745860901967,
+  "lastUpdate": 1746029441385,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -63378,6 +63378,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 53786326817,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "remy.baranx@gmail.com",
+            "name": "Rémy Baranx",
+            "username": "remybar"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "86a22f0749b01bc2a4f0b1f4bd0566dc14df11ee",
+          "message": "feat(dojo-lang): improve primitive type management (#3202)\n\n* use inlining to improve primitive type management\n\n* fix fmt + update scarb crates\n\n* update test artifacts\n\n* fix: bump scarb\n\n* fix: run cairo linter\n\n---------\n\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2025-04-30T15:57:29Z",
+          "tree_id": "23d456d6ade32d3b07985abe197affec3cee929d",
+          "url": "https://github.com/dojoengine/dojo/commit/86a22f0749b01bc2a4f0b1f4bd0566dc14df11ee"
+        },
+        "date": 1746029437259,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 54094616458,
             "range": "± 0",
             "unit": "ns/iter"
           }
