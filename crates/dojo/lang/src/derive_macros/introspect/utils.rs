@@ -41,22 +41,16 @@ pub fn get_array_item_type(ty: &str) -> String {
 /// # Examples
 ///    extract_composite_inner_type("Array<(u8, u16)", "Array<", ">") returns "u8, u16"
 pub fn extract_composite_inner_type(ty: &str, prefix: &str, suffix: &str) -> String {
-    // The unit type is a special case (empty tuple). Even if this syntax is not used much anymore,
-    // if will cause an error if a variant of an enum or a field of a struct is a unit type.
-    // `A: ()` is the same as `A`.
-    if ty == "()" {
-        return "".to_string();
-    }
-
     // Note: Until at least 2.11, in cairo_lang_* crates, if there is a comment after a struct field
     // type, without a comma, like `v1: Span<u32> // comment`, the comment is included in the
     // type definition while reading it from the AST.
-    let re = regex::Regex::new(&format!(
-        "{}\\s*(\\S*.*\\S+)\\s*{}",
-        regex::escape(prefix),
-        regex::escape(suffix)
-    ))
-    .unwrap();
+
+    // first, remove trailing comment if present
+    let ty = ty.split("//").next().unwrap();
+
+    // then, extract the type between prefix and suffix
+    let re = regex::Regex::new(&format!("{}(.*){}", regex::escape(prefix), regex::escape(suffix)))
+        .unwrap();
 
     let caps = re.captures(ty).unwrap_or_else(|| {
         panic!("'{ty}' must contain the '{prefix}' prefix and the '{suffix}' suffix.")
@@ -127,6 +121,7 @@ pub fn test_get_tuple_item_types() {
     }
 
     let test_cases = vec![
+        ("()", vec![]),
         ("(u8,)", vec!["u8"]),
         ("(u8, u16, u32)", vec!["u8", "u16", "u32"]),
         ("(u8, (u16,), u32)", vec!["u8", "(u16,)", "u32"]),
@@ -163,6 +158,11 @@ fn test_extract_composite_inner_type_with_tuples() {
         ("(u8, u32), // comment", "u8,u32"),
         // Unity type is a special case (empty tuple).
         ("()", ""),
+        ("(),", ""),
+        // comment with parenthesis
+        ("() // ( comment )", ""),
+        // with a lot of spaces
+        ("  (   u8   ,    u32   )    // comment", "u8,u32"),
     ];
 
     for (tuple, expected) in test_cases {
@@ -191,6 +191,7 @@ fn test_extract_composite_inner_type_with_arrays() {
         ("Array<Array<(u8, u16)>>", "Array<(u8,u16)>"),
         ("Array<(u8, u16)> // comment", "(u8,u16)"),
         ("Array<(u8, u16)>, // comment", "(u8,u16)"),
+        // Array<()> is not supported by Cairo so no need to test this case
     ];
 
     for (arr, expected) in test_cases {
@@ -213,6 +214,7 @@ fn test_extract_composite_inner_type_with_spans() {
         ("Span<Array<(u8, u16)>>", "Array<(u8,u16)>"),
         ("Span<(u8, u16)> // comment", "(u8,u16)"),
         ("Span<(u8, u16)>, // comment", "(u8,u16)"),
+        ("Span<()>", "()"),
     ];
 
     for (sp, expected) in test_cases {
