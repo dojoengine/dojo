@@ -161,6 +161,8 @@ fn test_extract_composite_inner_type_with_tuples() {
         ),
         ("(u8, u32) // comment", "u8,u32"),
         ("(u8, u32), // comment", "u8,u32"),
+        // Unity type is a special case (empty tuple).
+        ("()", ""),
     ];
 
     for (tuple, expected) in test_cases {
@@ -223,16 +225,4 @@ fn test_extract_composite_inner_type_with_spans() {
 #[should_panic(expected = "'u8, u16' must contain the 'Span<' prefix and the '>' suffix.")]
 fn test_extract_composite_inner_type_with_spans_bad_ty() {
     let _ = extract_composite_inner_type("u8, u16", SPAN_PREFIX, SPAN_SUFFIX);
-}
-
-#[test]
-fn test_extract_composite_inner_type_with_unit_type() {
-    let test_cases = [
-        ("()", ""),
-    ];
-
-    for (unit, expected) in test_cases {
-        let result = extract_composite_inner_type(unit, TUPLE_PREFIX, TUPLE_SUFFIX);
-        assert!(result == expected, "bad unit: {} result: {} expected: {}", unit, result, expected);
-    }
 }
