@@ -12,7 +12,9 @@ use super::attribute_macros::{
     DojoContract, DojoEvent, DojoModel, DOJO_CONTRACT_ATTR, DOJO_EVENT_ATTR, DOJO_LIBRARY_ATTR,
     DOJO_MODEL_ATTR,
 };
-use super::derive_macros::{dojo_derive_all, DOJO_INTROSPECT_DERIVE, DOJO_PACKED_DERIVE};
+use super::derive_macros::{
+    dojo_derive_all, DOJO_INTROSPECT_DERIVE, DOJO_LEGACY_STORAGE_DERIVE, DOJO_PACKED_DERIVE,
+};
 use super::inline_macros::{BytearrayHashMacro, SelectorFromTagMacro};
 use crate::attribute_macros::DojoLibrary;
 
@@ -110,6 +112,10 @@ impl MacroPlugin for BuiltinDojoPlugin {
     }
 
     fn declared_derives(&self) -> Vec<String> {
-        vec![DOJO_INTROSPECT_DERIVE.to_string(), DOJO_PACKED_DERIVE.to_string()]
+        vec![
+            DOJO_INTROSPECT_DERIVE.to_string(),
+            DOJO_PACKED_DERIVE.to_string(),
+            DOJO_LEGACY_STORAGE_DERIVE.to_string(),
+        ]
     }
 }

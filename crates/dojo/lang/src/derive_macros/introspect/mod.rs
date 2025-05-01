@@ -7,7 +7,11 @@ use cairo_lang_syntax::node::ast::{
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::{Terminal, TypedSyntaxNode};
 use cairo_lang_utils::unordered_hash_map::UnorderedHashMap;
+use itertools::Itertools;
 
+use crate::debug_store_expand;
+
+mod dojo_store;
 mod layout;
 mod size;
 mod ty;
@@ -20,7 +24,15 @@ pub fn handle_introspect_struct(
     struct_ast: ItemStruct,
     packed: bool,
 ) -> RewriteNode {
-    let struct_name = struct_ast.name(db).text(db).into();
+    let struct_name = struct_ast.name(db).text(db).to_string();
+
+    let gen_types = build_generic_types(db, struct_ast.generic_params(db));
+
+    let inspect_gen_impls =
+        build_generic_impls(&gen_types, &["+dojo::meta::introspect::Introspect".to_string()], &[]);
+    let dojo_store_gen_impls =
+        build_generic_impls(&gen_types, &["+dojo::storage::DojoStore".to_string()], &[]);
+
     let struct_size = size::compute_struct_layout_size(db, &struct_ast, packed);
     let ty = ty::build_struct_ty(db, &struct_name, &struct_ast);
 
@@ -37,9 +49,25 @@ pub fn handle_introspect_struct(
         )
     };
 
-    let (gen_types, gen_impls) = build_generic_types_and_impls(db, struct_ast.generic_params(db));
+    let dojo_store = dojo_store::build_struct_dojo_store(
+        db,
+        &struct_name,
+        &struct_ast,
+        &gen_types,
+        &dojo_store_gen_impls,
+    );
 
-    generate_introspect(&struct_name, &struct_size, &gen_types, gen_impls, &layout, &ty)
+    debug_store_expand(&format!("DOJO_STORE STRUCT::{struct_name}"), &dojo_store);
+
+    generate_introspect(
+        &struct_name,
+        &struct_size,
+        &gen_types,
+        inspect_gen_impls,
+        &layout,
+        &ty,
+        &dojo_store,
+    )
 }
 
 /// Generate the introspect of a Enum
@@ -50,6 +78,20 @@ pub fn handle_introspect_enum(
     packed: bool,
 ) -> RewriteNode {
     let enum_name = enum_ast.name(db).text(db).into();
+
+    let gen_types = build_generic_types(db, enum_ast.generic_params(db));
+    let gen_joined_types = gen_types.join(", ");
+
+    let enum_name_with_generics = format!("{enum_name}<{gen_joined_types}>");
+
+    let inspect_gen_impls =
+        build_generic_impls(&gen_types, &["+dojo::meta::introspect::Introspect".to_string()], &[]);
+    let dojo_store_gen_impls = build_generic_impls(
+        &gen_types,
+        &["+dojo::storage::DojoStore".to_string(), "+core::serde::Serde".to_string()],
+        &[format!("+core::traits::Default<{enum_name_with_generics}>")],
+    );
+
     let variant_sizes = size::compute_enum_variant_sizes(db, &enum_ast);
 
     let layout = if packed {
@@ -75,11 +117,27 @@ pub fn handle_introspect_enum(
         )
     };
 
-    let (gen_types, gen_impls) = build_generic_types_and_impls(db, enum_ast.generic_params(db));
     let enum_size = size::compute_enum_layout_size(&variant_sizes, packed);
     let ty = ty::build_enum_ty(db, &enum_name, &enum_ast);
+    let dojo_store = dojo_store::build_enum_dojo_store(
+        db,
+        &enum_name,
+        &enum_ast,
+        &gen_types,
+        &dojo_store_gen_impls,
+    );
 
-    generate_introspect(&enum_name, &enum_size, &gen_types, gen_impls, &layout, &ty)
+    debug_store_expand(&format!("DOJO_STORE ENUM::{enum_name}"), &dojo_store);
+
+    generate_introspect(
+        &enum_name,
+        &enum_size,
+        &gen_types,
+        inspect_gen_impls,
+        &layout,
+        &ty,
+        &dojo_store,
+    )
 }
 
 /// Generate the introspect impl for a Struct or an Enum,
@@ -91,6 +149,7 @@ fn generate_introspect(
     generic_impls: String,
     layout: &String,
     ty: &String,
+    dojo_store: &String,
 ) -> RewriteNode {
     RewriteNode::interpolate_patched(
         "
@@ -111,6 +170,8 @@ impl $name$Introspect<$generics$> of dojo::meta::introspect::Introspect<$name$<$
         $ty$
     }
 }
+
+$dojo_store$
         ",
         &UnorderedHashMap::from([
             ("name".to_string(), RewriteNode::Text(name.to_string())),
@@ -119,16 +180,17 @@ impl $name$Introspect<$generics$> of dojo::meta::introspect::Introspect<$name$<$
             ("size".to_string(), RewriteNode::Text(size.to_string())),
             ("layout".to_string(), RewriteNode::Text(layout.to_string())),
             ("ty".to_string(), RewriteNode::Text(ty.to_string())),
+            ("dojo_store".to_string(), RewriteNode::Text(dojo_store.to_string())),
         ]),
     )
 }
 
 // Extract generic type information and build the
 // type and impl information to add to the generated introspect
-fn build_generic_types_and_impls(
+fn build_generic_types(
     db: &dyn SyntaxGroup,
     generic_params: OptionWrappedGenericParamList,
-) -> (Vec<String>, String) {
+) -> Vec<String> {
     let generic_types =
         if let OptionWrappedGenericParamList::WrappedGenericParamList(params) = generic_params {
             params
@@ -147,11 +209,27 @@ fn build_generic_types_and_impls(
             vec![]
         };
 
-    let generic_impls = generic_types
-        .iter()
-        .map(|g| format!("{g}, impl {g}Introspect: dojo::meta::introspect::Introspect<{g}>"))
-        .collect::<Vec<_>>()
-        .join(", ");
+    generic_types
+}
 
-    (generic_types, generic_impls)
+fn build_generic_impls(
+    gen_types: &[String],
+    base_impls: &[String],
+    additional_impls: &[String],
+) -> String {
+    let mut gen_impls = gen_types
+        .iter()
+        .map(|g| {
+            format!(
+                "{g}, {base_impls}",
+                base_impls = base_impls.iter().map(|i| format!("{i}<{g}>")).join(", ")
+            )
+        })
+        .collect::<Vec<_>>();
+
+    if !gen_types.is_empty() {
+        gen_impls.extend(additional_impls.to_vec());
+    }
+
+    gen_impls.join(", ")
 }

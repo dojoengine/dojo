@@ -36,4 +36,8 @@ pub impl IModelImpl<TContractState, M, +Model<M>> of IModel<TContractState> {
     fn definition(self: @TContractState) -> ModelDef {
         Model::<M>::definition()
     }
+
+    fn use_legacy_storage(self: @TContractState) -> bool {
+        Model::<M>::use_legacy_storage()
+    }
 }

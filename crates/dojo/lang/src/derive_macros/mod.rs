@@ -21,6 +21,7 @@ pub mod print;
 pub const DOJO_PRINT_DERIVE: &str = "Print";
 pub const DOJO_INTROSPECT_DERIVE: &str = "Introspect";
 pub const DOJO_PACKED_DERIVE: &str = "IntrospectPacked";
+pub const DOJO_LEGACY_STORAGE_DERIVE: &str = "DojoLegacyStorage";
 
 /// Handles all the dojo derives macro and returns the generated code and diagnostics.
 pub fn dojo_derive_all(

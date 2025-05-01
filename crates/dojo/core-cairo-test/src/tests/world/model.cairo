@@ -56,8 +56,9 @@ pub struct FooModelMemberAdded {
     pub c: u256,
 }
 
-#[derive(Introspect, Copy, Drop, Serde, PartialEq)]
+#[derive(Introspect, Copy, Drop, Serde, PartialEq, Default)]
 enum MyEnum {
+    #[default]
     X: u8,
     Y: u16,
 }
@@ -71,8 +72,9 @@ struct FooModelMemberChanged {
     pub b: u128,
 }
 
-#[derive(Introspect, Copy, Drop, Serde)]
+#[derive(Introspect, Copy, Drop, Serde, Default)]
 enum AnotherEnum {
+    #[default]
     X: bool,
 }
 

@@ -7,7 +7,7 @@ use cairo_lang_syntax::node::{ids, Terminal, TypedSyntaxNode};
 use starknet::core::utils::get_selector_from_name;
 
 use super::utils::{
-    get_array_item_type, get_tuple_item_types, is_array, is_byte_array, is_tuple,
+    get_array_item_type, get_tuple_item_types, is_array, is_byte_array, is_option, is_tuple,
     is_unsupported_option_type,
 };
 
@@ -75,7 +75,9 @@ pub fn build_variant_layouts(
         .iter()
         .enumerate()
         .map(|(i, v)| {
-            let selector = format!("{i}");
+            // with the new `DojoStore`` trait, variants start from 1, to be able to use
+            // 0 as uninitialized variant.
+            let selector = i + 1;
 
             let variant_layout = match v.type_clause(db) {
                 OptionTypeClause::Empty(_) => {
@@ -375,6 +377,13 @@ pub fn get_packed_item_layout_from_type(
         vec!["ERROR".to_string()]
     } else if is_tuple(item_type) {
         get_packed_tuple_layout_from_type(diagnostics, diagnostic_item, item_type)
+    } else if is_option(item_type) {
+        diagnostics.push(PluginDiagnostic {
+            stable_ptr: diagnostic_item,
+            message: format!("{item_type} cannot be packed."),
+            severity: Severity::Error,
+        });
+        vec!["ERROR".to_string()]
     } else {
         // as we cannot verify that an enum/struct custom type is packable,
         // we suppose it is and let the user verify this.

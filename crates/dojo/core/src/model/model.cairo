@@ -50,6 +50,8 @@ pub trait KeyParser<M, K> {
 
 /// Defines a trait for parsing models, providing methods to serialize keys and values.
 pub trait ModelParser<M> {
+    /// Deserializes raw data into a model struct.
+    fn deserialize(ref values: Span<felt252>) -> Option<M>;
     /// Serializes the keys of the model.
     fn serialize_keys(self: @M) -> Span<felt252>;
     /// Serializes the values of the model.
@@ -79,6 +81,9 @@ pub trait Model<M> {
     fn layout() -> Layout;
     /// Returns the layout of a field in the model.
     fn field_layout(field_selector: felt252) -> Option<Layout>;
+    /// Indicates if the model uses the legacy storage (true), or
+    /// the new one (false).
+    fn use_legacy_storage() -> bool;
     /// Returns the unpacked size of the model. Only applicable for fixed size models.
     fn unpacked_size() -> Option<usize>;
     /// Returns the packed size of the model. Only applicable for fixed size models.
@@ -127,7 +132,7 @@ pub impl ModelImpl<M, +ModelParser<M>, +ModelDefinition<M>, +Serde<M>, +Drop<M>>
         serialized.append_span(values);
         let mut span = serialized.span();
 
-        Serde::<M>::deserialize(ref span)
+        ModelParser::<M>::deserialize(ref span)
     }
 
     fn name() -> ByteArray {
@@ -144,6 +149,10 @@ pub impl ModelImpl<M, +ModelParser<M>, +ModelDefinition<M>, +Serde<M>, +Drop<M>>
 
     fn field_layout(field_selector: felt252) -> Option<Layout> {
         find_model_field_layout(Self::layout(), field_selector)
+    }
+
+    fn use_legacy_storage() -> bool {
+        ModelDefinition::<M>::use_legacy_storage()
     }
 
     fn schema() -> Struct {

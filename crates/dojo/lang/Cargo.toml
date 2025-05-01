@@ -29,3 +29,4 @@ tracing.workspace = true
 
 [dev-dependencies]
 cairo-lang-semantic.workspace = true
+cairo-lang-parser.workspace = true
