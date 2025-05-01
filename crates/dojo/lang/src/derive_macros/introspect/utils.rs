@@ -41,6 +41,13 @@ pub fn get_array_item_type(ty: &str) -> String {
 /// # Examples
 ///    extract_composite_inner_type("Array<(u8, u16)", "Array<", ">") returns "u8, u16"
 pub fn extract_composite_inner_type(ty: &str, prefix: &str, suffix: &str) -> String {
+    // The unit type is a special case (empty tuple). Even if this syntax is not used much anymore,
+    // if will cause an error if a variant of an enum or a field of a struct is a unit type.
+    // `A: ()` is the same as `A`.
+    if ty == "()" {
+        return "".to_string();
+    }
+
     // Note: Until at least 2.11, in cairo_lang_* crates, if there is a comment after a struct field
     // type, without a comma, like `v1: Span<u32> // comment`, the comment is included in the
     // type definition while reading it from the AST.
@@ -216,4 +223,16 @@ fn test_extract_composite_inner_type_with_spans() {
 #[should_panic(expected = "'u8, u16' must contain the 'Span<' prefix and the '>' suffix.")]
 fn test_extract_composite_inner_type_with_spans_bad_ty() {
     let _ = extract_composite_inner_type("u8, u16", SPAN_PREFIX, SPAN_SUFFIX);
+}
+
+#[test]
+fn test_extract_composite_inner_type_with_unit_type() {
+    let test_cases = [
+        ("()", ""),
+    ];
+
+    for (unit, expected) in test_cases {
+        let result = extract_composite_inner_type(unit, TUPLE_PREFIX, TUPLE_SUFFIX);
+        assert!(result == expected, "bad unit: {} result: {} expected: {}", unit, result, expected);
+    }
 }
