@@ -17,7 +17,7 @@ RUN git clone https://github.com/Comcast/Infinite-File-Curtailer.git curtailer \
 FROM ubuntu:24.04 AS base
 
 RUN apt-get update && \
-    apt-get install -y curl ca-certificates libssl-dev tini jq && \
+    apt-get install -y curl ca-certificates libssl-dev tini jq git && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* && \
     cp /usr/bin/tini /tini
