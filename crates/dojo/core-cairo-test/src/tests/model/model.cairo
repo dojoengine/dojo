@@ -71,6 +71,30 @@ struct ModelWithCommentOnLastFied {
     v1: Span<u32> // a comment without a comma 
 }
 
+// to test with unit types
+#[derive(Copy, Drop, Introspect, Debug, Serde, PartialEq)]
+enum EnumWithUnitType {
+    X: u8,
+    Y,
+    Z: (),
+}
+
+#[derive(Copy, Drop, Introspect, Debug, Serde, PartialEq)]
+struct StructWithUnitType {
+    x: (),
+}
+
+#[derive(Copy, Drop, Serde, Debug, PartialEq)]
+#[dojo::model]
+struct ModelWithUnitType {
+    #[key]
+    k: u8,
+    x: StructWithUnitType,
+    y: EnumWithUnitType,
+    z: (),
+    a: ((), (u8, ())),
+}
+
 fn namespace_def() -> NamespaceDef {
     NamespaceDef {
         namespace: "dojo_cairo_test",
@@ -79,6 +103,7 @@ fn namespace_def() -> NamespaceDef {
             TestResource::Model(m_Foo2::TEST_CLASS_HASH.try_into().unwrap()),
             TestResource::Model(m_Foo3::TEST_CLASS_HASH.try_into().unwrap()),
             TestResource::Model(m_Foo4::TEST_CLASS_HASH.try_into().unwrap()),
+            TestResource::Model(m_ModelWithUnitType::TEST_CLASS_HASH.try_into().unwrap()),
         ]
             .span(),
     }
@@ -348,5 +373,31 @@ fn test_read_schemas() {
             && schema_2.v3.b == foo_2.v3.b
             && schema_2.v3.c == foo_2.v3.c
             && schema_2.v3.d == foo_2.v3.d,
+    );
+}
+
+#[test]
+fn test_access_with_unit_type() {
+    let mut world = spawn_foo_world();
+
+    let m = ModelWithUnitType {
+        k: 1, x: StructWithUnitType { x: () }, y: EnumWithUnitType::Z(()), z: (), a: ((), (12, ())),
+    };
+
+    world.write_model(@m);
+
+    let read_m: ModelWithUnitType = world.read_model(1);
+    let read_default_m: ModelWithUnitType = world.read_model(2);
+
+    assert!(m == read_m, "Bad read model");
+    assert!(
+        read_default_m == ModelWithUnitType {
+            k: 2,
+            x: StructWithUnitType { x: () },
+            y: EnumWithUnitType::X(0),
+            z: (),
+            a: ((), (0, ())),
+        },
+        "Bad default model",
     );
 }
