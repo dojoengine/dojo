@@ -102,6 +102,14 @@ enum EnumInnerNotPacked {
     B: (EnumPacked, Base),
 }
 
+// no variant data or unit type must be equivalent and
+// so, must compile successfully
+#[derive(Drop, IntrospectPacked)]
+enum EnumPackedWithUnitType {
+    A,
+    B: (),
+}
+
 #[derive(Drop, Introspect)]
 struct StructWithOption {
     x: Option<u16>,
