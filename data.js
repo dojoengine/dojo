@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1746036031796,
+  "lastUpdate": 1746225792001,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -63468,6 +63468,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 51872959131,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "distinct": true,
+          "id": "b46accd053e1cfad28ab241860025428c15cde4a",
+          "message": "chore: add missing Cargo.lock changes",
+          "timestamp": "2025-05-02T16:29:51-06:00",
+          "tree_id": "61fc82bae5393276c60a0c08db7d04edffc071e5",
+          "url": "https://github.com/dojoengine/dojo/commit/b46accd053e1cfad28ab241860025428c15cde4a"
+        },
+        "date": 1746225788693,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 50813777446,
             "range": "± 0",
             "unit": "ns/iter"
           }
