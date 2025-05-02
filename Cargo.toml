@@ -158,9 +158,9 @@ rstest = "0.18.2"
 rstest_reuse = "0.6.0"
 salsa = "0.16.1"
 
-scarb = { git = "https://github.com/dojoengine/scarb", rev = "937955721f0218a7971baed79d5d4e82fa022c59" }
-scarb-metadata = { git = "https://github.com/dojoengine/scarb", rev = "937955721f0218a7971baed79d5d4e82fa022c59" }
-scarb-ui = { git = "https://github.com/dojoengine/scarb", rev = "937955721f0218a7971baed79d5d4e82fa022c59" }
+scarb = { git = "https://github.com/dojoengine/scarb", rev = "38f13cb6f9f33836a61b231f7e00c5c4dc5cafd6" }
+scarb-metadata = { git = "https://github.com/dojoengine/scarb", rev = "38f13cb6f9f33836a61b231f7e00c5c4dc5cafd6" }
+scarb-ui = { git = "https://github.com/dojoengine/scarb", rev = "38f13cb6f9f33836a61b231f7e00c5c4dc5cafd6" }
 
 semver = "1.0.5"
 serde = { version = "1.0", features = [ "derive" ] }
