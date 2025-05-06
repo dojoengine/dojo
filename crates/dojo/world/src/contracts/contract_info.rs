@@ -61,9 +61,9 @@ impl From<&Manifest> for HashMap<String, ContractInfo> {
 
         for c in &manifest.external_contracts {
             contracts.insert(
-                c.instance_name.clone(),
+                c.tag.clone(),
                 ContractInfo {
-                    tag_or_name: c.instance_name.clone(),
+                    tag_or_name: c.tag.clone(),
                     address: c.address,
                     entrypoints: vec![],
                 },
@@ -104,7 +104,8 @@ impl From<&WorldDiff> for HashMap<String, ContractInfo> {
                         },
                     );
                 }
-                ResourceDiff::Updated(ResourceLocal::Contract(l), ResourceRemote::Contract(r)) => {
+                ResourceDiff::Updated(ResourceLocal::Contract(l), ResourceRemote::Contract(r))
+                | ResourceDiff::Synced(ResourceLocal::Contract(l), ResourceRemote::Contract(r)) => {
                     contracts.insert(
                         tag.clone(),
                         ContractInfo {
@@ -114,31 +115,39 @@ impl From<&WorldDiff> for HashMap<String, ContractInfo> {
                         },
                     );
                 }
-                ResourceDiff::Synced(ResourceLocal::Contract(l), ResourceRemote::Contract(r)) => {
+                ResourceDiff::Created(ResourceLocal::ExternalContract(l)) => {
                     contracts.insert(
                         tag.clone(),
                         ContractInfo {
                             tag_or_name: tag.clone(),
-                            address: r.common.address,
-                            entrypoints: l.systems.clone(),
+                            address: l.computed_address,
+                            entrypoints: vec![], // TODO RBA: Not available for Starknet contracts.
+                        },
+                    );
+                }
+                ResourceDiff::Updated(
+                    ResourceLocal::ExternalContract(l),
+                    ResourceRemote::ExternalContract(r),
+                )
+                | ResourceDiff::Synced(
+                    ResourceLocal::ExternalContract(l),
+                    ResourceRemote::ExternalContract(r),
+                ) => {
+                    contracts.insert(
+                        tag.clone(),
+                        ContractInfo {
+                            tag_or_name: tag.clone(),
+                            address: if l.is_upgradeable {
+                                r.common.address
+                            } else {
+                                l.computed_address
+                            },
+                            entrypoints: vec![], // TODO RBA: Not available for Starknet contracts.
                         },
                     );
                 }
                 _ => {}
             }
-        }
-
-        for contract in world_diff.external_contracts.values() {
-            let contract = contract.contract_data();
-
-            contracts.insert(
-                contract.instance_name.clone(),
-                ContractInfo {
-                    tag_or_name: contract.instance_name,
-                    address: contract.address,
-                    entrypoints: vec![], // Not available for Starknet contracts.
-                },
-            );
         }
 
         contracts
@@ -153,7 +162,7 @@ mod tests {
 
     use super::*;
     use crate::diff::{DojoContract, DojoLibrary, DojoModel, WorldContract};
-    use crate::local::{CommonLocalInfo, ContractLocal, ExternalContractLocal, WorldLocal};
+    use crate::local::{CommonLocalInfo, ContractLocal, WorldLocal};
 
     #[test]
     fn test_manifest_to_contracts_info() {
@@ -236,27 +245,6 @@ mod tests {
 
         local.profile_config.namespace.default = "ns".to_string();
         local.add_resource(ResourceLocal::Contract(contract));
-
-        local.external_contracts = vec![
-            ExternalContractLocal {
-                contract_name: "Contract".to_string(),
-                instance_name: "Instance1".to_string(),
-                class_hash: Felt::ONE,
-                salt: Felt::ZERO,
-                constructor_data: vec![],
-                raw_constructor_data: vec![],
-                address: Felt::from_hex("0x6789").unwrap(),
-            },
-            ExternalContractLocal {
-                contract_name: "Contract".to_string(),
-                instance_name: "Instance2".to_string(),
-                class_hash: Felt::ONE,
-                salt: Felt::ZERO,
-                constructor_data: vec![],
-                raw_constructor_data: vec![],
-                address: Felt::from_hex("0x1234").unwrap(),
-            },
-        ];
 
         let world_diff = WorldDiff::from_local(local).unwrap();
 

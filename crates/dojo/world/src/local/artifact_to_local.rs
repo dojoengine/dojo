@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use anyhow::{bail, Result};
 use cairo_lang_starknet_classes::casm_contract_class::CasmContractClass;
 use cairo_lang_starknet_classes::contract_class::ContractClass;
-use dojo_types::naming::compute_bytearray_hash;
+use dojo_types::naming::{compute_bytearray_hash, compute_selector_from_names};
 use serde_json;
 use starknet::core::types::contract::{
     AbiEntry, AbiEvent, AbiImpl, CompiledClass, SierraClass, StateMutability, TypedAbiEvent,
@@ -25,6 +25,29 @@ const CONTRACT_INTF: &str = "dojo::contract::interface::IContract";
 const LIBRARY_INTF: &str = "dojo::contract::interface::ILibrary";
 const MODEL_INTF: &str = "dojo::model::interface::IModel";
 const EVENT_INTF: &str = "dojo::event::interface::IEvent";
+
+#[derive(Debug, Clone)]
+struct ExternalContractClassLocal {
+    pub casm_class_hash: Felt,
+    pub class: SierraClass,
+    pub casm_class: Option<CompiledClass>,
+    pub is_upgradeable: bool,
+}
+
+fn is_upgrade_fn(entry: &AbiEntry) -> bool {
+    if let AbiEntry::Function(f) = entry {
+        match f.state_mutability {
+            StateMutability::External => {
+                f.name == UPGRADE_CONTRACT_FN_NAME
+                    && f.inputs.len() == 1
+                    && f.inputs.first().unwrap().r#type == "core::starknet::class_hash::ClassHash"
+            }
+            _ => false,
+        }
+    } else {
+        false
+    }
+}
 
 impl WorldLocal {
     pub fn from_directory<P: AsRef<Path>>(dir: P, profile_config: ProfileConfig) -> Result<Self> {
@@ -89,7 +112,7 @@ impl WorldLocal {
                                 world_class_hash = Some(class_hash);
                                 world_casm_class_hash = Some(casm_class_hash);
                                 world_entrypoints = systems_from_abi(&abi);
-                                world_casm_class = casm_class;
+                                world_casm_class = casm_class.clone();
 
                                 dojo_resource_found = true;
                                 break;
@@ -108,7 +131,7 @@ impl WorldLocal {
 
                                     let resource = ResourceLocal::Contract(ContractLocal {
                                         common: CommonLocalInfo {
-                                            namespace: ns,
+                                            namespace: ns.clone(),
                                             name: name.clone(),
                                             class: sierra.clone(),
                                             casm_class: casm_class.clone(),
@@ -249,12 +272,15 @@ impl WorldLocal {
                             }
                         };
 
+                        let is_upgradeable = is_upgradeable_from_abi(&abi);
+
                         external_contract_classes.insert(
                             contract_name.clone(),
                             ExternalContractClassLocal {
-                                contract_name,
                                 casm_class_hash,
                                 class: sierra.clone(),
+                                casm_class: casm_class.clone(),
+                                is_upgradeable,
                             },
                         );
                     }
@@ -262,12 +288,10 @@ impl WorldLocal {
             }
         }
 
-        let mut external_contracts = vec![];
-
         if let Some(contracts) = &profile_config.external_contracts {
             for contract in contracts {
                 if let Some(local_class) = external_contract_classes.get(&contract.contract_name) {
-                    let raw_constructor_data = if let Some(data) = &contract.constructor_data {
+                    let encoded_constructor_data = if let Some(data) = &contract.constructor_data {
                         decode_calldata(data)?
                     } else {
                         vec![]
@@ -276,36 +300,48 @@ impl WorldLocal {
                     let instance_name =
                         contract.instance_name.clone().unwrap_or(contract.contract_name.clone());
 
-                    let salt = poseidon_hash_many(&[
-                        compute_bytearray_hash(&instance_name),
-                        compute_bytearray_hash(&contract.salt),
-                    ]);
                     let class_hash = local_class.class.class_hash()?;
 
-                    let address = snutils::get_contract_address(
-                        salt,
-                        class_hash,
-                        &raw_constructor_data,
-                        Felt::ZERO,
-                    );
+                    let namespaces = profile_config.namespace.get_namespaces(&instance_name);
 
-                    let instance = ExternalContractLocal {
-                        contract_name: contract.contract_name.clone(),
-                        class_hash,
-                        instance_name,
-                        salt,
-                        constructor_data: contract.constructor_data.clone().unwrap_or(vec![]),
-                        raw_constructor_data,
-                        address,
-                    };
+                    for ns in namespaces {
+                        let salt = poseidon_hash_many(&[
+                            compute_selector_from_names(&ns, &instance_name),
+                            compute_bytearray_hash(&contract.salt),
+                        ]);
+                        let computed_address = snutils::get_contract_address(
+                            salt,
+                            class_hash,
+                            &encoded_constructor_data,
+                            Felt::ZERO,
+                        );
 
-                    trace!(
-                        contract_name = contract.contract_name.clone(),
-                        instance_name = instance.instance_name.clone(),
-                        "External contract instance."
-                    );
+                        let resource = ResourceLocal::ExternalContract(ExternalContractLocal {
+                            common: CommonLocalInfo {
+                                namespace: ns.clone(),
+                                name: instance_name.clone(),
+                                class: local_class.class.clone(),
+                                casm_class: local_class.casm_class.clone(),
+                                class_hash,
+                                casm_class_hash: local_class.casm_class_hash,
+                            },
+                            contract_name: contract.contract_name.clone(),
+                            salt,
+                            constructor_data: contract.constructor_data.clone().unwrap_or(vec![]),
+                            encoded_constructor_data: encoded_constructor_data.clone(),
+                            computed_address,
+                            is_upgradeable: local_class.is_upgradeable,
+                        });
 
-                    external_contracts.push(instance);
+                        trace!(
+                            contract_name = contract.contract_name.clone(),
+                            instance_name = instance_name.clone(),
+                            namespace = ns.clone(),
+                            "Adding local external contract from artifact."
+                        );
+
+                        resources.push(resource);
+                    }
                 } else {
                     bail!(
                         "Your profile configuration mentions the external contract '{}' but it \
@@ -337,8 +373,6 @@ impl WorldLocal {
                 casm_class: world_casm_class,
                 casm_class_hash,
                 resources: HashMap::new(),
-                external_contract_classes,
-                external_contracts,
                 profile_config,
                 entrypoints: world_entrypoints,
             },
@@ -448,8 +482,22 @@ fn contract_name_from_abi(abi: &[AbiEntry]) -> Option<String> {
     None
 }
 
+fn is_upgradeable_from_abi(abi: &[AbiEntry]) -> bool {
+    for entry in abi.iter() {
+        if let AbiEntry::Interface(entry) = entry {
+            if entry.items.iter().any(is_upgrade_fn) {
+                return true;
+            }
+        }
+    }
+
+    false
+}
+
 #[cfg(test)]
 mod tests {
+    use starknet::core::types::contract::{AbiFunction, AbiInterface, AbiNamedMember};
+
     use super::*;
     use crate::config::NamespaceConfig;
 
@@ -547,5 +595,79 @@ mod tests {
 
         let systems = systems_from_abi(&abi.abi);
         assert_eq!(systems, vec!["system_1", "system_2", "system_3", "system_4", "upgrade"]);
+    }
+
+    #[test]
+    fn test_is_upgradeable_from_abi() {
+        fn build_abi(
+            fname: &str,
+            mtypes: Vec<&str>,
+            state_mutability: StateMutability,
+        ) -> Vec<AbiEntry> {
+            [AbiEntry::Interface(AbiInterface {
+                name: "IUpgrade".to_string(),
+                items: [AbiEntry::Function(AbiFunction {
+                    name: fname.to_string(),
+                    inputs: mtypes
+                        .iter()
+                        .map(|t| AbiNamedMember {
+                            name: "new_class_hash".to_string(),
+                            r#type: t.to_string(),
+                        })
+                        .collect::<Vec<_>>(),
+                    outputs: vec![],
+                    state_mutability,
+                })]
+                .to_vec(),
+            })]
+            .to_vec()
+        }
+
+        assert!(
+            is_upgradeable_from_abi(&build_abi(
+                UPGRADE_CONTRACT_FN_NAME,
+                vec!["core::starknet::class_hash::ClassHash"],
+                StateMutability::External
+            )),
+            "Should be upgradeable"
+        );
+
+        assert!(!is_upgradeable_from_abi(&[]), "Should contain at least an interface");
+
+        assert!(
+            !is_upgradeable_from_abi(&build_abi(
+                "upgrade_v2",
+                vec!["core::starknet::class_hash::ClassHash"],
+                StateMutability::External
+            )),
+            "Should be named 'upgrade'"
+        );
+
+        assert!(
+            !is_upgradeable_from_abi(&build_abi(
+                UPGRADE_CONTRACT_FN_NAME,
+                vec!["u8"],
+                StateMutability::External
+            )),
+            "Should have one parameter of type ClassHash"
+        );
+
+        assert!(
+            !is_upgradeable_from_abi(&build_abi(
+                UPGRADE_CONTRACT_FN_NAME,
+                vec!["core::starknet::class_hash::ClassHash", "u8"],
+                StateMutability::External
+            )),
+            "Should be have only one parameter"
+        );
+
+        assert!(
+            !is_upgradeable_from_abi(&build_abi(
+                UPGRADE_CONTRACT_FN_NAME,
+                vec!["core::starknet::class_hash::ClassHash"],
+                StateMutability::View
+            )),
+            "Should be external"
+        );
     }
 }

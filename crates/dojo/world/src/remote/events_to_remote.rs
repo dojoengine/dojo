@@ -6,7 +6,7 @@
 //! Events are also sequential, a resource is not expected to be upgraded before
 //! being registered. We take advantage of this fact to optimize the data gathering.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 use anyhow::Result;
 use starknet::core::types::{BlockId, BlockTag, EventFilter, Felt, StarknetError};
@@ -19,7 +19,8 @@ use super::{ResourceRemote, WorldRemote};
 use crate::constants::WORLD;
 use crate::contracts::abigen::world::{self, Event as WorldEvent};
 use crate::remote::{
-    CommonRemoteInfo, ContractRemote, EventRemote, LibraryRemote, ModelRemote, NamespaceRemote,
+    CommonRemoteInfo, ContractRemote, EventRemote, ExternalContractRemote, LibraryRemote,
+    ModelRemote, NamespaceRemote,
 };
 
 impl WorldRemote {
@@ -64,9 +65,11 @@ impl WorldRemote {
             world::ModelRegistered::event_selector(),
             world::EventRegistered::event_selector(),
             world::ContractRegistered::event_selector(),
+            world::ExternalContractRegistered::event_selector(),
             world::ModelUpgraded::event_selector(),
             world::EventUpgraded::event_selector(),
             world::ContractUpgraded::event_selector(),
+            world::ExternalContractUpgraded::event_selector(),
             world::ContractInitialized::event_selector(),
             world::WriterUpdated::event_selector(),
             world::OwnerUpdated::event_selector(),
@@ -142,49 +145,6 @@ impl WorldRemote {
         }
 
         Ok(world)
-    }
-
-    /// Get the current state of external contracts and external contract
-    /// classes from the blockchain.
-    pub async fn load_external_contract_states<P: Provider>(
-        &mut self,
-        provider: &P,
-        external_contract_classes: Vec<(String, Felt)>,
-        external_contracts: HashMap<String, Felt>,
-    ) -> Result<()> {
-        // dojo.utils is not wasm compatible, and dojo-world needs to be compatible with wasm.
-        // Hence, the is_declared and is_deployed functions are implemented here.
-        for (name, hash) in external_contract_classes {
-            match provider.get_class(BlockId::Tag(BlockTag::Pending), hash).await {
-                Err(ProviderError::StarknetError(StarknetError::ClassHashNotFound)) => {}
-                Ok(_) => {
-                    trace!(
-                        name,
-                        class_hash = format!("{:#066x}", hash),
-                        "External contract class already declared."
-                    );
-                    self.declared_external_contract_classes.push(name);
-                }
-                Err(e) => return Err(e.into()),
-            };
-        }
-
-        for (name, address) in external_contracts {
-            match provider.get_class_hash_at(BlockId::Tag(BlockTag::Pending), address).await {
-                Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => {}
-                Ok(_) => {
-                    trace!(
-                        name,
-                        contract_address = format!("{:#066x}", address),
-                        "External contract already deployed."
-                    );
-                    self.deployed_external_contracts.push(name);
-                }
-                Err(e) => return Err(e.into()),
-            }
-        }
-
-        Ok(())
     }
 
     /// Matches the given event to the corresponding remote resource and inserts it into the world.
@@ -296,6 +256,32 @@ impl WorldRemote {
 
                 self.add_resource(r);
             }
+            WorldEvent::ExternalContractRegistered(e) => {
+                let namespace = e.namespace.to_string()?;
+
+                if !is_whitelisted(whitelisted_namespaces, &namespace) {
+                    debug!(
+                        namespace,
+                        contract_name = e.contract_name.to_string()?,
+                        instance_name = e.instance_name.to_string()?,
+                        "External contract's namespace not whitelisted."
+                    );
+
+                    return Ok(());
+                }
+
+                let r = ResourceRemote::ExternalContract(ExternalContractRemote {
+                    common: CommonRemoteInfo::new(
+                        e.class_hash.into(),
+                        &namespace,
+                        &e.instance_name.to_string()?,
+                        e.contract_address.into(),
+                    ),
+                });
+                trace!(?r, "External contract registered.");
+
+                self.add_resource(r);
+            }
             WorldEvent::LibraryRegistered(e) => {
                 let namespace = e.namespace.to_string()?;
 
@@ -367,6 +353,22 @@ impl WorldRemote {
                     return Ok(());
                 };
                 trace!(?resource, "Contract upgraded.");
+
+                resource.push_class_hash(e.class_hash.into());
+            }
+            WorldEvent::ExternalContractUpgraded(e) => {
+                let resource = if let Some(resource) = self.resources.get_mut(&e.contract_selector)
+                {
+                    resource
+                } else {
+                    debug!(
+                        selector = format!("{:#066x}", e.contract_selector),
+                        "External contract not found (may be excluded by whitelist of namespaces)."
+                    );
+
+                    return Ok(());
+                };
+                trace!(?resource, "External contract upgraded.");
 
                 resource.push_class_hash(e.class_hash.into());
             }
@@ -761,3 +763,5 @@ mod tests {
         assert_eq!(resource.metadata_hash(), Felt::ONE);
     }
 }
+
+// TODO RBA: add ExternalContractRegistered / ExternalContractUpgraded

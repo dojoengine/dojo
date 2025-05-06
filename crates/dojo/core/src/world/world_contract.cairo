@@ -28,7 +28,8 @@ pub mod world {
 
     use starknet::{
         get_caller_address, get_tx_info, ClassHash, ContractAddress,
-        syscalls::{deploy_syscall, replace_class_syscall}, SyscallResultTrait, storage::Map,
+        syscalls::{deploy_syscall, replace_class_syscall, get_class_hash_at_syscall},
+        SyscallResultTrait, storage::Map,
     };
     pub use starknet::storage::{
         StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess,
@@ -64,6 +65,8 @@ pub mod world {
         ModelRegistered: ModelRegistered,
         EventRegistered: EventRegistered,
         ContractRegistered: ContractRegistered,
+        ExternalContractRegistered: ExternalContractRegistered,
+        ExternalContractUpgraded: ExternalContractUpgraded,
         ModelUpgraded: ModelUpgraded,
         EventUpgraded: EventUpgraded,
         ContractUpgraded: ContractUpgraded,
@@ -106,6 +109,32 @@ pub mod world {
         #[key]
         pub selector: felt252,
         pub class_hash: ClassHash,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    pub struct ExternalContractRegistered {
+        #[key]
+        pub namespace: ByteArray,
+        #[key]
+        pub contract_name: ByteArray,
+        #[key]
+        pub instance_name: ByteArray,
+        #[key]
+        pub contract_selector: felt252,
+        pub class_hash: ClassHash,
+        pub contract_address: ContractAddress,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    pub struct ExternalContractUpgraded {
+        #[key]
+        pub namespace: ByteArray,
+        #[key]
+        pub instance_name: ByteArray,
+        #[key]
+        pub contract_selector: felt252,
+        pub class_hash: ClassHash,
+        pub contract_address: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -331,8 +360,9 @@ pub mod world {
         ) -> ContractAddress {
             match self.resources.read(contract_selector) {
                 Resource::Contract((a, _)) => a,
+                Resource::ExternalContract((a, _)) => a,
                 _ => core::panics::panic_with_byte_array(
-                    @format!("Contract not registered: {}", contract_selector),
+                    @format!("Contract/ExternalContract not registered: {}", contract_selector),
                 ),
             }
         }
@@ -805,6 +835,105 @@ pub mod world {
             }
         }
 
+        fn register_external_contract(
+            ref self: ContractState,
+            namespace: ByteArray,
+            contract_name: ByteArray,
+            instance_name: ByteArray,
+            contract_address: ContractAddress,
+        ) {
+            let caller = get_caller_address();
+            let class_hash = get_class_hash_at_syscall(contract_address).unwrap_syscall();
+
+            self.assert_name(@instance_name);
+
+            let namespace_hash = bytearray_hash(@namespace);
+            let contract_selector = selector_from_namespace_and_name(
+                namespace_hash, @instance_name,
+            );
+
+            let maybe_existing_contract = self.resources.read(contract_selector);
+            if !maybe_existing_contract.is_unregistered() {
+                panic_with_byte_array(
+                    @errors::external_contract_already_registered(
+                        @namespace, @contract_name, @instance_name,
+                    ),
+                );
+            }
+
+            if !self.is_namespace_registered(namespace_hash) {
+                panic_with_byte_array(@errors::namespace_not_registered(@namespace));
+            }
+
+            self.assert_caller_permissions(namespace_hash, Permission::Owner);
+
+            self.owners.write((contract_selector, caller), true);
+            self
+                .resources
+                .write(
+                    contract_selector,
+                    Resource::ExternalContract((contract_address, namespace_hash)),
+                );
+
+            self
+                .emit(
+                    ExternalContractRegistered {
+                        namespace,
+                        contract_name,
+                        instance_name,
+                        contract_selector,
+                        class_hash,
+                        contract_address,
+                    },
+                );
+        }
+
+        fn upgrade_external_contract(
+            ref self: ContractState,
+            namespace: ByteArray,
+            instance_name: ByteArray,
+            contract_address: ContractAddress,
+        ) {
+            let class_hash = get_class_hash_at_syscall(contract_address).unwrap_syscall();
+
+            let namespace_hash = bytearray_hash(@namespace);
+            let contract_selector = selector_from_namespace_and_name(
+                namespace_hash, @instance_name,
+            );
+
+            match self.resources.read(contract_selector) {
+                Resource::ExternalContract(_) => {
+                    self.assert_caller_permissions(contract_selector, Permission::Owner);
+
+                    self
+                        .resources
+                        .write(
+                            contract_selector,
+                            Resource::ExternalContract((contract_address, namespace_hash)),
+                        );
+
+                    self
+                        .emit(
+                            ExternalContractUpgraded {
+                                namespace,
+                                instance_name,
+                                contract_selector,
+                                class_hash,
+                                contract_address,
+                            },
+                        );
+                },
+                Resource::Unregistered => panic_with_byte_array(
+                    @errors::resource_not_registered_details(@namespace, @instance_name),
+                ),
+                _ => panic_with_byte_array(
+                    @errors::resource_conflict(
+                        @format!("{}-{}", @namespace, @instance_name), @"external contract",
+                    ),
+                ),
+            }
+        }
+
         fn register_library(
             ref self: ContractState,
             namespace: ByteArray,
@@ -1111,10 +1240,12 @@ pub mod world {
                 return;
             }
 
-            // At this point, [`Resource::Contract`] and [`Resource::Model`] requires extra checks
+            // At this point, [`Resource::Contract`], [`Resource::ExternalContract`],
+            // [`Resource::Model`] and [`Resource::Event`] require extra checks
             // by switching to the namespace hash being the resource selector.
             let namespace_hash = match self.resources.read(resource_selector) {
                 Resource::Contract((_, namespace_hash)) => { namespace_hash },
+                Resource::ExternalContract((_, namespace_hash)) => { namespace_hash },
                 Resource::Model((_, namespace_hash)) => { namespace_hash },
                 Resource::Event((_, namespace_hash)) => { namespace_hash },
                 Resource::Unregistered => {
@@ -1210,6 +1341,9 @@ pub mod world {
                     let d = IDeployedResourceDispatcher { contract_address };
                     format!("contract (or its namespace) `{}`", d.dojo_name())
                 },
+                Resource::ExternalContract((
+                    contract_address, _,
+                )) => { format!("external contract (at 0x{:x})", contract_address) },
                 Resource::Event((
                     contract_address, _,
                 )) => {
