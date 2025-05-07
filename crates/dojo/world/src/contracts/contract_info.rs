@@ -137,11 +137,7 @@ impl From<&WorldDiff> for HashMap<String, ContractInfo> {
                         tag.clone(),
                         ContractInfo {
                             tag_or_name: tag.clone(),
-                            address: if l.is_upgradeable {
-                                r.common.address
-                            } else {
-                                l.computed_address
-                            },
+                            address: r.common.address,
                             entrypoints: l.entrypoints.clone(),
                         },
                     );
@@ -156,8 +152,8 @@ impl From<&WorldDiff> for HashMap<String, ContractInfo> {
 
 #[cfg(test)]
 mod tests {
-    use starknet::core::types::EntryPointsByType;
     use starknet::core::types::contract::{SierraClass, SierraClassDebugInfo};
+    use starknet::core::types::EntryPointsByType;
     use starknet::macros::felt;
 
     use super::*;

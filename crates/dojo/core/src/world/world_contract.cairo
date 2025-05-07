@@ -867,7 +867,7 @@ pub mod world {
 
             self.assert_caller_permissions(namespace_hash, Permission::Owner);
 
-            self.owners.write((contract_selector, caller), true);
+            self.write_ownership(contract_selector, caller, true);
             self
                 .resources
                 .write(

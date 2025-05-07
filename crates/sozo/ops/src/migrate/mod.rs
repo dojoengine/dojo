@@ -714,10 +714,11 @@ where
             {
                 Some((_, call)) => calls.push(call),
                 None => {
-                    panic!(
-                        "Unable to deploy {}-{}!",
-                        contract.common.namespace, contract.common.name
-                    )
+                    return Err(MigrationError::DeployExternalContractError(anyhow!(
+                        "Failed to deploy external contract `{}` in namespace `{}`",
+                        contract.common.name,
+                        contract.common.namespace
+                    )));
                 }
             }
 
