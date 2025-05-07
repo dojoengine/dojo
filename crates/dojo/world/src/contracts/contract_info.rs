@@ -121,7 +121,7 @@ impl From<&WorldDiff> for HashMap<String, ContractInfo> {
                         ContractInfo {
                             tag_or_name: tag.clone(),
                             address: l.computed_address,
-                            entrypoints: vec![], // TODO RBA: Not available for Starknet contracts.
+                            entrypoints: l.entrypoints.clone(),
                         },
                     );
                 }
@@ -142,7 +142,7 @@ impl From<&WorldDiff> for HashMap<String, ContractInfo> {
                             } else {
                                 l.computed_address
                             },
-                            entrypoints: vec![], // TODO RBA: Not available for Starknet contracts.
+                            entrypoints: l.entrypoints.clone(),
                         },
                     );
                 }

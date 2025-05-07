@@ -731,37 +731,57 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_metadata_updated_event() {
+    async fn test_external_contract_registered_event() {
         let mut world_remote = WorldRemote::default();
-        let selector = naming::compute_selector_from_names("ns", "m1");
 
-        let resource = ResourceRemote::Model(ModelRemote {
-            common: CommonRemoteInfo::new(Felt::TWO, "ns", "m1", Felt::ONE),
+        let contract_selector = naming::compute_selector_from_names("ns", "c1");
+        let event = WorldEvent::ExternalContractRegistered(world::ExternalContractRegistered {
+            namespace: ByteArray::from_string("ns").unwrap(),
+            contract_name: ByteArray::from_string("NOT_USED").unwrap(),
+            instance_name: ByteArray::from_string("c1").unwrap(),
+            contract_selector,
+            class_hash: Felt::TWO.into(),
+            contract_address: Felt::ONE.into(),
         });
+
+        world_remote.match_event(event, &NO_WHITELIST).unwrap();
+
+        assert!(world_remote.resources.contains_key(&contract_selector));
+
+        let resource = world_remote.resources.get(&contract_selector).unwrap();
+        let contract = resource.as_external_contract_or_panic();
+
+        assert_eq!(contract.common.name, "c1".to_string(), "bad name");
+        assert_eq!(contract.common.namespace, "ns".to_string(), "bad namespace");
+        assert_eq!(contract.common.address, Felt::ONE, "bad address");
+        assert_eq!(contract.common.class_hashes, vec![Felt::TWO], "bad classhash");
+    }
+
+    #[tokio::test]
+    async fn test_external_contract_upgraded_event() {
+        let mut world_remote = WorldRemote::default();
+        let contract_selector = naming::compute_selector_from_names("ns", "c1");
+
+        let resource = ResourceRemote::ExternalContract(ExternalContractRemote {
+            common: CommonRemoteInfo::new(Felt::ONE, "ns", "c1", Felt::ONE),
+        });
+
         world_remote.add_resource(resource);
 
-        let event = WorldEvent::MetadataUpdate(world::MetadataUpdate {
-            resource: selector,
-            uri: ByteArray::from_string("ipfs://m1").unwrap(),
-            hash: Felt::THREE,
+        let event = WorldEvent::ExternalContractUpgraded(world::ExternalContractUpgraded {
+            namespace: ByteArray::from_string("ns").unwrap(),
+            instance_name: ByteArray::from_string("c1").unwrap(),
+            contract_selector,
+            class_hash: Felt::TWO.into(),
+            contract_address: Felt::ONE.into(),
         });
 
         world_remote.match_event(event, &NO_WHITELIST).unwrap();
 
-        let resource = world_remote.resources.get(&selector).unwrap();
-        assert_eq!(resource.metadata_hash(), Felt::THREE);
-
-        let event = WorldEvent::MetadataUpdate(world::MetadataUpdate {
-            resource: selector,
-            uri: ByteArray::from_string("ipfs://m1").unwrap(),
-            hash: Felt::ONE,
-        });
-
-        world_remote.match_event(event, &NO_WHITELIST).unwrap();
-
-        let resource = world_remote.resources.get(&selector).unwrap();
-        assert_eq!(resource.metadata_hash(), Felt::ONE);
+        let resource = world_remote.resources.get(&contract_selector).unwrap();
+        assert_eq!(
+            resource.as_external_contract_or_panic().common.class_hashes,
+            vec![Felt::ONE, Felt::TWO]
+        );
     }
 }
-
-// TODO RBA: add ExternalContractRegistered / ExternalContractUpgraded

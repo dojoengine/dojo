@@ -136,6 +136,8 @@ pub struct ExternalContract {
     /// Encoded constructor call data.
     #[serde(default)]
     pub encoded_constructor_calldata: Vec<Felt>,
+    /// Entry points of the contract.
+    pub entrypoints: Vec<String>,
 }
 
 /// Represents a model member.
@@ -248,6 +250,7 @@ fn resource_diff_to_dojo_external_contract(resource: &ResourceDiff) -> ExternalC
             encoded_constructor_calldata: l.encoded_constructor_data.clone(),
             tag: l.tag(),
             contract_name: l.contract_name.clone(),
+            entrypoints: l.entrypoints.clone(),
         },
         ResourceDiff::Updated(
             ResourceLocal::ExternalContract(l),
@@ -264,6 +267,7 @@ fn resource_diff_to_dojo_external_contract(resource: &ResourceDiff) -> ExternalC
             encoded_constructor_calldata: l.encoded_constructor_data.clone(),
             tag: l.tag(),
             contract_name: l.contract_name.clone(),
+            entrypoints: l.entrypoints.clone(),
         },
         _ => unreachable!(),
     }

@@ -54,6 +54,8 @@ pub struct ExternalContractLocal {
     pub encoded_constructor_data: Vec<Felt>,
     // the computed contract address
     pub computed_address: Felt,
+    // list of exported entry points of the contract
+    pub entrypoints: Vec<String>,
     // indicates if the contract is upgradeable or if it has to be
     // deployed at another address in case of upgrade.
     pub is_upgradeable: bool,

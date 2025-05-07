@@ -31,22 +31,8 @@ struct ExternalContractClassLocal {
     pub casm_class_hash: Felt,
     pub class: SierraClass,
     pub casm_class: Option<CompiledClass>,
+    pub entrypoints: Vec<String>,
     pub is_upgradeable: bool,
-}
-
-fn is_upgrade_fn(entry: &AbiEntry) -> bool {
-    if let AbiEntry::Function(f) = entry {
-        match f.state_mutability {
-            StateMutability::External => {
-                f.name == UPGRADE_CONTRACT_FN_NAME
-                    && f.inputs.len() == 1
-                    && f.inputs.first().unwrap().r#type == "core::starknet::class_hash::ClassHash"
-            }
-            _ => false,
-        }
-    } else {
-        false
-    }
 }
 
 impl WorldLocal {
@@ -272,6 +258,8 @@ impl WorldLocal {
                             }
                         };
 
+                        let entrypoints = systems_from_abi(&abi);
+
                         let is_upgradeable = is_upgradeable_from_abi(&abi);
 
                         external_contract_classes.insert(
@@ -280,6 +268,7 @@ impl WorldLocal {
                                 casm_class_hash,
                                 class: sierra.clone(),
                                 casm_class: casm_class.clone(),
+                                entrypoints,
                                 is_upgradeable,
                             },
                         );
@@ -330,6 +319,7 @@ impl WorldLocal {
                             constructor_data: contract.constructor_data.clone().unwrap_or(vec![]),
                             encoded_constructor_data: encoded_constructor_data.clone(),
                             computed_address,
+                            entrypoints: local_class.entrypoints.clone(),
                             is_upgradeable: local_class.is_upgradeable,
                         });
 
@@ -482,6 +472,21 @@ fn contract_name_from_abi(abi: &[AbiEntry]) -> Option<String> {
     None
 }
 
+fn is_upgrade_fn(entry: &AbiEntry) -> bool {
+    if let AbiEntry::Function(f) = entry {
+        match f.state_mutability {
+            StateMutability::External => {
+                f.name == UPGRADE_CONTRACT_FN_NAME
+                    && f.inputs.len() == 1
+                    && f.inputs.first().unwrap().r#type == "core::starknet::class_hash::ClassHash"
+            }
+            _ => false,
+        }
+    } else {
+        false
+    }
+}
+
 fn is_upgradeable_from_abi(abi: &[AbiEntry]) -> bool {
     for entry in abi.iter() {
         if let AbiEntry::Interface(entry) = entry {
@@ -563,11 +568,13 @@ mod tests {
                 "register_event",
                 "register_model",
                 "register_contract",
+                "register_external_contract",
                 "register_library",
                 "init_contract",
                 "upgrade_event",
                 "upgrade_model",
                 "upgrade_contract",
+                "upgrade_external_contract",
                 "emit_event",
                 "emit_events",
                 "set_entity",
