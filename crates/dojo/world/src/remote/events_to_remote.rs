@@ -731,6 +731,39 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_metadata_updated_event() {
+        let mut world_remote = WorldRemote::default();
+        let selector = naming::compute_selector_from_names("ns", "m1");
+
+        let resource = ResourceRemote::Model(ModelRemote {
+            common: CommonRemoteInfo::new(Felt::TWO, "ns", "m1", Felt::ONE),
+        });
+        world_remote.add_resource(resource);
+
+        let event = WorldEvent::MetadataUpdate(world::MetadataUpdate {
+            resource: selector,
+            uri: ByteArray::from_string("ipfs://m1").unwrap(),
+            hash: Felt::THREE,
+        });
+
+        world_remote.match_event(event, &NO_WHITELIST).unwrap();
+
+        let resource = world_remote.resources.get(&selector).unwrap();
+        assert_eq!(resource.metadata_hash(), Felt::THREE);
+
+        let event = WorldEvent::MetadataUpdate(world::MetadataUpdate {
+            resource: selector,
+            uri: ByteArray::from_string("ipfs://m1").unwrap(),
+            hash: Felt::ONE,
+        });
+
+        world_remote.match_event(event, &NO_WHITELIST).unwrap();
+
+        let resource = world_remote.resources.get(&selector).unwrap();
+        assert_eq!(resource.metadata_hash(), Felt::ONE);
+    }
+
+    #[tokio::test]
     async fn test_external_contract_registered_event() {
         let mut world_remote = WorldRemote::default();
 
