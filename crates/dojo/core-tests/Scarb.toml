@@ -1,0 +1,25 @@
+[package]
+name = "dojo_core_test"
+description = "Testing library for Dojo using Starknet foundry."
+
+version = "1.5.0"
+edition = "2024_07"
+cairo-version = "2.11.2"
+
+[dependencies]
+starknet = "2.11.2"
+dojo = { path = "../core" }
+dojo_macros = { path = "../macros" }
+
+[dev-dependencies]
+snforge_std = "0.40.0"
+assert_macros = "2.11.2"
+
+[[target.starknet-contract]]
+build-external-contracts = ["dojo::world::world_contract::world"]
+
+[scripts]
+test = "snforge test"
+
+[tool.scarb]
+allow-prebuilt-plugins = ["snforge_std"]

@@ -6,7 +6,7 @@ members = [
 	"bin/sozo",
 	"crates/dojo/bindgen",
 	"crates/dojo/core",
-	"crates/dojo/lang",
+	"crates/dojo/macros",
 	"crates/dojo/test-utils",
 	"crates/dojo/types",
 	"crates/dojo/utils",
@@ -92,6 +92,11 @@ auto_impl = "1.2.0"
 base64 = "0.21.2"
 bigdecimal = "0.4.1"
 bytes = "1.6"
+
+# refer to Scarb git while `cairo-lang-macro` 0.2.0 (new api) is deployed on crates.io
+cairo-lang-macro = { version = "0.2.0", git = "https://github.com/software-mansion/scarb.git" }
+
+
 cairo-lang-compiler = "=2.10.1"
 cairo-lang-debug = "=2.10.1"
 cairo-lang-defs = "=2.10.1"
