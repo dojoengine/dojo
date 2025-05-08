@@ -59,4 +59,5 @@ jobs:
       - name: Run post-install validation
         run: |
           ./dojoup/install ./dojoup/dojoup
+          dojoup install
           ./dojoup/post_install_check
