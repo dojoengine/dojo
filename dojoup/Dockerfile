@@ -2,26 +2,24 @@
 
 FROM ubuntu:24.04
 
-# System dependencies for dojo/katana/torii
+# System dependencies for dojoup installation.
 RUN apt-get update && \
     apt-get install -y curl unzip git jq ca-certificates && \
     apt-get clean
 
-# Create a non-root user (optional but recommended)
+# Create a non-root user.
 RUN useradd -ms /bin/bash dojo
 USER dojo
 WORKDIR /home/dojo
 
-# Copy the local dojoup folder into the container
-COPY --chown=dojo:dojo dojoup ./dojoup
+COPY --chown=dojo:dojo install install
+COPY --chown=dojo:dojo dojoup dojoup
 
-# Install Dojoup using the install script
-RUN ./dojoup/install ./dojoup/dojoup && \
-    . "$HOME/.dojo/env" && \
+RUN ./install ./dojoup && \
+    . "${XDG_CONFIG_HOME:-$HOME}"/.dojo/env && \
     dojoup install
 
 # Copy and run the post-install check
-COPY --chown=dojo:dojo dojoup/post_install_check.sh ./post_install_check.sh
-RUN chmod +x ./post_install_check.sh
+COPY --chown=dojo:dojo post_install_check post_install_check
 
-CMD ["./post_install_check.sh"]
+CMD ["./post_install_check"]
