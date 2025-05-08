@@ -10,6 +10,9 @@ name: dojoup
 on:
   workflow_dispatch:
   push:
+    pull_request:
+    branches:
+      - main
     paths:
       - dojoup/**
 
