@@ -17,9 +17,9 @@ echo "[+] Starting post-install validation"
 
 # Start by sourcing the .env file of dojo, which should be present
 # if the installation was successful.
-# The path of the .env file can be passed as an argument to this script,
-# but defaults to ~/.dojo/env.
-. ${1:-~/.dojo/env}
+BASE_DIR=${XDG_CONFIG_HOME:-$HOME}
+DOJO_DIR=${DOJO_DIR-"$BASE_DIR/.dojo"}
+. "${DOJO_DIR}"/env
 
 KATANA_LOG="/tmp/katana.log"
 TORII_LOG="/tmp/torii.log"
