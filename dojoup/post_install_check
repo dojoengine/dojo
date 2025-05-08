@@ -49,15 +49,13 @@ sozo migrate
 
 echo ""
 
-# 3. Start torii with a dummy world address in background
-# The wolrd address can be extracted from the /tmp/dojo-test/manifest_dev.json file with a grep and awk I guess. Maybe just use jq to extract it.
-# It's inside a key called "contracts" and then the name msut be world and then we get the address for the address key. contracts is an array though and the index we don't know we need to search for it.
+# 3. Start torii with a dummy world address in background.
 WORLD_ADDRESS=$(jq -r '.world.address' "${TEST_DIR}/manifest_dev.json")
 
 torii --world "${WORLD_ADDRESS}" > "${TORII_LOG}" 2>&1 &
 TORII_PID=$!
 
-# Wait for torii to be up
+# Wait for torii to be up and indexing data.
 sleep 2
 
 # Check if torii is running and has no errors
@@ -69,9 +67,6 @@ fi
 
 echo "[+] Torii started with PID $TORII_PID"
 
-# Can we query torii with a post request and curl to get the localhost:8080/sql sending a SQL quer to list all contracts?
-
-# Query and verify the world address
 WORLD_CHECK=$(curl -s -X POST http://localhost:8080/sql -d "SELECT contract_address FROM contracts WHERE contract_address = '${WORLD_ADDRESS}';")
 
 WORLD_CHECK=$(echo "${WORLD_CHECK}" | jq -r '.[0].contract_address')
@@ -84,5 +79,4 @@ fi
 
 echo "[✓] All post-install checks passed"
 
-# Cleanup background processes
 cleanup "$KATANA_PID" "$TORII_PID"
