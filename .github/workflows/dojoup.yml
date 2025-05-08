@@ -10,10 +10,6 @@ name: dojoup
 on:
   workflow_dispatch:
   push:
-    pull_request:
-      paths:
-        - dojoup/**
-        - .github/workflows/dojoup.yml
     paths:
       - dojoup/**
 
