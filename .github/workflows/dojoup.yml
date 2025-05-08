@@ -12,6 +12,7 @@ on:
   push:
     paths:
       - dojoup/**
+      - .github/workflows/dojoup.yml
 
 env:
   CARGO_TERM_COLOR: always
