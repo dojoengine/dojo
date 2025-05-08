@@ -25,7 +25,12 @@ pub struct NestedOptions {
 
 impl Default for NestedOptions {
     fn default() -> Self {
-        Self { field1: "default".to_string(), field2: None, field3: false, inner: MyInner::default() }
+        Self {
+            field1: "default".to_string(),
+            field2: None,
+            field3: false,
+            inner: MyInner::default(),
+        }
     }
 }
 
@@ -40,7 +45,6 @@ impl Default for MyInner {
         Self { timeout: 30, retries: 3 }
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -88,7 +92,7 @@ mod tests {
     #[test]
     fn test_nested_merge() {
         let mut base = NestedOptions::default();
-        
+
         let override_opts = NestedOptions {
             field1: "override".to_string(),
             field2: Some(42),
@@ -113,7 +117,7 @@ mod tests {
             field3: false,
             inner: MyInner { timeout: 30, retries: 10 },
         };
-        
+
         let override_opts = NestedOptions {
             field1: "override".to_string(),
             field2: Some(42),
@@ -133,7 +137,7 @@ mod tests {
     #[test]
     fn test_inner_struct_direct() {
         let mut base = MyInner { timeout: 30, retries: 10 };
-        
+
         let override_opts = MyInner { timeout: 2000, retries: 5 };
 
         base.merge(Some(&override_opts));
