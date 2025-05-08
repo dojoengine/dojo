@@ -17,7 +17,9 @@ echo "[+] Starting post-install validation"
 
 # Start by sourcing the .env file of dojo, which should be present
 # if the installation was successful.
-. ~/.dojo/env
+# The path of the .env file can be passed as an argument to this script,
+# but defaults to ~/.dojo/env.
+. ${1:-~/.dojo/env}
 
 KATANA_LOG="/tmp/katana.log"
 TORII_LOG="/tmp/torii.log"
