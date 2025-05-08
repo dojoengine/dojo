@@ -57,4 +57,6 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Run post-install validation
-        run: ./dojoup/post_install_check.sh
+        run: |
+          ./dojoup/install
+          ./dojoup/post_install_check
