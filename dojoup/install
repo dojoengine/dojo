@@ -3,6 +3,12 @@ set -e
 
 echo Installing dojoup...
 
+need_cmd() {
+  if ! check_cmd "$1"; then
+    err "need '$1' (command not found)"
+  fi
+}
+
 need_cmd curl
 
 BASE_DIR=${XDG_CONFIG_HOME:-$HOME}
