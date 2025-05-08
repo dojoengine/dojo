@@ -59,5 +59,6 @@ jobs:
       - name: Run post-install validation
         run: |
           ./dojoup/install ./dojoup/dojoup
+          . "/home/runner/.config/.dojo/env"
           dojoup install
           ./dojoup/post_install_check
