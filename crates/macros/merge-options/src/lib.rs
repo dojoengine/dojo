@@ -1,6 +1,6 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, Data, DeriveInput, Fields, Type};
+use syn::{parse_macro_input, Data, DeriveInput, Fields};
 
 /// Generates a `merge` method for a struct to be compared with another optional struct of the same
 /// type.
@@ -14,9 +14,8 @@ use syn::{parse_macro_input, Data, DeriveInput, Fields, Type};
 /// - If the other struct is `Some`, the field will be compared with the default value of the
 ///   struct. Every field that is default in `Self` will be overwritten with the value in `other`.
 ///
-/// This has one drawback at the moment, a value that is not the default in the other struct will
-/// always override the current value (if it's the default in `Self`). This may be inconvenient for
-/// some use cases, but it's a limitation of the current approach.
+/// Fields marked with `#[merge]` will recursively call their own `merge` method instead of being
+/// replaced entirely.
 ///
 /// # Example
 ///
@@ -26,12 +25,25 @@ use syn::{parse_macro_input, Data, DeriveInput, Fields, Type};
 ///     pub port: u16,
 ///     pub peers: Vec<String>,
 ///     pub path: Option<String>,
+///     #[merge]
+///     pub nested: NestedOptions,
 ///     pub enabled: bool,
+/// }
+///
+/// #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, MergeOptions)]
+/// pub struct NestedOptions {
+///     pub value: String,
 /// }
 ///
 /// impl Default for MyOptions {
 ///     fn default() -> Self {
-///         Self { port: 8080, peers: vec![], path: None, enabled: false }
+///         Self {
+///             port: 8080,
+///             peers: vec![],
+///             path: None,
+///             nested: NestedOptions::default(),
+///             enabled: false,
+///         }
 ///     }
 /// }
 ///
@@ -46,21 +58,23 @@ use syn::{parse_macro_input, Data, DeriveInput, Fields, Type};
 ///             }
 ///
 ///             if self.peers == default_values.peers {
-///                 self.peers = other.peers;
+///                 self.peers = other.peers.clone();
 ///             }
 ///
 ///             if self.path == default_values.path {
-///                 self.path = other.path;
+///                 self.path = other.path.clone();
 ///             }
 ///
-///             // Here we can note that if `Self` wants to enforce `false`, it will be overridden by `other` if it's `true`.
+///             // The #[merge] attribute causes this field to be merged recursively
+///             self.nested.merge(Some(&other.nested));
+///
 ///             if self.enabled == default_values.enabled {
 ///                 self.enabled = other.enabled;
 ///             }
 ///         }
 ///     }
 /// }
-#[proc_macro_derive(MergeOptions)]
+#[proc_macro_derive(MergeOptions, attributes(merge))]
 pub fn derive_merge_options(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let name = &input.ident;
@@ -77,51 +91,17 @@ pub fn derive_merge_options(input: TokenStream) -> TokenStream {
     // Generate merge logic for each field
     let merge_fields = fields.iter().map(|field| {
         let field_name = field.ident.as_ref().unwrap();
-        let field_type = &field.ty;
 
-        // Heuristic to determine if the field is a struct-like type
-        let is_struct_like = match field_type {
-            Type::Path(type_path) => {
-                let path = &type_path.path;
-                // Check if the type is a user-defined type (not in std or core)
-                path.segments.iter().all(|seg| {
-                    !seg.ident.to_string().starts_with("std")
-                        && !seg.ident.to_string().starts_with("core")
-                        && !matches!(
-                            seg.ident.to_string().as_str(),
-                            "i8" | "i16"
-                                | "i32"
-                                | "i64"
-                                | "i128"
-                                | "u8"
-                                | "u16"
-                                | "u32"
-                                | "u64"
-                                | "u128"
-                                | "f32"
-                                | "f64"
-                                | "bool"
-                                | "char"
-                                | "str"
-                                | "String"
-                                | "Vec"
-                                | "Option"
-                                | "Box"
-                                | "Rc"
-                                | "Arc"
-                        )
-                })
-            }
-            _ => false, // Non-path types (e.g., references, tuples) are treated as non-struct-like
-        };
+        // Check if the field has the #[merge] attribute
+        let has_merge_attr = field.attrs.iter().any(|attr| attr.path().is_ident("merge"));
 
-        if is_struct_like {
-            // For struct-like types, assume they have a merge method
+        if has_merge_attr {
+            // For fields with #[merge] attribute, use recursive merging
             quote! {
                 self.#field_name.merge(Some(&other.#field_name));
             }
         } else {
-            // For non-struct-like types, use the default comparison logic
+            // For fields without #[merge] attribute, use the default comparison logic
             quote! {
                 if self.#field_name == default_values.#field_name {
                     self.#field_name = other.#field_name.clone();

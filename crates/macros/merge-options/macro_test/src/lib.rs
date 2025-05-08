@@ -20,6 +20,7 @@ pub struct NestedOptions {
     pub field1: String,
     pub field2: Option<u32>,
     pub field3: bool,
+    #[merge]
     pub inner: MyInner,
 }
 
