@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1746225792001,
+  "lastUpdate": 1746714268071,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -63498,6 +63498,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 50813777446,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "82fe9bde8bb840db507dc11e26b3085a54dbd0d9",
+          "message": "refactor(merge-options): recursive merging (#3210)\n\n* refactor(merge-options): recursive merging\n\n* c\n\n* add tests\n\n* fmt\n\n* merge attribute",
+          "timestamp": "2025-05-08T08:09:45-06:00",
+          "tree_id": "d967029204db5915fc032bf0098cd091bc719c45",
+          "url": "https://github.com/dojoengine/dojo/commit/82fe9bde8bb840db507dc11e26b3085a54dbd0d9"
+        },
+        "date": 1746714264204,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 56095743705,
             "range": "± 0",
             "unit": "ns/iter"
           }
