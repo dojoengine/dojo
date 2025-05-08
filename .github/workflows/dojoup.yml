@@ -59,6 +59,6 @@ jobs:
       - name: Run post-install validation
         run: |
           ./dojoup/install ./dojoup/dojoup
-          ls -a /root
+          sudo ls -a /root
           ls -a ~
           ./dojoup/post_install_check /root/.dojo/env
