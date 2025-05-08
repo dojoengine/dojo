@@ -14,11 +14,6 @@ on:
       - dojoup/**
       - .github/workflows/dojoup.yml
 
-env:
-  CARGO_TERM_COLOR: always
-  RUST_VERSION: 1.85.0
-  REGISTRY_IMAGE: ghcr.io/${{ github.repository }}
-
 jobs:
   post-install-validation:
     name: ${{ matrix.job.target }} (${{ matrix.job.os }})
@@ -56,9 +51,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install curl on macOS
+        if: runner.platform == 'darwin'
+        run: |
+          brew install curl
+
       - name: Run post-install validation
         run: |
           ./dojoup/install ./dojoup/dojoup
           . "${XDG_CONFIG_HOME:-$HOME}"/.dojo/env
-          dojoup install
+          dojoup install v1.5.0
           ./dojoup/post_install_check
