@@ -1,0 +1,86 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Function to cleanup background processes
+cleanup() {
+  local pids=("$@")
+  echo "[+] Cleaning up background processes..."
+  for pid in "${pids[@]}"; do
+    if kill -0 "$pid" 2>/dev/null; then
+      kill "$pid" 2>/dev/null || true
+    fi
+  done
+  wait "${pids[@]}" 2>/dev/null || true
+}
+
+echo "[+] Starting post-install validation"
+
+# Start by sourcing the .env file of dojo, which should be present
+# if the installation was successful.
+. ~/.dojo/env
+
+KATANA_LOG="/tmp/katana.log"
+TORII_LOG="/tmp/torii.log"
+TEST_DIR="/tmp/dojo-test"
+
+# 1. Start katana in the background
+katana --dev > "${KATANA_LOG}" 2>&1 &
+KATANA_PID=$!
+
+# Wait a bit for katana to be up
+sleep 2
+
+# Check if katana is running and has no errors
+if ! pgrep -f katana > /dev/null || grep -i "error" "${KATANA_LOG}"; then
+  echo "[-] Katana failed to start or encountered errors"
+  exit 1
+fi
+
+echo "[+] Katana started with PID $KATANA_PID"
+
+# 2. Initialize, build and migrate with sozo
+rm -rf "${TEST_DIR}"
+sozo init "${TEST_DIR}"
+cd "${TEST_DIR}"
+sozo build
+sozo migrate
+
+echo ""
+
+# 3. Start torii with a dummy world address in background
+# The wolrd address can be extracted from the /tmp/dojo-test/manifest_dev.json file with a grep and awk I guess. Maybe just use jq to extract it.
+# It's inside a key called "contracts" and then the name msut be world and then we get the address for the address key. contracts is an array though and the index we don't know we need to search for it.
+WORLD_ADDRESS=$(jq -r '.world.address' "${TEST_DIR}/manifest_dev.json")
+
+torii --world "${WORLD_ADDRESS}" > "${TORII_LOG}" 2>&1 &
+TORII_PID=$!
+
+# Wait for torii to be up
+sleep 2
+
+# Check if torii is running and has no errors
+if ! pgrep -f torii > /dev/null || grep -i "error" "${TORII_LOG}"; then
+  echo "[-] Torii failed to start or encountered errors"
+  cleanup "$KATANA_PID"
+  exit 1
+fi
+
+echo "[+] Torii started with PID $TORII_PID"
+
+# Can we query torii with a post request and curl to get the localhost:8080/sql sending a SQL quer to list all contracts?
+
+# Query and verify the world address
+WORLD_CHECK=$(curl -s -X POST http://localhost:8080/sql -d "SELECT contract_address FROM contracts WHERE contract_address = '${WORLD_ADDRESS}';")
+
+WORLD_CHECK=$(echo "${WORLD_CHECK}" | jq -r '.[0].contract_address')
+
+if [ -z "${WORLD_CHECK}" ] || [ "${WORLD_CHECK}" != "${WORLD_ADDRESS}" ]; then
+  echo "[-] World address mismatch. Expected: ${WORLD_ADDRESS}, Got: ${WORLD_CHECK}"
+  cleanup "$KATANA_PID" "$TORII_PID"
+  exit 1
+fi
+
+echo "[✓] All post-install checks passed"
+
+# Cleanup background processes
+cleanup "$KATANA_PID" "$TORII_PID"
