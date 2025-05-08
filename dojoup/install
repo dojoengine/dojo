@@ -48,39 +48,91 @@ EOF
 
 SOURCE_COMMAND=". \"$ENV_FILE\""
 
-# Store the correct profile file (i.e. .profile for bash or .zshenv for ZSH).
-case $SHELL in
-*/zsh)
-    PROFILE=${ZDOTDIR-"$HOME"}/.zshenv
-    PREF_SHELL=zsh
+case $(basename "$SHELL") in
+zsh)
+	commands=(
+		$SOURCE_COMMAND
+	)
+
+    zsh_config=$HOME/.zshrc
+
+    if [[ -w $zsh_config ]]; then
+        {
+            echo -e '\n# dojo'
+            for command in "${commands[@]}"; do
+                echo "$command"
+            done
+        } >>"$zsh_config"
+
+        echo "Added \"$ENV_FILE\" to \$PATH in \"$zsh_config\""
+    else
+        echo "Manually add the directory to $zsh_config (or similar):"
+        for command in "${commands[@]}"; do
+            echo "  $command"
+        done
+    fi
     ;;
-*/bash)
-    PROFILE=$HOME/.bashrc
-    PREF_SHELL=bash
+bash)
+    commands=(
+    	$SOURCE_COMMAND
+    )
+
+    bash_configs=(
+        "$HOME/.bashrc"
+        "$HOME/.bash_profile"
+    )
+
+    if [[ ${XDG_CONFIG_HOME:-} ]]; then
+        bash_configs+=(
+            "$XDG_CONFIG_HOME/.bash_profile"
+            "$XDG_CONFIG_HOME/.bashrc"
+            "$XDG_CONFIG_HOME/bash_profile"
+            "$XDG_CONFIG_HOME/bashrc"
+        )
+    fi
+
+    set_manually=true
+    for bash_config in "${bash_configs[@]}"; do
+    	# if file is writable
+        if [[ -w $bash_config ]]; then
+            {
+                echo -e '\n# dojo'
+                for command in "${commands[@]}"; do
+                    echo "$command"
+                done
+            } >>"$bash_config"
+
+            echo "Added \"$ENV_FILE\" to \$PATH in \"$bash_config\""
+
+            set_manually=false
+            break
+        fi
+    done
+
+    if [[ $set_manually = true ]]; then
+        echo "Manually add the directory to $bash_config (or similar):"
+        for command in "${commands[@]}"; do
+            echo "  $command"
+        done
+    fi
     ;;
-*/fish)
-    PROFILE=$HOME/.config/fish/config.fish
-    PREF_SHELL=fish
+*)
+    echo 'Manually add the directory to ~/.bashrc (or similar):'
+    echo "  $SOURCE_COMMAND"
     ;;
-*/ash)
-    PROFILE=$HOME/.profile
-    PREF_SHELL=ash
-    ;;
-    *)
-		echo "Could not detect your current shell."
-        echo
-        echo "You may need to manually source the"
-        echo "corresponding env file under $DOJO_DIR."
-        echo
-        echo "This is usually done by running the following (note the leading DOT):"
-        echo "$SOURCE_COMMAND            # For sh/bash/zsh/ash/dash/pdksh"
-        exit 1
 esac
 
-if ! grep -q "$SOURCE_COMMAND" $PROFILE; then
-    echo >> $PROFILE && echo "$SOURCE_COMMAND" >> $PROFILE
-    . $PROFILE
-fi
-
-echo && echo "Dojoup is installed now."
-echo "Simply run 'dojoup install' to install a Dojo toolchain."
+echo
+echo -e "\033[1mDojoup is installed now.\033[0m"
+echo
+echo "To get started you may need to restart your current shell."
+echo "This would reload your \$PATH environment variable to include"
+echo "Dojo's bin directory ($DOJO_BIN_DIR)."
+echo
+echo "To configure your current shell, you need to source"
+echo "the corresponding env file under $DOJO_DIR."
+echo
+echo "This is usually done by running the following (note the leading DOT):"
+echo "$SOURCE_COMMAND           # For sh/bash/zsh/ash/dash/pdksh"
+echo
+echo "Then, simply run 'dojoup install' to install a Dojo toolchain."
