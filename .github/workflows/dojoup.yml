@@ -13,8 +13,7 @@ on:
     pull_request:
       paths:
         - dojoup/**
-    branches:
-      - main
+        - .github/workflows/dojoup.yml
     paths:
       - dojoup/**
 
