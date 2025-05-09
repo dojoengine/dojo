@@ -123,16 +123,21 @@ pub struct ExternalContract {
     pub class_hash: Felt,
     /// Contract Name
     pub contract_name: String,
-    /// Instance name
-    pub instance_name: String,
+    /// Tag of the external contract.
+    pub tag: String,
     /// Contract address
     #[serde_as(as = "UfeHex")]
     pub address: Felt,
     /// ABI of the contract.
     pub abi: Vec<AbiEntry>,
-    /// Initialization call data.
+    /// Human-readeable constructor call data.
     #[serde(default)]
     pub constructor_calldata: Vec<String>,
+    /// Encoded constructor call data.
+    #[serde(default)]
+    pub encoded_constructor_calldata: Vec<Felt>,
+    /// Entry points of the contract.
+    pub entrypoints: Vec<String>,
 }
 
 /// Represents a model member.
@@ -179,24 +184,10 @@ impl Manifest {
                 ResourceType::Model => models.push(resource_diff_to_dojo_model(resource)),
                 ResourceType::Event => events.push(resource_diff_to_dojo_event(resource)),
                 ResourceType::Namespace => {}
-                ResourceType::StarknetContract => {}
+                ResourceType::ExternalContract => {
+                    external_contracts.push(resource_diff_to_dojo_external_contract(resource))
+                }
             }
-        }
-
-        for contract in diff.external_contracts.values() {
-            let contract = contract.contract_data();
-
-            external_contracts.push(ExternalContract {
-                contract_name: contract.contract_name.clone(),
-                instance_name: contract.instance_name,
-                class_hash: contract.class_hash,
-                address: contract.address,
-                constructor_calldata: contract.constructor_data,
-                abi: diff
-                    .external_contract_classes
-                    .get(&contract.contract_name)
-                    .map_or(vec![], |d| d.class_data().class.abi),
-            })
         }
 
         // Keep order to ensure deterministic output.
@@ -204,7 +195,7 @@ impl Manifest {
         libraries.sort_by_key(|c| c.tag.clone());
         models.sort_by_key(|m| m.tag.clone());
         events.sort_by_key(|e| e.tag.clone());
-        external_contracts.sort_by_key(|c| c.instance_name.clone());
+        external_contracts.sort_by_key(|c| c.tag.clone());
 
         Self { world, contracts, models, events, libraries, external_contracts }
     }
@@ -248,6 +239,40 @@ fn resource_diff_to_dojo_contract(diff: &WorldDiff, resource: &ResourceDiff) -> 
         _ => unreachable!(),
     }
 }
+
+fn resource_diff_to_dojo_external_contract(resource: &ResourceDiff) -> ExternalContract {
+    match &resource {
+        ResourceDiff::Created(ResourceLocal::ExternalContract(l)) => ExternalContract {
+            class_hash: l.common.class_hash,
+            abi: l.common.class.abi.clone(),
+            address: l.computed_address,
+            constructor_calldata: l.constructor_data.clone(),
+            encoded_constructor_calldata: l.encoded_constructor_data.clone(),
+            tag: l.tag(),
+            contract_name: l.contract_name.clone(),
+            entrypoints: l.entrypoints.clone(),
+        },
+        ResourceDiff::Updated(
+            ResourceLocal::ExternalContract(l),
+            ResourceRemote::ExternalContract(r),
+        )
+        | ResourceDiff::Synced(
+            ResourceLocal::ExternalContract(l),
+            ResourceRemote::ExternalContract(r),
+        ) => ExternalContract {
+            class_hash: l.common.class_hash,
+            abi: l.common.class.abi.clone(),
+            address: if l.is_upgradeable { r.common.address } else { l.computed_address },
+            constructor_calldata: l.constructor_data.clone(),
+            encoded_constructor_calldata: l.encoded_constructor_data.clone(),
+            tag: l.tag(),
+            contract_name: l.contract_name.clone(),
+            entrypoints: l.entrypoints.clone(),
+        },
+        _ => unreachable!(),
+    }
+}
+
 fn resource_diff_to_dojo_library(diff: &WorldDiff, resource: &ResourceDiff) -> DojoLibrary {
     let tag = resource.tag();
 

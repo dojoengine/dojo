@@ -60,7 +60,7 @@ mod tests {
     mod world {
         mod acl;
         mod contract;
-        //mod entities;
+        mod external_contract;
         mod event;
         mod metadata;
         mod model;

@@ -90,7 +90,8 @@ async fn migrate_from_local(sequencer: &RunnerCtx) {
     let MigrationResult { manifest, has_changes } = migrate_spawn_and_move(sequencer, false).await;
 
     assert!(has_changes);
-    assert_eq!(manifest.contracts.len(), 4);
+    assert_eq!(manifest.contracts.len(), 5);
+    assert_eq!(manifest.external_contracts.len(), 8);
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -98,7 +99,7 @@ async fn migrate_from_local(sequencer: &RunnerCtx) {
 async fn migrate_no_change(sequencer: &RunnerCtx) {
     let MigrationResult { manifest, has_changes } = migrate_spawn_and_move(sequencer, false).await;
     assert!(!has_changes);
-    assert_eq!(manifest.contracts.len(), 4);
+    assert_eq!(manifest.contracts.len(), 5);
 }
 
 // helper to check metadata of a list of resources

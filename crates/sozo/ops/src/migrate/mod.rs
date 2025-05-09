@@ -22,22 +22,22 @@ use std::collections::HashMap;
 
 use anyhow::anyhow;
 use cainome::cairo_serde::{ByteArray, ClassHash, ContractAddress};
+use colored::*;
 use dojo_utils::{Declarer, Deployer, Invoker, LabeledClass, TransactionResult, TxnConfig};
 use dojo_world::config::calldata_decoder::decode_calldata;
 use dojo_world::config::{metadata_config, ProfileConfig, ResourceConfig, WorldMetadata};
 use dojo_world::constants::WORLD;
 use dojo_world::contracts::abigen::world::ResourceMetadata;
 use dojo_world::contracts::WorldContract;
-use dojo_world::diff::{
-    ExternalContractClassDiff, ExternalContractDiff, Manifest, ResourceDiff, WorldDiff, WorldStatus,
-};
-use dojo_world::local::ResourceLocal;
+use dojo_world::diff::{Manifest, ResourceDiff, WorldDiff, WorldStatus};
+use dojo_world::local::{ResourceLocal, UPGRADE_CONTRACT_FN_NAME};
 use dojo_world::metadata::MetadataStorage;
 use dojo_world::remote::ResourceRemote;
 use dojo_world::services::UploadService;
 use dojo_world::{utils, ResourceType};
 use starknet::accounts::{ConnectedAccount, SingleOwnerAccount};
 use starknet::core::types::Call;
+use starknet::core::utils as snutils;
 use starknet::providers::{AnyProvider, Provider};
 use starknet::signers::LocalWallet;
 use starknet_crypto::Felt;
@@ -103,13 +103,10 @@ where
 
         let contracts_have_changed = self.initialize_contracts(ui).await?;
 
-        let external_contracts_have_changed = self.sync_external_contracts(ui).await?;
-
         Ok(MigrationResult {
             has_changes: world_has_changed
                 || resources_have_changed
                 || permissions_have_changed
-                || external_contracts_have_changed
                 || contracts_have_changed,
             manifest: Manifest::new(&self.diff),
         })
@@ -479,6 +476,7 @@ where
         self.namespaces_getcalls(&mut invoker).await?;
 
         let mut classes: HashMap<Felt, LabeledClass> = HashMap::new();
+        let mut not_upgradeable_contract_names = vec![];
         let mut n_resources = 0;
 
         // Collects the calls and classes to be declared to sync the resources.
@@ -495,6 +493,21 @@ where
 
                     if !contract_calls.is_empty() {
                         n_resources += 1;
+                    }
+
+                    invoker.extend_calls(contract_calls);
+                    classes.extend(contract_classes);
+                }
+                ResourceType::ExternalContract => {
+                    let (contract_calls, contract_classes, is_upgradeable) =
+                        self.external_contracts_calls_classes(resource).await?;
+
+                    if !contract_calls.is_empty() {
+                        n_resources += 1;
+                    }
+
+                    if !is_upgradeable {
+                        not_upgradeable_contract_names.push(resource.tag());
                     }
 
                     invoker.extend_calls(contract_calls);
@@ -553,68 +566,15 @@ where
             invoker.invoke_all_sequentially().await?;
         }
 
-        Ok(has_changed)
-    }
-
-    /// Syncs the external contracts by declaring their classes and deploying them with
-    /// configured constructor data.
-    ///
-    /// Returns true if at least one external contract has changed, false otherwise.
-    async fn sync_external_contracts(
-        &self,
-        ui: &mut MigrationUi,
-    ) -> Result<bool, MigrationError<A::SignError>> {
-        let ui_text =
-            format!("Syncing {} external contracts...", self.diff.external_contracts.len());
-        ui.update_text_boxed(ui_text);
-
-        let mut invoker = Invoker::new(&self.world.account, self.txn_config);
-
-        // declaring external contract classes
-        let classes: HashMap<_, _> = self
-            .diff
-            .external_contract_classes
-            .iter()
-            .filter_map(|(_, c)| self.external_contract_classes(c))
-            .collect();
-
-        let ui_text = format!("Declaring {} external contract classes...", classes.len());
-        ui.update_text_boxed(ui_text);
-
-        self.declare_classes(ui, classes).await?;
-
-        // then deploying new external contracts
-        let deployer = Deployer::new(&self.world.account, self.txn_config);
-
-        for contract in self.diff.external_contracts.values() {
-            if let ExternalContractDiff::Created(contract) = contract {
-                if let Some((_, call)) = deployer
-                    .deploy_via_udc_getcall(
-                        contract.class_hash,
-                        contract.salt,
-                        &contract.raw_constructor_data,
-                        Felt::ZERO,
-                    )
-                    .await?
-                {
-                    invoker.add_call(call);
-                }
-            }
-        }
-
-        let has_changed = !invoker.calls.is_empty();
-
-        if self.do_multicall() {
-            let ui_text = format!("Deploying {} external contracts...", invoker.calls.len());
-            ui.update_text_boxed(ui_text);
-
-            invoker.multicall().await?;
-        } else {
-            let ui_text =
-                format!("Deploying {} external contracts (sequentially)...", invoker.calls.len());
-            ui.update_text_boxed(ui_text);
-
-            invoker.invoke_all_sequentially().await?;
+        if !not_upgradeable_contract_names.is_empty() {
+            let msg = format!(
+                "The following external contracts are NOT upgradeable as they don't export an \
+                 `upgrade(ClassHash)` function:\n{}",
+                not_upgradeable_contract_names.join("\n")
+            );
+            println!();
+            println!("{}", msg.as_str().bright_yellow());
+            println!();
         }
 
         Ok(has_changed)
@@ -712,6 +672,106 @@ where
         }
 
         Ok((calls, classes))
+    }
+
+    async fn external_contracts_calls_classes(
+        &self,
+        resource: &ResourceDiff,
+    ) -> Result<(Vec<Call>, HashMap<Felt, LabeledClass>, bool), MigrationError<A::SignError>> {
+        let mut calls = vec![];
+        let mut classes = HashMap::new();
+
+        let namespace = resource.namespace();
+        let tag = resource.tag();
+        let mut is_upgradeable = false;
+
+        if let ResourceDiff::Created(ResourceLocal::ExternalContract(contract)) = resource {
+            trace!(
+                namespace,
+                name = contract.common.name,
+                class_hash = format!("{:#066x}", contract.common.class_hash),
+                "Deploying and registering external contract."
+            );
+
+            let casm_class_hash = contract.common.casm_class_hash;
+            let class = contract.common.class.clone().flatten()?;
+
+            classes.insert(
+                casm_class_hash,
+                LabeledClass { label: tag.clone(), casm_class_hash, class },
+            );
+
+            let deployer = Deployer::new(&self.world.account, self.txn_config);
+
+            match deployer
+                .deploy_via_udc_getcall(
+                    contract.common.class_hash,
+                    contract.salt,
+                    &contract.encoded_constructor_data,
+                    Felt::ZERO,
+                )
+                .await?
+            {
+                Some((_, call)) => calls.push(call),
+                None => {
+                    return Err(MigrationError::DeployExternalContractError(anyhow!(
+                        "Failed to deploy external contract `{}` in namespace `{}`",
+                        contract.common.name,
+                        contract.common.namespace
+                    )));
+                }
+            }
+
+            // and register it into the world
+            calls.push(self.world.register_external_contract_getcall(
+                &ByteArray::from_string(&contract.common.namespace)?,
+                &ByteArray::from_string(&contract.contract_name)?,
+                &ByteArray::from_string(&contract.common.name)?,
+                &ContractAddress(contract.computed_address),
+            ));
+
+            is_upgradeable = contract.is_upgradeable;
+        }
+
+        if let ResourceDiff::Updated(
+            ResourceLocal::ExternalContract(contract_local),
+            ResourceRemote::ExternalContract(contract_remote),
+        ) = resource
+        {
+            let casm_class_hash = contract_local.common.casm_class_hash;
+            let class = contract_local.common.class.clone().flatten()?;
+
+            classes.insert(
+                casm_class_hash,
+                LabeledClass { label: tag.clone(), casm_class_hash, class },
+            );
+
+            let contract_address = contract_remote.common.address;
+
+            trace!(
+                namespace = namespace.clone(),
+                name = contract_local.common.name,
+                contract_address = format!("{:x}", contract_address),
+                class_hash = format!("{:#066x}", contract_local.common.class_hash),
+                "Upgrading contract..."
+            );
+
+            calls.push(Call {
+                to: contract_address,
+                selector: snutils::get_selector_from_name(UPGRADE_CONTRACT_FN_NAME).unwrap(),
+                calldata: vec![contract_local.common.class_hash],
+            });
+
+            calls.push(self.world.upgrade_external_contract_getcall(
+                &ByteArray::from_string(&namespace)?,
+                &ByteArray::from_string(&contract_local.common.name)?,
+                &ContractAddress(contract_address),
+            ));
+
+            is_upgradeable = contract_local.is_upgradeable;
+        }
+
+        Ok((calls, classes, is_upgradeable))
     }
 
     /// Gathers the calls required to sync the libraries' classes to be declared.
@@ -897,27 +957,6 @@ where
         }
 
         Ok((calls, classes))
-    }
-
-    /// Get the external contract class info to be declared.
-    ///
-    /// Returns a tuple with the CASM class hash and class info.
-    /// If the class is already declared, returns None.
-    fn external_contract_classes(
-        &self,
-        contract_class: &ExternalContractClassDiff,
-    ) -> Option<(Felt, LabeledClass)> {
-        match contract_class {
-            ExternalContractClassDiff::Created(c) => Some((
-                c.casm_class_hash,
-                LabeledClass {
-                    label: c.contract_name.clone(),
-                    casm_class_hash: c.casm_class_hash,
-                    class: c.class.clone().flatten().unwrap(),
-                },
-            )),
-            _ => None,
-        }
     }
 
     /// Ensures the world is declared and deployed if necessary.
