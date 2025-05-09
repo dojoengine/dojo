@@ -2,7 +2,7 @@ use anyhow::Result;
 use clap::Args;
 use colored::*;
 use dojo_types::naming;
-use dojo_world::diff::{ExternalContractDiff, ResourceDiff, WorldDiff, WorldStatus};
+use dojo_world::diff::{ResourceDiff, WorldDiff, WorldStatus};
 use dojo_world::ResourceType;
 use scarb::core::Config;
 use serde::Serialize;
@@ -75,6 +75,7 @@ impl std::fmt::Display for ResourceStatus {
 enum ResourceInspect {
     Namespace(NamespaceInspect),
     Contract(ContractInspect),
+    ExternalContract(ExternalContractInspect),
     Model(ModelInspect),
     Event(EventInspect),
     Library(LibraryInspect),
@@ -155,15 +156,13 @@ struct ExternalContractInspect {
     #[tabled(rename = "External Contract")]
     contract_name: String,
     #[tabled(rename = "Instance Name")]
-    instance_name: String,
+    tag: String,
     #[tabled(skip)]
     class_hash: String,
     #[tabled(rename = "Status")]
     status: ResourceStatus,
-    #[tabled(skip)]
-    salt: String,
-    #[tabled(skip)]
-    constructor_calldata: Vec<String>,
+    #[tabled(rename = "Dojo Selector")]
+    selector: String,
     #[tabled(rename = "Contract Address")]
     address: String,
 }
@@ -208,8 +207,6 @@ fn inspect_element(element_name: &str, world_diff: &WorldDiff) -> Result<()> {
 
     if let Some(diff) = world_diff.resources.get(&selector) {
         inspect_resource(diff, world_diff)
-    } else if let Some(diff) = world_diff.external_contracts.get(element_name) {
-        inspect_external_contract(diff)
     } else {
         Err(anyhow::anyhow!("Resource or external contract not found locally."))
     }
@@ -282,14 +279,6 @@ fn inspect_resource(resource_diff: &ResourceDiff, world_diff: &WorldDiff) -> Res
     Ok(())
 }
 
-/// Inspects an external contract.
-fn inspect_external_contract(contract_diff: &ExternalContractDiff) -> Result<()> {
-    let inspect = external_contract_diff_display(contract_diff);
-    print_section_header("[External Contract]");
-    pretty_print_toml(&toml::to_string_pretty(&inspect).unwrap());
-    Ok(())
-}
-
 /// Inspects the whole world.
 fn inspect_world(world_diff: &WorldDiff) {
     println!();
@@ -325,6 +314,10 @@ fn inspect_world(world_diff: &WorldDiff) {
                 ResourceInspect::Contract(c) => contracts_disp.push(c),
                 _ => unreachable!(),
             },
+            ResourceType::ExternalContract => match resource_diff_display(world_diff, resource) {
+                ResourceInspect::ExternalContract(c) => external_contracts_disp.push(c),
+                _ => unreachable!(),
+            },
             ResourceType::Model => match resource_diff_display(world_diff, resource) {
                 ResourceInspect::Model(m) => models_disp.push(m),
                 _ => unreachable!(),
@@ -337,12 +330,7 @@ fn inspect_world(world_diff: &WorldDiff) {
                 ResourceInspect::Library(l) => libraries_disp.push(l),
                 _ => unreachable!(),
             },
-            _ => {}
         }
-    }
-
-    for contract in world_diff.external_contracts.values() {
-        external_contracts_disp.push(external_contract_diff_display(contract));
     }
 
     namespaces_disp.sort_by_key(|m| m.name.to_string());
@@ -350,7 +338,7 @@ fn inspect_world(world_diff: &WorldDiff) {
     models_disp.sort_by_key(|m| m.tag.to_string());
     events_disp.sort_by_key(|m| m.tag.to_string());
     libraries_disp.sort_by_key(|m| m.tag.to_string());
-    external_contracts_disp.sort_by_key(|c| format!("{}-{}", c.contract_name, c.instance_name));
+    external_contracts_disp.sort_by_key(|c| format!("{}-{}", c.contract_name, c.tag));
 
     print_table(&namespaces_disp, Some(Color::FG_BRIGHT_BLACK), None);
     print_table(&contracts_disp, Some(Color::FG_BRIGHT_BLACK), None);
@@ -521,27 +509,39 @@ fn resource_diff_display(world_diff: &WorldDiff, resource: &ResourceDiff) -> Res
                 selector: format!("{:#066x}", resource.dojo_selector()),
             })
         }
-        ResourceType::StarknetContract => {
-            todo!()
+        ResourceType::ExternalContract => {
+            let (external_contract, contract_address, status) = match resource {
+                ResourceDiff::Created(local) => {
+                    let local = local.as_external_contract().unwrap();
+                    (local, local.computed_address, ResourceStatus::Created)
+                }
+                ResourceDiff::Updated(local, remote) => {
+                    let local = local.as_external_contract().unwrap();
+                    let remote = remote.as_external_contract_or_panic();
+                    (local, remote.common.address, ResourceStatus::Updated)
+                }
+                ResourceDiff::Synced(local, remote) => {
+                    let local = local.as_external_contract().unwrap();
+                    let remote = remote.as_external_contract_or_panic();
+                    (local, remote.common.address, ResourceStatus::Synced)
+                }
+            };
+
+            let status = if world_diff.profile_config.is_skipped(&resource.tag()) {
+                ResourceStatus::MigrationSkipped
+            } else {
+                status
+            };
+
+            ResourceInspect::ExternalContract(ExternalContractInspect {
+                contract_name: external_contract.contract_name.clone(),
+                tag: resource.tag(),
+                status,
+                address: format!("{:#066x}", contract_address),
+                class_hash: format!("{:#066x}", resource.current_class_hash()),
+                selector: format!("{:#066x}", resource.dojo_selector()),
+            })
         }
-    }
-}
-
-/// Displays the external contract diff.
-fn external_contract_diff_display(contract: &ExternalContractDiff) -> ExternalContractInspect {
-    let contract_data = contract.contract_data();
-
-    ExternalContractInspect {
-        contract_name: contract_data.contract_name,
-        instance_name: contract_data.instance_name,
-        address: contract_data.address.to_fixed_hex_string(),
-        class_hash: contract_data.class_hash.to_fixed_hex_string(),
-        status: match contract {
-            ExternalContractDiff::Created(_) => ResourceStatus::Created,
-            ExternalContractDiff::Synced(_) => ResourceStatus::Synced,
-        },
-        salt: contract_data.salt.to_fixed_hex_string(),
-        constructor_calldata: contract_data.constructor_data,
     }
 }
 

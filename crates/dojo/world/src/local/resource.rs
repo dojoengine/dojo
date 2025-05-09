@@ -9,6 +9,7 @@ use crate::{DojoSelector, ResourceType};
 pub enum ResourceLocal {
     Namespace(NamespaceLocal),
     Contract(ContractLocal),
+    ExternalContract(ExternalContractLocal),
     Model(ModelLocal),
     Event(EventLocal),
     Library(LibraryLocal),
@@ -37,6 +38,27 @@ pub struct ContractLocal {
     pub common: CommonLocalInfo,
     /// The systems of the contract.
     pub systems: Vec<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ExternalContractLocal {
+    /// Common information about the resource.
+    pub common: CommonLocalInfo,
+    // The Cairo contract name (common.name is the instance name)
+    pub contract_name: String,
+    // Salt used to deploy the contract
+    pub salt: Felt,
+    // Human-readeable constructor data
+    pub constructor_data: Vec<String>,
+    // encoded data to pass to the constructor while deploying the contract
+    pub encoded_constructor_data: Vec<Felt>,
+    // the computed contract address
+    pub computed_address: Felt,
+    // list of exported entry points of the contract
+    pub entrypoints: Vec<String>,
+    // indicates if the contract is upgradeable or if it has to be
+    // deployed at another address in case of upgrade.
+    pub is_upgradeable: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -87,6 +109,7 @@ impl ResourceLocal {
     pub fn name(&self) -> String {
         match self {
             ResourceLocal::Contract(c) => c.common.name.clone(),
+            ResourceLocal::ExternalContract(c) => c.common.name.clone(),
             ResourceLocal::Model(m) => m.common.name.clone(),
             ResourceLocal::Event(e) => e.common.name.clone(),
             ResourceLocal::Namespace(n) => n.name.clone(),
@@ -99,6 +122,7 @@ impl ResourceLocal {
         match self {
             ResourceLocal::Namespace(n) => n.name.clone(),
             ResourceLocal::Contract(c) => c.common.namespace.clone(),
+            ResourceLocal::ExternalContract(c) => c.common.namespace.clone(),
             ResourceLocal::Model(m) => m.common.namespace.clone(),
             ResourceLocal::Event(e) => e.common.namespace.clone(),
             ResourceLocal::Library(l) => l.common.namespace.clone(),
@@ -109,6 +133,7 @@ impl ResourceLocal {
     pub fn class_hash(&self) -> Felt {
         match self {
             ResourceLocal::Contract(c) => c.common.class_hash,
+            ResourceLocal::ExternalContract(c) => c.common.class_hash,
             ResourceLocal::Model(m) => m.common.class_hash,
             ResourceLocal::Event(e) => e.common.class_hash,
             ResourceLocal::Library(l) => l.common.class_hash,
@@ -120,6 +145,7 @@ impl ResourceLocal {
     pub fn abi(&self) -> Vec<AbiEntry> {
         match self {
             ResourceLocal::Contract(c) => c.common.class.abi.clone(),
+            ResourceLocal::ExternalContract(c) => c.common.class.abi.clone(),
             ResourceLocal::Model(m) => m.common.class.abi.clone(),
             ResourceLocal::Event(e) => e.common.class.abi.clone(),
             ResourceLocal::Library(l) => l.common.class.abi.clone(),
@@ -154,10 +180,22 @@ impl ResourceLocal {
         }
     }
 
+    /// Returns the external contract resource.
+    ///
+    /// This function panics since it must only be used where the developer
+    /// can ensure that the resource is an external contract.
+    pub fn as_external_contract(&self) -> Option<&ExternalContractLocal> {
+        match self {
+            ResourceLocal::ExternalContract(c) => Some(c),
+            _ => None,
+        }
+    }
+
     /// Returns the type of the resource.
     pub fn resource_type(&self) -> ResourceType {
         match self {
             ResourceLocal::Contract(_) => ResourceType::Contract,
+            ResourceLocal::ExternalContract(_) => ResourceType::ExternalContract,
             ResourceLocal::Model(_) => ResourceType::Model,
             ResourceLocal::Event(_) => ResourceType::Event,
             ResourceLocal::Namespace(_) => ResourceType::Namespace,
@@ -169,6 +207,7 @@ impl ResourceLocal {
     pub fn common(&self) -> &CommonLocalInfo {
         match self {
             ResourceLocal::Contract(c) => &c.common,
+            ResourceLocal::ExternalContract(c) => &c.common,
             ResourceLocal::Model(m) => &m.common,
             ResourceLocal::Event(e) => &e.common,
             ResourceLocal::Namespace(_) => panic!("Namespace has no common info."),
@@ -181,5 +220,22 @@ impl ContractLocal {
     /// Returns the dojo selector of the contract.
     pub fn dojo_selector(&self) -> DojoSelector {
         naming::compute_selector_from_names(&self.common.namespace, &self.common.name)
+    }
+}
+
+impl ExternalContractLocal {
+    /// Returns the tag of the resource.
+    pub fn tag(&self) -> String {
+        naming::get_tag(&self.namespace(), &self.name())
+    }
+
+    /// Returns the name of the resource.
+    pub fn name(&self) -> String {
+        self.common.name.clone()
+    }
+
+    /// Returns the namespace of the resource.
+    pub fn namespace(&self) -> String {
+        self.common.namespace.clone()
     }
 }

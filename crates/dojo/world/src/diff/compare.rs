@@ -4,7 +4,8 @@
 
 use super::ResourceDiff;
 use crate::local::{
-    ContractLocal, EventLocal, LibraryLocal, ModelLocal, NamespaceLocal, ResourceLocal,
+    ContractLocal, EventLocal, ExternalContractLocal, LibraryLocal, ModelLocal, NamespaceLocal,
+    ResourceLocal,
 };
 use crate::remote::ResourceRemote;
 
@@ -24,6 +25,18 @@ impl ComparableResource for ContractLocal {
             ResourceDiff::Synced(ResourceLocal::Contract(self), remote)
         } else {
             ResourceDiff::Updated(ResourceLocal::Contract(self), remote)
+        }
+    }
+}
+
+impl ComparableResource for ExternalContractLocal {
+    fn compare(self, remote: ResourceRemote) -> ResourceDiff {
+        let remote_contract = remote.as_external_contract_or_panic();
+
+        if self.common.class_hash == remote_contract.common.current_class_hash() {
+            ResourceDiff::Synced(ResourceLocal::ExternalContract(self), remote)
+        } else {
+            ResourceDiff::Updated(ResourceLocal::ExternalContract(self), remote)
         }
     }
 }
@@ -82,6 +95,7 @@ impl ComparableResource for ResourceLocal {
     fn compare(self, remote: ResourceRemote) -> ResourceDiff {
         match self {
             ResourceLocal::Contract(contract) => contract.compare(remote),
+            ResourceLocal::ExternalContract(contract) => contract.compare(remote),
             ResourceLocal::Model(model) => model.compare(remote),
             ResourceLocal::Event(event) => event.compare(remote),
             ResourceLocal::Namespace(ns) => ns.compare(remote),

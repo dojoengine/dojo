@@ -61,9 +61,9 @@ impl From<&Manifest> for HashMap<String, ContractInfo> {
 
         for c in &manifest.external_contracts {
             contracts.insert(
-                c.instance_name.clone(),
+                c.tag.clone(),
                 ContractInfo {
-                    tag_or_name: c.instance_name.clone(),
+                    tag_or_name: c.tag.clone(),
                     address: c.address,
                     entrypoints: vec![],
                 },
@@ -104,7 +104,8 @@ impl From<&WorldDiff> for HashMap<String, ContractInfo> {
                         },
                     );
                 }
-                ResourceDiff::Updated(ResourceLocal::Contract(l), ResourceRemote::Contract(r)) => {
+                ResourceDiff::Updated(ResourceLocal::Contract(l), ResourceRemote::Contract(r))
+                | ResourceDiff::Synced(ResourceLocal::Contract(l), ResourceRemote::Contract(r)) => {
                     contracts.insert(
                         tag.clone(),
                         ContractInfo {
@@ -114,31 +115,35 @@ impl From<&WorldDiff> for HashMap<String, ContractInfo> {
                         },
                     );
                 }
-                ResourceDiff::Synced(ResourceLocal::Contract(l), ResourceRemote::Contract(r)) => {
+                ResourceDiff::Created(ResourceLocal::ExternalContract(l)) => {
+                    contracts.insert(
+                        tag.clone(),
+                        ContractInfo {
+                            tag_or_name: tag.clone(),
+                            address: l.computed_address,
+                            entrypoints: l.entrypoints.clone(),
+                        },
+                    );
+                }
+                ResourceDiff::Updated(
+                    ResourceLocal::ExternalContract(l),
+                    ResourceRemote::ExternalContract(r),
+                )
+                | ResourceDiff::Synced(
+                    ResourceLocal::ExternalContract(l),
+                    ResourceRemote::ExternalContract(r),
+                ) => {
                     contracts.insert(
                         tag.clone(),
                         ContractInfo {
                             tag_or_name: tag.clone(),
                             address: r.common.address,
-                            entrypoints: l.systems.clone(),
+                            entrypoints: l.entrypoints.clone(),
                         },
                     );
                 }
                 _ => {}
             }
-        }
-
-        for contract in world_diff.external_contracts.values() {
-            let contract = contract.contract_data();
-
-            contracts.insert(
-                contract.instance_name.clone(),
-                ContractInfo {
-                    tag_or_name: contract.instance_name,
-                    address: contract.address,
-                    entrypoints: vec![], // Not available for Starknet contracts.
-                },
-            );
         }
 
         contracts
@@ -207,8 +212,9 @@ mod tests {
     fn test_world_diff_to_contracts_info() {
         let mut local = WorldLocal::default();
         local.entrypoints = vec!["execute".to_string()];
+        local.profile_config.namespace.default = "ns".to_string();
 
-        let contract = ContractLocal {
+        local.add_resource(ResourceLocal::Contract(ContractLocal {
             common: CommonLocalInfo {
                 name: "test_contract".to_string(),
                 namespace: "ns".to_string(),
@@ -232,36 +238,70 @@ mod tests {
                 casm_class_hash: felt!("0x2222"),
             },
             systems: vec!["system_1".to_string()],
-        };
+        }));
 
-        local.profile_config.namespace.default = "ns".to_string();
-        local.add_resource(ResourceLocal::Contract(contract));
+        local.add_resource(ResourceLocal::Contract(ContractLocal {
+            common: CommonLocalInfo {
+                name: "test_contract".to_string(),
+                namespace: "ns".to_string(),
+                class: SierraClass {
+                    sierra_program: vec![],
+                    sierra_program_debug_info: SierraClassDebugInfo {
+                        type_names: vec![],
+                        libfunc_names: vec![],
+                        user_func_names: vec![],
+                    },
+                    contract_class_version: "".to_string(),
+                    entry_points_by_type: EntryPointsByType {
+                        constructor: vec![],
+                        external: vec![],
+                        l1_handler: vec![],
+                    },
+                    abi: vec![],
+                },
+                casm_class: None,
+                class_hash: felt!("0x2222"),
+                casm_class_hash: felt!("0x2222"),
+            },
+            systems: vec!["system_1".to_string()],
+        }));
 
-        local.external_contracts = vec![
-            ExternalContractLocal {
-                contract_name: "Contract".to_string(),
-                instance_name: "Instance1".to_string(),
-                class_hash: Felt::ONE,
-                salt: Felt::ZERO,
-                constructor_data: vec![],
-                raw_constructor_data: vec![],
-                address: Felt::from_hex("0x6789").unwrap(),
+        local.add_resource(ResourceLocal::ExternalContract(ExternalContractLocal {
+            common: CommonLocalInfo {
+                name: "Instance1".to_string(),
+                namespace: "ns".to_string(),
+                class: SierraClass {
+                    sierra_program: vec![],
+                    sierra_program_debug_info: SierraClassDebugInfo {
+                        type_names: vec![],
+                        libfunc_names: vec![],
+                        user_func_names: vec![],
+                    },
+                    contract_class_version: "".to_string(),
+                    entry_points_by_type: EntryPointsByType {
+                        constructor: vec![],
+                        external: vec![],
+                        l1_handler: vec![],
+                    },
+                    abi: vec![],
+                },
+                casm_class: None,
+                class_hash: felt!("0x3333"),
+                casm_class_hash: felt!("0x3333"),
             },
-            ExternalContractLocal {
-                contract_name: "Contract".to_string(),
-                instance_name: "Instance2".to_string(),
-                class_hash: Felt::ONE,
-                salt: Felt::ZERO,
-                constructor_data: vec![],
-                raw_constructor_data: vec![],
-                address: Felt::from_hex("0x1234").unwrap(),
-            },
-        ];
+            contract_name: "C1".to_string(),
+            salt: felt!("0x01"),
+            constructor_data: vec![],
+            encoded_constructor_data: vec![],
+            computed_address: Felt::from_hex("0x1234").unwrap(),
+            entrypoints: vec!["entry_1".to_string()],
+            is_upgradeable: true,
+        }));
 
         let world_diff = WorldDiff::from_local(local).unwrap();
 
         let contracts_info: HashMap<String, ContractInfo> = (&world_diff).into();
-        assert_eq!(contracts_info.len(), 4);
+        assert_eq!(contracts_info.len(), 3);
         assert_eq!(
             contracts_info["world"].address,
             felt!("0x66c1fe28a8f6c5f1dfe797df547fb683d1c9d18c87b049021f115f026be8077")
@@ -275,19 +315,11 @@ mod tests {
         assert_eq!(contracts_info["ns-test_contract"].tag_or_name, "ns-test_contract".to_string());
 
         assert_eq!(
-            contracts_info["Instance1"],
+            contracts_info["ns-Instance1"],
             ContractInfo {
-                tag_or_name: "Instance1".to_string(),
-                address: Felt::from_hex("0x6789").unwrap(),
-                entrypoints: vec![]
-            }
-        );
-        assert_eq!(
-            contracts_info["Instance2"],
-            ContractInfo {
-                tag_or_name: "Instance2".to_string(),
+                tag_or_name: "ns-Instance1".to_string(),
                 address: Felt::from_hex("0x1234").unwrap(),
-                entrypoints: vec![]
+                entrypoints: vec!["entry_1".to_string()]
             }
         );
     }
