@@ -51,7 +51,6 @@ dojo-metrics = { path = "crates/metrics" }
 # dojo-lang
 dojo-bindgen = { path = "crates/dojo/bindgen" }
 dojo-core = { path = "crates/dojo/core" }
-#dojo-lang = { path = "crates/dojo/lang" }
 dojo-test-utils = { path = "crates/dojo/test-utils" }
 dojo-types = { path = "crates/dojo/types" }
 dojo-world = { path = "crates/dojo/world" }
@@ -161,10 +160,10 @@ rstest = "0.18.2"
 rstest_reuse = "0.6.0"
 salsa = "0.16.1"
 
-# version 2.11.2
-scarb = { git = "https://github.com/software-mansion/scarb", rev = "9c1873c" }
-scarb-metadata = { git = "https://github.com/software-mansion/scarb", rev = "9c1873c" }
-scarb-ui = { git = "https://github.com/software-mansion/scarb", rev = "9c1873c" }
+# version 2.11.2+nightly-2025-04-12
+scarb = { git = "https://github.com/software-mansion/scarb", rev="cc40f19" }
+scarb-metadata = { git = "https://github.com/software-mansion/scarb", rev="cc40f19" }
+scarb-ui = { git = "https://github.com/software-mansion/scarb", rev="cc40f19" }
 
 semver = "1.0.5"
 serde = { version = "1.0", features = [ "derive" ] }

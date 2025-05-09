@@ -19,7 +19,7 @@ dependencies = [
 name = "dojo"
 version = "1.5.0"
 dependencies = [
- "dojo_plugin",
+ "dojo_macros",
 ]
 
 [[package]]
@@ -41,8 +41,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "dojo_plugin"
-version = "2.10.1"
+name = "dojo_macros"
+version = "1.6.0"
 
 [[package]]
 name = "openzeppelin"

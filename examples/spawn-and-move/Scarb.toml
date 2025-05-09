@@ -1,5 +1,5 @@
 [package]
-cairo-version = "=2.10.1"
+cairo-version = "=2.11.2"
 name = "dojo_examples"
 version = "1.5.0"
 # Use the prelude with the less imports as possible
@@ -18,10 +18,10 @@ openzeppelin = "0.20.0"
 armory = { path = "../game-lib/armory" }
 bestiary = { path = "../game-lib/bestiary" }
 dojo = { path = "../../crates/dojo/core" }
-starknet = "2.10.1"
+starknet = "2.11.2"
 
 [dev-dependencies]
-cairo_test = "2.10.1"
+cairo_test = "2.11.2"
 dojo_cairo_test = { path = "../../crates/dojo/core-cairo-test" }
 
 [features]
