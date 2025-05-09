@@ -1,10 +1,8 @@
+use cairo_lang_syntax::node::TypedSyntaxNode;
 use cairo_lang_syntax::node::ast::{Expr, TypeClause};
 use cairo_lang_syntax::node::db::SyntaxGroup;
-use cairo_lang_syntax::node::TypedSyntaxNode;
 
-use super::utils::{
-    get_tuple_item_types, is_array, is_byte_array, is_tuple, primitive_type_introspection,
-};
+use super::utils::{get_tuple_item_types, is_array, is_byte_array, is_tuple};
 
 pub fn build_size_function_body(
     sizes: &mut Vec<String>,
@@ -55,11 +53,11 @@ pub fn get_field_size_from_type_clause(
 
     let field_sizes = match type_clause.ty(db) {
         Expr::Path(path) => {
-            let path_type = path.as_syntax_node().get_text(db).trim().to_string();
+            let path_type = path.as_syntax_node().get_text_without_trivia(db);
             compute_item_size_from_type(&path_type)
         }
         Expr::Tuple(expr) => {
-            let tuple_type = expr.as_syntax_node().get_text(db).trim().to_string();
+            let tuple_type = expr.as_syntax_node().get_text_without_trivia(db);
             compute_tuple_size_from_type(&tuple_type)
         }
         _ => {
@@ -95,16 +93,7 @@ pub fn compute_item_size_from_type(item_type: &String) -> Vec<String> {
     } else if is_tuple(item_type) {
         compute_tuple_size_from_type(item_type)
     } else {
-        let primitives = primitive_type_introspection();
-
-        if let Some(p) = primitives.get(item_type) {
-            vec![p.0.to_string()]
-        } else {
-            vec![format!(
-                "dojo::meta::introspect::Introspect::<{}>::size()",
-                item_type
-            )]
-        }
+        vec![format!("dojo::meta::introspect::Introspect::<{}>::size()", item_type)]
     }
 }
 

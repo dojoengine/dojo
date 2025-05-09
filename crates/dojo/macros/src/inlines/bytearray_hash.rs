@@ -1,6 +1,6 @@
-use cairo_lang_macro::{quote, ProcMacroResult, TokenStream};
+use cairo_lang_macro::{ProcMacroResult, TokenStream, quote};
 use cairo_lang_parser::utils::SimpleParserDatabase;
-use cairo_lang_syntax::node::{ast, db::SyntaxGroup, Terminal, TypedSyntaxNode};
+use cairo_lang_syntax::node::{Terminal, TypedSyntaxNode, ast, db::SyntaxGroup};
 
 use dojo_types::naming;
 
@@ -13,9 +13,7 @@ pub(crate) fn process(token_stream: TokenStream) -> ProcMacroResult {
         return process_ast(&db, &expr);
     }
 
-    ProcMacroResult::fail(format!(
-        "bytearray_hash: invalid parameter (arg: {token_stream})"
-    ))
+    ProcMacroResult::fail(format!("bytearray_hash: invalid parameter (arg: {token_stream})"))
 }
 
 fn process_ast(db: &dyn SyntaxGroup, expr: &ast::ExprParenthesized) -> ProcMacroResult {
@@ -30,7 +28,7 @@ fn process_ast(db: &dyn SyntaxGroup, expr: &ast::ExprParenthesized) -> ProcMacro
 
     ProcMacroResult::fail(format!(
         "bytearray_hash: invalid parameter type (arg: {})",
-        expr.as_syntax_node().get_text(db)
+        expr.as_syntax_node().get_text_without_trivia(db)
     ))
 }
 
@@ -74,9 +72,6 @@ mod tests {
         let res = process(TokenStream::new(vec![DojoTokenizer::tokenize(input)]));
 
         assert_eq!(res.diagnostics.len(), 0);
-        assert_eq!(
-            res.token_stream,
-            TokenStream::new(vec![DojoTokenizer::tokenize(expected)])
-        );
+        assert_eq!(res.token_stream, TokenStream::new(vec![DojoTokenizer::tokenize(expected)]));
     }
 }

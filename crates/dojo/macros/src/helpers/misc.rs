@@ -1,6 +1,6 @@
 use cairo_lang_parser::utils::SimpleParserDatabase;
-use cairo_lang_syntax::node::{ast::Member, Terminal, TypedSyntaxNode};
-use starknet_crypto::{poseidon_hash_many, Felt};
+use cairo_lang_syntax::node::{Terminal, TypedSyntaxNode, ast::Member};
+use starknet_crypto::{Felt, poseidon_hash_many};
 
 use dojo_types::naming;
 
@@ -23,11 +23,7 @@ pub fn compute_unique_hash(
                 poseidon_hash_many(&[
                     naming::compute_bytearray_hash(&m.name(db).text(db).to_string()),
                     naming::compute_bytearray_hash(
-                        m.type_clause(db)
-                            .ty(db)
-                            .as_syntax_node()
-                            .get_text(db)
-                            .trim(),
+                        &m.type_clause(db).ty(db).as_syntax_node().get_text_without_trivia(db),
                     ),
                 ])
             })

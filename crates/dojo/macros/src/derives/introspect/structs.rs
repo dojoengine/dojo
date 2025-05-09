@@ -18,9 +18,7 @@ pub struct DojoStructIntrospect {
 
 impl DojoStructIntrospect {
     pub fn new() -> Self {
-        Self {
-            diagnostics: vec![],
-        }
+        Self { diagnostics: vec![] }
     }
 
     pub fn process(
@@ -64,14 +62,7 @@ impl DojoStructIntrospect {
         let (gen_types, gen_impls) =
             super::generics::build_generic_types_and_impls(db, struct_ast.generic_params(db));
 
-        super::generate_introspect(
-            &struct_name,
-            &struct_size,
-            &gen_types,
-            gen_impls,
-            &layout,
-            &ty,
-        )
+        super::generate_introspect(&struct_name, &struct_size, &gen_types, gen_impls, &layout, &ty)
     }
 
     fn compute_struct_layout_size(
@@ -111,11 +102,7 @@ impl DojoStructIntrospect {
 
     pub fn build_member_ty(&self, db: &SimpleParserDatabase, member: &Member) -> String {
         let name = member.name(db).text(db).to_string();
-        let attrs = if member.has_attr(db, "key") {
-            vec!["'key'"]
-        } else {
-            vec![]
-        };
+        let attrs = if member.has_attr(db, "key") { vec!["'key'"] } else { vec![] };
 
         format!(
             "dojo::meta::introspect::Member {{
@@ -165,7 +152,8 @@ impl DojoStructIntrospect {
 
         for member in struct_ast.members(db).elements(db).iter() {
             if member.has_attr(db, "key") {
-                let member_type = member.type_clause(db).ty(db).as_syntax_node().get_text(db);
+                let member_type =
+                    member.type_clause(db).ty(db).as_syntax_node().get_text_without_trivia(db);
 
                 // Check if the member type uses the `usize` type, either
                 // directly or as a nested type (the tuple (u8, usize, u32) for example)
@@ -204,11 +192,7 @@ impl DojoStructIntrospect {
     ) -> String {
         let mut layouts = vec![];
 
-        for member in struct_ast
-            .members(db)
-            .elements(db)
-            .iter()
-            .filter(|m| !m.has_attr(db, "key"))
+        for member in struct_ast.members(db).elements(db).iter().filter(|m| !m.has_attr(db, "key"))
         {
             let layout = super::layout::get_packed_field_layout_from_type_clause(
                 db,
@@ -220,10 +204,7 @@ impl DojoStructIntrospect {
 
         let layouts = layouts.into_iter().flatten().collect::<Vec<_>>();
 
-        if layouts
-            .iter()
-            .any(|v| super::layout::is_custom_layout(v.as_str()))
-        {
+        if layouts.iter().any(|v| super::layout::is_custom_layout(v.as_str())) {
             super::layout::generate_cairo_code_for_fixed_layout_with_custom_types(&layouts)
         } else {
             format!(
@@ -240,9 +221,5 @@ impl DojoStructIntrospect {
 
 fn type_contains_usize(type_str: String) -> bool {
     type_str.contains("usize")
-        && type_str
-            .split(CAIRO_DELIMITERS)
-            .map(|s| s.trim())
-            .collect::<Vec<_>>()
-            .contains(&"usize")
+        && type_str.split(CAIRO_DELIMITERS).map(|s| s.trim()).collect::<Vec<_>>().contains(&"usize")
 }

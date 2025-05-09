@@ -1,14 +1,14 @@
 use cairo_lang_macro::Diagnostic;
 use cairo_lang_parser::utils::SimpleParserDatabase;
+use cairo_lang_syntax::node::TypedSyntaxNode;
 use cairo_lang_syntax::node::ast::{Expr, TypeClause};
 use cairo_lang_syntax::node::db::SyntaxGroup;
-use cairo_lang_syntax::node::TypedSyntaxNode;
 
 use crate::helpers::DiagnosticsExt;
 
 use super::utils::{
     get_array_item_type, get_tuple_item_types, is_array, is_byte_array, is_tuple,
-    is_unsupported_option_type, primitive_type_introspection,
+    is_unsupported_option_type,
 };
 
 /// Build a field layout describing the provided type clause.
@@ -19,11 +19,11 @@ pub(crate) fn get_layout_from_type_clause(
 ) -> String {
     match type_clause.ty(db) {
         Expr::Path(path) => {
-            let path_type = path.as_syntax_node().get_text(db);
+            let path_type = path.as_syntax_node().get_text_without_trivia(db);
             build_item_layout_from_type(diagnostics, &path_type)
         }
         Expr::Tuple(expr) => {
-            let tuple_type = expr.as_syntax_node().get_text(db);
+            let tuple_type = expr.as_syntax_node().get_text_without_trivia(db);
             build_tuple_layout_from_type(diagnostics, &tuple_type)
         }
         _ => {
@@ -57,10 +57,7 @@ pub fn build_array_layout_from_type(diagnostics: &mut Vec<Diagnostic>, item_type
             )"
         )
     } else {
-        format!(
-            "dojo::meta::introspect::Introspect::<{}>::layout()",
-            item_type
-        )
+        format!("dojo::meta::introspect::Introspect::<{}>::layout()", item_type)
     }
 }
 
@@ -106,10 +103,7 @@ pub fn build_item_layout_from_type(diagnostics: &mut Vec<Diagnostic>, item_type:
             );
         }
 
-        format!(
-            "dojo::meta::introspect::Introspect::<{}>::layout()",
-            item_type
-        )
+        format!("dojo::meta::introspect::Introspect::<{}>::layout()", item_type)
     }
 }
 
@@ -168,11 +162,11 @@ pub fn get_packed_field_layout_from_type_clause(
 ) -> Vec<String> {
     match type_clause.ty(db) {
         Expr::Path(path) => {
-            let path_type = path.as_syntax_node().get_text(db);
+            let path_type = path.as_syntax_node().get_text_without_trivia(db);
             get_packed_item_layout_from_type(diagnostics, path_type.trim())
         }
         Expr::Tuple(expr) => {
-            let tuple_type = expr.as_syntax_node().get_text(db);
+            let tuple_type = expr.as_syntax_node().get_text_without_trivia(db);
             get_packed_tuple_layout_from_type(diagnostics, &tuple_type)
         }
         _ => {
@@ -193,26 +187,10 @@ pub fn get_packed_item_layout_from_type(
     } else if is_tuple(item_type) {
         get_packed_tuple_layout_from_type(diagnostics, item_type)
     } else {
-        let primitives = primitive_type_introspection();
-
-        let res = if let Some(p) = primitives.get(item_type) {
-            vec![p
-                .1
-                .iter()
-                .map(|x| x.to_string())
-                .collect::<Vec<_>>()
-                .join(",")]
-        } else {
-            // as we cannot verify that an enum/struct custom type is packable,
-            // we suppose it is and let the user verify this.
-            // If it's not the case, the Dojo model layout function will panic.
-            vec![format!(
-                "dojo::meta::introspect::Introspect::<{}>::layout()",
-                item_type
-            )]
-        };
-
-        return res;
+        // as we cannot verify that an enum/struct custom type is packable,
+        // we suppose it is and let the user verify this.
+        // If it's not the case, the Dojo model layout function will panic.
+        vec![format!("dojo::meta::introspect::Introspect::<{}>::layout()", item_type)]
     }
 }
 

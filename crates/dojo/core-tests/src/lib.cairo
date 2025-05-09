@@ -31,8 +31,9 @@ mod tests {
             Abilities, Case, Character, DOJO_NSH, EnumOne, Foo, IFooSetter, IFooSetterDispatcher,
             IFooSetterDispatcherTrait, Ibar, IbarDispatcher, IbarDispatcherTrait, MyEnum,
             NotCopiable, SimpleEvent, Stats, Sword, Weapon, WithOptionAndEnums, bar, deploy_world,
-            deploy_world_and_bar, deploy_world_and_foo, e_SimpleEvent, foo_setter, m_Foo,
-            m_FooInvalidName, test_contract, test_contract_with_dojo_init_args,
+            deploy_world_and_bar, deploy_world_with_all_kind_of_resources, deploy_world_and_foo,
+            e_SimpleEvent, foo_setter, m_Foo, m_FooInvalidName, test_contract,
+            test_contract_with_dojo_init_args,
         };
 
         mod event;

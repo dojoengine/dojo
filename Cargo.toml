@@ -2,7 +2,6 @@
 resolver = "2"
 
 members = [
-	"bin/dojo-language-server",
 	"bin/sozo",
 	"crates/dojo/bindgen",
 	"crates/dojo/core",
@@ -52,7 +51,7 @@ dojo-metrics = { path = "crates/metrics" }
 # dojo-lang
 dojo-bindgen = { path = "crates/dojo/bindgen" }
 dojo-core = { path = "crates/dojo/core" }
-dojo-lang = { path = "crates/dojo/lang" }
+#dojo-lang = { path = "crates/dojo/lang" }
 dojo-test-utils = { path = "crates/dojo/test-utils" }
 dojo-types = { path = "crates/dojo/types" }
 dojo-world = { path = "crates/dojo/world" }
@@ -96,29 +95,28 @@ bytes = "1.6"
 # refer to Scarb git while `cairo-lang-macro` 0.2.0 (new api) is deployed on crates.io
 cairo-lang-macro = { version = "0.2.0", git = "https://github.com/software-mansion/scarb.git" }
 
-
-cairo-lang-compiler = "=2.10.1"
-cairo-lang-debug = "=2.10.1"
-cairo-lang-defs = "=2.10.1"
-cairo-lang-diagnostics = "=2.10.1"
-cairo-lang-filesystem = "=2.10.1"
-cairo-lang-formatter = "=2.10.1"
-#cairo-language-server = "=2.10.0"
-cairo-lang-lowering = "=2.10.1"
-cairo-lang-parser = "=2.10.1"
-cairo-lang-plugins = { version = "=2.10.1", features = [ "testing" ] }
-cairo-lang-project = "=2.10.1"
-cairo-lang-semantic = "=2.10.1"
-cairo-lang-sierra = "=2.10.1"
-cairo-lang-sierra-generator = "=2.10.1"
-cairo-lang-sierra-to-casm = "=2.10.1"
-cairo-lang-starknet = "=2.10.1"
-cairo-lang-starknet-classes = "=2.10.1"
-cairo-lang-syntax = "=2.10.1"
-cairo-lang-test-plugin = "=2.10.1"
-cairo-lang-test-runner = "=2.10.1"
-cairo-lang-test-utils = "=2.10.1"
-cairo-lang-utils = "=2.10.1"
+cairo-lang-primitive-token = "1"
+cairo-lang-compiler = "=2.11.2"
+cairo-lang-debug = "=2.11.2"
+cairo-lang-defs = "=2.11.2"
+cairo-lang-diagnostics = "=2.11.2"
+cairo-lang-filesystem = "=2.11.2"
+cairo-lang-formatter = "=2.11.2"
+cairo-lang-lowering = "=2.11.2"
+cairo-lang-parser = "=2.11.2"
+cairo-lang-plugins = { version = "=2.11.2", features = [ "testing" ] }
+cairo-lang-project = "=2.11.2"
+cairo-lang-semantic = "=2.11.2"
+cairo-lang-sierra = "=2.11.2"
+cairo-lang-sierra-generator = "=2.11.2"
+cairo-lang-sierra-to-casm = "=2.11.2"
+cairo-lang-starknet = "=2.11.2"
+cairo-lang-starknet-classes = "=2.11.2"
+cairo-lang-syntax = "=2.11.2"
+cairo-lang-test-plugin = "=2.11.2"
+cairo-lang-test-runner = "=2.11.2"
+cairo-lang-test-utils = "=2.11.2"
+cairo-lang-utils = "=2.11.2"
 cairo-vm = "1.0.0-rc4"
 camino = { version = "1.1.2", features = [ "serde1" ] }
 chrono = { version = "0.4.24", features = [ "serde" ] }
@@ -163,9 +161,10 @@ rstest = "0.18.2"
 rstest_reuse = "0.6.0"
 salsa = "0.16.1"
 
-scarb = { git = "https://github.com/dojoengine/scarb", rev = "38f13cb6f9f33836a61b231f7e00c5c4dc5cafd6" }
-scarb-metadata = { git = "https://github.com/dojoengine/scarb", rev = "38f13cb6f9f33836a61b231f7e00c5c4dc5cafd6" }
-scarb-ui = { git = "https://github.com/dojoengine/scarb", rev = "38f13cb6f9f33836a61b231f7e00c5c4dc5cafd6" }
+# version 2.11.2
+scarb = { git = "https://github.com/software-mansion/scarb", rev = "9c1873c" }
+scarb-metadata = { git = "https://github.com/software-mansion/scarb", rev = "9c1873c" }
+scarb-ui = { git = "https://github.com/software-mansion/scarb", rev = "9c1873c" }
 
 semver = "1.0.5"
 serde = { version = "1.0", features = [ "derive" ] }

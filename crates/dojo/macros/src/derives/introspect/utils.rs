@@ -1,33 +1,9 @@
-use std::collections::HashMap;
-use regex;
-
-#[derive(Clone, Default, Debug)]
-pub struct TypeIntrospection(pub usize, pub Vec<usize>);
-
 const TUPLE_PREFIX: &str = "(";
 const TUPLE_SUFFIX: &str = ")";
 const SPAN_PREFIX: &str = "Span<";
 const SPAN_SUFFIX: &str = ">";
 const ARRAY_PREFIX: &str = "Array<";
 const ARRAY_SUFFIX: &str = ">";
-
-// Provides type introspection information for primitive types
-pub fn primitive_type_introspection() -> HashMap<String, TypeIntrospection> {
-    HashMap::from([
-        ("bytes31".into(), TypeIntrospection(1, vec![248])),
-        ("felt252".into(), TypeIntrospection(1, vec![251])),
-        ("bool".into(), TypeIntrospection(1, vec![1])),
-        ("u8".into(), TypeIntrospection(1, vec![8])),
-        ("u16".into(), TypeIntrospection(1, vec![16])),
-        ("u32".into(), TypeIntrospection(1, vec![32])),
-        ("u64".into(), TypeIntrospection(1, vec![64])),
-        ("u128".into(), TypeIntrospection(1, vec![128])),
-        ("u256".into(), TypeIntrospection(2, vec![128, 128])),
-        ("usize".into(), TypeIntrospection(1, vec![32])),
-        ("ContractAddress".into(), TypeIntrospection(1, vec![251])),
-        ("ClassHash".into(), TypeIntrospection(1, vec![251])),
-    ])
-}
 
 /// Check if the provided type is an unsupported `Option<T>`,
 /// because tuples are not supported with Option.
@@ -56,7 +32,7 @@ pub fn get_array_item_type(ty: &str) -> String {
 }
 
 /// Extracts the inner type of a composite type such as tuple, array or span.
-/// 
+///
 /// # Arguments
 ///   * `ty` - the composite type
 ///   * `prefix` - the prefix used to delimit the beginning of the composite type
@@ -65,22 +41,14 @@ pub fn get_array_item_type(ty: &str) -> String {
 /// # Examples
 ///    extract_composite_inner_type("Array<(u8, u16)", "Array<", ">") returns "u8, u16"
 pub fn extract_composite_inner_type(ty: &str, prefix: &str, suffix: &str) -> String {
-    // Note: in cairo_lang_* 2.11 crates, if there is a comment after a struct field type,
-    // without a comma, like `v1: Span<u32> // comment`, the comment is included in the type definition
-    // while reading it from the AST.
-    let re = regex::Regex::new(
-        &format!(
-            "{}\\s*(\\S*.*\\S+)\\s*{}",
-            regex::escape(prefix),
-            regex::escape(suffix)
-        )
-    ).unwrap();
+    let re = regex::Regex::new(&format!("{}(.*){}", regex::escape(prefix), regex::escape(suffix)))
+        .unwrap();
 
-    let caps = re.captures(ty).expect(
-        &format!("'{ty}' must contain the '{prefix}' prefix and the '{suffix}' suffix.")
-    );
+    let caps = re.captures(ty).unwrap_or_else(|| {
+        panic!("'{ty}' must contain the '{prefix}' prefix and the '{suffix}' suffix.")
+    });
 
-    caps[1].to_string()
+    caps[1].to_string().replace(" ", "")
 }
 
 /// split a tuple in array of items (nested tuples are not splitted).
@@ -145,14 +113,12 @@ pub fn test_get_tuple_item_types() {
     }
 
     let test_cases = vec![
+        ("()", vec![]),
         ("(u8,)", vec!["u8"]),
         ("(u8, u16, u32)", vec!["u8", "u16", "u32"]),
         ("(u8, (u16,), u32)", vec!["u8", "(u16,)", "u32"]),
         ("(u8, (u16, (u8, u16)))", vec!["u8", "(u16,(u8,u16))"]),
-        (
-            "(Array<(Points, Damage)>, ((u16,),)))",
-            vec!["Array<(Points,Damage)>", "((u16,),))"],
-        ),
+        ("(Array<(Points, Damage)>, ((u16,),)))", vec!["Array<(Points,Damage)>", "((u16,),))"]),
         (
             "(u8, (u16, (u8, u16), Array<(Points, Damage)>), ((u16,),)))",
             vec!["u8", "(u16,(u8,u16),Array<(Points,Damage)>)", "((u16,),))"],
@@ -172,28 +138,34 @@ fn test_extract_composite_inner_type_with_tuples() {
     let test_cases = [
         ("(u8,)", "u8,"),
         ("(u8,),", "u8,"),
-        ("(u8, u16)", "u8, u16"),
-        ("(u8, u16,)", "u8, u16,"),
-        ("(u8, u16, (u32,))", "u8, u16, (u32,)"),
-        ("(u8, u16, (u32,),)", "u8, u16, (u32,),"),
-        ("(u8, (Span<u32>, u32, Option<Array<u8>,) u16, (u32,),)", "u8, (Span<u32>, u32, Option<Array<u8>,) u16, (u32,),"),
-        ("(u8, u32) // comment", "u8, u32"),
-        ("(u8, u32), // comment", "u8, u32"),
+        ("(u8, u16)", "u8,u16"),
+        ("(u8, u16,)", "u8,u16,"),
+        ("(u8, u16, (u32,))", "u8,u16,(u32,)"),
+        ("(u8, u16, (u32,),)", "u8,u16,(u32,),"),
+        (
+            "(u8, (Span<u32>, u32, Option<Array<u8>,) u16, (u32,),)",
+            "u8,(Span<u32>,u32,Option<Array<u8>,)u16,(u32,),",
+        ),
+        // Unity type is a special case (empty tuple).
+        ("()", ""),
+        ("(),", ""),
+        ("((), (u8, ()))", "(),(u8,())"),
     ];
 
     for (tuple, expected) in test_cases {
         let result = extract_composite_inner_type(tuple, TUPLE_PREFIX, TUPLE_SUFFIX);
         assert!(
             result == expected,
-            "bad tuple: {} result: {} expected: {}", tuple, result, expected
+            "bad tuple: {} result: {} expected: {}",
+            tuple,
+            result,
+            expected
         );
     }
 }
 
 #[test]
-#[should_panic(
-    expected = "'u8, u16' must contain the '(' prefix and the ')' suffix."
-)]
+#[should_panic(expected = "'u8, u16' must contain the '(' prefix and the ')' suffix.")]
 fn test_extract_composite_inner_type_with_tuples_bad_ty() {
     let _ = extract_composite_inner_type("u8, u16", TUPLE_PREFIX, TUPLE_SUFFIX);
 }
@@ -202,25 +174,21 @@ fn test_extract_composite_inner_type_with_tuples_bad_ty() {
 fn test_extract_composite_inner_type_with_arrays() {
     let test_cases = [
         ("Array<u8>", "u8"),
-        ("Array<(u8, u16)>", "(u8, u16)"),
-        ("Array<Array<(u8, u16)>>", "Array<(u8, u16)>"),
-        ("Array<(u8, u16)> // comment", "(u8, u16)"),
-        ("Array<(u8, u16)>, // comment", "(u8, u16)"),
+        ("Array<(u8, u16)>", "(u8,u16)"),
+        ("Array<Array<(u8, u16)>>", "Array<(u8,u16)>"),
+        ("Array<(u8, u16)> // comment", "(u8,u16)"),
+        ("Array<(u8, u16)>, // comment", "(u8,u16)"),
+        // Array<()> is not supported by Cairo so no need to test this case
     ];
 
     for (arr, expected) in test_cases {
         let result = extract_composite_inner_type(arr, ARRAY_PREFIX, ARRAY_SUFFIX);
-        assert!(
-            result == expected,
-            "bad array: {} result: {} expected: {}", arr, result, expected
-        );
+        assert!(result == expected, "bad array: {} result: {} expected: {}", arr, result, expected);
     }
 }
 
 #[test]
-#[should_panic(
-    expected = "'u8, u16' must contain the 'Array<' prefix and the '>' suffix."
-)]
+#[should_panic(expected = "'u8, u16' must contain the 'Array<' prefix and the '>' suffix.")]
 fn test_extract_composite_inner_type_with_arrays_bad_ty() {
     let _ = extract_composite_inner_type("u8, u16", ARRAY_PREFIX, ARRAY_SUFFIX);
 }
@@ -229,25 +197,21 @@ fn test_extract_composite_inner_type_with_arrays_bad_ty() {
 fn test_extract_composite_inner_type_with_spans() {
     let test_cases = [
         ("Span<u8>", "u8"),
-        ("Span<(u8, u16)>", "(u8, u16)"),
-        ("Span<Array<(u8, u16)>>", "Array<(u8, u16)>"),
-        ("Span<(u8, u16)> // comment", "(u8, u16)"),
-        ("Span<(u8, u16)>, // comment", "(u8, u16)"),
+        ("Span<(u8, u16)>", "(u8,u16)"),
+        ("Span<Array<(u8, u16)>>", "Array<(u8,u16)>"),
+        ("Span<(u8, u16)> // comment", "(u8,u16)"),
+        ("Span<(u8, u16)>, // comment", "(u8,u16)"),
+        ("Span<()>", "()"),
     ];
 
     for (sp, expected) in test_cases {
         let result = extract_composite_inner_type(sp, SPAN_PREFIX, SPAN_SUFFIX);
-        assert!(
-            result == expected,
-            "bad span: {} result: {} expected: {}", sp, result, expected
-        );
+        assert!(result == expected, "bad span: {} result: {} expected: {}", sp, result, expected);
     }
 }
 
 #[test]
-#[should_panic(
-    expected = "'u8, u16' must contain the 'Span<' prefix and the '>' suffix."
-)]
+#[should_panic(expected = "'u8, u16' must contain the 'Span<' prefix and the '>' suffix.")]
 fn test_extract_composite_inner_type_with_spans_bad_ty() {
     let _ = extract_composite_inner_type("u8, u16", SPAN_PREFIX, SPAN_SUFFIX);
 }
