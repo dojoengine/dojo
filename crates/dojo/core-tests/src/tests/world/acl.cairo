@@ -306,6 +306,8 @@ fn test_owners_count() {
     for resource in resources {
         let resource = *resource;
 
+        println!("resource: {}", resource);
+
         // after world deployment, a resource has 1 owner
         assert(world.owners_count(resource) == 1, 'resource should have 1 owner');
 

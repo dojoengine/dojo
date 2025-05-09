@@ -293,7 +293,7 @@ pub fn deploy_world_with_all_kind_of_resources() -> (WorldStorage, Span<felt252>
         Model::<Foo>::selector(DOJO_NSH), // model
         Event::<SimpleEvent>::selector(DOJO_NSH), // event
         selector_from_namespace_and_name(DOJO_NSH, @"bar"), // contract
-        selector_from_namespace_and_name(DOJO_NSH, @"dojolib_v1"), // library
+        selector_from_namespace_and_name(DOJO_NSH, @"dojo_lib_v1"), // library
         DOJO_NSH // namespace
     ]
         .span();

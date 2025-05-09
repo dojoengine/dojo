@@ -161,7 +161,7 @@ rstest_reuse = "0.6.0"
 salsa = "0.16.1"
 
 # version 2.11.4+nightly-2025-05-08
-scarb = { git = "https://github.com/software-mansion/scarb", rev="4fdeb7810" }
+scarb = { git = "https://github.com/software-mansion/scarb", rev="4fdeb7810", default-features = false }
 scarb-metadata = { git = "https://github.com/software-mansion/scarb", rev="4fdeb7810" }
 scarb-ui = { git = "https://github.com/software-mansion/scarb", rev="4fdeb7810" }
 

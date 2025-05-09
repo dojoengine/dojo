@@ -24,18 +24,6 @@ pub mod world {
     use core::num::traits::Zero;
     use core::panic_with_felt252;
     use core::panics::panic_with_byte_array;
-
-    use starknet::{
-        get_caller_address, get_tx_info, ClassHash, ContractAddress,
-        syscalls::{deploy_syscall, replace_class_syscall, get_class_hash_at_syscall},
-        SyscallResultTrait, storage::Map,
-    };
-    pub use starknet::storage::{
-        StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess,
-        StoragePointerWriteAccess,
-    };
-
-    use dojo::world::errors;
     use core::traits::Into;
     use dojo::contract::components::upgradeable::{
         IUpgradeableDispatcher, IUpgradeableDispatcherTrait,
@@ -56,7 +44,7 @@ pub mod world {
         StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess,
         StoragePointerWriteAccess,
     };
-    use starknet::syscalls::{deploy_syscall, replace_class_syscall};
+    use starknet::syscalls::{deploy_syscall, get_class_hash_at_syscall, replace_class_syscall};
     use starknet::{ClassHash, ContractAddress, SyscallResultTrait, get_caller_address, get_tx_info};
     use super::Permission;
 
