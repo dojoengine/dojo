@@ -1,15 +1,13 @@
 use core::array::{ArrayTrait, SpanTrait};
 use core::poseidon::poseidon_hash_span;
 use core::traits::Into;
-
-use starknet::{SyscallResultTrait, SyscallResult};
 use starknet::storage_access::{
-    StorageAddress, StorageBaseAddress, storage_base_address_from_felt252,
-    storage_address_from_base, storage_address_from_base_and_offset,
+    StorageAddress, StorageBaseAddress, storage_address_from_base,
+    storage_address_from_base_and_offset, storage_base_address_from_felt252,
 };
 use starknet::syscalls::{storage_read_syscall, storage_write_syscall};
-
-use super::packing::{pack, unpack, calculate_packed_size};
+use starknet::{SyscallResult, SyscallResultTrait};
+use super::packing::{calculate_packed_size, pack, unpack};
 
 pub const DEFAULT_ADDRESS_DOMAIN: u32 = 0;
 
@@ -107,7 +105,7 @@ pub fn set_many(
         ) {
             Result::Ok(_) => {},
             Result::Err(err) => { break Result::Err(err); },
-        };
+        }
 
         let (sum, has_overflowed) = core::num::traits::OverflowingAdd::overflowing_add(
             index_in_chunk, 1,
@@ -151,7 +149,7 @@ pub fn set_packed_array(
         ) {
             Result::Ok(_) => {},
             Result::Err(err) => { break Result::Err(err); },
-        };
+        }
 
         let (sum, has_overflowed) = core::num::traits::OverflowingAdd::overflowing_add(
             index_in_chunk, 1,

@@ -20,14 +20,14 @@ pub fn debug_macro(element: &str, res: &ProcMacroResult) {
         } else {
             format!(
                 "diagnostics:\n{}",
-                res.diagnostics
-                    .iter()
-                    .map(|d| d.to_pretty_string())
-                    .collect::<Vec<_>>()
-                    .join("\n")
+                res.diagnostics.iter().map(|d| d.to_pretty_string()).collect::<Vec<_>>().join("\n")
             )
         };
 
-        println!("\n*> MACRO {element}\n>>>>>>>>>>>>>>>>>>>>>>>>>>>\n{content}\n{diagnostics}\n<<<<<<<<<<<<<<<<<<<<<<<<<<<");
+        println!(
+            "\n*> MACRO \
+             {element}\n>>>>>>>>>>>>>>>>>>>>>>>>>>>\n{content}\n{diagnostics}\\
+             n<<<<<<<<<<<<<<<<<<<<<<<<<<<"
+        );
     }
 }

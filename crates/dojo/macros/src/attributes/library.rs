@@ -1,11 +1,8 @@
 use cairo_lang_macro::{quote, Diagnostic, ProcMacroResult, TokenStream};
 use cairo_lang_parser::utils::SimpleParserDatabase;
+use cairo_lang_syntax::node::ast::{self, MaybeModuleBody};
 use cairo_lang_syntax::node::with_db::SyntaxNodeWithDb;
-use cairo_lang_syntax::node::Terminal;
-use cairo_lang_syntax::node::{
-    ast::{self, MaybeModuleBody},
-    TypedSyntaxNode,
-};
+use cairo_lang_syntax::node::{Terminal, TypedSyntaxNode};
 
 use crate::constants::{CONSTRUCTOR_FN, DOJO_INIT_FN};
 use crate::helpers::{DojoChecker, DojoParser, DojoTokenizer, ProcMacroResultExt};

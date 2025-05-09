@@ -1,9 +1,6 @@
-use cairo_lang_macro::Diagnostic;
-use cairo_lang_macro::ProcMacroResult;
-use cairo_lang_macro::TokenStream;
+use cairo_lang_macro::{Diagnostic, ProcMacroResult, TokenStream};
 use cairo_lang_parser::utils::SimpleParserDatabase;
-use cairo_lang_syntax::node::ast::ItemStruct;
-use cairo_lang_syntax::node::ast::Member;
+use cairo_lang_syntax::node::ast::{ItemStruct, Member};
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{Terminal, TypedSyntaxNode};
 use starknet::core::utils::get_selector_from_name;
@@ -159,8 +156,8 @@ impl DojoStructIntrospect {
                 // directly or as a nested type (the tuple (u8, usize, u32) for example)
                 if type_contains_usize(member_type) {
                     self.diagnostics.push_error(
-                        "Use u32 rather than usize for model keys, as usize size is \
-                                architecture dependent."
+                        "Use u32 rather than usize for model keys, as usize size is architecture \
+                         dependent."
                             .to_string(),
                     );
                 }

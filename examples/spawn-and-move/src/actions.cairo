@@ -16,26 +16,25 @@ pub trait IActions<T> {
 
 #[dojo::contract]
 pub mod actions {
-    use super::IActions;
-
-    use starknet::{ContractAddress, get_caller_address};
-    use dojo_examples::models::{
-        Position, Moves, MovesValue, Direction, Vec2, PlayerConfig, PlayerItem, ServerProfile,
-    };
-    use dojo_examples::utils::next_position;
-    use dojo_examples::lib_math::{SimpleMathLibraryDispatcher, SimpleMathDispatcherTrait};
-    use dojo::model::{ModelStorage, ModelValueStorage, Model};
+    #[cfg(feature: 'dungeon')]
+    use armory::Flatbow;
+    #[cfg(feature: 'dungeon')]
+    use bestiary::RiverSkale;
     use dojo::event::EventStorage;
+    use dojo::model::{Model, ModelStorage, ModelValueStorage};
     use dojo::world::{WorldStorage, WorldStorageTrait};
 
     // Features can be used on modules, structs, trait and `use`. Not inside
     // a function.
     #[cfg(feature: 'dungeon')]
     use dojo_examples::dungeon::{IDungeonDispatcher, IDungeonDispatcherTrait};
-    #[cfg(feature: 'dungeon')]
-    use armory::Flatbow;
-    #[cfg(feature: 'dungeon')]
-    use bestiary::RiverSkale;
+    use dojo_examples::lib_math::{SimpleMathDispatcherTrait, SimpleMathLibraryDispatcher};
+    use dojo_examples::models::{
+        Direction, Moves, MovesValue, PlayerConfig, PlayerItem, Position, ServerProfile, Vec2,
+    };
+    use dojo_examples::utils::next_position;
+    use starknet::{ContractAddress, get_caller_address};
+    use super::IActions;
 
     #[derive(Copy, Drop, Serde)]
     #[dojo::event]
@@ -240,17 +239,16 @@ pub mod actions {
 
 #[cfg(test)]
 mod tests {
-    use dojo::model::{ModelStorage, ModelValueStorage, ModelStorageTest};
-    use dojo::world::{WorldStorageTrait};
+    use dojo::model::{ModelStorage, ModelStorageTest, ModelValueStorage};
+    use dojo::world::WorldStorageTrait;
     use dojo_cairo_test::{
-        spawn_test_world, NamespaceDef, TestResource, ContractDefTrait, ContractDef,
-        WorldStorageTestTrait,
+        ContractDef, ContractDefTrait, NamespaceDef, TestResource, WorldStorageTestTrait,
+        spawn_test_world,
     };
     use dojo_examples::lib_math::simple_math;
-
-    use super::{actions, IActionsDispatcher, IActionsDispatcherTrait};
+    use dojo_examples::models::{Direction, Moves, Position, PositionValue, m_Moves, m_Position};
     use crate::dungeon::dungeon;
-    use dojo_examples::models::{Position, PositionValue, m_Position, Moves, m_Moves, Direction};
+    use super::{IActionsDispatcher, IActionsDispatcherTrait, actions};
 
     fn namespace_def() -> NamespaceDef {
         let ndef = NamespaceDef {

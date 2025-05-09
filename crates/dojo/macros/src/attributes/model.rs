@@ -51,12 +51,7 @@ impl DojoModel {
     fn process_ast(db: &SimpleParserDatabase, struct_ast: &ast::ItemStruct) -> ProcMacroResult {
         let mut model = DojoModel::new();
 
-        model.model_type = struct_ast
-            .name(db)
-            .as_syntax_node()
-            .get_text(db)
-            .trim()
-            .to_string();
+        model.model_type = struct_ast.name(db).as_syntax_node().get_text(db).trim().to_string();
 
         if let Some(failure) = DojoChecker::is_name_valid("model", &model.model_type) {
             return failure;
@@ -83,20 +78,13 @@ impl DojoModel {
                 keys.push(member.clone());
                 key_types.push(member.ty.clone());
                 key_attrs.push(format!("*self.{}", member.name.clone()));
-                model
-                    .serialized_keys
-                    .push(DojoFormatter::serialize_member_ty(member, true));
+                model.serialized_keys.push(DojoFormatter::serialize_member_ty(member, true));
             } else {
                 values.push(member.clone());
-                model
-                    .serialized_values
-                    .push(DojoFormatter::serialize_member_ty(member, true));
+                model.serialized_values.push(DojoFormatter::serialize_member_ty(member, true));
                 model
                     .members_values
-                    .push(DojoFormatter::get_member_declaration(
-                        &member.name,
-                        &member.ty,
-                    ));
+                    .push(DojoFormatter::get_member_declaration(&member.name, &member.ty));
 
                 if !model_member_store_impls_processed.contains(&member.ty.to_string()) {
                     model_member_store_impls.extend(vec![
@@ -120,9 +108,7 @@ impl DojoModel {
         });
 
         if keys.is_empty() {
-            model
-                .diagnostics
-                .push_error("Model must define at least one #[key] attribute".into());
+            model.diagnostics.push_error("Model must define at least one #[key] attribute".into());
         }
 
         if values.is_empty() {
@@ -136,15 +122,9 @@ impl DojoModel {
         }
 
         (model.keys_to_tuple, model.key_type) = if keys.len() > 1 {
-            (
-                format!("({})", key_attrs.join(", ")),
-                format!("({})", key_types.join(", ")),
-            )
+            (format!("({})", key_attrs.join(", ")), format!("({})", key_types.join(", ")))
         } else {
-            (
-                key_attrs.first().unwrap().to_string(),
-                key_types.first().unwrap().to_string(),
-            )
+            (key_attrs.first().unwrap().to_string(), key_types.first().unwrap().to_string())
         };
 
         let derive_attr_names = DojoParser::extract_derive_attr_names(
@@ -197,10 +177,7 @@ impl DojoModel {
         let missing_derive_attr = if missing_derive_attr_names.is_empty() {
             DojoTokenizer::tokenize("")
         } else {
-            DojoTokenizer::tokenize(&format!(
-                "#[derive({})]",
-                missing_derive_attr_names.join(", ")
-            ))
+            DojoTokenizer::tokenize(&format!("#[derive({})]", missing_derive_attr_names.join(", ")))
         };
 
         ProcMacroResult::finalize(
@@ -228,10 +205,7 @@ impl DojoModel {
             unique_hash,
         ) = (
             &self.model_type,
-            format!(
-                "#[derive({})]",
-                self.model_value_derive_attr_names.join(", ")
-            ),
+            format!("#[derive({})]", self.model_value_derive_attr_names.join(", ")),
             self.members_values.join(""),
             &self.key_type,
             &self.keys_to_tuple,
@@ -241,21 +215,23 @@ impl DojoModel {
         );
 
         let content = format!(
-        "{model_value_derive_attr_names}
+            "{model_value_derive_attr_names}
 pub struct {model_type}Value {{
     {members_values}
 }}
 
 type {model_type}KeyType = {key_type};
 
-pub impl {model_type}KeyParser of dojo::model::model::KeyParser<{model_type}, {model_type}KeyType> {{
+pub impl {model_type}KeyParser of dojo::model::model::KeyParser<{model_type}, {model_type}KeyType> \
+             {{
     #[inline(always)]
     fn parse_key(self: @{model_type}) -> {model_type}KeyType {{
         {keys_to_tuple}
     }}
 }}
 
-impl {model_type}ModelValueKey of dojo::model::model_value::ModelValueKey<{model_type}Value, {model_type}KeyType> {{
+impl {model_type}ModelValueKey of dojo::model::model_value::ModelValueKey<{model_type}Value, \
+             {model_type}KeyType> {{
 }}
 
 // Impl to get the static definition of a model
@@ -274,7 +250,8 @@ pub mod m_{model_type}_definition {{
 
         #[inline(always)]
         fn schema() -> dojo::meta::introspect::Struct {{
-            if let dojo::meta::introspect::Ty::Struct(s) = dojo::meta::Introspect::<{model_type}>::ty() {{
+            if let dojo::meta::introspect::Ty::Struct(s) = \
+             dojo::meta::Introspect::<{model_type}>::ty() {{
                 s
             }}
             else {{
@@ -289,8 +266,10 @@ pub mod m_{model_type}_definition {{
     }}
 }}
 
-pub impl {model_type}Definition = m_{model_type}_definition::{model_type}DefinitionImpl<{model_type}>;
-pub impl {model_type}ModelValueDefinition = m_{model_type}_definition::{model_type}DefinitionImpl<{model_type}Value>;
+pub impl {model_type}Definition = \
+             m_{model_type}_definition::{model_type}DefinitionImpl<{model_type}>;
+pub impl {model_type}ModelValueDefinition = \
+             m_{model_type}_definition::{model_type}DefinitionImpl<{model_type}Value>;
 
 pub impl {model_type}ModelParser of dojo::model::model::ModelParser<{model_type}> {{
     fn serialize_keys(self: @{model_type}) -> Span<felt252> {{
@@ -305,7 +284,8 @@ pub impl {model_type}ModelParser of dojo::model::model::ModelParser<{model_type}
     }}
 }}
 
-pub impl {model_type}ModelValueParser of dojo::model::model_value::ModelValueParser<{model_type}Value> {{
+pub impl {model_type}ModelValueParser of \
+             dojo::model::model_value::ModelValueParser<{model_type}Value> {{
     fn serialize_values(self: @{model_type}Value) -> Span<felt252> {{
         let mut serialized = core::array::ArrayTrait::new();
         {serialized_values}
@@ -325,13 +305,16 @@ pub mod m_{model_type} {{
     struct Storage {{}}
 
     #[abi(embed_v0)]
-    impl {model_type}__DojoDeployedModelImpl = dojo::model::component::IDeployedModelImpl<ContractState, {model_type}>;
+    impl {model_type}__DojoDeployedModelImpl = \
+             dojo::model::component::IDeployedModelImpl<ContractState, {model_type}>;
 
     #[abi(embed_v0)]
-    impl {model_type}__DojoStoredModelImpl = dojo::model::component::IStoredModelImpl<ContractState, {model_type}>;
+    impl {model_type}__DojoStoredModelImpl = \
+             dojo::model::component::IStoredModelImpl<ContractState, {model_type}>;
 
     #[abi(embed_v0)]
-    impl {model_type}__DojoModelImpl = dojo::model::component::IModelImpl<ContractState, {model_type}>;
+    impl {model_type}__DojoModelImpl = dojo::model::component::IModelImpl<ContractState, \
+             {model_type}>;
 
     #[abi(per_item)]
     #[generate_trait]
@@ -358,7 +341,7 @@ pub mod m_{model_type} {{
         }}
     }}
 }}"
-    );
+        );
 
         TokenStream::new(vec![DojoTokenizer::tokenize(&content)])
     }

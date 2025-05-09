@@ -13,9 +13,7 @@ pub struct DojoEnumIntrospect {
 
 impl DojoEnumIntrospect {
     pub fn new() -> Self {
-        Self {
-            diagnostics: vec![],
-        }
+        Self { diagnostics: vec![] }
     }
 
     pub fn process(
@@ -116,9 +114,8 @@ impl DojoEnumIntrospect {
         }
 
         let v0 = variant_sizes[0].clone();
-        let identical_variants = variant_sizes
-            .iter()
-            .all(|vs| vs.0 == v0.0 && vs.1 == v0.1 && vs.2 == v0.2);
+        let identical_variants =
+            variant_sizes.iter().all(|vs| vs.0 == v0.0 && vs.1 == v0.1 && vs.2 == v0.2);
 
         if identical_variants {
             let (mut sizes, mut cumulated_sizes, is_dynamic_size) = v0;
@@ -165,10 +162,7 @@ impl DojoEnumIntrospect {
         // don't forget the store the variant value
         variant_layout.insert(0, "8".to_string());
 
-        if variant_layout
-            .iter()
-            .any(|v| super::layout::is_custom_layout(v.as_str()))
-        {
+        if variant_layout.iter().any(|v| super::layout::is_custom_layout(v.as_str())) {
             super::layout::generate_cairo_code_for_fixed_layout_with_custom_types(&variant_layout)
         } else {
             format!(
@@ -229,11 +223,7 @@ impl DojoEnumIntrospect {
         let variants_ty = if variants.is_empty() {
             "".to_string()
         } else {
-            variants
-                .iter()
-                .map(|v| self.build_variant_ty(db, v))
-                .collect::<Vec<_>>()
-                .join(",\n")
+            variants.iter().map(|v| self.build_variant_ty(db, v)).collect::<Vec<_>>().join(",\n")
         };
 
         format!(
@@ -257,10 +247,7 @@ impl DojoEnumIntrospect {
                 format!("('{name}', dojo::meta::introspect::Ty::Tuple(array![].span()))")
             }
             OptionTypeClause::TypeClause(type_clause) => {
-                format!(
-                    "('{name}', {})",
-                    super::ty::build_ty_from_type_clause(db, &type_clause)
-                )
+                format!("('{name}', {})", super::ty::build_ty_from_type_clause(db, &type_clause))
             }
         }
     }

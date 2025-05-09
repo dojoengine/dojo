@@ -23,9 +23,10 @@ impl DojoChecker {
         if attr_names.contains(&DOJO_INTROSPECT_DERIVE.to_string())
             && attr_names.contains(&DOJO_PACKED_DERIVE.to_string())
         {
-            diagnostics.push_error(
-                format!("{DOJO_INTROSPECT_DERIVE} and {DOJO_PACKED_DERIVE} attributes cannot be used at a same time.")
-            );
+            diagnostics.push_error(format!(
+                "{DOJO_INTROSPECT_DERIVE} and {DOJO_PACKED_DERIVE} attributes cannot be used at a \
+                 same time."
+            ));
         }
     }
 
@@ -33,8 +34,8 @@ impl DojoChecker {
     pub fn is_name_valid(element: &str, name: &str) -> Option<ProcMacroResult> {
         if !naming::is_name_valid(name) {
             return Some(ProcMacroResult::fail(format!(
-                "The {element} name '{name}' can only contain characters (a-z/A-Z), \
-                digits (0-9) and underscore (_)."
+                "The {element} name '{name}' can only contain characters (a-z/A-Z), digits (0-9) \
+                 and underscore (_)."
             )));
         }
 

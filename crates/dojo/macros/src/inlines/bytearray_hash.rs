@@ -1,7 +1,7 @@
-use cairo_lang_macro::{ProcMacroResult, TokenStream, quote};
+use cairo_lang_macro::{quote, ProcMacroResult, TokenStream};
 use cairo_lang_parser::utils::SimpleParserDatabase;
-use cairo_lang_syntax::node::{Terminal, TypedSyntaxNode, ast, db::SyntaxGroup};
-
+use cairo_lang_syntax::node::db::SyntaxGroup;
+use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
 use dojo_types::naming;
 
 use crate::helpers::{DojoParser, DojoTokenizer, ProcMacroResultExt};
@@ -34,8 +34,9 @@ fn process_ast(db: &dyn SyntaxGroup, expr: &ast::ExprParenthesized) -> ProcMacro
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use cairo_lang_macro::{Severity, TokenStream};
+
+    use super::*;
 
     #[test]
     fn test_with_bad_inputs() {

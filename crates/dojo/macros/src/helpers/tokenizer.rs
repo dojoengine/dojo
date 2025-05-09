@@ -1,6 +1,7 @@
 use cairo_lang_macro::{quote, TextSpan, Token, TokenStream, TokenTree};
 use cairo_lang_parser::utils::SimpleParserDatabase;
-use cairo_lang_syntax::node::{ast, with_db::SyntaxNodeWithDb, TypedSyntaxNode};
+use cairo_lang_syntax::node::with_db::SyntaxNodeWithDb;
+use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
 
 pub struct DojoTokenizer {}
 

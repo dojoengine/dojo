@@ -1,6 +1,6 @@
-use cairo_lang_syntax::node::TypedSyntaxNode;
 use cairo_lang_syntax::node::ast::{Expr, TypeClause};
 use cairo_lang_syntax::node::db::SyntaxGroup;
+use cairo_lang_syntax::node::TypedSyntaxNode;
 
 use super::utils::{get_array_item_type, get_tuple_item_types, is_array, is_byte_array, is_tuple};
 

@@ -1,15 +1,14 @@
 use cairo_lang_macro::Diagnostic;
 use cairo_lang_parser::utils::SimpleParserDatabase;
-use cairo_lang_syntax::node::TypedSyntaxNode;
 use cairo_lang_syntax::node::ast::{Expr, TypeClause};
 use cairo_lang_syntax::node::db::SyntaxGroup;
-
-use crate::helpers::DiagnosticsExt;
+use cairo_lang_syntax::node::TypedSyntaxNode;
 
 use super::utils::{
     get_array_item_type, get_tuple_item_types, is_array, is_byte_array, is_tuple,
     is_unsupported_option_type,
 };
+use crate::helpers::DiagnosticsExt;
 
 /// Build a field layout describing the provided type clause.
 pub(crate) fn get_layout_from_type_clause(

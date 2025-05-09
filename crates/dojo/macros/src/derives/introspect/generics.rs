@@ -1,8 +1,6 @@
 use cairo_lang_parser::utils::SimpleParserDatabase;
-use cairo_lang_syntax::node::{
-    ast::{GenericParam, OptionWrappedGenericParamList},
-    Terminal,
-};
+use cairo_lang_syntax::node::ast::{GenericParam, OptionWrappedGenericParamList};
+use cairo_lang_syntax::node::Terminal;
 
 // Extract generic type information and build the
 // type and impl information to add to the generated introspect

@@ -1,6 +1,7 @@
 use cairo_lang_macro::{quote, Diagnostic, ProcMacroResult, TokenStream};
 use cairo_lang_parser::utils::SimpleParserDatabase;
-use cairo_lang_syntax::node::{ast, helpers::QueryAttrs, TypedSyntaxNode};
+use cairo_lang_syntax::node::helpers::QueryAttrs;
+use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
 
 use crate::constants::{DOJO_INTROSPECT_DERIVE, DOJO_PACKED_DERIVE, EXPECTED_DERIVE_ATTR_NAMES};
 use crate::helpers::{
@@ -45,12 +46,7 @@ impl DojoEvent {
     fn process_ast(db: &SimpleParserDatabase, struct_ast: &ast::ItemStruct) -> ProcMacroResult {
         let mut event = DojoEvent::new();
 
-        event.event_name = struct_ast
-            .name(db)
-            .as_syntax_node()
-            .get_text(db)
-            .trim()
-            .to_string();
+        event.event_name = struct_ast.name(db).as_syntax_node().get_text(db).trim().to_string();
 
         if let Some(failure) = DojoChecker::is_name_valid("event", &event.event_name) {
             return failure;
@@ -69,9 +65,7 @@ impl DojoEvent {
         );
 
         if event.serialized_keys.is_empty() {
-            event
-                .diagnostics
-                .push_error("Event must define at least one #[key] attribute".into());
+            event.diagnostics.push_error("Event must define at least one #[key] attribute".into());
         }
 
         if event.serialized_values.is_empty() {
@@ -108,9 +102,9 @@ impl DojoEvent {
         // Ensures events always derive Introspect if not already derived,
         // and do not derive IntrospectPacked.
         if derive_attr_names.contains(&DOJO_PACKED_DERIVE.to_string()) {
-            event.diagnostics.push_error(format!(
-                "Deriving {DOJO_PACKED_DERIVE} on event is not allowed."
-            ));
+            event
+                .diagnostics
+                .push_error(format!("Deriving {DOJO_PACKED_DERIVE} on event is not allowed."));
         }
 
         missing_derive_attrs.push(DOJO_INTROSPECT_DERIVE.to_string());
@@ -119,9 +113,7 @@ impl DojoEvent {
         EXPECTED_DERIVE_ATTR_NAMES.iter().for_each(|expected_attr| {
             if !derive_attr_names.contains(&expected_attr.to_string()) {
                 missing_derive_attrs.push(expected_attr.to_string());
-                event
-                    .event_value_derive_attr_names
-                    .push(expected_attr.to_string());
+                event.event_value_derive_attr_names.push(expected_attr.to_string());
             }
         });
 
@@ -174,7 +166,7 @@ impl DojoEvent {
         );
 
         let content = format!(
-        "// EventValue on it's own does nothing since events are always emitted and
+            "// EventValue on it's own does nothing since events are always emitted and
 // never read from the storage. However, it's required by the ABI to
 // ensure that the event definition contains both keys and values easily distinguishable.
 // Only derives strictly required traits.
@@ -214,10 +206,12 @@ pub mod e_{type_name} {{
     struct Storage {{}}
 
     #[abi(embed_v0)]
-    impl {type_name}__DeployedEventImpl = dojo::event::component::IDeployedEventImpl<ContractState, {type_name}>;
+    impl {type_name}__DeployedEventImpl = \
+             dojo::event::component::IDeployedEventImpl<ContractState, {type_name}>;
 
     #[abi(embed_v0)]
-    impl {type_name}__StoredEventImpl = dojo::event::component::IStoredEventImpl<ContractState, {type_name}>;
+    impl {type_name}__StoredEventImpl = dojo::event::component::IStoredEventImpl<ContractState, \
+             {type_name}>;
 
      #[abi(embed_v0)]
     impl {type_name}__EventImpl = dojo::event::component::IEventImpl<ContractState, {type_name}>;
@@ -247,7 +241,7 @@ pub mod e_{type_name} {{
         }}
     }}
 }}"
-    );
+        );
         TokenStream::new(vec![DojoTokenizer::tokenize(&content)])
     }
 

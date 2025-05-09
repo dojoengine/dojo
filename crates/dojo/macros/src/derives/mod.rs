@@ -1,5 +1,6 @@
-use crate::helpers::debug_macro;
 use cairo_lang_macro::{derive_macro, ProcMacroResult, TokenStream};
+
+use crate::helpers::debug_macro;
 
 pub mod introspect;
 

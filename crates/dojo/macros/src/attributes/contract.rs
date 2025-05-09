@@ -1,11 +1,8 @@
 use cairo_lang_macro::{quote, Diagnostic, ProcMacroResult, TokenStream};
 use cairo_lang_parser::utils::SimpleParserDatabase;
+use cairo_lang_syntax::node::ast::{self, MaybeModuleBody, OptionReturnTypeClause};
 use cairo_lang_syntax::node::with_db::SyntaxNodeWithDb;
-use cairo_lang_syntax::node::Terminal;
-use cairo_lang_syntax::node::{
-    ast::{self, MaybeModuleBody, OptionReturnTypeClause},
-    TypedSyntaxNode,
-};
+use cairo_lang_syntax::node::{Terminal, TypedSyntaxNode};
 
 use crate::constants::{CONSTRUCTOR_FN, DOJO_INIT_FN};
 use crate::helpers::{DiagnosticsExt, DojoChecker, DojoParser, DojoTokenizer, ProcMacroResultExt};
@@ -174,8 +171,8 @@ impl DojoContract {
         if !is_valid_constructor_params(db, fn_ast) {
             self.diagnostics.push_error(format!(
                 "The constructor must have exactly one parameter, which is `ref self: \
-                    ContractState`. Add a `{DOJO_INIT_FN}` function instead if you need to \
-                    initialize the contract with parameters."
+                 ContractState`. Add a `{DOJO_INIT_FN}` function instead if you need to \
+                 initialize the contract with parameters."
             ));
         }
 
@@ -213,9 +210,8 @@ impl DojoContract {
         if let OptionReturnTypeClause::ReturnTypeClause(_) =
             fn_ast.declaration(db).signature(db).ret_ty(db)
         {
-            self.diagnostics.push_error(format!(
-                "The {DOJO_INIT_FN} function cannot have a return type."
-            ));
+            self.diagnostics
+                .push_error(format!("The {DOJO_INIT_FN} function cannot have a return type."));
         }
 
         let fn_decl = fn_ast.declaration(db).as_syntax_node();
@@ -333,39 +329,29 @@ impl DojoContract {
 /// We only allow one parameter for the constructor, which is the contract state,
 /// since `dojo_init` is called by the world after every resource has been deployed.
 fn is_valid_constructor_params(db: &SimpleParserDatabase, fn_ast: &ast::FunctionWithBody) -> bool {
-    let params = fn_ast
-        .declaration(db)
-        .signature(db)
-        .parameters(db)
-        .elements(db);
+    let params = fn_ast.declaration(db).signature(db).parameters(db).elements(db);
     params.len() == 1
-        && params
-            .first()
-            .unwrap()
-            .as_syntax_node()
-            .get_text(db)
-            .contains("ref self: ContractState")
+        && params.first().unwrap().as_syntax_node().get_text(db).contains("ref self: ContractState")
 }
 
-/* TODO RBA/
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_is_valid_constructor_params_ok() {
-        assert!(is_valid_constructor_params("ref self: ContractState"));
-        assert!(is_valid_constructor_params("ref self: ContractState "));
-        assert!(is_valid_constructor_params(" ref self: ContractState"));
-    }
-
-    #[test]
-    fn test_is_valid_constructor_params_not_ok() {
-        assert!(!is_valid_constructor_params(""));
-        assert!(!is_valid_constructor_params("self: ContractState"));
-        assert!(!is_valid_constructor_params("ref self: OtherState"));
-        assert!(!is_valid_constructor_params("ref self: ContractState, other: felt252"));
-        assert!(!is_valid_constructor_params("other: felt252"));
-    }
-}
-*/
+// TODO RBA/
+// #[cfg(test)]
+// mod tests {
+// use super::*;
+//
+// #[test]
+// fn test_is_valid_constructor_params_ok() {
+// assert!(is_valid_constructor_params("ref self: ContractState"));
+// assert!(is_valid_constructor_params("ref self: ContractState "));
+// assert!(is_valid_constructor_params(" ref self: ContractState"));
+// }
+//
+// #[test]
+// fn test_is_valid_constructor_params_not_ok() {
+// assert!(!is_valid_constructor_params(""));
+// assert!(!is_valid_constructor_params("self: ContractState"));
+// assert!(!is_valid_constructor_params("ref self: OtherState"));
+// assert!(!is_valid_constructor_params("ref self: ContractState, other: felt252"));
+// assert!(!is_valid_constructor_params("other: felt252"));
+// }
+// }

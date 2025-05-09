@@ -1,13 +1,10 @@
 use cairo_lang_macro::{Diagnostic, TokenStream};
 use cairo_lang_parser::utils::SimpleParserDatabase;
-use cairo_lang_syntax::attribute::structured::AttributeArgVariant;
-use cairo_lang_syntax::attribute::structured::AttributeStructurize;
-use cairo_lang_syntax::node::ast::Attribute;
-use cairo_lang_syntax::node::ast::Member as MemberAst;
+use cairo_lang_syntax::attribute::structured::{AttributeArgVariant, AttributeStructurize};
+use cairo_lang_syntax::node::ast::{Attribute, Member as MemberAst};
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::kind::SyntaxKind::{ExprParenthesized, ItemModule, ItemStruct};
-use cairo_lang_syntax::node::Terminal;
-use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
+use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
 
 use crate::helpers::{DiagnosticsExt, Member};
 
@@ -96,9 +93,9 @@ impl DojoParser {
                     diagnostics.push(Diagnostic::error(
                         "Key members must be defined before non-key members.",
                     ));
-                    // Don't return here, since we don't want to stop processing the members after the
-                    // first error to avoid diagnostics just because the field is
-                    // missing.
+                    // Don't return here, since we don't want to stop processing the members after
+                    // the first error to avoid diagnostics just because the
+                    // field is missing.
                 }
 
                 parsing_keys &= is_key;
