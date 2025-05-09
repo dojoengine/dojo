@@ -25,8 +25,7 @@ pub fn debug_macro(element: &str, res: &ProcMacroResult) {
         };
 
         println!(
-            "\n*> MACRO \
-             {element}\n>>>>>>>>>>>>>>>>>>>>>>>>>>>\n{content}\n{diagnostics}\\
+            "\n*> MACRO {element}\n>>>>>>>>>>>>>>>>>>>>>>>>>>>\n{content}\n{diagnostics}\\
              n<<<<<<<<<<<<<<<<<<<<<<<<<<<"
         );
     }
