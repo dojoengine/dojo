@@ -7,15 +7,11 @@ use crate::{declare, deploy, declare_event_contract, declare_model_contract};
 
 pub type TestClassHash = felt252;
 
-// TODO RBA: to rewrite for snfoundry
-
-/// In Cairo test runner, all the classes are expected to be declared already.
+/// In snfoundry test runner, all the classes must be declared.
 /// If a contract belong to an other crate, it must be added to the `build-external-contract`,
-/// event for testing, since Scarb does not do that automatically anymore.
+/// even for testing, since Scarb does not do that automatically anymore.
 ///
-/// The [`TestResource`] enum uses a felt252 to represent the class hash, this avoids
-/// having to write `bar::TEST_CLASS_HASH.try_into().unwrap()` in the test file, simply use
-/// `bar::TEST_CLASS_HASH`.
+/// The [`TestResource`] enum uses a ByteArray to represent the resource name.
 #[derive(Drop, Debug)]
 pub enum TestResource {
     Event: ByteArray,
