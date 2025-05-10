@@ -3,7 +3,7 @@ use dojo::model::Model;
 use dojo::utils::selector_from_namespace_and_name;
 use dojo::world::{IWorldDispatcher, WorldStorage, WorldStorageTrait};
 use starknet::ContractAddress;
-use crate::world::{
+use dojo_snf_test::world::{
     ContractDefTrait, NamespaceDef, TestResource, WorldStorageTestTrait, spawn_test_world,
 };
 

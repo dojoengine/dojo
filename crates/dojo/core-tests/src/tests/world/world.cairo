@@ -11,9 +11,8 @@ use crate::tests::helpers::{
     Foo, IbarDispatcherTrait, LibraryADispatcherTrait, LibraryALibraryDispatcher, SimpleEvent,
     deploy_world, deploy_world_and_bar,
 };
-use crate::{
-    ContractDefTrait, NamespaceDef, TestResource, WorldStorageTestTrait, snf_utils,
-    spawn_test_world,
+use dojo_snf_test::{
+    ContractDefTrait, NamespaceDef, TestResource, WorldStorageTestTrait, spawn_test_world,
 };
 
 #[test]
@@ -22,7 +21,7 @@ fn test_model() {
     let world = deploy_world();
     let world = world.dispatcher;
 
-    world.register_model("dojo", snf_utils::declare_model_contract("Foo"));
+    world.register_model("dojo", dojo_snf_test::declare_model_contract("Foo"));
 }
 
 #[test]
@@ -61,7 +60,7 @@ fn test_contract_getter() {
     let world = world.dispatcher;
 
     let address = world
-        .register_contract('salt1', "dojo", snf_utils::declare_contract("test_contract"));
+        .register_contract('salt1', "dojo", dojo_snf_test::declare_contract("test_contract"));
 
     if let Resource::Contract((contract_address, namespace_hash)) = world
         .resource(selector_from_tag!("dojo-test_contract")) {
@@ -88,7 +87,7 @@ fn test_emit() {
 
     let mut spy = spy_events();
 
-    snf_utils::set_caller_address(bob);
+    dojo_snf_test::set_caller_address(bob);
 
     let simple_event = SimpleEvent { id: 2, data: (3, 4) };
     world.emit_event(@simple_event);
@@ -154,9 +153,9 @@ mod worldupgrade {
 #[test]
 #[available_gas(l2_gas: 60000000)]
 fn test_upgradeable_world() {
-    let caller = snf_utils::declare_and_deploy("dojo_caller_contract");
-    snf_utils::set_account_address(caller);
-    snf_utils::set_caller_address(caller);
+    let caller = dojo_snf_test::declare_and_deploy("dojo_caller_contract");
+    dojo_snf_test::set_account_address(caller);
+    dojo_snf_test::set_caller_address(caller);
 
     let world = deploy_world();
     let world = world.dispatcher;
@@ -164,7 +163,7 @@ fn test_upgradeable_world() {
     let mut upgradeable_world_dispatcher = IUpgradeableWorldDispatcher {
         contract_address: world.contract_address,
     };
-    upgradeable_world_dispatcher.upgrade(snf_utils::declare_contract("worldupgrade"));
+    upgradeable_world_dispatcher.upgrade(dojo_snf_test::declare_contract("worldupgrade"));
 
     let res = (IWorldUpgradeDispatcher { contract_address: world.contract_address }).hello();
 
@@ -179,8 +178,8 @@ fn test_upgradeable_world_with_class_hash_zero() {
     let world = world.dispatcher;
 
     let admin: ContractAddress = 0x1337.try_into().unwrap();
-    snf_utils::set_account_address(admin);
-    snf_utils::set_caller_address(admin);
+    dojo_snf_test::set_account_address(admin);
+    dojo_snf_test::set_caller_address(admin);
 
     let mut upgradeable_world_dispatcher = IUpgradeableWorldDispatcher {
         contract_address: world.contract_address,
@@ -197,13 +196,13 @@ fn test_upgradeable_world_from_non_owner() {
     let world = world.dispatcher;
 
     let not_owner: ContractAddress = 0x1337.try_into().unwrap();
-    snf_utils::set_caller_address(not_owner);
-    snf_utils::set_account_address(not_owner);
+    dojo_snf_test::set_caller_address(not_owner);
+    dojo_snf_test::set_account_address(not_owner);
 
     let mut upgradeable_world_dispatcher = IUpgradeableWorldDispatcher {
         contract_address: world.contract_address,
     };
-    upgradeable_world_dispatcher.upgrade(snf_utils::declare_contract("worldupgrade"));
+    upgradeable_world_dispatcher.upgrade(dojo_snf_test::declare_contract("worldupgrade"));
 }
 
 #[test]
@@ -213,7 +212,7 @@ fn test_constructor_default() {
     let world = world.dispatcher;
 
     let _address = world
-        .register_contract('salt1', "dojo", snf_utils::declare_contract("test_contract"));
+        .register_contract('salt1', "dojo", dojo_snf_test::declare_contract("test_contract"));
 }
 
 #[test]
@@ -222,12 +221,12 @@ fn test_can_call_init_only_world() {
     let world = world.dispatcher;
 
     let address = world
-        .register_contract('salt1', "dojo", snf_utils::declare_contract("test_contract"));
+        .register_contract('salt1', "dojo", dojo_snf_test::declare_contract("test_contract"));
 
     let expected_panic: ByteArray =
         "Only the world can init contract `test_contract`, but caller is `2827`";
 
-    snf_utils::set_caller_address(2827.try_into().unwrap());
+    dojo_snf_test::set_caller_address(2827.try_into().unwrap());
 
     match starknet::syscalls::call_contract_syscall(
         address, dojo::world::world::DOJO_INIT_SELECTOR, [].span(),
@@ -253,10 +252,10 @@ fn test_can_call_init_only_owner() {
     let world = world.dispatcher;
 
     let _address = world
-        .register_contract('salt1', "dojo", snf_utils::declare_contract("test_contract"));
+        .register_contract('salt1', "dojo", dojo_snf_test::declare_contract("test_contract"));
 
-    let caller_contract = snf_utils::declare_and_deploy("non_dojo_caller_contract");
-    snf_utils::set_caller_address(caller_contract);
+    let caller_contract = dojo_snf_test::declare_and_deploy("non_dojo_caller_contract");
+    dojo_snf_test::set_caller_address(caller_contract);
 
     world.init_contract(selector_from_tag!("dojo-test_contract"), [].span());
 }
@@ -268,7 +267,7 @@ fn test_can_call_init_default() {
     let world = world.dispatcher;
 
     let _address = world
-        .register_contract('salt1', "dojo", snf_utils::declare_contract("test_contract"));
+        .register_contract('salt1', "dojo", dojo_snf_test::declare_contract("test_contract"));
 
     world.init_contract(selector_from_tag!("dojo-test_contract"), [].span());
 }
@@ -281,7 +280,7 @@ fn test_can_call_init_args() {
 
     let _address = world
         .register_contract(
-            'salt1', "dojo", snf_utils::declare_contract("test_contract_with_dojo_init_args"),
+            'salt1', "dojo", dojo_snf_test::declare_contract("test_contract_with_dojo_init_args"),
         );
 
     world.init_contract(selector_from_tag!("dojo-test_contract_with_dojo_init_args"), [1].span());
@@ -294,13 +293,13 @@ fn test_can_call_init_only_world_args() {
 
     let address = world
         .register_contract(
-            'salt1', "dojo", snf_utils::declare_contract("test_contract_with_dojo_init_args"),
+            'salt1', "dojo", dojo_snf_test::declare_contract("test_contract_with_dojo_init_args"),
         );
 
     let expected_panic: ByteArray =
         "Only the world can init contract `test_contract_with_dojo_init_args`, but caller is `2827`";
 
-    snf_utils::set_caller_address(2827.try_into().unwrap());
+    dojo_snf_test::set_caller_address(2827.try_into().unwrap());
 
     match starknet::syscalls::call_contract_syscall(
         address, dojo::world::world::DOJO_INIT_SELECTOR, [123].span(),
@@ -339,7 +338,7 @@ fn test_register_library() {
     let world = deploy_world();
     let world = world.dispatcher;
 
-    world.register_library("dojo", snf_utils::declare_library("library_a"), "liba", "0_1_0");
+    world.register_library("dojo", dojo_snf_test::declare_library("library_a"), "liba", "0_1_0");
 }
 
 #[test]
@@ -350,9 +349,9 @@ fn test_register_library_already_registered() {
     let world = deploy_world();
     let world = world.dispatcher;
 
-    world.register_library("dojo", snf_utils::declare_library("library_a"), "liba", "0_1_0");
+    world.register_library("dojo", dojo_snf_test::declare_library("library_a"), "liba", "0_1_0");
 
-    world.register_library("dojo", snf_utils::declare_library("library_a"), "liba", "0_1_0");
+    world.register_library("dojo", dojo_snf_test::declare_library("library_a"), "liba", "0_1_0");
 }
 
 #[test]
@@ -360,7 +359,7 @@ fn test_library_call() {
     let world = deploy_world();
     let world = world.dispatcher;
 
-    world.register_library("dojo", snf_utils::declare_library("library_a"), "liba", "0_1_0");
+    world.register_library("dojo", dojo_snf_test::declare_library("library_a"), "liba", "0_1_0");
 
     let world = WorldStorageTrait::new(world, @"dojo");
 

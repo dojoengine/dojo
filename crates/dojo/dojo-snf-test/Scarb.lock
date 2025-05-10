@@ -9,16 +9,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "dojo_core_test"
-version = "1.5.0"
-dependencies = [
- "dojo",
- "dojo_macros",
- "dojo_snf_test",
- "snforge_std",
-]
-
-[[package]]
 name = "dojo_macros"
 version = "1.6.0"
 
@@ -26,8 +16,15 @@ version = "1.6.0"
 name = "dojo_snf_test"
 version = "1.6.0"
 dependencies = [
- "dojo",
+ "dojo_test",
  "snforge_std",
+]
+
+[[package]]
+name = "dojo_test"
+version = "1.6.0"
+dependencies = [
+ "dojo",
 ]
 
 [[package]]

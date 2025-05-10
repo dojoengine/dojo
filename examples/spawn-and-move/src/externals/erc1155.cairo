@@ -60,6 +60,8 @@ mod ERC1155Token {
         UpgradeableEvent: UpgradeableComponent::Event,
     }
 
+    const NULL_ADDRESS: ContractAddress = 0.try_into().unwrap();
+
     #[constructor]
     fn constructor(ref self: ContractState, owner: ContractAddress, base_uri: ByteArray) {
         self.ownable.initializer(owner);
@@ -84,7 +86,7 @@ mod ERC1155Token {
             self
                 .erc1155
                 .update(
-                    starknet::contract_address_const::<0x0>(),
+                    NULL_ADDRESS,
                     starknet::get_caller_address(),
                     array![token_id].span(),
                     array![value].span(),
@@ -108,14 +110,7 @@ mod ERC1155Token {
 
         #[external(v0)]
         fn batch_mint(ref self: ContractState, token_ids: Span<u256>, values: Span<u256>) {
-            self
-                .erc1155
-                .update(
-                    starknet::contract_address_const::<0x0>(),
-                    starknet::get_caller_address(),
-                    token_ids,
-                    values,
-                );
+            self.erc1155.update(NULL_ADDRESS, starknet::get_caller_address(), token_ids, values);
             // Seems to not be supported by default dojo account.
         // self.erc1155.batch_mint_with_acceptance_check(account, token_ids, values, data);
         }

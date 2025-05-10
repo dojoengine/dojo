@@ -1,6 +1,6 @@
 use dojo::contract::components::upgradeable::{IUpgradeableDispatcher, IUpgradeableDispatcherTrait};
 use dojo::world::IWorldDispatcherTrait;
-use crate::snf_utils;
+use dojo_snf_test;
 use crate::tests::helpers::deploy_world;
 
 #[starknet::contract]
@@ -71,8 +71,8 @@ fn test_upgrade_from_world() {
     let world = world.dispatcher;
 
     let base_address = world
-        .register_contract('salt', "dojo", snf_utils::declare_contract("test_contract"));
-    let new_class_hash = snf_utils::declare_contract("test_contract_upgrade");
+        .register_contract('salt', "dojo", dojo_snf_test::declare_contract("test_contract"));
+    let new_class_hash = dojo_snf_test::declare_contract("test_contract_upgrade");
 
     world.upgrade_contract("dojo", new_class_hash);
 
@@ -87,8 +87,9 @@ fn test_upgrade_from_world_not_world_provider() {
     let world = deploy_world();
     let world = world.dispatcher;
 
-    let _ = world.register_contract('salt', "dojo", snf_utils::declare_contract("test_contract"));
-    let new_class_hash = snf_utils::declare_contract("contract_invalid_upgrade");
+    let _ = world
+        .register_contract('salt', "dojo", dojo_snf_test::declare_contract("test_contract"));
+    let new_class_hash = dojo_snf_test::declare_contract("contract_invalid_upgrade");
 
     world.upgrade_contract("dojo", new_class_hash);
 }
@@ -101,8 +102,8 @@ fn test_upgrade_direct() {
     let world = world.dispatcher;
 
     let base_address = world
-        .register_contract('salt', "dojo", snf_utils::declare_contract("test_contract"));
-    let new_class_hash = snf_utils::declare_contract("test_contract_upgrade");
+        .register_contract('salt', "dojo", dojo_snf_test::declare_contract("test_contract"));
+    let new_class_hash = dojo_snf_test::declare_contract("test_contract_upgrade");
 
     let upgradeable_dispatcher = IUpgradeableDispatcher { contract_address: base_address };
     upgradeable_dispatcher.upgrade(new_class_hash);

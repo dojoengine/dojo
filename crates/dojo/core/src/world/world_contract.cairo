@@ -812,8 +812,6 @@ pub mod world {
                     // For the init, to ensure only the world can call the init function,
                     // the verification is done in the init function of the contract that is
                     // injected by the plugin.
-                    // <crates/compiler/src/plugin/attribute_macros/contract.rs#L275>
-
                     starknet::syscalls::call_contract_syscall(
                         contract_address, DOJO_INIT_SELECTOR, init_calldata,
                     )

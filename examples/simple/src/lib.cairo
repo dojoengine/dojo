@@ -4,7 +4,7 @@ pub mod sn_c1 {
     struct Storage {}
 }
 
-#[derive(Drop, Serde)]
+#[derive(Drop, Serde, Debug)]
 #[dojo::model]
 pub struct M {
     #[key]
@@ -125,8 +125,8 @@ mod tests {
         let ndef = NamespaceDef {
             namespace: "ns",
             resources: [
-                TestResource::Model(m_M::TEST_CLASS_HASH),
-                TestResource::Contract(c1::TEST_CLASS_HASH),
+                TestResource::Model(m_M::TEST_CLASS_HASH.try_into().unwrap()),
+                TestResource::Contract(c1::TEST_CLASS_HASH.try_into().unwrap()),
             ]
                 .span(),
         };

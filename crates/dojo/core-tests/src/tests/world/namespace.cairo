@@ -2,7 +2,7 @@ use dojo::utils::bytearray_hash;
 use dojo::world::{IWorldDispatcherTrait, world};
 use snforge_std::{EventSpyAssertionsTrait, spy_events};
 use starknet::ContractAddress;
-use crate::snf_utils;
+use dojo_snf_test;
 use crate::tests::helpers::deploy_world;
 
 #[test]
@@ -11,8 +11,8 @@ fn test_register_namespace() {
     let world = world.dispatcher;
 
     let bob: ContractAddress = 0xb0b.try_into().unwrap();
-    snf_utils::set_account_address(bob);
-    snf_utils::set_caller_address(bob);
+    dojo_snf_test::set_account_address(bob);
+    dojo_snf_test::set_caller_address(bob);
 
     let mut spy = spy_events();
 
@@ -43,8 +43,8 @@ fn test_register_namespace_already_registered_same_caller() {
     let world = world.dispatcher;
 
     let bob: ContractAddress = 0xb0b.try_into().unwrap();
-    snf_utils::set_account_address(bob);
-    snf_utils::set_caller_address(bob);
+    dojo_snf_test::set_account_address(bob);
+    dojo_snf_test::set_caller_address(bob);
 
     world.register_namespace("namespace");
     world.register_namespace("namespace");
@@ -57,14 +57,14 @@ fn test_register_namespace_already_registered_other_caller() {
     let world = world.dispatcher;
 
     let bob: ContractAddress = 0xb0b.try_into().unwrap();
-    snf_utils::set_account_address(bob);
-    snf_utils::set_caller_address(bob);
+    dojo_snf_test::set_account_address(bob);
+    dojo_snf_test::set_caller_address(bob);
 
     world.register_namespace("namespace");
 
     let alice: ContractAddress = 0xa11ce.try_into().unwrap();
-    snf_utils::set_account_address(alice);
-    snf_utils::set_caller_address(alice);
+    dojo_snf_test::set_account_address(alice);
+    dojo_snf_test::set_caller_address(alice);
 
     world.register_namespace("namespace");
 }

@@ -239,6 +239,7 @@ pub mod actions {
 
 #[cfg(test)]
 mod tests {
+    use starknet::ContractAddress;
     use dojo::model::{ModelStorage, ModelStorageTest, ModelValueStorage};
     use dojo::world::WorldStorageTrait;
     use dojo_cairo_test::{
@@ -250,15 +251,19 @@ mod tests {
     use crate::dungeon::dungeon;
     use super::{IActionsDispatcher, IActionsDispatcherTrait, actions};
 
+    const NULL_ADDRESS: ContractAddress = 0.try_into().unwrap();
+
     fn namespace_def() -> NamespaceDef {
         let ndef = NamespaceDef {
             namespace: "ns",
             resources: [
-                TestResource::Model(m_Position::TEST_CLASS_HASH),
-                TestResource::Model(m_Moves::TEST_CLASS_HASH),
-                TestResource::Event(actions::e_Moved::TEST_CLASS_HASH),
-                TestResource::Contract(actions::TEST_CLASS_HASH),
-                TestResource::Library((simple_math::TEST_CLASS_HASH, @"simple_math", @"0_1_0")),
+                TestResource::Model(m_Position::TEST_CLASS_HASH.try_into().unwrap()),
+                TestResource::Model(m_Moves::TEST_CLASS_HASH.try_into().unwrap()),
+                TestResource::Event(actions::e_Moved::TEST_CLASS_HASH.try_into().unwrap()),
+                TestResource::Contract(actions::TEST_CLASS_HASH.try_into().unwrap()),
+                TestResource::Library(
+                    (simple_math::TEST_CLASS_HASH.try_into().unwrap(), @"simple_math", @"0_1_0"),
+                ),
             ]
                 .span(),
         };
@@ -276,7 +281,7 @@ mod tests {
 
     #[test]
     fn test_world_test_set() {
-        let caller = starknet::contract_address_const::<0x0>();
+        let caller = NULL_ADDRESS;
 
         let ndef = namespace_def();
         let mut world = spawn_test_world([ndef].span());
@@ -313,7 +318,7 @@ mod tests {
     #[test]
     #[available_gas(30000000)]
     fn test_move() {
-        let caller = starknet::contract_address_const::<0x0>();
+        let caller = NULL_ADDRESS;
 
         let ndef = namespace_def();
         let mut world = spawn_test_world([ndef].span());
@@ -363,10 +368,10 @@ mod tests {
         let ndef = NamespaceDef {
             namespace: "ns",
             resources: [
-                TestResource::Model(armory::m_Flatbow::TEST_CLASS_HASH),
-                TestResource::Model(bestiary::m_RiverSkale::TEST_CLASS_HASH),
-                TestResource::Contract(actions::TEST_CLASS_HASH),
-                TestResource::Contract(dungeon::TEST_CLASS_HASH),
+                TestResource::Model(armory::m_Flatbow::TEST_CLASS_HASH.try_into().unwrap()),
+                TestResource::Model(bestiary::m_RiverSkale::TEST_CLASS_HASH.try_into().unwrap()),
+                TestResource::Contract(actions::TEST_CLASS_HASH.try_into().unwrap()),
+                TestResource::Contract(dungeon::TEST_CLASS_HASH.try_into().unwrap()),
             ]
                 .span(),
         };
@@ -382,7 +387,7 @@ mod tests {
         let mut world = spawn_test_world([ndef].span());
         world.sync_perms_and_inits(contract_defs);
 
-        let other = starknet::contract_address_const::<0x1234>();
+        let other: ContractAddress = 0x1234.try_into().unwrap();
         starknet::testing::set_contract_address(other);
 
         let (dungeon_addr, _) = world.dns(@"dungeon").unwrap();

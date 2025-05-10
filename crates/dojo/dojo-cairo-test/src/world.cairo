@@ -1,9 +1,10 @@
 use core::option::OptionTrait;
 use core::result::ResultTrait;
 use core::traits::{Into, TryInto};
-use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait, WorldStorage, WorldStorageTrait, world};
-use starknet::ContractAddress;
-use crate::snf_utils;
+
+use starknet::{ContractAddress, syscalls::deploy_syscall};
+
+use dojo::world::{world, IWorldDispatcher, IWorldDispatcherTrait, WorldStorageTrait, WorldStorage};
 
 pub type TestClassHash = felt252;
 
@@ -14,16 +15,16 @@ pub type TestClassHash = felt252;
 /// The [`TestResource`] enum uses a felt252 to represent the class hash, this avoids
 /// having to write `bar::TEST_CLASS_HASH.try_into().unwrap()` in the test file, simply use
 /// `bar::TEST_CLASS_HASH`.
-#[derive(Drop)]
+#[derive(Drop, Debug)]
 pub enum TestResource {
-    Event: ByteArray,
-    Model: ByteArray,
-    Contract: ByteArray,
-    /// (name, version)
-    Library: (ByteArray, ByteArray),
+    Event: TestClassHash,
+    Model: TestClassHash,
+    Contract: TestClassHash,
+    /// (test_class_hash, name, version)
+    Library: (TestClassHash, @ByteArray, @ByteArray),
 }
 
-#[derive(Drop, Copy)]
+#[derive(Drop, Copy, Debug)]
 pub enum ContractDescriptor {
     /// Address of the contract.
     Address: ContractAddress,
@@ -36,7 +37,7 @@ pub enum ContractDescriptor {
 /// You can use this struct for a dojo contract, but also for an external contract.
 /// The only difference is the `init_calldata`, which is only used for dojo contracts.
 /// If the `contract` is an external contract (hence an address), then `init_calldata` is ignored.
-#[derive(Drop, Copy)]
+#[derive(Drop, Copy, Debug)]
 pub struct ContractDef {
     /// The contract to grant permission to.
     pub contract: ContractDescriptor,
@@ -48,7 +49,7 @@ pub struct ContractDef {
     pub init_calldata: Span<felt252>,
 }
 
-#[derive(Drop)]
+#[derive(Drop, Debug)]
 pub struct NamespaceDef {
     pub namespace: ByteArray,
     pub resources: Span<TestResource>,
@@ -80,7 +81,7 @@ pub impl ContractDefImpl of ContractDefTrait {
                 "Cannot set init_calldata for address descriptor",
             ),
             ContractDescriptor::Named(_) => self.init_calldata = init_calldata,
-        }
+        };
 
         self
     }
@@ -94,36 +95,6 @@ pub impl ContractDefImpl of ContractDefTrait {
         self.owner_of = owner_of;
         self
     }
-}
-
-/// Deploy classhash with calldata for constructor
-///
-/// # Arguments
-///
-/// * `class_hash` - Class to deploy
-/// * `calldata` - calldata for constructor
-///
-/// # Returns
-/// * address of contract deployed
-pub fn deploy_contract(class_hash: felt252, calldata: Span<felt252>) -> ContractAddress {
-    let (contract, _) = starknet::syscalls::deploy_syscall(
-        class_hash.try_into().unwrap(), 0, calldata, false,
-    )
-        .unwrap();
-    contract
-}
-
-/// Deploy classhash and passes in world address to constructor
-///
-/// # Arguments
-///
-/// * `class_hash` - Class to deploy
-/// * `world` - World dispatcher to pass as world address
-///
-/// # Returns
-/// * address of contract deployed
-pub fn deploy_with_world_address(class_hash: felt252, world: IWorldDispatcher) -> ContractAddress {
-    deploy_contract(class_hash, [world.contract_address.into()].span())
 }
 
 /// Spawns a test world registering provided resources into namespaces.
@@ -140,8 +111,15 @@ pub fn deploy_with_world_address(class_hash: felt252, world: IWorldDispatcher) -
 ///
 /// * World dispatcher
 pub fn spawn_test_world(namespaces_defs: Span<NamespaceDef>) -> WorldStorage {
-    let (world_contract, class_hash) = snf_utils::declare("world");
-    let world_address = snf_utils::deploy(world_contract, @array![class_hash.into()]);
+    let salt = core::testing::get_available_gas();
+
+    let (world_address, _) = deploy_syscall(
+        world::TEST_CLASS_HASH.try_into().unwrap(),
+        salt.into(),
+        [world::TEST_CLASS_HASH.try_into().unwrap()].span(),
+        false,
+    )
+        .unwrap();
 
     let world = IWorldDispatcher { contract_address: world_address };
 
@@ -157,28 +135,29 @@ pub fn spawn_test_world(namespaces_defs: Span<NamespaceDef>) -> WorldStorage {
 
         for r in ns.resources.clone() {
             match r {
-                TestResource::Event(name) => {
-                    let ch = snf_utils::declare_event_contract(name.clone());
-                    world.register_event(namespace.clone(), ch);
+                TestResource::Event(ch) => {
+                    world.register_event(namespace.clone(), (*ch).try_into().unwrap());
                 },
-                TestResource::Model(name) => {
-                    let ch = snf_utils::declare_model_contract(name.clone());
-                    world.register_model(namespace.clone(), ch);
+                TestResource::Model(ch) => {
+                    world.register_model(namespace.clone(), (*ch).try_into().unwrap());
                 },
-                TestResource::Contract(name) => {
-                    let (_, ch) = snf_utils::declare(name.clone());
-                    let salt = dojo::utils::bytearray_hash(name);
-                    world.register_contract(salt, namespace.clone(), ch);
+                TestResource::Contract(ch) => {
+                    world.register_contract(*ch, namespace.clone(), (*ch).try_into().unwrap());
                 },
                 TestResource::Library((
-                    name, version,
+                    ch, name, version,
                 )) => {
-                    let (_, ch) = snf_utils::declare(name.clone());
-                    world.register_library(namespace.clone(), ch, name.clone(), version.clone());
+                    world
+                        .register_library(
+                            namespace.clone(),
+                            (*ch).try_into().unwrap(),
+                            (*name).clone(),
+                            (*version).clone(),
+                        );
                 },
             }
         }
-    }
+    };
 
     WorldStorageTrait::new(world, @first_namespace.unwrap())
 }
@@ -203,12 +182,12 @@ pub impl WorldStorageInternalTestImpl of WorldStorageTestTrait {
 
             for w in *c.writer_of {
                 (*self.dispatcher).grant_writer(*w, contract_address);
-            }
+            };
 
             for o in *c.owner_of {
                 (*self.dispatcher).grant_owner(*o, contract_address);
             };
-        }
+        };
 
         // Then, calls the dojo_init for each contract that is a dojo contract.
         for c in contracts {

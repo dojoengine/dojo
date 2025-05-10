@@ -2,7 +2,7 @@ use dojo::model::{Model, ResourceMetadata};
 use dojo::world::{IWorldDispatcherTrait, world};
 use snforge_std::{EventSpyAssertionsTrait, spy_events};
 use starknet::ContractAddress;
-use crate::snf_utils;
+use dojo_snf_test;
 use crate::tests::helpers::{DOJO_NSH, Foo, deploy_world, deploy_world_and_foo};
 
 #[test]
@@ -10,9 +10,9 @@ fn test_set_metadata_world() {
     // deploy a dedicated contract to be used as caller/account address because of
     // the way `world.panic_with_details()` is written.
     // Once this function will use SRC5, we will be able to remove these lines
-    let caller_contract = snf_utils::declare_and_deploy("dojo_caller_contract");
-    snf_utils::set_caller_address(caller_contract);
-    snf_utils::set_account_address(caller_contract);
+    let caller_contract = dojo_snf_test::declare_and_deploy("dojo_caller_contract");
+    dojo_snf_test::set_caller_address(caller_contract);
+    dojo_snf_test::set_account_address(caller_contract);
 
     let world = deploy_world();
     let world = world.dispatcher;
@@ -35,8 +35,8 @@ fn test_set_metadata_resource_owner() {
 
     world.grant_owner(Model::<Foo>::selector(DOJO_NSH), bob);
 
-    snf_utils::set_account_address(bob);
-    snf_utils::set_caller_address(bob);
+    dojo_snf_test::set_account_address(bob);
+    dojo_snf_test::set_caller_address(bob);
 
     let metadata = ResourceMetadata {
         resource_id: model_selector, metadata_uri: format!("ipfs:bob"), metadata_hash: 42,
@@ -78,8 +78,8 @@ fn test_set_metadata_not_possible_for_resource_writer() {
 
     world.grant_writer(model_selector, bob);
 
-    snf_utils::set_account_address(bob);
-    snf_utils::set_caller_address(bob);
+    dojo_snf_test::set_account_address(bob);
+    dojo_snf_test::set_caller_address(bob);
 
     let metadata = ResourceMetadata {
         resource_id: model_selector, metadata_uri: format!("ipfs:bob"), metadata_hash: 42,
@@ -99,8 +99,8 @@ fn test_set_metadata_not_possible_for_random_account() {
     };
 
     let bob: ContractAddress = 0xb0b.try_into().unwrap();
-    snf_utils::set_caller_address(bob);
-    snf_utils::set_account_address(bob);
+    dojo_snf_test::set_caller_address(bob);
+    dojo_snf_test::set_account_address(bob);
 
     // Bob access follows the conventional ACL, he can't write the world
     // metadata if he does not have access to it.
@@ -114,12 +114,12 @@ fn test_set_metadata_through_malicious_contract() {
     let world = world.dispatcher;
 
     let bob: ContractAddress = 0xb0b.try_into().unwrap();
-    let malicious_contract = snf_utils::declare_and_deploy("malicious_contract");
+    let malicious_contract = dojo_snf_test::declare_and_deploy("malicious_contract");
 
     world.grant_owner(model_selector, bob);
 
-    snf_utils::set_account_address(bob);
-    snf_utils::set_caller_address(malicious_contract);
+    dojo_snf_test::set_account_address(bob);
+    dojo_snf_test::set_caller_address(malicious_contract);
 
     let metadata = ResourceMetadata {
         resource_id: model_selector, metadata_uri: format!("ipfs:bob"), metadata_hash: 42,

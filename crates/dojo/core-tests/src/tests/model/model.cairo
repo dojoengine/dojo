@@ -1,6 +1,6 @@
 use dojo::model::{Model, ModelPtr, ModelStorage, ModelValue, ModelValueStorage};
 use dojo::world::WorldStorage;
-use crate::world::{NamespaceDef, TestResource, spawn_test_world};
+use dojo_snf_test::world::{NamespaceDef, TestResource, spawn_test_world};
 
 #[derive(Copy, Drop, Serde, Debug, PartialEq)]
 #[dojo::model]

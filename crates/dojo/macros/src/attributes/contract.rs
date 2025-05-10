@@ -1,4 +1,4 @@
-use cairo_lang_macro::{quote, Diagnostic, ProcMacroResult, TokenStream};
+use cairo_lang_macro::{Diagnostic, ProcMacroResult, TokenStream, quote};
 use cairo_lang_parser::utils::SimpleParserDatabase;
 use cairo_lang_syntax::node::ast::{self, MaybeModuleBody, OptionReturnTypeClause};
 use cairo_lang_syntax::node::with_db::SyntaxNodeWithDb;
@@ -217,6 +217,9 @@ impl DojoContract {
         let fn_decl = fn_ast.declaration(db).as_syntax_node();
         let fn_decl = SyntaxNodeWithDb::new(&fn_decl, db);
 
+        let fn_body = fn_ast.body(db).as_syntax_node();
+        let fn_body = SyntaxNodeWithDb::new(&fn_body, db);
+
         quote! {
             #[abi(per_item)]
             #[generate_trait]
@@ -232,6 +235,7 @@ impl DojoContract {
                             )
                         );
                     }
+                    #fn_body
                 }
             }
         }

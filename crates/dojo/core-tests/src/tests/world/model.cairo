@@ -2,7 +2,7 @@ use dojo::model::{Model, ModelStorage};
 use dojo::world::{IWorldDispatcherTrait, world};
 use snforge_std::{EventSpyTrait, EventsFilterTrait, spy_events};
 use starknet::ContractAddress;
-use crate::snf_utils;
+use dojo_snf_test;
 use crate::tests::helpers::{DOJO_NSH, Foo, MyEnum, deploy_world, deploy_world_for_model_upgrades};
 
 #[dojo::model]
@@ -86,10 +86,10 @@ fn test_register_model_for_namespace_owner() {
 
     let mut spy = spy_events();
 
-    snf_utils::set_account_address(bob);
-    snf_utils::set_caller_address(bob);
+    dojo_snf_test::set_account_address(bob);
+    dojo_snf_test::set_caller_address(bob);
 
-    let class_hash = snf_utils::declare_model_contract("Foo");
+    let class_hash = dojo_snf_test::declare_model_contract("Foo");
     world.register_model("dojo", class_hash);
 
     // parse the event manually because we don't know the value of
@@ -122,7 +122,7 @@ fn test_register_model_with_invalid_name() {
     let world = deploy_world();
     let world = world.dispatcher;
 
-    world.register_model("dojo", snf_utils::declare_model_contract("FooInvalidName"));
+    world.register_model("dojo", dojo_snf_test::declare_model_contract("FooInvalidName"));
 }
 
 #[test]
@@ -135,10 +135,10 @@ fn test_register_model_for_namespace_writer() {
 
     world.grant_writer(DOJO_NSH, bob);
 
-    snf_utils::set_account_address(bob);
-    snf_utils::set_caller_address(bob);
+    dojo_snf_test::set_account_address(bob);
+    dojo_snf_test::set_caller_address(bob);
 
-    world.register_model("dojo", snf_utils::declare_model_contract("Foo"));
+    world.register_model("dojo", dojo_snf_test::declare_model_contract("Foo"));
 }
 
 #[test]
@@ -148,12 +148,12 @@ fn test_upgrade_model_from_model_owner() {
     let world = deploy_world_for_model_upgrades();
     world.grant_owner(Model::<FooModelMemberAdded>::selector(DOJO_NSH), bob);
 
-    snf_utils::set_account_address(bob);
-    snf_utils::set_caller_address(bob);
+    dojo_snf_test::set_account_address(bob);
+    dojo_snf_test::set_caller_address(bob);
 
     let mut spy = spy_events();
 
-    let class_hash = snf_utils::declare_model_contract("FooModelMemberAdded");
+    let class_hash = dojo_snf_test::declare_model_contract("FooModelMemberAdded");
     world.upgrade_model("dojo", class_hash);
 
     // parse the event manually because we don't know the value of
@@ -183,7 +183,7 @@ fn test_upgrade_model() {
 
     let mut spy = spy_events();
 
-    let class_hash = snf_utils::declare_model_contract("FooModelMemberAdded");
+    let class_hash = dojo_snf_test::declare_model_contract("FooModelMemberAdded");
     world.upgrade_model("dojo", class_hash);
 
     // parse the event manually because we don't know the value of
@@ -213,7 +213,7 @@ fn test_upgrade_model_with_member_changed() {
 
     let mut spy = spy_events();
 
-    let class_hash = snf_utils::declare_model_contract("FooModelMemberChanged");
+    let class_hash = dojo_snf_test::declare_model_contract("FooModelMemberChanged");
     world.upgrade_model("dojo", class_hash);
 
     // parse the event manually because we don't know the value of
@@ -240,14 +240,14 @@ fn test_upgrade_model_with_member_changed() {
 #[should_panic(expected: "Invalid new layout to upgrade the resource `dojo-FooModelBadLayoutType`")]
 fn test_upgrade_model_with_bad_layout_type() {
     let world = deploy_world_for_model_upgrades();
-    world.upgrade_model("dojo", snf_utils::declare_model_contract("FooModelBadLayoutType"));
+    world.upgrade_model("dojo", dojo_snf_test::declare_model_contract("FooModelBadLayoutType"));
 }
 
 #[test]
 #[should_panic(expected: "Invalid new schema to upgrade the resource `dojo-FooModelMemberRemoved`")]
 fn test_upgrade_model_with_member_removed() {
     let world = deploy_world_for_model_upgrades();
-    world.upgrade_model("dojo", snf_utils::declare_model_contract("FooModelMemberRemoved"));
+    world.upgrade_model("dojo", dojo_snf_test::declare_model_contract("FooModelMemberRemoved"));
 }
 
 #[test]
@@ -256,7 +256,10 @@ fn test_upgrade_model_with_member_removed() {
 )]
 fn test_upgrade_model_with_member_added_but_removed() {
     let world = deploy_world_for_model_upgrades();
-    world.upgrade_model("dojo", snf_utils::declare_model_contract("FooModelMemberAddedButRemoved"));
+    world
+        .upgrade_model(
+            "dojo", dojo_snf_test::declare_model_contract("FooModelMemberAddedButRemoved"),
+        );
 }
 
 #[test]
@@ -265,7 +268,10 @@ fn test_upgrade_model_with_member_added_but_removed() {
 )]
 fn test_upgrade_model_with_member_moved() {
     let world = deploy_world_for_model_upgrades();
-    world.upgrade_model("dojo", snf_utils::declare_model_contract("FooModelMemberAddedButMoved"));
+    world
+        .upgrade_model(
+            "dojo", dojo_snf_test::declare_model_contract("FooModelMemberAddedButMoved"),
+        );
 }
 
 #[test]
@@ -274,7 +280,10 @@ fn test_upgrade_model_with_member_moved() {
 )]
 fn test_upgrade_model_with_member_illegal_change() {
     let world = deploy_world_for_model_upgrades();
-    world.upgrade_model("dojo", snf_utils::declare_model_contract("FooModelMemberIllegalChange"));
+    world
+        .upgrade_model(
+            "dojo", dojo_snf_test::declare_model_contract("FooModelMemberIllegalChange"),
+        );
 }
 
 #[test]
@@ -288,10 +297,10 @@ fn test_upgrade_model_from_model_writer() {
 
     world.grant_writer(Model::<FooModelMemberAdded>::selector(DOJO_NSH), alice);
 
-    snf_utils::set_account_address(alice);
-    snf_utils::set_caller_address(alice);
+    dojo_snf_test::set_account_address(alice);
+    dojo_snf_test::set_caller_address(alice);
 
-    world.upgrade_model("dojo", snf_utils::declare_model_contract("FooModelMemberAdded"));
+    world.upgrade_model("dojo", dojo_snf_test::declare_model_contract("FooModelMemberAdded"));
 }
 
 #[test]
@@ -306,13 +315,13 @@ fn test_upgrade_model_from_random_account() {
     world.grant_owner(DOJO_NSH, bob);
     world.grant_owner(DOJO_NSH, alice);
 
-    snf_utils::set_account_address(bob);
-    snf_utils::set_caller_address(bob);
-    world.register_model("dojo", snf_utils::declare_model_contract("Foo"));
+    dojo_snf_test::set_account_address(bob);
+    dojo_snf_test::set_caller_address(bob);
+    world.register_model("dojo", dojo_snf_test::declare_model_contract("Foo"));
 
-    snf_utils::set_account_address(alice);
-    snf_utils::set_caller_address(alice);
-    world.register_model("dojo", snf_utils::declare_model_contract("Foo"));
+    dojo_snf_test::set_account_address(alice);
+    dojo_snf_test::set_caller_address(alice);
+    world.register_model("dojo", dojo_snf_test::declare_model_contract("Foo"));
 }
 
 #[test]
@@ -321,7 +330,7 @@ fn test_register_model_with_unregistered_namespace() {
     let world = deploy_world();
     let world = world.dispatcher;
 
-    world.register_model("another_namespace", snf_utils::declare_model_contract("Foo"));
+    world.register_model("another_namespace", dojo_snf_test::declare_model_contract("Foo"));
 }
 
 // It's ENTRYPOINT_NOT_FOUND for now as in this example the contract is not a dojo contract
@@ -330,16 +339,16 @@ fn test_register_model_with_unregistered_namespace() {
 #[should_panic(expected: ('ENTRYPOINT_NOT_FOUND', 'ENTRYPOINT_FAILED'))]
 fn test_register_model_through_malicious_contract() {
     let bob: ContractAddress = 0xb0b.try_into().unwrap();
-    let malicious_contract = snf_utils::declare_and_deploy("malicious_contract");
+    let malicious_contract = dojo_snf_test::declare_and_deploy("malicious_contract");
 
     let world = deploy_world();
     let world = world.dispatcher;
 
     world.grant_owner(DOJO_NSH, bob);
 
-    snf_utils::set_account_address(bob);
-    snf_utils::set_caller_address(malicious_contract);
-    world.register_model("dojo", snf_utils::declare_model_contract("Foo"));
+    dojo_snf_test::set_account_address(bob);
+    dojo_snf_test::set_caller_address(malicious_contract);
+    world.register_model("dojo", dojo_snf_test::declare_model_contract("Foo"));
 }
 
 #[test]
@@ -347,7 +356,7 @@ fn test_write_read_model_with_signed_int() {
     let mut world = deploy_world();
     let world_d = world.dispatcher;
 
-    world_d.register_model("dojo", snf_utils::declare_model_contract("ModelWithSignedInt"));
+    world_d.register_model("dojo", dojo_snf_test::declare_model_contract("ModelWithSignedInt"));
 
     let addr = starknet::get_contract_address();
 
