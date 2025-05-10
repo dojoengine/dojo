@@ -1,6 +1,6 @@
 use dojo::world::IWorldDispatcher;
-use starknet::ContractAddress;
 use dojo_snf_test::world::{NamespaceDef, TestResource, spawn_test_world};
+use starknet::ContractAddress;
 use super::helpers::MyEnum;
 
 // This event is used as a base to create the "previous" version of an event to be upgraded.

@@ -239,7 +239,6 @@ pub mod actions {
 
 #[cfg(test)]
 mod tests {
-    use starknet::ContractAddress;
     use dojo::model::{ModelStorage, ModelStorageTest, ModelValueStorage};
     use dojo::world::WorldStorageTrait;
     use dojo_cairo_test::{
@@ -248,6 +247,7 @@ mod tests {
     };
     use dojo_examples::lib_math::simple_math;
     use dojo_examples::models::{Direction, Moves, Position, PositionValue, m_Moves, m_Position};
+    use starknet::ContractAddress;
     use crate::dungeon::dungeon;
     use super::{IActionsDispatcher, IActionsDispatcherTrait, actions};
 

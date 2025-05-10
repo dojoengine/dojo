@@ -2,8 +2,8 @@ use dojo::meta::introspect::Introspect;
 use dojo::model::ModelIndex;
 use dojo::utils::selector_from_names;
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
-use starknet::ContractAddress;
 use dojo_snf_test::world::{NamespaceDef, TestResource, spawn_test_world};
+use starknet::ContractAddress;
 use super::helpers::MyEnum;
 
 // This model is used as a base to create the "previous" version of a model to be upgraded.

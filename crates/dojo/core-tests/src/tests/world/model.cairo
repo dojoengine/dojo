@@ -1,8 +1,8 @@
 use dojo::model::{Model, ModelStorage};
 use dojo::world::{IWorldDispatcherTrait, world};
+use dojo_snf_test;
 use snforge_std::{EventSpyTrait, EventsFilterTrait, spy_events};
 use starknet::ContractAddress;
-use dojo_snf_test;
 use crate::tests::helpers::{DOJO_NSH, Foo, MyEnum, deploy_world, deploy_world_for_model_upgrades};
 
 #[dojo::model]

@@ -5,14 +5,14 @@ use dojo::world::{
     IUpgradeableWorldDispatcher, IUpgradeableWorldDispatcherTrait, IWorldDispatcher,
     IWorldDispatcherTrait, Resource, WorldStorageTrait, world as world_contract,
 };
+use dojo_snf_test::{
+    ContractDefTrait, NamespaceDef, TestResource, WorldStorageTestTrait, spawn_test_world,
+};
 use snforge_std::{EventSpyAssertionsTrait, spy_events};
 use starknet::ContractAddress;
 use crate::tests::helpers::{
     Foo, IbarDispatcherTrait, LibraryADispatcherTrait, LibraryALibraryDispatcher, SimpleEvent,
     deploy_world, deploy_world_and_bar,
-};
-use dojo_snf_test::{
-    ContractDefTrait, NamespaceDef, TestResource, WorldStorageTestTrait, spawn_test_world,
 };
 
 #[test]

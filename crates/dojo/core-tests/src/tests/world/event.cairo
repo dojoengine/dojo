@@ -1,8 +1,8 @@
 use dojo::event::Event;
 use dojo::world::{IWorldDispatcherTrait, world};
+use dojo_snf_test;
 use snforge_std::{EventSpyTrait, EventsFilterTrait, spy_events};
 use starknet::ContractAddress;
-use dojo_snf_test;
 use crate::tests::helpers::{
     DOJO_NSH, MyEnum, SimpleEvent, deploy_world, deploy_world_for_event_upgrades,
 };

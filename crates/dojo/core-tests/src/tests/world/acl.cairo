@@ -1,6 +1,6 @@
 use dojo::world::IWorldDispatcherTrait;
-use starknet::ContractAddress;
 use dojo_snf_test;
+use starknet::ContractAddress;
 use crate::tests::helpers::{
     IFooSetterDispatcher, IFooSetterDispatcherTrait, deploy_world, deploy_world_and_foo,
     deploy_world_with_all_kind_of_resources,

@@ -2,10 +2,10 @@ use dojo::event::Event;
 use dojo::model::Model;
 use dojo::utils::selector_from_namespace_and_name;
 use dojo::world::{IWorldDispatcher, WorldStorage, WorldStorageTrait};
-use starknet::ContractAddress;
 use dojo_snf_test::world::{
     ContractDefTrait, NamespaceDef, TestResource, WorldStorageTestTrait, spawn_test_world,
 };
+use starknet::ContractAddress;
 
 pub const DOJO_NSH: felt252 = 0x309e09669bc1fdc1dd6563a7ef862aa6227c97d099d08cc7b81bad58a7443fa;
 
