@@ -1,4 +1,4 @@
-use dojo::meta::{Layout, FieldLayout};
+use dojo::meta::{FieldLayout, Layout};
 
 /// find a field with its selector in a list of layouts
 pub fn find_field_layout(

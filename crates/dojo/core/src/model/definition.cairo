@@ -1,4 +1,5 @@
-use dojo::meta::{Layout, introspect::Struct};
+use dojo::meta::Layout;
+use dojo::meta::introspect::Struct;
 
 /// The `ModelIndex` provides encapsulation for different ways to access
 /// a model's data.

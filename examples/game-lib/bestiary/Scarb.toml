@@ -6,6 +6,8 @@ edition.workspace = true
 cairo-version.workspace = true
 
 [dependencies]
+starknet.workspace = true
 dojo.workspace = true
+dojo_macros.workspace = true
 
 [lib]

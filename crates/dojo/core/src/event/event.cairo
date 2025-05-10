@@ -1,5 +1,5 @@
-use dojo::meta::Layout;
-use dojo::meta::{Introspect, introspect::{Struct, Ty}};
+use dojo::meta::introspect::{Struct, Ty};
+use dojo::meta::{Introspect, Layout};
 use dojo::model::model::ModelParser;
 
 #[derive(Drop, Serde, Debug, PartialEq)]

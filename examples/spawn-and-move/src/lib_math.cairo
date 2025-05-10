@@ -6,8 +6,8 @@ pub trait SimpleMath<T> {
 
 #[dojo::library]
 pub mod simple_math {
-    use super::SimpleMath;
     use core::num::traits::SaturatingSub;
+    use super::SimpleMath;
 
     #[abi(embed_v0)]
     impl SimpleMathImpl of SimpleMath<ContractState> {

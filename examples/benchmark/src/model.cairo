@@ -1,6 +1,6 @@
 use dojo::model::{Model, ModelStorage, ModelValueStorage};
 use dojo::world::WorldStorage;
-use dojo_cairo_test::{spawn_test_world, NamespaceDef, TestResource};
+use dojo_cairo_test::{NamespaceDef, TestResource, spawn_test_world};
 
 #[derive(Copy, Drop, Serde)]
 #[dojo::model]

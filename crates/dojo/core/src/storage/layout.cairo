@@ -1,8 +1,6 @@
-use dojo::meta::{Layout, FieldLayout};
+use dojo::meta::{FieldLayout, Layout};
 use dojo::utils::{combine_key, find_field_layout};
-
-use super::database;
-use super::packing;
+use super::{database, packing};
 
 // the minimum internal size of an empty ByteArray
 const MIN_BYTE_ARRAY_SIZE: u32 = 3;

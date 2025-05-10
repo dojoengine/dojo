@@ -1,3 +1,4 @@
+use core::panics::panic_with_byte_array;
 /// This file contains the implementation of the `Introspect` trait.
 ///
 /// The introspection is used to get the size and layout of a type.
@@ -5,7 +6,6 @@
 
 use dojo::meta::Layout;
 use dojo::storage::packing;
-use core::panics::panic_with_byte_array;
 
 // Each index matches with a primitive types in both arrays (main and nested).
 // The main array represents the source primitive while nested arrays represents

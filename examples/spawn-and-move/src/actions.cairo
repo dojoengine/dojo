@@ -16,26 +16,25 @@ pub trait IActions<T> {
 
 #[dojo::contract]
 pub mod actions {
-    use super::IActions;
-
-    use starknet::{ContractAddress, get_caller_address};
-    use dojo_examples::models::{
-        Position, Moves, MovesValue, Direction, Vec2, PlayerConfig, PlayerItem, ServerProfile,
-    };
-    use dojo_examples::utils::next_position;
-    use dojo_examples::lib_math::{SimpleMathLibraryDispatcher, SimpleMathDispatcherTrait};
-    use dojo::model::{ModelStorage, ModelValueStorage, Model};
+    #[cfg(feature: 'dungeon')]
+    use armory::Flatbow;
+    #[cfg(feature: 'dungeon')]
+    use bestiary::RiverSkale;
     use dojo::event::EventStorage;
+    use dojo::model::{Model, ModelStorage, ModelValueStorage};
     use dojo::world::{WorldStorage, WorldStorageTrait};
 
     // Features can be used on modules, structs, trait and `use`. Not inside
     // a function.
     #[cfg(feature: 'dungeon')]
     use dojo_examples::dungeon::{IDungeonDispatcher, IDungeonDispatcherTrait};
-    #[cfg(feature: 'dungeon')]
-    use armory::Flatbow;
-    #[cfg(feature: 'dungeon')]
-    use bestiary::RiverSkale;
+    use dojo_examples::lib_math::{SimpleMathDispatcherTrait, SimpleMathLibraryDispatcher};
+    use dojo_examples::models::{
+        Direction, Moves, MovesValue, PlayerConfig, PlayerItem, Position, ServerProfile, Vec2,
+    };
+    use dojo_examples::utils::next_position;
+    use starknet::{ContractAddress, get_caller_address};
+    use super::IActions;
 
     #[derive(Copy, Drop, Serde)]
     #[dojo::event]
@@ -240,27 +239,31 @@ pub mod actions {
 
 #[cfg(test)]
 mod tests {
-    use dojo::model::{ModelStorage, ModelValueStorage, ModelStorageTest};
-    use dojo::world::{WorldStorageTrait};
+    use dojo::model::{ModelStorage, ModelStorageTest, ModelValueStorage};
+    use dojo::world::WorldStorageTrait;
     use dojo_cairo_test::{
-        spawn_test_world, NamespaceDef, TestResource, ContractDefTrait, ContractDef,
-        WorldStorageTestTrait,
+        ContractDef, ContractDefTrait, NamespaceDef, TestResource, WorldStorageTestTrait,
+        spawn_test_world,
     };
     use dojo_examples::lib_math::simple_math;
-
-    use super::{actions, IActionsDispatcher, IActionsDispatcherTrait};
+    use dojo_examples::models::{Direction, Moves, Position, PositionValue, m_Moves, m_Position};
+    use starknet::ContractAddress;
     use crate::dungeon::dungeon;
-    use dojo_examples::models::{Position, PositionValue, m_Position, Moves, m_Moves, Direction};
+    use super::{IActionsDispatcher, IActionsDispatcherTrait, actions};
+
+    const NULL_ADDRESS: ContractAddress = 0.try_into().unwrap();
 
     fn namespace_def() -> NamespaceDef {
         let ndef = NamespaceDef {
             namespace: "ns",
             resources: [
-                TestResource::Model(m_Position::TEST_CLASS_HASH),
-                TestResource::Model(m_Moves::TEST_CLASS_HASH),
-                TestResource::Event(actions::e_Moved::TEST_CLASS_HASH),
-                TestResource::Contract(actions::TEST_CLASS_HASH),
-                TestResource::Library((simple_math::TEST_CLASS_HASH, @"simple_math", @"0_1_0")),
+                TestResource::Model(m_Position::TEST_CLASS_HASH.try_into().unwrap()),
+                TestResource::Model(m_Moves::TEST_CLASS_HASH.try_into().unwrap()),
+                TestResource::Event(actions::e_Moved::TEST_CLASS_HASH.try_into().unwrap()),
+                TestResource::Contract(actions::TEST_CLASS_HASH.try_into().unwrap()),
+                TestResource::Library(
+                    (simple_math::TEST_CLASS_HASH.try_into().unwrap(), @"simple_math", @"0_1_0"),
+                ),
             ]
                 .span(),
         };
@@ -278,7 +281,7 @@ mod tests {
 
     #[test]
     fn test_world_test_set() {
-        let caller = starknet::contract_address_const::<0x0>();
+        let caller = NULL_ADDRESS;
 
         let ndef = namespace_def();
         let mut world = spawn_test_world([ndef].span());
@@ -315,7 +318,7 @@ mod tests {
     #[test]
     #[available_gas(30000000)]
     fn test_move() {
-        let caller = starknet::contract_address_const::<0x0>();
+        let caller = NULL_ADDRESS;
 
         let ndef = namespace_def();
         let mut world = spawn_test_world([ndef].span());
@@ -365,10 +368,10 @@ mod tests {
         let ndef = NamespaceDef {
             namespace: "ns",
             resources: [
-                TestResource::Model(armory::m_Flatbow::TEST_CLASS_HASH),
-                TestResource::Model(bestiary::m_RiverSkale::TEST_CLASS_HASH),
-                TestResource::Contract(actions::TEST_CLASS_HASH),
-                TestResource::Contract(dungeon::TEST_CLASS_HASH),
+                TestResource::Model(armory::m_Flatbow::TEST_CLASS_HASH.try_into().unwrap()),
+                TestResource::Model(bestiary::m_RiverSkale::TEST_CLASS_HASH.try_into().unwrap()),
+                TestResource::Contract(actions::TEST_CLASS_HASH.try_into().unwrap()),
+                TestResource::Contract(dungeon::TEST_CLASS_HASH.try_into().unwrap()),
             ]
                 .span(),
         };
@@ -384,7 +387,7 @@ mod tests {
         let mut world = spawn_test_world([ndef].span());
         world.sync_perms_and_inits(contract_defs);
 
-        let other = starknet::contract_address_const::<0x1234>();
+        let other: ContractAddress = 0x1234.try_into().unwrap();
         starknet::testing::set_contract_address(other);
 
         let (dungeon_addr, _) = world.dns(@"dungeon").unwrap();

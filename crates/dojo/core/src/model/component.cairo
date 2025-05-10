@@ -1,5 +1,6 @@
-use dojo::model::{Model, IModel, ModelDef};
-use dojo::meta::{Layout, introspect::Struct};
+use dojo::meta::Layout;
+use dojo::meta::introspect::Struct;
+use dojo::model::{IModel, Model, ModelDef};
 
 #[starknet::embeddable]
 pub impl IDeployedModelImpl<

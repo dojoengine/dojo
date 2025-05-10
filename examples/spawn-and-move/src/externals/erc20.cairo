@@ -6,9 +6,9 @@ mod ERC20Token {
     use OwnableComponent::InternalTrait;
     use openzeppelin::access::ownable::OwnableComponent;
     use openzeppelin::token::erc20::{ERC20Component, ERC20HooksEmptyImpl};
-    use openzeppelin::upgrades::interface::IUpgradeable;
     use openzeppelin::upgrades::UpgradeableComponent;
-    use starknet::{ContractAddress, ClassHash};
+    use openzeppelin::upgrades::interface::IUpgradeable;
+    use starknet::{ClassHash, ContractAddress};
 
     component!(path: ERC20Component, storage: erc20, event: ERC20Event);
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);

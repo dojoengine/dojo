@@ -1,4 +1,4 @@
-use dojo_examples::models::{Position, Direction};
+use dojo_examples::models::{Direction, Position};
 
 pub fn next_position(mut position: Position, direction: Direction) -> Position {
     match direction {
@@ -7,6 +7,6 @@ pub fn next_position(mut position: Position, direction: Direction) -> Position {
         Direction::Right => { position.vec.x += 1; },
         Direction::Up => { position.vec.y -= 1; },
         Direction::Down => { position.vec.y += 1; },
-    };
+    }
     position
 }

@@ -1,4 +1,4 @@
-use core::fmt::{Display, Formatter, Error};
+use core::fmt::{Display, Error, Formatter};
 
 #[derive(Copy, Drop, PartialEq)]
 pub enum Permission {
@@ -22,35 +22,30 @@ pub mod world {
     use core::array::ArrayTrait;
     use core::box::BoxTrait;
     use core::num::traits::Zero;
-    use core::traits::Into;
     use core::panic_with_felt252;
     use core::panics::panic_with_byte_array;
-
-    use starknet::{
-        get_caller_address, get_tx_info, ClassHash, ContractAddress,
-        syscalls::{deploy_syscall, replace_class_syscall, get_class_hash_at_syscall},
-        SyscallResultTrait, storage::Map,
-    };
-    pub use starknet::storage::{
-        StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess,
-        StoragePointerWriteAccess,
-    };
-
-    use dojo::world::errors;
+    use core::traits::Into;
     use dojo::contract::components::upgradeable::{
         IUpgradeableDispatcher, IUpgradeableDispatcherTrait,
     };
     use dojo::meta::{
-        Layout, IStoredResourceDispatcher, IStoredResourceDispatcherTrait,
-        IDeployedResourceDispatcher, IDeployedResourceDispatcherTrait, LayoutCompareTrait,
-        IDeployedResourceLibraryDispatcher, TyCompareTrait,
+        IDeployedResourceDispatcher, IDeployedResourceDispatcherTrait,
+        IDeployedResourceLibraryDispatcher, IStoredResourceDispatcher,
+        IStoredResourceDispatcherTrait, Layout, LayoutCompareTrait, TyCompareTrait,
     };
-    use dojo::model::{Model, ResourceMetadata, metadata, ModelIndex};
+    use dojo::model::{Model, ModelIndex, ResourceMetadata, metadata};
     use dojo::storage;
     use dojo::utils::{
-        entity_id_from_serialized_keys, bytearray_hash, selector_from_namespace_and_name,
+        bytearray_hash, entity_id_from_serialized_keys, selector_from_namespace_and_name,
     };
-    use dojo::world::{IWorld, IUpgradeableWorld, Resource, ResourceIsNoneTrait};
+    use dojo::world::{IUpgradeableWorld, IWorld, Resource, ResourceIsNoneTrait, errors};
+    use starknet::storage::Map;
+    pub use starknet::storage::{
+        StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess,
+        StoragePointerWriteAccess,
+    };
+    use starknet::syscalls::{deploy_syscall, get_class_hash_at_syscall, replace_class_syscall};
+    use starknet::{ClassHash, ContractAddress, SyscallResultTrait, get_caller_address, get_tx_info};
     use super::Permission;
 
     pub const WORLD: felt252 = 0;
@@ -277,11 +272,11 @@ pub mod world {
         nonce: usize,
         models_salt: usize,
         events_salt: usize,
-        resources: Map::<felt252, Resource>,
-        owners: Map::<(felt252, ContractAddress), bool>,
-        writers: Map::<(felt252, ContractAddress), bool>,
-        owner_count: Map::<felt252, u64>,
-        initialized_contracts: Map::<felt252, bool>,
+        resources: Map<felt252, Resource>,
+        owners: Map<(felt252, ContractAddress), bool>,
+        writers: Map<(felt252, ContractAddress), bool>,
+        owner_count: Map<felt252, u64>,
+        initialized_contracts: Map<felt252, bool>,
     }
 
     /// Constructor for the world contract.
@@ -553,7 +548,7 @@ pub mod world {
                         @format!("{}-{}", @namespace, @event_name), @"event",
                     ),
                 ),
-            };
+            }
 
             self
                 .assert_resource_upgradability(
@@ -659,7 +654,7 @@ pub mod world {
                         @format!("{}-{}", @namespace, @model_name), @"model",
                     ),
                 ),
-            };
+            }
 
             self
                 .assert_resource_upgradability(
@@ -817,8 +812,6 @@ pub mod world {
                     // For the init, to ensure only the world can call the init function,
                     // the verification is done in the init function of the contract that is
                     // injected by the plugin.
-                    // <crates/compiler/src/plugin/attribute_macros/contract.rs#L275>
-
                     starknet::syscalls::call_contract_syscall(
                         contract_address, DOJO_INIT_SELECTOR, init_calldata,
                     )
@@ -1062,7 +1055,7 @@ pub mod world {
 
             for i in indexes {
                 models.append(self.get_entity_internal(model_selector, *i, layout));
-            };
+            }
 
             models.span()
         }

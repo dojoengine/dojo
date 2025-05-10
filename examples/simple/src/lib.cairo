@@ -4,7 +4,7 @@ pub mod sn_c1 {
     struct Storage {}
 }
 
-#[derive(Drop, Serde)]
+#[derive(Drop, Serde, Debug)]
 #[dojo::model]
 pub struct M {
     #[key]
@@ -38,9 +38,9 @@ pub trait MyInterface<T> {
 
 #[dojo::contract]
 pub mod c1 {
-    use super::{MyInterface, M, E, EH, MValue};
-    use dojo::model::{ModelStorage, ModelValueStorage, Model};
     use dojo::event::EventStorage;
+    use dojo::model::{Model, ModelStorage, ModelValueStorage};
+    use super::{E, EH, M, MValue, MyInterface};
 
     fn dojo_init(self: @ContractState, v: felt252) {
         let m = M { k: 0, v };
@@ -116,17 +116,17 @@ pub mod c3 {}
 mod tests {
     use dojo::model::ModelStorage;
     use dojo_cairo_test::{
-        spawn_test_world, NamespaceDef, TestResource, ContractDefTrait, WorldStorageTestTrait,
+        ContractDefTrait, NamespaceDef, TestResource, WorldStorageTestTrait, spawn_test_world,
     };
-    use super::{c1, m_M, M};
+    use super::{M, c1, m_M};
 
     #[test]
     fn test_1() {
         let ndef = NamespaceDef {
             namespace: "ns",
             resources: [
-                TestResource::Model(m_M::TEST_CLASS_HASH),
-                TestResource::Contract(c1::TEST_CLASS_HASH),
+                TestResource::Model(m_M::TEST_CLASS_HASH.try_into().unwrap()),
+                TestResource::Contract(c1::TEST_CLASS_HASH.try_into().unwrap()),
             ]
                 .span(),
         };

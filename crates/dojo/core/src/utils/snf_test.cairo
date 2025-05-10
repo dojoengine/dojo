@@ -1,7 +1,7 @@
-use starknet::{ClassHash, ContractAddress};
-use snforge_std::{declare, ContractClassTrait, DeclareResultTrait};
-use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait, Resource};
 use core::panics::panic_with_byte_array;
+use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait, Resource};
+use snforge_std::{ContractClassTrait, DeclareResultTrait, declare};
+use starknet::{ClassHash, ContractAddress};
 
 #[derive(Drop)]
 pub enum TestResource {
@@ -54,7 +54,7 @@ pub fn spawn_test_world(namespaces_defs: Span<NamespaceDef>) -> IWorldDispatcher
                 },
             }
         }
-    };
+    }
 
     world
 }

@@ -1,17 +1,16 @@
 [package]
-cairo-version = "=2.10.1"
+cairo-version = "=2.11.4"
 edition = "2024_07"
 description = "The Dojo Core library for autonomous worlds."
 name = "dojo"
 version = "1.5.0"
 
 [dependencies]
-starknet = "=2.10.1"
-dojo_plugin = { path = "../lang" }
-#dojo_macros = { path = "../macros" }
+starknet = "=2.11.4"
+dojo_macros = { path = "../macros" }
 
 [dev-dependencies]
-cairo_test = "=2.10.1"
+cairo_test = "=2.11.4"
 
 [lib]
 

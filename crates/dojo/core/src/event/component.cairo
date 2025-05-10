@@ -1,5 +1,6 @@
-use dojo::event::{Event, IEvent, EventDef};
-use dojo::meta::{Layout, introspect::Struct};
+use dojo::event::{Event, EventDef, IEvent};
+use dojo::meta::Layout;
+use dojo::meta::introspect::Struct;
 
 #[starknet::embeddable]
 pub impl IDeployedEventImpl<
