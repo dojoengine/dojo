@@ -16,15 +16,8 @@ version = "1.6.0"
 name = "dojo_snf_test"
 version = "1.6.0"
 dependencies = [
- "dojo_test",
- "snforge_std",
-]
-
-[[package]]
-name = "dojo_test"
-version = "1.6.0"
-dependencies = [
  "dojo",
+ "snforge_std",
 ]
 
 [[package]]
