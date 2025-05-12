@@ -21,7 +21,7 @@ pub fn compute_unique_hash(
             .iter()
             .map(|m| {
                 poseidon_hash_many(&[
-                    naming::compute_bytearray_hash(&m.name(db).text(db).to_string()),
+                    naming::compute_bytearray_hash(&m.name(db).text(db)),
                     naming::compute_bytearray_hash(
                         &m.type_clause(db).ty(db).as_syntax_node().get_text_without_trivia(db),
                     ),

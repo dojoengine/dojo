@@ -54,12 +54,12 @@ impl DojoLibrary {
                 .map(|el| {
                     match el {
                         ast::ModuleItem::Enum(ref enum_ast) => {
-                            if enum_ast.name(db).text(db).to_string() == "Event" {
+                            if enum_ast.name(db).text(db) == "Event" {
                                 return library.merge_event(db, enum_ast.clone());
                             }
                         }
                         ast::ModuleItem::Struct(ref struct_ast) => {
-                            if struct_ast.name(db).text(db).to_string() == "Storage" {
+                            if struct_ast.name(db).text(db) == "Storage" {
                                 return library.merge_storage(db, struct_ast.clone());
                             }
                         }
