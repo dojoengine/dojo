@@ -1,82 +1,239 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Function to cleanup background processes
-cleanup() {
-  local pids=("$@")
-  echo "[+] Cleaning up background processes..."
-  for pid in "${pids[@]}"; do
-    if kill -0 "$pid" 2>/dev/null; then
-      kill "$pid" 2>/dev/null || true
-    fi
-  done
-  wait "${pids[@]}" 2>/dev/null || true
-}
-
-echo "[+] Starting post-install validation"
-
-# Start by sourcing the .env file of dojo, which should be present
-# if the installation was successful.
 BASE_DIR=${XDG_CONFIG_HOME:-$HOME}
 DOJO_DIR=${DOJO_DIR-"$BASE_DIR/.dojo"}
-. "${DOJO_DIR}"/env
 
-KATANA_LOG="/tmp/katana.log"
-TORII_LOG="/tmp/torii.log"
-TEST_DIR="/tmp/dojo-test"
+log() {
+    echo "$1"
+}
 
-# 1. Start katana in the background
-katana --dev > "${KATANA_LOG}" 2>&1 &
-KATANA_PID=$!
+success() {
+    echo "[✓] $1"
+}
 
-# Wait a bit for katana to be up
-sleep 2
+error() {
+    echo "[✗] $1"
+    exit 1
+}
 
-# Check if katana is running and has no errors
-if ! pgrep -f katana > /dev/null || grep -i "error" "${KATANA_LOG}"; then
-  echo "[-] Katana failed to start or encountered errors"
-  exit 1
-fi
+# Cleanups background processes.
+cleanup() {
+    local pids=("$@")
+    log "Cleaning up background processes..."
+    for pid in "${pids[@]}"; do
+        if kill -0 "$pid" 2>/dev/null; then
+            kill "$pid" 2>/dev/null || true
+        fi
+    done
+    wait "${pids[@]}" 2>/dev/null || true
+}
 
-echo "[+] Katana started with PID $KATANA_PID"
+# Tests the dojoup install command.
+test_install() {
+    log "Testing dojoup install..."
 
-# 2. Initialize, build and migrate with sozo
-rm -rf "${TEST_DIR}"
-sozo init "${TEST_DIR}"
-cd "${TEST_DIR}"
-sozo build
-sozo migrate
+    # Check if .env file exists
+    if [ ! -f "${DOJO_DIR}/env" ]; then
+        error "Installation failed: .env file not found in ${DOJO_DIR}"
+    fi
 
-echo ""
+    # Source the .env file of dojo
+    . "${DOJO_DIR}"/env
 
-# 3. Start torii with a dummy world address in background.
-WORLD_ADDRESS=$(jq -r '.world.address' "${TEST_DIR}/manifest_dev.json")
+    # Technically, it's already installed since 1.5.0 is currently the last release.
+    # However, to ensure the install can be checked with fixed versions, we re-install 1.5.0 explicitly.
+    dojoup install 1.5.0
 
-torii --world "${WORLD_ADDRESS}" > "${TORII_LOG}" 2>&1 &
-TORII_PID=$!
+    if [ ! -d "$DOJO_DIR" ]; then
+        error "Installation failed: .dojo directory not created"
+    fi
 
-# Wait for torii to be up and indexing data.
-sleep 2
+    if [ ! -d "$DOJO_DIR/bin" ]; then
+        error "Installation failed: bin directory not created"
+    fi
 
-# Check if torii is running and has no errors
-if ! pgrep -f torii > /dev/null || grep -i "error" "${TORII_LOG}"; then
-  echo "[-] Torii failed to start or encountered errors"
-  cleanup "$KATANA_PID"
-  exit 1
-fi
+    for binary in sozo torii katana dojo-language-server; do
+        if [ ! -f "$DOJO_DIR/bin/$binary" ]; then
+            error "Installation failed: $binary not found"
+        fi
+    done
 
-echo "[+] Torii started with PID $TORII_PID"
+    success "Installation test passed"
+}
 
-WORLD_CHECK=$(curl -s -X POST http://localhost:8080/sql -d "SELECT contract_address FROM contracts WHERE contract_address = '${WORLD_ADDRESS}';")
+# Tests the dojoup default version switching command.
+test_default_version() {
+    log "Testing dojoup default version switching..."
 
-WORLD_CHECK=$(echo "${WORLD_CHECK}" | jq -r '.[0].contract_address')
+    current_version=$(dojoup show | grep "version:" | cut -d' ' -f2)
 
-if [ -z "${WORLD_CHECK}" ] || [ "${WORLD_CHECK}" != "${WORLD_ADDRESS}" ]; then
-  echo "[-] World address mismatch. Expected: ${WORLD_ADDRESS}, Got: ${WORLD_CHECK}"
-  cleanup "$KATANA_PID" "$TORII_PID"
-  exit 1
-fi
+    dojoup install "1.4.0"
 
-echo "[✓] All post-install checks passed"
+    dojoup default "1.4.0"
 
-cleanup "$KATANA_PID" "$TORII_PID"
+    new_version=$(dojoup show | grep "version:" | cut -d' ' -f2)
+    if [ "$new_version" != "1.4.0" ]; then
+        error "Default version switch failed: expected 1.4.0, got $new_version"
+    fi
+
+    dojoup default "$current_version"
+
+    success "Default version switching test passed"
+}
+
+# Tests the dojoup component management command.
+test_component_management() {
+    log "Testing dojoup component management..."
+
+    current_version=$(dojoup show | grep "version:" | cut -d' ' -f2)
+
+    dojoup component add katana 1.5.1
+
+    # Only test the bin symlink, since we may have internal folder structure changes
+    # in the future for dojoup.
+    # Also, the current version of component overrides the Katana install into the
+    # default toolchain version folder.
+    if [ ! -f "$DOJO_DIR/bin/katana" ]; then
+        error "Component installation failed: katana not found"
+    fi
+
+    component_version=$("$DOJO_DIR/bin/katana" --version | head -1 | cut -d' ' -f2)
+    if [ "$component_version" != "1.5.1" ]; then
+        error "Component version mismatch: expected 1.5.1, got $component_version"
+    fi
+
+    success "Component management test passed"
+}
+
+# Tests the dojoup list versions command.
+test_list_versions() {
+    log "Testing dojoup list versions..."
+
+    versions=$(dojoup list)
+
+    # Verify both versions are present that we installed during this post-install check.
+    if ! echo "$versions" | grep -q "1.4.0"; then
+        error "List versions failed: version 1.4.0 not found"
+    fi
+
+    if ! echo "$versions" | grep -q "1.5.0"; then
+        error "List versions failed: version 1.5.0 not found"
+    fi
+
+    if ! echo "$versions" | grep -q "1.5.0 (default)"; then
+        error "List versions failed: default version marker not found"
+    fi
+
+    success "List versions test passed"
+}
+
+# Tests the dojoup show version command.
+test_show_version() {
+    log "Testing dojoup show version..."
+
+    # Get current version info
+    version_info=$(dojoup show)
+
+    # Verify version format and exact version
+    if ! echo "$version_info" | grep -q "version: 1.5.0"; then
+        error "Show version failed: expected version 1.5.0 not found"
+    fi
+
+    # Verify components section exists
+    if ! echo "$version_info" | grep -q "components:"; then
+        error "Show version failed: components section not found"
+    fi
+
+    # Check each component version
+    if ! echo "$version_info" | grep -q "sozo: 1.5"; then
+        error "Show version failed: sozo version not found or less than 1.5"
+    fi
+
+    if ! echo "$version_info" | grep -q "torii: 1.5"; then
+        error "Show version failed: torii version not found or less than 1.5"
+    fi
+
+    if ! echo "$version_info" | grep -q "katana: 1.5"; then
+        error "Show version failed: katana version not found or less than 1.5"
+    fi
+
+    if ! echo "$version_info" | grep -q "dojo-language-server: 1.5"; then
+        error "Show version failed: dojo-language-server version not found or less than 1.5"
+    fi
+
+    success "Show version test passed"
+}
+
+# A end to end test that starts Katana and Torii and migrates a world using Sozo.
+test_katana_torii() {
+    log "Testing Katana and Torii functionality..."
+
+    KATANA_LOG="/tmp/katana.log"
+    TORII_LOG="/tmp/torii.log"
+    TEST_DIR="/tmp/dojo-test"
+
+    # 1. Start katana in the background
+    katana --dev > "${KATANA_LOG}" 2>&1 &
+    KATANA_PID=$!
+
+    # Wait a bit for katana to be up
+    sleep 2
+
+    # Check if katana is running and has no errors
+    if ! pgrep -f katana > /dev/null || grep -i "error" "${KATANA_LOG}"; then
+        error "Katana failed to start or encountered errors"
+    fi
+
+    log "Katana started with PID $KATANA_PID"
+
+    # 2. Initialize, build and migrate with sozo
+    rm -rf "${TEST_DIR}"
+    sozo init "${TEST_DIR}"
+    cd "${TEST_DIR}"
+    sozo build
+    sozo migrate
+
+    # 3. Start torii with a dummy world address in background.
+    WORLD_ADDRESS=$(jq -r '.world.address' "${TEST_DIR}/manifest_dev.json")
+
+    torii --world "${WORLD_ADDRESS}" > "${TORII_LOG}" 2>&1 &
+    TORII_PID=$!
+
+    # Wait for torii to be up and indexing data.
+    sleep 2
+
+    # Check if torii is running and has no errors
+    if ! pgrep -f torii > /dev/null || grep -i "error" "${TORII_LOG}"; then
+        error "Torii failed to start or encountered errors"
+        cleanup "$KATANA_PID"
+    fi
+
+    log "Torii started with PID $TORII_PID"
+
+    WORLD_CHECK=$(curl -s -X POST http://localhost:8080/sql -d "SELECT contract_address FROM contracts WHERE contract_address = '${WORLD_ADDRESS}';")
+    WORLD_CHECK=$(echo "${WORLD_CHECK}" | jq -r '.[0].contract_address')
+
+    if [ -z "${WORLD_CHECK}" ] || [ "${WORLD_CHECK}" != "${WORLD_ADDRESS}" ]; then
+        error "World address mismatch. Expected: ${WORLD_ADDRESS}, Got: ${WORLD_CHECK}"
+        cleanup "$KATANA_PID" "$TORII_PID"
+    fi
+
+    cleanup "$KATANA_PID" "$TORII_PID"
+    success "Katana and Torii test passed"
+}
+
+main() {
+    log "Starting dojoup test suite..."
+
+    test_install
+    test_default_version
+    test_component_management
+    test_list_versions
+    test_show_version
+    test_katana_torii
+
+    success "All tests passed!"
+}
+
+main
