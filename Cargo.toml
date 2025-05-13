@@ -15,6 +15,7 @@ members = [
 	"crates/macros/merge-options/macro_test",
 	"crates/metrics",
 	"crates/sozo/scarbext",
+	"crates/sozo/scarb_interop",
 	"crates/sozo/signers",
 	"crates/sozo/walnut",
 	"examples/spawn-and-move",
@@ -74,6 +75,7 @@ torii-mcp = { path = "crates/torii/mcp" }
 
 # sozo
 sozo-ops = { path = "crates/sozo/ops" }
+scarb-interop = { path = "crates/sozo/scarb_interop" }
 sozo-scarbext = { path = "crates/sozo/scarbext" }
 sozo-signers = { path = "crates/sozo/signers" }
 sozo-walnut = { path = "crates/sozo/walnut" }
@@ -129,6 +131,7 @@ convert_case = "0.6.0"
 crypto-bigint = { version = "0.5.3", features = [ "serde" ] }
 data-url = "0.3"
 derive_more = "0.99.17"
+dunce = "1"
 flate2 = "1.0.35"
 fluent-uri = "0.3"
 futures = "0.3.30"

@@ -7754,6 +7754,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "scarb-interop"
+version = "1.5.0"
+dependencies = [
+ "anyhow",
+ "camino",
+ "dojo-world",
+ "dunce",
+ "serde",
+ "serde_json",
+ "toml 0.8.22",
+]
+
+[[package]]
 name = "scarb-metadata"
 version = "1.14.0"
 source = "git+https://github.com/software-mansion/scarb?rev=4fdeb7810#4fdeb78106ac719ef6fd31379eef77b27c5e83b2"
@@ -8328,6 +8341,7 @@ dependencies = [
  "reqwest 0.11.27",
  "resolve-path",
  "scarb",
+ "scarb-interop",
  "scarb-metadata",
  "scarb-ui",
  "semver",

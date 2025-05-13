@@ -24,6 +24,7 @@ dojo-utils.workspace = true
 dojo-world.workspace = true
 notify = "7.0.0"
 resolve-path = "0.1.0"
+scarb-interop.workspace = true
 scarb.workspace = true
 scarb-metadata.workspace = true
 scarb-ui.workspace = true

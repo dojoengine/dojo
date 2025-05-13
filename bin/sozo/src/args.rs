@@ -9,10 +9,16 @@ use tracing_log::{AsTrace, LogTracer};
 use tracing_subscriber::FmtSubscriber;
 
 use crate::commands::Commands;
+
+/* TODO RBA
 use crate::utils::generate_version;
+*/
 
 #[derive(Parser, Debug)]
+/* TODO RBA
 #[command(author, version=generate_version(), about, long_about = None)]
+*/
+#[command(author, about, long_about = None)]
 #[command(propagate_version = true)]
 pub struct SozoArgs {
     #[arg(long)]

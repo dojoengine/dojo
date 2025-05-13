@@ -8,14 +8,11 @@ use cairo_lang_test_plugin::{TestCompilation, TestCompilationMetadata};
 use cairo_lang_test_runner::{CompiledTestRunner, RunProfilerConfig, TestRunConfig};
 use camino::Utf8PathBuf;
 use clap::Args;
-use scarb::core::{Config, TargetKind};
-use scarb::ops::{self, CompileOpts};
-use scarb_metadata::{Metadata, MetadataCommand, PackageId, PackageMetadata, TargetMetadata};
-use scarb_ui::args::{FeaturesSpec, PackagesFilter};
-use sozo_scarbext::WorkspaceExt;
 use tracing::trace;
 
-use super::check_package_dojo_version;
+use scarb_interop::{Config, Scarb};
+
+//use super::check_package_dojo_version;
 
 #[derive(Debug, Clone, PartialEq, clap::ValueEnum)]
 pub enum ProfilerMode {
@@ -55,104 +52,111 @@ pub struct TestArgs {
     /// Should we print the resource usage.
     #[arg(long, default_value_t = false)]
     print_resource_usage: bool,
-    /// Specify the features to activate.
-    #[command(flatten)]
-    features: FeaturesSpec,
-    /// Specify packages to test.
-    #[command(flatten)]
-    pub packages: PackagesFilter,
+    /* TODO RBA
+       /// Specify the features to activate.
+       #[command(flatten)]
+       features: FeaturesSpec,
+       /// Specify packages to test.
+       #[command(flatten)]
+       pub packages: PackagesFilter,
+    */
 }
 
 impl TestArgs {
-    // TODO: move this into the DojoCompiler.
     pub fn run(self, config: &Config) -> anyhow::Result<()> {
-        let ws = ops::read_workspace(config.manifest_path(), config).unwrap_or_else(|err| {
-            eprintln!("error: {err}");
-            std::process::exit(1);
-        });
+        /* TODO RBA
+               let ws = ops::read_workspace(config.manifest_path(), config).unwrap_or_else(|err| {
+                   eprintln!("error: {err}");
+                   std::process::exit(1);
+               });
 
-        // The scarb path is expected to be set in the env variable $SCARB.
-        // However, in some installation, we may not have the correct version, which will
-        // ends up in an error like "Scarb metadata not found".
-        let scarb_cairo_version = scarb::version::get().cairo.version.to_string();
-        let scarb_env_value = std::env::var("SCARB").unwrap_or_default();
-        let metadata = MetadataCommand::new()
-            .manifest_path(config.manifest_path())
-            .exec()
-            .with_context(|| {
-                format!(
-                    "Failed to get scarb metadata. Ensure `$SCARB` is set to the correct path \
-                     with the same version of Cairo ({scarb_cairo_version}). Current value: \
-                     {scarb_env_value}."
-                )
-            })?;
+               // The scarb path is expected to be set in the env variable $SCARB.
+               // However, in some installation, we may not have the correct version, which will
+               // ends up in an error like "Scarb metadata not found".
+               let scarb_cairo_version = scarb::version::get().cairo.version.to_string();
+               let scarb_env_value = std::env::var("SCARB").unwrap_or_default();
+               let metadata = MetadataCommand::new()
+                   .manifest_path(config.manifest_path())
+                   .exec()
+                   .with_context(|| {
+                       format!(
+                           "Failed to get scarb metadata. Ensure `$SCARB` is set to the correct path \
+                            with the same version of Cairo ({scarb_cairo_version}). Current value: \
+                            {scarb_env_value}."
+                       )
+                   })?;
 
-        let packages = self.packages.match_many(&ws)?;
-        for p in &packages {
-            check_package_dojo_version(&ws, p)?;
-        }
+               let packages = self.packages.match_many(&ws)?;
+               for p in &packages {
+                   check_package_dojo_version(&ws, p)?;
+               }
 
-        let matched = self.packages.match_many(&metadata)?;
+               let matched = self.packages.match_many(&metadata)?;
 
-        let target_names = matched
-            .iter()
-            .flat_map(|package| {
-                find_testable_targets(package).iter().map(|t| t.name.clone()).collect::<Vec<_>>()
-            })
-            .collect::<Vec<_>>();
+               let target_names = matched
+                   .iter()
+                   .flat_map(|package| {
+                       find_testable_targets(package).iter().map(|t| t.name.clone()).collect::<Vec<_>>()
+                   })
+                   .collect::<Vec<_>>();
 
-        trace!(?target_names, "Extracting testable targets.");
+               trace!(?target_names, "Extracting testable targets.");
+        */
+        Scarb::build(config)?;
+        Scarb::test(config)?;
 
-        scarb::ops::compile(
-            packages.iter().map(|p| p.id).collect(),
-            CompileOpts {
-                include_target_kinds: vec![TargetKind::TEST],
-                exclude_target_kinds: vec![],
-                include_target_names: vec![],
-                features: self.features.try_into()?,
-                ignore_cairo_version: false,
-            },
-            &ws,
-        )?;
+        /* TODO RBA
+                scarb::ops::compile(
+                    packages.iter().map(|p| p.id).collect(),
+                    CompileOpts {
+                        include_target_kinds: vec![TargetKind::TEST],
+                        exclude_target_kinds: vec![],
+                        include_target_names: vec![],
+                        features: self.features.try_into()?,
+                        ignore_cairo_version: false,
+                    },
+                    &ws,
+                )?;
 
-        let target_dir = Utf8PathBuf::from(ws.target_dir_profile().to_string());
+                let target_dir = Utf8PathBuf::from(ws.target_dir_profile().to_string());
 
-        let mut deduplicator = TargetGroupDeduplicator::default();
-        for package in matched {
-            println!("testing {} ...", package.name);
-            for target in find_testable_targets(&package) {
-                if !target_names.contains(&target.name) {
-                    continue;
+                let mut deduplicator = TargetGroupDeduplicator::default();
+                for package in matched {
+                    println!("testing {} ...", package.name);
+                    for target in find_testable_targets(&package) {
+                        if !target_names.contains(&target.name) {
+                            continue;
+                        }
+                        let name = target
+                            .params
+                            .get("group-id")
+                            .and_then(|v| v.as_str())
+                            .map(ToString::to_string)
+                            .unwrap_or(target.name.clone());
+                        let already_seen = deduplicator.visit(package.name.clone(), name.clone());
+                        if already_seen {
+                            continue;
+                        }
+                        let test_compilation = deserialize_test_compilation(&target_dir, name.clone())?;
+                        let config = TestRunConfig {
+                            filter: self.filter.clone(),
+                            include_ignored: self.include_ignored,
+                            ignored: self.ignored,
+                            run_profiler: RunProfilerConfig::None,
+                            gas_enabled: is_gas_enabled(&metadata, &package.id, target),
+                            print_resource_usage: self.print_resource_usage,
+                        };
+                        let runner = CompiledTestRunner::new(test_compilation, config);
+                        runner.run(None)?;
+                        println!();
+                    }
                 }
-                let name = target
-                    .params
-                    .get("group-id")
-                    .and_then(|v| v.as_str())
-                    .map(ToString::to_string)
-                    .unwrap_or(target.name.clone());
-                let already_seen = deduplicator.visit(package.name.clone(), name.clone());
-                if already_seen {
-                    continue;
-                }
-                let test_compilation = deserialize_test_compilation(&target_dir, name.clone())?;
-                let config = TestRunConfig {
-                    filter: self.filter.clone(),
-                    include_ignored: self.include_ignored,
-                    ignored: self.ignored,
-                    run_profiler: RunProfilerConfig::None,
-                    gas_enabled: is_gas_enabled(&metadata, &package.id, target),
-                    print_resource_usage: self.print_resource_usage,
-                };
-                let runner = CompiledTestRunner::new(test_compilation, config);
-                runner.run(None)?;
-                println!();
-            }
-        }
-
+        */
         Ok(())
     }
 }
 
+/* TODO RBA
 fn deserialize_test_compilation(target_dir: &Utf8PathBuf, name: String) -> Result<TestCompilation> {
     let file_path = target_dir.join(format!("{}.test.json", name));
     let test_comp_metadata = serde_json::from_str::<TestCompilationMetadata>(
@@ -204,3 +208,4 @@ fn is_gas_enabled(metadata: &Metadata, package_id: &PackageId, target: &TargetMe
 fn find_testable_targets(package: &PackageMetadata) -> Vec<&TargetMetadata> {
     package.targets.iter().filter(|target| target.kind == "test").collect()
 }
+ */
