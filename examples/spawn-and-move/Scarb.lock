@@ -6,6 +6,7 @@ name = "armory"
 version = "0.1.0"
 dependencies = [
  "dojo",
+ "dojo_macros",
 ]
 
 [[package]]
@@ -13,20 +14,14 @@ name = "bestiary"
 version = "0.1.0"
 dependencies = [
  "dojo",
+ "dojo_macros",
 ]
 
 [[package]]
 name = "dojo"
 version = "1.5.1"
 dependencies = [
- "dojo_plugin",
-]
-
-[[package]]
-name = "dojo_cairo_test"
-version = "1.0.12"
-dependencies = [
- "dojo",
+ "dojo_macros",
 ]
 
 [[package]]
@@ -36,13 +31,23 @@ dependencies = [
  "armory",
  "bestiary",
  "dojo",
- "dojo_cairo_test",
+ "dojo_macros",
+ "dojo_snf_test",
  "openzeppelin",
+ "snforge_std",
 ]
 
 [[package]]
-name = "dojo_plugin"
-version = "2.10.1"
+name = "dojo_macros"
+version = "1.6.0"
+
+[[package]]
+name = "dojo_snf_test"
+version = "1.6.0"
+dependencies = [
+ "dojo",
+ "snforge_std",
+]
 
 [[package]]
 name = "openzeppelin"
@@ -161,3 +166,18 @@ name = "openzeppelin_utils"
 version = "0.20.0"
 source = "registry+https://scarbs.xyz/"
 checksum = "sha256:44f32d242af1e43982decc49c563e613a9b67ade552f5c3d5cde504e92f74607"
+
+[[package]]
+name = "snforge_scarb_plugin"
+version = "0.40.0"
+source = "registry+https://scarbs.xyz/"
+checksum = "sha256:7c3b21f6cdab14fc63e19f9e6789b6a3d44f5618ebcf02d03b397375304e1891"
+
+[[package]]
+name = "snforge_std"
+version = "0.40.0"
+source = "registry+https://scarbs.xyz/"
+checksum = "sha256:0221bbe959eec72eb2e30be68df66c4ff5dcd924ec491f285c974e49671fabc0"
+dependencies = [
+ "snforge_scarb_plugin",
+]

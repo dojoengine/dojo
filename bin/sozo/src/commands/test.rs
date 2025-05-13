@@ -8,22 +8,14 @@ use cairo_lang_test_plugin::{TestCompilation, TestCompilationMetadata};
 use cairo_lang_test_runner::{CompiledTestRunner, RunProfilerConfig, TestRunConfig};
 use camino::Utf8PathBuf;
 use clap::Args;
-use scarb::compiler::ContractSelector;
 use scarb::core::{Config, TargetKind};
 use scarb::ops::{self, CompileOpts};
 use scarb_metadata::{Metadata, MetadataCommand, PackageId, PackageMetadata, TargetMetadata};
 use scarb_ui::args::{FeaturesSpec, PackagesFilter};
-use serde::{Deserialize, Serialize};
 use sozo_scarbext::WorkspaceExt;
 use tracing::trace;
 
 use super::check_package_dojo_version;
-
-#[derive(Debug, Default, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-pub struct Props {
-    pub build_external_contracts: Option<Vec<ContractSelector>>,
-}
 
 #[derive(Debug, Clone, PartialEq, clap::ValueEnum)]
 pub enum ProfilerMode {

@@ -1,9 +1,8 @@
-use dojo::{
-    meta::{Layout, introspect::Struct, layout::compute_packed_size},
-    utils::{entity_id_from_serialized_keys, find_model_field_layout, entity_id_from_keys},
-};
-
-use super::{ModelDefinition, ModelDef, ModelIndex};
+use dojo::meta::Layout;
+use dojo::meta::introspect::Struct;
+use dojo::meta::layout::compute_packed_size;
+use dojo::utils::{entity_id_from_keys, entity_id_from_serialized_keys, find_model_field_layout};
+use super::{ModelDef, ModelDefinition, ModelIndex};
 /// Trait `KeyParser` defines a trait for parsing keys from a given model.
 ///
 /// A pointer to a model, which can be expressed by an entity id.
@@ -30,7 +29,7 @@ pub impl ModelPtrsImpl<M> of ModelPtrsTrait<M> {
         let mut ids = ArrayTrait::<ModelIndex>::new();
         for ptr in self {
             ids.append(ModelIndex::Id(*ptr.id));
-        };
+        }
         ids.span()
     }
 
@@ -38,7 +37,7 @@ pub impl ModelPtrsImpl<M> of ModelPtrsTrait<M> {
         let mut ids = ArrayTrait::<ModelIndex>::new();
         for ptr in self {
             ids.append(ModelIndex::MemberId((*ptr.id, field_selector)));
-        };
+        }
         ids.span()
     }
 }
@@ -188,7 +187,7 @@ pub impl ModelImpl<M, +ModelParser<M>, +ModelDefinition<M>, +Serde<M>, +Drop<M>>
         let mut ptrs = ArrayTrait::<ModelPtr<M>>::new();
         for key in keys {
             ptrs.append(ModelPtr { id: entity_id_from_keys(key) });
-        };
+        }
         ptrs.span()
     }
 
@@ -196,7 +195,7 @@ pub impl ModelImpl<M, +ModelParser<M>, +ModelDefinition<M>, +Serde<M>, +Drop<M>>
         let mut ptrs = ArrayTrait::<ModelPtr<M>>::new();
         for key in keys {
             ptrs.append(Self::ptr_from_serialized_keys(*key));
-        };
+        }
         ptrs.span()
     }
 
@@ -204,7 +203,7 @@ pub impl ModelImpl<M, +ModelParser<M>, +ModelDefinition<M>, +Serde<M>, +Drop<M>>
         let mut ptrs = ArrayTrait::<ModelPtr<M>>::new();
         for entity_id in entity_ids {
             ptrs.append(Self::ptr_from_id(*entity_id));
-        };
+        }
         ptrs.span()
     }
 

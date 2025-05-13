@@ -4,12 +4,12 @@ use async_trait::async_trait;
 #[cfg(feature = "controller")]
 use slot::account_sdk::provider::CartridgeJsonRpcProvider;
 use starknet::accounts::{
-    single_owner, Account, ConnectedAccount, ExecutionEncoder, RawDeclarationV3, RawExecutionV3,
-    SingleOwnerAccount,
+    Account, ConnectedAccount, ExecutionEncoder, RawDeclarationV3, RawExecutionV3,
+    SingleOwnerAccount, single_owner,
 };
 use starknet::core::types::{BlockId, Call, Felt};
 use starknet::providers::Provider;
-use starknet::signers::{local_wallet, LocalWallet, SignerInteractivityContext};
+use starknet::signers::{LocalWallet, SignerInteractivityContext, local_wallet};
 
 #[cfg(feature = "controller")]
 use super::controller::ControllerAccount;
@@ -54,6 +54,8 @@ where
 }
 
 impl<P> SozoAccount<P>
+#[allow(clippy::large_enum_variant)]
+pub enum SozoAccount<P>
 where
     P: Provider + Send + Sync,
 {

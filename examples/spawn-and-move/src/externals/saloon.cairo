@@ -1,9 +1,9 @@
 #[starknet::contract]
 mod Saloon {
-    use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
-    use openzeppelin::upgrades::interface::IUpgradeable;
     use openzeppelin::upgrades::UpgradeableComponent;
-    use starknet::{ContractAddress, ClassHash, get_caller_address};
+    use openzeppelin::upgrades::interface::IUpgradeable;
+    use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
+    use starknet::{ClassHash, ContractAddress, get_caller_address};
 
     component!(path: UpgradeableComponent, storage: upgradeable, event: UpgradeableEvent);
 

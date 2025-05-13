@@ -44,7 +44,7 @@ impl InitArgs {
         if target_dir.exists() {
             ensure!(
                 fs::read_dir(&target_dir)?.next().is_none(),
-                io::Error::new(io::ErrorKind::Other, "Target directory is not empty",)
+                io::Error::other("Target directory is not empty")
             );
         }
 
