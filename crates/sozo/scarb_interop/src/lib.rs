@@ -1,7 +1,10 @@
 mod fsx;
 
-pub mod config;
+mod config;
 pub use config::*;
 
-pub mod scarb;
+mod manifest;
+pub use manifest::*;
+
+mod scarb;
 pub use scarb::*;
