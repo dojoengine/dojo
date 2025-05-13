@@ -31,6 +31,7 @@ pub enum SozoAccountSignError {
 #[must_use]
 #[non_exhaustive]
 #[allow(missing_debug_implementations)]
+#[allow(clippy::large_enum_variant)]
 pub enum SozoAccount<P>
 where
     P: Provider + Send + Sync,

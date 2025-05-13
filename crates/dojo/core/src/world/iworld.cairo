@@ -3,7 +3,6 @@
 use dojo::meta::Layout;
 use dojo::model::{ModelIndex, ResourceMetadata};
 use starknet::{ClassHash, ContractAddress};
-
 use super::resource::Resource;
 
 #[starknet::interface]

@@ -8,7 +8,9 @@ members = [
 version = "0.1.0"
 description = "Example game library for Dojo"
 edition = "2024_07"
-cairo-version = "=2.10.1"
+cairo-version = "=2.11.4"
 
 [workspace.dependencies]
+starknet = "=2.11.4"
 dojo = { path = "../../crates/dojo/core/" }
+dojo_macros = { path = "../../crates/dojo/macros" }

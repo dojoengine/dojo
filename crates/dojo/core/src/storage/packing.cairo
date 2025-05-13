@@ -19,10 +19,10 @@ pub fn pack(
                 );
             },
             Option::None(_) => { break; },
-        };
+        }
 
         index += 1;
-    };
+    }
     packed.append(packing);
 }
 
@@ -42,7 +42,7 @@ pub fn calculate_packed_size(ref layout: Span<u8>) -> usize {
             },
             Option::None(_) => { break; },
         };
-    };
+    }
 
     size
 }

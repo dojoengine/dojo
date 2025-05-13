@@ -25,7 +25,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  RUST_VERSION: 1.85.0
+  RUST_VERSION: 1.86.0
 
 jobs:
   build:
@@ -112,12 +112,14 @@ jobs:
       - uses: actions/checkout@v3
       - uses: software-mansion/setup-scarb@v1
         with:
-          scarb-version: "2.10.1"
+          scarb-version: "2.11.4"
       - run: |
-          scarb --manifest-path examples/spawn-and-move/Scarb.toml fmt --check
-          scarb --manifest-path examples/simple/Scarb.toml fmt --check
           scarb --manifest-path crates/dojo/core/Scarb.toml fmt --check
-          scarb --manifest-path crates/dojo/core-cairo-test/Scarb.toml fmt --check
+          scarb --manifest-path crates/dojo/macros/Scarb.toml fmt --check
+          scarb --manifest-path crates/dojo/core-tests/Scarb.toml fmt --check
+          scarb --manifest-path examples/simple/Scarb.toml fmt --check
+          scarb --manifest-path examples/spawn-and-move/Scarb.toml fmt --check
+          scarb --manifest-path examples/benchmark/Scarb.toml fmt --check
 
   dojo-core-test:
     needs: build
@@ -125,7 +127,7 @@ jobs:
     steps:
       - uses: software-mansion/setup-scarb@v1
         with:
-          scarb-version: "2.10.1"
+          scarb-version: "2.11.4"
       - uses: actions/download-artifact@v4
         with:
           name: dojo-bins
@@ -134,7 +136,7 @@ jobs:
       - run: |
           chmod +x /tmp/bins/sozo
           /tmp/bins/sozo --manifest-path crates/dojo/core/Scarb.toml test
-          /tmp/bins/sozo --manifest-path crates/dojo/core-cairo-test/Scarb.toml test
+          /tmp/bins/sozo --manifest-path crates/dojo/core-tests/Scarb.toml test
 
   dojo-examples-test:
     needs: build
@@ -142,7 +144,7 @@ jobs:
     steps:
       - uses: software-mansion/setup-scarb@v1
         with:
-          scarb-version: "2.10.1"
+          scarb-version: "2.11.4"
       - uses: actions/download-artifact@v4
         with:
           name: dojo-bins

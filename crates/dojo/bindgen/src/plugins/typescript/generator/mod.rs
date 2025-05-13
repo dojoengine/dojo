@@ -136,7 +136,7 @@ impl From<&Token> for JsPrimitiveType {
                     // we defined a type wrapper with Enum suffix let's use it there
                     return JsPrimitiveType::from(format!("{}Enum", c.type_name()).as_str());
                 }
-                return JsPrimitiveType::from(value.type_name().as_str());
+                JsPrimitiveType::from(value.type_name().as_str())
             }
             _ => JsPrimitiveType::from(value.type_name().as_str()),
         }
@@ -217,7 +217,7 @@ impl From<&Token> for JsPrimitiveInputType {
                     // Use CairoCustomEnum type from starknetjs
                     return JsPrimitiveInputType::from("CairoCustomEnum");
                 }
-                return JsPrimitiveInputType::from(value.type_name().as_str());
+                JsPrimitiveInputType::from(value.type_name().as_str())
             }
             _ => JsPrimitiveInputType::from(value.type_name().as_str()),
         }

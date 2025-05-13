@@ -1,28 +1,38 @@
 [package]
-cairo-version = "=2.10.1"
 name = "dojo_examples"
+description = "Dojo example to showcase Dojo features."
+
 version = "1.5.0"
-# Use the prelude with the less imports as possible
-# from corelib.
 edition = "2024_07"
+cairo-version = "=2.11.4"
 
 [cairo]
 sierra-replace-ids = true
+
+[dependencies]
+openzeppelin = "0.20.0"
+starknet = "2.11.4"
+
+armory = { path = "../game-lib/armory" }
+bestiary = { path = "../game-lib/bestiary" }
+dojo = { path = "../../crates/dojo/core" }
+dojo_macros = { path = "../../crates/dojo/macros" }
+
+[dev-dependencies]
+snforge_std = "0.40.0"
+assert_macros = "2.11.4"
+
+dojo_snf_test = { path = "../../crates/dojo/dojo-snf-test" }
 
 [[target.starknet-contract]]
 build-external-contracts = [ "dojo::world::world_contract::world", "armory::m_Flatbow", "bestiary::m_RiverSkale" ]
 allowed-libfuncs-list.name = "experimental"
 
-[dependencies]
-openzeppelin = "0.20.0"
-armory = { path = "../game-lib/armory" }
-bestiary = { path = "../game-lib/bestiary" }
-dojo = { path = "../../crates/dojo/core" }
-starknet = "2.10.1"
+[scripts]
+test = "snforge test"
 
-[dev-dependencies]
-cairo_test = "2.10.1"
-dojo_cairo_test = { path = "../../crates/dojo/core-cairo-test" }
+[tool.scarb]
+allow-prebuilt-plugins = ["snforge_std"]
 
 [features]
 default = [ "dungeon" ]

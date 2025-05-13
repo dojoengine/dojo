@@ -93,7 +93,7 @@ fn collect_source_code(root_dir: &Path) -> Result<Value, Error> {
                             && path
                                 .file_stem()
                                 .and_then(OsStr::to_str)
-                                .map_or(false, |name| name.starts_with("dojo_"))
+                                .is_some_and(|name| name.starts_with("dojo_"))
                         {
                             if let Ok(mut toml_data) = file_content.parse::<toml::Value>() {
                                 if let Some(table) = toml_data.as_table_mut() {

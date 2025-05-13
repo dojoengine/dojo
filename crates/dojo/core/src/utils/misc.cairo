@@ -17,7 +17,7 @@ pub fn any_none<T>(arr: @Array<Option<T>>) -> bool {
             break;
         }
         i += 1;
-    };
+    }
     res
 }
 

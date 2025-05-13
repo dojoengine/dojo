@@ -1,7 +1,5 @@
 use core::array::{ArrayTrait, SpanTrait};
-
 use starknet::SyscallResultTrait;
-
 use super::storage;
 
 const DOJO_STORAGE: felt252 = 'dojo_storage';
