@@ -29,12 +29,10 @@ function Add-ToPath {
 
 # Check if version parameter is provided
 if ($args.Count -eq 0) {
-    Write-Host "Please provide a Dojo version as an argument"
-    Write-Host "Example: .\install.ps1 1.5.0"
-    exit 1
+    $dojoVersion = "1.5.0"
+} else {
+    $dojoVersion = $args[0]
 }
-
-$dojoVersion = $args[0]
 
 # Create installation directory
 $installDir = Join-Path $env:USERPROFILE ".dojo"
