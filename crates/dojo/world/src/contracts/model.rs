@@ -58,6 +58,7 @@ pub trait ModelReader<E> {
     async fn packed_size(&self) -> Result<u32, E>;
     async fn unpacked_size(&self) -> Result<u32, E>;
     async fn layout(&self) -> Result<abigen::model::Layout, E>;
+    async fn use_legacy_storage(&self) -> Result<bool, E>;
 }
 
 #[derive(Debug)]

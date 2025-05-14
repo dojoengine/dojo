@@ -5,7 +5,7 @@ use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{Terminal, TypedSyntaxNode};
 
 use crate::helpers::{
-    debug_store_expand, DiagnosticsExt, DojoChecker, DojoFormatter, ProcMacroResultExt,
+    DiagnosticsExt, DojoChecker, DojoFormatter, ProcMacroResultExt, debug_store_expand,
 };
 
 #[derive(Debug)]
@@ -87,7 +87,7 @@ impl DojoEnumIntrospect {
         let dojo_store = Self::build_enum_dojo_store(
             db,
             &enum_name,
-            &enum_ast,
+            enum_ast,
             &gen_types,
             &dojo_store_gen_impls,
         );
