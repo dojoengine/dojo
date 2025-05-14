@@ -4,6 +4,15 @@ use cairo_lang_syntax::node::{Terminal, TypedSyntaxNode};
 use dojo_types::naming;
 use starknet_crypto::{poseidon_hash_many, Felt};
 
+#[inline(always)]
+pub fn get_serialization_path(use_serde: bool) -> String {
+    if use_serde {
+        "core::serde::Serde".to_string()
+    } else {
+        "dojo::storage::DojoStore".to_string()
+    }
+}
+
 /// Compute a unique hash based on the element name and types and names of members.
 /// This hash is used in element contracts to ensure uniqueness.
 pub fn compute_unique_hash(

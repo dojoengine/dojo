@@ -68,7 +68,7 @@ pub fn deploy_world_for_model_upgrades() -> IWorldDispatcher {
         .set_entity(
             selector_from_names(@"dojo", @"FooModelMemberChanged"),
             ModelIndex::Keys([0xb0b].span()),
-            [0, 42, 189, 456].span(),
+            [1, 42, 189, 456].span(),
             Introspect::<FooModelMemberChanged>::layout(),
         );
 

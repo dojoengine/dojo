@@ -23,6 +23,10 @@ pub fn is_tuple(ty: &str) -> bool {
     ty.starts_with(TUPLE_PREFIX)
 }
 
+pub fn is_option(ty: &str) -> bool {
+    ty.starts_with("Option<")
+}
+
 pub fn get_array_item_type(ty: &str) -> String {
     if ty.starts_with(ARRAY_PREFIX) {
         extract_composite_inner_type(ty, ARRAY_PREFIX, ARRAY_SUFFIX)

@@ -1,3 +1,4 @@
+use dojo::meta::{FieldLayout, Introspect, Layout};
 use dojo::model::{Model, ModelPtr, ModelStorage, ModelValue, ModelValueStorage};
 use dojo::world::WorldStorage;
 use dojo_snf_test::world::{NamespaceDef, TestResource, spawn_test_world};
@@ -70,9 +71,45 @@ struct ModelWithCommentOnLastFied {
     v1: Span<u32> // a comment without a comma 
 }
 
+#[derive(Copy, Drop, Serde, Debug, Introspect, Default, PartialEq)]
+enum EnumWithCommentOnLastVariant {
+    #[default]
+    X: u8,
+    Y: Span<u32> // a comment without a comma
+}
+
+#[derive(Copy, Drop, Serde, Debug, Introspect, Default, PartialEq)]
+enum MyEnum {
+    X: Option<u32>,
+    Y: (u8, u32),
+    #[default]
+    Z,
+}
+
+#[derive(Copy, Drop, Serde, Debug, Introspect, DojoLegacyStorage, PartialEq)]
+#[dojo::model]
+struct LegacyModel {
+    #[key]
+    a: u8,
+    b: (u8, u32),
+    c: Option<u32>,
+    d: MyEnum,
+}
+
+#[derive(Copy, Drop, Serde, Debug, Introspect, PartialEq)]
+#[dojo::model]
+struct DojoStoreModel {
+    #[key]
+    a: u8,
+    b: (u8, u32),
+    c: Option<u32>,
+    d: MyEnum,
+}
+
 // to test with unit types
-#[derive(Copy, Drop, Introspect, Debug, Serde, PartialEq)]
+#[derive(Copy, Drop, Introspect, Debug, Serde, PartialEq, Default)]
 enum EnumWithUnitType {
+    #[default]
     X: u8,
     Y,
     Z: (),
@@ -100,6 +137,7 @@ fn namespace_def() -> NamespaceDef {
         resources: [
             TestResource::Model("Foo"), TestResource::Model("Foo2"), TestResource::Model("Foo3"),
             TestResource::Model("Foo4"), TestResource::Model("ModelWithUnitType"),
+            TestResource::Model("LegacyModel"), TestResource::Model("DojoStoreModel"),
         ]
             .span(),
     }
@@ -396,4 +434,174 @@ fn test_access_with_unit_type() {
         },
         "Bad default model",
     )
+}
+
+#[test]
+fn test_legacy_model() {
+    let mut _world = spawn_foo_world();
+
+    // legacy layout
+    let definition = dojo::model::Model::<LegacyModel>::definition();
+    let layout = Introspect::<LegacyModel>::layout();
+
+    let expected_layout = Layout::Struct(
+        [
+            FieldLayout {
+                selector: selector!("b"),
+                layout: Layout::Tuple(
+                    [Introspect::<u8>::layout(), Introspect::<u32>::layout()].span(),
+                ),
+            },
+            FieldLayout {
+                selector: selector!("c"),
+                layout: Layout::Enum(
+                    [
+                        FieldLayout { selector: 0, layout: Introspect::<u32>::layout() },
+                        FieldLayout { selector: 1, layout: Layout::Fixed([].span()) },
+                    ]
+                        .span(),
+                ),
+            },
+            FieldLayout {
+                selector: selector!("d"),
+                layout: Layout::Enum(
+                    [
+                        FieldLayout {
+                            selector: 0,
+                            layout: Layout::Enum(
+                                [
+                                    FieldLayout {
+                                        selector: 0, layout: Introspect::<u32>::layout(),
+                                    },
+                                    FieldLayout { selector: 1, layout: Layout::Fixed([].span()) },
+                                ]
+                                    .span(),
+                            ),
+                        },
+                        FieldLayout {
+                            selector: 1,
+                            layout: Layout::Tuple(
+                                [Introspect::<u8>::layout(), Introspect::<u32>::layout()].span(),
+                            ),
+                        },
+                        FieldLayout { selector: 2, layout: Layout::Fixed([].span()) },
+                    ]
+                        .span(),
+                ),
+            },
+        ]
+            .span(),
+    );
+
+    // the layout returned by Introspect::layout() is the layout of the model
+    // for the new storage system, while the layout returned by ModelDefinition
+    // is the layout used to store data (so it is adapted in case of legacy storage model).
+    // This is fine as Introspect::layout() is never used for models.
+    assert_eq!(definition.layout, expected_layout, "ModelDefinition: bad layout");
+    assert_ne!(layout, expected_layout, "Introspect::layout(): bad layout");
+
+    // (de)serialization
+    let m = LegacyModel {
+        a: 42, b: (83, 1234), c: Option::Some(987), d: MyEnum::X(Option::Some(5432)),
+    };
+    let serialized_keys = dojo::model::model::ModelParser::<LegacyModel>::serialize_keys(@m);
+    let serialized_values = dojo::model::model::ModelParser::<LegacyModel>::serialize_values(@m);
+
+    assert_eq!(serialized_keys, [42].span(), "LegacyModel: serialize_keys failed");
+    assert_eq!(
+        serialized_values,
+        [83, 1234, 0, 987, 0, 0, 5432].span(),
+        "LegacyModel: serialize_values failed",
+    );
+
+    let mut values = [42, 83, 1234, 0, 987, 0, 0, 5432].span();
+
+    assert_eq!(
+        dojo::model::model::ModelParser::<LegacyModel>::deserialize(ref values),
+        Option::Some(m),
+        "LegacyModel: deserialize failed",
+    );
+}
+
+#[test]
+fn test_dojo_store_model() {
+    let mut _world = spawn_foo_world();
+
+    // DojoStore layout
+    let definition = dojo::model::Model::<DojoStoreModel>::definition();
+    let layout = Introspect::<DojoStoreModel>::layout();
+
+    let expected_layout = Layout::Struct(
+        [
+            FieldLayout {
+                selector: selector!("b"),
+                layout: Layout::Tuple(
+                    [Introspect::<u8>::layout(), Introspect::<u32>::layout()].span(),
+                ),
+            },
+            FieldLayout {
+                selector: selector!("c"),
+                layout: Layout::Enum(
+                    [
+                        FieldLayout { selector: 1, layout: Introspect::<u32>::layout() },
+                        FieldLayout { selector: 2, layout: Layout::Fixed([].span()) },
+                    ]
+                        .span(),
+                ),
+            },
+            FieldLayout {
+                selector: selector!("d"),
+                layout: Layout::Enum(
+                    [
+                        FieldLayout {
+                            selector: 1,
+                            layout: Layout::Enum(
+                                [
+                                    FieldLayout {
+                                        selector: 1, layout: Introspect::<u32>::layout(),
+                                    },
+                                    FieldLayout { selector: 2, layout: Layout::Fixed([].span()) },
+                                ]
+                                    .span(),
+                            ),
+                        },
+                        FieldLayout {
+                            selector: 2,
+                            layout: Layout::Tuple(
+                                [Introspect::<u8>::layout(), Introspect::<u32>::layout()].span(),
+                            ),
+                        },
+                        FieldLayout { selector: 3, layout: Layout::Fixed([].span()) },
+                    ]
+                        .span(),
+                ),
+            },
+        ]
+            .span(),
+    );
+
+    assert_eq!(definition.layout, expected_layout, "ModelDefinition: bad layout");
+    assert_eq!(layout, expected_layout, "Introspect::layout(): bad layout");
+
+    // (de)serialization
+    let m = DojoStoreModel {
+        a: 42, b: (83, 1234), c: Option::Some(987), d: MyEnum::X(Option::Some(5432)),
+    };
+    let serialized_keys = dojo::model::model::ModelParser::<DojoStoreModel>::serialize_keys(@m);
+    let serialized_values = dojo::model::model::ModelParser::<DojoStoreModel>::serialize_values(@m);
+
+    assert_eq!(serialized_keys, [42].span(), "DojoStoreModel: serialize_keys failed");
+    assert_eq!(
+        serialized_values,
+        [83, 1234, 1, 987, 1, 1, 5432].span(),
+        "DojoStoreModel: serialize_values failed",
+    );
+
+    let mut values = [42, 83, 1234, 1, 987, 1, 1, 5432].span();
+
+    assert_eq!(
+        dojo::model::model::ModelParser::<DojoStoreModel>::deserialize(ref values),
+        Option::Some(m),
+        "DojoStoreModel: deserialize failed",
+    );
 }

@@ -1,12 +1,14 @@
 use cairo_lang_macro::{Diagnostic, ProcMacroResult, TokenStream};
 use cairo_lang_parser::utils::SimpleParserDatabase;
-use cairo_lang_syntax::node::ast::{ItemStruct, Member};
+use cairo_lang_syntax::node::ast::{Expr, ItemStruct, Member};
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{Terminal, TypedSyntaxNode};
 use starknet::core::utils::get_selector_from_name;
 
 use crate::constants::CAIRO_DELIMITERS;
-use crate::helpers::{DiagnosticsExt, DojoChecker, ProcMacroResultExt};
+use crate::helpers::{
+    debug_store_expand, DiagnosticsExt, DojoChecker, DojoFormatter, ProcMacroResultExt,
+};
 
 #[derive(Debug)]
 pub struct DojoStructIntrospect {
@@ -56,10 +58,38 @@ impl DojoStructIntrospect {
             )
         };
 
-        let (gen_types, gen_impls) =
-            super::generics::build_generic_types_and_impls(db, struct_ast.generic_params(db));
+        let gen_types = super::generics::build_generic_types(db, struct_ast.generic_params(db));
 
-        super::generate_introspect(&struct_name, &struct_size, &gen_types, gen_impls, &layout, &ty)
+        let inspect_gen_impls = super::generics::build_generic_impls(
+            &gen_types,
+            &["+dojo::meta::introspect::Introspect".to_string()],
+            &[],
+        );
+        let dojo_store_gen_impls = super::generics::build_generic_impls(
+            &gen_types,
+            &["+dojo::storage::DojoStore".to_string()],
+            &[],
+        );
+
+        let dojo_store = Self::build_struct_dojo_store(
+            db,
+            &struct_name,
+            &struct_ast,
+            &gen_types,
+            &dojo_store_gen_impls,
+        );
+
+        debug_store_expand(&format!("DOJO_STORE STRUCT::{struct_name}"), &dojo_store);
+
+        super::generate_introspect(
+            &struct_name,
+            &struct_size,
+            &gen_types,
+            inspect_gen_impls,
+            &layout,
+            &ty,
+            &dojo_store,
+        )
     }
 
     fn compute_struct_layout_size(
@@ -213,6 +243,91 @@ impl DojoStructIntrospect {
                 layouts.join(",")
             )
         }
+    }
+
+    pub fn build_struct_dojo_store(
+        db: &SimpleParserDatabase,
+        name: &String,
+        struct_ast: &ItemStruct,
+        generic_types: &[String],
+        generic_impls: &String,
+    ) -> String {
+        let mut serialized_members = vec![];
+        let mut deserialized_members = vec![];
+        let mut member_names = vec![];
+
+        for member in struct_ast.members(db).elements(db).iter() {
+            let member_name = member.name(db).text(db).to_string();
+
+            let member_ty =
+                member.type_clause(db).ty(db).as_syntax_node().get_text_without_trivia(db);
+
+            match member.type_clause(db).ty(db) {
+                Expr::Tuple(tuple) => {
+                    serialized_members.push(DojoFormatter::serialize_tuple_member_ty(
+                        db,
+                        &member_name,
+                        &tuple,
+                        true,
+                        false,
+                    ));
+                    deserialized_members.push(DojoFormatter::deserialize_tuple_member_ty(
+                        db,
+                        &member_name,
+                        &tuple,
+                        false,
+                    ));
+                }
+                _ => {
+                    serialized_members.push(DojoFormatter::serialize_primitive_member_ty(
+                        &member_name,
+                        true,
+                        false,
+                    ));
+                    deserialized_members.push(DojoFormatter::deserialize_primitive_member_ty(
+                        &member_name,
+                        &member_ty,
+                        false,
+                    ));
+                }
+            }
+
+            member_names.push(member_name);
+        }
+
+        let serialized_members = serialized_members.join("");
+        let deserialized_members = deserialized_members.join("");
+        let member_names = member_names.join(",\n");
+
+        let generic_params = if generic_types.is_empty() {
+            "".to_string()
+        } else {
+            format!("<{}>", generic_types.join(", "))
+        };
+
+        let impl_decl = if generic_types.is_empty() {
+            format!("impl {name}DojoStore of dojo::storage::DojoStore<{name}>")
+        } else {
+            format!(
+                "impl {name}DojoStore<{generic_impls}> of \
+                 dojo::storage::DojoStore<{name}{generic_params}>"
+            )
+        };
+
+        format!(
+            "{impl_decl} {{
+        fn serialize(self: @{name}{generic_params}, ref serialized: Array<felt252>) {{
+            {serialized_members}
+        }}
+        fn deserialize(ref values: Span<felt252>) -> Option<{name}{generic_params}> {{
+            {deserialized_members}
+            Option::Some({name}{} {{
+                {member_names}
+            }})
+        }}
+    }}",
+            if generic_types.is_empty() { "".to_string() } else { format!("::{generic_params}") }
+        )
     }
 }
 

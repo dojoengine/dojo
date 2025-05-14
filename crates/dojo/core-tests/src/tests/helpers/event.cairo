@@ -4,7 +4,7 @@ use starknet::ContractAddress;
 use super::helpers::MyEnum;
 
 // This event is used as a base to create the "previous" version of an event to be upgraded.
-#[derive(Introspect)]
+#[derive(Introspect, Serde)]
 struct FooBaseEvent {
     #[key]
     pub caller: ContractAddress,
