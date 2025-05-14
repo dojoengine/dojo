@@ -7,7 +7,7 @@ use starknet::core::utils::get_selector_from_name;
 
 use crate::constants::CAIRO_DELIMITERS;
 use crate::helpers::{
-    DiagnosticsExt, DojoChecker, DojoFormatter, ProcMacroResultExt, debug_store_expand,
+    debug_store_expand, DiagnosticsExt, DojoChecker, DojoFormatter, ProcMacroResultExt,
 };
 
 #[derive(Debug)]
