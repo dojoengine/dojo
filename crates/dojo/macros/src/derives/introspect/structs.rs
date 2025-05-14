@@ -7,7 +7,7 @@ use starknet::core::utils::get_selector_from_name;
 
 use crate::constants::CAIRO_DELIMITERS;
 use crate::helpers::{
-    debug_store_expand, DiagnosticsExt, DojoChecker, DojoFormatter, ProcMacroResultExt,
+    DiagnosticsExt, DojoChecker, DojoFormatter, ProcMacroResultExt, debug_store_expand,
 };
 
 #[derive(Debug)]
@@ -74,7 +74,7 @@ impl DojoStructIntrospect {
         let dojo_store = Self::build_struct_dojo_store(
             db,
             &struct_name,
-            &struct_ast,
+            struct_ast,
             &gen_types,
             &dojo_store_gen_impls,
         );
