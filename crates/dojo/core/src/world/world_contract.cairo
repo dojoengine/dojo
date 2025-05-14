@@ -36,7 +36,8 @@ pub mod world {
     use dojo::model::{Model, ModelIndex, ResourceMetadata, metadata};
     use dojo::storage;
     use dojo::utils::{
-        bytearray_hash, entity_id_from_serialized_keys, selector_from_namespace_and_name,
+        bytearray_hash, default_address, default_class_hash, entity_id_from_serialized_keys,
+        selector_from_namespace_and_name,
     };
     use dojo::world::{IUpgradeableWorld, IWorld, Resource, ResourceIsNoneTrait, errors};
     use starknet::storage::Map;
@@ -306,9 +307,7 @@ pub mod world {
             .resources
             .write(
                 metadata::resource_metadata_selector(internal_ns_hash),
-                Resource::Model(
-                    (metadata::default_address(), metadata::default_class_hash().into()),
-                ),
+                Resource::Model((default_address(), default_class_hash().into())),
             );
 
         self.emit(WorldSpawned { creator, class_hash: world_class_hash });
@@ -1306,8 +1305,13 @@ pub mod world {
                 panic_with_byte_array(@errors::invalid_resource_layout_upgrade(namespace, name));
             }
 
+            // The layout of a resource using packed layout must remain the same.
             if let Layout::Fixed(_) = new_layout {
-                panic_with_byte_array(@errors::packed_layout_cannot_be_upgraded(namespace, name));
+                if new_layout != old_layout {
+                    panic_with_byte_array(
+                        @errors::packed_layout_cannot_be_upgraded(namespace, name),
+                    );
+                }
             }
 
             if !new_schema.is_an_upgrade_of(@old_schema) {

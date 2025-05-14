@@ -82,9 +82,7 @@ impl DojoParser {
                         .type_clause(db)
                         .ty(db)
                         .as_syntax_node()
-                        .get_text(db)
-                        .trim()
-                        .to_string(),
+                        .get_text_without_trivia(db),
                     key: is_key,
                 };
 

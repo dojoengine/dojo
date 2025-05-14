@@ -1,10 +1,12 @@
 use cairo_lang_macro::{Diagnostic, ProcMacroResult, TokenStream};
 use cairo_lang_parser::utils::SimpleParserDatabase;
-use cairo_lang_syntax::node::ast::{ItemEnum, OptionTypeClause, Variant};
+use cairo_lang_syntax::node::ast::{Expr, ItemEnum, OptionTypeClause, Variant};
 use cairo_lang_syntax::node::helpers::QueryAttrs;
-use cairo_lang_syntax::node::Terminal;
+use cairo_lang_syntax::node::{Terminal, TypedSyntaxNode};
 
-use crate::helpers::{DiagnosticsExt, DojoChecker, ProcMacroResultExt};
+use crate::helpers::{
+    debug_store_expand, DiagnosticsExt, DojoChecker, DojoFormatter, ProcMacroResultExt,
+};
 
 #[derive(Debug)]
 pub struct DojoEnumIntrospect {
@@ -62,12 +64,45 @@ impl DojoEnumIntrospect {
             )
         };
 
-        let (gen_types, gen_impls) =
-            super::generics::build_generic_types_and_impls(db, enum_ast.generic_params(db));
+        let gen_types = super::generics::build_generic_types(db, enum_ast.generic_params(db));
+        let gen_joined_types = gen_types.join(", ");
+
+        // TODO RBA: is it really good ?
+        let enum_name_with_generics = format!("{enum_name}<{gen_joined_types}>");
+
+        let inspect_gen_impls = super::generics::build_generic_impls(
+            &gen_types,
+            &["+dojo::meta::introspect::Introspect".to_string()],
+            &[],
+        );
+        let dojo_store_gen_impls = super::generics::build_generic_impls(
+            &gen_types,
+            &["+dojo::storage::DojoStore".to_string(), "+core::serde::Serde".to_string()],
+            &[format!("+core::traits::Default<{enum_name_with_generics}>")],
+        );
+
         let enum_size = self.compute_enum_layout_size(&variant_sizes, is_packed);
         let ty = self.build_enum_ty(db, &enum_name, enum_ast);
 
-        super::generate_introspect(&enum_name, &enum_size, &gen_types, gen_impls, &layout, &ty)
+        let dojo_store = Self::build_enum_dojo_store(
+            db,
+            &enum_name,
+            enum_ast,
+            &gen_types,
+            &dojo_store_gen_impls,
+        );
+
+        debug_store_expand(&format!("DOJO_STORE ENUM::{enum_name}"), &dojo_store);
+
+        super::generate_introspect(
+            &enum_name,
+            &enum_size,
+            &gen_types,
+            inspect_gen_impls,
+            &layout,
+            &ty,
+            &dojo_store,
+        )
     }
 
     pub fn compute_enum_variant_sizes(
@@ -186,7 +221,9 @@ impl DojoEnumIntrospect {
         let mut layouts = vec![];
 
         for (i, v) in enum_ast.variants(db).elements(db).iter().enumerate() {
-            let selector = format!("{i}");
+            // with the new `DojoStore`` trait, variants start from 1, to be able to use
+            // 0 as uninitialized variant.
+            let selector = i + 1;
 
             let variant_layout = match v.type_clause(db) {
                 OptionTypeClause::Empty(_) => {
@@ -250,5 +287,126 @@ impl DojoEnumIntrospect {
                 format!("('{name}', {})", super::ty::build_ty_from_type_clause(db, &type_clause))
             }
         }
+    }
+
+    pub fn build_enum_dojo_store(
+        db: &SimpleParserDatabase,
+        name: &String,
+        enum_ast: &ItemEnum,
+        generic_types: &[String],
+        generic_impls: &String,
+    ) -> String {
+        let mut serialized_variants = vec![];
+        let mut deserialized_variants = vec![];
+
+        for (index, variant) in enum_ast.variants(db).elements(db).iter().enumerate() {
+            let variant_name = variant.name(db).text(db).to_string();
+            let full_variant_name = format!("{name}::{variant_name}");
+            let variant_index = index + 1;
+
+            let (serialized_variant, deserialized_variant) = match variant.type_clause(db) {
+                OptionTypeClause::TypeClause(ty) => match ty.ty(db) {
+                    Expr::Tuple(expr) => {
+                        let serialized_tuple = DojoFormatter::serialize_tuple_member_ty(
+                            db,
+                            &"d".to_string(),
+                            &expr,
+                            false,
+                            false,
+                        );
+                        let deserialized_tuple = DojoFormatter::deserialize_tuple_member_ty(
+                            db,
+                            &"variant_data".to_string(),
+                            &expr,
+                            false,
+                        );
+
+                        let serialized = format!(
+                            "{full_variant_name}(d) => {{
+                                serialized.append({variant_index});
+                                {serialized_tuple}
+                            }},"
+                        );
+
+                        let deserialized = format!(
+                            "{variant_index} => {{
+                                {deserialized_tuple}
+                                Option::Some({full_variant_name}(variant_data))
+                            }},",
+                        );
+
+                        (serialized, deserialized)
+                    }
+                    _ => {
+                        let ty = ty.ty(db).as_syntax_node().get_text_without_trivia(db);
+
+                        let serialized = format!(
+                            "{full_variant_name}(d) => {{
+                                serialized.append({variant_index});
+                                dojo::storage::DojoStore::serialize(d, ref serialized);
+                            }},"
+                        );
+
+                        let deserialized = format!(
+                            "{variant_index} => {{
+                                let variant_data = \
+                             dojo::storage::DojoStore::<{ty}>::deserialize(ref values)?;
+                                Option::Some({full_variant_name}(variant_data))
+                            }},",
+                        );
+
+                        (serialized, deserialized)
+                    }
+                },
+                OptionTypeClause::Empty(_) => {
+                    let serialized = format!(
+                        "{full_variant_name} => {{ serialized.append({variant_index}); }},"
+                    );
+                    let deserialized =
+                        format!("{variant_index} => Option::Some({full_variant_name}),",);
+
+                    (serialized, deserialized)
+                }
+            };
+
+            serialized_variants.push(serialized_variant);
+            deserialized_variants.push(deserialized_variant);
+        }
+
+        let serialized_variants = serialized_variants.join("\n");
+        let deserialized_variants = deserialized_variants.join("\n");
+
+        let generic_params = if generic_types.is_empty() {
+            "".to_string()
+        } else {
+            format!("<{}>", generic_types.join(", "))
+        };
+
+        let impl_decl = if generic_types.is_empty() {
+            format!("impl {name}DojoStore of dojo::storage::DojoStore<{name}>")
+        } else {
+            format!(
+                "impl {name}DojoStore<{generic_impls}> of \
+                 dojo::storage::DojoStore<{name}{generic_params}>"
+            )
+        };
+
+        format!(
+            "{impl_decl} {{
+        fn serialize(self: @{name}{generic_params}, ref serialized: Array<felt252>) {{
+            match self {{
+                {serialized_variants}
+            }};
+        }}
+        fn deserialize(ref values: Span<felt252>) -> Option<{name}{generic_params}> {{
+            let variant = *values.pop_front()?;
+            match variant {{
+                0 => Option::Some(Default::<{name}{generic_params}>::default()),
+                {deserialized_variants}
+                _ => Option::None,
+            }}
+        }}
+    }}"
+        )
     }
 }
