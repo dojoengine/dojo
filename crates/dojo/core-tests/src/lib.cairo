@@ -37,6 +37,7 @@ mod tests {
 
     mod meta {
         mod introspect;
+        mod layout;
     }
 
     mod model {
@@ -45,6 +46,8 @@ mod tests {
 
     mod storage {
         mod database;
+        mod dojo_store;
+        mod layout;
         mod packing;
         mod storage;
     }

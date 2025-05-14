@@ -60,5 +60,9 @@ pub mod attacker_model {
                 unpacked_size: Self::unpacked_size(self),
             }
         }
+
+        fn use_legacy_storage(self: @ContractState) -> bool {
+            false
+        }
     }
 }

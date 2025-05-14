@@ -5,7 +5,7 @@ use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::TypedSyntaxNode;
 
 use super::utils::{
-    get_array_item_type, get_tuple_item_types, is_array, is_byte_array, is_tuple,
+    get_array_item_type, get_tuple_item_types, is_array, is_byte_array, is_option, is_tuple,
     is_unsupported_option_type,
 };
 use crate::helpers::DiagnosticsExt;
@@ -185,6 +185,9 @@ pub fn get_packed_item_layout_from_type(
         vec![]
     } else if is_tuple(item_type) {
         get_packed_tuple_layout_from_type(diagnostics, item_type)
+    } else if is_option(item_type) {
+        diagnostics.push_error(format!("{item_type} cannot be packed."));
+        vec!["ERROR".to_string()]
     } else {
         // as we cannot verify that an enum/struct custom type is packable,
         // we suppose it is and let the user verify this.

@@ -204,6 +204,10 @@ where
     async fn layout(&self) -> Result<abigen::model::Layout, ModelError> {
         Ok(self.model_reader.layout().call().await?)
     }
+
+    async fn use_legacy_storage(&self) -> Result<bool, ModelError> {
+        Ok(self.model_reader.use_legacy_storage().call().await?)
+    }
 }
 
 fn parse_schema(ty: &abigen::model::Ty) -> Result<Ty, ParseError> {

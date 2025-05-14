@@ -44,6 +44,7 @@ pub(crate) fn generate_introspect(
     generic_impls: String,
     layout: &str,
     ty: &str,
+    dojo_store: &str,
 ) -> TokenStream {
     let impl_decl = if generic_types.is_empty() {
         format!("{name}Introspect of dojo::meta::introspect::Introspect<{name}>")
@@ -58,6 +59,7 @@ pub(crate) fn generate_introspect(
     let size = DojoTokenizer::tokenize(size);
     let layout = DojoTokenizer::tokenize(layout);
     let ty = DojoTokenizer::tokenize(ty);
+    let dojo_store = DojoTokenizer::tokenize(dojo_store);
 
     quote! {
         impl #impl_decl {
@@ -76,5 +78,7 @@ pub(crate) fn generate_introspect(
                 #ty
             }
         }
+
+        #dojo_store
     }
 }
