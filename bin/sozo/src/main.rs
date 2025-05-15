@@ -16,18 +16,19 @@ mod args;
 mod commands;
 //mod utils;
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let args = SozoArgs::parse();
     let _ = args.init_logging(&args.verbose);
     let ui = Ui::new(args.ui_verbosity(), OutputFormat::Text);
 
-    if let Err(err) = cli_main(args) {
+    if let Err(err) = cli_main(args).await {
         ui.anyhow(&err);
         exit(1);
     }
 }
 
-fn cli_main(args: SozoArgs) -> Result<()> {
+async fn cli_main(args: SozoArgs) -> Result<()> {
     // Default to the current directory to mimic how Scarb works.
     let manifest_path = if let Some(manifest_path) = &args.manifest_path {
         manifest_path
@@ -67,5 +68,5 @@ fn cli_main(args: SozoArgs) -> Result<()> {
     */
     trace!(%scarb_metadata.runtime_manifest, "Configuration built successfully.");
 
-    commands::run(args.command, &scarb_metadata)
+    commands::run(args.command, &scarb_metadata).await
 }

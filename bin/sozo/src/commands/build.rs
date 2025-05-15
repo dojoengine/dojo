@@ -6,7 +6,7 @@ use colored::{ColoredString, Colorize};
 use dojo_bindgen::{BuiltinPlugins, PluginManager};
 use dojo_world::ResourceType;
 use dojo_world::local::{ResourceLocal, WorldLocal};
-use scarb_interop::{self, Scarb, MetadataDojoExt};
+use scarb_interop::{self, MetadataDojoExt, Scarb};
 use scarb_metadata::Metadata;
 use tabled::settings::Style;
 use tabled::{Table, Tabled};
@@ -98,44 +98,18 @@ pub struct StatOptions {
 }
 
 impl BuildArgs {
-    pub fn run(self, scarb_metadata: &Metadata) -> Result<()> {
-        /* TODO RBA
-                let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
-                ws.profile_check()?;
-
-                // Ensure we don't have old contracts in the build dir, since the local artifacts
-                // guides the migration.
-                ws.clean_dir_profile();
-
-                let packages: Vec<Package> = if let Some(filter) = self.packages {
-                    filter.match_many(&ws)?.into_iter().collect()
-                } else {
-                    ws.members().collect()
-                };
-
-                for p in &packages {
-                    check_package_dojo_version(&ws, p)?;
-                }
-
-                debug!(?packages);
-        */
+    pub async fn run(self, scarb_metadata: &Metadata) -> Result<()> {
         scarb_metadata.clean_dir_profile();
 
         // TODO: pass arguments to scarb build based on the one exposed into Sozo CLI.
-        Scarb::build(&scarb_metadata.workspace.manifest_path)?;
-        /* TODO RBA
-                scarb::ops::compile(
-                    packages.iter().map(|p| p.id).collect(),
-                    CompileOpts {
-                        include_target_names: vec![],
-                        include_target_kinds: vec![],
-                        exclude_target_kinds: vec![TargetKind::TEST],
-                        features: self.features.try_into()?,
-                        ignore_cairo_version: false,
-                    },
-                    &ws,
-                )?;
-        */
+        //   - features
+        //   - packages list
+        Scarb::build(
+            &scarb_metadata.workspace.manifest_path,
+            scarb_metadata.current_profile.as_str(),
+            vec![],
+        )?;
+
         let mut builtin_plugins = vec![];
 
         if self.typescript {
@@ -158,59 +132,55 @@ impl BuildArgs {
             builtin_plugins.push(BuiltinPlugins::UnrealEngine);
         }
 
-        /* TODO RBA
-                // Custom plugins are always empty for now.
-                let bindgen = PluginManager {
-                    profile_name: ws.current_profile().expect("Profile expected").to_string(),
-                    root_package_name: ws
-                        .root_package()
-                        .map(|p| p.id.name.to_string())
-                        .unwrap_or("NO_ROOT_PACKAGE".to_string()),
-                    output_path: self.bindings_output.into(),
-                    manifest_path: config.manifest_path().to_path_buf(),
-                    plugins: vec![],
-                    builtin_plugins,
-                };
+        // Custom plugins are always empty for now.
+        let bindgen = PluginManager {
+            profile_name: scarb_metadata.current_profile.to_string(),
+            root_package_name: scarb_metadata.workspace_package_name()?,
+            output_path: self.bindings_output.into(),
+            manifest_path: scarb_metadata.dojo_manifest_path_profile(),
+            plugins: vec![],
+            builtin_plugins,
+        };
 
-                // TODO: check about the skip migration as now we process the metadata
-                // directly during the compilation to get the data we need from it.
-                config.tokio_handle().block_on(bindgen.generate(None)).expect("Error generating bindings");
+        // TODO: check about the skip migration as now we process the metadata
+        // directly during the compilation to get the data we need from it.
+        bindgen.generate(None).await?;
 
-                if self.stats != StatOptions::default() {
-                    let world = WorldLocal::from_directory(
-                        ws.target_dir_profile().to_string(),
-                        ws.load_profile_config().unwrap(),
-                    )?;
+        if self.stats != StatOptions::default() {
+            let world = WorldLocal::from_directory(
+                scarb_metadata.target_dir_profile().to_string(),
+                scarb_metadata.load_dojo_profile_config().unwrap(),
+            )?;
 
-                    let world_stat = world.to_stat_item();
-                    let mut stats = vec![world_stat];
+            let world_stat = world.to_stat_item();
+            let mut stats = vec![world_stat];
 
-                    for r in world.resources.values() {
-                        if r.resource_type() != ResourceType::Namespace {
-                            stats.push(r.to_stat_item());
-                        }
-                    }
+            for r in world.resources.values() {
+                if r.resource_type() != ResourceType::Namespace {
+                    stats.push(r.to_stat_item());
+                }
+            }
 
-                    if self.stats.sort_by_tag {
-                        stats.sort_by_key(|s| s.tag.clone());
-                    } else if self.stats.sort_by_sierra_mb {
-                        stats.sort_by_key(|s| Reverse(s.sierra_file_size));
-                    } else if self.stats.sort_by_sierra_felts {
-                        stats.sort_by_key(|s| Reverse(s.sierra_program_size));
-                    } else if self.stats.sort_by_casm_felts {
-                        stats.sort_by_key(|s| Reverse(s.casm_bytecode_size));
-                    }
+            if self.stats.sort_by_tag {
+                stats.sort_by_key(|s| s.tag.clone());
+            } else if self.stats.sort_by_sierra_mb {
+                stats.sort_by_key(|s| Reverse(s.sierra_file_size));
+            } else if self.stats.sort_by_sierra_felts {
+                stats.sort_by_key(|s| Reverse(s.sierra_program_size));
+            } else if self.stats.sort_by_casm_felts {
+                stats.sort_by_key(|s| Reverse(s.casm_bytecode_size));
+            }
 
-                    let mut table = Table::new(stats.iter().map(StatItemPrint::from).collect::<Vec<_>>());
-                    table.with(Style::psql());
+            let mut table = Table::new(stats.iter().map(StatItemPrint::from).collect::<Vec<_>>());
+            table.with(Style::psql());
 
-                    println!();
-                    println!("{table}");
+            println!();
+            println!("{table}");
 
-                    if stats.iter().all(|s| s.casm_bytecode_size == 0) {
-                        println!(
-                            "{}",
-                            r#"
+            if stats.iter().all(|s| s.casm_bytecode_size == 0) {
+                println!(
+                    "{}",
+                    r#"
 All the casm bytecode sizes are 0, did you forget to enable casm compilation?
 To enable casm compilation, add the following to your Scarb.toml:
 
@@ -218,28 +188,27 @@ To enable casm compilation, add the following to your Scarb.toml:
 sierra = true
 casm = true
             "#
-                            .bright_yellow()
-                        );
-                    }
+                    .bright_yellow()
+                );
+            }
 
-                    println!(
-                        "\nRefer to https://docs.starknet.io/tools/limits-and-triggers/ for more \
+            println!(
+                "\nRefer to https://docs.starknet.io/tools/limits-and-triggers/ for more \
                          information about the public networks limits."
-                    );
-                }
-        */
+            );
+        }
         Ok(())
     }
 }
 
-/* TODO RBA
 impl Default for BuildArgs {
     fn default() -> Self {
         // use the clap defaults
-        let features = FeaturesSpec::parse_from([""]);
+        // let features = FeaturesSpec::parse_from([""]);
 
         Self {
-            features,
+            // features,
+            // packages: None,
             typescript: false,
             typescript_v2: false,
             recs: false,
@@ -247,7 +216,6 @@ impl Default for BuildArgs {
             unrealengine: false,
             bindings_output: "bindings".to_string(),
             stats: StatOptions::default(),
-            packages: None,
         }
     }
 }
@@ -357,4 +325,3 @@ impl ContractStats for WorldLocal {
         self.casm_class.as_ref().map_or(0, |casm| casm.bytecode.len())
     }
 }
-*/

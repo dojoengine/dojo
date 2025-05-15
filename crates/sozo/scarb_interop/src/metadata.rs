@@ -14,6 +14,9 @@ use crate::fsx;
 
 /// Extension trait for the [`Metadata`] type.
 pub trait MetadataDojoExt {
+    /// Returns the workspace package name. If it's a virtual workspace, there's no package name and returns an error.
+    /// In the case of Dojo, it's never expected to be a virtual workspace.
+    fn workspace_package_name(&self) -> Result<String>;
     /// Returns the target directory root for the workspace.
     fn target_dir_root(&self) -> Utf8PathBuf;
     /// Returns the target directory for the current profile.
@@ -25,16 +28,34 @@ pub trait MetadataDojoExt {
     /// Checks if the current profile has generated artifacts.
     fn ensure_profile_artifacts(&self) -> Result<()>;
     /// Loads the Dojo profile config for the current profile.
-    fn load_profile_config(&self) -> Result<ProfileConfig>;
+    fn load_dojo_profile_config(&self) -> Result<ProfileConfig>;
     /// Loads the local world from the workspace configuration.
-    fn load_world_local(&self) -> Result<WorldLocal>;
+    fn load_dojo_world_local(&self) -> Result<WorldLocal>;
     /// Writes the Dojo manifest for the current profile.
-    fn write_manifest_profile(&self, manifest: impl Serialize) -> Result<()>;
+    fn write_dojo_manifest_profile(&self, manifest: impl Serialize) -> Result<()>;
     /// Reads the Dojo manifest for the current profile.
-    fn read_manifest_profile(&self) -> Result<Option<Manifest>>;
+    fn read_dojo_manifest_profile(&self) -> Result<Option<Manifest>>;
+    /// Returns the dojo manifest path for the current profile.
+    fn dojo_manifest_path_profile(&self) -> Utf8PathBuf;
 }
 
 impl MetadataDojoExt for Metadata {
+    fn workspace_package_name(&self) -> Result<String> {
+        // Read the toml file at the workspace root and check if the [package] table in toml contains a `name` field. If we don't have [package] but [workspace.package] we know it's a virtual workspace.
+        let toml_path = &self.workspace.manifest_path;
+        let toml_content = fsx::read_to_string(toml_path)?;
+        let toml: toml::Value = toml::from_str(&toml_content)?;
+
+        let package_name = toml.get("package").and_then(|v| v.get("name")).and_then(|v| v.as_str());
+
+        match package_name {
+            Some(name) => Ok(name.to_string()),
+            None => anyhow::bail!(
+                "No package name found in {}. Sozo currently supports only non-virtual workspaces.",
+                toml_path
+            ),
+        }
+    }
     fn target_dir_root(&self) -> Utf8PathBuf {
         if let Some(target_dir) = &self.target_dir {
             target_dir.clone()
@@ -83,7 +104,7 @@ impl MetadataDojoExt for Metadata {
         Ok(())
     }
 
-    fn load_profile_config(&self) -> Result<ProfileConfig> {
+    fn load_dojo_profile_config(&self) -> Result<ProfileConfig> {
         // Safe to unwrap since manifest is a file.
         let manifest_dir = &self.workspace.root;
         let profile_str = self.current_profile.as_str();
@@ -110,14 +131,14 @@ impl MetadataDojoExt for Metadata {
         Ok(config)
     }
 
-    fn load_world_local(&self) -> Result<WorldLocal> {
+    fn load_dojo_world_local(&self) -> Result<WorldLocal> {
         WorldLocal::from_directory(
             self.target_dir_profile().to_string(),
-            self.load_profile_config()?,
+            self.load_dojo_profile_config()?,
         )
     }
 
-    fn write_manifest_profile(&self, manifest: impl Serialize) -> Result<()> {
+    fn write_dojo_manifest_profile(&self, manifest: impl Serialize) -> Result<()> {
         let profile_name = self.current_profile.as_str();
         let manifest_name = format!("manifest_{}.json", &profile_name);
 
@@ -131,7 +152,7 @@ impl MetadataDojoExt for Metadata {
         Ok(serde_json::to_writer_pretty(file, &manifest)?)
     }
 
-    fn read_manifest_profile(&self) -> Result<Option<Manifest>> {
+    fn read_dojo_manifest_profile(&self) -> Result<Option<Manifest>> {
         let profile_name = self.current_profile.as_str();
         let manifest_name = format!("manifest_{}.json", &profile_name);
 
@@ -145,6 +166,13 @@ impl MetadataDojoExt for Metadata {
         let content = fsx::read_to_string(manifest_path)?;
 
         Ok(Some(serde_json::from_str(&content)?))
+    }
+
+    fn dojo_manifest_path_profile(&self) -> Utf8PathBuf {
+        let profile_name = self.current_profile.as_str();
+        let manifest_name = format!("manifest_{}.json", &profile_name);
+
+        self.workspace.root.join(manifest_name)
     }
 }
 
@@ -163,9 +191,7 @@ impl MetadataErrorExt for MetadataCommandError {
                         stdout.split("has no profile").nth(1).unwrap_or("").trim().replace("`", "");
                     format!(
                         "The profile '{}' does not exist. Consider adding [profile.{}] to `{}` to declare the profile.",
-                        profile_name,
-                        profile_name,
-                        manifest_path
+                        profile_name, profile_name, manifest_path
                     )
                 } else {
                     format!(

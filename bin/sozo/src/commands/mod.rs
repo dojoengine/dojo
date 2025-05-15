@@ -108,7 +108,7 @@ impl fmt::Display for Commands {
     }
 }
 
-pub fn run(command: Commands, scarb_metadata: &Metadata) -> Result<()> {
+pub async fn run(command: Commands, scarb_metadata: &Metadata) -> Result<()> {
     let name = command.to_string();
     let span = info_span!("Subcommand", name);
     let _span = span.enter();
@@ -117,7 +117,7 @@ pub fn run(command: Commands, scarb_metadata: &Metadata) -> Result<()> {
     // useful to write tests for each command.
 
     match command {
-        Commands::Build(args) => args.run(scarb_metadata),
+        Commands::Build(args) => args.run(scarb_metadata).await,
         Commands::Test(args) => args.run(scarb_metadata),
         /* TODO RBA
                Commands::Auth(args) => args.run(config),

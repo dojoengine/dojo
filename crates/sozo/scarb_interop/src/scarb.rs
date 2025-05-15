@@ -47,8 +47,14 @@ impl Scarb {
     /// Builds the workspace provided in the Scarb metadata.
     ///
     /// Every Scarb project, even with one single package, are considered a workspace, with the `root` being the parent directory of the `Scarb.toml` file.
-    pub fn build(manifest_path: &Utf8Path) -> Result<()> {
-        Self::execute(&manifest_path.to_string(), vec!["build"])
+    ///
+    /// TODO: check if we should pass here directly the whole scarb metadata + the optional things from the CLI like features and packages. Or if having the manifest_path and the profile separated is a better approach.
+    pub fn build(manifest_path: &Utf8Path, profile: &str, other_args: Vec<&str>) -> Result<()> {
+        let mut all_args = vec!["-P", profile, "build"];
+
+        all_args.extend(other_args);
+
+        Self::execute(&manifest_path.to_string(), all_args)
     }
 
     /// Tests the workspace provided in the Scarb metadata.
