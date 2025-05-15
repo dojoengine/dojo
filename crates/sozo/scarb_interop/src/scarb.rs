@@ -4,15 +4,19 @@ use std::process::{Command, Stdio};
 use anyhow::{Result, anyhow, bail};
 use camino::Utf8Path;
 
-use crate::Config;
-
 pub struct Scarb {}
 
 impl Scarb {
-    fn execute(current_dir: &Utf8Path, args: Vec<&str>) -> Result<()> {
+    /// Executes a Scarb command for the given manifest path.
+    fn execute(manifest_path: &str, args: Vec<&str>) -> Result<()> {
+        // To not change the current dir at this level, we rely
+        // on Scarb `manifest-path` option.
+        let mut args_with_manifest = vec!["--manifest-path", manifest_path];
+
+        args_with_manifest.extend(args);
+
         let stdout = match Command::new("scarb")
-            .current_dir(current_dir)
-            .args(args)
+            .args(&args_with_manifest)
             .stdout(Stdio::piped())
             .spawn()
         {
@@ -40,11 +44,15 @@ impl Scarb {
         Ok(())
     }
 
-    pub fn build(config: &Config) -> Result<()> {
-        Self::execute(config.manifest_dir(), vec!["build"])
+    /// Builds the workspace provided in the Scarb metadata.
+    ///
+    /// Every Scarb project, even with one single package, are considered a workspace, with the `root` being the parent directory of the `Scarb.toml` file.
+    pub fn build(manifest_path: &Utf8Path) -> Result<()> {
+        Self::execute(&manifest_path.to_string(), vec!["build"])
     }
 
-    pub fn test(config: &Config) -> Result<()> {
-        Self::execute(config.manifest_dir(), vec!["test"])
+    /// Tests the workspace provided in the Scarb metadata.
+    pub fn test(manifest_path: &Utf8Path) -> Result<()> {
+        Self::execute(&manifest_path.to_string(), vec!["test"])
     }
 }

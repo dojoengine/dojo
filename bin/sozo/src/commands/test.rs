@@ -8,9 +8,9 @@ use cairo_lang_test_plugin::{TestCompilation, TestCompilationMetadata};
 use cairo_lang_test_runner::{CompiledTestRunner, RunProfilerConfig, TestRunConfig};
 use camino::Utf8PathBuf;
 use clap::Args;
+use scarb_interop::Scarb;
+use scarb_metadata::Metadata;
 use tracing::trace;
-
-use scarb_interop::{Config, Scarb};
 
 //use super::check_package_dojo_version;
 
@@ -63,7 +63,7 @@ pub struct TestArgs {
 }
 
 impl TestArgs {
-    pub fn run(self, config: &Config) -> anyhow::Result<()> {
+    pub fn run(self, scarb_metadata: &Metadata) -> anyhow::Result<()> {
         /* TODO RBA
                let ws = ops::read_workspace(config.manifest_path(), config).unwrap_or_else(|err| {
                    eprintln!("error: {err}");
@@ -102,8 +102,13 @@ impl TestArgs {
 
                trace!(?target_names, "Extracting testable targets.");
         */
-        Scarb::build(config)?;
-        Scarb::test(config)?;
+        //Scarb::build(config)?;
+
+        // We don't need to build before testing, the testing rebuilds automatically.
+
+        // TODO: For test command, it's merely passing the arguments
+        // as the vec[&str], no extra logic.
+        Scarb::test(&scarb_metadata.workspace.manifest_path)?;
 
         /* TODO RBA
                 scarb::ops::compile(

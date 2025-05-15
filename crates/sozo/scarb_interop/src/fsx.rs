@@ -7,6 +7,29 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result, anyhow};
 use camino::{Utf8Path, Utf8PathBuf};
 
+/// Equivalent to [`fs::read_dir`] but returns a list of files instead of an iterator on entries.
+///
+/// Uses [`dunce`] to generate more familiar paths on Windows.
+pub fn list_files(path: impl AsRef<Path>) -> Result<Vec<PathBuf>> {
+    let entries = fs::read_dir(path)?;
+
+    let files =
+        entries
+            .filter_map(|entry| {
+                let entry = entry.ok()?;
+                let path = entry.path();
+                if path.is_file() {
+                    Some(dunce::canonicalize(&path).with_context(|| {
+                        format!("failed to get absolute path of `{}`", path.display())
+                    }))
+                } else {
+                    None
+                }
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+    Ok(files)
+}
+
 /// Equivalent to [`fs::canonicalize`] with better error messages.
 ///
 /// Uses [`dunce`] to generate more familiar paths on Windows.

@@ -6,7 +6,8 @@ use colored::{ColoredString, Colorize};
 use dojo_bindgen::{BuiltinPlugins, PluginManager};
 use dojo_world::ResourceType;
 use dojo_world::local::{ResourceLocal, WorldLocal};
-use scarb_interop::Config;
+use scarb_interop::{self, Scarb, MetadataDojoExt};
+use scarb_metadata::Metadata;
 use tabled::settings::Style;
 use tabled::{Table, Tabled};
 use tracing::debug;
@@ -40,6 +41,21 @@ pub struct BuildArgs {
     pub bindings_output: String,
 
     /* TODO RBA
+
+    --
+    For those two, let's copy the structs from Scarb
+    without the associated logic. And we should implement a to string
+    method to them pass this to `Scarb::build`.
+
+    Or we can even makes it simpler, since by default we build the workspace (except if a list of packages is provided).
+
+    And for the features, we still need those 3, so let's re-use the
+    same struct as scarb.
+    - features: a list of features.
+    - all-features: to avoid listing all.
+    - no-default-features: to avoid listing none and deactivating all features.
+    --
+
        /// Specify the features to activate.
        #[command(flatten)]
        pub features: FeaturesSpec,
@@ -82,7 +98,7 @@ pub struct StatOptions {
 }
 
 impl BuildArgs {
-    pub fn run(self, config: &Config) -> Result<()> {
+    pub fn run(self, scarb_metadata: &Metadata) -> Result<()> {
         /* TODO RBA
                 let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
                 ws.profile_check()?;
@@ -103,7 +119,10 @@ impl BuildArgs {
 
                 debug!(?packages);
         */
-        scarb_interop::Scarb::build(&config)?;
+        scarb_metadata.clean_dir_profile();
+
+        // TODO: pass arguments to scarb build based on the one exposed into Sozo CLI.
+        Scarb::build(&scarb_metadata.workspace.manifest_path)?;
         /* TODO RBA
                 scarb::ops::compile(
                     packages.iter().map(|p| p.id).collect(),

@@ -1,15 +1,16 @@
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
 
-use std::env;
 use std::process::exit;
 
 use anyhow::Result;
 use args::SozoArgs;
+use camino::Utf8PathBuf;
 use clap::Parser;
 
 use scarb_ui::{OutputFormat, Ui};
 
-use scarb_interop::{self, Config};
+use scarb_interop::MetadataErrorExt;
+use scarb_metadata::MetadataCommand;
 use tracing::trace;
 mod args;
 mod commands;
@@ -27,11 +28,32 @@ fn main() {
 }
 
 fn cli_main(args: SozoArgs) -> Result<()> {
-    let manifest_path = scarb_interop::find_manifest_path(args.manifest_path.as_deref())?;
+    // Default to the current directory to mimic how Scarb works.
+    let manifest_path = if let Some(manifest_path) = &args.manifest_path {
+        manifest_path
+    } else {
+        let current_dir = Utf8PathBuf::from_path_buf(std::env::current_dir()?)
+            .map_err(|e| anyhow::anyhow!("Invalid UTF-8 in path: {}", e.display()))?;
+
+        &current_dir.join("Scarb.toml")
+    };
+
+    let mut metadata = MetadataCommand::new();
+    metadata.manifest_path(manifest_path);
+    metadata.profile(args.profile_spec.determine()?.as_str());
+
+    if args.offline {
+        metadata.no_deps();
+    }
+
+    let scarb_metadata = match metadata.exec() {
+        Ok(metadata) => metadata,
+        Err(err) => {
+            return Err(anyhow::anyhow!(err.format_error_message(&manifest_path)));
+        }
+    };
 
     // TODO RBA: utils::verify_cairo_version_compatibility(&manifest_path)?;
-
-    let config = Config::builder(manifest_path.clone()).build()?;
 
     /* TODO RBA
        let config = Config::builder(manifest_path.clone())
@@ -43,7 +65,7 @@ fn cli_main(args: SozoArgs) -> Result<()> {
            .compilers(compilers)
            .build()?;
     */
-    trace!(%manifest_path, "Configuration built successfully.");
+    trace!(%scarb_metadata.runtime_manifest, "Configuration built successfully.");
 
-    commands::run(args.command, &config)
+    commands::run(args.command, &scarb_metadata)
 }

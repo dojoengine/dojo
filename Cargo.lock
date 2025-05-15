@@ -7761,6 +7761,7 @@ dependencies = [
  "camino",
  "dojo-world",
  "dunce",
+ "scarb-metadata",
  "serde",
  "serde_json",
  "toml 0.8.22",

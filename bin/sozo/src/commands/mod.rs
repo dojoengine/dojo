@@ -4,7 +4,7 @@ use anyhow::Result;
 //use auth::AuthArgs;
 use clap::Subcommand;
 //use events::EventsArgs;
-use scarb_interop::Config;
+use scarb_metadata::Metadata;
 use semver::{Version, VersionReq};
 use tracing::info_span;
 
@@ -108,7 +108,7 @@ impl fmt::Display for Commands {
     }
 }
 
-pub fn run(command: Commands, config: &Config) -> Result<()> {
+pub fn run(command: Commands, scarb_metadata: &Metadata) -> Result<()> {
     let name = command.to_string();
     let span = info_span!("Subcommand", name);
     let _span = span.enter();
@@ -117,8 +117,8 @@ pub fn run(command: Commands, config: &Config) -> Result<()> {
     // useful to write tests for each command.
 
     match command {
-        Commands::Build(args) => args.run(config),
-        Commands::Test(args) => args.run(config),
+        Commands::Build(args) => args.run(scarb_metadata),
+        Commands::Test(args) => args.run(scarb_metadata),
         /* TODO RBA
                Commands::Auth(args) => args.run(config),
                Commands::Dev(args) => args.run(config),
