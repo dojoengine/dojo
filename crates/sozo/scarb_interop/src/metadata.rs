@@ -195,8 +195,8 @@ impl MetadataErrorExt for MetadataCommandError {
                     )
                 } else {
                     format!(
-                        "Error while executing scarb metadata command:\nstdout:\n{}\nstderr:\n{}",
-                        stdout, stderr
+                        "Error while executing scarb metadata command:\nstdout:\n{}\nstderr:\n{}\nPlease verify that the `$SCARB` environment variable is set correctly and match the scarb executable version.\n$SCARB={}",
+                        stdout, stderr, std::env::var("SCARB").unwrap_or("NOT SET".to_string())
                     )
                 }
             }

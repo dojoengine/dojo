@@ -58,7 +58,11 @@ impl Scarb {
     }
 
     /// Tests the workspace provided in the Scarb metadata.
-    pub fn test(manifest_path: &Utf8Path) -> Result<()> {
-        Self::execute(&manifest_path.to_string(), vec!["test"])
+    pub fn test(manifest_path: &Utf8Path, other_args: Vec<&str>) -> Result<()> {
+        let mut all_args = vec!["test"];
+
+        all_args.extend(other_args);
+
+        Self::execute(&manifest_path.to_string(), all_args)
     }
 }
