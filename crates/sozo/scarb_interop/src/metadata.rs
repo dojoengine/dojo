@@ -7,15 +7,35 @@ use camino::Utf8PathBuf;
 use dojo_world::config::ProfileConfig;
 use dojo_world::diff::Manifest;
 use dojo_world::local::WorldLocal;
-use scarb_metadata::{Metadata, MetadataCommandError};
+use scarb_metadata::{DepKind, Metadata, MetadataCommandError};
 use serde::Serialize;
 
 use crate::fsx;
 
+#[derive(Debug, PartialEq)]
+pub enum TestRunner {
+    NoTestRunner,
+    CairoTestRunner,
+    SnfTestRunner,
+}
+
+const CAIRO_TEST_RUNNER_NAME: &str = "cairo_test";
+const SNF_TEST_RUNNER_NAME: &str = "snforge_std";
+
+impl From<&String> for TestRunner {
+    fn from(value: &String) -> Self {
+        match value.as_str() {
+            CAIRO_TEST_RUNNER_NAME => Self::CairoTestRunner,
+            SNF_TEST_RUNNER_NAME => Self::SnfTestRunner,
+            _ => Self::NoTestRunner,
+        }
+    }
+}
+
 /// Extension trait for the [`Metadata`] type.
 pub trait MetadataDojoExt {
-    /// Returns the workspace package name. If it's a virtual workspace, there's no package name and returns an error.
-    /// In the case of Dojo, it's never expected to be a virtual workspace.
+    /// Returns the workspace package name. If it's a virtual workspace, there's no package name and
+    /// returns an error. In the case of Dojo, it's never expected to be a virtual workspace.
     fn workspace_package_name(&self) -> Result<String>;
     /// Returns the target directory root for the workspace.
     fn target_dir_root(&self) -> Utf8PathBuf;
@@ -37,11 +57,15 @@ pub trait MetadataDojoExt {
     fn read_dojo_manifest_profile(&self) -> Result<Option<Manifest>>;
     /// Returns the dojo manifest path for the current profile.
     fn dojo_manifest_path_profile(&self) -> Utf8PathBuf;
+    /// Indicates which test runner is used in the project
+    fn test_runner(&self) -> Result<TestRunner>;
 }
 
 impl MetadataDojoExt for Metadata {
     fn workspace_package_name(&self) -> Result<String> {
-        // Read the toml file at the workspace root and check if the [package] table in toml contains a `name` field. If we don't have [package] but [workspace.package] we know it's a virtual workspace.
+        // Read the toml file at the workspace root and check if the [package] table in toml
+        // contains a `name` field. If we don't have [package] but [workspace.package] we know it's
+        // a virtual workspace.
         let toml_path = &self.workspace.manifest_path;
         let toml_content = fsx::read_to_string(toml_path)?;
         let toml: toml::Value = toml::from_str(&toml_content)?;
@@ -71,13 +95,13 @@ impl MetadataDojoExt for Metadata {
     fn clean_dir_profile(&self) {
         let target_dir = self.target_dir_profile();
         // Ignore errors since the directory might not exist.
-        let _ = fsx::remove_dir_all(target_dir.to_string());
+        let _ = fsx::remove_dir_all(&target_dir);
     }
 
     fn clean_dir_all_profiles(&self) {
         let target_dir = self.target_dir_root();
         // Ignore errors since the directory might not exist.
-        let _ = fsx::remove_dir_all(target_dir.to_string());
+        let _ = fsx::remove_dir_all(&target_dir);
     }
 
     fn ensure_profile_artifacts(&self) -> Result<()> {
@@ -132,10 +156,7 @@ impl MetadataDojoExt for Metadata {
     }
 
     fn load_dojo_world_local(&self) -> Result<WorldLocal> {
-        WorldLocal::from_directory(
-            self.target_dir_profile().to_string(),
-            self.load_dojo_profile_config()?,
-        )
+        WorldLocal::from_directory(self.target_dir_profile(), self.load_dojo_profile_config()?)
     }
 
     fn write_dojo_manifest_profile(&self, manifest: impl Serialize) -> Result<()> {
@@ -174,6 +195,30 @@ impl MetadataDojoExt for Metadata {
 
         self.workspace.root.join(manifest_name)
     }
+
+    fn test_runner(&self) -> Result<TestRunner> {
+        let package_name = self.workspace_package_name()?;
+        let dev_dependencies = self
+            .packages
+            .iter()
+            .filter(|p| p.name == package_name)
+            .flat_map(|p| {
+                p.dependencies
+                    .iter()
+                    .filter(|d| {
+                        d.kind.clone().is_some_and(|kind| kind == DepKind::Dev)
+                            && (d.name == CAIRO_TEST_RUNNER_NAME || d.name == SNF_TEST_RUNNER_NAME)
+                    })
+                    .map(|d| d.name.clone())
+            })
+            .collect::<Vec<_>>();
+
+        if dev_dependencies.is_empty() {
+            return Ok(TestRunner::NoTestRunner);
+        }
+
+        Ok(TestRunner::from(dev_dependencies.first().unwrap()))
+    }
 }
 
 /// Extension trait for the [`MetadataCommandError`] type to provide
@@ -190,13 +235,19 @@ impl MetadataErrorExt for MetadataCommandError {
                     let profile_name =
                         stdout.split("has no profile").nth(1).unwrap_or("").trim().replace("`", "");
                     format!(
-                        "The profile '{}' does not exist. Consider adding [profile.{}] to `{}` to declare the profile.",
+                        "The profile '{}' does not exist. Consider adding [profile.{}] to `{}` to \
+                         declare the profile.",
                         profile_name, profile_name, manifest_path
                     )
                 } else {
                     format!(
-                        "Error while executing scarb metadata command:\nstdout:\n{}\nstderr:\n{}\nPlease verify that the `$SCARB` environment variable is set correctly and match the scarb executable version.\n$SCARB={}",
-                        stdout, stderr, std::env::var("SCARB").unwrap_or("NOT SET".to_string())
+                        "Error while executing scarb metadata \
+                         command:\nstdout:\n{}\nstderr:\n{}\nPlease verify that the `$SCARB` \
+                         environment variable is set correctly and match the scarb executable \
+                         version.\n$SCARB={}",
+                        stdout,
+                        stderr,
+                        std::env::var("SCARB").unwrap_or("NOT SET".to_string())
                     )
                 }
             }

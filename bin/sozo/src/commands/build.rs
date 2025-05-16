@@ -6,52 +6,12 @@ use colored::{ColoredString, Colorize};
 use dojo_bindgen::{BuiltinPlugins, PluginManager};
 use dojo_world::ResourceType;
 use dojo_world::local::{ResourceLocal, WorldLocal};
-use scarb_interop::{self, Features, MetadataDojoExt, Scarb};
+use scarb_interop::{self, MetadataDojoExt, Scarb};
 use scarb_metadata::Metadata;
 use tabled::settings::Style;
 use tabled::{Table, Tabled};
 
-//use crate::commands::check_package_dojo_version;
-
-/// [`clap`] structured arguments that provide features selection.
-#[derive(Parser, Clone, Debug)]
-pub struct FeaturesSpec {
-    /// Comma separated list of features to activate.
-    #[arg(short = 'F', long, value_delimiter = ',', env = "SCARB_FEATURES")]
-    pub features: Vec<String>,
-
-    /// Activate all available features.
-    #[arg(
-        long,
-        default_value_t = false,
-        env = "SCARB_ALL_FEATURES",
-        conflicts_with = "no_default_features"
-    )]
-    pub all_features: bool,
-
-    /// Do not activate the `default` feature.
-    #[arg(
-        long,
-        default_value_t = false,
-        env = "SCARB_NO_DEFAULT_FEATURES",
-        conflicts_with = "all_features"
-    )]
-    pub no_default_features: bool,
-}
-
-impl FeaturesSpec {
-    pub fn into(self) -> Features {
-        if self.no_default_features {
-            return Features::NoDefault;
-        }
-
-        if self.all_features {
-            return Features::AllFeatures;
-        }
-
-        Features::Features(self.features.join(","))
-    }
-}
+use crate::features::FeaturesSpec;
 
 #[derive(Debug, Clone, Args)]
 pub struct BuildArgs {
@@ -170,7 +130,7 @@ impl BuildArgs {
 
         if self.stats != StatOptions::default() {
             let world = WorldLocal::from_directory(
-                scarb_metadata.target_dir_profile().to_string(),
+                scarb_metadata.target_dir_profile(),
                 scarb_metadata.load_dojo_profile_config().unwrap(),
             )?;
 
@@ -216,7 +176,7 @@ casm = true
 
             println!(
                 "\nRefer to https://docs.starknet.io/tools/limits-and-triggers/ for more \
-                         information about the public networks limits."
+                 information about the public networks limits."
             );
         }
         Ok(())

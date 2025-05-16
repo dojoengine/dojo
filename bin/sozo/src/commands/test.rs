@@ -1,18 +1,10 @@
 //! Compiles and runs tests for a Dojo project using Scarb.
-use std::collections::HashSet;
-use std::fs;
-
-use anyhow::{Context, Result};
-use cairo_lang_sierra::program::VersionedProgram;
-use cairo_lang_test_plugin::{TestCompilation, TestCompilationMetadata};
-use cairo_lang_test_runner::{CompiledTestRunner, RunProfilerConfig, TestRunConfig};
-use camino::Utf8PathBuf;
+use cairo_lang_test_runner::RunProfilerConfig;
 use clap::Args;
-use scarb_interop::Scarb;
+use scarb_interop::{MetadataDojoExt, Scarb, TestRunner};
 use scarb_metadata::Metadata;
-use tracing::trace;
 
-//use super::check_package_dojo_version;
+use crate::features::FeaturesSpec;
 
 #[derive(Debug, Clone, PartialEq, clap::ValueEnum)]
 pub enum ProfilerMode {
@@ -52,23 +44,75 @@ pub struct TestArgs {
     /// Should we print the resource usage.
     #[arg(long, default_value_t = false)]
     print_resource_usage: bool,
-    /* TODO RBA
-       /// Specify the features to activate.
-       #[command(flatten)]
-       features: FeaturesSpec,
-       /// Specify packages to test.
-       #[command(flatten)]
-       pub packages: PackagesFilter,
-    */
+    /// Specify the features to activate.
+    #[command(flatten)]
+    pub features: FeaturesSpec,
+    // Specify packages to build.
+    /// Packages to run this command on, can be a concrete package name (`foobar`) or
+    /// a prefix glob (`foo*`).
+    #[arg(short, long, value_delimiter = ',', env = "SCARB_PACKAGES_FILTER")]
+    pub packages: Vec<String>,
 }
 
 impl TestArgs {
     pub fn run(self, scarb_metadata: &Metadata) -> anyhow::Result<()> {
+        let mut extra_args = vec![];
+
+        match scarb_metadata.test_runner()? {
+            TestRunner::SnfTestRunner => {
+                if self.ignored {
+                    extra_args.push("--ignored");
+                }
+                if self.include_ignored {
+                    extra_args.push("--include-ignored");
+                }
+
+                if self.print_resource_usage {
+                    extra_args.push("--detailed-resources");
+                }
+
+                //        profiler_mode: ProfilerMode,
+                //        gas_enabled: bool,
+
+                if !self.filter.is_empty() {
+                    extra_args.push(&self.filter);
+                }
+            }
+            TestRunner::CairoTestRunner => {
+                if self.ignored {
+                    extra_args.push("--ignored");
+                }
+                if self.include_ignored {
+                    extra_args.push("--include-ignored");
+                }
+
+                if self.print_resource_usage {
+                    extra_args.push("--print-resource-usage");
+                }
+
+                //        profiler_mode: ProfilerMode,
+                //        gas_enabled: bool,
+
+                if !self.filter.is_empty() {
+                    extra_args.extend(vec!["-f", &self.filter]);
+                }
+            }
+            TestRunner::NoTestRunner => {
+                anyhow::bail!(
+                    "No test runner defined for the project. Please add a dev-dependency to a \
+                     test runner (cairo_test or snforge_std) to your Scarb.toml"
+                );
+            }
+        }
+
         // TODO: For test command, it's merely passing the arguments
         // as the vec[&str], no extra logic.
         // Do we need a profile for test?
-        Scarb::test(&scarb_metadata.workspace.manifest_path, vec![])?;
-
-        Ok(())
+        Scarb::test(
+            &scarb_metadata.workspace.manifest_path,
+            &self.packages.join(","),
+            self.features.into(),
+            extra_args,
+        )
     }
 }

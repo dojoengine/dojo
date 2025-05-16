@@ -6,15 +6,14 @@ use anyhow::Result;
 use args::SozoArgs;
 use camino::Utf8PathBuf;
 use clap::Parser;
-
-use scarb_ui::{OutputFormat, Ui};
-
 use scarb_interop::MetadataErrorExt;
 use scarb_metadata::MetadataCommand;
+use scarb_ui::{OutputFormat, Ui};
 use tracing::trace;
 mod args;
 mod commands;
-//mod utils;
+mod features;
+mod utils;
 
 #[tokio::main]
 async fn main() {
@@ -50,11 +49,9 @@ async fn cli_main(args: SozoArgs) -> Result<()> {
     let scarb_metadata = match metadata.exec() {
         Ok(metadata) => metadata,
         Err(err) => {
-            return Err(anyhow::anyhow!(err.format_error_message(&manifest_path)));
+            return Err(anyhow::anyhow!(err.format_error_message(manifest_path)));
         }
     };
-
-    // TODO RBA: utils::verify_cairo_version_compatibility(&manifest_path)?;
 
     trace!(%scarb_metadata.runtime_manifest, "Configuration built successfully.");
 
