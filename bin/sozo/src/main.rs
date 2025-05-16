@@ -56,16 +56,6 @@ async fn cli_main(args: SozoArgs) -> Result<()> {
 
     // TODO RBA: utils::verify_cairo_version_compatibility(&manifest_path)?;
 
-    /* TODO RBA
-       let config = Config::builder(manifest_path.clone())
-           .log_filter_directive(env::var_os("SCARB_LOG"))
-           .profile(args.profile_spec.determine()?)
-           .offline(args.offline)
-           .cairo_plugins(cairo_plugins)
-           .ui_verbosity(args.ui_verbosity())
-           .compilers(compilers)
-           .build()?;
-    */
     trace!(%scarb_metadata.runtime_manifest, "Configuration built successfully.");
 
     commands::run(args.command, &scarb_metadata).await

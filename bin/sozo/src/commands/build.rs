@@ -6,13 +6,52 @@ use colored::{ColoredString, Colorize};
 use dojo_bindgen::{BuiltinPlugins, PluginManager};
 use dojo_world::ResourceType;
 use dojo_world::local::{ResourceLocal, WorldLocal};
-use scarb_interop::{self, MetadataDojoExt, Scarb};
+use scarb_interop::{self, Features, MetadataDojoExt, Scarb};
 use scarb_metadata::Metadata;
 use tabled::settings::Style;
 use tabled::{Table, Tabled};
-use tracing::debug;
 
 //use crate::commands::check_package_dojo_version;
+
+/// [`clap`] structured arguments that provide features selection.
+#[derive(Parser, Clone, Debug)]
+pub struct FeaturesSpec {
+    /// Comma separated list of features to activate.
+    #[arg(short = 'F', long, value_delimiter = ',', env = "SCARB_FEATURES")]
+    pub features: Vec<String>,
+
+    /// Activate all available features.
+    #[arg(
+        long,
+        default_value_t = false,
+        env = "SCARB_ALL_FEATURES",
+        conflicts_with = "no_default_features"
+    )]
+    pub all_features: bool,
+
+    /// Do not activate the `default` feature.
+    #[arg(
+        long,
+        default_value_t = false,
+        env = "SCARB_NO_DEFAULT_FEATURES",
+        conflicts_with = "all_features"
+    )]
+    pub no_default_features: bool,
+}
+
+impl FeaturesSpec {
+    pub fn into(self) -> Features {
+        if self.no_default_features {
+            return Features::NoDefault;
+        }
+
+        if self.all_features {
+            return Features::AllFeatures;
+        }
+
+        Features::Features(self.features.join(","))
+    }
+}
 
 #[derive(Debug, Clone, Args)]
 pub struct BuildArgs {
@@ -40,30 +79,14 @@ pub struct BuildArgs {
     #[arg(help = "Output directory.", default_value = "bindings")]
     pub bindings_output: String,
 
-    /* TODO RBA
-
-    --
-    For those two, let's copy the structs from Scarb
-    without the associated logic. And we should implement a to string
-    method to them pass this to `Scarb::build`.
-
-    Or we can even makes it simpler, since by default we build the workspace (except if a list of packages is provided).
-
-    And for the features, we still need those 3, so let's re-use the
-    same struct as scarb.
-    - features: a list of features.
-    - all-features: to avoid listing all.
-    - no-default-features: to avoid listing none and deactivating all features.
-    --
-
-       /// Specify the features to activate.
-       #[command(flatten)]
-       pub features: FeaturesSpec,
-
-       /// Specify packages to build.
-       #[command(flatten)]
-       pub packages: Option<PackagesFilter>,
-    */
+    /// Specify packages to build.
+    /// Packages to run this command on, can be a concrete package name (`foobar`) or
+    /// a prefix glob (`foo*`).
+    #[arg(short, long, value_delimiter = ',', env = "SCARB_PACKAGES_FILTER")]
+    pub packages: Vec<String>,
+    /// Specify the features to activate.
+    #[command(flatten)]
+    pub features: FeaturesSpec,
     /// Display statistics about the compiled contracts.
     #[command(flatten)]
     pub stats: StatOptions,
@@ -101,12 +124,11 @@ impl BuildArgs {
     pub async fn run(self, scarb_metadata: &Metadata) -> Result<()> {
         scarb_metadata.clean_dir_profile();
 
-        // TODO: pass arguments to scarb build based on the one exposed into Sozo CLI.
-        //   - features
-        //   - packages list
         Scarb::build(
             &scarb_metadata.workspace.manifest_path,
             scarb_metadata.current_profile.as_str(),
+            &self.packages.join(","),
+            self.features.into(),
             vec![],
         )?;
 
@@ -204,11 +226,11 @@ casm = true
 impl Default for BuildArgs {
     fn default() -> Self {
         // use the clap defaults
-        // let features = FeaturesSpec::parse_from([""]);
+        let features = FeaturesSpec::parse_from([""]);
 
         Self {
-            // features,
-            // packages: None,
+            features,
+            packages: vec![],
             typescript: false,
             typescript_v2: false,
             recs: false,

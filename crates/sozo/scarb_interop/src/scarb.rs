@@ -4,6 +4,12 @@ use std::process::{Command, Stdio};
 use anyhow::{Result, anyhow, bail};
 use camino::Utf8Path;
 
+pub enum Features {
+    NoDefault,
+    AllFeatures,
+    Features(String),
+}
+
 pub struct Scarb {}
 
 impl Scarb {
@@ -46,11 +52,37 @@ impl Scarb {
 
     /// Builds the workspace provided in the Scarb metadata.
     ///
-    /// Every Scarb project, even with one single package, are considered a workspace, with the `root` being the parent directory of the `Scarb.toml` file.
+    /// Every Scarb project, even with one single package, are considered a workspace,
+    /// with the `root` being the parent directory of the `Scarb.toml` file.
     ///
-    /// TODO: check if we should pass here directly the whole scarb metadata + the optional things from the CLI like features and packages. Or if having the manifest_path and the profile separated is a better approach.
-    pub fn build(manifest_path: &Utf8Path, profile: &str, other_args: Vec<&str>) -> Result<()> {
+    /// TODO: check if we should pass here directly the whole scarb metadata + the optional things
+    /// from the CLI like features and packages. Or if having the manifest_path and the profile separated is a better approach.
+    pub fn build(
+        manifest_path: &Utf8Path,
+        profile: &str,
+        packages: &str,
+        features: Features,
+        other_args: Vec<&str>,
+    ) -> Result<()> {
         let mut all_args = vec!["-P", profile, "build"];
+
+        if !packages.is_empty() {
+            all_args.extend(vec!["--package", packages]);
+        }
+
+        match &features {
+            Features::NoDefault => {
+                all_args.push("--no-default-features");
+            }
+            Features::AllFeatures => {
+                all_args.push("--all-features");
+            }
+            Features::Features(features) => {
+                if !features.is_empty() {
+                    all_args.extend(vec!["--features", features]);
+                }
+            }
+        };
 
         all_args.extend(other_args);
 
