@@ -1,10 +1,10 @@
-use anyhow::{anyhow, bail, Result};
+use anyhow::{Result, anyhow, bail};
 use clap::Args;
 use dojo_utils::{Invoker, TxnConfig};
 use dojo_world::config::calldata_decoder;
-use scarb::core::Config;
+use scarb_interop::MetadataDojoExt;
+use scarb_metadata::Metadata;
 use sozo_ops::resource_descriptor::ResourceDescriptor;
-use sozo_scarbext::WorkspaceExt;
 #[cfg(feature = "walnut")]
 use sozo_walnut::WalnutDebugger;
 use starknet::core::types::Call;
@@ -63,12 +63,10 @@ and the move function of the ns-Actions contract, with the calldata [1,2]."))]
 }
 
 impl ExecuteArgs {
-    pub fn run(self, config: &Config) -> Result<()> {
+    pub fn run(self, scarb_metadata: &Metadata) -> Result<()> {
         trace!(args = ?self);
 
-        let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
-
-        let profile_config = ws.load_profile_config()?;
+        let profile_config = scarb_metadata.load_dojo_profile_config()?;
 
         #[cfg(feature = "walnut")]
         let walnut_debugger = WalnutDebugger::new_from_flag(
@@ -78,14 +76,15 @@ impl ExecuteArgs {
 
         let txn_config: TxnConfig = self.transaction.try_into()?;
 
-        config.tokio_handle().block_on(async {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(async {
             let (provider, _) = self.starknet.provider(profile_config.env.as_ref())?;
 
             let contracts = utils::contracts_from_manifest_or_diff(
                 self.account.clone(),
                 self.starknet.clone(),
                 self.world,
-                &ws,
+                &scarb_metadata,
                 self.diff,
             )
             .await?;
@@ -171,10 +170,11 @@ impl ExecuteArgs {
 
             let tx_result = invoker.multicall().await?;
 
-            #[cfg(feature = "walnut")]
-            if let Some(walnut_debugger) = walnut_debugger {
-                walnut_debugger.debug_transaction(&config.ui(), &tx_result)?;
-            }
+            // TODO RBA
+            //#[cfg(feature = "walnut")]
+            //if let Some(walnut_debugger) = walnut_debugger {
+            //    walnut_debugger.debug_transaction(&config.ui(), &tx_result)?;
+            //}
 
             println!("{}", tx_result);
             Ok(())

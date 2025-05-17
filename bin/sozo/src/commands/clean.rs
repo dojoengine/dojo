@@ -1,7 +1,7 @@
 use anyhow::Result;
 use clap::Args;
-use scarb::core::Config;
-use sozo_scarbext::WorkspaceExt;
+use scarb_interop::MetadataDojoExt;
+use scarb_metadata::Metadata;
 
 #[derive(Debug, Args)]
 pub struct CleanArgs {
@@ -11,13 +11,11 @@ pub struct CleanArgs {
 }
 
 impl CleanArgs {
-    pub fn run(self, config: &Config) -> Result<()> {
-        let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
-
+    pub fn run(self, scarb_metadata: &Metadata) -> Result<()> {
         if self.all_profiles {
-            ws.clean_dir_all_profiles();
+            scarb_metadata.clean_dir_all_profiles();
         } else {
-            ws.clean_dir_profile();
+            scarb_metadata.clean_dir_profile();
         }
 
         Ok(())

@@ -1,11 +1,11 @@
 use dojo_utils::TransactionResult;
-use scarb::core::Workspace;
+use scarb_metadata::Metadata;
 use scarb_ui::Ui;
 use url::Url;
 
+use crate::Error;
 use crate::transaction::walnut_debug_transaction;
 use crate::verification::walnut_verify;
-use crate::Error;
 
 /// A debugger for Starknet transactions embedding the walnut configuration.
 #[derive(Debug)]
@@ -44,7 +44,7 @@ impl WalnutDebugger {
 
     /// Verifies a migration strategy with Walnut by uploading the source code of the contracts and
     /// models in the strategy.
-    pub async fn verify(ws: &Workspace<'_>) -> anyhow::Result<()> {
-        walnut_verify(ws).await
+    pub async fn verify(scarb_metadata: &Metadata, ui: &Ui) -> anyhow::Result<()> {
+        walnut_verify(scarb_metadata, ui).await
     }
 }

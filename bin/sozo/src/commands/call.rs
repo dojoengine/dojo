@@ -1,10 +1,12 @@
 use std::collections::HashMap;
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::{Result, anyhow, bail};
 use clap::Args;
 use dojo_world::config::calldata_decoder;
 use dojo_world::contracts::ContractInfo;
 use scarb::core::Config;
+use scarb_interop::MetadataDojoExt;
+use scarb_metadata::Metadata;
 use sozo_ops::resource_descriptor::ResourceDescriptor;
 use sozo_scarbext::WorkspaceExt;
 use starknet::core::types::{BlockId, BlockTag, FunctionCall, StarknetError};
@@ -49,28 +51,30 @@ pub struct CallArgs {
 }
 
 impl CallArgs {
-    pub fn run(self, config: &Config) -> Result<()> {
+    pub fn run(self, scarb_metadata: &Metadata) -> Result<()> {
         trace!(args = ?self);
 
-        let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
-
-        let profile_config = ws.load_profile_config()?;
+        let profile_config = scarb_metadata.load_dojo_profile_config()?;
 
         let CallArgs { tag_or_address, .. } = self;
 
-        config.tokio_handle().block_on(async {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(async {
             let descriptor =
                 tag_or_address.clone().ensure_namespace(&profile_config.namespace.default);
 
-            let local_manifest = ws.read_manifest_profile()?;
+            let local_manifest = scarb_metadata.read_dojo_manifest_profile()?;
 
             let calldata = calldata_decoder::decode_calldata(&self.calldata)?;
 
             let contracts: HashMap<String, ContractInfo> = if self.diff || local_manifest.is_none()
             {
-                let (world_diff, _, _) =
-                    utils::get_world_diff_and_provider(self.starknet.clone(), self.world, &ws)
-                        .await?;
+                let (world_diff, _, _) = utils::get_world_diff_and_provider(
+                    self.starknet.clone(),
+                    self.world,
+                    &scarb_metadata,
+                )
+                .await?;
 
                 (&world_diff).into()
             } else {

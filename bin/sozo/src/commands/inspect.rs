@@ -2,9 +2,10 @@ use anyhow::Result;
 use clap::Args;
 use colored::*;
 use dojo_types::naming;
-use dojo_world::diff::{ResourceDiff, WorldDiff, WorldStatus};
 use dojo_world::ResourceType;
+use dojo_world::diff::{ResourceDiff, WorldDiff, WorldStatus};
 use scarb::core::Config;
+use scarb_metadata::Metadata;
 use serde::Serialize;
 use tabled::settings::object::Cell;
 use tabled::settings::{Color, Style};
@@ -29,15 +30,17 @@ pub struct InspectArgs {
 }
 
 impl InspectArgs {
-    pub fn run(self, config: &Config) -> Result<()> {
+    pub fn run(self, scarb_metadata: &Metadata) -> Result<()> {
         trace!(args = ?self);
-        let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
 
         let InspectArgs { world, starknet, element } = self;
 
-        config.tokio_handle().block_on(async {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+
+        rt.block_on(async {
             let (world_diff, _, _) =
-                utils::get_world_diff_and_provider(starknet.clone(), world, &ws).await?;
+                utils::get_world_diff_and_provider(starknet.clone(), world, &scarb_metadata)
+                    .await?;
 
             if let Some(element) = element {
                 inspect_element(&element, &world_diff)?;

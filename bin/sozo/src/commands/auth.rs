@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use cainome::cairo_serde::ContractAddress;
 use clap::{Args, Subcommand};
 use colored::Colorize;
@@ -14,8 +14,8 @@ use scarb_interop::MetadataDojoExt;
 use scarb_metadata::Metadata;
 use sozo_ops::migration_ui::MigrationUi;
 use starknet::core::types::Felt;
-use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
+use starknet::providers::jsonrpc::HttpTransport;
 use tracing::trace;
 
 use super::options::account::{AccountOptions, SozoAccount};
@@ -143,7 +143,7 @@ impl AuthArgs {
 
         let profile_config = scarb_metadata.load_dojo_profile_config()?;
 
-        let mut rt = tokio::runtime::Runtime::new().unwrap();
+        let rt = tokio::runtime::Runtime::new().unwrap();
         rt.block_on(async {
             match self.command {
                 AuthCommand::Grant { kind, common, .. } => {
