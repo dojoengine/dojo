@@ -52,6 +52,28 @@ impl Scarb {
         Ok(())
     }
 
+    fn format_packages(packages: &str) -> Vec<&str> {
+        if packages.is_empty() { vec![] } else { vec!["--package", packages] }
+    }
+
+    fn format_features(features: &Features) -> Vec<&str> {
+        match &features {
+            Features::NoDefault => {
+                vec!["--no-default-features"]
+            }
+            Features::AllFeatures => {
+                vec!["--all-features"]
+            }
+            Features::Features(features) => {
+                if features.is_empty() {
+                    vec![]
+                } else {
+                    vec!["--features", features]
+                }
+            }
+        }
+    }
+
     /// Builds the workspace provided in the Scarb metadata.
     ///
     /// Every Scarb project, even with one single package, are considered a workspace,
@@ -69,24 +91,8 @@ impl Scarb {
     ) -> Result<()> {
         let mut all_args = vec!["-P", profile, "build"];
 
-        if !packages.is_empty() {
-            all_args.extend(vec!["--package", packages]);
-        }
-
-        match &features {
-            Features::NoDefault => {
-                all_args.push("--no-default-features");
-            }
-            Features::AllFeatures => {
-                all_args.push("--all-features");
-            }
-            Features::Features(features) => {
-                if !features.is_empty() {
-                    all_args.extend(vec!["--features", features]);
-                }
-            }
-        };
-
+        all_args.extend(Self::format_packages(packages));
+        all_args.extend(Self::format_features(&features));
         all_args.extend(other_args);
 
         Self::execute(manifest_path, all_args)
@@ -101,24 +107,8 @@ impl Scarb {
     ) -> Result<()> {
         let mut all_args = vec!["test"];
 
-        if !packages.is_empty() {
-            all_args.extend(vec!["--package", packages]);
-        }
-
-        match &features {
-            Features::NoDefault => {
-                all_args.push("--no-default-features");
-            }
-            Features::AllFeatures => {
-                all_args.push("--all-features");
-            }
-            Features::Features(features) => {
-                if !features.is_empty() {
-                    all_args.extend(vec!["--features", features]);
-                }
-            }
-        };
-
+        all_args.extend(Self::format_packages(packages));
+        all_args.extend(Self::format_features(&features));
         all_args.extend(other_args);
 
         Self::execute(manifest_path, all_args)
