@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
 
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use cainome::cairo_serde::ContractAddress;
 use clap::{Args, Subcommand};
 use colored::Colorize;
@@ -14,8 +14,8 @@ use scarb_interop::MetadataDojoExt;
 use scarb_metadata::Metadata;
 use sozo_ops::migration_ui::MigrationUi;
 use starknet::core::types::Felt;
-use starknet::providers::JsonRpcClient;
 use starknet::providers::jsonrpc::HttpTransport;
+use starknet::providers::JsonRpcClient;
 use tracing::trace;
 
 use super::options::account::{AccountOptions, SozoAccount};

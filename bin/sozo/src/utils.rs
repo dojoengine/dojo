@@ -3,7 +3,7 @@ use std::io::{self, Write};
 use std::str::FromStr;
 use std::sync::Arc;
 
-use anyhow::{Context, Result, anyhow};
+use anyhow::{anyhow, Context, Result};
 use camino::Utf8PathBuf;
 use colored::*;
 use dojo_utils::provider as provider_utils;
@@ -24,10 +24,10 @@ use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
 use tracing::{trace, warn};
 
-use crate::commands::LOG_TARGET;
 use crate::commands::options::account::{AccountOptions, SozoAccount};
 use crate::commands::options::starknet::StarknetOptions;
 use crate::commands::options::world::WorldOptions;
+use crate::commands::LOG_TARGET;
 
 /// The maximum number of blocks that will separate the `from_block` and the `to_block` in the
 /// event fetching, which if too high will cause the event fetching to fail in most of the node
@@ -68,10 +68,10 @@ pub fn get_world_address(
                 "{}",
                 format!(
                     "The world address computed from the seed is different from the address \
-provided in config:\n\ndeterministic address: {:#x}\nconfig address: \
-{:#x}\n\nThe address in the config file is preferred, consider commenting it \
-out from the config file if you attempt to migrate the world with a new \
-seed.\n\nIf you are upgrading the world, you can ignore this message.",
+                     provided in config:\n\ndeterministic address: {:#x}\nconfig address: \
+                     {:#x}\n\nThe address in the config file is preferred, consider commenting it \
+                     out from the config file if you attempt to migrate the world with a new \
+                     seed.\n\nIf you are upgrading the world, you can ignore this message.",
                     deterministic_world_address, wa
                 )
                 .yellow()
@@ -98,7 +98,6 @@ pub fn generate_version() -> String {
     version_string
 }
 
-//
 // Sets up the world diff from the environment and returns associated starknet account.
 //
 // Returns the world address, the world diff, the starknet provider and the rpc url.
@@ -250,7 +249,6 @@ pub async fn contracts_from_manifest_or_diff(
 
     Ok(contracts)
 }
-//
 // Prompts the user to confirm an operation.
 pub fn prompt_confirm(prompt: &str) -> Result<bool> {
     print!("{} [y/N]", prompt);
