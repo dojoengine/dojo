@@ -1,7 +1,6 @@
 use anyhow::Result;
 use camino::Utf8PathBuf;
 use clap::Parser;
-use scarb::compiler::Profile;
 use scarb_ui::Verbosity;
 use smol_str::SmolStr;
 use tracing::level_filters::LevelFilter;
@@ -9,15 +8,11 @@ use tracing_log::{AsTrace, LogTracer};
 use tracing_subscriber::FmtSubscriber;
 
 use crate::commands::Commands;
-
-// TODO RBA
-// use crate::utils::generate_version;
+use crate::profile::Profile;
 
 #[derive(Parser, Debug)]
-// TODO RBA
-// #[command(author, version=generate_version(), about, long_about = None)]
 #[command(author, about, long_about = None)]
-#[command(propagate_version = true)]
+#[command(disable_version_flag = true)]
 pub struct SozoArgs {
     #[arg(long)]
     #[arg(global = true)]
@@ -38,6 +33,9 @@ pub struct SozoArgs {
     #[arg(global = true)]
     #[arg(help = "Run without accessing the network.")]
     pub offline: bool,
+
+    #[arg(short = 'V', long, help = "Print version")]
+    pub version: bool,
 
     #[command(subcommand)]
     pub command: Commands,

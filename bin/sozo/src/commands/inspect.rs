@@ -4,7 +4,6 @@ use colored::*;
 use dojo_types::naming;
 use dojo_world::ResourceType;
 use dojo_world::diff::{ResourceDiff, WorldDiff, WorldStatus};
-use scarb::core::Config;
 use scarb_metadata::Metadata;
 use serde::Serialize;
 use tabled::settings::object::Cell;

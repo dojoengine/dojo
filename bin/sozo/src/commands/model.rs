@@ -1,10 +1,10 @@
 use anyhow::{Context, Result};
 use clap::{Args, Subcommand};
 use dojo_world::config::calldata_decoder;
-use scarb::core::Config;
+use scarb_interop::MetadataDojoExt;
+use scarb_metadata::Metadata;
 use sozo_ops::model;
 use sozo_ops::resource_descriptor::ResourceDescriptor;
-use sozo_scarbext::WorkspaceExt;
 use starknet::core::types::{BlockId, BlockTag, Felt};
 use tracing::trace;
 
@@ -124,26 +124,29 @@ hashes, called 'hash' in the following documentation.
         starknet: StarknetOptions,
 
         #[arg(short, long)]
-        #[arg(help = "Block number at which to retrieve the model data (pending block by default)")]
+        #[arg(
+            help = "Block number at which to retrieve the model data (pending block by default)"
+        )]
         block: Option<u64>,
     },
 }
 
 impl ModelArgs {
-    pub fn run(self, config: &Config) -> Result<()> {
+    pub fn run(self, scarb_metadata: &Metadata) -> Result<()> {
         trace!(args = ?self);
 
-        let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
-        let profile_config = ws.load_profile_config()?;
+        let profile_config = scarb_metadata.load_dojo_profile_config()?;
         let default_ns = profile_config.namespace.default;
 
-        config.tokio_handle().block_on(async {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(async {
             match self.command {
                 ModelCommand::ClassHash { tag_or_name, starknet, world } => {
                     let tag = tag_or_name.ensure_namespace(&default_ns);
 
                     let (world_diff, provider, _) =
-                        utils::get_world_diff_and_provider(starknet, world, &ws).await?;
+                        utils::get_world_diff_and_provider(starknet, world, &scarb_metadata)
+                            .await?;
 
                     model::model_class_hash(
                         tag.to_string(),
@@ -157,7 +160,8 @@ impl ModelArgs {
                     let tag = tag_or_name.ensure_namespace(&default_ns);
 
                     let (world_diff, provider, _) =
-                        utils::get_world_diff_and_provider(starknet, world, &ws).await?;
+                        utils::get_world_diff_and_provider(starknet, world, &scarb_metadata)
+                            .await?;
 
                     model::model_contract_address(
                         tag.to_string(),
@@ -173,7 +177,8 @@ impl ModelArgs {
                         block.map(BlockId::Number).unwrap_or(BlockId::Tag(BlockTag::Pending));
 
                     let (world_diff, provider, _) =
-                        utils::get_world_diff_and_provider(starknet, world, &ws).await?;
+                        utils::get_world_diff_and_provider(starknet, world, &scarb_metadata)
+                            .await?;
 
                     model::model_layout(
                         tag.to_string(),
@@ -190,7 +195,8 @@ impl ModelArgs {
                         block.map(BlockId::Number).unwrap_or(BlockId::Tag(BlockTag::Pending));
 
                     let (world_diff, provider, _) =
-                        utils::get_world_diff_and_provider(starknet, world, &ws).await?;
+                        utils::get_world_diff_and_provider(starknet, world, &scarb_metadata)
+                            .await?;
 
                     model::model_schema(
                         tag.to_string(),
@@ -208,7 +214,8 @@ impl ModelArgs {
                         block.map(BlockId::Number).unwrap_or(BlockId::Tag(BlockTag::Pending));
 
                     let (world_diff, provider, _) =
-                        utils::get_world_diff_and_provider(starknet, world, &ws).await?;
+                        utils::get_world_diff_and_provider(starknet, world, &scarb_metadata)
+                            .await?;
 
                     let (record, _, _) = model::model_get(
                         tag.to_string(),

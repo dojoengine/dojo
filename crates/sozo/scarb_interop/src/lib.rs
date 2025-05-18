@@ -1,4 +1,4 @@
-mod fsx;
+pub mod fsx;
 
 mod scarb;
 pub use scarb::*;

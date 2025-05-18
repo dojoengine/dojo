@@ -1,22 +1,18 @@
 use std::collections::HashMap;
 use std::io::{self, Write};
-use std::str::FromStr;
 use std::sync::Arc;
 
-use anyhow::{anyhow, Context, Result};
-use camino::Utf8PathBuf;
+use anyhow::{Context, Result, anyhow};
 use colored::*;
 use dojo_utils::provider as provider_utils;
 use dojo_world::config::ProfileConfig;
 use dojo_world::contracts::ContractInfo;
 use dojo_world::diff::WorldDiff;
 use dojo_world::local::WorldLocal;
-use scarb::core::{TomlManifest, Workspace};
 use scarb_interop::MetadataDojoExt;
 use scarb_metadata::Metadata;
 use semver::{Version, VersionReq};
 use sozo_ops::migration_ui::MigrationUi;
-use sozo_scarbext::WorkspaceExt;
 use starknet::accounts::{Account, ConnectedAccount};
 use starknet::core::types::Felt;
 use starknet::core::utils as snutils;
@@ -24,10 +20,10 @@ use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
 use tracing::{trace, warn};
 
+use crate::commands::LOG_TARGET;
 use crate::commands::options::account::{AccountOptions, SozoAccount};
 use crate::commands::options::starknet::StarknetOptions;
 use crate::commands::options::world::WorldOptions;
-use crate::commands::LOG_TARGET;
 
 /// The maximum number of blocks that will separate the `from_block` and the `to_block` in the
 /// event fetching, which if too high will cause the event fetching to fail in most of the node
@@ -82,20 +78,6 @@ pub fn get_world_address(
     } else {
         Ok(deterministic_world_address)
     }
-}
-
-// TODO RBA
-pub fn generate_version() -> String {
-    const DOJO_VERSION: &str = env!("CARGO_PKG_VERSION");
-    let scarb_version = scarb::version::get().version;
-    let scarb_sierra_version = scarb::version::get().sierra.version;
-    let scarb_cairo_version = scarb::version::get().cairo.version;
-
-    let version_string = format!(
-        "{}\nscarb: {}\ncairo: {}\nsierra: {}",
-        DOJO_VERSION, scarb_version, scarb_cairo_version, scarb_sierra_version,
-    );
-    version_string
 }
 
 // Sets up the world diff from the environment and returns associated starknet account.

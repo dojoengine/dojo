@@ -4,6 +4,7 @@ use dojo_utils::{Invoker, TxnConfig};
 use dojo_world::config::calldata_decoder;
 use scarb_interop::MetadataDojoExt;
 use scarb_metadata::Metadata;
+use scarb_ui::Ui;
 use sozo_ops::resource_descriptor::ResourceDescriptor;
 #[cfg(feature = "walnut")]
 use sozo_walnut::WalnutDebugger;
@@ -63,7 +64,7 @@ and the move function of the ns-Actions contract, with the calldata [1,2]."))]
 }
 
 impl ExecuteArgs {
-    pub fn run(self, scarb_metadata: &Metadata) -> Result<()> {
+    pub fn run(self, scarb_metadata: &Metadata, ui: &Ui) -> Result<()> {
         trace!(args = ?self);
 
         let profile_config = scarb_metadata.load_dojo_profile_config()?;
@@ -170,11 +171,10 @@ impl ExecuteArgs {
 
             let tx_result = invoker.multicall().await?;
 
-            // TODO RBA
-            //#[cfg(feature = "walnut")]
-            //if let Some(walnut_debugger) = walnut_debugger {
-            //    walnut_debugger.debug_transaction(&config.ui(), &tx_result)?;
-            //}
+            #[cfg(feature = "walnut")]
+            if let Some(walnut_debugger) = walnut_debugger {
+                walnut_debugger.debug_transaction(ui, &tx_result)?;
+            }
 
             println!("{}", tx_result);
             Ok(())

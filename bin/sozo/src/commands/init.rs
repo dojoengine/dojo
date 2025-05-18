@@ -5,7 +5,6 @@ use std::{fs, io};
 
 use anyhow::{Context, Result, ensure};
 use clap::Args;
-use scarb_metadata::Metadata;
 use scarb_ui::Ui;
 use tracing::trace;
 
@@ -26,7 +25,7 @@ pub struct InitArgs {
 }
 
 impl InitArgs {
-    pub fn run(self, scarb_metadata: &Metadata, ui: &Ui) -> Result<()> {
+    pub fn run(self, ui: &Ui) -> Result<()> {
         trace!(args = ?self);
         let target_dir = match self.path {
             Some(path) => {
@@ -66,7 +65,7 @@ impl InitArgs {
 
         trace!(repo_url = repo_url, sozo_version = sozo_version);
 
-        clone_repo(&repo_url, &target_dir, &sozo_version, scarb_metadata, ui)?;
+        clone_repo(&repo_url, &target_dir, &sozo_version, ui)?;
 
         // Navigate to the newly cloned repo.
         let initial_dir = current_dir()?;
@@ -119,13 +118,7 @@ fn check_tag_exists(url: &str, version: &str) -> Result<bool> {
     Ok(tag_exists)
 }
 
-fn clone_repo(
-    url: &str,
-    path: &Path,
-    version: &str,
-    scarb_metadata: &Metadata,
-    ui: &Ui,
-) -> Result<()> {
+fn clone_repo(url: &str, path: &Path, version: &str, ui: &Ui) -> Result<()> {
     // Check if the version tag exists in the repository
     let tag_exists = check_tag_exists(url, version)?;
 

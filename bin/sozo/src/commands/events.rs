@@ -6,9 +6,9 @@ use clap::Args;
 use colored::Colorize;
 use dojo_world::contracts::abigen::world::{self, Event as WorldEvent};
 use dojo_world::diff::WorldDiff;
-use scarb::core::Config;
+use scarb_interop::MetadataDojoExt;
+use scarb_metadata::Metadata;
 use sozo_ops::model;
-use sozo_scarbext::WorkspaceExt;
 use starknet::core::types::{BlockId, BlockTag, EventFilter, Felt};
 use starknet::core::utils::starknet_keccak;
 use starknet::macros::felt;
@@ -56,13 +56,15 @@ pub struct EventsArgs {
 }
 
 impl EventsArgs {
-    pub fn run(self, config: &Config) -> Result<()> {
-        config.tokio_handle().block_on(async {
-            let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
-            let profile_config = ws.load_profile_config()?;
+    pub fn run(self, scarb_metadata: &Metadata) -> Result<()> {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+
+        rt.block_on(async {
+            let profile_config = scarb_metadata.load_dojo_profile_config()?;
 
             let (world_diff, provider, _) =
-                utils::get_world_diff_and_provider(self.starknet, self.world, &ws).await?;
+                utils::get_world_diff_and_provider(self.starknet, self.world, &scarb_metadata)
+                    .await?;
             let provider = Arc::new(provider);
 
             let latest_block = provider.block_number().await?;

@@ -13,6 +13,7 @@ use tracing::trace;
 mod args;
 mod commands;
 mod features;
+mod profile;
 mod utils;
 
 #[tokio::main]
@@ -49,7 +50,7 @@ async fn cli_main(args: SozoArgs, ui: &Ui) -> Result<()> {
     let scarb_metadata = match metadata.exec() {
         Ok(metadata) => metadata,
         Err(err) => {
-            return Err(anyhow::anyhow!(err.format_error_message(manifest_path)));
+            return Err(anyhow::anyhow!(err.format_error_message(&manifest_path)));
         }
     };
 

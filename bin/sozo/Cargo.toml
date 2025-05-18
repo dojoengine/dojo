@@ -11,8 +11,6 @@ slot = { workspace = true, optional = true }
 anyhow.workspace = true
 async-trait.workspace = true
 cainome.workspace = true
-cairo-lang-sierra.workspace = true
-cairo-lang-test-plugin.workspace = true
 cairo-lang-test-runner.workspace = true
 camino.workspace = true
 clap.workspace = true
@@ -22,10 +20,8 @@ dojo-bindgen.workspace = true
 dojo-types.workspace = true
 dojo-utils.workspace = true
 dojo-world.workspace = true
-notify = "7.0.0"
 resolve-path = "0.1.0"
 scarb-interop.workspace = true
-scarb.workspace = true
 scarb-metadata.workspace = true
 scarb-ui.workspace = true
 semver.workspace = true
@@ -33,7 +29,6 @@ serde.workspace = true
 serde_json.workspace = true
 smol_str.workspace = true
 sozo-ops.workspace = true
-sozo-scarbext.workspace = true
 sozo-walnut = { workspace = true, optional = true }
 starknet.workspace = true
 starknet-crypto.workspace = true

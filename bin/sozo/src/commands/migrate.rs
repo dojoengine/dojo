@@ -1,15 +1,15 @@
 use std::sync::Arc;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use clap::Args;
 use colored::*;
-use dojo_utils::{self, provider as provider_utils, TxnConfig};
+use dojo_utils::{self, TxnConfig, provider as provider_utils};
 use dojo_world::contracts::WorldContract;
 use dojo_world::services::IpfsService;
-use scarb::core::{Config, Workspace};
+use scarb_interop::MetadataDojoExt;
+use scarb_metadata::Metadata;
 use sozo_ops::migrate::{Migration, MigrationResult};
 use sozo_ops::migration_ui::MigrationUi;
-use sozo_scarbext::WorkspaceExt;
 use starknet::core::utils::parse_cairo_short_string;
 use starknet::providers::Provider;
 use tabled::settings::Style;
@@ -44,17 +44,16 @@ pub struct MigrateArgs {
 
 impl MigrateArgs {
     /// Runs the migration.
-    pub fn run(self, config: &Config) -> Result<()> {
+    pub fn run(self, scarb_metadata: &Metadata) -> Result<()> {
         trace!(args = ?self);
 
-        let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
-        ws.profile_check()?;
-        ws.ensure_profile_artifacts()?;
+        scarb_metadata.ensure_profile_artifacts()?;
 
         let MigrateArgs { world, starknet, account, ipfs, .. } = self;
 
-        config.tokio_handle().block_on(async {
-            print_banner(&ws, &starknet).await?;
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(async {
+            print_banner(&scarb_metadata, &starknet).await?;
 
             let mut spinner = MigrationUi::new(Some("Evaluating world diff..."));
 
@@ -64,13 +63,13 @@ impl MigrateArgs {
                 account,
                 starknet,
                 world,
-                &ws,
+                &scarb_metadata,
                 &mut Some(&mut spinner),
             )
             .await?;
 
             let world_address = world_diff.world_info.address;
-            let profile_config = ws.load_profile_config()?;
+            let profile_config = scarb_metadata.load_dojo_profile_config()?;
 
             let mut txn_config: TxnConfig = self.transaction.try_into()?;
             txn_config.wait = true;
@@ -79,7 +78,7 @@ impl MigrateArgs {
                 world_diff,
                 WorldContract::new(world_address, &account),
                 txn_config,
-                ws.load_profile_config()?,
+                profile_config.clone(),
                 rpc_url,
                 is_guest,
             );
@@ -106,7 +105,7 @@ impl MigrateArgs {
             };
 
             spinner.update_text("Writing manifest...");
-            ws.write_manifest_profile(manifest).context("🪦 Failed to write manifest.")?;
+            scarb_metadata.write_dojo_manifest_profile(manifest).context("🪦 Failed to write manifest.")?;
 
             let colored_address = format!("{:#066x}", world_address).green();
 
@@ -143,8 +142,8 @@ pub struct Banner {
 }
 
 /// Prints the migration banner.
-async fn print_banner(ws: &Workspace<'_>, starknet: &StarknetOptions) -> Result<()> {
-    let profile_config = ws.load_profile_config()?;
+async fn print_banner(scarb_metadata: &Metadata, starknet: &StarknetOptions) -> Result<()> {
+    let profile_config = scarb_metadata.load_dojo_profile_config()?;
     let (provider, rpc_url) = starknet.provider(profile_config.env.as_ref())?;
 
     let provider = Arc::new(provider);
@@ -157,11 +156,7 @@ async fn print_banner(ws: &Workspace<'_>, starknet: &StarknetOptions) -> Result<
     let chain_id =
         parse_cairo_short_string(&chain_id).with_context(|| "Cannot parse chain_id as string")?;
 
-    let banner = Banner {
-        profile: ws.current_profile().expect("Scarb profile should be set.").to_string(),
-        chain_id,
-        rpc_url,
-    };
+    let banner = Banner { profile: scarb_metadata.current_profile.clone(), chain_id, rpc_url };
 
     println!();
     println!("{}", Table::new(&[banner]).with(Style::psql()));

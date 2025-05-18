@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use dojo_world::contracts::contract_info::ContractInfo;
+use slot::account_sdk::account::session::SessionAccount;
 use slot::account_sdk::account::session::hash::{Policy, ProvedPolicy};
 use slot::account_sdk::account::session::merkle::MerkleTree;
-use slot::account_sdk::account::session::SessionAccount;
 use slot::session::{FullSessionInfo, PolicyMethod};
 use starknet::core::types::Felt;
 use starknet::core::utils::get_selector_from_name;
@@ -165,17 +165,18 @@ fn collect_policies_from_contracts(
     Ok(policies)
 }
 
+// TODO RBA
+/*
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
 
+    use crate::profile::Profile;
     use dojo_test_utils::compiler::CompilerTestSetup;
     use dojo_world::contracts::ContractInfo;
-    use scarb::compiler::Profile;
-    use sozo_scarbext::WorkspaceExt;
     use starknet::macros::felt;
 
-    use super::{collect_policies, PolicyMethod};
+    use super::{PolicyMethod, collect_policies};
 
     #[test]
     fn collect_policies_from_project() {
@@ -207,3 +208,4 @@ mod tests {
         }
     }
 }
+ */

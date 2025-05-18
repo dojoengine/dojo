@@ -10,37 +10,32 @@ pub(crate) mod auth;
 pub(crate) mod build;
 pub(crate) mod call;
 pub(crate) mod clean;
+pub(crate) mod events;
 pub(crate) mod execute;
 pub(crate) mod hash;
 pub(crate) mod init;
 pub(crate) mod inspect;
+pub(crate) mod migrate;
+pub(crate) mod model;
 pub(crate) mod options;
 pub(crate) mod test;
-
-// TODO RBA
-// pub(crate) mod dev;
-// pub(crate) mod events;
-// pub(crate) mod migrate;
-// pub(crate) mod model;
+pub(crate) mod version;
 
 use auth::AuthArgs;
 use build::BuildArgs;
 use call::CallArgs;
 use clean::CleanArgs;
+use events::EventsArgs;
 use execute::ExecuteArgs;
 use hash::HashArgs;
 use init::InitArgs;
 use inspect::InspectArgs;
+use migrate::MigrateArgs;
+use model::ModelArgs;
 #[cfg(feature = "walnut")]
 use sozo_walnut::walnut::WalnutArgs;
 use test::TestArgs;
-
-// TODO RBA
-// use events::EventsArgs;
-// use dev::DevArgs;
-// use migrate::MigrateArgs;
-// use model::ModelArgs;
-//
+use version::VersionArgs;
 
 pub(crate) const LOG_TARGET: &str = "sozo::cli";
 
@@ -52,6 +47,8 @@ pub enum Commands {
     Build(Box<BuildArgs>),
     #[command(about = "Call a contract")]
     Call(Box<CallArgs>),
+    #[command(about = "Inspect events emitted by the world")]
+    Events(Box<EventsArgs>),
     #[command(about = "Execute one or several systems with the given calldata.")]
     Execute(Box<ExecuteArgs>),
     #[command(about = "Clean the build directory")]
@@ -62,25 +59,19 @@ pub enum Commands {
     Init(Box<InitArgs>),
     #[command(about = "Inspect the world")]
     Inspect(Box<InspectArgs>),
+    #[command(
+        about = "Run a migration, declaring and deploying contracts as necessary to update the world"
+    )]
+    Migrate(Box<MigrateArgs>),
+    #[command(about = "Inspect a model")]
+    Model(Box<ModelArgs>),
     #[command(about = "Runs cairo tests")]
     Test(Box<TestArgs>),
+    #[command(about = "Print version")]
+    Version(Box<VersionArgs>),
     #[cfg(feature = "walnut")]
     #[command(about = "Interact with walnut.dev - transactions debugger and simulator")]
     Walnut(Box<WalnutArgs>),
-    // TODO RBA
-    // #[command(about = "Build and migrate the world every time a file changes")]
-    // Dev(Box<DevArgs>),
-    // #[command(about = "Run a migration, declaring and deploying contracts as necessary to
-    // update \ the world")]
-    // Migrate(Box<MigrateArgs>),
-
-    //
-
-    // #[command(about = "Inspect a model")]
-    // Model(Box<ModelArgs>),
-    // #[command(about = "Inspect events emitted by the world")]
-    // Events(Box<EventsArgs>),
-    //
 }
 
 impl fmt::Display for Commands {
@@ -90,19 +81,17 @@ impl fmt::Display for Commands {
             Commands::Build(_) => write!(f, "Build"),
             Commands::Call(_) => write!(f, "Call"),
             Commands::Clean(_) => write!(f, "Clean"),
+            Commands::Events(_) => write!(f, "Events"),
             Commands::Execute(_) => write!(f, "Execute"),
             Commands::Hash(_) => write!(f, "Hash"),
             Commands::Init(_) => write!(f, "Init"),
             Commands::Inspect(_) => write!(f, "Inspect"),
+            Commands::Migrate(_) => write!(f, "Migrate"),
+            Commands::Model(_) => write!(f, "Model"),
             Commands::Test(_) => write!(f, "Test"),
+            Commands::Version(_) => write!(f, "Version"),
             #[cfg(feature = "walnut")]
             Commands::Walnut(_) => write!(f, "WalnutVerify"),
-            // Commands::Dev(_) => write!(f, "Dev"),
-            // Commands::Migrate(_) => write!(f, "Migrate"),
-            //
-            // Commands::Model(_) => write!(f, "Model"),
-            // Commands::Events(_) => write!(f, "Events"),
-            //
         }
     }
 }
@@ -120,18 +109,16 @@ pub async fn run(command: Commands, scarb_metadata: &Metadata, ui: &Ui) -> Resul
         Commands::Build(args) => args.run(scarb_metadata).await,
         Commands::Call(args) => args.run(scarb_metadata),
         Commands::Clean(args) => args.run(scarb_metadata),
-        Commands::Execute(args) => args.run(scarb_metadata),
+        Commands::Events(args) => args.run(scarb_metadata),
+        Commands::Execute(args) => args.run(scarb_metadata, ui),
         Commands::Hash(args) => args.run(scarb_metadata).map(|_| ()),
-        Commands::Init(args) => args.run(scarb_metadata, ui),
+        Commands::Init(args) => args.run(ui),
         Commands::Inspect(args) => args.run(scarb_metadata),
+        Commands::Migrate(args) => args.run(scarb_metadata),
+        Commands::Model(args) => args.run(scarb_metadata),
         Commands::Test(args) => args.run(scarb_metadata),
+        Commands::Version(args) => args.run(scarb_metadata),
         #[cfg(feature = "walnut")]
         Commands::Walnut(args) => args.run(scarb_metadata, ui),
-        // TODO RBA
-        // Commands::Dev(args) => args.run(config),
-        // Commands::Migrate(args) => args.run(config),
-        //
-        // Commands::Model(args) => args.run(config),
-        // Commands::Events(args) => args.run(config),
     }
 }

@@ -4,8 +4,20 @@ use std::fs;
 use std::fs::File;
 use std::path::{Path, PathBuf};
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use camino::Utf8Path;
+
+/// Equivalent to [`fs::canonicalize`] with better error messages.
+///
+/// Uses [`dunce`] to generate more familiar paths on Windows.
+pub fn canonicalize(p: impl AsRef<Path>) -> Result<PathBuf> {
+    return inner(p.as_ref());
+
+    fn inner(p: &Path) -> Result<PathBuf> {
+        dunce::canonicalize(p)
+            .with_context(|| format!("failed to get absolute path of `{}`", p.display()))
+    }
+}
 
 /// Equivalent to [`fs::read_dir`] but returns a list of files instead of an iterator on entries.
 ///
