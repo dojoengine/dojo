@@ -74,6 +74,10 @@ impl Scarb {
         }
     }
 
+    pub fn build_simple_dev(manifest_path: &Utf8Path) -> Result<()> {
+        Self::build(manifest_path, "dev", "", Features::Features("".to_string()), vec![])
+    }
+
     /// Builds the workspace provided in the Scarb metadata.
     ///
     /// Every Scarb project, even with one single package, are considered a workspace,

@@ -89,7 +89,7 @@ jobs:
           cache-on-failure: true
 
       - name: Build binaries
-        run: cargo build --release --bin sozo --bin dojo-language-server --target ${{ matrix.job.target }}
+        run: cargo build --release --bin sozo --target ${{ matrix.job.target }}
 
       - name: Archive binaries
         id: artifacts
