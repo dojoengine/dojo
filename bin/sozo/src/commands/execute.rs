@@ -64,7 +64,7 @@ and the move function of the ns-Actions contract, with the calldata [1,2]."))]
 }
 
 impl ExecuteArgs {
-    pub fn run(self, scarb_metadata: &Metadata, ui: &Ui) -> Result<()> {
+    pub async fn run(self, scarb_metadata: &Metadata, ui: &Ui) -> Result<()> {
         trace!(args = ?self);
 
         let profile_config = scarb_metadata.load_dojo_profile_config()?;
@@ -77,107 +77,103 @@ impl ExecuteArgs {
 
         let txn_config: TxnConfig = self.transaction.try_into()?;
 
-        let rt = tokio::runtime::Runtime::new().unwrap();
-        rt.block_on(async {
-            let (provider, _) = self.starknet.provider(profile_config.env.as_ref())?;
+        let (provider, _) = self.starknet.provider(profile_config.env.as_ref())?;
 
-            let contracts = utils::contracts_from_manifest_or_diff(
-                self.account.clone(),
-                self.starknet.clone(),
-                self.world,
-                &scarb_metadata,
-                self.diff,
-            )
+        let contracts = utils::contracts_from_manifest_or_diff(
+            self.account.clone(),
+            self.starknet.clone(),
+            self.world,
+            &scarb_metadata,
+            self.diff,
+        )
+        .await?;
+
+        let account = self
+            .account
+            .account(provider, profile_config.env.as_ref(), &self.starknet, &contracts)
             .await?;
 
-            let account = self
-                .account
-                .account(provider, profile_config.env.as_ref(), &self.starknet, &contracts)
-                .await?;
+        let mut invoker = Invoker::new(&account, txn_config);
 
-            let mut invoker = Invoker::new(&account, txn_config);
+        let mut arg_iter = self.calls.into_iter();
 
-            let mut arg_iter = self.calls.into_iter();
+        while let Some(arg) = arg_iter.next() {
+            let tag_or_address = arg;
 
-            while let Some(arg) = arg_iter.next() {
-                let tag_or_address = arg;
+            let contract_address = if tag_or_address == "world" {
+                match contracts.get(&tag_or_address) {
+                    Some(c) => c.address,
+                    None => bail!("Unable to find the world address."),
+                }
+            } else {
+                // first, try to find the contract to call among Dojo contracts
+                let descriptor = ResourceDescriptor::from_string(&tag_or_address)?
+                    .ensure_namespace(&profile_config.namespace.default);
 
-                let contract_address = if tag_or_address == "world" {
-                    match contracts.get(&tag_or_address) {
-                        Some(c) => c.address,
-                        None => bail!("Unable to find the world address."),
+                let mut contract_address = match &descriptor {
+                    ResourceDescriptor::Address(address) => Some(*address),
+                    ResourceDescriptor::Tag(tag) => contracts.get(tag).map(|c| c.address),
+                    ResourceDescriptor::Name(_) => {
+                        unimplemented!("Expected to be a resolved tag with default namespace.")
                     }
-                } else {
-                    // first, try to find the contract to call among Dojo contracts
-                    let descriptor = ResourceDescriptor::from_string(&tag_or_address)?
-                        .ensure_namespace(&profile_config.namespace.default);
-
-                    let mut contract_address = match &descriptor {
-                        ResourceDescriptor::Address(address) => Some(*address),
-                        ResourceDescriptor::Tag(tag) => contracts.get(tag).map(|c| c.address),
-                        ResourceDescriptor::Name(_) => {
-                            unimplemented!("Expected to be a resolved tag with default namespace.")
-                        }
-                    };
-
-                    // if not found, try to find a Starknet contract matching with the provided
-                    // contract name.
-                    if contract_address.is_none() {
-                        contract_address = contracts.get(&tag_or_address).map(|c| c.address);
-                    }
-
-                    contract_address.ok_or_else(|| {
-                        let mut message =
-                            format!("Contract {descriptor} not found in the manifest.");
-                        if self.diff {
-                            message.push_str(
-                                " Run the command again with `--diff` to force the fetch of data \
-                                 from the chain.",
-                            );
-                        }
-                        anyhow!(message)
-                    })?
                 };
 
-                let entrypoint = arg_iter.next().ok_or_else(|| {
-                    anyhow!(
-                        "You must specify the entry point of the contract `{tag_or_address}` to \
-                         invoke, and optionally the calldata."
-                    )
-                })?;
-
-                let mut calldata = vec![];
-                for arg in &mut arg_iter {
-                    let arg = match arg.as_str() {
-                        "/" | "-" | "\\" => break,
-                        _ => calldata_decoder::decode_single_calldata(&arg)?,
-                    };
-                    calldata.extend(arg);
+                // if not found, try to find a Starknet contract matching with the provided
+                // contract name.
+                if contract_address.is_none() {
+                    contract_address = contracts.get(&tag_or_address).map(|c| c.address);
                 }
 
-                trace!(
-                    contract=?contract_address,
-                    entrypoint=entrypoint,
-                    calldata=?calldata,
-                    "Decoded call."
-                );
+                contract_address.ok_or_else(|| {
+                    let mut message = format!("Contract {descriptor} not found in the manifest.");
+                    if self.diff {
+                        message.push_str(
+                            " Run the command again with `--diff` to force the fetch of data \
+                                 from the chain.",
+                        );
+                    }
+                    anyhow!(message)
+                })?
+            };
 
-                invoker.add_call(Call {
-                    to: contract_address,
-                    selector: snutils::get_selector_from_name(&entrypoint)?,
-                    calldata,
-                });
+            let entrypoint = arg_iter.next().ok_or_else(|| {
+                anyhow!(
+                    "You must specify the entry point of the contract `{tag_or_address}` to \
+                         invoke, and optionally the calldata."
+                )
+            })?;
+
+            let mut calldata = vec![];
+            for arg in &mut arg_iter {
+                let arg = match arg.as_str() {
+                    "/" | "-" | "\\" => break,
+                    _ => calldata_decoder::decode_single_calldata(&arg)?,
+                };
+                calldata.extend(arg);
             }
 
-            let tx_result = invoker.multicall().await?;
+            trace!(
+                contract=?contract_address,
+                entrypoint=entrypoint,
+                calldata=?calldata,
+                "Decoded call."
+            );
 
-            #[cfg(feature = "walnut")]
-            if let Some(walnut_debugger) = walnut_debugger {
-                walnut_debugger.debug_transaction(ui, &tx_result)?;
-            }
+            invoker.add_call(Call {
+                to: contract_address,
+                selector: snutils::get_selector_from_name(&entrypoint)?,
+                calldata,
+            });
+        }
 
-            println!("{}", tx_result);
-            Ok(())
-        })
+        let tx_result = invoker.multicall().await?;
+
+        #[cfg(feature = "walnut")]
+        if let Some(walnut_debugger) = walnut_debugger {
+            walnut_debugger.debug_transaction(ui, &tx_result)?;
+        }
+
+        println!("{}", tx_result);
+        Ok(())
     }
 }

@@ -101,24 +101,21 @@ pub async fn run(command: Commands, scarb_metadata: &Metadata, ui: &Ui) -> Resul
     let span = info_span!("Subcommand", name);
     let _span = span.enter();
 
-    // use `.map(|_| ())` to avoid returning a value here but still
-    // useful to write tests for each command.
-
     match command {
-        Commands::Auth(args) => args.run(scarb_metadata),
+        Commands::Auth(args) => args.run(scarb_metadata).await,
         Commands::Build(args) => args.run(scarb_metadata).await,
-        Commands::Call(args) => args.run(scarb_metadata),
+        Commands::Call(args) => args.run(scarb_metadata).await,
         Commands::Clean(args) => args.run(scarb_metadata),
-        Commands::Events(args) => args.run(scarb_metadata),
-        Commands::Execute(args) => args.run(scarb_metadata, ui),
-        Commands::Hash(args) => args.run(scarb_metadata).map(|_| ()),
+        Commands::Events(args) => args.run(scarb_metadata).await,
+        Commands::Execute(args) => args.run(scarb_metadata, ui).await,
+        Commands::Hash(args) => args.run(scarb_metadata),
         Commands::Init(args) => args.run(ui),
-        Commands::Inspect(args) => args.run(scarb_metadata),
-        Commands::Migrate(args) => args.run(scarb_metadata),
-        Commands::Model(args) => args.run(scarb_metadata),
+        Commands::Inspect(args) => args.run(scarb_metadata).await,
+        Commands::Migrate(args) => args.run(scarb_metadata).await,
+        Commands::Model(args) => args.run(scarb_metadata).await,
         Commands::Test(args) => args.run(scarb_metadata),
         Commands::Version(args) => args.run(scarb_metadata),
         #[cfg(feature = "walnut")]
-        Commands::Walnut(args) => args.run(scarb_metadata, ui),
+        Commands::Walnut(args) => args.run(scarb_metadata, ui).await,
     }
 }

@@ -23,15 +23,12 @@ pub enum WalnutVerifyCommand {
 pub struct WalnutVerifyOptions {}
 
 impl WalnutArgs {
-    pub fn run(self, scarb_metadata: &Metadata, ui: &Ui) -> Result<()> {
-        let rt = tokio::runtime::Runtime::new().unwrap();
-        rt.block_on(async {
-            match self.command {
-                WalnutVerifyCommand::Verify(_options) => {
-                    WalnutDebugger::verify(&scarb_metadata, ui).await?;
-                }
+    pub async fn run(self, scarb_metadata: &Metadata, ui: &Ui) -> Result<()> {
+        match self.command {
+            WalnutVerifyCommand::Verify(_options) => {
+                WalnutDebugger::verify(&scarb_metadata, ui).await?;
             }
-            Ok(())
-        })
+        }
+        Ok(())
     }
 }

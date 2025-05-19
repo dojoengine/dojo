@@ -138,78 +138,74 @@ Some examples:
 }
 
 impl AuthArgs {
-    pub fn run(self, scarb_metadata: &Metadata) -> Result<()> {
+    pub async fn run(self, scarb_metadata: &Metadata) -> Result<()> {
         trace!(args = ?self);
 
         let profile_config = scarb_metadata.load_dojo_profile_config()?;
 
-        let rt = tokio::runtime::Runtime::new().unwrap();
-        rt.block_on(async {
-            match self.command {
-                AuthCommand::Grant { kind, common, .. } => {
-                    let contracts = utils::contracts_from_manifest_or_diff(
-                        common.account.clone(),
-                        common.starknet.clone(),
-                        common.world.clone(),
-                        &scarb_metadata,
-                        false,
-                    )
-                    .await?;
+        match self.command {
+            AuthCommand::Grant { kind, common, .. } => {
+                let contracts = utils::contracts_from_manifest_or_diff(
+                    common.account.clone(),
+                    common.starknet.clone(),
+                    common.world.clone(),
+                    &scarb_metadata,
+                    false,
+                )
+                .await?;
 
-                    let do_grant = true;
+                let do_grant = true;
 
-                    match kind {
-                        AuthKind::Writer { pairs } => {
-                            update_writers(&contracts, &common, &profile_config, pairs, do_grant)
-                                .await?;
-                        }
-                        AuthKind::Owner { pairs } => {
-                            update_owners(&contracts, &common, &profile_config, pairs, do_grant)
-                                .await?;
-                        }
+                match kind {
+                    AuthKind::Writer { pairs } => {
+                        update_writers(&contracts, &common, &profile_config, pairs, do_grant)
+                            .await?;
+                    }
+                    AuthKind::Owner { pairs } => {
+                        update_owners(&contracts, &common, &profile_config, pairs, do_grant)
+                            .await?;
                     }
                 }
-                AuthCommand::Revoke { kind, common, .. } => {
-                    let contracts = utils::contracts_from_manifest_or_diff(
-                        common.account.clone(),
-                        common.starknet.clone(),
-                        common.world.clone(),
-                        scarb_metadata,
-                        false,
-                    )
-                    .await?;
+            }
+            AuthCommand::Revoke { kind, common, .. } => {
+                let contracts = utils::contracts_from_manifest_or_diff(
+                    common.account.clone(),
+                    common.starknet.clone(),
+                    common.world.clone(),
+                    scarb_metadata,
+                    false,
+                )
+                .await?;
 
-                    let do_grant = false;
+                let do_grant = false;
 
-                    match kind {
-                        AuthKind::Writer { pairs } => {
-                            update_writers(&contracts, &common, &profile_config, pairs, do_grant)
-                                .await?;
-                        }
-                        AuthKind::Owner { pairs } => {
-                            update_owners(&contracts, &common, &profile_config, pairs, do_grant)
-                                .await?;
-                        }
+                match kind {
+                    AuthKind::Writer { pairs } => {
+                        update_writers(&contracts, &common, &profile_config, pairs, do_grant)
+                            .await?;
+                    }
+                    AuthKind::Owner { pairs } => {
+                        update_owners(&contracts, &common, &profile_config, pairs, do_grant)
+                            .await?;
                     }
                 }
-                AuthCommand::List { resource, show_address, starknet, world } => {
-                    list_permissions(resource, show_address, starknet, world, scarb_metadata)
-                        .await?;
-                }
-                AuthCommand::Clone { revoke_from, common, from, to } => {
-                    if from == to {
-                        anyhow::bail!(
-                            "Source and target are the same, please specify different source and \
+            }
+            AuthCommand::List { resource, show_address, starknet, world } => {
+                list_permissions(resource, show_address, starknet, world, scarb_metadata).await?;
+            }
+            AuthCommand::Clone { revoke_from, common, from, to } => {
+                if from == to {
+                    anyhow::bail!(
+                        "Source and target are the same, please specify different source and \
                              target."
-                        );
-                    }
-
-                    clone_permissions(common, scarb_metadata, revoke_from, from, to).await?;
+                    );
                 }
-            };
 
-            Ok(())
-        })
+                clone_permissions(common, scarb_metadata, revoke_from, from, to).await?;
+            }
+        };
+
+        Ok(())
     }
 }
 

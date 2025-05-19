@@ -29,26 +29,21 @@ pub struct InspectArgs {
 }
 
 impl InspectArgs {
-    pub fn run(self, scarb_metadata: &Metadata) -> Result<()> {
+    pub async fn run(self, scarb_metadata: &Metadata) -> Result<()> {
         trace!(args = ?self);
 
         let InspectArgs { world, starknet, element } = self;
 
-        let rt = tokio::runtime::Runtime::new().unwrap();
+        let (world_diff, _, _) =
+            utils::get_world_diff_and_provider(starknet.clone(), world, &scarb_metadata).await?;
 
-        rt.block_on(async {
-            let (world_diff, _, _) =
-                utils::get_world_diff_and_provider(starknet.clone(), world, &scarb_metadata)
-                    .await?;
+        if let Some(element) = element {
+            inspect_element(&element, &world_diff)?;
+        } else {
+            inspect_world(&world_diff);
+        }
 
-            if let Some(element) = element {
-                inspect_element(&element, &world_diff)?;
-            } else {
-                inspect_world(&world_diff);
-            }
-
-            Ok(())
-        })
+        Ok(())
     }
 }
 

@@ -22,7 +22,6 @@ toml.workspace = true
 url.workspace = true
 urlencoding = "2.1.3"
 walkdir.workspace = true
-tokio.workspace = true
 
 [dev-dependencies]
 starknet.workspace = true
