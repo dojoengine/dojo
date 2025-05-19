@@ -7,8 +7,8 @@ use args::SozoArgs;
 use camino::Utf8PathBuf;
 use clap::Parser;
 use commands::Commands;
-use scarb_interop::MetadataErrorExt;
-use scarb_metadata::MetadataCommand;
+use scarb_interop::MetadataDojoExt;
+use scarb_metadata::Metadata;
 use scarb_ui::{OutputFormat, Ui};
 use tracing::trace;
 mod args;
@@ -47,20 +47,8 @@ async fn cli_main(args: SozoArgs, ui: &Ui) -> Result<()> {
             bail!("Unable to find {}", &manifest_path);
         }
 
-        let mut metadata = MetadataCommand::new();
-        metadata.manifest_path(manifest_path);
-        metadata.profile(args.profile_spec.determine()?.as_str());
-
-        if args.offline {
-            metadata.no_deps();
-        }
-
-        let scarb_metadata = match metadata.exec() {
-            Ok(metadata) => metadata,
-            Err(err) => {
-                return Err(anyhow::anyhow!(err.format_error_message(&manifest_path)));
-            }
-        };
+        let scarb_metadata =
+            Metadata::load(manifest_path, args.profile_spec.determine()?.as_str(), args.offline)?;
 
         trace!(%scarb_metadata.runtime_manifest, "Configuration built successfully.");
 

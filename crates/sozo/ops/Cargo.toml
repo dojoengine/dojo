@@ -33,8 +33,6 @@ dojo-test-utils = { workspace = true, features = [ "build-examples" ], optional 
 assert_fs.workspace = true
 dojo-test-utils = { workspace = true, features = [ "build-examples" ] }
 katana-runner = { git = "https://github.com/dojoengine/katana", rev = "5cb249c0fa59fa6b7c88b32557e7baf8944cdb3d" }
-scarb.workspace = true
-sozo-scarbext.workspace = true
 tokio.workspace = true
 
 [features]

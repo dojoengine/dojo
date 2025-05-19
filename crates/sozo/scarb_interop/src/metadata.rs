@@ -7,7 +7,7 @@ use camino::Utf8PathBuf;
 use dojo_world::config::ProfileConfig;
 use dojo_world::diff::Manifest;
 use dojo_world::local::WorldLocal;
-use scarb_metadata::{DepKind, Metadata, MetadataCommandError};
+use scarb_metadata::{DepKind, Metadata, MetadataCommand, MetadataCommandError};
 use serde::Serialize;
 
 use crate::fsx;
@@ -59,6 +59,8 @@ pub trait MetadataDojoExt {
     fn dojo_manifest_path_profile(&self) -> Utf8PathBuf;
     /// Indicates which test runner is used in the project
     fn test_runner(&self) -> Result<TestRunner>;
+    /// load metadata
+    fn load(manifest_path: &Utf8PathBuf, profile: &str, offline: bool) -> Result<Metadata>;
 }
 
 impl MetadataDojoExt for Metadata {
@@ -218,6 +220,18 @@ impl MetadataDojoExt for Metadata {
         }
 
         Ok(TestRunner::from(dev_dependencies.first().unwrap()))
+    }
+
+    fn load(manifest_path: &Utf8PathBuf, profile: &str, offline: bool) -> Result<Self> {
+        let mut metadata = MetadataCommand::new();
+        metadata.manifest_path(manifest_path);
+        metadata.profile(profile);
+
+        if offline {
+            metadata.no_deps();
+        }
+
+        metadata.exec().map_err(|err| anyhow::anyhow!(err.format_error_message(&manifest_path)))
     }
 }
 
