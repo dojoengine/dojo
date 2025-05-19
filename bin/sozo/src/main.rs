@@ -2,7 +2,7 @@
 
 use std::process::exit;
 
-use anyhow::Result;
+use anyhow::{Result, bail};
 use args::SozoArgs;
 use camino::Utf8PathBuf;
 use clap::Parser;
@@ -38,6 +38,10 @@ async fn cli_main(args: SozoArgs, ui: &Ui) -> Result<()> {
 
         &current_dir.join("Scarb.toml")
     };
+
+    if !manifest_path.exists() {
+        bail!("Unable to find {}", &manifest_path);
+    }
 
     let mut metadata = MetadataCommand::new();
     metadata.manifest_path(manifest_path);
