@@ -4,8 +4,8 @@ use anyhow::Result;
 use clap::{Args, Parser};
 use colored::{ColoredString, Colorize};
 use dojo_bindgen::{BuiltinPlugins, PluginManager};
-use dojo_world::local::{ResourceLocal, WorldLocal};
 use dojo_world::ResourceType;
+use dojo_world::local::{ResourceLocal, WorldLocal};
 use scarb_interop::{self, MetadataDojoExt, Scarb};
 use scarb_metadata::Metadata;
 use tabled::settings::Style;
@@ -57,25 +57,25 @@ pub struct BuildArgs {
 pub struct StatOptions {
     #[arg(long = "stats.by-tag")]
     #[arg(help = "Sort the stats by tag.")]
-    #[arg(conflicts_with_all = ["stats.by-sierra-mb", "stats.by-sierra-felts", "stats.by-casm-felts"])]
+    #[arg(conflicts_with_all = ["sort_by_sierra_mb", "sort_by_sierra_felts", "sort_by_casm_felts"])]
     #[arg(default_value_t = false)]
     pub sort_by_tag: bool,
 
     #[arg(long = "stats.by-sierra-mb")]
     #[arg(help = "Sort the stats by Sierra file size in MB.")]
-    #[arg(conflicts_with_all = ["stats.by-tag", "stats.by-sierra-felts", "stats.by-casm-felts"])]
+    #[arg(conflicts_with_all = ["sort_by_tag", "sort_by_sierra_felts", "sort_by_casm_felts"])]
     #[arg(default_value_t = false)]
     pub sort_by_sierra_mb: bool,
 
     #[arg(long = "stats.by-sierra-felts")]
     #[arg(help = "Sort the stats by Sierra program size in felts.")]
-    #[arg(conflicts_with_all = ["stats.by-tag", "stats.by-sierra-mb", "stats.by-casm-felts"])]
+    #[arg(conflicts_with_all = ["sort_by_tag", "sort_by_sierra_mb", "sort_by_casm_felts"])]
     #[arg(default_value_t = false)]
     pub sort_by_sierra_felts: bool,
 
     #[arg(long = "stats.by-casm-felts")]
     #[arg(help = "Sort the stats by Casm bytecode size in felts.")]
-    #[arg(conflicts_with_all = ["stats.by-tag", "stats.by-sierra-mb", "stats.by-sierra-felts"])]
+    #[arg(conflicts_with_all = ["sort_by_tag", "sort_by_sierra_mb", "sort_by_sierra_felts"])]
     #[arg(default_value_t = false)]
     pub sort_by_casm_felts: bool,
 }
