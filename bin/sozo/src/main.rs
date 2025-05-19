@@ -6,6 +6,7 @@ use anyhow::{Result, bail};
 use args::SozoArgs;
 use camino::Utf8PathBuf;
 use clap::Parser;
+use commands::Commands;
 use scarb_interop::MetadataErrorExt;
 use scarb_metadata::MetadataCommand;
 use scarb_ui::{OutputFormat, Ui};
@@ -29,36 +30,40 @@ async fn main() {
 }
 
 async fn cli_main(args: SozoArgs, ui: &Ui) -> Result<()> {
-    // Default to the current directory to mimic how Scarb works.
-    let manifest_path = if let Some(manifest_path) = &args.manifest_path {
-        manifest_path
+    if let Commands::Init(args) = args.command {
+        args.run(ui)
     } else {
-        let current_dir = Utf8PathBuf::from_path_buf(std::env::current_dir()?)
-            .map_err(|e| anyhow::anyhow!("Invalid UTF-8 in path: {}", e.display()))?;
+        // Default to the current directory to mimic how Scarb works.
+        let manifest_path = if let Some(manifest_path) = &args.manifest_path {
+            manifest_path
+        } else {
+            let current_dir = Utf8PathBuf::from_path_buf(std::env::current_dir()?)
+                .map_err(|e| anyhow::anyhow!("Invalid UTF-8 in path: {}", e.display()))?;
 
-        &current_dir.join("Scarb.toml")
-    };
+            &current_dir.join("Scarb.toml")
+        };
 
-    if !manifest_path.exists() {
-        bail!("Unable to find {}", &manifest_path);
-    }
-
-    let mut metadata = MetadataCommand::new();
-    metadata.manifest_path(manifest_path);
-    metadata.profile(args.profile_spec.determine()?.as_str());
-
-    if args.offline {
-        metadata.no_deps();
-    }
-
-    let scarb_metadata = match metadata.exec() {
-        Ok(metadata) => metadata,
-        Err(err) => {
-            return Err(anyhow::anyhow!(err.format_error_message(&manifest_path)));
+        if !manifest_path.exists() {
+            bail!("Unable to find {}", &manifest_path);
         }
-    };
 
-    trace!(%scarb_metadata.runtime_manifest, "Configuration built successfully.");
+        let mut metadata = MetadataCommand::new();
+        metadata.manifest_path(manifest_path);
+        metadata.profile(args.profile_spec.determine()?.as_str());
 
-    commands::run(args.command, &scarb_metadata, ui).await
+        if args.offline {
+            metadata.no_deps();
+        }
+
+        let scarb_metadata = match metadata.exec() {
+            Ok(metadata) => metadata,
+            Err(err) => {
+                return Err(anyhow::anyhow!(err.format_error_message(&manifest_path)));
+            }
+        };
+
+        trace!(%scarb_metadata.runtime_manifest, "Configuration built successfully.");
+
+        commands::run(args.command, &scarb_metadata, ui).await
+    }
 }

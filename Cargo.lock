@@ -8351,7 +8351,6 @@ dependencies = [
  "serde_json",
  "starknet 0.12.0",
  "thiserror 1.0.69",
- "tokio",
  "toml 0.8.22",
  "url",
  "urlencoding",

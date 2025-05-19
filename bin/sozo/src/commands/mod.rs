@@ -109,7 +109,6 @@ pub async fn run(command: Commands, scarb_metadata: &Metadata, ui: &Ui) -> Resul
         Commands::Events(args) => args.run(scarb_metadata).await,
         Commands::Execute(args) => args.run(scarb_metadata, ui).await,
         Commands::Hash(args) => args.run(scarb_metadata),
-        Commands::Init(args) => args.run(ui),
         Commands::Inspect(args) => args.run(scarb_metadata).await,
         Commands::Migrate(args) => args.run(scarb_metadata).await,
         Commands::Model(args) => args.run(scarb_metadata).await,
@@ -117,5 +116,10 @@ pub async fn run(command: Commands, scarb_metadata: &Metadata, ui: &Ui) -> Resul
         Commands::Version(args) => args.run(scarb_metadata),
         #[cfg(feature = "walnut")]
         Commands::Walnut(args) => args.run(scarb_metadata, ui).await,
+        Commands::Init(_) => {
+            // `sozo init` is directly managed in main.rs as scarb metadata
+            // cannot be loaded in this case (the project does not exist yet).
+            Ok(())
+        }
     }
 }
