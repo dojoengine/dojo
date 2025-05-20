@@ -7,9 +7,11 @@ pub trait DojoStore<T> {
 /// The default implementation of DojoStore uses Serde.
 mod default_impl {
     pub impl SerdeBasedDojoStore<T, +Serde<T>> of super::DojoStore<T> {
+        #[inline(always)]
         fn serialize(self: @T, ref serialized: Array<felt252>) {
             Serde::serialize(self, ref serialized);
         }
+        #[inline(always)]
         fn deserialize(ref values: Span<felt252>) -> Option<T> {
             Serde::<T>::deserialize(ref values)
         }
