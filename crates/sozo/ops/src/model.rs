@@ -66,7 +66,13 @@ where
     };
     let schema = model.schema().await?;
 
-    deep_print_layout(&tag, &layout, &schema);
+    // in old models, this `use_legacy_storage` function does not exist,
+    // so returns true.
+    // If the error is due to unknown model or whatever, it will be catched by
+    // a previous model reader call.
+    let use_legacy_storage = model.use_legacy_storage().await.unwrap_or(true);
+
+    deep_print_layout(&tag, &layout, &schema, use_legacy_storage);
 
     Ok(layout)
 }
@@ -117,7 +123,13 @@ where
     let schema = model.schema().await?;
     let values = model.entity_storage(&keys).await?;
 
-    Ok((format_deep_record(&schema, &keys, &values), schema, values))
+    // in old models, this `use_legacy_storage` function does not exist,
+    // so returns true.
+    // If the error is due to unknown model or whatever, it will be catched by
+    // a previous model reader call.
+    let use_legacy_storage = model.use_legacy_storage().await.unwrap_or(true);
+
+    Ok((format_deep_record(&schema, &keys, &values, use_legacy_storage), schema, values))
 }
 
 #[derive(Clone, Debug)]
@@ -382,16 +394,19 @@ fn print_layout_info(layout_info: LayoutInfo) {
 }
 
 // print the full Layout tree
-fn deep_print_layout(name: &String, layout: &Layout, schema: &Ty) {
+fn deep_print_layout(name: &String, layout: &Layout, schema: &Ty, use_legacy_storage: bool) {
     if let Layout::Fixed(lf) = layout {
         println!("\n{} (packed)", name);
-        println!("    selector : {:#x}", get_selector_from_name(name).unwrap());
-        println!("    layout   : {}", format_fixed(lf));
+        println!("    selector       : {:#x}", get_selector_from_name(name).unwrap());
+        println!("    legacy storage : {}", use_legacy_storage);
+        println!("    layout         : {}", format_fixed(lf));
     } else {
         let mut layout_list = vec![];
         get_printable_layout_list(layout, schema, &mut layout_list);
 
-        println!("\n{} selector: {:#x}\n", name, get_selector_from_name(name).unwrap());
+        println!("\n{}", name);
+        println!("    selector       : {:#x}", get_selector_from_name(name).unwrap());
+        println!("    legacy storage : {}\n", use_legacy_storage);
 
         for l in layout_list {
             print_layout_info(l);
@@ -422,17 +437,28 @@ fn format_byte_array(values: &mut Vec<Felt>, level: usize, start_indent: bool) -
     format!("{}{}", _start_indent(level, start_indent), ByteArray::to_string(&bytearray).unwrap())
 }
 
-fn format_field_value(member: &Member, values: &mut Vec<Felt>, level: usize) -> String {
-    let field_repr = format_record_value(&member.ty, values, level, false);
+fn format_field_value(
+    member: &Member,
+    use_legacy_storage: bool,
+    values: &mut Vec<Felt>,
+    level: usize,
+) -> String {
+    let field_repr = format_record_value(&member.ty, use_legacy_storage, values, level, false);
     format!("{}{:<16}: {field_repr}", INDENT.repeat(level), member.name)
 }
 
-fn format_array(item: &Ty, values: &mut Vec<Felt>, level: usize, start_indent: bool) -> String {
+fn format_array(
+    item: &Ty,
+    use_legacy_storage: bool,
+    values: &mut Vec<Felt>,
+    level: usize,
+    start_indent: bool,
+) -> String {
     let length: u32 = values.remove(0).to_u32().unwrap();
     let mut items = vec![];
 
     for _ in 0..length {
-        items.push(format_record_value(item, values, level + 1, true));
+        items.push(format_record_value(item, use_legacy_storage, values, level + 1, true));
     }
 
     format!(
@@ -443,14 +469,20 @@ fn format_array(item: &Ty, values: &mut Vec<Felt>, level: usize, start_indent: b
     )
 }
 
-fn format_tuple(items: &[Ty], values: &mut Vec<Felt>, level: usize, start_indent: bool) -> String {
+fn format_tuple(
+    items: &[Ty],
+    use_legacy_storage: bool,
+    values: &mut Vec<Felt>,
+    level: usize,
+    start_indent: bool,
+) -> String {
     if items.is_empty() {
         return "".to_string();
     }
 
     let items_repr = items
         .iter()
-        .map(|x| format_record_value(x, values, level + 1, true))
+        .map(|x| format_record_value(x, use_legacy_storage, values, level + 1, true))
         .collect::<Vec<_>>()
         .join(",\n");
 
@@ -459,6 +491,7 @@ fn format_tuple(items: &[Ty], values: &mut Vec<Felt>, level: usize, start_indent
 
 fn format_struct(
     schema: &Struct,
+    use_legacy_storage: bool,
     values: &mut Vec<Felt>,
     level: usize,
     start_indent: bool,
@@ -466,7 +499,7 @@ fn format_struct(
     let fields = schema
         .children
         .iter()
-        .map(|m| format_field_value(m, values, level + 1))
+        .map(|m| format_field_value(m, use_legacy_storage, values, level + 1))
         .collect::<Vec<_>>();
 
     format!(
@@ -477,12 +510,41 @@ fn format_struct(
     )
 }
 
-fn format_enum(schema: &Enum, values: &mut Vec<Felt>, level: usize, start_indent: bool) -> String {
+fn format_enum(
+    schema: &Enum,
+    use_legacy_storage: bool,
+    values: &mut Vec<Felt>,
+    level: usize,
+    start_indent: bool,
+) -> String {
     let variant_index: u8 = values.remove(0).to_u8().unwrap();
-    let variant_index: usize = variant_index.into();
+    let mut variant_index: usize = variant_index.into();
+
+    if !use_legacy_storage {
+        // In the new storage system, variant 0 means unset/default value.
+        // Unfortunately, with the current Enum schema we are not able to build the default value.
+        // TODO: think about how to build the default enum value from schema
+        // (at least store the index of the default variant).
+        if variant_index == 0 {
+            // For Options, just print 'None' instead of default
+            if schema.name.starts_with("Option<") {
+                return format!("{}::None", schema.name);
+            }
+
+            return format!("{}::default()", schema.name);
+        }
+
+        variant_index -= 1;
+    }
+
     let variant_name = format!("{}::{}", schema.name, schema.options[variant_index].name);
-    let variant_data =
-        format_record_value(&schema.options[variant_index].ty, values, level + 1, true);
+    let variant_data = format_record_value(
+        &schema.options[variant_index].ty,
+        use_legacy_storage,
+        values,
+        level + 1,
+        true,
+    );
 
     if variant_data.is_empty() {
         format!("{}{variant_name}", _start_indent(level, start_indent),)
@@ -498,6 +560,7 @@ fn format_enum(schema: &Enum, values: &mut Vec<Felt>, level: usize, start_indent
 
 fn format_record_value(
     schema: &Ty,
+    use_legacy_storage: bool,
     values: &mut Vec<Felt>,
     level: usize,
     start_indent: bool,
@@ -505,20 +568,25 @@ fn format_record_value(
     match schema {
         Ty::Primitive(p) => format_primitive(p, values, level, start_indent),
         Ty::ByteArray(_) => format_byte_array(values, level, start_indent),
-        Ty::Struct(s) => format_struct(s, values, level, start_indent),
-        Ty::Enum(e) => format_enum(e, values, level, start_indent),
-        Ty::Array(a) => format_array(&a[0], values, level, start_indent),
-        Ty::Tuple(t) => format_tuple(t, values, level, start_indent),
+        Ty::Struct(s) => format_struct(s, use_legacy_storage, values, level, start_indent),
+        Ty::Enum(e) => format_enum(e, use_legacy_storage, values, level, start_indent),
+        Ty::Array(a) => format_array(&a[0], use_legacy_storage, values, level, start_indent),
+        Ty::Tuple(t) => format_tuple(t, use_legacy_storage, values, level, start_indent),
     }
 }
 
 // print the structured record values
-fn format_deep_record(schema: &Ty, keys: &[Felt], values: &[Felt]) -> String {
+fn format_deep_record(
+    schema: &Ty,
+    keys: &[Felt],
+    values: &[Felt],
+    use_legacy_storage: bool,
+) -> String {
     let mut model_values = vec![];
     model_values.extend(keys);
     model_values.extend(values);
 
-    format_record_value(schema, &mut model_values, 0, true)
+    format_record_value(schema, use_legacy_storage, &mut model_values, 0, true)
 }
 
 fn get_ty_repr(ty: &Ty) -> String {

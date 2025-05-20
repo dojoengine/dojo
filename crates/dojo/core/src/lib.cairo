@@ -63,13 +63,18 @@ pub mod model {
 
 pub mod storage {
     pub mod database;
+    pub mod dojo_store;
     pub mod entity_model;
     pub mod layout;
     pub mod packing;
     pub mod storage;
+    pub use dojo_store::DojoStore;
 }
 
 pub mod utils {
+    pub mod default;
+    pub use default::*;
+
     pub mod hash;
     pub use hash::{
         bytearray_hash, selector_from_hashes, selector_from_names, selector_from_namespace_and_name,

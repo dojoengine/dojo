@@ -1,6 +1,6 @@
 use dojo::event::Event;
 use dojo::model::Model;
-use dojo::utils::selector_from_namespace_and_name;
+use dojo::utils::{ContractAddressDefault, selector_from_namespace_and_name};
 use dojo::world::{IWorldDispatcher, WorldStorage, WorldStorageTrait};
 use dojo_snf_test::world::{
     ContractDefTrait, NamespaceDef, TestResource, WorldStorageTestTrait, spawn_test_world,
@@ -9,8 +9,9 @@ use starknet::ContractAddress;
 
 pub const DOJO_NSH: felt252 = 0x309e09669bc1fdc1dd6563a7ef862aa6227c97d099d08cc7b81bad58a7443fa;
 
-#[derive(Introspect, Drop, Serde, Debug, PartialEq)]
+#[derive(Introspect, Drop, Serde, Debug, PartialEq, Default)]
 pub enum MyEnum {
+    #[default]
     X: u8,
     Y: u16,
 }
@@ -40,9 +41,10 @@ pub struct NotCopiable {
 }
 
 
-#[derive(Drop, Serde, Debug, PartialEq, Introspect)]
+#[derive(Drop, Serde, Debug, PartialEq, Introspect, Default)]
 pub enum EnumOne {
     One,
+    #[default]
     Two: u32,
     Three: (felt252, u32),
 }
@@ -100,6 +102,10 @@ pub mod m_FooInvalidName {
                 unpacked_size: Self::unpacked_size(self),
             }
         }
+
+        fn use_legacy_storage(self: @ContractState) -> bool {
+            false
+        }
     }
 }
 
@@ -144,7 +150,7 @@ pub mod test_contract_with_dojo_init_args {
     }
 }
 
-#[derive(IntrospectPacked, Copy, Drop, Serde)]
+#[derive(IntrospectPacked, Copy, Drop, Serde, Default)]
 pub struct Sword {
     pub swordsmith: ContractAddress,
     pub damage: u32,
@@ -195,8 +201,9 @@ pub struct Stats {
 }
 
 // IntrospectPacked requires same arms
-#[derive(IntrospectPacked, Copy, Drop, Serde)]
+#[derive(IntrospectPacked, Copy, Drop, Serde, Default)]
 pub enum Weapon {
+    #[default]
     DualWield: (Sword, Sword),
     Fists: (Sword, Sword),
 }
