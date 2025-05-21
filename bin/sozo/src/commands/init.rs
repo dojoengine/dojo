@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::{fs, io};
 
-use anyhow::{Context, Result, ensure};
+use anyhow::{ensure, Context, Result};
 use clap::Args;
 use scarb_ui::Ui;
 use tracing::trace;

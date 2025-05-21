@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use anyhow::{Result, anyhow, bail};
+use anyhow::{anyhow, bail, Result};
 use clap::Args;
 use dojo_world::config::calldata_decoder;
 use dojo_world::contracts::ContractInfo;
@@ -65,7 +65,7 @@ impl CallArgs {
             let (world_diff, _, _) = utils::get_world_diff_and_provider(
                 self.starknet.clone(),
                 self.world,
-                &scarb_metadata,
+                scarb_metadata,
             )
             .await?;
 
@@ -74,8 +74,8 @@ impl CallArgs {
             match &local_manifest {
                 Some(manifest) => manifest.into(),
                 _ => bail!(
-                    "Unable to get the list of contracts, either from the world or from the \
-                         local manifest."
+                    "Unable to get the list of contracts, either from the world or from the local \
+                     manifest."
                 ),
             }
         };

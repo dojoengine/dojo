@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::io::{self, Write};
 use std::sync::Arc;
 
-use anyhow::{Context, Result, anyhow};
+use anyhow::{anyhow, Context, Result};
 use colored::*;
 use dojo_utils::provider as provider_utils;
 use dojo_world::config::ProfileConfig;
@@ -20,10 +20,10 @@ use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
 use tracing::{trace, warn};
 
-use crate::commands::LOG_TARGET;
 use crate::commands::options::account::{AccountOptions, SozoAccount};
 use crate::commands::options::starknet::StarknetOptions;
 use crate::commands::options::world::WorldOptions;
+use crate::commands::LOG_TARGET;
 
 /// The maximum number of blocks that will separate the `from_block` and the `to_block` in the
 /// event fetching, which if too high will cause the event fetching to fail in most of the node

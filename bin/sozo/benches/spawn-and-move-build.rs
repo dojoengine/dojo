@@ -1,5 +1,6 @@
-use scarb_interop::Scarb;
 use std::time::Instant;
+
+use scarb_interop::Scarb;
 
 // Criterion enforces at least 10 iterations, in the case of Sozo, we only need to compile the code
 // once to have a baseline and compiling 10 times would have been too long for the CI.

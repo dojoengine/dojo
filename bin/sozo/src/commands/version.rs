@@ -1,7 +1,8 @@
-use anyhow::{Result, bail};
+use std::process::Command;
+
+use anyhow::{bail, Result};
 use clap::Args;
 use scarb_metadata::Metadata;
-use std::process::Command;
 
 #[derive(Debug, Args)]
 pub struct VersionArgs {}

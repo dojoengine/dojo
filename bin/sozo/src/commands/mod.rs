@@ -59,9 +59,8 @@ pub enum Commands {
     Init(Box<InitArgs>),
     #[command(about = "Inspect the world")]
     Inspect(Box<InspectArgs>),
-    #[command(
-        about = "Run a migration, declaring and deploying contracts as necessary to update the world"
-    )]
+    #[command(about = "Run a migration, declaring and deploying contracts as necessary to update \
+                       the world")]
     Migrate(Box<MigrateArgs>),
     #[command(about = "Inspect a model")]
     Model(Box<ModelArgs>),

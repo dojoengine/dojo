@@ -1,7 +1,8 @@
-use anyhow::{Result, ensure};
+use std::fmt;
+
+use anyhow::{ensure, Result};
 use serde::{Deserialize, Serialize};
 use smol_str::SmolStr;
-use std::fmt;
 
 #[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct Profile(SmolStr);
@@ -25,7 +26,8 @@ impl Profile {
         ensure!(
             name.chars().all(|c| c.is_ascii_alphanumeric() || c == '-'),
             format!(
-                "profile name `{name}` is not allowed, only alphanumeric characters and `-` can be used"
+                "profile name `{name}` is not allowed, only alphanumeric characters and `-` can \
+                 be used"
             )
         );
         Ok(Self(name))

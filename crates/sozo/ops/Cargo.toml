@@ -26,6 +26,7 @@ starknet.workspace = true
 thiserror.workspace = true
 toml.workspace = true
 tracing.workspace = true
+scarb-interop.workspace = true
 
 dojo-test-utils = { workspace = true, features = [ "build-examples" ], optional = true }
 

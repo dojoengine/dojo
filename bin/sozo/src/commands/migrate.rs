@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
-use anyhow::{Context, Result, anyhow};
+use anyhow::{anyhow, Context, Result};
 use clap::Args;
 use colored::*;
-use dojo_utils::{self, TxnConfig, provider as provider_utils};
+use dojo_utils::{self, provider as provider_utils, TxnConfig};
 use dojo_world::contracts::WorldContract;
 use dojo_world::services::IpfsService;
 use scarb_interop::MetadataDojoExt;
@@ -51,7 +51,7 @@ impl MigrateArgs {
 
         let MigrateArgs { world, starknet, account, ipfs, .. } = self;
 
-        print_banner(&scarb_metadata, &starknet).await?;
+        print_banner(scarb_metadata, &starknet).await?;
 
         let mut spinner = MigrationUi::new(Some("Evaluating world diff..."));
 
@@ -61,7 +61,7 @@ impl MigrateArgs {
             account,
             starknet,
             world,
-            &scarb_metadata,
+            scarb_metadata,
             &mut Some(&mut spinner),
         )
         .await?;

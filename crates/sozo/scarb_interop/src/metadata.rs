@@ -231,7 +231,7 @@ impl MetadataDojoExt for Metadata {
             metadata.no_deps();
         }
 
-        metadata.exec().map_err(|err| anyhow::anyhow!(err.format_error_message(&manifest_path)))
+        metadata.exec().map_err(|err| anyhow::anyhow!(err.format_error_message(manifest_path)))
     }
 }
 

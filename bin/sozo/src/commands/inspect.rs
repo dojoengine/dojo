@@ -2,8 +2,8 @@ use anyhow::Result;
 use clap::Args;
 use colored::*;
 use dojo_types::naming;
-use dojo_world::ResourceType;
 use dojo_world::diff::{ResourceDiff, WorldDiff, WorldStatus};
+use dojo_world::ResourceType;
 use scarb_metadata::Metadata;
 use serde::Serialize;
 use tabled::settings::object::Cell;
@@ -35,7 +35,7 @@ impl InspectArgs {
         let InspectArgs { world, starknet, element } = self;
 
         let (world_diff, _, _) =
-            utils::get_world_diff_and_provider(starknet.clone(), world, &scarb_metadata).await?;
+            utils::get_world_diff_and_provider(starknet.clone(), world, scarb_metadata).await?;
 
         if let Some(element) = element {
             inspect_element(&element, &world_diff)?;

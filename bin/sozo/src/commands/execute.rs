@@ -1,4 +1,4 @@
-use anyhow::{Result, anyhow, bail};
+use anyhow::{anyhow, bail, Result};
 use clap::Args;
 use dojo_utils::{Invoker, TxnConfig};
 use dojo_world::config::calldata_decoder;
@@ -83,7 +83,7 @@ impl ExecuteArgs {
             self.account.clone(),
             self.starknet.clone(),
             self.world,
-            &scarb_metadata,
+            scarb_metadata,
             self.diff,
         )
         .await?;
@@ -128,8 +128,8 @@ impl ExecuteArgs {
                     let mut message = format!("Contract {descriptor} not found in the manifest.");
                     if self.diff {
                         message.push_str(
-                            " Run the command again with `--diff` to force the fetch of data \
-                                 from the chain.",
+                            " Run the command again with `--diff` to force the fetch of data from \
+                             the chain.",
                         );
                     }
                     anyhow!(message)
@@ -139,7 +139,7 @@ impl ExecuteArgs {
             let entrypoint = arg_iter.next().ok_or_else(|| {
                 anyhow!(
                     "You must specify the entry point of the contract `{tag_or_address}` to \
-                         invoke, and optionally the calldata."
+                     invoke, and optionally the calldata."
                 )
             })?;
 

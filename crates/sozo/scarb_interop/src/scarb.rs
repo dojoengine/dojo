@@ -1,7 +1,7 @@
 use std::io::{BufRead, BufReader, ErrorKind};
 use std::process::{Command, Stdio};
 
-use anyhow::{Result, anyhow, bail};
+use anyhow::{anyhow, bail, Result};
 use camino::Utf8Path;
 
 #[derive(Debug)]

@@ -1,6 +1,7 @@
 use anyhow::Result;
 use camino::Utf8PathBuf;
 use clap::Parser;
+use scarb_interop::Profile;
 use scarb_ui::Verbosity;
 use smol_str::SmolStr;
 use tracing::level_filters::LevelFilter;
@@ -8,7 +9,6 @@ use tracing_log::{AsTrace, LogTracer};
 use tracing_subscriber::FmtSubscriber;
 
 use crate::commands::Commands;
-use crate::profile::Profile;
 
 #[derive(Parser, Debug)]
 #[command(author, about, long_about = None)]

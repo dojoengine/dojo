@@ -2,7 +2,7 @@ use std::ffi::OsStr;
 use std::io;
 use std::path::Path;
 
-use console::{Alignment, Style, StyledObject, pad_str};
+use console::{pad_str, Alignment, Style, StyledObject};
 use reqwest::StatusCode;
 use scarb_interop::MetadataDojoExt;
 use scarb_metadata::Metadata;
@@ -11,8 +11,8 @@ use serde::Serialize;
 use serde_json::Value;
 use walkdir::WalkDir;
 
-use crate::Error;
 use crate::utils::walnut_get_api_url;
+use crate::Error;
 
 #[derive(Debug, Serialize)]
 struct VerificationPayload {
@@ -39,7 +39,7 @@ pub async fn walnut_verify(scarb_metadata: &Metadata, ui: &Ui) -> anyhow::Result
 
     // its path to a file so `parent` should never return `None`
     let manifest = scarb_metadata.dojo_manifest_path_profile();
-    let root_dir: &Path = &manifest.parent().unwrap().as_std_path();
+    let root_dir: &Path = manifest.parent().unwrap().as_std_path();
 
     let source_code = collect_source_code(root_dir)?;
     let cairo_version = scarb_metadata.version;

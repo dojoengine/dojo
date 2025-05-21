@@ -60,7 +60,7 @@ impl EventsArgs {
         let profile_config = scarb_metadata.load_dojo_profile_config()?;
 
         let (world_diff, provider, _) =
-            utils::get_world_diff_and_provider(self.starknet, self.world, &scarb_metadata).await?;
+            utils::get_world_diff_and_provider(self.starknet, self.world, scarb_metadata).await?;
         let provider = Arc::new(provider);
 
         let latest_block = provider.block_number().await?;

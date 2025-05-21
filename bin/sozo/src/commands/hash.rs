@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use std::str::FromStr;
 
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use clap::{Args, Subcommand};
 use dojo_types::naming::{
     compute_bytearray_hash, compute_selector_from_tag, get_name_from_tag, get_namespace_from_tag,

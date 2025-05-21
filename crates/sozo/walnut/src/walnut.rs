@@ -26,7 +26,7 @@ impl WalnutArgs {
     pub async fn run(self, scarb_metadata: &Metadata, ui: &Ui) -> Result<()> {
         match self.command {
             WalnutVerifyCommand::Verify(_options) => {
-                WalnutDebugger::verify(&scarb_metadata, ui).await?;
+                WalnutDebugger::verify(scarb_metadata, ui).await?;
             }
         }
         Ok(())

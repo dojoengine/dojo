@@ -124,9 +124,7 @@ hashes, called 'hash' in the following documentation.
         starknet: StarknetOptions,
 
         #[arg(short, long)]
-        #[arg(
-            help = "Block number at which to retrieve the model data (pending block by default)"
-        )]
+        #[arg(help = "Block number at which to retrieve the model data (pending block by default)")]
         block: Option<u64>,
     },
 }
@@ -143,7 +141,7 @@ impl ModelArgs {
                 let tag = tag_or_name.ensure_namespace(&default_ns);
 
                 let (world_diff, provider, _) =
-                    utils::get_world_diff_and_provider(starknet, world, &scarb_metadata).await?;
+                    utils::get_world_diff_and_provider(starknet, world, scarb_metadata).await?;
 
                 model::model_class_hash(tag.to_string(), world_diff.world_info.address, &provider)
                     .await?;
@@ -153,7 +151,7 @@ impl ModelArgs {
                 let tag = tag_or_name.ensure_namespace(&default_ns);
 
                 let (world_diff, provider, _) =
-                    utils::get_world_diff_and_provider(starknet, world, &scarb_metadata).await?;
+                    utils::get_world_diff_and_provider(starknet, world, scarb_metadata).await?;
 
                 model::model_contract_address(
                     tag.to_string(),
@@ -169,7 +167,7 @@ impl ModelArgs {
                     block.map(BlockId::Number).unwrap_or(BlockId::Tag(BlockTag::Pending));
 
                 let (world_diff, provider, _) =
-                    utils::get_world_diff_and_provider(starknet, world, &scarb_metadata).await?;
+                    utils::get_world_diff_and_provider(starknet, world, scarb_metadata).await?;
 
                 model::model_layout(
                     tag.to_string(),
@@ -186,7 +184,7 @@ impl ModelArgs {
                     block.map(BlockId::Number).unwrap_or(BlockId::Tag(BlockTag::Pending));
 
                 let (world_diff, provider, _) =
-                    utils::get_world_diff_and_provider(starknet, world, &scarb_metadata).await?;
+                    utils::get_world_diff_and_provider(starknet, world, scarb_metadata).await?;
 
                 model::model_schema(
                     tag.to_string(),
@@ -204,7 +202,7 @@ impl ModelArgs {
                     block.map(BlockId::Number).unwrap_or(BlockId::Tag(BlockTag::Pending));
 
                 let (world_diff, provider, _) =
-                    utils::get_world_diff_and_provider(starknet, world, &scarb_metadata).await?;
+                    utils::get_world_diff_and_provider(starknet, world, scarb_metadata).await?;
 
                 let (record, _, _) = model::model_get(
                     tag.to_string(),
