@@ -45,7 +45,10 @@ pub mod world {
         StoragePointerWriteAccess,
     };
     use starknet::syscalls::{deploy_syscall, get_class_hash_at_syscall, replace_class_syscall};
-    use starknet::{ClassHash, ContractAddress, SyscallResultTrait, get_caller_address, get_tx_info};
+    use starknet::{
+        ClassHash, ContractAddress, SyscallResultTrait, get_block_number, get_caller_address,
+        get_tx_info,
+    };
     use super::Permission;
 
     pub const WORLD: felt252 = 0;
@@ -118,6 +121,7 @@ pub mod world {
         pub contract_selector: felt252,
         pub class_hash: ClassHash,
         pub contract_address: ContractAddress,
+        pub block_number: u64,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -130,6 +134,7 @@ pub mod world {
         pub contract_selector: felt252,
         pub class_hash: ClassHash,
         pub contract_address: ContractAddress,
+        pub block_number: u64,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -877,6 +882,7 @@ pub mod world {
                         contract_selector,
                         class_hash,
                         contract_address,
+                        block_number: get_block_number(),
                     },
                 );
         }
@@ -913,6 +919,7 @@ pub mod world {
                                 contract_selector,
                                 class_hash,
                                 contract_address,
+                                block_number: get_block_number(),
                             },
                         );
                 },
