@@ -20,3 +20,7 @@ pub fn set_caller_address(contract: ContractAddress) {
 pub fn get_default_caller_address() -> ContractAddress {
     snforge_std::test_address()
 }
+
+pub fn set_block_number(block_number: u64) {
+    snforge_std::start_cheat_block_number_global(block_number);
+}
