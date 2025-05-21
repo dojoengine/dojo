@@ -1,5 +1,5 @@
-pub mod addresses;
-pub use addresses::*;
+pub mod cheatcodes;
+pub use cheatcodes::*;
 
 pub mod declare_deploy;
 pub use declare_deploy::*;

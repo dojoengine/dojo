@@ -61,6 +61,7 @@ mod tests {
         mod acl;
         mod contract;
         mod event;
+        mod external_contract;
         mod metadata;
         mod model;
         mod namespace;
