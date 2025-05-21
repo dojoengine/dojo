@@ -48,7 +48,6 @@ dojo-utils = { path = "crates/dojo/utils" }
 # metrics
 dojo-metrics = { path = "crates/metrics" }
 
-# dojo-lang
 dojo-bindgen = { path = "crates/dojo/bindgen" }
 dojo-core = { path = "crates/dojo/core" }
 dojo-test-utils = { path = "crates/dojo/test-utils" }
