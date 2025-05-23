@@ -108,7 +108,7 @@ fn test_set_metadata_not_possible_for_random_account() {
 }
 
 #[test]
-#[should_panic(expected: ('ENTRYPOINT_NOT_FOUND', 'ENTRYPOINT_FAILED'))]
+#[should_panic(expected: 'ENTRYPOINT_NOT_FOUND')]
 fn test_set_metadata_through_malicious_contract() {
     let (world, model_selector) = deploy_world_and_foo();
     let world = world.dispatcher;

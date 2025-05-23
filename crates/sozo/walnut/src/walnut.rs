@@ -1,6 +1,7 @@
 use anyhow::Result;
 use clap::{Args, Subcommand};
-use scarb::core::Config;
+use scarb_metadata::Metadata;
+use scarb_ui::Ui;
 
 use crate::WalnutDebugger;
 
@@ -22,15 +23,12 @@ pub enum WalnutVerifyCommand {
 pub struct WalnutVerifyOptions {}
 
 impl WalnutArgs {
-    pub fn run(self, config: &Config) -> Result<()> {
-        let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
-        config.tokio_handle().block_on(async {
-            match self.command {
-                WalnutVerifyCommand::Verify(_options) => {
-                    WalnutDebugger::verify(&ws).await?;
-                }
+    pub async fn run(self, scarb_metadata: &Metadata, ui: &Ui) -> Result<()> {
+        match self.command {
+            WalnutVerifyCommand::Verify(_options) => {
+                WalnutDebugger::verify(scarb_metadata, ui).await?;
             }
-            Ok(())
-        })
+        }
+        Ok(())
     }
 }

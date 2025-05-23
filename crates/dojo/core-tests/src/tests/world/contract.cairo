@@ -76,7 +76,7 @@ fn test_upgrade_from_world() {
 
 #[test]
 #[available_gas(l2_gas: 7000000)]
-#[should_panic(expected: ('ENTRYPOINT_NOT_FOUND', 'ENTRYPOINT_FAILED'))]
+#[should_panic(expected: 'ENTRYPOINT_NOT_FOUND')]
 fn test_upgrade_from_world_not_world_provider() {
     let world = deploy_world();
     let world = world.dispatcher;
@@ -240,7 +240,7 @@ fn test_deploy_contract_with_unregistered_namespace() {
 // It's ENTRYPOINT_NOT_FOUND for now as in this example the contract is not a dojo contract
 // and it's not the account that is calling the deploy_contract function.
 #[test]
-#[should_panic(expected: ('ENTRYPOINT_NOT_FOUND', 'ENTRYPOINT_FAILED'))]
+#[should_panic(expected: 'ENTRYPOINT_NOT_FOUND')]
 fn test_deploy_contract_through_malicious_contract() {
     let world = deploy_world();
     let world = world.dispatcher;
@@ -346,7 +346,7 @@ fn test_upgrade_contract_from_random_account() {
 }
 
 #[test]
-#[should_panic(expected: ('ENTRYPOINT_NOT_FOUND', 'ENTRYPOINT_FAILED'))]
+#[should_panic(expected: 'ENTRYPOINT_NOT_FOUND')]
 fn test_upgrade_contract_through_malicious_contract() {
     let world = deploy_world();
     let world = world.dispatcher;

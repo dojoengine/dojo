@@ -11,8 +11,6 @@ slot = { workspace = true, optional = true }
 anyhow.workspace = true
 async-trait.workspace = true
 cainome.workspace = true
-cairo-lang-sierra.workspace = true
-cairo-lang-test-plugin.workspace = true
 cairo-lang-test-runner.workspace = true
 camino.workspace = true
 clap.workspace = true
@@ -22,9 +20,8 @@ dojo-bindgen.workspace = true
 dojo-types.workspace = true
 dojo-utils.workspace = true
 dojo-world.workspace = true
-notify = "7.0.0"
 resolve-path = "0.1.0"
-scarb.workspace = true
+scarb-interop.workspace = true
 scarb-metadata.workspace = true
 scarb-ui.workspace = true
 semver.workspace = true
@@ -32,7 +29,6 @@ serde.workspace = true
 serde_json.workspace = true
 smol_str.workspace = true
 sozo-ops.workspace = true
-sozo-scarbext.workspace = true
 sozo-walnut = { workspace = true, optional = true }
 starknet.workspace = true
 starknet-crypto.workspace = true
@@ -43,6 +39,7 @@ tracing.workspace = true
 tracing-log.workspace = true
 tracing-subscriber.workspace = true
 url.workspace = true
+tokio.workspace = true
 
 reqwest = { workspace = true, features = [ "json" ] }
 
@@ -50,7 +47,6 @@ reqwest = { workspace = true, features = [ "json" ] }
 dojo-test-utils = { workspace = true, features = [ "build-examples" ] }
 katana-runner = { git = "https://github.com/dojoengine/katana", rev = "5cb249c0fa59fa6b7c88b32557e7baf8944cdb3d" }
 serde_json.workspace = true
-tokio.workspace = true
 
 [features]
 default = [ "controller", "walnut" ]

@@ -1,17 +1,17 @@
 [package]
+name = "scarb-interop"
 edition.workspace = true
-name = "dojo-world-abigen"
 version.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 anyhow.workspace = true
-cairo-lang-starknet.workspace = true
-cairo-lang-starknet-classes.workspace = true
 camino.workspace = true
-cainome.workspace = true
-scarb-ui.workspace = true
+dojo-world.workspace = true
+toml.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-scarb-interop.workspace = true
+dunce.workspace = true
+scarb-metadata.workspace = true
+smol_str.workspace = true

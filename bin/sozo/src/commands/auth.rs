@@ -10,9 +10,9 @@ use dojo_world::config::ProfileConfig;
 use dojo_world::constants::WORLD;
 use dojo_world::contracts::{ContractInfo, WorldContract};
 use dojo_world::diff::{DiffPermissions, WorldDiff};
-use scarb::core::{Config, Workspace};
+use scarb_interop::MetadataDojoExt;
+use scarb_metadata::Metadata;
 use sozo_ops::migration_ui::MigrationUi;
-use sozo_scarbext::WorkspaceExt;
 use starknet::core::types::Felt;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
@@ -138,84 +138,81 @@ Some examples:
 }
 
 impl AuthArgs {
-    pub fn run(self, config: &Config) -> Result<()> {
+    pub async fn run(self, scarb_metadata: &Metadata) -> Result<()> {
         trace!(args = ?self);
 
-        let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
-        let profile_config = ws.load_profile_config()?;
+        let profile_config = scarb_metadata.load_dojo_profile_config()?;
 
-        config.tokio_handle().block_on(async {
-            match self.command {
-                AuthCommand::Grant { kind, common, .. } => {
-                    let contracts = utils::contracts_from_manifest_or_diff(
-                        common.account.clone(),
-                        common.starknet.clone(),
-                        common.world.clone(),
-                        &ws,
-                        false,
-                    )
-                    .await?;
+        match self.command {
+            AuthCommand::Grant { kind, common, .. } => {
+                let contracts = utils::contracts_from_manifest_or_diff(
+                    common.account.clone(),
+                    common.starknet.clone(),
+                    common.world.clone(),
+                    scarb_metadata,
+                    false,
+                )
+                .await?;
 
-                    let do_grant = true;
+                let do_grant = true;
 
-                    match kind {
-                        AuthKind::Writer { pairs } => {
-                            update_writers(&contracts, &common, &profile_config, pairs, do_grant)
-                                .await?;
-                        }
-                        AuthKind::Owner { pairs } => {
-                            update_owners(&contracts, &common, &profile_config, pairs, do_grant)
-                                .await?;
-                        }
+                match kind {
+                    AuthKind::Writer { pairs } => {
+                        update_writers(&contracts, &common, &profile_config, pairs, do_grant)
+                            .await?;
+                    }
+                    AuthKind::Owner { pairs } => {
+                        update_owners(&contracts, &common, &profile_config, pairs, do_grant)
+                            .await?;
                     }
                 }
-                AuthCommand::Revoke { kind, common, .. } => {
-                    let contracts = utils::contracts_from_manifest_or_diff(
-                        common.account.clone(),
-                        common.starknet.clone(),
-                        common.world.clone(),
-                        &ws,
-                        false,
-                    )
-                    .await?;
+            }
+            AuthCommand::Revoke { kind, common, .. } => {
+                let contracts = utils::contracts_from_manifest_or_diff(
+                    common.account.clone(),
+                    common.starknet.clone(),
+                    common.world.clone(),
+                    scarb_metadata,
+                    false,
+                )
+                .await?;
 
-                    let do_grant = false;
+                let do_grant = false;
 
-                    match kind {
-                        AuthKind::Writer { pairs } => {
-                            update_writers(&contracts, &common, &profile_config, pairs, do_grant)
-                                .await?;
-                        }
-                        AuthKind::Owner { pairs } => {
-                            update_owners(&contracts, &common, &profile_config, pairs, do_grant)
-                                .await?;
-                        }
+                match kind {
+                    AuthKind::Writer { pairs } => {
+                        update_writers(&contracts, &common, &profile_config, pairs, do_grant)
+                            .await?;
+                    }
+                    AuthKind::Owner { pairs } => {
+                        update_owners(&contracts, &common, &profile_config, pairs, do_grant)
+                            .await?;
                     }
                 }
-                AuthCommand::List { resource, show_address, starknet, world } => {
-                    list_permissions(resource, show_address, starknet, world, &ws).await?;
+            }
+            AuthCommand::List { resource, show_address, starknet, world } => {
+                list_permissions(resource, show_address, starknet, world, scarb_metadata).await?;
+            }
+            AuthCommand::Clone { revoke_from, common, from, to } => {
+                if from == to {
+                    anyhow::bail!(
+                        "Source and target are the same, please specify different source and \
+                         target."
+                    );
                 }
-                AuthCommand::Clone { revoke_from, common, from, to } => {
-                    if from == to {
-                        anyhow::bail!(
-                            "Source and target are the same, please specify different source and \
-                             target."
-                        );
-                    }
 
-                    clone_permissions(common, &ws, revoke_from, from, to).await?;
-                }
-            };
+                clone_permissions(common, scarb_metadata, revoke_from, from, to).await?;
+            }
+        };
 
-            Ok(())
-        })
+        Ok(())
     }
 }
 
 /// Clones the permissions from the source contract address to the target contract address.
 async fn clone_permissions(
     options: CommonAuthOptions,
-    ws: &Workspace<'_>,
+    scarb_metadata: &Metadata,
     revoke_from: bool,
     from_tag_or_address: String,
     to_tag_or_address: String,
@@ -229,7 +226,7 @@ async fn clone_permissions(
         options.account,
         options.starknet,
         options.world,
-        ws,
+        scarb_metadata,
         &mut Some(&mut migration_ui),
     )
     .await?;
@@ -401,14 +398,15 @@ async fn list_permissions(
     show_address: bool,
     starknet: StarknetOptions,
     world: WorldOptions,
-    ws: &Workspace<'_>,
+    scarb_metadata: &Metadata,
 ) -> Result<()> {
     let mut migration_ui = MigrationUi::new_with_frames(
         "Gathering permissions from the world...",
         vec!["🌍", "🔍", "📜"],
     );
 
-    let (world_diff, _, _) = utils::get_world_diff_and_provider(starknet, world, ws).await?;
+    let (world_diff, _, _) =
+        utils::get_world_diff_and_provider(starknet, world, scarb_metadata).await?;
 
     // Sort resources by tag for deterministic output.
     let mut resources = world_diff.resources.values().collect::<Vec<_>>();

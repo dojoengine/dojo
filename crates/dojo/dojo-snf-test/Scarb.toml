@@ -8,7 +8,7 @@ cairo-version = "=2.11.4"
 
 [dependencies]
 starknet = "=2.11.4"
-snforge_std = "0.40.0"
+snforge_std = "0.43.1"
 assert_macros = "2.11.4"
 
 dojo = { path = "../core" }

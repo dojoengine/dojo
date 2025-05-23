@@ -1,20 +1,18 @@
 use std::collections::HashMap;
 use std::io::{self, Write};
-use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::{anyhow, Context, Result};
-use camino::Utf8PathBuf;
 use colored::*;
 use dojo_utils::provider as provider_utils;
 use dojo_world::config::ProfileConfig;
 use dojo_world::contracts::ContractInfo;
 use dojo_world::diff::WorldDiff;
 use dojo_world::local::WorldLocal;
-use scarb::core::{TomlManifest, Workspace};
-use semver::Version;
+use scarb_interop::MetadataDojoExt;
+use scarb_metadata::Metadata;
+use semver::{Version, VersionReq};
 use sozo_ops::migration_ui::MigrationUi;
-use sozo_scarbext::WorkspaceExt;
 use starknet::accounts::{Account, ConnectedAccount};
 use starknet::core::types::Felt;
 use starknet::core::utils as snutils;
@@ -50,7 +48,7 @@ Sozo supports some prefixes that you can use to automatically parse some types. 
     - u256farr: A fixed-size array of u256.
     - no prefix: A cairo felt or any type that fit into one felt.";
 
-/// Computes the world address based on the provided options.
+// Computes the world address based on the provided options.
 pub fn get_world_address(
     profile_config: &ProfileConfig,
     world: &WorldOptions,
@@ -82,56 +80,16 @@ pub fn get_world_address(
     }
 }
 
-pub fn verify_cairo_version_compatibility(manifest_path: &Utf8PathBuf) -> Result<()> {
-    let scarb_cairo_version = scarb::version::get().cairo;
-    // When manifest file doesn't exists ignore it. Would be the case during `sozo init`
-    let Ok(manifest) = TomlManifest::read_from_path(manifest_path) else { return Ok(()) };
-
-    // For any kind of error, like package not specified, cairo version not specified return
-    // without an error
-    let Some(package) = manifest.package else { return Ok(()) };
-
-    let Some(cairo_version) = package.cairo_version else { return Ok(()) };
-
-    // only when cairo version is found in manifest file confirm that it matches
-    let version_req = cairo_version.as_defined().unwrap();
-    let version = Version::from_str(scarb_cairo_version.version).unwrap();
-    if !version_req.matches(&version) {
-        anyhow::bail!(
-            "Cairo version {} found in {} is not supported by dojo (expecting {}). Please change \
-             the Cairo version in your manifest or update dojo.",
-            version_req,
-            manifest_path,
-            version,
-        );
-    };
-
-    Ok(())
-}
-
-pub fn generate_version() -> String {
-    const DOJO_VERSION: &str = env!("CARGO_PKG_VERSION");
-    let scarb_version = scarb::version::get().version;
-    let scarb_sierra_version = scarb::version::get().sierra.version;
-    let scarb_cairo_version = scarb::version::get().cairo.version;
-
-    let version_string = format!(
-        "{}\nscarb: {}\ncairo: {}\nsierra: {}",
-        DOJO_VERSION, scarb_version, scarb_cairo_version, scarb_sierra_version,
-    );
-    version_string
-}
-
-/// Sets up the world diff from the environment and returns associated starknet account.
-///
-/// Returns the world address, the world diff, the starknet provider and the rpc url.
+// Sets up the world diff from the environment and returns associated starknet account.
+//
+// Returns the world address, the world diff, the starknet provider and the rpc url.
 pub async fn get_world_diff_and_provider(
     starknet: StarknetOptions,
     world: WorldOptions,
-    ws: &Workspace<'_>,
+    scarb_metadata: &Metadata,
 ) -> Result<(WorldDiff, JsonRpcClient<HttpTransport>, String)> {
-    let world_local = ws.load_world_local()?;
-    let profile_config = ws.load_profile_config()?;
+    let world_local = scarb_metadata.load_dojo_world_local()?;
+    let profile_config = scarb_metadata.load_dojo_profile_config()?;
 
     let env = profile_config.env.as_ref();
 
@@ -140,7 +98,8 @@ pub async fn get_world_diff_and_provider(
     let (provider, rpc_url) = starknet.provider(env)?;
     let provider = Arc::new(provider);
     if (provider_utils::health_check_provider(provider.clone()).await).is_err() {
-        warn!(target: LOG_TARGET, "Provider health check failed during sozo inspect, inspecting locally and all resources will appeared as `Created`. Remote resources will not be fetched.");
+        warn!(target: LOG_TARGET, "Provider health check failed during sozo inspect, inspecting locally
+and all resources will appeared as `Created`. Remote resources will not be fetched.");
         return Ok((
             WorldDiff::from_local(world_local)?,
             Arc::try_unwrap(provider).map_err(|_| anyhow!("Failed to unwrap Arc"))?,
@@ -180,22 +139,22 @@ pub async fn get_world_diff_and_provider(
     Ok((world_diff, provider, rpc_url))
 }
 
-/// Sets up the world diff from the environment and returns associated starknet account.
-///
-/// Returns the world address, the world diff, the account and the rpc url.
-/// This would be convenient to have the rpc url retrievable from the [`Provider`] trait.
+// Sets up the world diff from the environment and returns associated starknet account.
+//
+// Returns the world address, the world diff, the account and the rpc url.
+// This would be convenient to have the rpc url retrievable from the [`Provider`] trait.
 pub async fn get_world_diff_and_account(
     account: AccountOptions,
     starknet: StarknetOptions,
     world: WorldOptions,
-    ws: &Workspace<'_>,
+    scarb_metadata: &Metadata,
     ui: &mut Option<&mut MigrationUi>,
 ) -> Result<(WorldDiff, SozoAccount<JsonRpcClient<HttpTransport>>, String)> {
-    let profile_config = ws.load_profile_config()?;
+    let profile_config = scarb_metadata.load_dojo_profile_config()?;
     let env = profile_config.env.as_ref();
 
     let (world_diff, provider, rpc_url) =
-        get_world_diff_and_provider(starknet.clone(), world, ws).await?;
+        get_world_diff_and_provider(starknet.clone(), world, scarb_metadata).await?;
 
     // Ensures we don't interfere with the spinner if a password must be prompted.
     if let Some(ui) = ui {
@@ -217,22 +176,20 @@ pub async fn get_world_diff_and_account(
     Ok((world_diff, account, rpc_url))
 }
 
-/// Checks if the provided version string is compatible with the expected version string using
-/// semantic versioning rules. Includes specific backward compatibility rules, e.g., version 0.6 is
-/// compatible with 0.7.
-///
-/// # Arguments
-///
-/// * `provided_version` - The version string provided by the user.
-/// * `expected_version` - The expected version string.
-///
-/// # Returns
-///
-/// * `Result<bool>` - Returns `true` if the provided version is compatible with the expected
-///   version, `false` otherwise.
+// Checks if the provided version string is compatible with the expected version string using
+// semantic versioning rules. Includes specific backward compatibility rules, e.g., version 0.6 is
+// compatible with 0.7.
+//
+// # Arguments
+//
+// * `provided_version` - The version string provided by the user.
+// * `expected_version` - The expected version string.
+//
+// # Returns
+//
+// * `Result<bool>` - Returns `true` if the provided version is compatible with the expected
+//   version, `false` otherwise.
 fn is_compatible_version(provided_version: &str, expected_version: &str) -> Result<bool> {
-    use semver::{Version, VersionReq};
-
     let provided_ver = Version::parse(provided_version)
         .map_err(|e| anyhow!("Failed to parse provided version '{}': {}", provided_version, e))?;
     let expected_ver = Version::parse(expected_version)
@@ -252,20 +209,20 @@ fn is_compatible_version(provided_version: &str, expected_version: &str) -> Resu
     Ok(expected_ver_req.matches(&provided_ver))
 }
 
-/// Returns the contracts from the manifest or from the diff.
+// Returns the contracts from the manifest or from the diff.
 #[allow(clippy::unnecessary_unwrap)]
 pub async fn contracts_from_manifest_or_diff(
     account: AccountOptions,
     starknet: StarknetOptions,
     world: WorldOptions,
-    ws: &Workspace<'_>,
+    scarb_metadata: &Metadata,
     force_diff: bool,
 ) -> Result<HashMap<String, ContractInfo>> {
-    let local_manifest = ws.read_manifest_profile()?;
+    let local_manifest = scarb_metadata.read_dojo_manifest_profile()?;
 
     let contracts: HashMap<String, ContractInfo> = if force_diff || local_manifest.is_none() {
         let (world_diff, _, _) =
-            get_world_diff_and_account(account, starknet, world, ws, &mut None).await?;
+            get_world_diff_and_account(account, starknet, world, scarb_metadata, &mut None).await?;
         (&world_diff).into()
     } else {
         let local_manifest = local_manifest.unwrap();
@@ -274,8 +231,7 @@ pub async fn contracts_from_manifest_or_diff(
 
     Ok(contracts)
 }
-
-/// Prompts the user to confirm an operation.
+// Prompts the user to confirm an operation.
 pub fn prompt_confirm(prompt: &str) -> Result<bool> {
     print!("{} [y/N]", prompt);
     io::stdout().flush()?;

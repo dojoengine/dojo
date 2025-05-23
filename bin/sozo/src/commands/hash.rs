@@ -7,8 +7,8 @@ use dojo_types::naming::{
     compute_bytearray_hash, compute_selector_from_tag, get_name_from_tag, get_namespace_from_tag,
     get_tag,
 };
-use scarb::core::Config;
-use sozo_scarbext::WorkspaceExt;
+use scarb_interop::MetadataDojoExt;
+use scarb_metadata::Metadata;
 use starknet::core::types::Felt;
 use starknet::core::utils::{get_selector_from_name, starknet_keccak};
 use starknet_crypto::{poseidon_hash_many, poseidon_hash_single};
@@ -102,7 +102,7 @@ impl HashArgs {
 
     pub fn find(
         &self,
-        config: &Config,
+        scarb_metadata: &Metadata,
         hash: &String,
         namespaces: Option<Vec<String>>,
         resources: Option<Vec<String>>,
@@ -110,9 +110,8 @@ impl HashArgs {
         let hash = Felt::from_str(hash)
             .map_err(|_| anyhow::anyhow!("The provided hash is not valid (hash: {hash})"))?;
 
-        let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
-        let profile_config = ws.load_profile_config()?;
-        let manifest = ws.read_manifest_profile()?;
+        let profile_config = scarb_metadata.load_dojo_profile_config()?;
+        let manifest = scarb_metadata.read_dojo_manifest_profile()?;
 
         let namespaces = namespaces.unwrap_or_else(|| {
             let mut ns_from_config = HashSet::new();
@@ -224,13 +223,13 @@ impl HashArgs {
         if hash_found { Ok(()) } else { bail!("No resource matches the provided hash.") }
     }
 
-    pub fn run(&self, config: &Config) -> Result<()> {
+    pub fn run(&self, scarb_metadata: &Metadata) -> Result<()> {
         trace!(args = ?self);
 
         match &self.command {
             HashCommand::Compute { input } => self.compute(input),
             HashCommand::Find { hash, namespaces, resources } => {
-                self.find(config, hash, namespaces.clone(), resources.clone())
+                self.find(scarb_metadata, hash, namespaces.clone(), resources.clone())
             }
         }
     }

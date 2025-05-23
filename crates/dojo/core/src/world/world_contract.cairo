@@ -684,7 +684,7 @@ pub mod world {
             let hash = bytearray_hash(@namespace);
 
             match self.resources.read(hash) {
-                Resource::Namespace => panic_with_byte_array(
+                Resource::Namespace(_) => panic_with_byte_array(
                     @errors::namespace_already_registered(@namespace),
                 ),
                 Resource::Unregistered => {
@@ -1387,7 +1387,7 @@ pub mod world {
         #[inline(always)]
         fn is_namespace_registered(self: @ContractState, namespace_hash: felt252) -> bool {
             match self.resources.read(namespace_hash) {
-                Resource::Namespace => true,
+                Resource::Namespace(_) => true,
                 _ => false,
             }
         }
