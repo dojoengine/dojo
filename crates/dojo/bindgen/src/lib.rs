@@ -12,13 +12,13 @@ use dojo_world::local::{ResourceLocal, WorldLocal};
 use error::BindgenResult;
 
 mod plugins;
-use plugins::BuiltinPlugin;
-pub use plugins::BuiltinPlugins;
 use plugins::recs::TypescriptRecsPlugin;
 use plugins::typescript::TypescriptPlugin;
 use plugins::typescript_v2::TypeScriptV2Plugin;
 use plugins::unity::UnityPlugin;
 use plugins::unrealengine::UnrealEnginePlugin;
+use plugins::BuiltinPlugin;
+pub use plugins::BuiltinPlugins;
 
 #[derive(Debug, PartialEq)]
 pub struct DojoModel {
