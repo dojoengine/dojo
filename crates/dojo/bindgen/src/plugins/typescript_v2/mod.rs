@@ -660,7 +660,7 @@ mod tests {
         };
 
         let data = gather_dojo_data(
-            &setup.package_dir("spawn-and-move"),
+            setup.manifest_path("spawn-and-move"),
             "dojo_examples",
             "dev",
             skip_migrations,

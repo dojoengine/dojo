@@ -12,7 +12,7 @@ use super::WorldContractReader;
 async fn test_world_contract_reader(sequencer: &RunnerCtx) {
     let setup = TestSetup::from_examples("../dojo/core", "../../examples/");
 
-    let manifest_dir = setup.package_dir("spawn-and-move");
+    let manifest_dir = setup.manifest_path("spawn-and-move");
     let target_dir = manifest_dir.join("target").join("dev");
 
     let mut account = sequencer.account(0);

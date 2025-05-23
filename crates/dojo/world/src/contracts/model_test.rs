@@ -19,7 +19,7 @@ async fn test_model(sequencer: &RunnerCtx) {
 
     let setup = TestSetup::from_examples("../dojo/core", "../../examples/");
 
-    let manifest_dir = setup.package_dir("spawn-and-move");
+    let manifest_dir = setup.manifest_dir("spawn-and-move");
     let target_dir = manifest_dir.join("target").join("dev");
 
     let (strat, _) = prepare_migration_with_world_and_seed(

@@ -49,8 +49,14 @@ impl TestSetup {
         TestSetup { root_dir: tmp_dir, dojo_core: dojo_core.clone(), manifest_paths }
     }
 
-    pub fn package_dir(&self, package_name: &str) -> Utf8PathBuf {
-        self.root_dir.join(package_name)
+    pub fn manifest_path(&self, package_name: &str) -> &Utf8PathBuf {
+        self.manifest_paths
+            .get(package_name)
+            .unwrap_or_else(|| panic!("No manifest for {}", package_name))
+    }
+
+    pub fn manifest_dir(&self, package_name: &str) -> Utf8PathBuf {
+        self.manifest_path(package_name).parent().unwrap().to_path_buf()
     }
 
     pub fn load_metadata(&self, package_name: &str, profile: Profile) -> Metadata {

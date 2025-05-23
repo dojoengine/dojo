@@ -12,13 +12,13 @@ use dojo_world::local::{ResourceLocal, WorldLocal};
 use error::BindgenResult;
 
 mod plugins;
+use plugins::BuiltinPlugin;
+pub use plugins::BuiltinPlugins;
 use plugins::recs::TypescriptRecsPlugin;
 use plugins::typescript::TypescriptPlugin;
 use plugins::typescript_v2::TypeScriptV2Plugin;
 use plugins::unity::UnityPlugin;
 use plugins::unrealengine::UnrealEnginePlugin;
-use plugins::BuiltinPlugin;
-pub use plugins::BuiltinPlugins;
 
 #[derive(Debug, PartialEq)]
 pub struct DojoModel {
@@ -257,9 +257,9 @@ mod tests {
             None
         };
 
-        dbg!(&setup.package_dir("spawn-and-move"));
+        dbg!(&setup.manifest_path("spawn-and-move"));
         let data =
-            gather_dojo_data(&setup.package_dir("spawn-and-move"), "ns", "dev", skip_migrations)
+            gather_dojo_data(setup.manifest_path("spawn-and-move"), "ns", "dev", skip_migrations)
                 .expect("Failed to gather dojo data");
 
         assert_eq!(data.models.len(), 8);
