@@ -13,11 +13,11 @@ pub struct ResourceMetadata {
 }
 
 pub fn default_address() -> starknet::ContractAddress {
-    starknet::contract_address_const::<0>()
+    0.try_into().unwrap()
 }
 
 pub fn default_class_hash() -> starknet::ClassHash {
-    starknet::class_hash::class_hash_const::<0>()
+    0.try_into().unwrap()
 }
 
 pub fn resource_metadata_selector(default_namespace_hash: felt252) -> felt252 {

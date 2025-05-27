@@ -169,25 +169,20 @@ fn collect_policies_from_contracts(
 mod tests {
     use std::collections::HashMap;
 
-    use dojo_test_utils::compiler::CompilerTestSetup;
+    use dojo_test_utils::setup::TestSetup;
     use dojo_world::contracts::ContractInfo;
-    use scarb::compiler::Profile;
-    use sozo_scarbext::WorkspaceExt;
+    use scarb_interop::{MetadataDojoExt, Profile};
     use starknet::macros::felt;
 
     use super::{collect_policies, PolicyMethod};
 
     #[test]
     fn collect_policies_from_project() {
-        let current_dir = std::env::current_dir().unwrap();
-        println!("Current directory: {:?}", current_dir);
-        let setup = CompilerTestSetup::from_examples("../../crates/dojo/core", "../../examples/");
-        let config = setup.build_test_config("spawn-and-move", Profile::DEV);
+        let setup = TestSetup::from_examples("../../crates/dojo/core", "../../examples/");
+        let scarb_metadata = setup.load_metadata("spawn-and-move", Profile::DEV);
 
-        let ws = scarb::ops::read_workspace(config.manifest_path(), &config)
-            .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"));
-
-        let manifest = ws.read_manifest_profile().expect("Failed to read manifest").unwrap();
+        let manifest =
+            scarb_metadata.read_dojo_manifest_profile().expect("Failed to read manifest").unwrap();
         let contracts: HashMap<String, ContractInfo> = (&manifest).into();
 
         let user_addr = felt!("0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba");
@@ -203,7 +198,9 @@ mod tests {
 
             // Compare the collected policies with the test data.
             assert_eq!(policies.len(), expected_policies.len());
-            expected_policies.iter().for_each(|p| assert!(policies.contains(p)));
+            expected_policies.iter().for_each(|p| {
+                assert!(policies.contains(p), "Policy method '{}' is missing", p.method)
+            });
         }
     }
 }

@@ -305,7 +305,7 @@ fn test_register_event_with_unregistered_namespace() {
 // It's ENTRYPOINT_NOT_FOUND for now as in this example the contract is not a dojo contract
 // and it's not the account that is calling the register_event function.
 #[test]
-#[should_panic(expected: ('ENTRYPOINT_NOT_FOUND', 'ENTRYPOINT_FAILED'))]
+#[should_panic(expected: 'ENTRYPOINT_NOT_FOUND')]
 fn test_register_event_through_malicious_contract() {
     let bob: ContractAddress = 0xb0b.try_into().unwrap();
     let malicious_contract = dojo_snf_test::declare_and_deploy("malicious_contract");

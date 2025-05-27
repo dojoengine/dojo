@@ -3,7 +3,7 @@ use core::result::ResultTrait;
 use core::traits::{Into, TryInto};
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait, WorldStorage, WorldStorageTrait, world};
 use starknet::ContractAddress;
-use crate::{declare, deploy, declare_event_contract, declare_model_contract};
+use crate::{declare, declare_event_contract, declare_model_contract, deploy};
 
 pub type TestClassHash = felt252;
 
