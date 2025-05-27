@@ -18,7 +18,7 @@ dojo = { path = "../../crates/dojo/core" }
 dojo_macros = { path = "../../crates/dojo/macros" }
 
 [dev-dependencies]
-snforge_std = "0.40.0"
+snforge_std = "0.43.1"
 assert_macros = "2.11.4"
 
 dojo_snf_test = { path = "../../crates/dojo/dojo-snf-test" }

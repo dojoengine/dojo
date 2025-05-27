@@ -2,16 +2,15 @@
 use std::sync::Arc;
 
 use anyhow::Result;
-use dojo_test_utils::compiler::CompilerTestSetup;
 use dojo_test_utils::migration::copy_spawn_and_move_db;
+use dojo_test_utils::setup::TestSetup;
 use dojo_utils::TxnConfig;
 use dojo_world::config::ResourceConfig;
 use dojo_world::contracts::WorldContract;
 use dojo_world::diff::WorldDiff;
 use dojo_world::services::MockUploadService;
 use katana_runner::RunnerCtx;
-use scarb::compiler::Profile;
-use sozo_scarbext::WorkspaceExt;
+use scarb_interop::{MetadataDojoExt, Profile};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use starknet_crypto::Felt;
@@ -26,12 +25,10 @@ async fn setup_migration(
     profile: Profile,
     provider: Arc<JsonRpcClient<HttpTransport>>,
 ) -> Result<WorldDiff> {
-    let setup = CompilerTestSetup::from_examples("../../dojo/core", "../../../examples/");
-    let config = setup.build_test_config(example_project, profile);
+    let setup = TestSetup::from_examples("../../dojo/core", "../../../examples/");
+    let metadata = setup.load_metadata(example_project, profile);
 
-    let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
-
-    let world_local = ws.load_world_local().unwrap();
+    let world_local = metadata.load_dojo_world_local().unwrap();
     let world_address = world_local.deterministic_world_address().unwrap();
 
     let whitelisted_namespaces = vec![];

@@ -12,8 +12,7 @@ dojo-utils.workspace = true
 dojo-world.workspace = true
 katana-runner.workspace = true
 reqwest = { workspace = true, features = [ "json" ] }
-scarb.workspace = true
+scarb-interop.workspace = true
 sozo-ops = { workspace = true, features = [ "test-utils" ] }
-sozo-scarbext.workspace = true
 starknet.workspace = true
 tokio.workspace = true

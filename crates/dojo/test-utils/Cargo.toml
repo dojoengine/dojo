@@ -6,18 +6,15 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
-anyhow.workspace = true
 assert_fs.workspace = true
 camino.workspace = true
-scarb.workspace = true
-scarb-ui.workspace = true
 toml.workspace = true
+scarb-interop.workspace = true
+scarb-metadata.workspace = true
 
 [build-dependencies]
 assert_fs.workspace = true
 camino.workspace = true
-scarb.workspace = true
-scarb-ui.workspace = true
 
 [features]
 build-examples = [  ]

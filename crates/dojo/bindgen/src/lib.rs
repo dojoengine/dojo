@@ -235,19 +235,17 @@ pub fn compare_tokens_by_type_name(a: &Token, b: &Token) -> Ordering {
 
 #[cfg(test)]
 mod tests {
-    use dojo_test_utils::compiler::CompilerTestSetup;
-    use scarb::compiler::Profile;
-    use sozo_scarbext::WorkspaceExt;
+    use dojo_test_utils::setup::TestSetup;
+    use scarb_interop::{MetadataDojoExt, Profile};
 
     use super::*;
 
     #[test]
     fn gather_data_ok() {
-        let setup = CompilerTestSetup::from_examples("../core", "../../../examples/");
-        let config = setup.build_test_config("spawn-and-move", Profile::DEV);
+        let setup = TestSetup::from_examples("../core", "../../../examples/");
+        let metadata = setup.load_metadata("spawn-and-move", Profile::DEV);
 
-        let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
-        let profile_config = ws.load_profile_config().unwrap();
+        let profile_config = metadata.load_dojo_profile_config().unwrap();
 
         let skip_migrations = if let Some(migration) = profile_config.migration {
             let mut skip_migration = vec![];
@@ -259,9 +257,9 @@ mod tests {
             None
         };
 
-        dbg!(&config.manifest_path());
+        dbg!(&setup.manifest_path("spawn-and-move"));
         let data =
-            gather_dojo_data(&config.manifest_path().to_path_buf(), "ns", "dev", skip_migrations)
+            gather_dojo_data(setup.manifest_path("spawn-and-move"), "ns", "dev", skip_migrations)
                 .expect("Failed to gather dojo data");
 
         assert_eq!(data.models.len(), 8);

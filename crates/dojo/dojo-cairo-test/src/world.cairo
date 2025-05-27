@@ -1,10 +1,9 @@
 use core::option::OptionTrait;
 use core::result::ResultTrait;
 use core::traits::{Into, TryInto};
-
-use starknet::{ContractAddress, syscalls::deploy_syscall};
-
-use dojo::world::{world, IWorldDispatcher, IWorldDispatcherTrait, WorldStorageTrait, WorldStorage};
+use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait, WorldStorage, WorldStorageTrait, world};
+use starknet::ContractAddress;
+use starknet::syscalls::deploy_syscall;
 
 pub type TestClassHash = felt252;
 
@@ -81,7 +80,7 @@ pub impl ContractDefImpl of ContractDefTrait {
                 "Cannot set init_calldata for address descriptor",
             ),
             ContractDescriptor::Named(_) => self.init_calldata = init_calldata,
-        };
+        }
 
         self
     }
@@ -157,7 +156,7 @@ pub fn spawn_test_world(namespaces_defs: Span<NamespaceDef>) -> WorldStorage {
                 },
             }
         }
-    };
+    }
 
     WorldStorageTrait::new(world, @first_namespace.unwrap())
 }
@@ -182,12 +181,12 @@ pub impl WorldStorageInternalTestImpl of WorldStorageTestTrait {
 
             for w in *c.writer_of {
                 (*self.dispatcher).grant_writer(*w, contract_address);
-            };
+            }
 
             for o in *c.owner_of {
                 (*self.dispatcher).grant_owner(*o, contract_address);
             };
-        };
+        }
 
         // Then, calls the dojo_init for each contract that is a dojo contract.
         for c in contracts {

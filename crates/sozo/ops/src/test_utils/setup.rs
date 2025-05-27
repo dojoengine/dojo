@@ -1,15 +1,13 @@
 use anyhow::Result;
-use dojo_test_utils::compiler::CompilerTestSetup;
 use dojo_test_utils::migration::prepare_migration_with_world_and_seed;
+use dojo_test_utils::setup::TestSetup;
 use dojo_utils::TxnConfig;
 use dojo_world::contracts::world::WorldContract;
 use dojo_world::metadata::get_default_namespace_from_ws;
 use dojo_world::migration::strategy::MigrationStrategy;
 use dojo_world::migration::world::WorldDiff;
 use katana_runner::KatanaRunner;
-use scarb::compiler::Profile;
-use scarb::core::{Config, Workspace};
-use scarb::ops;
+use scarb_interop::Profile;
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::types::{BlockId, BlockTag};
 use starknet::providers::jsonrpc::HttpTransport;
@@ -51,22 +49,9 @@ pub async fn get_declarers_from_sequencer(
 /// # Returns
 ///
 /// A [`Config`] object loaded from the spawn-and-moves Scarb.toml file.
-pub fn load_config() -> Config {
-    let setup = CompilerTestSetup::from_examples("../../dojo/core", "../../../examples/");
-    setup.build_test_config("spawn-and-move", Profile::DEV)
-}
-
-/// Setups the workspace for the spawn-and-moves project.
-///
-/// # Arguments
-/// * `config` - the project configuration.
-///
-/// # Returns
-///
-/// A [`Workspace`] loaded from the spawn-and-moves project.
-pub fn setup_ws(config: &Config) -> Workspace<'_> {
-    ops::read_workspace(config.manifest_path(), config)
-        .unwrap_or_else(|op| panic!("Error building workspace: {op:?}"))
+pub fn load_metadata() -> Metadata {
+    let setup = TestSetup::from_examples("../../dojo/core", "../../../examples/");
+    setup.load_metadata("spawn-and-move", Profile::DEV)
 }
 
 /// Prepare the migration for the spawn-and-moves project.
@@ -105,11 +90,11 @@ pub fn setup_migration(config: &Config, seed: &str) -> Result<(MigrationStrategy
 pub async fn setup(
     sequencer: &KatanaRunner,
 ) -> Result<WorldContract<SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>>> {
-    let config = load_config();
+    let metadata = load_metadata();
     let ws = setup_ws(&config);
     let ui = config.ui();
 
-    let (migration, diff) = setup_migration(&config, "dojo_examples")?;
+    let (migration, diff) = setup_migration(&metadata, "dojo_examples")?;
     let default_namespace = get_default_namespace_from_ws(&ws).unwrap();
 
     let mut account = sequencer.account(0);

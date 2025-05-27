@@ -60,6 +60,9 @@ jobs:
       image: ghcr.io/dojoengine/dojo-dev:v1.5.1
     steps:
       - uses: actions/checkout@v3
+      - uses: software-mansion/setup-scarb@v1
+        with:
+          scarb-version: "nightly-2025-05-08"
       - uses: Swatinem/rust-cache@v2
       - uses: actions/download-artifact@v4
         with:
@@ -112,14 +115,8 @@ jobs:
       - uses: actions/checkout@v3
       - uses: software-mansion/setup-scarb@v1
         with:
-          scarb-version: "2.11.4"
-      - run: |
-          scarb --manifest-path crates/dojo/core/Scarb.toml fmt --check
-          scarb --manifest-path crates/dojo/macros/Scarb.toml fmt --check
-          scarb --manifest-path crates/dojo/core-tests/Scarb.toml fmt --check
-          scarb --manifest-path examples/simple/Scarb.toml fmt --check
-          scarb --manifest-path examples/spawn-and-move/Scarb.toml fmt --check
-          scarb --manifest-path examples/benchmark/Scarb.toml fmt --check
+          scarb-version: "nightly-2025-05-08"
+      - run: bash scripts/cairo_fmt.sh
 
   dojo-core-test:
     needs: build
@@ -127,7 +124,7 @@ jobs:
     steps:
       - uses: software-mansion/setup-scarb@v1
         with:
-          scarb-version: "2.11.4"
+          scarb-version: "nightly-2025-05-08"
       - uses: actions/download-artifact@v4
         with:
           name: dojo-bins
@@ -144,7 +141,7 @@ jobs:
     steps:
       - uses: software-mansion/setup-scarb@v1
         with:
-          scarb-version: "2.11.4"
+          scarb-version: "nightly-2025-05-08"
       - uses: actions/download-artifact@v4
         with:
           name: dojo-bins

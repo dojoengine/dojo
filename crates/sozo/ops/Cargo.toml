@@ -26,15 +26,14 @@ starknet-crypto.workspace = true
 thiserror.workspace = true
 toml.workspace = true
 tracing.workspace = true
+scarb-interop.workspace = true
 
 dojo-test-utils = { workspace = true, features = [ "build-examples" ], optional = true }
 
 [dev-dependencies]
 assert_fs.workspace = true
 dojo-test-utils = { workspace = true, features = [ "build-examples" ] }
-katana-runner.workspace = true
-scarb.workspace = true
-sozo-scarbext.workspace = true
+katana-runner = { git = "https://github.com/dojoengine/katana", rev = "5cb249c0fa59fa6b7c88b32557e7baf8944cdb3d" }
 tokio.workspace = true
 
 [features]

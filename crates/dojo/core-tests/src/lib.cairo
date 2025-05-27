@@ -1,4 +1,4 @@
-#[cfg(target: "test")]
+#[cfg(test)]
 mod utils;
 
 #[cfg(test)]
