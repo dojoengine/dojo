@@ -72,10 +72,9 @@ pub impl WorldStorageInternalImpl of WorldStorageTrait {
             Resource::Contract((
                 contract_address, _,
             )) => {
-                // TODO: once starknet 0.13.4 is out, uncomment that.
-                // let class_hash = starknet::syscalls::get_class_hash_at_syscall(contract_address)
-                //    .expect('Failed to get class hash');
-                Option::Some((contract_address, 0.try_into().unwrap()))
+                let class_hash = starknet::syscalls::get_class_hash_at_syscall(contract_address)
+                    .expect('Failed to get class hash');
+                Option::Some((contract_address, class_hash))
             },
             Resource::Library((
                 class_hash, _,
@@ -627,4 +626,3 @@ fn get_serialized_member(
         Option::None => panic_with_felt252('bad member id'),
     }
 }
-
