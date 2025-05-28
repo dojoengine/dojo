@@ -6,7 +6,7 @@ members = [
 	"crates/dojo/bindgen",
 	"crates/dojo/core",
 	"crates/dojo/macros",
-	"crates/dojo/test-utils",
+	"crates/dojo/test-utils", "crates/dojo/tools/cairo-bench",
 	"crates/dojo/types",
 	"crates/dojo/utils",
 	"crates/dojo/world",

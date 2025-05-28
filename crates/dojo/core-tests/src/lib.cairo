@@ -3,6 +3,10 @@ mod utils;
 
 #[cfg(test)]
 mod tests {
+    mod benches {
+        mod layout;
+    }
+
     mod contract;
 
     mod event {
