@@ -775,6 +775,7 @@ mod tests {
             contract_selector,
             class_hash: Felt::TWO.into(),
             contract_address: Felt::ONE.into(),
+            block_number: 123,
         });
 
         world_remote.match_event(event, &NO_WHITELIST).unwrap();
@@ -807,6 +808,7 @@ mod tests {
             contract_selector,
             class_hash: Felt::TWO.into(),
             contract_address: Felt::ONE.into(),
+            block_number: 123,
         });
 
         world_remote.match_event(event, &NO_WHITELIST).unwrap();
