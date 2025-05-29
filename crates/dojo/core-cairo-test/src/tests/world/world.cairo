@@ -328,9 +328,7 @@ pub fn dns_valid_class_hash() {
     world.sync_perms_and_inits([].span());
 
     let (_, class_hash) = world.dns(@"bar").unwrap();
-    assert!(class_hash == 0.try_into().unwrap());
-    // TODO: once starknet 0.13.4 is out, uncomment that.
-//assert!(class_hash == bar::TEST_CLASS_HASH.try_into().unwrap());
+    assert(class_hash == bar::TEST_CLASS_HASH.try_into().unwrap(), 'should return bar class hash');
 }
 
 #[test]
