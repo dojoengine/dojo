@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1746714268071,
+  "lastUpdate": 1748485992298,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -63528,6 +63528,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 56095743705,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "kronovet@gmail.com",
+            "name": "Daniel Kronovet",
+            "username": "kronosapiens"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e070399721b001f28d5df05e29d5fa4924e9861b",
+          "message": "fix(world): return class_hash properly in dns_from_selector (#3227)\n\n* Return class_hash properly in dns_from_selector\npick 572ccbe Add getResidentPreferencePosition\n\n* Bump example cairo versions to 1.5.0 and re-generate spawn-and-move",
+          "timestamp": "2025-05-28T20:19:33-06:00",
+          "tree_id": "7651875aa0d35c2bafd0fec1ef958c8694f3c37a",
+          "url": "https://github.com/dojoengine/dojo/commit/e070399721b001f28d5df05e29d5fa4924e9861b"
+        },
+        "date": 1748485988349,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 54616106541,
             "range": "± 0",
             "unit": "ns/iter"
           }
