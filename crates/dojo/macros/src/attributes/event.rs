@@ -5,8 +5,7 @@ use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
 
 use crate::constants::{DOJO_INTROSPECT_DERIVE, DOJO_PACKED_DERIVE, EXPECTED_DERIVE_ATTR_NAMES};
 use crate::helpers::{
-    self, DiagnosticsExt, DojoChecker, DojoFormatter, DojoParser, DojoTokenizer, Member,
-    ProcMacroResultExt,
+    self, DiagnosticsExt, DojoChecker, DojoFormatter, DojoParser, DojoTokenizer, ProcMacroResultExt,
 };
 
 #[derive(Debug)]
@@ -52,16 +51,23 @@ impl DojoEvent {
             return failure;
         }
 
+        // generic events are not allowed
+        if let Some(failure) = DojoChecker::is_struct_generic("event", db, struct_ast) {
+            return failure;
+        }
+
         let members = DojoParser::parse_members(
             db,
             &struct_ast.members(db).elements(db),
             &mut event.diagnostics,
         );
 
-        DojoEvent::serialize_keys_and_values(
-            &members,
+        DojoFormatter::serialize_keys_and_values(
+            db,
+            &struct_ast.members(db).elements(db),
             &mut event.serialized_keys,
             &mut event.serialized_values,
+            true,
         );
 
         if event.serialized_keys.is_empty() {
@@ -183,6 +189,10 @@ pub impl {type_name}Definition of dojo::event::EventDefinition<{type_name}> {{
 }}
 
 pub impl {type_name}ModelParser of dojo::model::model::ModelParser<{type_name}> {{
+    fn deserialize(ref values: Span<felt252>) -> Option<{type_name}> {{
+        // always use Serde as event data are never stored in the world storage.
+        core::serde::Serde::<{type_name}>::deserialize(ref values)
+    }}
     fn serialize_keys(self: @{type_name}) -> Span<felt252> {{
         let mut serialized = core::array::ArrayTrait::new();
         {serialized_keys}
@@ -243,19 +253,5 @@ pub mod e_{type_name} {{
 }}"
         );
         TokenStream::new(vec![DojoTokenizer::tokenize(&content)])
-    }
-
-    pub fn serialize_keys_and_values(
-        members: &[Member],
-        serialized_keys: &mut Vec<String>,
-        serialized_values: &mut Vec<String>,
-    ) {
-        members.iter().for_each(|member| {
-            if member.key {
-                serialized_keys.push(DojoFormatter::serialize_member_ty(member, true));
-            } else {
-                serialized_values.push(DojoFormatter::serialize_member_ty(member, true));
-            }
-        });
     }
 }

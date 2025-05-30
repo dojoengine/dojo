@@ -2,42 +2,42 @@ use dojo::meta::introspect::{Enum, Introspect, Member, Struct, Ty, TyCompareTrai
 use dojo::meta::{FieldLayout, Layout};
 use crate::utils::GasCounterTrait;
 
-#[derive(Drop, Introspect)]
+#[derive(Drop, Introspect, Serde, Default)]
 struct Base {
     value: u32,
 }
 
-#[derive(Drop, Introspect)]
+#[derive(Drop, Introspect, Serde)]
 struct WithArray {
     value: u32,
     arr: Array<u8>,
 }
 
-#[derive(Drop, Introspect)]
+#[derive(Drop, Introspect, Serde)]
 struct WithByteArray {
     value: u32,
     arr: ByteArray,
 }
 
-#[derive(Drop, Introspect)]
+#[derive(Drop, Introspect, Serde)]
 struct WithTuple {
     value: u32,
     arr: (u8, u16, u32),
 }
 
-#[derive(Drop, Introspect)]
+#[derive(Drop, Introspect, Serde)]
 struct WithNestedTuple {
     value: u32,
     arr: (u8, (u16, u128, u256), u32),
 }
 
-#[derive(Drop, Introspect)]
+#[derive(Drop, Introspect, Serde)]
 struct WithNestedArrayInTuple {
     value: u32,
     arr: (u8, (u16, Array<u128>, u256), u32),
 }
 
-#[derive(Drop, IntrospectPacked)]
+#[derive(Drop, IntrospectPacked, Serde, Default)]
 struct Vec3 {
     x: u32,
     y: u32,
@@ -55,69 +55,82 @@ struct StructInnerNotPacked {
     x: Base,
 }
 
-#[derive(Drop, Introspect)]
+#[derive(Drop, Introspect, Serde, Default)]
 enum EnumNoData {
+    #[default]
     One,
     Two,
     Three,
 }
 
-#[derive(Drop, Introspect)]
+#[derive(Drop, Introspect, Serde, Default)]
 enum EnumWithSameData {
+    #[default]
     One: u256,
     Two: u256,
     Three: u256,
 }
 
-#[derive(Drop, Introspect)]
+#[derive(Drop, Introspect, Serde, Default)]
 enum EnumWithSameTupleData {
+    #[default]
     One: (u256, u32),
     Two: (u256, u32),
     Three: (u256, u32),
 }
 
-#[derive(Drop, Introspect)]
+#[derive(Drop, Introspect, Serde, Default)]
 enum EnumWithVariousData {
+    #[default]
     One: u32,
     Two: (u8, u16),
     Three: Array<u128>,
 }
 
-
-#[derive(Drop, IntrospectPacked)]
+#[derive(Drop, IntrospectPacked, Serde, Default)]
 enum EnumPacked {
+    #[default]
     A: u32,
     B: u32,
 }
 
-#[derive(Drop, IntrospectPacked)]
+#[derive(Drop, IntrospectPacked, Serde, Default)]
 enum EnumInnerPacked {
+    #[default]
     A: (EnumPacked, Vec3),
     B: (EnumPacked, Vec3),
 }
 
-#[derive(Drop, IntrospectPacked)]
+#[derive(Drop, IntrospectPacked, Serde, Default)]
 enum EnumInnerNotPacked {
+    #[default]
     A: (EnumPacked, Base),
     B: (EnumPacked, Base),
 }
 
 // no variant data or unit type must be equivalent and
 // so, must compile successfully
-#[derive(Drop, IntrospectPacked)]
+#[derive(Drop, IntrospectPacked, Serde, Default)]
 enum EnumPackedWithUnitType {
+    #[default]
     A,
     B: (),
 }
 
-#[derive(Drop, Introspect)]
+#[derive(Drop, Introspect, Serde)]
 struct StructWithOption {
     x: Option<u16>,
 }
 
-#[derive(Drop, Introspect)]
-struct Generic<T> {
+#[derive(Drop, Introspect, Serde)]
+struct GenericStruct<T> {
     value: T,
+}
+
+#[derive(Drop, Introspect, Serde, Default)]
+enum GenericEnum<T> {
+    #[default]
+    A: T,
 }
 
 fn field(selector: felt252, layout: Layout) -> FieldLayout {
@@ -142,9 +155,13 @@ fn _enum(values: Array<Option<Layout>>) -> Layout {
         }
 
         let v = *values.at(i);
+
+        // in the new Dojo storage layout, variants start from 1.
+        let variant = i + 1;
+
         match v {
-            Option::Some(v) => { items.append(field(i.into(), v)); },
-            Option::None => { items.append(field(i.into(), fixed(array![]))) },
+            Option::Some(v) => { items.append(field(variant.into(), v)); },
+            Option::None => { items.append(field(variant.into(), fixed(array![]))) },
         }
 
         i += 1;
@@ -158,9 +175,48 @@ fn arr(item_layout: Layout) -> Layout {
 }
 
 #[test]
-#[available_gas(l2_gas: 2000000)]
-fn test_generic_introspect() {
-    let _generic = Generic { value: Base { value: 123 } };
+fn test_generic_struct_introspect() {
+    let size = Introspect::<GenericStruct<u32>>::size();
+    assert!(size.is_some());
+    assert!(size.unwrap() == 1);
+
+    let layout = Introspect::<GenericStruct<u32>>::layout();
+    assert_eq!(layout, Layout::Struct([field(selector!("value"), fixed(array![32]))].span()));
+
+    let ty = Introspect::<GenericStruct<u32>>::ty();
+    assert_eq!(
+        ty,
+        Ty::Struct(
+            Struct {
+                name: 'GenericStruct',
+                attrs: [].span(),
+                children: [Member { name: 'value', attrs: [].span(), ty: Ty::Primitive('u32') }]
+                    .span(),
+            },
+        ),
+    );
+}
+
+#[test]
+fn test_generic_enum_introspect() {
+    let size = Introspect::<GenericEnum<u32>>::size();
+    assert!(size.is_some());
+    assert_eq!(size.unwrap(), 2);
+
+    let layout = Introspect::<GenericEnum<u32>>::layout();
+    assert_eq!(layout, _enum(array![Option::Some(fixed(array![32]))]));
+
+    let ty = Introspect::<GenericEnum<u32>>::ty();
+    assert_eq!(
+        ty,
+        Ty::Enum(
+            Enum {
+                name: 'GenericEnum',
+                attrs: [].span(),
+                children: [('A', Ty::Primitive('u32'))].span(),
+            },
+        ),
+    );
 }
 
 #[test]

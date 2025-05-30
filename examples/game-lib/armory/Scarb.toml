@@ -10,4 +10,8 @@ starknet.workspace = true
 dojo.workspace = true
 dojo_macros.workspace = true
 
+[dev-dependencies]
+cairo_test = "2.11.4"
+dojo_cairo_test = { path = "../../../crates/dojo/dojo-cairo-test" }
+
 [lib]

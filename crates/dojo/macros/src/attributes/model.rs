@@ -5,10 +5,13 @@ use cairo_lang_parser::utils::SimpleParserDatabase;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
 
-use crate::constants::{DOJO_INTROSPECT_DERIVE, DOJO_PACKED_DERIVE, EXPECTED_DERIVE_ATTR_NAMES};
+use crate::constants::{
+    DOJO_INTROSPECT_DERIVE, DOJO_LEGACY_STORAGE_DERIVE, DOJO_PACKED_DERIVE,
+    EXPECTED_DERIVE_ATTR_NAMES,
+};
 use crate::helpers::{
-    self, DiagnosticsExt, DojoChecker, DojoFormatter, DojoParser, DojoTokenizer, Member,
-    ProcMacroResultExt,
+    self, get_serialization_path, DiagnosticsExt, DojoChecker, DojoFormatter, DojoParser,
+    DojoTokenizer, Member, ProcMacroResultExt,
 };
 
 #[derive(Debug)]
@@ -22,6 +25,11 @@ pub struct DojoModel {
     serialized_keys: Vec<String>,
     serialized_values: Vec<String>,
     unique_hash: String,
+    model_layout: String,
+    use_legacy_storage: bool,
+    model_deserialize_path: String,
+    deserialized_values: Vec<String>,
+    deserialized_modelvalue: String,
 }
 
 impl DojoModel {
@@ -36,6 +44,11 @@ impl DojoModel {
             serialized_keys: vec![],
             serialized_values: vec![],
             unique_hash: String::default(),
+            model_layout: String::default(),
+            use_legacy_storage: false,
+            model_deserialize_path: String::default(),
+            deserialized_values: vec![],
+            deserialized_modelvalue: String::default(),
         }
     }
     pub fn process(token_stream: TokenStream) -> ProcMacroResult {
@@ -57,6 +70,20 @@ impl DojoModel {
             return failure;
         }
 
+        // generic models are not allowed
+        if let Some(failure) = DojoChecker::is_struct_generic("model", db, struct_ast) {
+            return failure;
+        }
+
+        let derive_attr_names = DojoParser::extract_derive_attr_names(
+            db,
+            &mut model.diagnostics,
+            struct_ast.attributes(db).query_attr(db, "derive"),
+        );
+
+        model.use_legacy_storage =
+            derive_attr_names.contains(&DOJO_LEGACY_STORAGE_DERIVE.to_string());
+
         let mut values: Vec<Member> = vec![];
         let mut keys: Vec<Member> = vec![];
         let mut key_types: Vec<String> = vec![];
@@ -73,15 +100,31 @@ impl DojoModel {
             &mut model.diagnostics,
         );
 
+        DojoFormatter::serialize_keys_and_values(
+            db,
+            &struct_ast.members(db).elements(db),
+            &mut model.serialized_keys,
+            &mut model.serialized_values,
+            model.use_legacy_storage,
+        );
+
+        struct_ast.members(db).elements(db).iter().filter(|m| !m.has_attr(db, "key")).for_each(
+            |member_ast| {
+                model.deserialized_values.push(DojoFormatter::deserialize_member_ty(
+                    db,
+                    member_ast,
+                    model.use_legacy_storage,
+                ));
+            },
+        );
+
         members.iter().for_each(|member| {
             if member.key {
                 keys.push(member.clone());
                 key_types.push(member.ty.clone());
                 key_attrs.push(format!("*self.{}", member.name.clone()));
-                model.serialized_keys.push(DojoFormatter::serialize_member_ty(member, true));
             } else {
                 values.push(member.clone());
-                model.serialized_values.push(DojoFormatter::serialize_member_ty(member, true));
                 model
                     .members_values
                     .push(DojoFormatter::get_member_declaration(&member.name, &member.ty));
@@ -127,12 +170,6 @@ impl DojoModel {
             (key_attrs.first().unwrap().to_string(), key_types.first().unwrap().to_string())
         };
 
-        let derive_attr_names = DojoParser::extract_derive_attr_names(
-            db,
-            &mut model.diagnostics,
-            struct_ast.attributes(db).query_attr(db, "derive"),
-        );
-
         // Build the list of derive attributes to set on "ModelValue" struct.
         model.model_value_derive_attr_names = derive_attr_names
             .iter()
@@ -170,6 +207,28 @@ impl DojoModel {
         )
         .to_string();
 
+        let value_names = values.iter().map(|v| v.name.clone()).collect::<Vec<_>>().join(",\n");
+
+        model.deserialized_modelvalue = format!(
+            "Option::Some({}Value {{
+                {value_names}
+            }})",
+            model.model_type
+        );
+
+        model.model_deserialize_path = get_serialization_path(model.use_legacy_storage);
+
+        model.model_layout = if model.use_legacy_storage {
+            format!(
+                "dojo::meta::layout::build_legacy_layout(
+                    dojo::meta::Introspect::<{}>::layout()
+                )",
+                model.model_type
+            )
+        } else {
+            format!("dojo::meta::Introspect::<{}>::layout()", model.model_type)
+        };
+
         let model_code = model.generate_model_code();
 
         let original_struct = DojoTokenizer::rebuild_original_struct(db, struct_ast);
@@ -203,6 +262,11 @@ impl DojoModel {
             serialized_keys,
             serialized_values,
             unique_hash,
+            model_layout,
+            use_legacy_storage,
+            model_deserialize_path,
+            deserialized_values,
+            deserialized_modelvalue,
         ) = (
             &self.model_type,
             format!("#[derive({})]", self.model_value_derive_attr_names.join(", ")),
@@ -212,6 +276,11 @@ impl DojoModel {
             self.serialized_keys.join(""),
             self.serialized_values.join(""),
             &self.unique_hash,
+            &self.model_layout,
+            self.use_legacy_storage,
+            &self.model_deserialize_path,
+            &self.deserialized_values.join(""),
+            &self.deserialized_modelvalue,
         );
 
         let content = format!(
@@ -245,7 +314,12 @@ pub mod m_{model_type}_definition {{
 
         #[inline(always)]
         fn layout() -> dojo::meta::Layout {{
-            dojo::meta::Introspect::<{model_type}>::layout()
+            {model_layout}
+        }}
+
+        #[inline(always)]
+        fn use_legacy_storage() -> bool {{
+            {use_legacy_storage}
         }}
 
         #[inline(always)]
@@ -272,6 +346,9 @@ pub impl {model_type}ModelValueDefinition = \
              m_{model_type}_definition::{model_type}DefinitionImpl<{model_type}Value>;
 
 pub impl {model_type}ModelParser of dojo::model::model::ModelParser<{model_type}> {{
+    fn deserialize(ref values: Span<felt252>) -> Option<{model_type}> {{
+        {model_deserialize_path}::<{model_type}>::deserialize(ref values)
+    }}
     fn serialize_keys(self: @{model_type}) -> Span<felt252> {{
         let mut serialized = core::array::ArrayTrait::new();
         {serialized_keys}
@@ -286,10 +363,26 @@ pub impl {model_type}ModelParser of dojo::model::model::ModelParser<{model_type}
 
 pub impl {model_type}ModelValueParser of \
              dojo::model::model_value::ModelValueParser<{model_type}Value> {{
+    fn deserialize(ref values: Span<felt252>) -> Option<{model_type}Value> {{
+        {model_deserialize_path}::<{model_type}Value>::deserialize(ref values)
+    }}
     fn serialize_values(self: @{model_type}Value) -> Span<felt252> {{
         let mut serialized = core::array::ArrayTrait::new();
         {serialized_values}
         core::array::ArrayTrait::span(@serialized)
+    }}
+}}
+
+// Note that {model_type}DojoStore is implemented through the Introspect derive attribute
+// as any structs.
+
+pub impl {model_type}ValueDojoStore of dojo::storage::DojoStore<{model_type}Value> {{
+    fn serialize(self: @{model_type}Value, ref serialized: Array<felt252>) {{
+        {serialized_values}
+    }}
+    fn deserialize(ref values: Span<felt252>) -> Option<{model_type}Value> {{
+        {deserialized_values}
+        {deserialized_modelvalue}
     }}
 }}
 

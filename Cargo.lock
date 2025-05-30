@@ -2788,6 +2788,7 @@ dependencies = [
  "cairo-lang-syntax",
  "cairo-lang-utils",
  "dojo-types",
+ "itertools 0.12.1",
  "regex",
  "smol_str",
  "starknet 0.12.0",
