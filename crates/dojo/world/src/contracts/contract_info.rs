@@ -20,7 +20,7 @@ use starknet::core::types::Felt;
 use tracing::trace;
 
 use crate::diff::{Manifest, ResourceDiff, WorldDiff};
-use crate::local::ResourceLocal;
+use crate::local::{ExternalContractLocal, ResourceLocal};
 use crate::remote::ResourceRemote;
 
 #[derive(Debug, PartialEq)]
@@ -116,13 +116,18 @@ impl From<&WorldDiff> for HashMap<String, ContractInfo> {
                     );
                 }
                 ResourceDiff::Created(ResourceLocal::ExternalContract(l)) => {
+                    let (tag, contract_address, entrypoints) = match l {
+                        ExternalContractLocal::SozoManaged(l) => {
+                            (tag.clone(), l.computed_address, l.entrypoints.clone())
+                        }
+                        ExternalContractLocal::SelfManaged(l) => {
+                            (tag.clone(), l.contract_address, vec![])
+                        }
+                    };
+
                     contracts.insert(
                         tag.clone(),
-                        ContractInfo {
-                            tag_or_name: tag.clone(),
-                            address: l.computed_address,
-                            entrypoints: l.entrypoints.clone(),
-                        },
+                        ContractInfo { tag_or_name: tag, address: contract_address, entrypoints },
                     );
                 }
                 ResourceDiff::Updated(
@@ -133,12 +138,17 @@ impl From<&WorldDiff> for HashMap<String, ContractInfo> {
                     ResourceLocal::ExternalContract(l),
                     ResourceRemote::ExternalContract(r),
                 ) => {
+                    let entrypoints = match l {
+                        ExternalContractLocal::SozoManaged(l) => l.entrypoints.clone(),
+                        ExternalContractLocal::SelfManaged(_) => vec![],
+                    };
+
                     contracts.insert(
                         tag.clone(),
                         ContractInfo {
                             tag_or_name: tag.clone(),
                             address: r.common.address,
-                            entrypoints: l.entrypoints.clone(),
+                            entrypoints,
                         },
                     );
                 }
@@ -158,7 +168,10 @@ mod tests {
 
     use super::*;
     use crate::diff::{DojoContract, DojoLibrary, DojoModel, WorldContract};
-    use crate::local::{CommonLocalInfo, ContractLocal, ExternalContractLocal, WorldLocal};
+    use crate::local::{
+        CommonLocalInfo, ContractLocal, ExternalContractLocal, SozoManagedExternalContractLocal,
+        WorldLocal,
+    };
 
     #[test]
     fn test_manifest_to_contracts_info() {
@@ -266,37 +279,40 @@ mod tests {
             systems: vec!["system_1".to_string()],
         }));
 
-        local.add_resource(ResourceLocal::ExternalContract(ExternalContractLocal {
-            common: CommonLocalInfo {
-                name: "Instance1".to_string(),
-                namespace: "ns".to_string(),
-                class: SierraClass {
-                    sierra_program: vec![],
-                    sierra_program_debug_info: SierraClassDebugInfo {
-                        type_names: vec![],
-                        libfunc_names: vec![],
-                        user_func_names: vec![],
+        local.add_resource(ResourceLocal::ExternalContract(ExternalContractLocal::SozoManaged(
+            SozoManagedExternalContractLocal {
+                common: CommonLocalInfo {
+                    name: "Instance1".to_string(),
+                    namespace: "ns".to_string(),
+                    class: SierraClass {
+                        sierra_program: vec![],
+                        sierra_program_debug_info: SierraClassDebugInfo {
+                            type_names: vec![],
+                            libfunc_names: vec![],
+                            user_func_names: vec![],
+                        },
+                        contract_class_version: "".to_string(),
+                        entry_points_by_type: EntryPointsByType {
+                            constructor: vec![],
+                            external: vec![],
+                            l1_handler: vec![],
+                        },
+                        abi: vec![],
                     },
-                    contract_class_version: "".to_string(),
-                    entry_points_by_type: EntryPointsByType {
-                        constructor: vec![],
-                        external: vec![],
-                        l1_handler: vec![],
-                    },
-                    abi: vec![],
+                    casm_class: None,
+                    class_hash: felt!("0x3333"),
+                    casm_class_hash: felt!("0x3333"),
                 },
-                casm_class: None,
-                class_hash: felt!("0x3333"),
-                casm_class_hash: felt!("0x3333"),
+                contract_name: "C1".to_string(),
+                salt: felt!("0x01"),
+                constructor_data: vec![],
+                encoded_constructor_data: vec![],
+                computed_address: Felt::from_hex("0x1234").unwrap(),
+                entrypoints: vec!["entry_1".to_string()],
+                is_upgradeable: true,
+                block_number: Some(123),
             },
-            contract_name: "C1".to_string(),
-            salt: felt!("0x01"),
-            constructor_data: vec![],
-            encoded_constructor_data: vec![],
-            computed_address: Felt::from_hex("0x1234").unwrap(),
-            entrypoints: vec!["entry_1".to_string()],
-            is_upgradeable: true,
-        }));
+        )));
 
         let world_diff = WorldDiff::from_local(local).unwrap();
 

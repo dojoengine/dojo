@@ -41,7 +41,26 @@ pub struct ContractLocal {
 }
 
 #[derive(Debug, Clone)]
-pub struct ExternalContractLocal {
+#[allow(clippy::large_enum_variant)]
+pub enum ExternalContractLocal {
+    SelfManaged(SelfManagedExternalContractLocal),
+    SozoManaged(SozoManagedExternalContractLocal),
+}
+
+#[derive(Debug, Clone)]
+pub struct SelfManagedExternalContractLocal {
+    /// The name of the contract.
+    pub name: String,
+    /// The namespace used to register the resource remotely.
+    pub namespace: String,
+    // the contract address
+    pub contract_address: Felt,
+    // the block number from where to start indexing
+    pub block_number: u64,
+}
+
+#[derive(Debug, Clone)]
+pub struct SozoManagedExternalContractLocal {
     /// Common information about the resource.
     pub common: CommonLocalInfo,
     // The Cairo contract name (common.name is the instance name)
@@ -59,6 +78,8 @@ pub struct ExternalContractLocal {
     // indicates if the contract is upgradeable or if it has to be
     // deployed at another address in case of upgrade.
     pub is_upgradeable: bool,
+    // the block number from where to start indexing
+    pub block_number: Option<u64>,
 }
 
 #[derive(Debug, Clone)]
@@ -109,7 +130,10 @@ impl ResourceLocal {
     pub fn name(&self) -> String {
         match self {
             ResourceLocal::Contract(c) => c.common.name.clone(),
-            ResourceLocal::ExternalContract(c) => c.common.name.clone(),
+            ResourceLocal::ExternalContract(c) => match c {
+                ExternalContractLocal::SozoManaged(c) => c.common.name.clone(),
+                ExternalContractLocal::SelfManaged(c) => c.name.clone(),
+            },
             ResourceLocal::Model(m) => m.common.name.clone(),
             ResourceLocal::Event(e) => e.common.name.clone(),
             ResourceLocal::Namespace(n) => n.name.clone(),
@@ -122,7 +146,10 @@ impl ResourceLocal {
         match self {
             ResourceLocal::Namespace(n) => n.name.clone(),
             ResourceLocal::Contract(c) => c.common.namespace.clone(),
-            ResourceLocal::ExternalContract(c) => c.common.namespace.clone(),
+            ResourceLocal::ExternalContract(c) => match c {
+                ExternalContractLocal::SozoManaged(c) => c.common.namespace.clone(),
+                ExternalContractLocal::SelfManaged(c) => c.namespace.clone(),
+            },
             ResourceLocal::Model(m) => m.common.namespace.clone(),
             ResourceLocal::Event(e) => e.common.namespace.clone(),
             ResourceLocal::Library(l) => l.common.namespace.clone(),
@@ -133,7 +160,10 @@ impl ResourceLocal {
     pub fn class_hash(&self) -> Felt {
         match self {
             ResourceLocal::Contract(c) => c.common.class_hash,
-            ResourceLocal::ExternalContract(c) => c.common.class_hash,
+            ResourceLocal::ExternalContract(c) => match c {
+                ExternalContractLocal::SozoManaged(c) => c.common.class_hash,
+                ExternalContractLocal::SelfManaged(_) => Felt::ZERO,
+            },
             ResourceLocal::Model(m) => m.common.class_hash,
             ResourceLocal::Event(e) => e.common.class_hash,
             ResourceLocal::Library(l) => l.common.class_hash,
@@ -145,7 +175,10 @@ impl ResourceLocal {
     pub fn abi(&self) -> Vec<AbiEntry> {
         match self {
             ResourceLocal::Contract(c) => c.common.class.abi.clone(),
-            ResourceLocal::ExternalContract(c) => c.common.class.abi.clone(),
+            ResourceLocal::ExternalContract(c) => match c {
+                ExternalContractLocal::SozoManaged(c) => c.common.class.abi.clone(),
+                ExternalContractLocal::SelfManaged(_) => Vec::new(),
+            },
             ResourceLocal::Model(m) => m.common.class.abi.clone(),
             ResourceLocal::Event(e) => e.common.class.abi.clone(),
             ResourceLocal::Library(l) => l.common.class.abi.clone(),
@@ -207,7 +240,12 @@ impl ResourceLocal {
     pub fn common(&self) -> &CommonLocalInfo {
         match self {
             ResourceLocal::Contract(c) => &c.common,
-            ResourceLocal::ExternalContract(c) => &c.common,
+            ResourceLocal::ExternalContract(c) => match c {
+                ExternalContractLocal::SozoManaged(c) => &c.common,
+                ExternalContractLocal::SelfManaged(_) => {
+                    panic!("Self-managed external contract has no common info.")
+                }
+            },
             ResourceLocal::Model(m) => &m.common,
             ResourceLocal::Event(e) => &e.common,
             ResourceLocal::Namespace(_) => panic!("Namespace has no common info."),
@@ -231,11 +269,17 @@ impl ExternalContractLocal {
 
     /// Returns the name of the resource.
     pub fn name(&self) -> String {
-        self.common.name.clone()
+        match self {
+            Self::SozoManaged(c) => c.common.name.clone(),
+            Self::SelfManaged(c) => c.name.clone(),
+        }
     }
 
     /// Returns the namespace of the resource.
     pub fn namespace(&self) -> String {
-        self.common.namespace.clone()
+        match self {
+            Self::SozoManaged(c) => c.common.namespace.clone(),
+            Self::SelfManaged(c) => c.namespace.clone(),
+        }
     }
 }

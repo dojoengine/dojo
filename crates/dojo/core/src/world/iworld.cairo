@@ -90,12 +90,14 @@ pub trait IWorld<T> {
     /// * `contract_name` - The Starknet contract name.
     /// * `instance_name` - A name given to this instance of `contract_name`.
     /// * `contract_address` - The address of the deployed contract.
+    /// * `block_number` - The block number to use to start contract indexing.
     fn register_external_contract(
         ref self: T,
         namespace: ByteArray,
         contract_name: ByteArray,
         instance_name: ByteArray,
         contract_address: ContractAddress,
+        block_number: u64,
     );
 
     /// Registers and declare a library associated with the world and returns the class_hash of
@@ -156,11 +158,13 @@ pub trait IWorld<T> {
     /// * `namespace` - The namespace of the external contract.
     /// * `instance_name` - The contract instance name.
     /// * `contract_address` - The new address of the deployed contract.
+    /// * `block_number` - The block number to use to start contract indexing.
     fn upgrade_external_contract(
         ref self: T,
         namespace: ByteArray,
         instance_name: ByteArray,
         contract_address: ContractAddress,
+        block_number: u64,
     );
 
     /// Emits a custom event that was previously registered in the world.

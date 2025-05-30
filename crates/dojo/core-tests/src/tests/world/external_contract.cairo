@@ -32,12 +32,17 @@ fn test_register_external_contract() {
     let contract_name = "ERC20";
     let instance_name = "GoldToken";
     let selector = selector_from_namespace_and_name(DOJO_NSH, @instance_name);
+    let block_number = 123_u64;
 
     let mut spy = spy_events();
 
     world
         .register_external_contract(
-            namespace.clone(), contract_name.clone(), instance_name.clone(), token_address,
+            namespace.clone(),
+            contract_name.clone(),
+            instance_name.clone(),
+            token_address,
+            block_number,
         );
 
     assert(world.is_owner(selector, bob), 'ext. contract not registered');
@@ -55,7 +60,7 @@ fn test_register_external_contract() {
                             contract_selector: selector,
                             class_hash,
                             contract_address: token_address,
-                            block_number: 123,
+                            block_number,
                         },
                     ),
                 ),
@@ -73,8 +78,8 @@ fn test_register_already_registered_external_contract() {
 
     let token_address: ContractAddress = 'gold'.try_into().unwrap();
 
-    world.register_external_contract("dojo", "ERC20", "GoldToken", token_address);
-    world.register_external_contract("dojo", "ERC20", "GoldToken", token_address);
+    world.register_external_contract("dojo", "ERC20", "GoldToken", token_address, 0);
+    world.register_external_contract("dojo", "ERC20", "GoldToken", token_address, 0);
 }
 
 #[test]
@@ -83,7 +88,7 @@ fn test_register_external_contract_in_a_not_registered_namespace() {
     let world = deploy_world();
     let world = world.dispatcher;
 
-    world.register_external_contract("dojo2", "ERC20", "GoldToken", 'gold'.try_into().unwrap());
+    world.register_external_contract("dojo2", "ERC20", "GoldToken", 'gold'.try_into().unwrap(), 0);
 }
 
 #[test]
@@ -96,7 +101,7 @@ fn test_register_external_contract_without_owner_permission_on_namespace() {
     dojo_snf_test::set_account_address(bob);
     dojo_snf_test::set_caller_address(bob);
 
-    world.register_external_contract("dojo", "ERC20", "GoldToken", 'gold'.try_into().unwrap());
+    world.register_external_contract("dojo", "ERC20", "GoldToken", 'gold'.try_into().unwrap(), 0);
 }
 
 #[test]
@@ -120,6 +125,7 @@ fn test_upgrade_external_contract() {
     let contract_name = "ERC20";
     let instance_name = "GoldToken";
     let selector = selector_from_namespace_and_name(DOJO_NSH, @instance_name);
+    let block_number = 123_u64;
 
     world
         .register_external_contract(
@@ -127,11 +133,15 @@ fn test_upgrade_external_contract() {
             contract_name.clone(),
             instance_name.clone(),
             'gold'.try_into().unwrap(),
+            0,
         );
 
     let mut spy = spy_events();
 
-    world.upgrade_external_contract(namespace.clone(), instance_name.clone(), new_token_address);
+    world
+        .upgrade_external_contract(
+            namespace.clone(), instance_name.clone(), new_token_address, block_number,
+        );
 
     spy
         .assert_emitted(
@@ -145,7 +155,7 @@ fn test_upgrade_external_contract() {
                             contract_selector: selector,
                             contract_address: new_token_address,
                             class_hash,
-                            block_number: 123,
+                            block_number,
                         },
                     ),
                 ),
@@ -161,13 +171,13 @@ fn test_upgrade_external_contract_without_owner_permission() {
     let world = deploy_world();
     let world = world.dispatcher;
 
-    world.register_external_contract("dojo", "ERC20", "GoldToken", 'gold'.try_into().unwrap());
+    world.register_external_contract("dojo", "ERC20", "GoldToken", 'gold'.try_into().unwrap(), 0);
 
     let bob: ContractAddress = 0xb0b.try_into().unwrap();
     dojo_snf_test::set_account_address(bob);
     dojo_snf_test::set_caller_address(bob);
 
-    world.upgrade_external_contract("dojo", "GoldToken", 'new_gold'.try_into().unwrap());
+    world.upgrade_external_contract("dojo", "GoldToken", 'new_gold'.try_into().unwrap(), 0);
 }
 
 #[test]
@@ -176,7 +186,7 @@ fn test_upgrade_external_contract_without_being_registered_first() {
     let world = deploy_world();
     let world = world.dispatcher;
 
-    world.upgrade_external_contract("dojo", "GoldToken", 'new_gold'.try_into().unwrap());
+    world.upgrade_external_contract("dojo", "GoldToken", 'new_gold'.try_into().unwrap(), 0);
 }
 
 #[test]
@@ -185,5 +195,5 @@ fn test_upgrade_external_contract_with_already_registered_resource_conflict() {
     let (world, _) = deploy_world_and_foo();
     let world = world.dispatcher;
 
-    world.upgrade_external_contract("dojo", "Foo", 'new_gold'.try_into().unwrap());
+    world.upgrade_external_contract("dojo", "Foo", 'new_gold'.try_into().unwrap(), 0);
 }
