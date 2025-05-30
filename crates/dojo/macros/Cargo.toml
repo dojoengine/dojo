@@ -25,3 +25,4 @@ cainome-cairo-serde.workspace = true
 starknet-crypto.workspace = true
 starknet.workspace = true
 regex.workspace = true
+itertools.workspace = true
