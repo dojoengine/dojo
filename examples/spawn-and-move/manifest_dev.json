@@ -1,7 +1,7 @@
 {
   "world": {
-    "class_hash": "0x61f356b64356aa750e441ae65fc8b4d9f141e7a73335400c7b5a16ab04c5861",
-    "address": "0x73f3ef4904767b51b256fb3202f12bf70e3dcf487329f4e3b7d58c06f5b3000",
+    "class_hash": "0x21008ae5eb02fbad0dada5bf82838ab742d9b7a76f4974ad494e37a2cd13038",
+    "address": "0x723ee69ab5dfb81e9a294ae9bbc424e86bfc56ec7e3fde474712489066f8560",
     "seed": "dojo_examples",
     "name": "example",
     "entrypoints": [
@@ -392,6 +392,10 @@
               {
                 "name": "contract_address",
                 "type": "core::starknet::contract_address::ContractAddress"
+              },
+              {
+                "name": "block_number",
+                "type": "core::integer::u64"
               }
             ],
             "outputs": [],
@@ -508,6 +512,10 @@
               {
                 "name": "contract_address",
                 "type": "core::starknet::contract_address::ContractAddress"
+              },
+              {
+                "name": "block_number",
+                "type": "core::integer::u64"
               }
             ],
             "outputs": [],
@@ -1010,6 +1018,11 @@
             "name": "contract_address",
             "type": "core::starknet::contract_address::ContractAddress",
             "kind": "data"
+          },
+          {
+            "name": "block_number",
+            "type": "core::integer::u64",
+            "kind": "data"
           }
         ]
       },
@@ -1041,6 +1054,11 @@
           {
             "name": "contract_address",
             "type": "core::starknet::contract_address::ContractAddress",
+            "kind": "data"
+          },
+          {
+            "name": "block_number",
+            "type": "core::integer::u64",
             "kind": "data"
           }
         ]
@@ -1457,8 +1475,8 @@
   },
   "contracts": [
     {
-      "address": "0x3429e4b214e0234c3d65b33b1cad29ea648244842424c6dc7b4f5e1461f5e01",
-      "class_hash": "0x16710d8c1bb22e0dec6fe8737c8b7888e0e4aa621298798b9325b5fe9cd6423",
+      "address": "0x682fe3b23f0ba6c530a1e763cae97b3c215742240c31639be74532763be705c",
+      "class_hash": "0x14cb73f280d6635e6d8a0182abec9b984e858c82912b6d462082bf752282e34",
       "abi": [
         {
           "type": "impl",
@@ -1811,7 +1829,7 @@
       ]
     },
     {
-      "address": "0x30260a9ccfe2577e4f7d29e74f93f72b9a9616fdc1bc767a7422247ec899090",
+      "address": "0x233a6f8579b81a080b16db6480b6ba2dc8e07d5aa6310f35f34fe907dd077fe",
       "class_hash": "0x1372814d45ad33782ac108850c646b503a7984d47fe72c0bfb7b98b4801941e",
       "abi": [
         {
@@ -2005,7 +2023,7 @@
       ]
     },
     {
-      "address": "0x26484f90a6b381b6c974d0653e295a870dbfa8582e709626f48d9607d38aecc",
+      "address": "0x7945300e7431ef54f9d5e0ea36b3577dfb3947d058ae5300e367fcd1f21b111",
       "class_hash": "0x107e12907f077cccbf5414b63d18f667f087d29d5869864d7c9532833a5dab3",
       "abi": [
         {
@@ -2181,7 +2199,7 @@
       ]
     },
     {
-      "address": "0x58747fb6ad9989262582ef6e11e5a64cb275e9cea181ee6a269a783b44d79cf",
+      "address": "0x201df17ea18f5727f4d09a8c34a46d1a0af71a9cc873c519743be2a216e0299",
       "class_hash": "0x1c824ab016a1000dff997f4e0c6451c7b04744ef59cc7f8fbac8a325c35ba82",
       "abi": [
         {
@@ -2364,8 +2382,8 @@
       ]
     },
     {
-      "address": "0x2f99271ff6c32832b65e845ad4ffd6b5e389a484caf6e3d51b1864278501f70",
-      "class_hash": "0x16710d8c1bb22e0dec6fe8737c8b7888e0e4aa621298798b9325b5fe9cd6423",
+      "address": "0x5526fde245f2451cb6adacec587d659df9fafb3180122d80dc534d72b3b376a",
+      "class_hash": "0x14cb73f280d6635e6d8a0182abec9b984e858c82912b6d462082bf752282e34",
       "abi": [
         {
           "type": "impl",
@@ -3827,7 +3845,8 @@
         "renounceOwnership",
         "emit_metadata_update",
         "emit_batch_metadata_update"
-      ]
+      ],
+      "block_number": null
     },
     {
       "class_hash": "0x6910d29e4e5fccce2bc3da8759f242318a324daf6b48d3c80287165140511de",
@@ -3913,7 +3932,8 @@
       ],
       "entrypoints": [
         "upgrade"
-      ]
+      ],
+      "block_number": null
     },
     {
       "class_hash": "0x19f8f2dae7b9b09b3243e30beb37a29a8a01e91409bd6d2ee2d253336d47659",
@@ -4483,7 +4503,8 @@
         "renounce_ownership",
         "transferOwnership",
         "renounceOwnership"
-      ]
+      ],
+      "block_number": null
     },
     {
       "class_hash": "0x3fd772ef209c598eb62a292a80bcb63c3cb52a12832e42b1d0284a3a7a95d4e",
@@ -5443,7 +5464,8 @@
         "renounceOwnership",
         "emit_metadata_update",
         "emit_batch_metadata_update"
-      ]
+      ],
+      "block_number": null
     },
     {
       "class_hash": "0x7bfd851dbbba64e84510940d3b114239a86b31b2d49789616faab3154db78f6",
@@ -5520,7 +5542,8 @@
       "encoded_constructor_calldata": [],
       "entrypoints": [
         "upgrade"
-      ]
+      ],
+      "block_number": null
     },
     {
       "class_hash": "0x19f8f2dae7b9b09b3243e30beb37a29a8a01e91409bd6d2ee2d253336d47659",
@@ -6090,7 +6113,8 @@
         "renounce_ownership",
         "transferOwnership",
         "renounceOwnership"
-      ]
+      ],
+      "block_number": null
     },
     {
       "class_hash": "0x19f8f2dae7b9b09b3243e30beb37a29a8a01e91409bd6d2ee2d253336d47659",
@@ -6660,7 +6684,8 @@
         "renounce_ownership",
         "transferOwnership",
         "renounceOwnership"
-      ]
+      ],
+      "block_number": null
     },
     {
       "class_hash": "0x6910d29e4e5fccce2bc3da8759f242318a324daf6b48d3c80287165140511de",
@@ -6746,7 +6771,8 @@
       ],
       "entrypoints": [
         "upgrade"
-      ]
+      ],
+      "block_number": null
     }
   ]
 }

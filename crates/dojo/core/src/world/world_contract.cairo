@@ -46,10 +46,7 @@ pub mod world {
         StoragePointerWriteAccess,
     };
     use starknet::syscalls::{deploy_syscall, get_class_hash_at_syscall, replace_class_syscall};
-    use starknet::{
-        ClassHash, ContractAddress, SyscallResultTrait, get_block_number, get_caller_address,
-        get_tx_info,
-    };
+    use starknet::{ClassHash, ContractAddress, SyscallResultTrait, get_caller_address, get_tx_info};
     use super::Permission;
 
     pub const WORLD: felt252 = 0;
@@ -838,6 +835,7 @@ pub mod world {
             contract_name: ByteArray,
             instance_name: ByteArray,
             contract_address: ContractAddress,
+            block_number: u64,
         ) {
             let caller = get_caller_address();
             let class_hash = get_class_hash_at_syscall(contract_address).unwrap_syscall();
@@ -881,7 +879,7 @@ pub mod world {
                         contract_selector,
                         class_hash,
                         contract_address,
-                        block_number: get_block_number(),
+                        block_number,
                     },
                 );
         }
@@ -891,6 +889,7 @@ pub mod world {
             namespace: ByteArray,
             instance_name: ByteArray,
             contract_address: ContractAddress,
+            block_number: u64,
         ) {
             let class_hash = get_class_hash_at_syscall(contract_address).unwrap_syscall();
 
@@ -918,7 +917,7 @@ pub mod world {
                                 contract_selector,
                                 class_hash,
                                 contract_address,
-                                block_number: get_block_number(),
+                                block_number,
                             },
                         );
                 },

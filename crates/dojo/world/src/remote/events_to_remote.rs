@@ -277,6 +277,7 @@ impl WorldRemote {
                         &e.instance_name.to_string()?,
                         e.contract_address.into(),
                     ),
+                    block_number: e.block_number,
                 });
                 trace!(?r, "External contract registered.");
 
@@ -369,6 +370,10 @@ impl WorldRemote {
                     return Ok(());
                 };
                 trace!(?resource, "External contract upgraded.");
+
+                if let ResourceRemote::ExternalContract(r) = resource {
+                    r.block_number = e.block_number;
+                }
 
                 resource.push_class_hash(e.class_hash.into());
             }
@@ -798,6 +803,7 @@ mod tests {
 
         let resource = ResourceRemote::ExternalContract(ExternalContractRemote {
             common: CommonRemoteInfo::new(Felt::ONE, "ns", "c1", Felt::ONE),
+            block_number: 123,
         });
 
         world_remote.add_resource(resource);
@@ -814,9 +820,8 @@ mod tests {
         world_remote.match_event(event, &NO_WHITELIST).unwrap();
 
         let resource = world_remote.resources.get(&contract_selector).unwrap();
-        assert_eq!(
-            resource.as_external_contract_or_panic().common.class_hashes,
-            vec![Felt::ONE, Felt::TWO]
-        );
+        let external_contract = resource.as_external_contract_or_panic();
+        assert_eq!(external_contract.common.class_hashes, vec![Felt::ONE, Felt::TWO]);
+        assert_eq!(external_contract.block_number, 123);
     }
 }
