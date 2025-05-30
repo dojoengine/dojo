@@ -7,7 +7,7 @@ use starknet::core::types::contract::AbiEntry;
 use starknet::core::types::Felt;
 
 use super::{ResourceDiff, WorldDiff};
-use crate::local::ResourceLocal;
+use crate::local::{ExternalContractLocal, ResourceLocal};
 use crate::remote::ResourceRemote;
 use crate::ResourceType;
 
@@ -138,6 +138,8 @@ pub struct ExternalContract {
     pub encoded_constructor_calldata: Vec<Felt>,
     /// Entry points of the contract.
     pub entrypoints: Vec<String>,
+    /// Block number used for indexing.
+    pub block_number: Option<u64>,
 }
 
 /// Represents a model member.
@@ -242,32 +244,60 @@ fn resource_diff_to_dojo_contract(diff: &WorldDiff, resource: &ResourceDiff) -> 
 
 fn resource_diff_to_dojo_external_contract(resource: &ResourceDiff) -> ExternalContract {
     match &resource {
-        ResourceDiff::Created(ResourceLocal::ExternalContract(l)) => ExternalContract {
-            class_hash: l.common.class_hash,
-            abi: l.common.class.abi.clone(),
-            address: l.computed_address,
-            constructor_calldata: l.constructor_data.clone(),
-            encoded_constructor_calldata: l.encoded_constructor_data.clone(),
-            tag: l.tag(),
-            contract_name: l.contract_name.clone(),
-            entrypoints: l.entrypoints.clone(),
+        ResourceDiff::Created(ResourceLocal::ExternalContract(local)) => match local {
+            ExternalContractLocal::SozoManaged(l) => ExternalContract {
+                class_hash: l.common.class_hash,
+                abi: l.common.class.abi.clone(),
+                address: l.computed_address,
+                constructor_calldata: l.constructor_data.clone(),
+                encoded_constructor_calldata: l.encoded_constructor_data.clone(),
+                tag: local.tag(),
+                contract_name: l.contract_name.clone(),
+                entrypoints: l.entrypoints.clone(),
+                block_number: l.block_number,
+            },
+            ExternalContractLocal::SelfManaged(l) => ExternalContract {
+                class_hash: Felt::ZERO,
+                abi: vec![],
+                address: l.contract_address,
+                constructor_calldata: vec![],
+                encoded_constructor_calldata: vec![],
+                tag: local.tag(),
+                contract_name: l.name.clone(),
+                entrypoints: vec![],
+                block_number: Some(l.block_number),
+            },
         },
         ResourceDiff::Updated(
-            ResourceLocal::ExternalContract(l),
+            ResourceLocal::ExternalContract(local),
             ResourceRemote::ExternalContract(r),
         )
         | ResourceDiff::Synced(
-            ResourceLocal::ExternalContract(l),
+            ResourceLocal::ExternalContract(local),
             ResourceRemote::ExternalContract(r),
-        ) => ExternalContract {
-            class_hash: l.common.class_hash,
-            abi: l.common.class.abi.clone(),
-            address: if l.is_upgradeable { r.common.address } else { l.computed_address },
-            constructor_calldata: l.constructor_data.clone(),
-            encoded_constructor_calldata: l.encoded_constructor_data.clone(),
-            tag: l.tag(),
-            contract_name: l.contract_name.clone(),
-            entrypoints: l.entrypoints.clone(),
+        ) => match local {
+            ExternalContractLocal::SozoManaged(l) => ExternalContract {
+                class_hash: l.common.class_hash,
+                abi: l.common.class.abi.clone(),
+                address: if l.is_upgradeable { r.common.address } else { l.computed_address },
+                constructor_calldata: l.constructor_data.clone(),
+                encoded_constructor_calldata: l.encoded_constructor_data.clone(),
+                tag: local.tag(),
+                contract_name: l.contract_name.clone(),
+                entrypoints: l.entrypoints.clone(),
+                block_number: l.block_number,
+            },
+            ExternalContractLocal::SelfManaged(l) => ExternalContract {
+                class_hash: Felt::ZERO,
+                abi: vec![],
+                address: l.contract_address,
+                constructor_calldata: vec![],
+                encoded_constructor_calldata: vec![],
+                tag: local.tag(),
+                contract_name: l.name.clone(),
+                entrypoints: vec![],
+                block_number: Some(l.block_number),
+            },
         },
         _ => unreachable!(),
     }

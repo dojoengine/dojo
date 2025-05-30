@@ -3,6 +3,7 @@ use clap::Args;
 use colored::*;
 use dojo_types::naming;
 use dojo_world::diff::{ResourceDiff, WorldDiff, WorldStatus};
+use dojo_world::local::ExternalContractLocal;
 use dojo_world::ResourceType;
 use scarb_metadata::Metadata;
 use serde::Serialize;
@@ -510,7 +511,11 @@ fn resource_diff_display(world_diff: &WorldDiff, resource: &ResourceDiff) -> Res
             let (external_contract, contract_address, status) = match resource {
                 ResourceDiff::Created(local) => {
                     let local = local.as_external_contract().unwrap();
-                    (local, local.computed_address, ResourceStatus::Created)
+                    let address = match local {
+                        ExternalContractLocal::SozoManaged(l) => l.computed_address,
+                        ExternalContractLocal::SelfManaged(l) => l.contract_address,
+                    };
+                    (local, address, ResourceStatus::Created)
                 }
                 ResourceDiff::Updated(local, remote) => {
                     let local = local.as_external_contract().unwrap();
@@ -530,8 +535,13 @@ fn resource_diff_display(world_diff: &WorldDiff, resource: &ResourceDiff) -> Res
                 status
             };
 
+            let contract_name = match external_contract {
+                ExternalContractLocal::SozoManaged(c) => c.contract_name.clone(),
+                ExternalContractLocal::SelfManaged(c) => c.name.clone(),
+            };
+
             ResourceInspect::ExternalContract(ExternalContractInspect {
-                contract_name: external_contract.contract_name.clone(),
+                contract_name,
                 tag: resource.tag(),
                 status,
                 address: format!("{:#066x}", contract_address),

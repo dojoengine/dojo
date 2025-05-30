@@ -17,6 +17,7 @@ use tracing::trace;
 use super::local::{ResourceLocal, WorldLocal};
 use super::remote::{ResourceRemote, WorldRemote};
 use crate::config::ProfileConfig;
+use crate::local::ExternalContractLocal;
 use crate::{utils, ContractAddress, DojoSelector, ResourceType};
 
 mod compare;
@@ -372,7 +373,11 @@ impl WorldDiff {
                 ResourceDiff::Updated(_, ResourceRemote::Contract(c)) => Some(c.common.address),
                 ResourceDiff::Synced(_, ResourceRemote::Contract(c)) => Some(c.common.address),
                 ResourceDiff::Created(ResourceLocal::ExternalContract(c)) => {
-                    Some(c.computed_address)
+                    if let ExternalContractLocal::SozoManaged(c) = c {
+                        Some(c.computed_address)
+                    } else {
+                        None
+                    }
                 }
                 ResourceDiff::Updated(
                     ResourceLocal::ExternalContract(_),

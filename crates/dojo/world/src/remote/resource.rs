@@ -52,6 +52,8 @@ pub struct ContractRemote {
 pub struct ExternalContractRemote {
     /// Common information about the resource.
     pub common: CommonRemoteInfo,
+    /// The block number from where to start the indexing
+    pub block_number: u64,
 }
 
 #[derive(Debug, Clone)]

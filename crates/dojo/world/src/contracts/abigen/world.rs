@@ -364,6 +364,11 @@ pub struct ExternalContractRegistered {
     pub contract_selector: starknet::core::types::Felt,
     pub class_hash: cainome::cairo_serde::ClassHash,
     pub contract_address: cainome::cairo_serde::ContractAddress,
+    #[serde(
+        serialize_with = "cainome::cairo_serde::serialize_as_hex",
+        deserialize_with = "cainome::cairo_serde::deserialize_from_hex"
+    )]
+    pub block_number: u64,
 }
 impl cainome::cairo_serde::CairoSerde for ExternalContractRegistered {
     type RustType = Self;
@@ -378,6 +383,7 @@ impl cainome::cairo_serde::CairoSerde for ExternalContractRegistered {
         __size += cainome::cairo_serde::ClassHash::cairo_serialized_size(&__rust.class_hash);
         __size +=
             cainome::cairo_serde::ContractAddress::cairo_serialized_size(&__rust.contract_address);
+        __size += u64::cairo_serialized_size(&__rust.block_number);
         __size
     }
     fn cairo_serialize(__rust: &Self::RustType) -> Vec<starknet::core::types::Felt> {
@@ -390,6 +396,7 @@ impl cainome::cairo_serde::CairoSerde for ExternalContractRegistered {
         __out.extend(cainome::cairo_serde::ContractAddress::cairo_serialize(
             &__rust.contract_address,
         ));
+        __out.extend(u64::cairo_serialize(&__rust.block_number));
         __out
     }
     fn cairo_deserialize(
@@ -410,6 +417,8 @@ impl cainome::cairo_serde::CairoSerde for ExternalContractRegistered {
         let contract_address =
             cainome::cairo_serde::ContractAddress::cairo_deserialize(__felts, __offset)?;
         __offset += cainome::cairo_serde::ContractAddress::cairo_serialized_size(&contract_address);
+        let block_number = u64::cairo_deserialize(__felts, __offset)?;
+        __offset += u64::cairo_serialized_size(&block_number);
         Ok(ExternalContractRegistered {
             namespace,
             contract_name,
@@ -417,6 +426,7 @@ impl cainome::cairo_serde::CairoSerde for ExternalContractRegistered {
             contract_selector,
             class_hash,
             contract_address,
+            block_number,
         })
     }
 }
@@ -435,6 +445,11 @@ pub struct ExternalContractUpgraded {
     pub contract_selector: starknet::core::types::Felt,
     pub class_hash: cainome::cairo_serde::ClassHash,
     pub contract_address: cainome::cairo_serde::ContractAddress,
+    #[serde(
+        serialize_with = "cainome::cairo_serde::serialize_as_hex",
+        deserialize_with = "cainome::cairo_serde::deserialize_from_hex"
+    )]
+    pub block_number: u64,
 }
 impl cainome::cairo_serde::CairoSerde for ExternalContractUpgraded {
     type RustType = Self;
@@ -448,6 +463,7 @@ impl cainome::cairo_serde::CairoSerde for ExternalContractUpgraded {
         __size += cainome::cairo_serde::ClassHash::cairo_serialized_size(&__rust.class_hash);
         __size +=
             cainome::cairo_serde::ContractAddress::cairo_serialized_size(&__rust.contract_address);
+        __size += u64::cairo_serialized_size(&__rust.block_number);
         __size
     }
     fn cairo_serialize(__rust: &Self::RustType) -> Vec<starknet::core::types::Felt> {
@@ -459,6 +475,7 @@ impl cainome::cairo_serde::CairoSerde for ExternalContractUpgraded {
         __out.extend(cainome::cairo_serde::ContractAddress::cairo_serialize(
             &__rust.contract_address,
         ));
+        __out.extend(u64::cairo_serialize(&__rust.block_number));
         __out
     }
     fn cairo_deserialize(
@@ -477,12 +494,15 @@ impl cainome::cairo_serde::CairoSerde for ExternalContractUpgraded {
         let contract_address =
             cainome::cairo_serde::ContractAddress::cairo_deserialize(__felts, __offset)?;
         __offset += cainome::cairo_serde::ContractAddress::cairo_serialized_size(&contract_address);
+        let block_number = u64::cairo_deserialize(__felts, __offset)?;
+        __offset += u64::cairo_serialized_size(&block_number);
         Ok(ExternalContractUpgraded {
             namespace,
             instance_name,
             contract_selector,
             class_hash,
             contract_address,
+            block_number,
         })
     }
 }
@@ -1808,6 +1828,16 @@ impl TryFrom<&starknet::core::types::EmittedEvent> for Event {
             };
             data_offset +=
                 cainome::cairo_serde::ContractAddress::cairo_serialized_size(&contract_address);
+            let block_number = match u64::cairo_deserialize(&event.data, data_offset) {
+                Ok(v) => v,
+                Err(e) => {
+                    return Err(format!(
+                        "Could not deserialize field {} for {}: {:?}",
+                        "block_number", "ExternalContractRegistered", e
+                    ));
+                }
+            };
+            data_offset += u64::cairo_serialized_size(&block_number);
             return Ok(Event::ExternalContractRegistered(ExternalContractRegistered {
                 namespace,
                 contract_name,
@@ -1815,6 +1845,7 @@ impl TryFrom<&starknet::core::types::EmittedEvent> for Event {
                 contract_selector,
                 class_hash,
                 contract_address,
+                block_number,
             }));
         }
         let selector = event.keys[0];
@@ -1884,12 +1915,23 @@ impl TryFrom<&starknet::core::types::EmittedEvent> for Event {
             };
             data_offset +=
                 cainome::cairo_serde::ContractAddress::cairo_serialized_size(&contract_address);
+            let block_number = match u64::cairo_deserialize(&event.data, data_offset) {
+                Ok(v) => v,
+                Err(e) => {
+                    return Err(format!(
+                        "Could not deserialize field {} for {}: {:?}",
+                        "block_number", "ExternalContractUpgraded", e
+                    ));
+                }
+            };
+            data_offset += u64::cairo_serialized_size(&block_number);
             return Ok(Event::ExternalContractUpgraded(ExternalContractUpgraded {
                 namespace,
                 instance_name,
                 contract_selector,
                 class_hash,
                 contract_address,
+                block_number,
             }));
         }
         let selector = event.keys[0];
@@ -2894,6 +2936,16 @@ impl TryFrom<&starknet::core::types::Event> for Event {
             };
             data_offset +=
                 cainome::cairo_serde::ContractAddress::cairo_serialized_size(&contract_address);
+            let block_number = match u64::cairo_deserialize(&event.data, data_offset) {
+                Ok(v) => v,
+                Err(e) => {
+                    return Err(format!(
+                        "Could not deserialize field {} for {}: {:?}",
+                        "block_number", "ExternalContractRegistered", e
+                    ));
+                }
+            };
+            data_offset += u64::cairo_serialized_size(&block_number);
             return Ok(Event::ExternalContractRegistered(ExternalContractRegistered {
                 namespace,
                 contract_name,
@@ -2901,6 +2953,7 @@ impl TryFrom<&starknet::core::types::Event> for Event {
                 contract_selector,
                 class_hash,
                 contract_address,
+                block_number,
             }));
         }
         let selector = event.keys[0];
@@ -2970,12 +3023,23 @@ impl TryFrom<&starknet::core::types::Event> for Event {
             };
             data_offset +=
                 cainome::cairo_serde::ContractAddress::cairo_serialized_size(&contract_address);
+            let block_number = match u64::cairo_deserialize(&event.data, data_offset) {
+                Ok(v) => v,
+                Err(e) => {
+                    return Err(format!(
+                        "Could not deserialize field {} for {}: {:?}",
+                        "block_number", "ExternalContractUpgraded", e
+                    ));
+                }
+            };
+            data_offset += u64::cairo_serialized_size(&block_number);
             return Ok(Event::ExternalContractUpgraded(ExternalContractUpgraded {
                 namespace,
                 instance_name,
                 contract_selector,
                 class_hash,
                 contract_address,
+                block_number,
             }));
         }
         let selector = event.keys[0];
@@ -4400,6 +4464,7 @@ impl<A: starknet::accounts::ConnectedAccount + Sync> WorldContract<A> {
         contract_name: &cainome::cairo_serde::ByteArray,
         instance_name: &cainome::cairo_serde::ByteArray,
         contract_address: &cainome::cairo_serde::ContractAddress,
+        block_number: &u64,
     ) -> starknet::core::types::Call {
         use cainome::cairo_serde::CairoSerde;
         let mut __calldata = vec![];
@@ -4407,6 +4472,7 @@ impl<A: starknet::accounts::ConnectedAccount + Sync> WorldContract<A> {
         __calldata.extend(cainome::cairo_serde::ByteArray::cairo_serialize(contract_name));
         __calldata.extend(cainome::cairo_serde::ByteArray::cairo_serialize(instance_name));
         __calldata.extend(cainome::cairo_serde::ContractAddress::cairo_serialize(contract_address));
+        __calldata.extend(u64::cairo_serialize(block_number));
         starknet::core::types::Call {
             to: self.address,
             selector: starknet::macros::selector!("register_external_contract"),
@@ -4421,6 +4487,7 @@ impl<A: starknet::accounts::ConnectedAccount + Sync> WorldContract<A> {
         contract_name: &cainome::cairo_serde::ByteArray,
         instance_name: &cainome::cairo_serde::ByteArray,
         contract_address: &cainome::cairo_serde::ContractAddress,
+        block_number: &u64,
     ) -> starknet::accounts::ExecutionV1<A> {
         use cainome::cairo_serde::CairoSerde;
         let mut __calldata = vec![];
@@ -4428,6 +4495,7 @@ impl<A: starknet::accounts::ConnectedAccount + Sync> WorldContract<A> {
         __calldata.extend(cainome::cairo_serde::ByteArray::cairo_serialize(contract_name));
         __calldata.extend(cainome::cairo_serde::ByteArray::cairo_serialize(instance_name));
         __calldata.extend(cainome::cairo_serde::ContractAddress::cairo_serialize(contract_address));
+        __calldata.extend(u64::cairo_serialize(block_number));
         let __call = starknet::core::types::Call {
             to: self.address,
             selector: starknet::macros::selector!("register_external_contract"),
@@ -4833,12 +4901,14 @@ impl<A: starknet::accounts::ConnectedAccount + Sync> WorldContract<A> {
         namespace: &cainome::cairo_serde::ByteArray,
         instance_name: &cainome::cairo_serde::ByteArray,
         contract_address: &cainome::cairo_serde::ContractAddress,
+        block_number: &u64,
     ) -> starknet::core::types::Call {
         use cainome::cairo_serde::CairoSerde;
         let mut __calldata = vec![];
         __calldata.extend(cainome::cairo_serde::ByteArray::cairo_serialize(namespace));
         __calldata.extend(cainome::cairo_serde::ByteArray::cairo_serialize(instance_name));
         __calldata.extend(cainome::cairo_serde::ContractAddress::cairo_serialize(contract_address));
+        __calldata.extend(u64::cairo_serialize(block_number));
         starknet::core::types::Call {
             to: self.address,
             selector: starknet::macros::selector!("upgrade_external_contract"),
@@ -4852,12 +4922,14 @@ impl<A: starknet::accounts::ConnectedAccount + Sync> WorldContract<A> {
         namespace: &cainome::cairo_serde::ByteArray,
         instance_name: &cainome::cairo_serde::ByteArray,
         contract_address: &cainome::cairo_serde::ContractAddress,
+        block_number: &u64,
     ) -> starknet::accounts::ExecutionV1<A> {
         use cainome::cairo_serde::CairoSerde;
         let mut __calldata = vec![];
         __calldata.extend(cainome::cairo_serde::ByteArray::cairo_serialize(namespace));
         __calldata.extend(cainome::cairo_serde::ByteArray::cairo_serialize(instance_name));
         __calldata.extend(cainome::cairo_serde::ContractAddress::cairo_serialize(contract_address));
+        __calldata.extend(u64::cairo_serialize(block_number));
         let __call = starknet::core::types::Call {
             to: self.address,
             selector: starknet::macros::selector!("upgrade_external_contract"),
