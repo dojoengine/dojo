@@ -209,6 +209,23 @@ pub enum Weapon {
 }
 
 #[starknet::interface]
+pub trait IHello<T> {
+    fn say_hello(self: @T, name: ByteArray) -> ByteArray;
+}
+
+#[starknet::contract]
+pub mod hello {
+    #[storage]
+    struct Storage {}
+
+    impl HelloTrait of super::IHello<ContractState> {
+        fn say_hello(self: @ContractState, name: ByteArray) -> ByteArray {
+            format!("Hello, {name}")
+        }
+    }
+}
+
+#[starknet::interface]
 pub trait Ibar<TContractState> {
     fn set_foo(self: @TContractState, a: felt252, b: u128);
     fn delete_foo(self: @TContractState);
