@@ -318,19 +318,37 @@ fn test_can_call_init_only_world_args() {
 }
 
 #[test]
-pub fn dns_valid_class_hash() {
-    let namespace_def = NamespaceDef {
-        namespace: "dojo",
-        resources: [TestResource::Model("Foo"), TestResource::Contract("bar")].span(),
-    };
+pub fn test_dns_for_contract() {
+    let world = deploy_world();
+    let world = world.dispatcher;
 
-    let mut world = spawn_test_world([namespace_def].span());
-    world.sync_perms_and_inits([].span());
+    let (_, ch) = dojo_snf_test::declare("bar");
+    let salt = dojo::utils::bytearray_hash(@"bar");
 
-    let (_, class_hash) = world.dns(@"bar").unwrap();
-    assert!(class_hash == 0.try_into().unwrap());
-    // TODO: once starknet 0.13.4 is out, uncomment that.
-//assert!(class_hash == bar::TEST_CLASS_HASH.try_into().unwrap());
+    let contract_address = world.register_contract(salt, "dojo", ch);
+
+    let world_storage = WorldStorageTrait::new(world, @"dojo");
+
+    let (dns_address, dns_ch) = world_storage.dns(@"bar").unwrap();
+    assert(dns_ch == ch, 'should return bar class hash');
+    assert(dns_address == contract_address, 'should return bar address');
+}
+
+#[test]
+pub fn test_dns_for_external_contract() {
+    let world = deploy_world();
+    let world = world.dispatcher;
+
+    let (contract_class, ch) = dojo_snf_test::declare("hello");
+    let contract_address = dojo_snf_test::deploy(contract_class, @array![]);
+
+    world.register_external_contract("dojo", "hello", "hello", contract_address, 123);
+
+    let world_storage = WorldStorageTrait::new(world, @"dojo");
+
+    let (dns_address, dns_ch) = world_storage.dns(@"hello").unwrap();
+    assert(dns_ch == ch, 'should return hello class hash');
+    assert(dns_address == contract_address, 'should return hello address');
 }
 
 #[test]
