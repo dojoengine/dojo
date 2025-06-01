@@ -1475,8 +1475,8 @@
   },
   "contracts": [
     {
-      "address": "0x682fe3b23f0ba6c530a1e763cae97b3c215742240c31639be74532763be705c",
-      "class_hash": "0x14cb73f280d6635e6d8a0182abec9b984e858c82912b6d462082bf752282e34",
+      "address": "0x7dd1e7fa6cf802e57bddcc48898ffff4e922aa4c4e2ebe9aa097a8b96f1aa57",
+      "class_hash": "0x23cbf0f9a6f46c8c7708ea566845b0b1e377afa6abc32968d980b955264fec3",
       "abi": [
         {
           "type": "impl",
@@ -1695,6 +1695,22 @@
               ],
               "outputs": [],
               "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "say_hello",
+              "inputs": [
+                {
+                  "name": "name",
+                  "type": "core::byte_array::ByteArray"
+                }
+              ],
+              "outputs": [
+                {
+                  "type": "core::byte_array::ByteArray"
+                }
+              ],
+              "state_mutability": "view"
             }
           ]
         },
@@ -2382,8 +2398,8 @@
       ]
     },
     {
-      "address": "0x5526fde245f2451cb6adacec587d659df9fafb3180122d80dc534d72b3b376a",
-      "class_hash": "0x14cb73f280d6635e6d8a0182abec9b984e858c82912b6d462082bf752282e34",
+      "address": "0x66bda49d580b081c61738dffbd44d8c882e3cb7b3b4a5f61daaa39c121d8f8",
+      "class_hash": "0x23cbf0f9a6f46c8c7708ea566845b0b1e377afa6abc32968d980b955264fec3",
       "abi": [
         {
           "type": "impl",
@@ -2602,6 +2618,22 @@
               ],
               "outputs": [],
               "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "say_hello",
+              "inputs": [
+                {
+                  "name": "name",
+                  "type": "core::byte_array::ByteArray"
+                }
+              ],
+              "outputs": [
+                {
+                  "type": "core::byte_array::ByteArray"
+                }
+              ],
+              "state_mutability": "view"
             }
           ]
         },
@@ -5468,11 +5500,51 @@
       "block_number": null
     },
     {
-      "class_hash": "0x7bfd851dbbba64e84510940d3b114239a86b31b2d49789616faab3154db78f6",
+      "class_hash": "0x6b1b124cf0e44c68e2f5bf3aa5b1bbda49d59b9199c280c603e4856071270d5",
       "contract_name": "Saloon",
       "tag": "ns-Saloon",
-      "address": "0x2365c3683fc7042111a7088d051dcb7d10f874a6d5e5416e533eb06689df350",
+      "address": "0x247d2a7d4346dbbe45ed401819e0c2bdacf0dcdd96f7ae813236290ad43078b",
       "abi": [
+        {
+          "type": "impl",
+          "name": "TotoImpl",
+          "interface_name": "dojo_examples::externals::saloon::ITotoTrait"
+        },
+        {
+          "type": "struct",
+          "name": "core::byte_array::ByteArray",
+          "members": [
+            {
+              "name": "data",
+              "type": "core::array::Array::<core::bytes_31::bytes31>"
+            },
+            {
+              "name": "pending_word",
+              "type": "core::felt252"
+            },
+            {
+              "name": "pending_word_len",
+              "type": "core::integer::u32"
+            }
+          ]
+        },
+        {
+          "type": "interface",
+          "name": "dojo_examples::externals::saloon::ITotoTrait",
+          "items": [
+            {
+              "type": "function",
+              "name": "toto",
+              "inputs": [],
+              "outputs": [
+                {
+                  "type": "core::byte_array::ByteArray"
+                }
+              ],
+              "state_mutability": "view"
+            }
+          ]
+        },
         {
           "type": "impl",
           "name": "UpgradeableImpl",
