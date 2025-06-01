@@ -406,7 +406,8 @@ async fn match_event<P: Provider + Send + Sync>(
         WorldEvent::ExternalContractRegistered(e) => (
             "External contract registered".to_string(),
             format!(
-                "Namespace: {}\nContract Name: {}\nInstance Name: {}\nClassHash {:#066x}\nAddress: {:#066x}\nBlock number: {}",
+                "Namespace: {}\nContract Name: {}\nInstance Name: {}\nClassHash \
+                 {:#066x}\nAddress: {:#066x}\nBlock number: {}",
                 e.namespace.to_string()?,
                 e.contract_name.to_string()?,
                 e.instance_name.to_string()?,
@@ -418,7 +419,8 @@ async fn match_event<P: Provider + Send + Sync>(
         WorldEvent::ExternalContractUpgraded(e) => (
             "External contract upgraded".to_string(),
             format!(
-                "Namespace: {}\nInstance Name: {}\nClassHash {:#066x}\nAddress: {:#066x}\nBlock number: {}",
+                "Namespace: {}\nInstance Name: {}\nClassHash {:#066x}\nAddress: {:#066x}\nBlock \
+                 number: {}",
                 e.namespace.to_string()?,
                 e.instance_name.to_string()?,
                 e.class_hash.0,
