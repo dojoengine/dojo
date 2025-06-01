@@ -213,10 +213,8 @@ pub mod actions {
         fn say_hello(self: @ContractState, name: ByteArray) -> ByteArray {
             let mut world = self.world_default();
 
-            match world.dns(@"hello") {
-                Some((
-                    contract_address, _,
-                )) => {
+            match world.dns_address(@"Hello") {
+                Some(contract_address) => {
                     let dispatcher = super::IHelloDispatcher { contract_address };
                     dispatcher.say_hello(name)
                 },
