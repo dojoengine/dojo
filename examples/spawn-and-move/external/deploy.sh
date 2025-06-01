@@ -1,12 +1,10 @@
 #!/bin/bash
 
-CMD=/Users/remybaranx/bin/starkli
+CMD=starkli
 
 ACCOUNT=katana-0
 CLASS_FILE=target/dev/hello_hello.contract_class.json
 RPC=http://localhost:5050
-
-DOJO_DEV=../dojo_dev.toml
 
 if ! command -v ${CMD} 2>&1 >/dev/null
 then
