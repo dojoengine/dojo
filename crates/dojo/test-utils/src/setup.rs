@@ -43,7 +43,7 @@ impl TestSetup {
 
             manifest_paths.insert(package_name.to_string(), package_manifest_path);
 
-            Self::copy_project(package_source, &package_tmp_dir, dojo_core, &[]).unwrap();
+            Self::copy_project(package_source, &package_tmp_dir, dojo_core, &["external"]).unwrap();
         }
 
         TestSetup { root_dir: tmp_dir, dojo_core: dojo_core.clone(), manifest_paths }
@@ -73,14 +73,27 @@ impl TestSetup {
             }
         }
         fn update_dependency(
+            manifest_path: &Utf8PathBuf,
             table: &mut toml::map::Map<String, Value>,
             dep_name: &str,
             new_dep_path: &Utf8PathBuf,
         ) {
             let dep = if table.contains_key("workspace") {
-                table["workspace"]["dependencies"][dep_name].as_table_mut().unwrap()
+                table["workspace"]["dependencies"]
+                    .get_mut(dep_name)
+                    .unwrap_or_else(|| {
+                        panic!("{manifest_path} should contain {dep_name} dependency")
+                    })
+                    .as_table_mut()
+                    .unwrap()
             } else {
-                table["dependencies"][dep_name].as_table_mut().unwrap()
+                table["dependencies"]
+                    .get_mut(dep_name)
+                    .unwrap_or_else(|| {
+                        panic!("{manifest_path} should contain {dep_name} dependency")
+                    })
+                    .as_table_mut()
+                    .unwrap()
             };
 
             update_dep_path(dep, new_dep_path);
@@ -123,8 +136,8 @@ impl TestSetup {
 
         let root_path = dojo_core_path.parent().unwrap();
 
-        update_dependency(&mut table, "dojo", dojo_core_path);
-        update_dependency(&mut table, "dojo_macros", &root_path.join("macros"));
+        update_dependency(manifest_path, &mut table, "dojo", dojo_core_path);
+        update_dependency(manifest_path, &mut table, "dojo_macros", &root_path.join("macros"));
         update_dev_dependency(&mut table, "dojo_snf_test", &root_path.join("dojo-snf-test"));
         update_dev_dependency(&mut table, "dojo_cairo_test", &root_path.join("dojo-cairo-test"));
 
