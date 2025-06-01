@@ -403,7 +403,42 @@ async fn match_event<P: Provider + Send + Sync>(
                 ),
             )
         }
-        _ => ("Unprocessed event".to_string(), format!("Event: {:?}", event)),
+        WorldEvent::ExternalContractRegistered(e) => (
+            "External contract registered".to_string(),
+            format!(
+                "Namespace: {}\nContract Name: {}\nInstance Name: {}\nClassHash {:#066x}\nAddress: {:#066x}\nBlock number: {}",
+                e.namespace.to_string()?,
+                e.contract_name.to_string()?,
+                e.instance_name.to_string()?,
+                e.class_hash.0,
+                e.contract_address.0,
+                e.block_number
+            ),
+        ),
+        WorldEvent::ExternalContractUpgraded(e) => (
+            "External contract upgraded".to_string(),
+            format!(
+                "Namespace: {}\nInstance Name: {}\nClassHash {:#066x}\nAddress: {:#066x}\nBlock number: {}",
+                e.namespace.to_string()?,
+                e.instance_name.to_string()?,
+                e.class_hash.0,
+                e.contract_address.0,
+                e.block_number
+            ),
+        ),
+        WorldEvent::LibraryRegistered(e) => (
+            "Library upgraded".to_string(),
+            format!(
+                "Namespace: {}\nName: {}\nClassHash {:#066x}",
+                e.namespace.to_string()?,
+                e.name.to_string()?,
+                e.class_hash.0,
+            ),
+        ),
+        WorldEvent::MetadataUpdate(e) => (
+            "Metadata update".to_string(),
+            format!("Resource: {}\nURI: {}\nHash {}", e.resource, e.uri.to_string()?, e.hash,),
+        ),
     };
 
     let block_str = block_number.map(|n| n.to_string()).unwrap_or("pending".to_string());
