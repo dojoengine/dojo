@@ -1,5 +1,11 @@
 use dojo_examples::models::{Direction, Position};
 
+// Interface of a self-managed external contract "ns-Hello"
+#[starknet::interface]
+pub trait IHello<T> {
+    fn say_hello(self: @T, name: ByteArray) -> ByteArray;
+}
+
 #[starknet::interface]
 pub trait IActions<T> {
     fn spawn(ref self: T);
@@ -12,6 +18,7 @@ pub trait IActions<T> {
     fn set_models(ref self: T, seed: felt252, n_models: u32);
     #[cfg(feature: 'dungeon')]
     fn enter_dungeon(ref self: T, dungeon_address: starknet::ContractAddress);
+    fn say_hello(self: @T, name: ByteArray) -> ByteArray;
 }
 
 #[dojo::contract]
@@ -34,7 +41,7 @@ pub mod actions {
     };
     use dojo_examples::utils::next_position;
     use starknet::{ContractAddress, get_caller_address};
-    use super::IActions;
+    use super::{IActions, IHelloDispatcherTrait};
 
     #[derive(Copy, Drop, Serde)]
     #[dojo::event]
@@ -199,6 +206,22 @@ pub mod actions {
             world.write_model(@river_skale);
 
             IDungeonDispatcher { contract_address: dungeon_address }.enter();
+        }
+
+        // call a self-managed external contract ("ns-Hello") if it has
+        // been registered into the world.
+        fn say_hello(self: @ContractState, name: ByteArray) -> ByteArray {
+            let mut world = self.world_default();
+
+            match world.dns(@"hello") {
+                Some((
+                    contract_address, _,
+                )) => {
+                    let dispatcher = super::IHelloDispatcher { contract_address };
+                    dispatcher.say_hello(name)
+                },
+                None => "Hello world!",
+            }
         }
     }
 
