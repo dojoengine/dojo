@@ -38,4 +38,3 @@ KATANA_RUNNER_BIN=/tmp/katana cargo generate-test-db
 
 # Extracts the database for testing.
 bash ./scripts/extract_test_db.sh
-
