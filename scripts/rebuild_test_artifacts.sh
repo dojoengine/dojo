@@ -7,22 +7,14 @@
 cargo build -r --bin sozo
 
 # Some formatting.
-cargo +nightly-2024-08-28 fmt --all -- "$@"
-
-scarb --manifest-path examples/spawn-and-move/Scarb.toml fmt
-scarb --manifest-path examples/simple/Scarb.toml fmt
-scarb --manifest-path crates/dojo/core/Scarb.toml fmt
-scarb --manifest-path crates/dojo/core-test/Scarb.toml fmt
-scarb --manifest-path crates/dojo/dojo-cairo-test/Scarb.toml fmt
-scarb --manifest-path crates/dojo/dojo-snf-test/Scarb.toml fmt
+bash ./scripts/rust_fmt.sh --fix
+bash ./scripts/cairo_fmt.sh fmt
 
 # Manual forced cleanup.
 rm -rf examples/spawn-and-move/target
 
 # Ensure the world bindings are up to date.
 cargo run --bin dojo-world-abigen -r
-
-cargo +nightly-2024-08-28 fmt --all -- "$@"
 
 # Re-run the minimal tests, this will re-build the projects + generate the build artifacts.
 ./target/release/sozo build --manifest-path examples/simple/Scarb.toml

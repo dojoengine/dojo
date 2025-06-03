@@ -18,8 +18,10 @@ use super::world_config::WorldConfig;
 pub struct ExternalContractConfig {
     pub contract_name: String,
     pub instance_name: Option<String>,
-    pub salt: String,
+    pub contract_address: Option<String>,
+    pub salt: Option<String>,
     pub constructor_data: Option<Vec<String>>,
+    pub block_number: Option<u64>,
 }
 
 /// Profile configuration that is used to configure the world and its environment.
@@ -103,6 +105,8 @@ impl ProfileConfig {
     /// - for a same external contract name we should have:
     ///   + only one external_contracts block if instance name is not set OR,
     ///   + one or several external_contracts blocks with different instance names.
+    /// - for a self-managed external contract, the fields instance_name, salt and constructor_data
+    ///   should NOT be set.
     pub fn validate(&self) -> Result<()> {
         if let Some(contracts) = &self.external_contracts {
             let mut map = HashMap::<String, Vec<Option<String>>>::new();
@@ -111,6 +115,19 @@ impl ProfileConfig {
                 map.entry(contract.contract_name.clone())
                     .or_default()
                     .push(contract.instance_name.clone());
+
+                // self-managed contract
+                if contract.contract_address.is_some()
+                    && (contract.instance_name.is_some()
+                        || contract.constructor_data.is_some()
+                        || contract.salt.is_some())
+                {
+                    println!(
+                        "warning: the contract {} is self-managed so the fields instance_name, \
+                         constructor_data and salt should NOT be set",
+                        contract.contract_name
+                    )
+                }
             }
 
             for (contract_name, instance_names) in map {
@@ -214,6 +231,20 @@ mod tests {
         description = "This is the e1 event"
         icon_uri = "ipfs://dojo/e1.png"
 
+        [[external_contracts]]
+        contract_name = "ERC1155Token"
+        instance_name = "Rewards"
+        salt = "1"
+        constructor_data = ["0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba", "str:https://rewards.com/" ]
+
+        [[external_contracts]]
+        contract_name = "Saloon"
+        block_number = 123
+
+        [[external_contracts]]
+        contract_name = "Bank"
+        contract_address = "0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba"
+
         [namespace]
         default = "test"
         mappings = { "test" = ["test2"] }
@@ -304,6 +335,40 @@ mod tests {
         assert_eq!(events[0].description, Some("This is the e1 event".to_string()));
         assert_eq!(events[0].icon_uri, Some(Uri::from_string("ipfs://dojo/e1.png").unwrap()));
 
+        assert!(config.external_contracts.is_some());
+        let external_contracts = config.external_contracts.unwrap();
+
+        assert_eq!(external_contracts.len(), 3);
+        assert_eq!(external_contracts[0].contract_name, "ERC1155Token");
+        assert_eq!(external_contracts[0].instance_name.clone().unwrap(), "Rewards");
+        assert_eq!(external_contracts[0].salt.clone().unwrap(), "1");
+        assert_eq!(
+            external_contracts[0].constructor_data.clone().unwrap(),
+            vec![
+                "0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba",
+                "str:https://rewards.com/"
+            ]
+        );
+        assert!(external_contracts[0].block_number.is_none());
+        assert!(external_contracts[0].contract_address.is_none());
+
+        assert_eq!(external_contracts[1].contract_name, "Saloon");
+        assert_eq!(external_contracts[1].block_number.unwrap(), 123);
+        assert!(external_contracts[1].contract_address.is_none());
+        assert!(external_contracts[1].instance_name.is_none());
+        assert!(external_contracts[1].salt.is_none());
+        assert!(external_contracts[1].constructor_data.is_none());
+
+        assert_eq!(external_contracts[2].contract_name, "Bank");
+        assert_eq!(
+            external_contracts[2].contract_address.clone().unwrap(),
+            "0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba"
+        );
+        assert!(external_contracts[2].block_number.is_none());
+        assert!(external_contracts[2].instance_name.is_none());
+        assert!(external_contracts[2].salt.is_none());
+        assert!(external_contracts[2].constructor_data.is_none());
+
         assert_eq!(config.namespace.default, "test".to_string());
         assert_eq!(
             config.namespace.mappings,
@@ -340,14 +405,18 @@ mod tests {
             ExternalContractConfig {
                 contract_name: "c1".to_string(),
                 instance_name: Some("x".to_string()),
-                salt: "0x01".to_string(),
+                salt: Some("0x01".to_string()),
                 constructor_data: None,
+                block_number: None,
+                contract_address: None,
             },
             ExternalContractConfig {
                 contract_name: "c1".to_string(),
                 instance_name: None,
-                salt: "0x01".to_string(),
+                salt: Some("0x01".to_string()),
                 constructor_data: None,
+                block_number: Some(123),
+                contract_address: None,
             },
         ]);
 
@@ -364,20 +433,26 @@ mod tests {
             ExternalContractConfig {
                 contract_name: "c1".to_string(),
                 instance_name: Some("x".to_string()),
-                salt: "0x01".to_string(),
+                salt: Some("0x01".to_string()),
                 constructor_data: None,
+                block_number: None,
+                contract_address: None,
             },
             ExternalContractConfig {
                 contract_name: "c1".to_string(),
                 instance_name: Some("y".to_string()),
-                salt: "0x01".to_string(),
+                salt: Some("0x01".to_string()),
                 constructor_data: None,
+                block_number: Some(123),
+                contract_address: None,
             },
             ExternalContractConfig {
                 contract_name: "c1".to_string(),
                 instance_name: Some("x".to_string()),
-                salt: "0x01".to_string(),
+                salt: Some("0x01".to_string()),
                 constructor_data: None,
+                block_number: Some(456),
+                contract_address: None,
             },
         ]);
 
@@ -393,26 +468,34 @@ mod tests {
             ExternalContractConfig {
                 contract_name: "c1".to_string(),
                 instance_name: None,
-                salt: "0x01".to_string(),
+                salt: Some("0x01".to_string()),
                 constructor_data: None,
+                block_number: None,
+                contract_address: None,
             },
             ExternalContractConfig {
                 contract_name: "c2".to_string(),
                 instance_name: Some("x@".to_string()),
-                salt: "0x01".to_string(),
+                salt: Some("0x01".to_string()),
                 constructor_data: None,
+                block_number: Some(123),
+                contract_address: None,
             },
             ExternalContractConfig {
                 contract_name: "c2".to_string(),
                 instance_name: Some("y".to_string()),
-                salt: "0x01".to_string(),
+                salt: Some("0x01".to_string()),
                 constructor_data: None,
+                block_number: Some(456),
+                contract_address: None,
             },
             ExternalContractConfig {
                 contract_name: "c3".to_string(),
                 instance_name: Some("c3".to_string()),
-                salt: "0x01".to_string(),
+                salt: Some("0x01".to_string()),
                 constructor_data: None,
+                block_number: None,
+                contract_address: None,
             },
         ]);
 
@@ -428,26 +511,34 @@ mod tests {
             ExternalContractConfig {
                 contract_name: "c1".to_string(),
                 instance_name: None,
-                salt: "0x01".to_string(),
+                salt: Some("0x01".to_string()),
                 constructor_data: None,
+                block_number: None,
+                contract_address: None,
             },
             ExternalContractConfig {
                 contract_name: "c2".to_string(),
                 instance_name: Some("x".to_string()),
-                salt: "0x01".to_string(),
+                salt: Some("0x01".to_string()),
                 constructor_data: None,
+                block_number: Some(123),
+                contract_address: None,
             },
             ExternalContractConfig {
                 contract_name: "c2".to_string(),
                 instance_name: Some("y".to_string()),
-                salt: "0x01".to_string(),
+                salt: Some("0x01".to_string()),
                 constructor_data: None,
+                block_number: Some(456),
+                contract_address: None,
             },
             ExternalContractConfig {
                 contract_name: "c3".to_string(),
                 instance_name: Some("c3".to_string()),
-                salt: "0x01".to_string(),
+                salt: Some("0x01".to_string()),
                 constructor_data: None,
+                block_number: None,
+                contract_address: None,
             },
         ]);
 

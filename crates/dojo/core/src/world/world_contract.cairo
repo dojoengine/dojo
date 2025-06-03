@@ -119,6 +119,7 @@ pub mod world {
         pub contract_selector: felt252,
         pub class_hash: ClassHash,
         pub contract_address: ContractAddress,
+        pub block_number: u64,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -131,6 +132,7 @@ pub mod world {
         pub contract_selector: felt252,
         pub class_hash: ClassHash,
         pub contract_address: ContractAddress,
+        pub block_number: u64,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -833,6 +835,7 @@ pub mod world {
             contract_name: ByteArray,
             instance_name: ByteArray,
             contract_address: ContractAddress,
+            block_number: u64,
         ) {
             let caller = get_caller_address();
             let class_hash = get_class_hash_at_syscall(contract_address).unwrap_syscall();
@@ -876,6 +879,7 @@ pub mod world {
                         contract_selector,
                         class_hash,
                         contract_address,
+                        block_number,
                     },
                 );
         }
@@ -885,6 +889,7 @@ pub mod world {
             namespace: ByteArray,
             instance_name: ByteArray,
             contract_address: ContractAddress,
+            block_number: u64,
         ) {
             let class_hash = get_class_hash_at_syscall(contract_address).unwrap_syscall();
 
@@ -912,6 +917,7 @@ pub mod world {
                                 contract_selector,
                                 class_hash,
                                 contract_address,
+                                block_number,
                             },
                         );
                 },

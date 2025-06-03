@@ -76,6 +76,13 @@ pub impl WorldStorageInternalImpl of WorldStorageTrait {
                     .expect('Failed to get class hash');
                 Option::Some((contract_address, class_hash))
             },
+            Resource::ExternalContract((
+                contract_address, _,
+            )) => {
+                let class_hash = starknet::syscalls::get_class_hash_at_syscall(contract_address)
+                    .expect('Failed to get class hash');
+                Option::Some((contract_address, class_hash))
+            },
             Resource::Library((
                 class_hash, _,
             )) => { Option::Some((0.try_into().unwrap(), class_hash)) },
