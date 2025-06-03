@@ -67,7 +67,7 @@ If you have a compatible version of Katana in your path, simply run the followin
 bash scripts/rebuild_test_artifacts.sh
 ```
 
-> If you receive error messages saying `No version is set for command scarb`, run `asdf current` to check if your versions are up-to-date.
+> If you receive error messages saying `No version is set for command scarb`, run `asdf current` to check your installed versions.
 
 Otherwise, you will need to build Katana from source and copy it to the `/tmp/` directory.
 In a new terminal window, run:
