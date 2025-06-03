@@ -633,4 +633,3 @@ fn get_serialized_member(
         Option::None => panic_with_felt252('bad member id'),
     }
 }
-

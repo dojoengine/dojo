@@ -19,14 +19,14 @@ dependencies = [
 
 [[package]]
 name = "dojo"
-version = "1.5.0"
+version = "1.6.0"
 dependencies = [
  "dojo_macros",
 ]
 
 [[package]]
 name = "dojo_examples"
-version = "1.5.0"
+version = "1.6.0"
 dependencies = [
  "armory",
  "bestiary",

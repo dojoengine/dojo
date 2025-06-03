@@ -24,7 +24,7 @@ jobs:
       contents: write
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:v1.5.0
+      image: ghcr.io/dojoengine/dojo-dev:v1.5.1
     env:
       VERSION: ""
     steps:
