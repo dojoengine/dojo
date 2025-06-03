@@ -33,10 +33,26 @@ impl ComparableResource for ExternalContractLocal {
     fn compare(self, remote: ResourceRemote) -> ResourceDiff {
         let remote_contract = remote.as_external_contract_or_panic();
 
-        if self.common.class_hash == remote_contract.common.current_class_hash() {
-            ResourceDiff::Synced(ResourceLocal::ExternalContract(self), remote)
-        } else {
-            ResourceDiff::Updated(ResourceLocal::ExternalContract(self), remote)
+        match &self {
+            Self::SelfManaged(l) => {
+                if l.block_number == remote_contract.block_number
+                    && l.contract_address == remote_contract.common.address
+                {
+                    ResourceDiff::Synced(ResourceLocal::ExternalContract(self), remote)
+                } else {
+                    ResourceDiff::Updated(ResourceLocal::ExternalContract(self), remote)
+                }
+            }
+            Self::SozoManaged(l) => {
+                if l.common.class_hash == remote_contract.common.current_class_hash()
+                    && (l.block_number.is_none()
+                        || l.block_number.unwrap() == remote_contract.block_number)
+                {
+                    ResourceDiff::Synced(ResourceLocal::ExternalContract(self), remote)
+                } else {
+                    ResourceDiff::Updated(ResourceLocal::ExternalContract(self), remote)
+                }
+            }
         }
     }
 }

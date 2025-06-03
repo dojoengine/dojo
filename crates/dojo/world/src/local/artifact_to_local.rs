@@ -2,6 +2,7 @@
 
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::str::FromStr;
 
 use anyhow::{bail, Result};
 use cairo_lang_starknet_classes::casm_contract_class::CasmContractClass;
@@ -293,10 +294,12 @@ impl WorldLocal {
 
                     let namespaces = profile_config.namespace.get_namespaces(&instance_name);
 
+                    let salt = contract.salt.clone().unwrap_or("0".to_string());
+
                     for ns in namespaces {
                         let salt = poseidon_hash_many(&[
                             compute_selector_from_names(&ns, &instance_name),
-                            compute_bytearray_hash(&contract.salt),
+                            compute_bytearray_hash(&salt),
                         ]);
                         let computed_address = snutils::get_contract_address(
                             salt,
@@ -305,23 +308,29 @@ impl WorldLocal {
                             Felt::ZERO,
                         );
 
-                        let resource = ResourceLocal::ExternalContract(ExternalContractLocal {
-                            common: CommonLocalInfo {
-                                namespace: ns.clone(),
-                                name: instance_name.clone(),
-                                class: local_class.class.clone(),
-                                casm_class: local_class.casm_class.clone(),
-                                class_hash,
-                                casm_class_hash: local_class.casm_class_hash,
-                            },
-                            contract_name: contract.contract_name.clone(),
-                            salt,
-                            constructor_data: contract.constructor_data.clone().unwrap_or(vec![]),
-                            encoded_constructor_data: encoded_constructor_data.clone(),
-                            computed_address,
-                            entrypoints: local_class.entrypoints.clone(),
-                            is_upgradeable: local_class.is_upgradeable,
-                        });
+                        let resource = ResourceLocal::ExternalContract(
+                            ExternalContractLocal::SozoManaged(SozoManagedExternalContractLocal {
+                                common: CommonLocalInfo {
+                                    namespace: ns.clone(),
+                                    name: instance_name.clone(),
+                                    class: local_class.class.clone(),
+                                    casm_class: local_class.casm_class.clone(),
+                                    class_hash,
+                                    casm_class_hash: local_class.casm_class_hash,
+                                },
+                                contract_name: contract.contract_name.clone(),
+                                salt,
+                                constructor_data: contract
+                                    .constructor_data
+                                    .clone()
+                                    .unwrap_or(vec![]),
+                                encoded_constructor_data: encoded_constructor_data.clone(),
+                                computed_address,
+                                entrypoints: local_class.entrypoints.clone(),
+                                is_upgradeable: local_class.is_upgradeable,
+                                block_number: contract.block_number,
+                            }),
+                        );
 
                         trace!(
                             contract_name = contract.contract_name.clone(),
@@ -332,10 +341,34 @@ impl WorldLocal {
 
                         resources.push(resource);
                     }
+                } else if let Some(contract_address) = &contract.contract_address {
+                    let namespaces =
+                        profile_config.namespace.get_namespaces(&contract.contract_name);
+
+                    let contract_address = Felt::from_str(contract_address).unwrap_or_else(|_| {
+                        panic!(
+                            "Invalid format for {} contract_address field",
+                            contract.contract_name
+                        )
+                    });
+
+                    for ns in namespaces {
+                        let resource = ResourceLocal::ExternalContract(
+                            ExternalContractLocal::SelfManaged(SelfManagedExternalContractLocal {
+                                name: contract.contract_name.clone(),
+                                namespace: ns,
+                                contract_address,
+                                block_number: contract.block_number.unwrap_or(0),
+                            }),
+                        );
+
+                        resources.push(resource);
+                    }
                 } else {
                     bail!(
                         "Your profile configuration mentions the external contract '{}' but it \
-                         has NOT been compiled.",
+                         has NOT been compiled (sozo-managed) and no contract_address is \
+                         specified (self-managed)",
                         contract.contract_name
                     );
                 }

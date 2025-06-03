@@ -23,14 +23,16 @@ use std::collections::HashMap;
 use anyhow::anyhow;
 use cainome::cairo_serde::{ByteArray, ClassHash, ContractAddress};
 use colored::*;
-use dojo_utils::{Declarer, Deployer, Invoker, LabeledClass, TransactionResult, TxnConfig};
+use dojo_utils::{
+    Declarer, Deployer, Invoker, LabeledClass, TransactionResult, TransactionWaiter, TxnConfig,
+};
 use dojo_world::config::calldata_decoder::decode_calldata;
 use dojo_world::config::{metadata_config, ProfileConfig, ResourceConfig, WorldMetadata};
 use dojo_world::constants::WORLD;
 use dojo_world::contracts::abigen::world::ResourceMetadata;
 use dojo_world::contracts::WorldContract;
 use dojo_world::diff::{Manifest, ResourceDiff, WorldDiff, WorldStatus};
-use dojo_world::local::{ResourceLocal, UPGRADE_CONTRACT_FN_NAME};
+use dojo_world::local::{ExternalContractLocal, ResourceLocal, UPGRADE_CONTRACT_FN_NAME};
 use dojo_world::metadata::MetadataStorage;
 use dojo_world::remote::ResourceRemote;
 use dojo_world::services::UploadService;
@@ -469,6 +471,10 @@ where
 
         let mut invoker = Invoker::new(&self.world.account, self.txn_config);
 
+        // separate calls for external contracts to be able to handle block number
+        let mut deploy_calls = HashMap::<String, Call>::new();
+        let mut deploy_block_numbers = HashMap::<String, u64>::new();
+
         // Namespaces must be synced first, since contracts, models and events are namespaced.
         self.namespaces_getcalls(&mut invoker).await?;
 
@@ -496,18 +502,24 @@ where
                     classes.extend(contract_classes);
                 }
                 ResourceType::ExternalContract => {
-                    let (contract_calls, contract_classes, is_upgradeable) =
+                    let (deploy_call, upgrade_call, contract_classes, is_upgradeable) =
                         self.external_contracts_calls_classes(resource).await?;
 
-                    if !contract_calls.is_empty() {
+                    if deploy_call.is_some() || upgrade_call.is_some() {
+                        if !is_upgradeable {
+                            not_upgradeable_contract_names.push(resource.tag());
+                        }
                         n_resources += 1;
                     }
 
-                    if !is_upgradeable {
-                        not_upgradeable_contract_names.push(resource.tag());
+                    if let Some(call) = deploy_call {
+                        deploy_calls.insert(resource.tag(), call);
                     }
 
-                    invoker.extend_calls(contract_calls);
+                    if let Some(call) = upgrade_call {
+                        invoker.add_call(call);
+                    }
+
                     classes.extend(contract_classes);
                 }
                 ResourceType::Library => {
@@ -547,7 +559,7 @@ where
 
         let has_classes = !classes.is_empty();
         let has_calls = !invoker.calls.is_empty();
-        let has_changed = has_classes || has_calls;
+        let mut has_changed = has_classes || has_calls;
 
         self.declare_classes(ui, classes).await?;
 
@@ -555,11 +567,69 @@ where
             let ui_text = format!("Registering {} resources...", n_resources);
             ui.update_text_boxed(ui_text);
 
-            invoker.multicall().await?;
+            invoker.extend_calls(deploy_calls.values().cloned().collect());
+
+            let tx = invoker.multicall().await?;
+
+            // if some external contracts have been deployed, we need to
+            // get the block number of the multicall tx.
+            if !deploy_calls.is_empty() {
+                if let TransactionResult::Hash(tx_hash) = tx {
+                    let receipt =
+                        TransactionWaiter::new(tx_hash, &self.world.account.provider()).await?;
+                    let block_number =
+                        receipt.block.block_number().expect("Block number should be available...");
+
+                    deploy_block_numbers =
+                        deploy_calls.keys().map(|name| (name.clone(), block_number)).collect();
+                }
+            }
         } else {
             let ui_text = format!("Registering {} resources (sequentially)...", n_resources);
             ui.update_text_boxed(ui_text);
 
+            invoker.invoke_all_sequentially().await?;
+
+            for (name, call) in deploy_calls {
+                let tx = invoker.invoke(call).await?;
+                if let TransactionResult::Hash(tx_hash) = tx {
+                    let receipt =
+                        TransactionWaiter::new(tx_hash, &self.world.account.provider()).await?;
+                    let block_number =
+                        receipt.block.block_number().expect("Block number should be available...");
+                    deploy_block_numbers.insert(name, block_number);
+                }
+            }
+        }
+
+        // Handle external contract registering in a second step as we need block numbers of
+        // deploying transactions for that.
+        invoker.clean_calls();
+
+        let mut n_external_contracts = 0;
+
+        for resource in self.diff.resources.values() {
+            if resource.resource_type() == ResourceType::ExternalContract {
+                let register_calls =
+                    self.external_contracts_register_calls(resource, &deploy_block_numbers).await?;
+
+                n_external_contracts += register_calls.len();
+                invoker.extend_calls(register_calls);
+            }
+        }
+
+        has_changed = has_changed || !invoker.calls.is_empty();
+
+        if self.do_multicall() {
+            let ui_text = format!("Registering {} external contracts...", n_external_contracts);
+            ui.update_text_boxed(ui_text);
+            invoker.multicall().await?;
+        } else {
+            let ui_text = format!(
+                "Registering {} external contracts (sequentially)...",
+                n_external_contracts
+            );
+            ui.update_text_boxed(ui_text);
             invoker.invoke_all_sequentially().await?;
         }
 
@@ -671,23 +741,104 @@ where
         Ok((calls, classes))
     }
 
+    async fn external_contracts_register_calls(
+        &self,
+        resource: &ResourceDiff,
+        deploy_block_numbers: &HashMap<String, u64>,
+    ) -> Result<Vec<Call>, MigrationError<A::SignError>> {
+        let mut calls = vec![];
+
+        if let ResourceDiff::Created(ResourceLocal::ExternalContract(contract)) = resource {
+            match contract {
+                ExternalContractLocal::SozoManaged(c) => {
+                    let block_number =
+                        deploy_block_numbers.get(&contract.tag()).unwrap_or_else(|| {
+                            panic!(
+                                "Block number should be available for sozo-managed {} external \
+                                 contract.",
+                                contract.tag()
+                            )
+                        });
+
+                    calls.push(self.world.register_external_contract_getcall(
+                        &ByteArray::from_string(&contract.namespace())?,
+                        &ByteArray::from_string(&c.contract_name)?,
+                        &ByteArray::from_string(&c.common.name)?,
+                        &ContractAddress(c.computed_address),
+                        &c.block_number.unwrap_or(*block_number),
+                    ));
+                }
+                ExternalContractLocal::SelfManaged(c) => {
+                    calls.push(self.world.register_external_contract_getcall(
+                        &ByteArray::from_string(&c.namespace)?,
+                        &ByteArray::from_string(&c.name)?,
+                        &ByteArray::from_string(&c.name)?,
+                        &ContractAddress(c.contract_address),
+                        &c.block_number,
+                    ));
+                }
+            }
+        }
+
+        if let ResourceDiff::Updated(
+            ResourceLocal::ExternalContract(contract_local),
+            ResourceRemote::ExternalContract(contract_remote),
+        ) = resource
+        {
+            match contract_local {
+                ExternalContractLocal::SozoManaged(c) => {
+                    // do not call `world.upgrade_external_contract()` if the block_number
+                    // didn't change, as for sozo-managed external contracts, the address of
+                    // the contract doesn't change when upgrading.
+                    if c.block_number.is_some()
+                        && c.block_number.unwrap() != contract_remote.block_number
+                    {
+                        calls.push(self.world.upgrade_external_contract_getcall(
+                            &ByteArray::from_string(&c.common.namespace)?,
+                            &ByteArray::from_string(&c.common.name)?,
+                            &ContractAddress(contract_remote.common.address),
+                            &c.block_number.unwrap(),
+                        ));
+                    }
+                }
+                ExternalContractLocal::SelfManaged(c) => {
+                    calls.push(self.world.upgrade_external_contract_getcall(
+                        &ByteArray::from_string(&c.namespace)?,
+                        &ByteArray::from_string(&c.name)?,
+                        &ContractAddress(c.contract_address),
+                        &c.block_number,
+                    ));
+                }
+            };
+        }
+
+        Ok(calls)
+    }
+
     async fn external_contracts_calls_classes(
         &self,
         resource: &ResourceDiff,
-    ) -> Result<(Vec<Call>, HashMap<Felt, LabeledClass>, bool), MigrationError<A::SignError>> {
-        let mut calls = vec![];
+    ) -> Result<
+        (Option<Call>, Option<Call>, HashMap<Felt, LabeledClass>, bool),
+        MigrationError<A::SignError>,
+    > {
+        let mut deploy_call = None;
+        let mut upgrade_call = None;
         let mut classes = HashMap::new();
 
         let namespace = resource.namespace();
         let tag = resource.tag();
-        let mut is_upgradeable = false;
+        let mut is_upgradeable = true;
 
-        if let ResourceDiff::Created(ResourceLocal::ExternalContract(contract)) = resource {
+        if let ResourceDiff::Created(ResourceLocal::ExternalContract(
+            ExternalContractLocal::SozoManaged(contract),
+        )) = resource
+        {
             trace!(
                 namespace,
                 name = contract.common.name,
                 class_hash = format!("{:#066x}", contract.common.class_hash),
-                "Deploying and registering external contract."
+                "Deploying a sozo-managed external contract."
             );
 
             let casm_class_hash = contract.common.casm_class_hash;
@@ -709,7 +860,7 @@ where
                 )
                 .await?
             {
-                Some((_, call)) => calls.push(call),
+                Some((_, call)) => deploy_call = Some(call),
                 None => {
                     return Err(MigrationError::DeployExternalContractError(anyhow!(
                         "Failed to deploy external contract `{}` in namespace `{}`",
@@ -719,19 +870,11 @@ where
                 }
             }
 
-            // and register it into the world
-            calls.push(self.world.register_external_contract_getcall(
-                &ByteArray::from_string(&contract.common.namespace)?,
-                &ByteArray::from_string(&contract.contract_name)?,
-                &ByteArray::from_string(&contract.common.name)?,
-                &ContractAddress(contract.computed_address),
-            ));
-
             is_upgradeable = contract.is_upgradeable;
         }
 
         if let ResourceDiff::Updated(
-            ResourceLocal::ExternalContract(contract_local),
+            ResourceLocal::ExternalContract(ExternalContractLocal::SozoManaged(contract_local)),
             ResourceRemote::ExternalContract(contract_remote),
         ) = resource
         {
@@ -753,22 +896,16 @@ where
                 "Upgrading contract..."
             );
 
-            calls.push(Call {
+            upgrade_call = Some(Call {
                 to: contract_address,
                 selector: snutils::get_selector_from_name(UPGRADE_CONTRACT_FN_NAME).unwrap(),
                 calldata: vec![contract_local.common.class_hash],
             });
 
-            calls.push(self.world.upgrade_external_contract_getcall(
-                &ByteArray::from_string(&namespace)?,
-                &ByteArray::from_string(&contract_local.common.name)?,
-                &ContractAddress(contract_address),
-            ));
-
             is_upgradeable = contract_local.is_upgradeable;
         }
 
-        Ok((calls, classes, is_upgradeable))
+        Ok((deploy_call, upgrade_call, classes, is_upgradeable))
     }
 
     /// Gathers the calls required to sync the libraries' classes to be declared.
