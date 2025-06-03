@@ -3,14 +3,14 @@ version = 1
 
 [[package]]
 name = "dojo"
-version = "1.5.1"
+version = "1.6.0"
 dependencies = [
  "dojo_macros",
 ]
 
 [[package]]
 name = "dojo_core_test"
-version = "1.5.0"
+version = "1.6.0"
 dependencies = [
  "dojo",
  "dojo_macros",
