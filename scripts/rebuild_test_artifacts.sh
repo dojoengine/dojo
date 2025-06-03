@@ -34,6 +34,9 @@ cargo +nightly-2024-08-28 fmt --all -- "$@"
 ./target/release/sozo test --manifest-path crates/dojo/core-cairo-test/Scarb.toml
 
 # Generates the database for testing by migrating the spawn and move example.
+if [ ! -f /tmp/katana ]; then
+    cp "$(command -v katana)" /tmp/katana
+fi
 KATANA_RUNNER_BIN=/tmp/katana cargo generate-test-db
 
 # Extracts the database for testing.

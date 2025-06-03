@@ -1,78 +1,93 @@
 # Development Setup
 
-This guide outlines the steps to set up a development environment for Dojo. If you just want to play with the toolchain, we recommend following the [Quick Start](/getting-started.md) guide instead.
+This guide outlines the steps for setting up a development environment for Dojo itself.
+If you want to use Dojo to make things, follow the [Dojo Installation guide](https://book.dojoengine.org/installation) instead.
 
-## Prerequisites
+## System prerequisites
 
 - [Rust](https://github.com/rust-lang/rust)
 - [Cairo](https://github.com/starkware-libs/cairo)
 - [protoc](https://github.com/protocolbuffers/protobuf)
+- Optional: [VS Code extension](https://marketplace.visualstudio.com/items?itemName=starkware.cairo1)
 
-## Setup
+See the [Dojo Installation guide](https://book.dojoengine.org/installation) for more details on installing these dependencies.
+
+> Depending on your Linux distribution, you may need to install additional dependencies.
+
+## Setting up your environment
 
 ### 1. Clone the repository
 
 ```sh
+# Clone and enter the repo
 git clone https://github.com/dojoengine/dojo.git
+cd dojo
 ```
 
-### 2. Install Rust and dependencies
-
-Install & update Rust:
-
-```sh
-rustup override set stable && rustup update
-```
-
-Now run the test suite to confirm your setup:
-
-```sh
-# First generate db artifacts for the tests
-bash scripts/extract_test_db.sh
-
-# The run the tests
-cargo test
-```
-
-Note: Depending on your Linux distribution, you may need to install additional dependencies.
-
-### 3. Install Scarb package manager
-
-Install the [Scarb](https://docs.swmansion.com/scarb).
-
-### 4. Add the Cairo 1.0 VSCode extension
-
-Install the [Cairo 1.0](https://marketplace.visualstudio.com/items?itemName=starkware.cairo1) extension for Visual Studio Code.
-
-## Testing
-
-Before you submit your pull request, you should run the test suite locally to make sure your changes haven't broken anything.
+### 2. Run the tests
 
 We're using `nextest` as our test runner, which you can get at [https://nexte.st/](https://nexte.st/).
 
-To run the test, you can execute the same command that will be executed on the CI by checking the [`.github/workflows/ci.yml`](.github/workflows/ci.yml) file.
+> Note that the tests depend on database artifacts for a simple "spawn and move" game.
 
-```bash
-# Run all the tests excluding Katana (due to SiR dependency, they may be run independently)
-cargo nextest run --all-features --workspace --exclude katana
+```sh
+# Prepare the spawn-and-move db artifact
+bash scripts/extract_test_db.sh
 
-# To limit the resources, you can run the tests only on a package:
+# Run all the tests
+cargo nextest run --all-features --workspace
+
+# Run a single package test
 cargo nextest run --all-features -p sozo-ops
 ```
 
-If you have to modify `dojo-core` or `dojo-lang` crates you must:
+By convention, Dojo stores test dependencies in your system's `/tmp/` directory.
+
+## Testing your changes
+
+Before you submit your pull request, you should run the tests locally to make sure your changes haven't broken anything.
+You can execute the same command that will be executed on the CI by checking the [`.github/workflows/ci.yml`](.github/workflows/ci.yml) file.
+
+When you push your changes, the built-in Continuous Integration (CI) will run all the tests on your new code.
+You can see the result of these tests in the GitHub interface of your pull request.
+If the tests fail, you'll need to revise your code and push it again.
+
+> The CI uses a `devcontainer` to have all the dependencies installed and to run the tests.
+> You can find more information about the devcontainer in the [`.devcontainer.json`](.devcontainer/devcontainer.json) file and see the latest releases on [GitHub package](https://github.com/dojoengine/dojo/pkgs/container/dojo-dev).
+
+### Rebuilding artifacts
+
+If you modified the `dojo-core` or `dojo-lang` crates you must rebuild the db artifacts.
+This will require a compatible version of Katana.
+
+If you have a compatible version of Katana in your path, simply run the following command:
 
 ```bash
-# First spin up a **fresh** Katana instance on default port.
-cargo run --bin katana
-
-# Then execute the script that will rebuild them.
+# Rebuild the spawn-and-move db artifact
 bash scripts/rebuild_test_artifacts.sh
 ```
 
-Additionally, when you push your changes, the built-in Continuous Integration (CI) will also run all the tests on the pushed code. You can see the result of these tests in the GitHub interface of your pull request. If the tests fail, you'll need to revise your code and push it again.
+> If you receive error messages saying `No version is set for command scarb`, run `asdf current` to check if your versions are up-to-date.
 
-The CI uses a `devcontainer` to have all the dependencies installed and to run the tests. You can find more information about the devcontainer in the [`.devcontainer.json`](.devcontainer/devcontainer.json) file and see the latest releases on [GitHub package](https://github.com/dojoengine/dojo/pkgs/container/dojo-dev).
+Otherwise, you will need to build Katana from source and copy it to the `/tmp/` directory.
+In a new terminal window, run:
+
+```sh
+# Clone and enter the repo
+git clone https://github.com/dojoengine/katana.git
+cd katana
+
+# Build a new katana binary from source
+cargo build --bin katana -r
+
+# Copy the binary to the /tmp/ directory
+cp target/release/katana /tmp/
+```
+
+Then you can run the `rebuild_test_artifacts` script from the Dojo directory.
+
+> Note: Katana depends on [Bun](https://bun.sh/) for development, which you will need to install.
+> For more information, see [the Katana README](https://github.com/dojoengine/katana).
 
 ## Releasing
 
