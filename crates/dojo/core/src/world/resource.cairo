@@ -41,12 +41,12 @@ pub enum Resource {
     Model: (ContractAddress, felt252),
     Event: (ContractAddress, felt252),
     Contract: (ContractAddress, felt252),
-    ExternalContract: (ContractAddress, felt252),
     Namespace: ByteArray,
     World,
     #[default]
     Unregistered,
     Library: (ClassHash, felt252),
+    ExternalContract: (ContractAddress, felt252),
 }
 
 #[generate_trait]
