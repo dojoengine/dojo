@@ -14,6 +14,7 @@ pub mod typescript;
 pub mod typescript_v2;
 pub mod unity;
 pub mod unrealengine;
+pub mod golang;
 
 #[derive(Debug)]
 pub enum BuiltinPlugins {
@@ -22,6 +23,7 @@ pub enum BuiltinPlugins {
     UnrealEngine,
     TypeScriptV2,
     Recs,
+    Golang,
 }
 
 impl fmt::Display for BuiltinPlugins {
@@ -32,6 +34,7 @@ impl fmt::Display for BuiltinPlugins {
             BuiltinPlugins::UnrealEngine => write!(f, "unrealengine"),
             BuiltinPlugins::TypeScriptV2 => write!(f, "typescript_v2"),
             BuiltinPlugins::Recs => write!(f, "recs"),
+            BuiltinPlugins::Golang => write!(f, "golang"),
         }
     }
 }
