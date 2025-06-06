@@ -1,14 +1,15 @@
 # Development Setup
 
-This guide outlines the steps for setting up a development environment for Dojo itself.
+This guide outlines the steps for setting up an environment for developing the Dojo codebase.
 If you want to use Dojo to make things, follow the [Dojo Installation guide](https://book.dojoengine.org/installation) instead.
 
 ## System prerequisites
 
 - [Rust](https://github.com/rust-lang/rust)
 - [Cairo](https://github.com/starkware-libs/cairo)
+- [Katana](https://github.com/dojoengine/katana) (via Dojo)
 - [protoc](https://github.com/protocolbuffers/protobuf)
-- Optional: [VS Code extension](https://marketplace.visualstudio.com/items?itemName=starkware.cairo1)
+- Optional: [VS Code extension](https://marketplace.visualstudio.com/items?itemName=starkware.cairo1) for syntax highlighting
 
 See the [Dojo Installation guide](https://book.dojoengine.org/installation) for more details on installing these dependencies.
 
@@ -20,8 +21,7 @@ See the [Dojo Installation guide](https://book.dojoengine.org/installation) for 
 
 ```sh
 # Clone and enter the repo
-git clone https://github.com/dojoengine/dojo.git
-cd dojo
+git clone https://github.com/dojoengine/dojo.git && cd dojo
 ```
 
 ### 2. Run the tests
@@ -57,7 +57,7 @@ If the tests fail, you'll need to revise your code and push it again.
 
 ### Rebuilding artifacts
 
-If you modified the `dojo-core` or `dojo-lang` crates you must rebuild the db artifacts.
+If you modified the `dojo-core` or `dojo-lang` crates, you must rebuild the db artifacts.
 This will require a compatible version of Katana.
 
 If you have a compatible version of Katana in your `$PATH`, simply run the following command:
@@ -74,8 +74,7 @@ In a new terminal window, run:
 
 ```sh
 # Clone and enter the repo
-git clone https://github.com/dojoengine/katana.git
-cd katana
+git clone https://github.com/dojoengine/katana.git && cd katana
 
 # Build a new katana binary from source
 cargo build --bin katana -r
