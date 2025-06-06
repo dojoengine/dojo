@@ -46,7 +46,7 @@ By convention, Dojo stores test dependencies in your system's `/tmp/` directory.
 ## Testing your changes
 
 Before you submit your pull request, you should run the tests locally to make sure your changes haven't broken anything.
-You can execute the same command that will be executed on the CI by checking the [`.github/workflows/ci.yml`](.github/workflows/ci.yml) file.
+You can execute the same command that will be executed on the CI by checking the [`.github/workflows/test.yml`](.github/workflows/test.yml) file.
 
 When you push your changes, the built-in Continuous Integration (CI) will run all the tests on your new code.
 You can see the result of these tests in the GitHub interface of your pull request.
@@ -60,7 +60,7 @@ If the tests fail, you'll need to revise your code and push it again.
 If you modified the `dojo-core` or `dojo-lang` crates you must rebuild the db artifacts.
 This will require a compatible version of Katana.
 
-If you have a compatible version of Katana in your path, simply run the following command:
+If you have a compatible version of Katana in your `$PATH`, simply run the following command:
 
 ```bash
 # Rebuild the spawn-and-move db artifact
