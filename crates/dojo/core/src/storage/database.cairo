@@ -11,7 +11,7 @@ pub const MAX_ARRAY_LENGTH: u256 = 4_294_967_295;
 /// # Arguments
 ///   * `values` - the array to fill
 ///   * `size` - the number of zero to append in the array
-fn fill_with_zeroes(ref values: Array<felt252>, size: u32) {
+pub fn fill_with_zeroes(ref values: Array<felt252>, size: u32) {
     let mut i = 0;
 
     loop {
