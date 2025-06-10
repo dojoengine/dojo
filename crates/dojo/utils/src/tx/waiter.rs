@@ -313,8 +313,8 @@ mod tests {
         ReceiptBlock, TransactionReceipt, TransactionReceiptWithBlockInfo,
     };
     use starknet::macros::felt;
-    use starknet::providers::JsonRpcClient;
     use starknet::providers::jsonrpc::HttpTransport;
+    use starknet::providers::JsonRpcClient;
 
     use super::{Duration, TransactionWaiter};
     use crate::TransactionWaitingError;

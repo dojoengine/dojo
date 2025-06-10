@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use clap::Args;
 use dojo_utils::env::DOJO_ACCOUNT_ADDRESS_ENV_VAR;
 use dojo_world::config::Environment;

@@ -76,16 +76,16 @@ where
         let hooks = Arc::new(move || self.hooks.iter().for_each(|hook| hook()));
 
         // Bind to the port and listen for incoming TCP connections
-        let listener = TcpListener::bind(addr).await
-            .map_err(|_| Error::FailedToBindAddress { addr })?;
+        let listener =
+            TcpListener::bind(addr).await.map_err(|_| Error::FailedToBindAddress { addr })?;
 
         loop {
             // Accept incoming TCP connections
-            let (tcp, _) = listener.accept().await
-                .map_err(|_| Error::FailedToBindAddress { addr })?;
+            let (tcp, _) =
+                listener.accept().await.map_err(|_| Error::FailedToBindAddress { addr })?;
 
-            // Use an adapter to access something implementing `tokio::io` traits as if they implement
-            // `hyper::rt` IO traits.
+            // Use an adapter to access something implementing `tokio::io` traits as if they
+            // implement `hyper::rt` IO traits.
             let io = TokioIo::new(tcp);
 
             // Clone the hooks and exporter for each connection
@@ -96,13 +96,16 @@ where
             tokio::task::spawn(async move {
                 // Handle the connection using HTTP1
                 if let Err(err) = http1::Builder::new()
-                    .serve_connection(io, service_fn(move |_: Request<hyper::body::Incoming>| {
-                        // call the hooks to collect metrics before exporting them
-                        (hooks)();
-                        // export the metrics from the installed exporter and send as response
-                        let metrics = Full::new(Bytes::from(exporter.export()));
-                        async move { Ok::<_, Infallible>(Response::new(metrics)) }
-                    }))
+                    .serve_connection(
+                        io,
+                        service_fn(move |_: Request<hyper::body::Incoming>| {
+                            // call the hooks to collect metrics before exporting them
+                            (hooks)();
+                            // export the metrics from the installed exporter and send as response
+                            let metrics = Full::new(Bytes::from(exporter.export()));
+                            async move { Ok::<_, Infallible>(Response::new(metrics)) }
+                        }),
+                    )
                     .await
                 {
                     eprintln!("Error serving connection: {:?}", err);
