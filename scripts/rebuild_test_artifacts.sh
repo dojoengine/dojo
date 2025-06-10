@@ -33,6 +33,15 @@ cargo +nightly-2024-08-28 fmt --all -- "$@"
 ./target/release/sozo build --manifest-path examples/spawn-and-move/Scarb.toml -P release
 ./target/release/sozo test --manifest-path crates/dojo/core-cairo-test/Scarb.toml
 
+# Copy the katana binary to the /tmp/ directory if needed.
+if [ ! -f /tmp/katana ]; then
+    if ! command -v katana >/dev/null 2>&1; then
+      echo "Error: 'katana' not found in PATH. Please install Katana or add it to your PATH."
+      exit 1
+    fi
+    cp "$(command -v katana)" /tmp/katana
+fi
+
 # Generates the database for testing by migrating the spawn and move example.
 KATANA_RUNNER_BIN=/tmp/katana cargo generate-test-db
 
