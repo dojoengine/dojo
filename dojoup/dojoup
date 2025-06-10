@@ -600,7 +600,7 @@ welcome_msg() {
 
 Congratulations on successfully installing ${dojo}Dojo${clear} ${DOJOUP_VERSION}! 🥷
 
-For more info on how to get started, check out the Dojo Getting Started Guide: https://book.dojoengine.org/getting-started/quick-start
+For more info on getting started, check out the Dojo Starter guide: https://book.dojoengine.org/tutorials/dojo-starter
 
 ═════════════════════════════════════════════════════════════════════════
 
@@ -619,7 +619,10 @@ check_scarb() {
         if asdf list | grep -q "scarb"; then
           # Check if default version is set
           if ! asdf current scarb &> /dev/null; then
-            asdf global scarb $scarb_version
+            # Try newer asdf command first, fall back to older command if it fails.
+            if ! asdf set scarb $scarb_version &> /dev/null; then
+              asdf global scarb $scarb_version
+            fi
           fi
         else
           # Install scarb using asdf

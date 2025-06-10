@@ -28,7 +28,7 @@ edition = "2021"
 license = "Apache-2.0"
 license-file = "LICENSE"
 repository = "https://github.com/dojoengine/dojo/"
-version = "1.5.0-alpha.2"
+version = "1.5.1"
 
 [profile.performance]
 codegen-units = 1
@@ -159,9 +159,11 @@ rpassword = "7.2.0"
 rstest = "0.18.2"
 rstest_reuse = "0.6.0"
 salsa = "0.16.1"
-scarb = { git = "https://github.com/remybar/scarb", rev = "bf0b4448a1977e1fb74c6ad31022320d63edfd57" }
-scarb-metadata = { git = "https://github.com/remybar/scarb", rev = "bf0b4448a1977e1fb74c6ad31022320d63edfd57" }
-scarb-ui = { git = "https://github.com/remybar/scarb", rev = "bf0b4448a1977e1fb74c6ad31022320d63edfd57" }
+
+scarb = { git = "https://github.com/dojoengine/scarb", rev = "38f13cb6f9f33836a61b231f7e00c5c4dc5cafd6" }
+scarb-metadata = { git = "https://github.com/dojoengine/scarb", rev = "38f13cb6f9f33836a61b231f7e00c5c4dc5cafd6" }
+scarb-ui = { git = "https://github.com/dojoengine/scarb", rev = "38f13cb6f9f33836a61b231f7e00c5c4dc5cafd6" }
+
 semver = "1.0.5"
 serde = { version = "1.0", features = [ "derive" ] }
 serde_json = { version = "1.0", features = [ "arbitrary_precision" ] }

@@ -97,6 +97,7 @@ async fn migrate_from_local(sequencer: &RunnerCtx) {
 #[katana_runner::test(accounts = 10, db_dir = copy_spawn_and_move_db().as_str())]
 async fn migrate_no_change(sequencer: &RunnerCtx) {
     let MigrationResult { manifest, has_changes } = migrate_spawn_and_move(sequencer, false).await;
+
     assert!(!has_changes);
     assert_eq!(manifest.contracts.len(), 4);
 }

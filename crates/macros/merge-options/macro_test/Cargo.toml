@@ -1,6 +1,6 @@
 [package]
 name = "merge-options-macro-test"
-version = "1.5.0-alpha.2"
+version = "1.5.1"
 edition = "2021"
 publish = false
 

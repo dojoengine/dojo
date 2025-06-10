@@ -14,9 +14,8 @@ use syn::{parse_macro_input, Data, DeriveInput, Fields};
 /// - If the other struct is `Some`, the field will be compared with the default value of the
 ///   struct. Every field that is default in `Self` will be overwritten with the value in `other`.
 ///
-/// This has one drawback at the moment, a value that is not the default in the other struct will
-/// always override the current value (if it's the default in `Self`). This may be inconvenient for
-/// some use cases, but it's a limitation of the current approach.
+/// Fields marked with `#[merge]` will recursively call their own `merge` method instead of being
+/// replaced entirely.
 ///
 /// # Example
 ///
@@ -26,12 +25,25 @@ use syn::{parse_macro_input, Data, DeriveInput, Fields};
 ///     pub port: u16,
 ///     pub peers: Vec<String>,
 ///     pub path: Option<String>,
+///     #[merge]
+///     pub nested: NestedOptions,
 ///     pub enabled: bool,
+/// }
+///
+/// #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, MergeOptions)]
+/// pub struct NestedOptions {
+///     pub value: String,
 /// }
 ///
 /// impl Default for MyOptions {
 ///     fn default() -> Self {
-///         Self { port: 8080, peers: vec![], path: None, enabled: false }
+///         Self {
+///             port: 8080,
+///             peers: vec![],
+///             path: None,
+///             nested: NestedOptions::default(),
+///             enabled: false,
+///         }
 ///     }
 /// }
 ///
@@ -46,25 +58,28 @@ use syn::{parse_macro_input, Data, DeriveInput, Fields};
 ///             }
 ///
 ///             if self.peers == default_values.peers {
-///                 self.peers = other.peers;
+///                 self.peers = other.peers.clone();
 ///             }
 ///
 ///             if self.path == default_values.path {
-///                 self.path = other.path;
+///                 self.path = other.path.clone();
 ///             }
 ///
-///             // Here we can note that if `Self` wants to enforce `false`, it will be overridden by `other` if it's `true`.
+///             // The #[merge] attribute causes this field to be merged recursively
+///             self.nested.merge(Some(&other.nested));
+///
 ///             if self.enabled == default_values.enabled {
 ///                 self.enabled = other.enabled;
 ///             }
 ///         }
 ///     }
 /// }
-#[proc_macro_derive(MergeOptions)]
+#[proc_macro_derive(MergeOptions, attributes(merge))]
 pub fn derive_merge_options(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let name = &input.ident;
 
+    // Ensure the input is a struct with named fields
     let fields = match &input.data {
         Data::Struct(data) => match &data.fields {
             Fields::Named(fields) => &fields.named,
@@ -73,17 +88,29 @@ pub fn derive_merge_options(input: TokenStream) -> TokenStream {
         _ => panic!("MergeOptions can only be derived for structs"),
     };
 
+    // Generate merge logic for each field
     let merge_fields = fields.iter().map(|field| {
         let field_name = field.ident.as_ref().unwrap();
 
-        // For all field types, check against the default value.
-        quote! {
-            if self.#field_name == default_values.#field_name {
-                self.#field_name = other.#field_name.clone();
+        // Check if the field has the #[merge] attribute
+        let has_merge_attr = field.attrs.iter().any(|attr| attr.path().is_ident("merge"));
+
+        if has_merge_attr {
+            // For fields with #[merge] attribute, use recursive merging
+            quote! {
+                self.#field_name.merge(Some(&other.#field_name));
+            }
+        } else {
+            // For fields without #[merge] attribute, use the default comparison logic
+            quote! {
+                if self.#field_name == default_values.#field_name {
+                    self.#field_name = other.#field_name.clone();
+                }
             }
         }
     });
 
+    // Generate the impl block
     let expanded = quote! {
         impl #name {
             pub fn merge(&mut self, other: Option<&Self>) {

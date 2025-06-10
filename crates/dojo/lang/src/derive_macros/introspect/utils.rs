@@ -1,34 +1,9 @@
-use std::collections::HashMap;
-
-use regex;
-
-#[derive(Clone, Default, Debug)]
-pub struct TypeIntrospection(pub usize, pub Vec<usize>);
-
 const TUPLE_PREFIX: &str = "(";
 const TUPLE_SUFFIX: &str = ")";
 const SPAN_PREFIX: &str = "Span<";
 const SPAN_SUFFIX: &str = ">";
 const ARRAY_PREFIX: &str = "Array<";
 const ARRAY_SUFFIX: &str = ">";
-
-// Provides type introspection information for primitive types
-pub fn primitive_type_introspection() -> HashMap<String, TypeIntrospection> {
-    HashMap::from([
-        ("bytes31".into(), TypeIntrospection(1, vec![248])),
-        ("felt252".into(), TypeIntrospection(1, vec![251])),
-        ("bool".into(), TypeIntrospection(1, vec![1])),
-        ("u8".into(), TypeIntrospection(1, vec![8])),
-        ("u16".into(), TypeIntrospection(1, vec![16])),
-        ("u32".into(), TypeIntrospection(1, vec![32])),
-        ("u64".into(), TypeIntrospection(1, vec![64])),
-        ("u128".into(), TypeIntrospection(1, vec![128])),
-        ("u256".into(), TypeIntrospection(2, vec![128, 128])),
-        ("usize".into(), TypeIntrospection(1, vec![32])),
-        ("ContractAddress".into(), TypeIntrospection(1, vec![251])),
-        ("ClassHash".into(), TypeIntrospection(1, vec![251])),
-    ])
-}
 
 /// Check if the provided type is an unsupported `Option<T>`,
 /// because tuples are not supported with Option.
@@ -69,12 +44,13 @@ pub fn extract_composite_inner_type(ty: &str, prefix: &str, suffix: &str) -> Str
     // Note: Until at least 2.11, in cairo_lang_* crates, if there is a comment after a struct field
     // type, without a comma, like `v1: Span<u32> // comment`, the comment is included in the
     // type definition while reading it from the AST.
-    let re = regex::Regex::new(&format!(
-        "{}\\s*(\\S*.*\\S+)\\s*{}",
-        regex::escape(prefix),
-        regex::escape(suffix)
-    ))
-    .unwrap();
+
+    // first, remove trailing comment if present
+    let ty = ty.split("//").next().unwrap();
+
+    // then, extract the type between prefix and suffix
+    let re = regex::Regex::new(&format!("{}(.*){}", regex::escape(prefix), regex::escape(suffix)))
+        .unwrap();
 
     let caps = re.captures(ty).unwrap_or_else(|| {
         panic!("'{ty}' must contain the '{prefix}' prefix and the '{suffix}' suffix.")
@@ -145,6 +121,7 @@ pub fn test_get_tuple_item_types() {
     }
 
     let test_cases = vec![
+        ("()", vec![]),
         ("(u8,)", vec!["u8"]),
         ("(u8, u16, u32)", vec!["u8", "u16", "u32"]),
         ("(u8, (u16,), u32)", vec!["u8", "(u16,)", "u32"]),
@@ -179,6 +156,14 @@ fn test_extract_composite_inner_type_with_tuples() {
         ),
         ("(u8, u32) // comment", "u8,u32"),
         ("(u8, u32), // comment", "u8,u32"),
+        // Unity type is a special case (empty tuple).
+        ("()", ""),
+        ("(),", ""),
+        ("((), (u8, ()))", "(),(u8,())"),
+        // comment with parenthesis
+        ("() // ( comment )", ""),
+        // with a lot of spaces
+        ("  (   u8   ,    u32   )    // comment", "u8,u32"),
     ];
 
     for (tuple, expected) in test_cases {
@@ -207,6 +192,7 @@ fn test_extract_composite_inner_type_with_arrays() {
         ("Array<Array<(u8, u16)>>", "Array<(u8,u16)>"),
         ("Array<(u8, u16)> // comment", "(u8,u16)"),
         ("Array<(u8, u16)>, // comment", "(u8,u16)"),
+        // Array<()> is not supported by Cairo so no need to test this case
     ];
 
     for (arr, expected) in test_cases {
@@ -229,6 +215,7 @@ fn test_extract_composite_inner_type_with_spans() {
         ("Span<Array<(u8, u16)>>", "Array<(u8,u16)>"),
         ("Span<(u8, u16)> // comment", "(u8,u16)"),
         ("Span<(u8, u16)>, // comment", "(u8,u16)"),
+        ("Span<()>", "()"),
     ];
 
     for (sp, expected) in test_cases {
