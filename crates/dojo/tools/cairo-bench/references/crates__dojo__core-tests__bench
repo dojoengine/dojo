@@ -1,0 +1,366 @@
+[
+  {
+    "name": "calculate_packed_size::large",
+    "cost": 1973980
+  },
+  {
+    "name": "calculate_packed_size::medium",
+    "cost": 583900
+  },
+  {
+    "name": "calculate_packed_size::small",
+    "cost": 236380
+  },
+  {
+    "name": "delete_array_layout::big",
+    "cost": 196848
+  },
+  {
+    "name": "delete_array_layout::medium",
+    "cost": 196848
+  },
+  {
+    "name": "delete_array_layout::small",
+    "cost": 196848
+  },
+  {
+    "name": "delete_byte_array_layout::big",
+    "cost": 293700
+  },
+  {
+    "name": "delete_byte_array_layout::medium",
+    "cost": 293700
+  },
+  {
+    "name": "delete_byte_array_layout::small",
+    "cost": 293700
+  },
+  {
+    "name": "delete_layout::big",
+    "cost": 1616180
+  },
+  {
+    "name": "delete_layout::medium",
+    "cost": 498620
+  },
+  {
+    "name": "delete_layout::small",
+    "cost": 219230
+  },
+  {
+    "name": "delete_enum_layout::big",
+    "cost": 9980440
+  },
+  {
+    "name": "delete_enum_layout::medium",
+    "cost": 1544702
+  },
+  {
+    "name": "delete_enum_layout::small",
+    "cost": 483684
+  },
+  {
+    "name": "delete_fixed_layout::big",
+    "cost": 2329336
+  },
+  {
+    "name": "delete_fixed_layout::medium",
+    "cost": 697188
+  },
+  {
+    "name": "delete_fixed_layout::small",
+    "cost": 430180
+  },
+  {
+    "name": "delete_struct_layout::big",
+    "cost": 21009798
+  },
+  {
+    "name": "delete_struct_layout::medium",
+    "cost": 5344422
+  },
+  {
+    "name": "delete_struct_layout::small",
+    "cost": 1428078
+  },
+  {
+    "name": "delete_tuple_layout::big",
+    "cost": 83268420
+  },
+  {
+    "name": "delete_tuple_layout::medium",
+    "cost": 10556594
+  },
+  {
+    "name": "delete_tuple_layout::small",
+    "cost": 1426858
+  },
+  {
+    "name": "fill_with_zeroes",
+    "cost": 2593590
+  },
+  {
+    "name": "get_many::large",
+    "cost": 24655784
+  },
+  {
+    "name": "get_many::medium",
+    "cost": 6269480
+  },
+  {
+    "name": "get_many::small",
+    "cost": 1672904
+  },
+  {
+    "name": "get_packed_array::large",
+    "cost": 2084902
+  },
+  {
+    "name": "get_packed_array::medium",
+    "cost": 620902
+  },
+  {
+    "name": "get_packed_array::small",
+    "cost": 254902
+  },
+  {
+    "name": "pack::large",
+    "cost": 15928212
+  },
+  {
+    "name": "pack::medium",
+    "cost": 4075668
+  },
+  {
+    "name": "pack::small",
+    "cost": 1112532
+  },
+  {
+    "name": "pow2_const(10)",
+    "cost": 97830
+  },
+  {
+    "name": "pow2_const(255)",
+    "cost": 95460
+  },
+  {
+    "name": "read_array_layout::big",
+    "cost": 99456538
+  },
+  {
+    "name": "read_array_layout::medium",
+    "cost": 12755922
+  },
+  {
+    "name": "read_array_layout::small",
+    "cost": 1869746
+  },
+  {
+    "name": "read_byte_array_layout::big",
+    "cost": 1056610
+  },
+  {
+    "name": "read_byte_array_layout::medium",
+    "cost": 447490
+  },
+  {
+    "name": "read_byte_array_layout::small",
+    "cost": 362890
+  },
+  {
+    "name": "read_enum_layout::big",
+    "cost": 12113192
+  },
+  {
+    "name": "read_enum_layout::medium",
+    "cost": 1823744
+  },
+  {
+    "name": "read_enum_layout::small",
+    "cost": 529886
+  },
+  {
+    "name": "read_fixed_layout::big",
+    "cost": 2949276
+  },
+  {
+    "name": "read_fixed_layout::medium",
+    "cost": 917768
+  },
+  {
+    "name": "read_fixed_layout::small",
+    "cost": 584440
+  },
+  {
+    "name": "read_layout::big",
+    "cost": 503569874
+  },
+  {
+    "name": "read_layout::medium",
+    "cost": 13058090
+  },
+  {
+    "name": "read_layout::small",
+    "cost": 802724
+  },
+  {
+    "name": "read_struct_layout::big",
+    "cost": 25199918
+  },
+  {
+    "name": "read_struct_layout::medium",
+    "cost": 6481742
+  },
+  {
+    "name": "read_struct_layout::small",
+    "cost": 1022274
+  },
+  {
+    "name": "read_tuple_layout::big",
+    "cost": 99579760
+  },
+  {
+    "name": "read_tuple_layout::medium",
+    "cost": 12685134
+  },
+  {
+    "name": "read_tuple_layout::small",
+    "cost": 1774598
+  },
+  {
+    "name": "set_many::large",
+    "cost": 19811566
+  },
+  {
+    "name": "set_many::medium",
+    "cost": 5057630
+  },
+  {
+    "name": "set_many::small",
+    "cost": 1372094
+  },
+  {
+    "name": "set_packed_array::large",
+    "cost": 2340072
+  },
+  {
+    "name": "set_packed_array::medium",
+    "cost": 685992
+  },
+  {
+    "name": "set_packed_array::small",
+    "cost": 272472
+  },
+  {
+    "name": "shl(1, 255)",
+    "cost": 109640
+  },
+  {
+    "name": "shl(10, 10)",
+    "cost": 112010
+  },
+  {
+    "name": "shr(10, 10)",
+    "cost": 104580
+  },
+  {
+    "name": "shr(U256_MAX, 255)",
+    "cost": 102210
+  },
+  {
+    "name": "unpack::large",
+    "cost": 18881882
+  },
+  {
+    "name": "unpack::medium",
+    "cost": 4813658
+  },
+  {
+    "name": "unpack::small",
+    "cost": 1296602
+  },
+  {
+    "name": "write_array_layout::big",
+    "cost": 77426578
+  },
+  {
+    "name": "write_array_layout::medium",
+    "cost": 9892812
+  },
+  {
+    "name": "write_array_layout::small",
+    "cost": 1413236
+  },
+  {
+    "name": "write_byte_array_layout::big",
+    "cost": 197512
+  },
+  {
+    "name": "write_byte_array_layout::medium",
+    "cost": 197512
+  },
+  {
+    "name": "write_byte_array_layout::small",
+    "cost": 197512
+  },
+  {
+    "name": "write_enum_layout::big",
+    "cost": 9254342
+  },
+  {
+    "name": "write_enum_layout::medium",
+    "cost": 1378334
+  },
+  {
+    "name": "write_enum_layout::small",
+    "cost": 387596
+  },
+  {
+    "name": "write_fixed_layout::big",
+    "cost": 2164056
+  },
+  {
+    "name": "write_fixed_layout::medium",
+    "cost": 652388
+  },
+  {
+    "name": "write_fixed_layout::small",
+    "cost": 405460
+  },
+  {
+    "name": "write_layout::big",
+    "cost": 395879256
+  },
+  {
+    "name": "write_layout::medium",
+    "cost": 10333072
+  },
+  {
+    "name": "write_layout::small",
+    "cost": 606146
+  },
+  {
+    "name": "write_struct_layout::big",
+    "cost": 19579698
+  },
+  {
+    "name": "write_struct_layout::medium",
+    "cost": 4987122
+  },
+  {
+    "name": "write_struct_layout::small",
+    "cost": 730954
+  },
+  {
+    "name": "write_tuple_layout::big",
+    "cost": 77569470
+  },
+  {
+    "name": "write_tuple_layout::medium",
+    "cost": 9841694
+  },
+  {
+    "name": "write_tuple_layout::small",
+    "cost": 1337758
+  }
+]

@@ -11,6 +11,14 @@ pub impl GasCounterImpl of GasCounterTrait {
         GasCounter { start }
     }
 
+    fn end_csv(self: GasCounter, name: ByteArray) {
+        let end = core::testing::get_available_gas();
+        let gas_used = self.start - end;
+
+        println!("#GAS#{};{}", name, gas_used);
+        core::gas::withdraw_gas().unwrap();
+    }
+
     fn end(self: GasCounter, name: ByteArray) {
         let end = core::testing::get_available_gas();
         let gas_used = self.start - end;
