@@ -68,11 +68,11 @@ jobs:
       # Workaround for https://github.com/actions/runner-images/issues/6775
       - run: git config --global --add safe.directory "*"
 
-      # This pulls and runs Katana docker image for integration tests.
-      - name: Initialize Katana for integration tests
+      # This puts Katana in the path for integration tests.
+      - name: Download Katana for integration tests
         run: |
-          docker pull ghcr.io/dojoengine/katana-dev:v1.6.0-preview.0
-          docker run -d -p 5050:5050 ghcr.io/dojoengine/katana-dev:v1.6.0-preview.0 katana
+          curl -L https://github.com/dojoengine/katana/releases/download/v1.6.0-alpha.0/katana_v1.6.0-alpha.0_linux_amd64.tar.gz -o katana.tar.gz;
+          tar -C /usr/local/bin -xzf katana.tar.gz
 
       - run: |
           export PATH=/tmp/bins:$PATH
