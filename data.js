@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1748877058550,
+  "lastUpdate": 1749587456572,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -63588,6 +63588,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 52659481218,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "kronovet@gmail.com",
+            "name": "Daniel Kronovet",
+            "username": "kronosapiens"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "26dd59f608be36b53ef66b20c0c9b015e1a867f5",
+          "message": "Update DEVELOPMENT.md (#3236)\n\n* Update DEVELOPMENT.md with new instructions\n\n* Update scripts/rebuild_test_artifacts.sh with Rabbit suggestion\n\nCo-authored-by: coderabbitai[bot] <136622811+coderabbitai[bot]@users.noreply.github.com>\n\n* Respond to review comments\n\n* Respond to review comments II\n\n* Respond to review comments III\n\n---------\n\nCo-authored-by: coderabbitai[bot] <136622811+coderabbitai[bot]@users.noreply.github.com>",
+          "timestamp": "2025-06-10T13:17:07-07:00",
+          "tree_id": "4dca39e8ae8c40576923078da4cf3992c3db0129",
+          "url": "https://github.com/dojoengine/dojo/commit/26dd59f608be36b53ef66b20c0c9b015e1a867f5"
+        },
+        "date": 1749587453275,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 53338425443,
             "range": "± 0",
             "unit": "ns/iter"
           }
