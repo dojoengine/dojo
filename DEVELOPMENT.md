@@ -20,7 +20,6 @@ See the [Dojo Installation guide](https://book.dojoengine.org/installation) for 
 ### 1. Clone the repository
 
 ```sh
-# Clone and enter the repo
 git clone https://github.com/dojoengine/dojo.git && cd dojo
 ```
 
@@ -41,12 +40,14 @@ cargo nextest run --all-features --workspace
 cargo nextest run --all-features -p sozo-ops
 ```
 
-By convention, Dojo stores test dependencies in your system's `/tmp/` directory.
-
 ## Testing your changes
 
 Before you submit your pull request, you should run the tests locally to make sure your changes haven't broken anything.
-You can execute the same command that will be executed on the CI by checking the [`.github/workflows/test.yml`](.github/workflows/test.yml) file.
+You can execute the same command that will be executed on the CI by checking the [`.github/workflows/test.yml`](.github/workflows/test.yml) file:
+
+```bash
+cargo nextest run --all-features --workspace --build-jobs 20
+```
 
 When you push your changes, the built-in Continuous Integration (CI) will run all the tests on your new code.
 You can see the result of these tests in the GitHub interface of your pull request.
@@ -73,7 +74,6 @@ Otherwise, you will need to build Katana from source and copy it to the `/tmp/` 
 In a new terminal window, run:
 
 ```sh
-# Clone and enter the repo
 git clone https://github.com/dojoengine/katana.git && cd katana
 
 # Build a new katana binary from source
@@ -85,7 +85,9 @@ cp target/release/katana /tmp/
 
 Then you can run the `rebuild_test_artifacts` script from the Dojo directory.
 
-> Note: Katana depends on [Bun](https://bun.sh/) for development, which you will need to install.
+> Note: By convention, Dojo looks for its test dependencies -- the `katana` binary and the `spawn-and-move` artifact -- in your system's `/tmp/` directory.
+
+> Note: Katana depends on [Bun](https://bun.sh/) for development, which you may need to install.
 > For more information, see [the Katana README](https://github.com/dojoengine/katana).
 
 ## Releasing
