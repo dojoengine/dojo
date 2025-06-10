@@ -1,4 +1,3 @@
-use itertools::Itertools;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fs;
@@ -8,6 +7,7 @@ use std::process::Command;
 use camino::{Utf8Path, Utf8PathBuf};
 use clap::Parser;
 use colored::Colorize;
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 
 // just keep test functions starting with this prefix
@@ -58,8 +58,8 @@ enum BenchResultSorting {
     version,
     about = "Tool to benchmark Cairo tests.",
     long_about = "Tool for comparing Cairo test performance by measuring their gas cost. It \
-                  allows tracking performance evolution over time by comparing test results with a \
-                  reference file.\n- Test functions must start with `bench_` to be taken into \
+                  allows tracking performance evolution over time by comparing test results with \
+                  a reference file.\n- Test functions must start with `bench_` to be taken into \
                   account.\n- Gas cost must follow the output format defined in \
                   GasCounterTrait::end_csv()."
 )]
@@ -75,7 +75,8 @@ struct Args {
 
     #[arg(
         long,
-        help = "Update the test list of the reference file corresponding to the provided manifest file."
+        help = "Update the test list of the reference file corresponding to the provided manifest \
+                file."
     )]
     pub update_ref_test_list: bool,
 
@@ -141,7 +142,7 @@ fn validate_args(args: &Args) {
 }
 
 /// Sort test costs by name.
-fn sort_tests(tests: &mut Vec<TestCost>) {
+fn sort_tests(tests: &mut [TestCost]) {
     tests.sort_by(|a, b| a.name.partial_cmp(&b.name).unwrap());
 }
 
@@ -247,15 +248,15 @@ fn read_ref_tests(ref_file: &Utf8PathBuf) -> Vec<TestCost> {
     let content = fs::read_to_string(ref_file)
         .unwrap_or_else(|_| panic!("Failed to read reference file: {}", ref_file));
 
-    let mut tests = serde_json::from_str(&content)
+    let mut tests: Vec<TestCost> = serde_json::from_str(&content)
         .unwrap_or_else(|_| panic!("Failed to parse reference file: {}", ref_file));
 
-    sort_tests(&mut tests);
+    sort_tests(tests.as_mut_slice());
     tests
 }
 
 /// Write the test costs to the reference file.
-fn write_ref_file(ref_file: &Utf8PathBuf, tests: Vec<TestCost>) {
+fn write_ref_file(ref_file: &Utf8PathBuf, tests: &[TestCost]) {
     let ref_dir = ref_file.parent().unwrap();
 
     if !ref_dir.exists() {
@@ -285,10 +286,7 @@ fn get_manifest_path(manifest_path: Option<Utf8PathBuf>) -> Utf8PathBuf {
 
 /// Compare the reference tests with the new tests and return a map of test names to their
 /// comparison status.
-fn compare_tests(
-    ref_tests: &Vec<TestCost>,
-    new_tests: &Vec<TestCost>,
-) -> HashMap<String, TestCompare> {
+fn compare_tests(ref_tests: &[TestCost], new_tests: &[TestCost]) -> HashMap<String, TestCompare> {
     let mut result = HashMap::<String, TestCompare>::new();
 
     let mut ref_it = ref_tests.iter();
@@ -346,7 +344,7 @@ fn get_ratio(old_cost: u128, new_cost: u128) -> (f64, i128) {
 
 /// Get the ratio indicator for the provided old and new costs.
 fn get_ratio_indicator(old_cost: &u128, new_cost: &u128) -> String {
-    match new_cost.partial_cmp(&old_cost).unwrap() {
+    match new_cost.partial_cmp(old_cost).unwrap() {
         Ordering::Less | Ordering::Greater => {
             let (ratio, diff) = get_ratio(*old_cost, *new_cost);
             format!("({ratio:+.2}%) / {diff:+}")
@@ -432,17 +430,17 @@ fn print_compare_result(
     for (name, status) in filter_and_sort_result(result, filtering_criteria, sorting_criteria) {
         has_results = true;
         match status {
-            TestCompare::Removed => print_result(REMOVED_TAG, &name, ""),
-            TestCompare::Created => print_result(CREATED_TAG, &name, ""),
+            TestCompare::Removed => print_result(REMOVED_TAG, name, ""),
+            TestCompare::Created => print_result(CREATED_TAG, name, ""),
             TestCompare::Updated((old_cost, new_cost)) => {
                 match new_cost.partial_cmp(old_cost).unwrap() {
                     Ordering::Less => {
-                        print_result(BETTER_TAG, &name, &get_ratio_indicator(old_cost, new_cost));
+                        print_result(BETTER_TAG, name, &get_ratio_indicator(old_cost, new_cost));
                     }
                     Ordering::Greater => {
-                        print_result(WORSE_TAG, &name, &get_ratio_indicator(old_cost, new_cost));
+                        print_result(WORSE_TAG, name, &get_ratio_indicator(old_cost, new_cost));
                     }
-                    Ordering::Equal => print_result(EQUAL_TAG, &name, ""),
+                    Ordering::Equal => print_result(EQUAL_TAG, name, ""),
                 };
             }
         }
@@ -456,8 +454,8 @@ fn print_compare_result(
 /// Update the reference file with the new test results.
 fn update_ref_file(
     ref_file: &Utf8PathBuf,
-    ref_results: &Vec<TestCost>,
-    new_results: &Vec<TestCost>,
+    ref_results: &[TestCost],
+    new_results: &[TestCost],
     keep_ref_costs: bool,
 ) {
     if keep_ref_costs {
@@ -467,17 +465,17 @@ fn update_ref_file(
                 name: new_test.name.clone(),
                 cost: ref_results
                     .iter()
-                    .find(|ref_test| &ref_test.name == &new_test.name)
-                    .and_then(|ref_test| Some(ref_test.cost))
+                    .find(|ref_test| ref_test.name == new_test.name)
+                    .map(|ref_test| ref_test.cost)
                     .unwrap_or(new_test.cost),
             })
             .collect::<Vec<_>>();
 
         sort_tests(&mut updated_tests_results);
 
-        write_ref_file(&ref_file, updated_tests_results);
+        write_ref_file(ref_file, &updated_tests_results);
     } else {
-        write_ref_file(&ref_file, new_results.clone());
+        write_ref_file(ref_file, new_results);
     }
 }
 
@@ -516,7 +514,7 @@ fn main() {
 
         print_compare_result(&results, bench_result_filtering, bench_result_sorting);
     } else {
-        write_ref_file(&ref_file, new_test_results);
+        write_ref_file(&ref_file, &new_test_results);
     }
 }
 
