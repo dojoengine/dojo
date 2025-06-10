@@ -183,7 +183,7 @@ where
     }
 }
 
-impl<'a, P> Future for TransactionWaiter<'a, P>
+impl<P> Future for TransactionWaiter<'_, P>
 where
     P: Provider + Send,
 {

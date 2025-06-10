@@ -221,10 +221,7 @@ where
 
     /// Returns whether multicall should be used. By default, it is enabled.
     fn do_multicall(&self) -> bool {
-        self.profile_config
-            .migration
-            .as_ref()
-            .map_or(true, |m| !m.disable_multicall.unwrap_or(false))
+        self.profile_config.migration.as_ref().is_none_or(|m| !m.disable_multicall.unwrap_or(false))
     }
 
     /// For all contracts that are not initialized, initialize them by using the init call arguments
