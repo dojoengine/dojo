@@ -48,7 +48,7 @@ reqwest = { workspace = true, features = [ "json" ] }
 
 [dev-dependencies]
 dojo-test-utils = { workspace = true, features = [ "build-examples" ] }
-katana-runner = { git = "https://github.com/dojoengine/katana", rev = "5cb249c0fa59fa6b7c88b32557e7baf8944cdb3d" }
+katana-runner.workspace = true
 serde_json.workspace = true
 tokio.workspace = true
 

@@ -83,7 +83,7 @@ sozo-walnut = { path = "crates/sozo/walnut" }
 # macros
 merge-options = { path = "crates/macros/merge-options" }
 
-katana-runner = { git = "https://github.com/dojoengine/katana", branch = "rpc-0.8.0" }
+katana-runner = { git = "https://github.com/dojoengine/katana", rev = "f472095" }
 
 anyhow = "1.0.89"
 arbitrary = { version = "1.3.2", features = [ "derive" ] }
@@ -194,7 +194,7 @@ ipfs-api-backend-hyper = { git = "https://github.com/ferristseng/rust-ipfs-api",
 mime_guess = "2.0"
 
 # server
-hyper = "0.14.27"
+hyper = "1.5"
 warp = "0.3"
 
 # gRPC
