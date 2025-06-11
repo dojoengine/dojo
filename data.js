@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1749587456572,
+  "lastUpdate": 1749602454720,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -63618,6 +63618,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 53338425443,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c8de92b7aa71c498ebc0d9334c6643109bed63de",
+          "message": "feat: update rpc spec to 0.8 (#3179)",
+          "timestamp": "2025-06-11T08:26:42+08:00",
+          "tree_id": "f575474d5db0c76d2325c79f3c1176c1c4c01408",
+          "url": "https://github.com/dojoengine/dojo/commit/c8de92b7aa71c498ebc0d9334c6643109bed63de"
+        },
+        "date": 1749602451287,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 58517547053,
             "range": "± 0",
             "unit": "ns/iter"
           }
