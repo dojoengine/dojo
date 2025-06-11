@@ -15,7 +15,7 @@ use std::path::Path;
 use std::process::Command;
 
 use anyhow::{anyhow, Result};
-use cainome::rs::Abigen;
+use cainome::rs::{Abigen, ExecutionVersion};
 use camino::Utf8PathBuf;
 use scarb::core::{Config, TargetKind};
 use scarb::ops::{CompileOpts, FeaturesOpts, FeaturesSelector};
@@ -66,6 +66,7 @@ fn generate_bindings(
     let tmp_file = format!("/tmp/{contract_name}.rs");
 
     let abigen = Abigen::new(contract_name, contract_artifact_path)
+        .with_execution_version(ExecutionVersion::V3)
         .with_types_aliases(HashMap::from([(
             String::from("dojo::world::config::Config::Event"),
             String::from("DojoConfigEvent"),
