@@ -3,7 +3,7 @@
 # Dojo: Provable Games and Applications [![discord](https://img.shields.io/badge/join-dojo-green?logo=discord&logoColor=white)](https://discord.com/invite/dojoengine) [![Telegram Chat][tg-badge]][tg-url] [![Github Actions][gha-badge]][gha-url]
 
 [gha-badge]: https://img.shields.io/github/actions/workflow/status/dojoengine/dojo/test.yml?branch=main
-[gha-url]: https://github.com/dojoengine/dojo/actions
+[gha-url]: https://github.com/dojoengine/dojo/actions/workflows/test.yml?query=branch%3Amain
 [tg-badge]: https://img.shields.io/endpoint?color=neon&logo=telegram&label=chat&style=flat-square&url=https%3A%2F%2Ftg.sumanjay.workers.dev%2Fdojoengine
 [tg-url]: https://t.me/dojoengine
 
