@@ -74,6 +74,7 @@ use syn::{parse_macro_input, Data, DeriveInput, Fields};
 ///         }
 ///     }
 /// }
+/// ```
 #[proc_macro_derive(MergeOptions, attributes(merge))]
 pub fn derive_merge_options(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
