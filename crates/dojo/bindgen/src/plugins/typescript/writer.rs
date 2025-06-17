@@ -43,6 +43,7 @@ impl BindgenWriter for TsFileWriter {
                 composites
             })
             .filter(|c| !(c.type_path.starts_with("dojo::") || c.type_path.starts_with("core::")))
+            .filter(|c| !c.type_name().ends_with("Value"))
             .collect::<Vec<_>>();
 
         let mut m_composites = models
@@ -65,6 +66,7 @@ impl BindgenWriter for TsFileWriter {
                 composites
             })
             .filter(|c| !(c.type_path.starts_with("dojo::") || c.type_path.starts_with("core::")))
+            .filter(|c| !c.type_name().ends_with("Value"))
             .collect::<Vec<_>>();
 
         // Sort models based on their tag to ensure deterministic output.
