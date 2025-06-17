@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1749606277866,
+  "lastUpdate": 1750181742060,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -63678,6 +63678,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 52221055575,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "163239332+one230six@users.noreply.github.com",
+            "name": "one230six",
+            "username": "one230six"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "03aa6c4983714b780bfe2fee23dd4498151f4364",
+          "message": "chore: add the missing backticks in the comments (#3243)\n\nSigned-off-by: one230six <723682061@qq.com>",
+          "timestamp": "2025-06-18T01:21:57+08:00",
+          "tree_id": "7c8d6f000a51eb4b3b4c3681c9f0515e6802a1c5",
+          "url": "https://github.com/dojoengine/dojo/commit/03aa6c4983714b780bfe2fee23dd4498151f4364"
+        },
+        "date": 1750181738689,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 50511750637,
             "range": "± 0",
             "unit": "ns/iter"
           }
