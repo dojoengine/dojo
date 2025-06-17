@@ -1,10 +1,13 @@
-use dojo_examples::models::{Direction, Position};
+use dojo_examples::models::{Direction, Position, PlayerItem};
 
 #[starknet::interface]
 pub trait IActions<T> {
     fn spawn(ref self: T);
     fn move(ref self: T, direction: Direction);
     fn set_player_config(ref self: T, name: ByteArray);
+    fn update_player_config_items(
+        ref self: T, items: Array<PlayerItem>, favorite_item: Option<u32>,
+    );
     fn update_player_config_name(ref self: T, name: ByteArray);
     fn get_player_position(self: @T) -> Position;
     fn reset_player_config(ref self: T);
@@ -21,6 +24,7 @@ pub mod actions {
     use starknet::{ContractAddress, get_caller_address};
     use dojo_examples::models::{
         Position, Moves, MovesValue, Direction, Vec2, PlayerConfig, PlayerItem, ServerProfile,
+        PlayerConfigItems,
     };
     use dojo_examples::utils::next_position;
     use dojo_examples::lib_math::{SimpleMathLibraryDispatcher, SimpleMathDispatcherTrait};
@@ -134,6 +138,16 @@ pub mod actions {
 
             let config = PlayerConfig { player, name, items, favorite_item: Option::Some(1) };
             world.write_model(@config);
+        }
+
+        fn update_player_config_items(
+            ref self: ContractState, items: Array<PlayerItem>, favorite_item: Option<u32>,
+        ) {
+            let mut world = self.world_default();
+            let player = get_caller_address();
+            let player_items = PlayerConfigItems { items, favorite_item };
+            // Don't need to read the model here, we directly overwrite the member "items".
+            world.write_schema(Model::<PlayerConfig>::ptr_from_keys(player), @player_items);
         }
 
         fn update_player_config_name(ref self: ContractState, name: ByteArray) {

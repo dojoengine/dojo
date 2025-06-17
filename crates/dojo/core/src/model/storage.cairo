@@ -61,6 +61,14 @@ pub trait ModelStorage<S, M> {
         self: @S, ptrs: Span<ModelPtr<M>>,
     ) -> Array<T>;
 
+    /// Writes a subset of members in a model, matching a defined schema <T>.
+    fn write_schema<T, +Serde<T>, +Introspect<T>>(ref self: S, ptr: ModelPtr<M>, schema: @T);
+
+    /// Writes part of multiple models, matching a schema.
+    fn write_schemas<T, +Serde<T>, +Introspect<T>>(
+        ref self: S, ptrs: Span<ModelPtr<M>>, schemas: Span<@T>,
+    );
+
     /// Returns the current namespace hash.
     fn namespace_hash(self: @S) -> felt252;
 }

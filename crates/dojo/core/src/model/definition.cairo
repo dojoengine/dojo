@@ -1,4 +1,5 @@
-use dojo::meta::{Layout, introspect::Struct};
+use dojo::meta::Layout;
+use dojo::meta::introspect::Struct;
 
 /// The `ModelIndex` provides encapsulation for different ways to access
 /// a model's data.
@@ -12,6 +13,7 @@ pub enum ModelIndex {
     Id: felt252,
     // (entity_id, member_id)
     MemberId: (felt252, felt252),
+    Schema: felt252,
 }
 
 /// The `ModelDefinition` trait.

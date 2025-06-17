@@ -369,6 +369,27 @@ async fn match_event<P: Provider + Send + Sync>(
                 ),
             )
         }
+        WorldEvent::StoreUpdateMembers(e) => {
+            let tag = get_tag(e.selector, &tags);
+            (
+                format!("Store update member ({})", tag),
+                format!(
+                    "Selector: {:#066x}\nEntity ID: {:#066x}\nMember selectors: {}\nValues: {}",
+                    e.selector,
+                    e.entity_id,
+                    e.member_selectors
+                        .iter()
+                        .map(|v| format!("{:#066x}", v))
+                        .collect::<Vec<String>>()
+                        .join(", "),
+                    e.values
+                        .iter()
+                        .map(|v| format!("{:#066x}", v))
+                        .collect::<Vec<String>>()
+                        .join(", "),
+                ),
+            )
+        }
         WorldEvent::StoreDelRecord(e) => {
             let tag = get_tag(e.selector, &tags);
             (
