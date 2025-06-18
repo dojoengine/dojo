@@ -52,7 +52,7 @@ use syn::{parse_macro_input, Data, DeriveInput, Fields};
 ///     pub fn merge(&mut self, other: Option<&Self>) {
 ///         if let Some(other) = other {
 ///             let default_values = Self::default();
-///             
+///
 ///             if self.port == default_values.port {
 ///                 self.port = other.port;
 ///             }
