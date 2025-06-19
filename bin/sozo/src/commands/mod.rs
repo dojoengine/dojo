@@ -1,4 +1,5 @@
 use core::fmt;
+use std::sync::Arc;
 
 use anyhow::Result;
 use auth::AuthArgs;
@@ -18,6 +19,7 @@ pub(crate) mod execute;
 pub(crate) mod hash;
 pub(crate) mod init;
 pub(crate) mod inspect;
+pub(crate) mod mcp;
 pub(crate) mod migrate;
 pub(crate) mod model;
 pub(crate) mod options;
@@ -31,11 +33,14 @@ use execute::ExecuteArgs;
 use hash::HashArgs;
 use init::InitArgs;
 use inspect::InspectArgs;
+use mcp::McpArgs;
 use migrate::MigrateArgs;
 use model::ModelArgs;
 #[cfg(feature = "walnut")]
 use sozo_walnut::walnut::WalnutArgs;
 use test::TestArgs;
+
+use crate::args::SozoArgs;
 
 pub(crate) const LOG_TARGET: &str = "sozo::cli";
 
@@ -71,6 +76,8 @@ pub enum Commands {
     #[cfg(feature = "walnut")]
     #[command(about = "Interact with walnut.dev - transactions debugger and simulator")]
     Walnut(Box<WalnutArgs>),
+    #[command(about = "Starts a MCP server")]
+    Mcp(Box<McpArgs>),
 }
 
 impl fmt::Display for Commands {
@@ -89,13 +96,15 @@ impl fmt::Display for Commands {
             Commands::Init(_) => write!(f, "Init"),
             Commands::Model(_) => write!(f, "Model"),
             Commands::Events(_) => write!(f, "Events"),
+            Commands::Mcp(_) => write!(f, "Mcp"),
             #[cfg(feature = "walnut")]
             Commands::Walnut(_) => write!(f, "WalnutVerify"),
         }
     }
 }
 
-pub fn run(command: Commands, config: &Config) -> Result<()> {
+pub fn run(sozo_args: SozoArgs, config: &Config) -> Result<()> {
+    let command = sozo_args.command;
     let name = command.to_string();
     let span = info_span!("Subcommand", name);
     let _span = span.enter();
@@ -104,21 +113,22 @@ pub fn run(command: Commands, config: &Config) -> Result<()> {
     // useful to write tests for each command.
 
     match command {
-        Commands::Auth(args) => args.run(config),
-        Commands::Build(args) => args.run(config),
-        Commands::Dev(args) => args.run(config),
-        Commands::Migrate(args) => args.run(config),
-        Commands::Execute(args) => args.run(config),
-        Commands::Inspect(args) => args.run(config),
-        Commands::Clean(args) => args.run(config),
-        Commands::Call(args) => args.run(config),
-        Commands::Test(args) => args.run(config),
-        Commands::Hash(args) => args.run(config).map(|_| ()),
-        Commands::Init(args) => args.run(config),
-        Commands::Model(args) => args.run(config),
-        Commands::Events(args) => args.run(config),
+        Commands::Auth(args) => args.run(&config),
+        Commands::Build(args) => args.run(&config),
+        Commands::Dev(args) => args.run(&config),
+        Commands::Migrate(args) => args.run(&config),
+        Commands::Execute(args) => args.run(&config),
+        Commands::Inspect(args) => args.run(&config),
+        Commands::Clean(args) => args.run(&config),
+        Commands::Call(args) => args.run(&config),
+        Commands::Test(args) => args.run(&config),
+        Commands::Hash(args) => args.run(&config).map(|_| ()),
+        Commands::Init(args) => args.run(&config),
+        Commands::Model(args) => args.run(&config),
+        Commands::Events(args) => args.run(&config),
+        Commands::Mcp(args) => args.run(&config, sozo_args.manifest_path, sozo_args.profile_spec.clone()),
         #[cfg(feature = "walnut")]
-        Commands::Walnut(args) => args.run(config),
+        Commands::Walnut(args) => args.run(&config),
     }
 }
 

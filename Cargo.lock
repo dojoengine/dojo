@@ -8449,6 +8449,7 @@ version = "1.6.0-alpha.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "axum",
  "cainome 0.6.1",
  "cairo-lang-sierra",
  "cairo-lang-test-plugin",
@@ -8462,6 +8463,7 @@ dependencies = [
  "dojo-types 1.6.0-alpha.0",
  "dojo-utils",
  "dojo-world",
+ "itertools 0.12.1",
  "katana-runner",
  "notify",
  "reqwest 0.11.27",
@@ -8483,6 +8485,7 @@ dependencies = [
  "thiserror 1.0.63",
  "tokio",
  "toml 0.8.19",
+ "tower-http",
  "tracing",
  "tracing-log 0.1.4",
  "tracing-subscriber",

@@ -10,6 +10,7 @@ slot = { workspace = true, optional = true }
 
 anyhow.workspace = true
 async-trait.workspace = true
+axum = "0.7"
 cainome.workspace = true
 cairo-lang-sierra.workspace = true
 cairo-lang-test-plugin.workspace = true
@@ -39,10 +40,13 @@ starknet-crypto.workspace = true
 tabled = { version = "0.16.0", features = [ "ansi" ] }
 thiserror.workspace = true
 toml.workspace = true
+tower-http = { version = "0.5", features = ["cors"] }
 tracing.workspace = true
 tracing-log.workspace = true
 tracing-subscriber.workspace = true
+tokio.workspace = true
 url.workspace = true
+itertools.workspace = true
 
 reqwest = { workspace = true, features = [ "json" ] }
 
@@ -50,7 +54,6 @@ reqwest = { workspace = true, features = [ "json" ] }
 dojo-test-utils = { workspace = true, features = [ "build-examples" ] }
 katana-runner.workspace = true
 serde_json.workspace = true
-tokio.workspace = true
 
 [features]
 default = [ "controller", "walnut" ]

@@ -1,6 +1,6 @@
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
 
-use std::env;
+use std::{env, sync::Arc};
 use std::process::exit;
 
 use anyhow::Result;
@@ -45,5 +45,5 @@ fn cli_main(args: SozoArgs) -> Result<()> {
 
     trace!(%manifest_path, "Configuration built successfully.");
 
-    commands::run(args.command, &config)
+    commands::run(args, &config)
 }
