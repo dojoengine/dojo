@@ -1,5 +1,4 @@
 use core::fmt;
-use std::sync::Arc;
 
 use anyhow::Result;
 use auth::AuthArgs;

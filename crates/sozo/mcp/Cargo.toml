@@ -10,7 +10,6 @@ slot = { workspace = true, optional = true }
 
 anyhow.workspace = true
 async-trait.workspace = true
-axum = "0.7"
 cainome.workspace = true
 cairo-lang-sierra.workspace = true
 cairo-lang-test-plugin.workspace = true
@@ -46,5 +45,9 @@ tracing-log.workspace = true
 tracing-subscriber.workspace = true
 tokio.workspace = true
 url.workspace = true
-itertools.workspace = true
 reqwest = { workspace = true, features = [ "json" ] }
+
+# Use dev version of rmcp.
+rmcp = { git = "https://github.com/modelcontextprotocol/rust-sdk", rev = "13e72ec", features = ["server", "transport-io"] }
+# This is currently required to ensure that the `derive` feature works. rmcp fails to compile otherwise.
+schemars = { version = "0.8.22", features = ["derive"] }
