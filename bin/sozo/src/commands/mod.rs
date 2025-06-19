@@ -126,7 +126,7 @@ pub fn run(sozo_args: SozoArgs, config: &Config) -> Result<()> {
         Commands::Init(args) => args.run(&config),
         Commands::Model(args) => args.run(&config),
         Commands::Events(args) => args.run(&config),
-        Commands::Mcp(args) => args.run(&config, sozo_args.manifest_path, sozo_args.profile_spec.clone()),
+        Commands::Mcp(args) => args.run(&config, sozo_args.manifest_path),
         #[cfg(feature = "walnut")]
         Commands::Walnut(args) => args.run(&config),
     }

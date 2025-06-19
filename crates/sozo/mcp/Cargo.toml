@@ -1,6 +1,6 @@
 [package]
 edition.workspace = true
-name = "sozo"
+name = "sozo-mcp"
 version.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -33,7 +33,6 @@ serde.workspace = true
 serde_json.workspace = true
 smol_str.workspace = true
 sozo-ops.workspace = true
-sozo-mcp.workspace = true
 sozo-scarbext.workspace = true
 sozo-walnut = { workspace = true, optional = true }
 starknet.workspace = true
@@ -48,20 +47,4 @@ tracing-subscriber.workspace = true
 tokio.workspace = true
 url.workspace = true
 itertools.workspace = true
-
 reqwest = { workspace = true, features = [ "json" ] }
-
-[dev-dependencies]
-dojo-test-utils = { workspace = true, features = [ "build-examples" ] }
-katana-runner.workspace = true
-serde_json.workspace = true
-
-[features]
-default = [ "controller", "walnut" ]
-
-controller = [ "dep:slot" ]
-walnut = [ "dep:sozo-walnut", "sozo-ops/walnut" ]
-
-[[bench]]
-harness = false
-name = "spawn-and-move-build"
