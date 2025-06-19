@@ -23,6 +23,7 @@ use serde_json::{Value, json};
 use tokio::net::TcpListener;
 use tokio::process::Command as AsyncCommand;
 use tower_http::cors::{Any, CorsLayer};
+use tracing::info;
 
 use crate::resources::ResourceManager;
 use crate::tools::{Tool, ToolManager};
@@ -30,6 +31,7 @@ use crate::tools::{Tool, ToolManager};
 mod resources;
 mod tools;
 
+const LOG_TARGET: &str = "sozo_mcp_server";
 const MCP_PROTOCOL_VERSION: &str = "2025-06-18";
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -92,14 +94,10 @@ impl SozoMcpServer {
             .layer(cors)
             .with_state(self.state.clone());
 
-        let listener = TcpListener::bind(format!("127.0.0.1:{}", port)).await?;
+        let address = format!("127.0.0.1:{}", port);
+        let listener = TcpListener::bind(&address).await?;
 
-        println!("🚀 Sozo MCP Server starting on http://127.0.0.1:{}", port);
-        println!("📋 Available endpoints:");
-        println!("   POST / - MCP JSON-RPC endpoint");
-        println!("   GET  /health - Health check");
-        println!("   GET  /tools - List available tools");
-        println!("   GET  /resources - List available resources");
+        info!(target: LOG_TARGET, address, "MCP Server starting.");
 
         // Start the server
         axum::serve(listener, app).await?;
@@ -113,7 +111,6 @@ impl SozoMcpServer {
             "status": "healthy",
             "service": "sozo-mcp-server",
             "version": "1.0.0",
-            "protocolVersion": MCP_PROTOCOL_VERSION,
         }))
     }
 
@@ -134,6 +131,7 @@ impl SozoMcpServer {
             "resources/list" => self.handle_resources_list(request.id),
             "resources/templates/list" => self.handle_resources_templates_list(request.id),
             "resources/read" => self.handle_resources_read(request.id, request.params).await,
+            "initialize" => self.handle_initialize(request.id),
             _ => McpResponse {
                 jsonrpc: "2.0".to_string(),
                 id: request.id,
@@ -145,6 +143,23 @@ impl SozoMcpServer {
                 }),
             },
         }
+    }
+
+    fn handle_initialize(&self, id: Option<Value>) -> McpResponse {
+        McpResponse::new_ok(
+            id,
+            json!({
+                "protocolVersion": MCP_PROTOCOL_VERSION,
+                "capabilities": {
+                    "tools": {},
+                    "resources": {}
+                },
+                "serverInfo": {
+                    "name": "sozo-mcp",
+                    "version": env!("CARGO_PKG_VERSION"),
+                }
+            }),
+        )
     }
 
     fn handle_tools_list(&self, id: Option<Value>) -> McpResponse {
