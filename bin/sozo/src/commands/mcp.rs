@@ -5,31 +5,18 @@
 //!
 //! In future versions, this will not be necessary anymore.
 
-use std::env;
-
 use anyhow::Result;
-use axum::{
-    Router,
-    extract::{Json, State},
-    response::Json as JsonResponse,
-    routing::{get, post},
-};
 use camino::Utf8PathBuf;
 use clap::Args;
-use itertools::Itertools;
 use scarb::core::Config;
-use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
-use tokio::net::TcpListener;
-use tokio::process::Command as AsyncCommand;
-use tower_http::cors::{Any, CorsLayer};
 
-use sozo_mcp::{AppState, SozoMcpServer};
+use crate::args::ProfileSpec;
+use sozo_mcp::{SozoMcpServer, ServerMode};
 
 #[derive(Debug, Clone, Args)]
 pub struct McpArgs {
-    #[arg(long, default_value = "10300")]
-    #[arg(help = "Port to start the MCP server on.")]
+    #[arg(long, default_value = "0")]
+    #[arg(help = "Port to start the MCP server on (HTTP mode only).")]
     pub port: u16,
 }
 
@@ -41,7 +28,14 @@ impl McpArgs {
     ) -> Result<()> {
         config.tokio_handle().block_on(async {
             let server = SozoMcpServer::new(manifest_path);
-            server.start(self.port).await?;
+            
+            let mode = if self.port == 0 {
+                ServerMode::Stdio
+            } else {
+                ServerMode::Http { port: self.port }
+            };
+            
+            server.start(mode).await?;
 
             Ok(())
         })

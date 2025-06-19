@@ -6,6 +6,7 @@
 //! In future versions, this will not be necessary anymore.
 
 use std::env;
+use std::io::{self, BufRead, BufReader, Write};
 
 use anyhow::Result;
 use axum::{
@@ -78,6 +79,12 @@ pub struct AppState {
     manifest_path: Option<Utf8PathBuf>,
 }
 
+#[derive(Debug, Clone)]
+pub enum ServerMode {
+    Http { port: u16 },
+    Stdio,
+}
+
 impl SozoMcpServer {
     pub fn new(manifest_path: Option<Utf8PathBuf>) -> Self {
         let state = AppState { manifest_path };
@@ -85,7 +92,39 @@ impl SozoMcpServer {
         Self { tools_manager: ToolManager::new(), resources_manager: ResourceManager::new(), state }
     }
 
-    pub async fn start(&self, port: u16) -> Result<()> {
+    pub async fn start(&self, mode: ServerMode) -> Result<()> {
+        match mode {
+            ServerMode::Http { port } => self.start_http(port).await,
+            ServerMode::Stdio => self.start_stdio().await,
+        }
+    }
+
+    pub async fn start_stdio(&self) -> Result<()> {
+        info!(target: LOG_TARGET, "Starting MCP server in STDIO mode");
+        
+        let stdin = io::stdin();
+        let mut stdout = io::stdout();
+        let reader = BufReader::new(stdin);
+
+        for line in reader.lines() {
+            let line = line?;
+            if line.trim().is_empty() {
+                continue;
+            }
+
+            let request: McpRequest = serde_json::from_str(&line)?;
+            
+            let response = self.handle_request(request, self.state.clone()).await;
+            
+            let response_json = serde_json::to_string(&response)?;
+            writeln!(stdout, "{}", response_json)?;
+            stdout.flush()?;
+        }
+
+        Ok(())
+    }
+
+    pub async fn start_http(&self, port: u16) -> Result<()> {
         let cors = CorsLayer::new().allow_methods(Any).allow_origin(Any);
 
         let app = Router::new()
@@ -97,7 +136,7 @@ impl SozoMcpServer {
         let address = format!("127.0.0.1:{}", port);
         let listener = TcpListener::bind(&address).await?;
 
-        info!(target: LOG_TARGET, address, "MCP Server starting.");
+        info!(target: LOG_TARGET, address, "MCP Server starting in HTTP mode.");
 
         // Start the server
         axum::serve(listener, app).await?;
