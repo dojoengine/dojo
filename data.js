@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1750450293303,
+  "lastUpdate": 1750450408028,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -63768,6 +63768,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 52825672110,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "valentin@pupucecorp.com",
+            "name": "Brother MartianGreed",
+            "username": "MartianGreed"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "79963e2f4bb376bb3e9ef40f4b9b5035759f7733",
+          "message": "fix(bindgen): fix ts bytearray type mapping (#3247)",
+          "timestamp": "2025-06-20T14:59:39-05:00",
+          "tree_id": "199f599e70198d88f5e79290739d55b53c6d94aa",
+          "url": "https://github.com/dojoengine/dojo/commit/79963e2f4bb376bb3e9ef40f4b9b5035759f7733"
+        },
+        "date": 1750450404752,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 49724915014,
             "range": "± 0",
             "unit": "ns/iter"
           }
