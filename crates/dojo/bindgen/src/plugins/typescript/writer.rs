@@ -72,25 +72,30 @@ impl BindgenWriter for TsFileWriter {
         m_composites.sort_by(|a, b| a.type_path.cmp(&b.type_path));
         e_composites.sort_by(|a, b| a.type_path.cmp(&b.type_path));
 
-        let code = self
-            .generators
-            .iter()
-            .fold(Buffer::new(), |mut acc, g| {
-                [m_composites.clone(), e_composites.clone()].concat().iter().for_each(|c| {
-                    match g.generate(c, &mut acc) {
-                        Ok(code) => {
-                            if !code.is_empty() {
-                                acc.push(code)
-                            }
+        // Store the world name at the beginning of the buffer as a special marker
+        let mut initial_buffer = Buffer::new();
+        initial_buffer.push(format!("// WORLD_NAME:{}", data.world.name));
+
+        let mut code_buffer = self.generators.iter().fold(initial_buffer, |mut acc, g| {
+            [m_composites.clone(), e_composites.clone()].concat().iter().for_each(|c| {
+                match g.generate(c, &mut acc) {
+                    Ok(code) => {
+                        if !code.is_empty() {
+                            acc.push(code)
                         }
-                        Err(_e) => {
-                            log::error!("Failed to generate code for model {}", c.type_path);
-                        }
-                    };
-                });
-                acc
-            })
-            .join("\n");
+                    }
+                    Err(_e) => {
+                        log::error!("Failed to generate code for model {}", c.type_path);
+                    }
+                };
+            });
+            acc
+        });
+
+        // Remove the world name marker from the final output
+        code_buffer.retain(|s| !s.starts_with("// WORLD_NAME:"));
+
+        let code = code_buffer.join("\n");
 
         Ok((models_path, code.as_bytes().to_vec()))
     }
