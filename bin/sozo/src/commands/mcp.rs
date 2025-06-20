@@ -9,7 +9,6 @@ use anyhow::Result;
 use camino::Utf8PathBuf;
 use clap::Args;
 use scarb::core::Config;
-
 use sozo_mcp::SozoMcpServer;
 
 #[derive(Debug, Clone, Args)]

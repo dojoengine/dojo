@@ -7,14 +7,14 @@
 
 use anyhow::Result;
 use camino::Utf8PathBuf;
-use serde_json::json;
+use rmcp::service::RequestContext;
+use rmcp::{Error as McpError, RoleServer, ServerHandler, ServiceExt, schemars, tool, transport};
+use rmcp::{const_string, model::*};
+use serde_json::{Value, json};
 use tokio::process::Command as AsyncCommand;
+use tracing::{debug, error};
 
-use rmcp::{
-    Error as McpError, RoleServer, ServerHandler, model::*, schemars, service::RequestContext, tool,
-};
-use rmcp::{ServiceExt, transport};
-use tracing::error;
+const LOG_TARGET: &str = "sozo_mcp";
 
 fn _create_resource_text(uri: &str, name: &str) -> Resource {
     RawResource {
@@ -53,8 +53,9 @@ impl SozoMcpServer {
         Ok(())
     }
 
-    #[tool(description = "Build the project using the given profile. If no profile is provided, the default profile `dev` is used.")]
-    async fn build_project(
+    #[tool(description = "Build the project using the given profile. If no profile is provided, \
+                          the default profile `dev` is used.")]
+    async fn build(
         &self,
         #[tool(param)]
         #[schemars(description = "Profile to use for build.")]
@@ -84,13 +85,65 @@ impl SozoMcpServer {
             Ok(CallToolResult::error(vec![Content::text(err)]))
         }
     }
+
+    #[tool(
+        description = "Inspect the project to retrieve information about the resources, useful to retrieve models, contracts, events, namespaces, etc."
+    )]
+    async fn inspect(
+        &self,
+        #[tool(param)]
+        #[schemars(description = "Profile to use for build.")]
+        profile: Option<String>,
+    ) -> Result<CallToolResult, McpError> {
+        let profile = profile.unwrap_or("dev".to_string());
+
+        let mut cmd = AsyncCommand::new("/Users/glihm/cgg/dojo/target/release/sozo");
+
+        if let Some(manifest_path) = &self.manifest_path {
+            cmd.arg("--manifest-path").arg(manifest_path);
+        }
+
+        cmd.arg("--profile").arg(profile.clone());
+        cmd.arg("inspect");
+        cmd.arg("--json");
+
+        debug!(target: LOG_TARGET, "Running inspect command: {:?}", cmd);
+        dbg!("1");
+
+        let output = cmd.output().await.map_err(|e| {
+            McpError::internal_error(
+                "inspect_failed",
+                Some(json!({ "reason": format!("Failed to inspect project: {}", e) })),
+            )
+        });
+
+        dbg!("2");
+
+        let output = output?;
+        dbg!(&output);
+
+        if output.status.success() {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            match serde_json::from_str::<Value>(&stdout) {
+                Ok(json_value) => Ok(CallToolResult::success(vec![Content::json(json_value)?])),
+                Err(e) => {
+                    error!(target: LOG_TARGET, "Failed to parse JSON: {:?}", e);
+                    Ok(CallToolResult::error(vec![Content::text(e.to_string())]))
+                }
+            }
+        } else {
+            let err = String::from_utf8_lossy(&output.stderr).to_string();
+            error!(target: LOG_TARGET, "Failed to run inspect command: {:?}", err);
+            Ok(CallToolResult::error(vec![Content::text(err)]))
+        }
+    }
 }
 
 #[tool(tool_box)]
 impl ServerHandler for SozoMcpServer {
     fn get_info(&self) -> ServerInfo {
         ServerInfo {
-            protocol_version: ProtocolVersion::LATEST,
+            protocol_version: ProtocolVersion::V_2025_03_26,
             capabilities: ServerCapabilities::builder().enable_resources().enable_tools().build(),
             server_info: Implementation::from_build_env(),
             instructions: Some(
@@ -105,10 +158,13 @@ impl ServerHandler for SozoMcpServer {
         _request: Option<PaginatedRequestParam>,
         _: RequestContext<RoleServer>,
     ) -> Result<ListResourcesResult, McpError> {
-        Ok(ListResourcesResult { resources: vec![
-            _create_resource_text("str:////Users/to/some/path/", "cwd"),
-            _create_resource_text("memo://insights", "memo-name"),
-        ], next_cursor: None })
+        Ok(ListResourcesResult {
+            resources: vec![
+                _create_resource_text("str:////Users/to/some/path/", "cwd"),
+                _create_resource_text("memo://insights", "memo-name"),
+            ],
+            next_cursor: None,
+        })
     }
 
     async fn read_resource(

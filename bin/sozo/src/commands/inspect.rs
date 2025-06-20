@@ -21,6 +21,9 @@ pub struct InspectArgs {
                   not provided, a world summary will be displayed.")]
     element: Option<String>,
 
+    #[arg(long, help = "Output in JSON format")]
+    json: bool,
+
     #[command(flatten)]
     world: WorldOptions,
 
@@ -33,16 +36,16 @@ impl InspectArgs {
         trace!(args = ?self);
         let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
 
-        let InspectArgs { world, starknet, element } = self;
+        let InspectArgs { world, starknet, element, json } = self;
 
         config.tokio_handle().block_on(async {
             let (world_diff, _, _) =
                 utils::get_world_diff_and_provider(starknet.clone(), world, &ws).await?;
 
             if let Some(element) = element {
-                inspect_element(&element, &world_diff)?;
+                inspect_element(&element, &world_diff, json)?;
             } else {
-                inspect_world(&world_diff);
+                inspect_world(&world_diff, json);
             }
 
             Ok(())
@@ -198,8 +201,119 @@ struct GranteeDisplay {
     source: GranteeSource,
 }
 
+// JSON output structures
+#[derive(Debug, Serialize)]
+struct JsonWorldInspect {
+    world: JsonWorldInfo,
+    namespaces: Vec<JsonNamespaceInfo>,
+    contracts: Vec<JsonContractInfo>,
+    libraries: Vec<JsonLibraryInfo>,
+    models: Vec<JsonModelInfo>,
+    events: Vec<JsonEventInfo>,
+    external_contracts: Vec<JsonExternalContractInfo>,
+}
+
+#[derive(Debug, Serialize)]
+struct JsonWorldInfo {
+    status: String,
+    address: String,
+    class_hash: String,
+}
+
+#[derive(Debug, Serialize)]
+struct JsonNamespaceInfo {
+    name: String,
+    status: String,
+    selector: String,
+}
+
+#[derive(Debug, Serialize)]
+struct JsonContractInfo {
+    tag: String,
+    status: String,
+    is_initialized: bool,
+    selector: String,
+    address: String,
+    class_hash: String,
+}
+
+#[derive(Debug, Serialize)]
+struct JsonLibraryInfo {
+    tag: String,
+    version: String,
+    status: String,
+    selector: String,
+    class_hash: String,
+}
+
+#[derive(Debug, Serialize)]
+struct JsonModelInfo {
+    tag: String,
+    status: String,
+    selector: String,
+}
+
+#[derive(Debug, Serialize)]
+struct JsonEventInfo {
+    tag: String,
+    status: String,
+    selector: String,
+}
+
+#[derive(Debug, Serialize)]
+struct JsonExternalContractInfo {
+    contract_name: String,
+    instance_name: String,
+    address: String,
+    class_hash: String,
+    status: String,
+    salt: String,
+    constructor_calldata: Vec<String>,
+}
+
+#[derive(Debug, Serialize)]
+struct JsonResourceInspect {
+    resource: serde_json::Value,
+    writers: Vec<JsonGranteeInfo>,
+    owners: Vec<JsonGranteeInfo>,
+}
+
+#[derive(Debug, Serialize)]
+struct JsonGranteeInfo {
+    tag: String,
+    address: String,
+    source: String,
+}
+
+// Helper functions for JSON output
+impl ResourceStatus {
+    fn to_string(&self) -> String {
+        match self {
+            ResourceStatus::Created => "Created".to_string(),
+            ResourceStatus::Updated => "Updated".to_string(),
+            ResourceStatus::Synced => "Synced".to_string(),
+            ResourceStatus::DirtyLocalPerms => "DirtyLocalPerms".to_string(),
+            ResourceStatus::MigrationSkipped => "MigrationSkipped".to_string(),
+        }
+    }
+}
+
+impl GranteeSource {
+    fn to_string(&self) -> String {
+        match self {
+            GranteeSource::Local => "Local".to_string(),
+            GranteeSource::Remote => "Remote".to_string(),
+            GranteeSource::Synced => "Synced".to_string(),
+        }
+    }
+}
+
+fn print_json<T: serde::Serialize>(data: &T) {
+    println!("{}", serde_json::to_string_pretty(data).unwrap());
+}
+
 /// Inspects a world element (resource or external contract).
-fn inspect_element(element_name: &str, world_diff: &WorldDiff) -> Result<()> {
+fn inspect_element(element_name: &str, world_diff: &WorldDiff, json: bool) -> Result<()> {
     let selector = if naming::is_valid_tag(element_name) {
         naming::compute_selector_from_tag(element_name)
     } else {
@@ -207,157 +321,354 @@ fn inspect_element(element_name: &str, world_diff: &WorldDiff) -> Result<()> {
     };
 
     if let Some(diff) = world_diff.resources.get(&selector) {
-        inspect_resource(diff, world_diff)
+        return inspect_resource(diff, world_diff, json);
     } else if let Some(diff) = world_diff.external_contracts.get(element_name) {
-        inspect_external_contract(diff)
+        return inspect_external_contract(diff, json);
     } else {
-        Err(anyhow::anyhow!("Resource or external contract not found locally."))
+        return Err(anyhow::anyhow!("Resource or external contract not found locally."));
     }
 }
 
 /// Inspects a resource.
-fn inspect_resource(resource_diff: &ResourceDiff, world_diff: &WorldDiff) -> Result<()> {
+fn inspect_resource(
+    resource_diff: &ResourceDiff,
+    world_diff: &WorldDiff,
+    json: bool,
+) -> Result<()> {
     let inspect = resource_diff_display(world_diff, resource_diff);
-    pretty_print_toml(&toml::to_string_pretty(&inspect).unwrap());
 
-    let writers = world_diff.get_writers(resource_diff.dojo_selector());
-    let mut writers_disp = vec![];
+    if json {
+        let writers = world_diff.get_writers(resource_diff.dojo_selector());
+        let owners = world_diff.get_owners(resource_diff.dojo_selector());
 
-    for pdiff in writers.only_local() {
-        writers_disp.push(GranteeDisplay {
-            tag: pdiff.tag.unwrap_or("external".to_string()),
-            address: format!("{:#066x}", pdiff.address),
-            source: GranteeSource::Local,
-        });
+        let mut writers_json = vec![];
+        for pdiff in writers.only_local() {
+            writers_json.push(JsonGranteeInfo {
+                tag: pdiff.tag.unwrap_or("external".to_string()),
+                address: format!("{:#066x}", pdiff.address),
+                source: GranteeSource::Local.to_string(),
+            });
+        }
+        for pdiff in writers.only_remote() {
+            writers_json.push(JsonGranteeInfo {
+                tag: pdiff.tag.unwrap_or("external".to_string()),
+                address: format!("{:#066x}", pdiff.address),
+                source: GranteeSource::Remote.to_string(),
+            });
+        }
+        for pdiff in writers.synced() {
+            writers_json.push(JsonGranteeInfo {
+                tag: pdiff.tag.unwrap_or("external".to_string()),
+                address: format!("{:#066x}", pdiff.address),
+                source: GranteeSource::Synced.to_string(),
+            });
+        }
+
+        let mut owners_json = vec![];
+        for pdiff in owners.only_local() {
+            owners_json.push(JsonGranteeInfo {
+                tag: pdiff.tag.unwrap_or("external".to_string()),
+                address: format!("{:#066x}", pdiff.address),
+                source: GranteeSource::Local.to_string(),
+            });
+        }
+        for pdiff in owners.only_remote() {
+            owners_json.push(JsonGranteeInfo {
+                tag: pdiff.tag.unwrap_or("external".to_string()),
+                address: format!("{:#066x}", pdiff.address),
+                source: GranteeSource::Remote.to_string(),
+            });
+        }
+        for pdiff in owners.synced() {
+            owners_json.push(JsonGranteeInfo {
+                tag: pdiff.tag.unwrap_or("external".to_string()),
+                address: format!("{:#066x}", pdiff.address),
+                source: GranteeSource::Synced.to_string(),
+            });
+        }
+
+        let resource_json = JsonResourceInspect {
+            resource: serde_json::to_value(&inspect)?,
+            writers: writers_json,
+            owners: owners_json,
+        };
+
+        print_json(&resource_json);
+    } else {
+        pretty_print_toml(&toml::to_string_pretty(&inspect).unwrap());
+
+        let writers = world_diff.get_writers(resource_diff.dojo_selector());
+        let mut writers_disp = vec![];
+
+        for pdiff in writers.only_local() {
+            writers_disp.push(GranteeDisplay {
+                tag: pdiff.tag.unwrap_or("external".to_string()),
+                address: format!("{:#066x}", pdiff.address),
+                source: GranteeSource::Local,
+            });
+        }
+
+        for pdiff in writers.only_remote() {
+            writers_disp.push(GranteeDisplay {
+                tag: pdiff.tag.unwrap_or("external".to_string()),
+                address: format!("{:#066x}", pdiff.address),
+                source: GranteeSource::Remote,
+            });
+        }
+
+        for pdiff in writers.synced() {
+            writers_disp.push(GranteeDisplay {
+                tag: pdiff.tag.unwrap_or("external".to_string()),
+                address: format!("{:#066x}", pdiff.address),
+                source: GranteeSource::Synced,
+            });
+        }
+
+        let owners = world_diff.get_owners(resource_diff.dojo_selector());
+        let mut owners_disp = vec![];
+
+        for pdiff in owners.only_local() {
+            owners_disp.push(GranteeDisplay {
+                tag: pdiff.tag.unwrap_or("external".to_string()),
+                address: format!("{:#066x}", pdiff.address),
+                source: GranteeSource::Local,
+            });
+        }
+
+        for pdiff in owners.only_remote() {
+            owners_disp.push(GranteeDisplay {
+                tag: pdiff.tag.unwrap_or("external".to_string()),
+                address: format!("{:#066x}", pdiff.address),
+                source: GranteeSource::Remote,
+            });
+        }
+
+        for pdiff in owners.synced() {
+            owners_disp.push(GranteeDisplay {
+                tag: pdiff.tag.unwrap_or("external".to_string()),
+                address: format!("{:#066x}", pdiff.address),
+                source: GranteeSource::Synced,
+            });
+        }
+
+        writers_disp.sort_by_key(|m| m.tag.to_string());
+        owners_disp.sort_by_key(|m| m.tag.to_string());
+
+        print_table(&writers_disp, Some(Color::FG_BRIGHT_CYAN), Some("\n> Writers"));
+        print_table(&owners_disp, Some(Color::FG_BRIGHT_MAGENTA), Some("\n> Owners"));
     }
 
-    for pdiff in writers.only_remote() {
-        writers_disp.push(GranteeDisplay {
-            tag: pdiff.tag.unwrap_or("external".to_string()),
-            address: format!("{:#066x}", pdiff.address),
-            source: GranteeSource::Remote,
-        });
-    }
-
-    for pdiff in writers.synced() {
-        writers_disp.push(GranteeDisplay {
-            tag: pdiff.tag.unwrap_or("external".to_string()),
-            address: format!("{:#066x}", pdiff.address),
-            source: GranteeSource::Synced,
-        });
-    }
-
-    let owners = world_diff.get_owners(resource_diff.dojo_selector());
-    let mut owners_disp = vec![];
-
-    for pdiff in owners.only_local() {
-        owners_disp.push(GranteeDisplay {
-            tag: pdiff.tag.unwrap_or("external".to_string()),
-            address: format!("{:#066x}", pdiff.address),
-            source: GranteeSource::Local,
-        });
-    }
-
-    for pdiff in owners.only_remote() {
-        owners_disp.push(GranteeDisplay {
-            tag: pdiff.tag.unwrap_or("external".to_string()),
-            address: format!("{:#066x}", pdiff.address),
-            source: GranteeSource::Remote,
-        });
-    }
-
-    for pdiff in owners.synced() {
-        owners_disp.push(GranteeDisplay {
-            tag: pdiff.tag.unwrap_or("external".to_string()),
-            address: format!("{:#066x}", pdiff.address),
-            source: GranteeSource::Synced,
-        });
-    }
-
-    writers_disp.sort_by_key(|m| m.tag.to_string());
-    owners_disp.sort_by_key(|m| m.tag.to_string());
-
-    print_table(&writers_disp, Some(Color::FG_BRIGHT_CYAN), Some("\n> Writers"));
-    print_table(&owners_disp, Some(Color::FG_BRIGHT_MAGENTA), Some("\n> Owners"));
     Ok(())
 }
 
 /// Inspects an external contract.
-fn inspect_external_contract(contract_diff: &ExternalContractDiff) -> Result<()> {
+fn inspect_external_contract(contract_diff: &ExternalContractDiff, json: bool) -> Result<()> {
     let inspect = external_contract_diff_display(contract_diff);
-    print_section_header("[External Contract]");
-    pretty_print_toml(&toml::to_string_pretty(&inspect).unwrap());
+
+    if json {
+        let contract_json = JsonExternalContractInfo {
+            contract_name: inspect.contract_name,
+            instance_name: inspect.instance_name,
+            address: inspect.address,
+            class_hash: inspect.class_hash,
+            status: inspect.status.to_string(),
+            salt: inspect.salt,
+            constructor_calldata: inspect.constructor_calldata,
+        };
+        print_json(&contract_json);
+    } else {
+        print_section_header("[External Contract]");
+        pretty_print_toml(&toml::to_string_pretty(&inspect).unwrap());
+    }
+
     Ok(())
 }
 
 /// Inspects the whole world.
-fn inspect_world(world_diff: &WorldDiff) {
-    println!();
+fn inspect_world(world_diff: &WorldDiff, json: bool) {
+    if json {
+        let status = match &world_diff.world_info.status {
+            WorldStatus::NotDeployed => ResourceStatus::Created,
+            WorldStatus::NewVersion => ResourceStatus::Updated,
+            WorldStatus::Synced => ResourceStatus::Synced,
+        };
 
-    let status = match &world_diff.world_info.status {
-        WorldStatus::NotDeployed => ResourceStatus::Created,
-        WorldStatus::NewVersion => ResourceStatus::Updated,
-        WorldStatus::Synced => ResourceStatus::Synced,
-    };
+        let world_info = JsonWorldInfo {
+            status: status.to_string(),
+            address: format!("{:#066x}", world_diff.world_info.address),
+            class_hash: format!("{:#066x}", world_diff.world_info.class_hash),
+        };
 
-    let world = WorldInspect {
-        address: format!("{:#066x}", world_diff.world_info.address),
-        current_class_hash: format!("{:#066x}", world_diff.world_info.class_hash),
-        status,
-    };
+        let mut namespaces = vec![];
+        let mut contracts = vec![];
+        let mut external_contracts = vec![];
+        let mut models = vec![];
+        let mut events = vec![];
+        let mut libraries = vec![];
 
-    print_table(&[world], Some(Color::FG_BRIGHT_BLACK), None);
-
-    let mut namespaces_disp = vec![];
-    let mut contracts_disp = vec![];
-    let mut external_contracts_disp = vec![];
-    let mut models_disp = vec![];
-    let mut events_disp = vec![];
-    let mut libraries_disp = vec![];
-
-    for resource in world_diff.resources.values() {
-        match resource.resource_type() {
-            ResourceType::Namespace => match resource_diff_display(world_diff, resource) {
-                ResourceInspect::Namespace(n) => namespaces_disp.push(n),
-                _ => unreachable!(),
-            },
-            ResourceType::Contract => match resource_diff_display(world_diff, resource) {
-                ResourceInspect::Contract(c) => contracts_disp.push(c),
-                _ => unreachable!(),
-            },
-            ResourceType::Model => match resource_diff_display(world_diff, resource) {
-                ResourceInspect::Model(m) => models_disp.push(m),
-                _ => unreachable!(),
-            },
-            ResourceType::Event => match resource_diff_display(world_diff, resource) {
-                ResourceInspect::Event(e) => events_disp.push(e),
-                _ => unreachable!(),
-            },
-            ResourceType::Library => match resource_diff_display(world_diff, resource) {
-                ResourceInspect::Library(l) => libraries_disp.push(l),
-                _ => unreachable!(),
-            },
-            _ => {}
+        for resource in world_diff.resources.values() {
+            match resource.resource_type() {
+                ResourceType::Namespace => {
+                    if let ResourceInspect::Namespace(n) =
+                        resource_diff_display(world_diff, resource)
+                    {
+                        namespaces.push(JsonNamespaceInfo {
+                            name: n.name,
+                            status: n.status.to_string(),
+                            selector: n.selector,
+                        });
+                    }
+                }
+                ResourceType::Contract => {
+                    if let ResourceInspect::Contract(c) =
+                        resource_diff_display(world_diff, resource)
+                    {
+                        contracts.push(JsonContractInfo {
+                            tag: c.tag,
+                            status: c.status.to_string(),
+                            is_initialized: c.is_initialized,
+                            selector: c.selector,
+                            address: c.address,
+                            class_hash: c.current_class_hash,
+                        });
+                    }
+                }
+                ResourceType::Model => {
+                    if let ResourceInspect::Model(m) = resource_diff_display(world_diff, resource) {
+                        models.push(JsonModelInfo {
+                            tag: m.tag,
+                            status: m.status.to_string(),
+                            selector: m.selector,
+                        });
+                    }
+                }
+                ResourceType::Event => {
+                    if let ResourceInspect::Event(e) = resource_diff_display(world_diff, resource) {
+                        events.push(JsonEventInfo {
+                            tag: e.tag,
+                            status: e.status.to_string(),
+                            selector: e.selector,
+                        });
+                    }
+                }
+                ResourceType::Library => {
+                    if let ResourceInspect::Library(l) = resource_diff_display(world_diff, resource)
+                    {
+                        libraries.push(JsonLibraryInfo {
+                            tag: l.tag,
+                            status: l.status.to_string(),
+                            selector: l.selector,
+                            class_hash: l.current_class_hash,
+                            version: l.version,
+                        });
+                    }
+                }
+                _ => {}
+            }
         }
+
+        for contract in world_diff.external_contracts.values() {
+            let contract_data = contract.contract_data();
+            external_contracts.push(JsonExternalContractInfo {
+                contract_name: contract_data.contract_name,
+                instance_name: contract_data.instance_name,
+                address: contract_data.address.to_fixed_hex_string(),
+                class_hash: contract_data.class_hash.to_fixed_hex_string(),
+                status: match contract {
+                    ExternalContractDiff::Created(_) => ResourceStatus::Created.to_string(),
+                    ExternalContractDiff::Synced(_) => ResourceStatus::Synced.to_string(),
+                },
+                salt: contract_data.salt.to_fixed_hex_string(),
+                constructor_calldata: contract_data.constructor_data,
+            });
+        }
+
+        namespaces.sort_by_key(|m| m.name.to_string());
+        contracts.sort_by_key(|m| m.tag.to_string());
+        models.sort_by_key(|m| m.tag.to_string());
+        events.sort_by_key(|m| m.tag.to_string());
+        libraries.sort_by_key(|m| m.tag.to_string());
+        external_contracts.sort_by_key(|c| format!("{}-{}", c.contract_name, c.instance_name));
+
+        let world_inspect = JsonWorldInspect {
+            world: world_info,
+            namespaces,
+            contracts,
+            libraries,
+            models,
+            events,
+            external_contracts,
+        };
+
+        print_json(&world_inspect);
+    } else {
+        println!();
+
+        let status = match &world_diff.world_info.status {
+            WorldStatus::NotDeployed => ResourceStatus::Created,
+            WorldStatus::NewVersion => ResourceStatus::Updated,
+            WorldStatus::Synced => ResourceStatus::Synced,
+        };
+
+        let world = WorldInspect {
+            address: format!("{:#066x}", world_diff.world_info.address),
+            current_class_hash: format!("{:#066x}", world_diff.world_info.class_hash),
+            status,
+        };
+
+        print_table(&[world], Some(Color::FG_BRIGHT_BLACK), None);
+
+        let mut namespaces_disp = vec![];
+        let mut contracts_disp = vec![];
+        let mut external_contracts_disp = vec![];
+        let mut models_disp = vec![];
+        let mut events_disp = vec![];
+        let mut libraries_disp = vec![];
+
+        for resource in world_diff.resources.values() {
+            match resource.resource_type() {
+                ResourceType::Namespace => match resource_diff_display(world_diff, resource) {
+                    ResourceInspect::Namespace(n) => namespaces_disp.push(n),
+                    _ => unreachable!(),
+                },
+                ResourceType::Contract => match resource_diff_display(world_diff, resource) {
+                    ResourceInspect::Contract(c) => contracts_disp.push(c),
+                    _ => unreachable!(),
+                },
+                ResourceType::Model => match resource_diff_display(world_diff, resource) {
+                    ResourceInspect::Model(m) => models_disp.push(m),
+                    _ => unreachable!(),
+                },
+                ResourceType::Event => match resource_diff_display(world_diff, resource) {
+                    ResourceInspect::Event(e) => events_disp.push(e),
+                    _ => unreachable!(),
+                },
+                ResourceType::Library => match resource_diff_display(world_diff, resource) {
+                    ResourceInspect::Library(l) => libraries_disp.push(l),
+                    _ => unreachable!(),
+                },
+                _ => {}
+            }
+        }
+
+        for contract in world_diff.external_contracts.values() {
+            external_contracts_disp.push(external_contract_diff_display(contract));
+        }
+
+        namespaces_disp.sort_by_key(|m| m.name.to_string());
+        contracts_disp.sort_by_key(|m| m.tag.to_string());
+        models_disp.sort_by_key(|m| m.tag.to_string());
+        events_disp.sort_by_key(|m| m.tag.to_string());
+        libraries_disp.sort_by_key(|m| m.tag.to_string());
+        external_contracts_disp.sort_by_key(|c| format!("{}-{}", c.contract_name, c.instance_name));
+
+        print_table(&namespaces_disp, Some(Color::FG_BRIGHT_BLACK), None);
+        print_table(&contracts_disp, Some(Color::FG_BRIGHT_BLACK), None);
+        print_table(&libraries_disp, Some(Color::FG_BRIGHT_BLACK), None);
+        print_table(&models_disp, Some(Color::FG_BRIGHT_BLACK), None);
+        print_table(&events_disp, Some(Color::FG_BRIGHT_BLACK), None);
+        print_table(&external_contracts_disp, Some(Color::FG_BRIGHT_BLACK), None);
     }
-
-    for contract in world_diff.external_contracts.values() {
-        external_contracts_disp.push(external_contract_diff_display(contract));
-    }
-
-    namespaces_disp.sort_by_key(|m| m.name.to_string());
-    contracts_disp.sort_by_key(|m| m.tag.to_string());
-    models_disp.sort_by_key(|m| m.tag.to_string());
-    events_disp.sort_by_key(|m| m.tag.to_string());
-    libraries_disp.sort_by_key(|m| m.tag.to_string());
-    external_contracts_disp.sort_by_key(|c| format!("{}-{}", c.contract_name, c.instance_name));
-
-    print_table(&namespaces_disp, Some(Color::FG_BRIGHT_BLACK), None);
-    print_table(&contracts_disp, Some(Color::FG_BRIGHT_BLACK), None);
-    print_table(&libraries_disp, Some(Color::FG_BRIGHT_BLACK), None);
-    print_table(&models_disp, Some(Color::FG_BRIGHT_BLACK), None);
-    print_table(&events_disp, Some(Color::FG_BRIGHT_BLACK), None);
-    print_table(&external_contracts_disp, Some(Color::FG_BRIGHT_BLACK), None);
 }
 
 /// Displays the resource diff with the address and class hash.
