@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1750181742060,
+  "lastUpdate": 1750450253486,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -63708,6 +63708,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 50511750637,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "valentin@pupucecorp.com",
+            "name": "Brother MartianGreed",
+            "username": "MartianGreed"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "17ff3c84b2cb69b315966a049f9b76eeaa0db860",
+          "message": "fix(bindgen): use world namespace for imported models in TypeScript S… (#3249)",
+          "timestamp": "2025-06-20T14:57:02-05:00",
+          "tree_id": "2ddb5a0036aab010822479690497d43a52560d2c",
+          "url": "https://github.com/dojoengine/dojo/commit/17ff3c84b2cb69b315966a049f9b76eeaa0db860"
+        },
+        "date": 1750450249993,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 49997553223,
             "range": "± 0",
             "unit": "ns/iter"
           }
