@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1750450253486,
+  "lastUpdate": 1750450293303,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -63738,6 +63738,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 49997553223,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "valentin@pupucecorp.com",
+            "name": "Brother MartianGreed",
+            "username": "MartianGreed"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a0a5e1f775c2cc7945b73123a7976f3d5ef3852c",
+          "message": "fix(bindgen): filter out Value models (#3248)",
+          "timestamp": "2025-06-20T14:57:33-05:00",
+          "tree_id": "1de847c6e5108a497644dc3e9b5f7dbd4e5b2cc1",
+          "url": "https://github.com/dojoengine/dojo/commit/a0a5e1f775c2cc7945b73123a7976f3d5ef3852c"
+        },
+        "date": 1750450289110,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 52825672110,
             "range": "± 0",
             "unit": "ns/iter"
           }
