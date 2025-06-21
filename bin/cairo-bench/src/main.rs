@@ -23,7 +23,7 @@ const REMOVED_TAG: &str = "[REMOVED]";
 const CREATED_TAG: &str = "[CREATED]";
 
 // where to store reference files
-const REF_DIR_PATH: &str = "crates/dojo/tools/cairo-bench/references";
+const REF_DIR_PATH: &str = "bin/cairo-bench/references";
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize, PartialEq, Eq)]
 struct TestCost {
