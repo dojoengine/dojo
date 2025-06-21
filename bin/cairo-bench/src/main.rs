@@ -183,6 +183,10 @@ fn execute_scarb(manifest_path: &str, show_scarb_output: bool) -> String {
             .output()
             .unwrap_or_else(|_| panic!("Failed to run scarb at path: {}.", manifest_path));
 
+        if !output.status.success() {
+            panic!("{}", String::from_utf8(output.stderr).unwrap());
+        }
+
         String::from_utf8(output.stdout).unwrap()
     };
 
@@ -245,6 +249,8 @@ fn get_ref_file(manifest_path: &Utf8PathBuf) -> Utf8PathBuf {
 
 /// Read the reference file and parse the test costs, and sort the tests by name.
 fn read_ref_tests(ref_file: &Utf8PathBuf) -> Vec<TestCost> {
+    println!("{}", format!("Reading reference file: {}", ref_file.file_name().unwrap()).blue());
+
     let content = fs::read_to_string(ref_file)
         .unwrap_or_else(|_| panic!("Failed to read reference file: {}", ref_file));
 
