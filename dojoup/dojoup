@@ -214,6 +214,17 @@ detect_platform_arch() {
   echo "$platform $ext $architecture"
 }
 
+# Fetch the latest stable version from GitHub
+get_latest_stable_version() {
+  curl -s "https://api.github.com/repos/${DOJO_REPO}/releases" \
+      | grep -oE '"tag_name": "[^"]*"|"prerelease": (true|false)' \
+      | grep -B1 '"prerelease": false' \
+      | grep '"tag_name":' \
+      | grep -oE '"v[0-9]*\.[0-9]*\.[0-9]*(-rc\.[0-9]*)?"' \
+      | tr -d '"' \
+      | head -n 1
+}
+
 install_dojo() {
   need_cmd jq
   need_cmd curl
@@ -254,13 +265,7 @@ install_dojo() {
   # Normalize versions (handle channels, versions without v prefix)
   if [[ "$DOJOUP_VERSION" == "stable" ]]; then
     # Fetch the list of releases from the GitHub API and filter out `prerelease`` releases and `alpha`` releases
-    DOJOUP_TAG=$(curl -s "https://api.github.com/repos/${DOJO_REPO}/releases" \
-        | grep -oE '"tag_name": "[^"]*"|"prerelease": (true|false)' \
-        | grep -B1 '"prerelease": false' \
-        | grep '"tag_name":' \
-        | grep -oE '"v[0-9]*\.[0-9]*\.[0-9]*(-rc\.[0-9]*)?"' \
-        | tr -d '"' \
-        | head -n 1)
+    DOJOUP_TAG=$(get_latest_stable_version)
     DOJOUP_VERSION=$DOJOUP_TAG
   elif [[ "$DOJOUP_VERSION" == [[:digit:]]* ]]; then
     # Add v prefix
@@ -531,6 +536,9 @@ update_dojo() {
 
   # Get the current active version
   current_version=$(get_default_version)
+  if [ -z "$current_version" ]; then
+    current_version="none"
+  fi
   
   # Default to latest stable if no version specified
   target_version=${UPDATE_VERSION:-"stable"}
@@ -538,13 +546,7 @@ update_dojo() {
   # Handle version normalization
   if [[ "$target_version" == "stable" ]]; then
     # Fetch latest stable version
-    latest_tag=$(curl -s "https://api.github.com/repos/${DOJO_REPO}/releases" \
-        | grep -oE '"tag_name": "[^"]*"|"prerelease": (true|false)' \
-        | grep -B1 '"prerelease": false' \
-        | grep '"tag_name":' \
-        | grep -oE '"v[0-9]*\.[0-9]*\.[0-9]*(-rc\.[0-9]*)?"' \
-        | tr -d '"' \
-        | head -n 1)
+    latest_tag=$(get_latest_stable_version)
     target_version_clean=$(echo "$latest_tag" | sed 's/^v//')
     say "latest stable version: $latest_tag"
   elif [[ "$target_version" == [[:digit:]]* ]]; then
@@ -558,7 +560,7 @@ update_dojo() {
   fi
 
   # Check if we're already at the target version
-  if [ "$current_version" = "$target_version_clean" ]; then
+  if [ "$current_version" != "none" ] && [ "$current_version" = "$target_version_clean" ]; then
     say "already using dojo toolchain: $target_version_clean"
     return 0
   fi
@@ -573,10 +575,13 @@ update_dojo() {
   fi
 
   # Version not installed, need to install it
-  say "updating from $current_version to $target_version_clean..."
+  if [ "$current_version" = "none" ]; then
+    say "installing dojo toolchain: $target_version_clean..."
+  else
+    say "updating from $current_version to $target_version_clean..."
+  fi
   
   # Call the install function with the target version
-  DOJOUP_VERSION="$latest_tag"
   install_dojo "$latest_tag"
   
   say "successfully updated to dojo toolchain: $target_version_clean"
