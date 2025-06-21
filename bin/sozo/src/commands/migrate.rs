@@ -135,7 +135,7 @@ async fn print_banner(scarb_metadata: &Metadata, starknet: &StarknetOptions) -> 
 
     let provider = Arc::new(provider);
     if let Err(e) = provider_utils::health_check_provider(provider.clone()).await {
-        error!(target: LOG_TARGET,"Provider health check failed during sozo migrate.");
+        error!(target: LOG_TARGET, "Provider health check failed during sozo migrate.");
         return Err(e);
     }
     let provider = Arc::try_unwrap(provider).map_err(|_| anyhow!("Failed to unwrap Arc"))?;
