@@ -111,6 +111,7 @@ COMMANDS:
     install     Install Dojo
     list        List all installed versions
     show        Display the default Dojo version
+    update      Update to the latest version or specific version
 EOF
 }
 
@@ -503,6 +504,104 @@ OPTIONS:
 EOF
 }
 
+update_dojo() {
+  # Process options for update
+  # If the first argument is provided and doesn't start with a dash, treat it as the version
+  if [[ $1 && ! $1 =~ ^- ]]; then
+    UPDATE_VERSION=$1
+    shift
+  fi
+
+  # Process any remaining options
+  while [[ $1 ]]; do
+    case $1 in
+      --)               shift; break;;
+      -h|--help)
+        usage_update
+        exit 0
+        ;;
+      *)
+        warn "unknown update option: $1"
+        usage_update
+        exit 1
+        ;;
+    esac
+    shift
+  done
+
+  # Get the current active version
+  current_version=$(get_default_version)
+  
+  # Default to latest stable if no version specified
+  target_version=${UPDATE_VERSION:-"stable"}
+  
+  # Handle version normalization
+  if [[ "$target_version" == "stable" ]]; then
+    # Fetch latest stable version
+    latest_tag=$(curl -s "https://api.github.com/repos/${DOJO_REPO}/releases" \
+        | grep -oE '"tag_name": "[^"]*"|"prerelease": (true|false)' \
+        | grep -B1 '"prerelease": false' \
+        | grep '"tag_name":' \
+        | grep -oE '"v[0-9]*\.[0-9]*\.[0-9]*(-rc\.[0-9]*)?"' \
+        | tr -d '"' \
+        | head -n 1)
+    target_version_clean=$(echo "$latest_tag" | sed 's/^v//')
+    say "latest stable version: $latest_tag"
+  elif [[ "$target_version" == [[:digit:]]* ]]; then
+    # Add v prefix for tag
+    target_version_clean="$target_version"
+    latest_tag="v${target_version}"
+  else
+    # Version already has v prefix
+    target_version_clean=$(echo "$target_version" | sed 's/^v//')
+    latest_tag="$target_version"
+  fi
+
+  # Check if we're already at the target version
+  if [ "$current_version" = "$target_version_clean" ]; then
+    say "already using dojo toolchain: $target_version_clean"
+    return 0
+  fi
+
+  # Check if target version is already installed
+  target_toolchain_path="$TOOLCHAIN_DIR/$target_version_clean"
+  if [ -d "$target_toolchain_path" ]; then
+    say "version $target_version_clean is already installed, switching to it..."
+    set_default_version "$target_version_clean"
+    say "updated to dojo toolchain: $target_version_clean"
+    return 0
+  fi
+
+  # Version not installed, need to install it
+  say "updating from $current_version to $target_version_clean..."
+  
+  # Call the install function with the target version
+  DOJOUP_VERSION="$latest_tag"
+  install_dojo "$latest_tag"
+  
+  say "successfully updated to dojo toolchain: $target_version_clean"
+}
+
+usage_update() {
+  cat 1>&2 <<'EOF'
+Update the Dojo toolchain to the latest or specified version.
+
+USAGE:
+    dojoup update [VERSION]
+
+ARGS:
+    VERSION             The version to update to (if not specified, updates to the latest stable version)
+
+OPTIONS:
+    -h, --help          Print help information
+
+EXAMPLES:
+    dojoup update               # Update to latest stable version
+    dojoup update 1.5.0         # Update to specific version
+    dojoup update v1.5.0        # Update to specific version (with v prefix)
+EOF
+}
+
 say() {
   printf "%s\n" "$1"
 }
@@ -870,6 +969,9 @@ main() {
       ;;
     list)
       list_toolchains
+      ;;
+    update)
+      update_dojo "$@"
       ;;
     component)
       if [ $# -eq 0 ]; then
