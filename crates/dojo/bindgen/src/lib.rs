@@ -17,6 +17,7 @@ use plugins::typescript::TypescriptPlugin;
 use plugins::typescript_v2::TypeScriptV2Plugin;
 use plugins::unity::UnityPlugin;
 use plugins::unrealengine::UnrealEnginePlugin;
+use plugins::golang::GolangPlugin;
 use plugins::BuiltinPlugin;
 pub use plugins::BuiltinPlugins;
 
@@ -105,6 +106,7 @@ impl PluginManager {
                 BuiltinPlugins::UnrealEngine => Box::new(UnrealEnginePlugin::new()),
                 BuiltinPlugins::TypeScriptV2 => Box::new(TypeScriptV2Plugin::new()),
                 BuiltinPlugins::Recs => Box::new(TypescriptRecsPlugin::new()),
+                BuiltinPlugins::Golang => Box::new(GolangPlugin::new()),
             };
 
             let files = builder.generate_code(&data).await?;
