@@ -1,7 +1,7 @@
 {
   "world": {
-    "class_hash": "0x7c9469d45a9cdbab775035afb48e1fa73fb35ab059fcb9dfb0a301aa973e783",
-    "address": "0x24334e79a3c56e5374c5bdd148c22ff2f0de3b4dc6e734e22ea49795f367221",
+    "class_hash": "0x14f824e95baa23e1bf3e242e0316b7154f79787b08d818fc4a2c8e6b95520a4",
+    "address": "0x3e6abad7e2199acaa34a390c7cf3d0d732685ed3a4ea8493dbb7804f5e25002",
     "seed": "dojo_examples",
     "name": "example",
     "entrypoints": [
@@ -139,6 +139,10 @@
           {
             "name": "MemberId",
             "type": "(core::felt252, core::felt252)"
+          },
+          {
+            "name": "Schema",
+            "type": "core::felt252"
           }
         ]
       },
@@ -693,6 +697,22 @@
           },
           {
             "type": "function",
+            "name": "owners_count",
+            "inputs": [
+              {
+                "name": "resource",
+                "type": "core::felt252"
+              }
+            ],
+            "outputs": [
+              {
+                "type": "core::integer::u64"
+              }
+            ],
+            "state_mutability": "view"
+          },
+          {
+            "type": "function",
             "name": "is_writer",
             "inputs": [
               {
@@ -1147,6 +1167,33 @@
       },
       {
         "type": "event",
+        "name": "dojo::world::world_contract::world::StoreUpdateMembers",
+        "kind": "struct",
+        "members": [
+          {
+            "name": "selector",
+            "type": "core::felt252",
+            "kind": "key"
+          },
+          {
+            "name": "entity_id",
+            "type": "core::felt252",
+            "kind": "key"
+          },
+          {
+            "name": "member_selectors",
+            "type": "core::array::Span::<core::felt252>",
+            "kind": "data"
+          },
+          {
+            "name": "values",
+            "type": "core::array::Span::<core::felt252>",
+            "kind": "data"
+          }
+        ]
+      },
+      {
+        "type": "event",
         "name": "dojo::world::world_contract::world::StoreDelRecord",
         "kind": "struct",
         "members": [
@@ -1292,6 +1339,11 @@
             "kind": "nested"
           },
           {
+            "name": "StoreUpdateMembers",
+            "type": "dojo::world::world_contract::world::StoreUpdateMembers",
+            "kind": "nested"
+          },
+          {
             "name": "StoreDelRecord",
             "type": "dojo::world::world_contract::world::StoreDelRecord",
             "kind": "nested"
@@ -1312,8 +1364,8 @@
   },
   "contracts": [
     {
-      "address": "0x73011d08f54413ec16fd768a0dcf1e61a6218e196b01b6ddfad09502f47e71d",
-      "class_hash": "0x747821121b203c09f02f2568e69fa3e4f50840ec33d38546143cffe6114afce",
+      "address": "0xd4ed7610833263d1e01c38438541d1735507f40dad636bfb43b32293463335",
+      "class_hash": "0x5128a5331e9d78688affdf6fae7ff05fdcfd7ae68bebb0caffdd038caa51870",
       "abi": [
         {
           "type": "impl",
@@ -1456,6 +1508,13 @@
                   "type": "core::byte_array::ByteArray"
                 }
               ],
+              "outputs": [],
+              "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "update_player_config_items",
+              "inputs": [],
               "outputs": [],
               "state_mutability": "external"
             },
@@ -1657,6 +1716,7 @@
         "spawn",
         "move",
         "set_player_config",
+        "update_player_config_items",
         "update_player_config_name",
         "reset_player_config",
         "set_player_server_profile",
@@ -1666,8 +1726,8 @@
       ]
     },
     {
-      "address": "0x2fbd487dc4ccae7a01c767addb192df5c285fe07fe06756b463d7b5f3b43044",
-      "class_hash": "0x7b31bb137c041fbe8247724a888bb108aaf2ff6b2bb7be5ecf5c954471e30c3",
+      "address": "0x95b4f2e73a88f2fc6052f958c8f43ea880e136873f565af1ab80f25ee272f5",
+      "class_hash": "0x216b7f3b4d4d8f37e280a310881bdf11edb8c2f665d116388a3e0f6055929d2",
       "abi": [
         {
           "type": "impl",
@@ -1860,8 +1920,8 @@
       ]
     },
     {
-      "address": "0x64b964be7fb8d9d9161a34b39cb2709b7a36b46063e0180c93a62aabc899b52",
-      "class_hash": "0x38c4b1f36acecf15ea27430f34956bdfed933271ef23bcb9444db15dce66c6b",
+      "address": "0x17be6c1ece001ffe3474c8733a37a595a07b558ac504e4f3355414e71e50975",
+      "class_hash": "0x6f8120a9adbe5b42764ef71dcb261eca97bbe19ff8ad2d43271cb751f35d226",
       "abi": [
         {
           "type": "impl",
@@ -2036,8 +2096,8 @@
       ]
     },
     {
-      "address": "0x6460654b134506a238bf79b73d2be078f587718521048c80b78514fe90b6336",
-      "class_hash": "0x5dd5b200655bdc68fba0ec23b25a9fb2d8ea2da118d60789c2d1d6adac3afae",
+      "address": "0x71cc34a38cda71e406a2c6372580ee7b3fde2bea8a7d3af77550a18c4195b2a",
+      "class_hash": "0x2171f2464ca252e6a717084210b5636b2788aa09a2b7fa53d67773262287a49",
       "abi": [
         {
           "type": "impl",
@@ -2221,7 +2281,7 @@
   ],
   "libraries": [
     {
-      "class_hash": "0x5d656902fe69f699ebbe0af587d01a46ecdb166daf10c70a6cf0b27555ee7fe",
+      "class_hash": "0x4f9e8d8b86626a2c78b494eab81b59a9675116b449c054ab1eb75d309df0533",
       "abi": [
         {
           "type": "impl",
@@ -2360,49 +2420,49 @@
   "models": [
     {
       "members": [],
-      "class_hash": "0x5fff7fd534708d4d13ea05fd95ce6fb1c3623d0225bc752963246d4a5cd969e",
+      "class_hash": "0x3a5256c1d86a1961246a181cbf1310ff324912fd6fe909fca960158d004222e",
       "tag": "ns-Flatbow",
       "selector": "0x27a35f8bac96f1deebf4d3e83fc6b94a3da4e6d30a1ce34d5893d2fb602725d"
     },
     {
       "members": [],
-      "class_hash": "0x352619ce02b242854390b59216eca80b4d51a41ea96169847637216098b5b3c",
+      "class_hash": "0x78c77a191b3f5eeb6473a0f6914ebea9008f60fbc2f527359aefe16c19e9ed9",
       "tag": "ns-Message",
       "selector": "0x7e77b60a338fa7414998176fd93ff265e4ca04b93105ac98f155bcb2e9e8438"
     },
     {
       "members": [],
-      "class_hash": "0x3cb57dec0524eee7b10b8df78ffd8167e04c8bfee85c81f0dc1883f333a0eeb",
+      "class_hash": "0x1d350d32f41cb979897048f97b924516e7290f0c572373c5bad42d54a6e319a",
       "tag": "ns-MockToken",
       "selector": "0x23ee42c8f47d1d693b966176dcd5deca0ec147b33e42186382d9d027603a6fd"
     },
     {
       "members": [],
-      "class_hash": "0x67080a2923abdf48e821518da3e58bde33881db7187571cbf43d1bae1ac6636",
+      "class_hash": "0x41cbd832e8099827f90aed350f270bf86f01fd6b99afdb3a3c71985589ef5bb",
       "tag": "ns-Moves",
       "selector": "0x54104f060e63bdd9d68bb872f2dc6d40a101e168e18b999c10de348d06ea24a"
     },
     {
       "members": [],
-      "class_hash": "0x6bbee80be480d884a298afb0d041e7755832c271e8291db9c581a0d725e9027",
+      "class_hash": "0x1c0a03365283c19eb292b291218001ff6d93cb21ff5e6ad1c44661be1ddef6b",
       "tag": "ns-PlayerConfig",
       "selector": "0x3bea561c3e142a660a00d1471d7712b70695dc4ee3b173aeaefd5178f7a21af"
     },
     {
       "members": [],
-      "class_hash": "0x7e7de15d29fc42772368e242acc59474457fa7b6ccd6944e7aa972430d427a8",
+      "class_hash": "0x5123ea4c923ccd712a3238e4b2a36ce952851aad33f02ed72d20cd12eb03142",
       "tag": "ns-Position",
       "selector": "0x5e12c61e9cf30881c126a6d298975c8d79f95abed1a05c2d38b7803ed19445f"
     },
     {
       "members": [],
-      "class_hash": "0x127b7a795eb7d381505d0cf99c4d7b34f72575bcb10fdce997fd5c81c5147f",
+      "class_hash": "0x348efb67b6293d25104c970316c3b7e82550cc4ab10c3b7c71135c36e96fe9f",
       "tag": "ns-RiverSkale",
       "selector": "0x47f763aa7de3b872f7fbec198275547e06751dbe26b66281b9cffaed9938f24"
     },
     {
       "members": [],
-      "class_hash": "0xbdb10fde8e9d7ccd8c07a04a1c25cc226159f68695e0a8a1c2ffe7b8fc5a6d",
+      "class_hash": "0x647a38cde68764353dfcdec7e3ecc5456a16b3acfd60063bde968aa435c603c",
       "tag": "ns-ServerProfile",
       "selector": "0x641dc5f178aff0c7935a8f1ae30c6038a3d3512ea164d486f98bc37b6beabf"
     }
@@ -2410,23 +2470,23 @@
   "events": [
     {
       "members": [],
-      "class_hash": "0x7d4d38635c05c9da6b8d71126d426145d204057c593a3d0a65245356c59055b",
+      "class_hash": "0x417a1467225cfa72d2e6b949bc7bbb1ee05805014351a8ef78a7ac718ce0653",
       "tag": "ns-Moved",
       "selector": "0x6d4c1ac3717ba997500153c52344a2acac5123bbfa0f78d3dcc04cb786826b0"
     },
     {
       "members": [],
-      "class_hash": "0x72724ada5a30dca6c13cbd278307870b853dd6a4a34432600fa814d88175acd",
+      "class_hash": "0x2a47cf642e1d010ba73f41aab00aaa0757b75eedb0caa6ba575c85c343b7727",
       "tag": "ns-MyInit",
       "selector": "0xe1c030210beae7e2153a7b996d7d2ae6a428faf16a61f192f02178718b6f0"
     }
   ],
   "external_contracts": [
     {
-      "class_hash": "0x69cb6ea3ce8a2312c70eb83f0ead12480698d9f42350332249f524dd8572244",
+      "class_hash": "0x42a5ab1b66c07d69a42b3958064327269ba49ca435ca390582b0ac5df564097",
       "contract_name": "ERC721Token",
       "instance_name": "Badge",
-      "address": "0x1ddb490b72e4b62f98a2e14dde12e490ab1d6ed38e7d9159a88c7223c197b1e",
+      "address": "0x6f7a18f07a642724350bf344176eb545679df0df57eebd7476aff255f872971",
       "abi": [
         {
           "type": "struct",
@@ -3247,10 +3307,10 @@
       ]
     },
     {
-      "class_hash": "0x158820e9b983e5aa54581fb66ca96d935383906579498bfe8a6ea3776f35a37",
+      "class_hash": "0x4cbd01aa2bd0447e071ad7dc72669ce68dfda9c043eaa9972bc6363c79fb92e",
       "contract_name": "Bank",
       "instance_name": "Bank",
-      "address": "0x73cbd5fcb9152540aa039a861b661d1eff6da790f6990d4b619a3788f4aa570",
+      "address": "0x22b6c1775d34c6262d74e613ba196ddcc874c90a7af0450f34e97aa56714754",
       "abi": [
         {
           "type": "constructor",
@@ -3274,10 +3334,10 @@
       ]
     },
     {
-      "class_hash": "0x273417f4ad2ad408b6db9dba9005ddf88f4b194ae1a9a00908f0bdd17b699f8",
+      "class_hash": "0x7186749b8ff1e51555b77d6ae343eadcad699634796227a70d99e037832f192",
       "contract_name": "ERC20Token",
       "instance_name": "GoldToken",
-      "address": "0x3222c22e7ed4d1334cbf96deb96cca8ff3134bbc6b51b74fe77ea876fdd07a2",
+      "address": "0x1ddd59ba845557e712b42245be9d7d172dd3f5e40de7cf1c0256d258633cf69",
       "abi": [
         {
           "type": "struct",
@@ -3768,10 +3828,10 @@
       ]
     },
     {
-      "class_hash": "0x342e7234ef0066eaf28438eb8e2013a711548ee1b8f4b286f6e2dad44fc5a0b",
+      "class_hash": "0x10d6e882428f58611abf8e450846fccdbbecb53783d702ae4905980c076393f",
       "contract_name": "ERC1155Token",
       "instance_name": "Rewards",
-      "address": "0x357e29a60b3c5b809695dc8b2e0d43f07be8e7654dd1b7378989dd6c51bb798",
+      "address": "0x1c69858ebadea848afde8d2c3aef3fb01c7c6efedc2f756e046c3a04d3f7133",
       "abi": [
         {
           "type": "struct",
@@ -4648,10 +4708,10 @@
       ]
     },
     {
-      "class_hash": "0x385397f49e3e40c38890a195e1866f1fb25326cfde124a27b7eaf3f238bf081",
+      "class_hash": "0x38d50bde18609efa98b736a8ca582729255674058c54d19ad03949c454ddfc4",
       "contract_name": "Saloon",
       "instance_name": "Saloon",
-      "address": "0x4cdfebcb371188d5f2fb54b51d5de43a62c1b5998a397021f48807483db72a7",
+      "address": "0x2bd802e28bba82c7c6a8ca4604a397b6ca0d263fa56b93c818d15c8ab55991a",
       "abi": [
         {
           "type": "constructor",
@@ -4668,10 +4728,10 @@
       "constructor_calldata": []
     },
     {
-      "class_hash": "0x273417f4ad2ad408b6db9dba9005ddf88f4b194ae1a9a00908f0bdd17b699f8",
+      "class_hash": "0x7186749b8ff1e51555b77d6ae343eadcad699634796227a70d99e037832f192",
       "contract_name": "ERC20Token",
       "instance_name": "WoodToken",
-      "address": "0x62fed1352472192eda3ac19346961a55e44ad01820505aa861ad1dd0625579e",
+      "address": "0x33f5acb2e6bc57febe867e4624a481d9c597011de7f55e37c8e1efd5a110d58",
       "abi": [
         {
           "type": "struct",
