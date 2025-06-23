@@ -1,13 +1,11 @@
-use dojo_examples::models::{Direction, Position, PlayerItem};
+use dojo_examples::models::{Direction, Position};
 
 #[starknet::interface]
 pub trait IActions<T> {
     fn spawn(ref self: T);
     fn move(ref self: T, direction: Direction);
     fn set_player_config(ref self: T, name: ByteArray);
-    fn update_player_config_items(
-        ref self: T, items: Array<PlayerItem>, favorite_item: Option<u32>,
-    );
+    fn update_player_config_items(ref self: T);
     fn update_player_config_name(ref self: T, name: ByteArray);
     fn get_player_position(self: @T) -> Position;
     fn reset_player_config(ref self: T);
@@ -19,27 +17,26 @@ pub trait IActions<T> {
 
 #[dojo::contract]
 pub mod actions {
-    use super::IActions;
-
-    use starknet::{ContractAddress, get_caller_address};
-    use dojo_examples::models::{
-        Position, Moves, MovesValue, Direction, Vec2, PlayerConfig, PlayerItem, ServerProfile,
-        PlayerConfigItems,
-    };
-    use dojo_examples::utils::next_position;
-    use dojo_examples::lib_math::{SimpleMathLibraryDispatcher, SimpleMathDispatcherTrait};
-    use dojo::model::{ModelStorage, ModelValueStorage, Model};
+    #[cfg(feature: 'dungeon')]
+    use armory::Flatbow;
+    #[cfg(feature: 'dungeon')]
+    use bestiary::RiverSkale;
     use dojo::event::EventStorage;
+    use dojo::model::{Model, ModelStorage, ModelValueStorage};
     use dojo::world::{WorldStorage, WorldStorageTrait};
 
     // Features can be used on modules, structs, trait and `use`. Not inside
     // a function.
     #[cfg(feature: 'dungeon')]
     use dojo_examples::dungeon::{IDungeonDispatcher, IDungeonDispatcherTrait};
-    #[cfg(feature: 'dungeon')]
-    use armory::Flatbow;
-    #[cfg(feature: 'dungeon')]
-    use bestiary::RiverSkale;
+    use dojo_examples::lib_math::{SimpleMathDispatcherTrait, SimpleMathLibraryDispatcher};
+    use dojo_examples::models::{
+        Direction, Moves, MovesValue, PlayerConfig, PlayerConfigItems, PlayerItem, Position,
+        ServerProfile, Vec2,
+    };
+    use dojo_examples::utils::next_position;
+    use starknet::{ContractAddress, get_caller_address};
+    use super::IActions;
 
     #[derive(Copy, Drop, Serde)]
     #[dojo::event]
@@ -140,12 +137,16 @@ pub mod actions {
             world.write_model(@config);
         }
 
-        fn update_player_config_items(
-            ref self: ContractState, items: Array<PlayerItem>, favorite_item: Option<u32>,
-        ) {
+        fn update_player_config_items(ref self: ContractState) {
             let mut world = self.world_default();
             let player = get_caller_address();
+            let items = array![
+                PlayerItem { item_id: 1, quantity: 12, score: 8 },
+                PlayerItem { item_id: 2, quantity: 42, score: -123 },
+            ];
+            let favorite_item = Option::Some(2);
             let player_items = PlayerConfigItems { items, favorite_item };
+
             // Don't need to read the model here, we directly overwrite the member "items".
             world.write_schema(Model::<PlayerConfig>::ptr_from_keys(player), @player_items);
         }
@@ -254,17 +255,16 @@ pub mod actions {
 
 #[cfg(test)]
 mod tests {
-    use dojo::model::{ModelStorage, ModelValueStorage, ModelStorageTest};
-    use dojo::world::{WorldStorageTrait};
+    use dojo::model::{ModelStorage, ModelStorageTest, ModelValueStorage};
+    use dojo::world::WorldStorageTrait;
     use dojo_cairo_test::{
-        spawn_test_world, NamespaceDef, TestResource, ContractDefTrait, ContractDef,
-        WorldStorageTestTrait,
+        ContractDef, ContractDefTrait, NamespaceDef, TestResource, WorldStorageTestTrait,
+        spawn_test_world,
     };
     use dojo_examples::lib_math::simple_math;
-
-    use super::{actions, IActionsDispatcher, IActionsDispatcherTrait};
+    use dojo_examples::models::{Direction, Moves, Position, PositionValue, m_Moves, m_Position};
     use crate::dungeon::dungeon;
-    use dojo_examples::models::{Position, PositionValue, m_Position, Moves, m_Moves, Direction};
+    use super::{IActionsDispatcher, IActionsDispatcherTrait, actions};
 
     fn namespace_def() -> NamespaceDef {
         let ndef = NamespaceDef {
