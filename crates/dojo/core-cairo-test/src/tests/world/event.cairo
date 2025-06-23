@@ -112,7 +112,7 @@ fn test_register_event_for_namespace_owner() {
 
 #[test]
 #[should_panic(
-    expected: ("Account `2827` does NOT have OWNER role on namespace `dojo`", 'ENTRYPOINT_FAILED'),
+    expected: ("Account `0xb0b` does NOT have OWNER role on namespace `dojo`", 'ENTRYPOINT_FAILED'),
 )]
 fn test_register_event_for_namespace_writer() {
     let bob = starknet::contract_address_const::<0xb0b>();
@@ -293,7 +293,7 @@ fn test_upgrade_event_with_member_illegal_change() {
 #[test]
 #[should_panic(
     expected: (
-        "Account `659918` does NOT have OWNER role on event (or its namespace) `FooEventMemberAdded`",
+        "Account `0xa11ce` does NOT have OWNER role on event (or its namespace) `FooEventMemberAdded`",
         'ENTRYPOINT_FAILED',
     ),
 )]
@@ -341,10 +341,12 @@ fn test_register_event_with_unregistered_namespace() {
     world.register_event("another_namespace", e_SimpleEvent::TEST_CLASS_HASH.try_into().unwrap());
 }
 
-// It's CONTRACT_NOT_DEPLOYED for now as in this example the contract is not a dojo contract
-// and it's not the account that is calling the register_event function.
 #[test]
-#[should_panic(expected: ('CONTRACT_NOT_DEPLOYED', 'ENTRYPOINT_FAILED', 'ENTRYPOINT_FAILED'))]
+#[should_panic(
+    expected: (
+        "Contract `0xdead` does NOT have OWNER role on namespace `dojo`", 'ENTRYPOINT_FAILED',
+    ),
+)]
 fn test_register_event_through_malicious_contract() {
     let bob = starknet::contract_address_const::<0xb0b>();
     let malicious_contract = starknet::contract_address_const::<0xdead>();

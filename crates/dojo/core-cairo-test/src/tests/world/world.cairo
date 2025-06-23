@@ -242,7 +242,12 @@ fn test_can_call_init_only_world() {
 
 #[test]
 #[available_gas(6000000)]
-#[should_panic(expected: ('CONTRACT_NOT_DEPLOYED', 'ENTRYPOINT_FAILED', 'ENTRYPOINT_FAILED'))]
+#[should_panic(
+    expected: (
+        "Contract `0x1337` does NOT have OWNER role on contract (or its namespace) `test_contract`",
+        'ENTRYPOINT_FAILED',
+    ),
+)]
 fn test_can_call_init_only_owner() {
     let world = deploy_world();
     let world = world.dispatcher;
