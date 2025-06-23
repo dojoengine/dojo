@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1750450408028,
+  "lastUpdate": 1750695470202,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -63798,6 +63798,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 49724915014,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "corentin.cailleaud@caillef.com",
+            "name": "Corentin Cailleaud",
+            "username": "caillef"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "de2247492aa6b0914d8123a894676967eeb774ca",
+          "message": "sozo(unrealengine): handle UE5.6 and Dojo 1.5 (#3252)",
+          "timestamp": "2025-06-23T10:03:54-06:00",
+          "tree_id": "1f51867130d50b0866b54fb10bb659642bcefb59",
+          "url": "https://github.com/dojoengine/dojo/commit/de2247492aa6b0914d8123a894676967eeb774ca"
+        },
+        "date": 1750695466879,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 49700344692,
             "range": "± 0",
             "unit": "ns/iter"
           }
