@@ -55,7 +55,7 @@ fn test_set_metadata_resource_owner() {
 #[test]
 #[should_panic(
     expected: (
-        "Account `2827` does NOT have OWNER role on model (or its namespace) `Foo`",
+        "Account `0xb0b` does NOT have OWNER role on model (or its namespace) `Foo`",
         'ENTRYPOINT_FAILED',
     ),
 )]
@@ -78,7 +78,9 @@ fn test_set_metadata_not_possible_for_resource_writer() {
 }
 
 #[test]
-#[should_panic(expected: ("Account `2827` does NOT have OWNER role on world", 'ENTRYPOINT_FAILED'))]
+#[should_panic(
+    expected: ("Account `0xb0b` does NOT have OWNER role on world", 'ENTRYPOINT_FAILED'),
+)]
 fn test_set_metadata_not_possible_for_random_account() {
     let world = deploy_world();
     let world = world.dispatcher;
@@ -97,7 +99,12 @@ fn test_set_metadata_not_possible_for_random_account() {
 }
 
 #[test]
-#[should_panic(expected: ('CONTRACT_NOT_DEPLOYED', 'ENTRYPOINT_FAILED', 'ENTRYPOINT_FAILED'))]
+#[should_panic(
+    expected: (
+        "Contract `0xdead` does NOT have OWNER role on model (or its namespace) `Foo`",
+        'ENTRYPOINT_FAILED',
+    ),
+)]
 fn test_set_metadata_through_malicious_contract() {
     let (world, model_selector) = deploy_world_and_foo();
     let world = world.dispatcher;

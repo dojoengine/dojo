@@ -32,7 +32,7 @@ use crate::commands::LOG_TARGET;
 /// providers.
 pub const MAX_BLOCK_RANGE: u64 = 200_000;
 
-pub const RPC_SPEC_VERSION: &str = "0.7.1";
+pub const _RPC_SPEC_VERSION: &str = "0.7.1";
 
 pub const CALLDATA_DOC: &str = "
 Space separated values e.g., 0x12345 128 u256:9999999999 str:'hello world'.
@@ -154,14 +154,16 @@ pub async fn get_world_diff_and_provider(
     let spec_version = provider.spec_version().await?;
     trace!(spec_version);
 
-    if !is_compatible_version(&spec_version, RPC_SPEC_VERSION)? {
-        return Err(anyhow!(
-            "Unsupported Starknet RPC version: {}, expected {}.",
-            spec_version,
-            RPC_SPEC_VERSION
-        ));
-    }
-
+    // TODO: @remybar @glihm currently Katana is using new types, but doesn't
+    // return the correct spec version. We comment this test for now to ensure
+    // one can deploy on sepolia/mainnet but also Katana.
+    //     if !is_compatible_version(&spec_version, RPC_SPEC_VERSION)? {
+    // return Err(anyhow!(
+    // "Unsupported Starknet RPC version: {}, expected {}.",
+    // spec_version,
+    // RPC_SPEC_VERSION
+    // ));
+    // }
     let chain_id = provider.chain_id().await?;
     let chain_id = snutils::parse_cairo_short_string(&chain_id)
         .with_context(|| "Cannot parse chain_id as string")?;
@@ -230,6 +232,7 @@ pub async fn get_world_diff_and_account(
 ///
 /// * `Result<bool>` - Returns `true` if the provided version is compatible with the expected
 ///   version, `false` otherwise.
+#[allow(dead_code)]
 fn is_compatible_version(provided_version: &str, expected_version: &str) -> Result<bool> {
     use semver::{Version, VersionReq};
 
