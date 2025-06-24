@@ -259,6 +259,7 @@ public class {}_{} : ModelInstance {{
             }
         }
 
+        dbg!(&model_struct);
         let model_struct = model_struct.expect("model struct not found");
 
         // Handle struct dependencies
