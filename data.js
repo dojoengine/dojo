@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1750695470202,
+  "lastUpdate": 1750732825252,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -63828,6 +63828,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 49700344692,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "remy.baranx@gmail.com",
+            "name": "Rémy Baranx",
+            "username": "remybar"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1080783e90a9b00f0942706909f8e5322a2ec2d0",
+          "message": "fix(sozo): assert caller permission with match (#3254)\n\n* handle call_contract_syscall() result for better panic trace\n\n* avoid using 0 as caller address\n\n* remove temporarly the RPC version check.\n\nCurrently, Katana uses the new RPC types, without\nbumping the spec version. To ensure we can still use\nsozo with sepolia/mainnet and Katana, Sozo will not check\nthe RPC version for now\n\n* update test dbs\n\n---------\n\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2025-06-23T20:26:42-06:00",
+          "tree_id": "0bba28dcfc2e574b7587bf7d82899d8affb9ac2b",
+          "url": "https://github.com/dojoengine/dojo/commit/1080783e90a9b00f0942706909f8e5322a2ec2d0"
+        },
+        "date": 1750732821656,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 50877851565,
             "range": "± 0",
             "unit": "ns/iter"
           }
