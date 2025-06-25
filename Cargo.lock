@@ -1137,6 +1137,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "cairo-bench"
+version = "1.5.1"
+dependencies = [
+ "anyhow",
+ "camino",
+ "clap",
+ "colored 2.2.0",
+ "itertools 0.12.1",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "cairo-lang-casm"
 version = "2.11.4"
 source = "git+https://github.com/starkware-libs/cairo?rev=64b88f06c6261ac67c6b478434c844d4af81e5a3#64b88f06c6261ac67c6b478434c844d4af81e5a3"
