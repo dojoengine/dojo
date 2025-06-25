@@ -7,10 +7,15 @@
 
 use anyhow::Result;
 use camino::Utf8PathBuf;
-use rmcp::service::RequestContext;
-use rmcp::{Error as McpError, RoleServer, ServerHandler, ServiceExt, schemars, tool, transport};
-use rmcp::{const_string, model::*};
+use rmcp::{
+    Error as McpError, RoleServer, ServerHandler, ServiceExt,
+    handler::server::{router::tool::ToolRouter, tool::Parameters},
+    model::*,
+    service::RequestContext,
+    tool, tool_handler, tool_router, transport,
+};
 use serde_json::{Value, json};
+use std::future::Future;
 use tokio::process::Command as AsyncCommand;
 use tracing::{debug, error};
 
@@ -27,21 +32,16 @@ fn _create_resource_text(uri: &str, name: &str) -> Resource {
     .no_annotation()
 }
 
-#[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
-pub struct StructRequest {
-    pub a: i32,
-    pub b: i32,
-}
-
 #[derive(Clone)]
 pub struct SozoMcpServer {
     manifest_path: Option<Utf8PathBuf>,
+    tool_router: ToolRouter<SozoMcpServer>,
 }
 
-#[tool(tool_box)]
+#[tool_router]
 impl SozoMcpServer {
     pub fn new(manifest_path: Option<Utf8PathBuf>) -> Self {
-        Self { manifest_path }
+        Self { manifest_path, tool_router: Self::tool_router() }
     }
 
     pub async fn serve_stdio(self) -> Result<()> {
@@ -57,19 +57,19 @@ impl SozoMcpServer {
                           the default profile `dev` is used.")]
     async fn build(
         &self,
-        #[tool(param)]
-        #[schemars(description = "Profile to use for build.")]
-        profile: Option<String>,
+        Parameters(object): Parameters<JsonObject>,
     ) -> Result<CallToolResult, McpError> {
-        let profile = profile.unwrap_or("dev".to_string());
+        let profile = object.get("profile").and_then(|v| v.as_str()).unwrap_or("dev");
 
         let mut cmd = AsyncCommand::new("sozo");
         cmd.arg("build");
-        cmd.arg("--profile").arg(profile.clone());
+        cmd.arg("--profile").arg(profile);
 
         if let Some(manifest_path) = &self.manifest_path {
             cmd.arg("--manifest-path").arg(manifest_path);
         }
+
+        debug!(target: LOG_TARGET, profile, manifest_path = ?self.manifest_path, "Building project.");
 
         let output = cmd.output().await.map_err(|e| {
             McpError::internal_error(
@@ -91,11 +91,9 @@ impl SozoMcpServer {
     )]
     async fn inspect(
         &self,
-        #[tool(param)]
-        #[schemars(description = "Profile to use for build.")]
-        profile: Option<String>,
+        Parameters(object): Parameters<JsonObject>,
     ) -> Result<CallToolResult, McpError> {
-        let profile = profile.unwrap_or("dev".to_string());
+        let profile = object.get("profile").and_then(|v| v.as_str()).unwrap_or("dev");
 
         let mut cmd = AsyncCommand::new("/Users/glihm/cgg/dojo/target/release/sozo");
 
@@ -103,12 +101,9 @@ impl SozoMcpServer {
             cmd.arg("--manifest-path").arg(manifest_path);
         }
 
-        cmd.arg("--profile").arg(profile.clone());
+        cmd.arg("--profile").arg(profile);
         cmd.arg("inspect");
         cmd.arg("--json");
-
-        debug!(target: LOG_TARGET, "Running inspect command: {:?}", cmd);
-        dbg!("1");
 
         let output = cmd.output().await.map_err(|e| {
             McpError::internal_error(
@@ -117,10 +112,7 @@ impl SozoMcpServer {
             )
         });
 
-        dbg!("2");
-
         let output = output?;
-        dbg!(&output);
 
         if output.status.success() {
             let stdout = String::from_utf8_lossy(&output.stdout);
@@ -139,7 +131,7 @@ impl SozoMcpServer {
     }
 }
 
-#[tool(tool_box)]
+#[tool_handler]
 impl ServerHandler for SozoMcpServer {
     fn get_info(&self) -> ServerInfo {
         ServerInfo {

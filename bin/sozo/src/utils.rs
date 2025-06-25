@@ -20,9 +20,8 @@ use starknet::core::types::Felt;
 use starknet::core::utils as snutils;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
-use tracing::{trace, warn};
+use tracing::trace;
 
-use crate::commands::LOG_TARGET;
 use crate::commands::options::account::{AccountOptions, SozoAccount};
 use crate::commands::options::starknet::StarknetOptions;
 use crate::commands::options::world::WorldOptions;

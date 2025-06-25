@@ -48,6 +48,6 @@ url.workspace = true
 reqwest = { workspace = true, features = [ "json" ] }
 
 # Use dev version of rmcp.
-rmcp = { git = "https://github.com/modelcontextprotocol/rust-sdk", rev = "13e72ec", features = ["server", "transport-io"] }
+rmcp = { git = "https://github.com/modelcontextprotocol/rust-sdk", rev = "e6effb327883d0a8a91f5efbb527194747eee57b", features = ["server", "transport-io"] }
 # This is currently required to ensure that the `derive` feature works. rmcp fails to compile otherwise.
 schemars = { version = "0.8.22", features = ["derive"] }
