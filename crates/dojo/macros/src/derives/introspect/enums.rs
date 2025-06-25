@@ -307,35 +307,49 @@ impl DojoEnumIntrospect {
             let (serialized_variant, deserialized_variant) = match variant.type_clause(db) {
                 OptionTypeClause::TypeClause(ty) => match ty.ty(db) {
                     Expr::Tuple(expr) => {
-                        let serialized_tuple = DojoFormatter::serialize_tuple_member_ty(
-                            db,
-                            &"d".to_string(),
-                            &expr,
-                            false,
-                            false,
-                        );
-                        let deserialized_tuple = DojoFormatter::deserialize_tuple_member_ty(
-                            db,
-                            &"variant_data".to_string(),
-                            &expr,
-                            false,
-                        );
+                        if expr.expressions(db).elements(db).is_empty() {
+                            let serialized = format!(
+                                "{full_variant_name}(_) => {{
+                                    serialized.append({variant_index});
+                                }},"
+                            );
 
-                        let serialized = format!(
-                            "{full_variant_name}(d) => {{
-                                serialized.append({variant_index});
-                                {serialized_tuple}
-                            }},"
-                        );
+                            let deserialized = format!(
+                                "{variant_index} => Option::Some({full_variant_name}(())),"
+                            );
 
-                        let deserialized = format!(
-                            "{variant_index} => {{
-                                {deserialized_tuple}
-                                Option::Some({full_variant_name}(variant_data))
-                            }},",
-                        );
+                            (serialized, deserialized)
+                        } else {
+                            let serialized_tuple = DojoFormatter::serialize_tuple_member_ty(
+                                db,
+                                &"d".to_string(),
+                                &expr,
+                                false,
+                                false,
+                            );
+                            let deserialized_tuple = DojoFormatter::deserialize_tuple_member_ty(
+                                db,
+                                &"variant_data".to_string(),
+                                &expr,
+                                false,
+                            );
 
-                        (serialized, deserialized)
+                            let serialized = format!(
+                                "{full_variant_name}(d) => {{
+                                    serialized.append({variant_index});
+                                    {serialized_tuple}
+                                }},"
+                            );
+
+                            let deserialized = format!(
+                                "{variant_index} => {{
+                                    {deserialized_tuple}
+                                    Option::Some({full_variant_name}(variant_data))
+                                }},",
+                            );
+
+                            (serialized, deserialized)
+                        }
                     }
                     _ => {
                         let ty = ty.ty(db).as_syntax_node().get_text_without_trivia(db);
