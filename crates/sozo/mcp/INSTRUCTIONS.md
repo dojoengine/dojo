@@ -34,6 +34,8 @@ Retrieves detailed information about the project's resources including models, c
 ### Migrate Tool
 Migrates the project to the blockchain using the specified profile (defaults to `dev`). Migration is always differential, and Sozo will only migrate the changes to the project that need to be migrated.
 
+The migration generates a Dojo manifest file which is at the root of the project and named `manifest_{profile}.json`. This file is used to track the state of the project and the contracts deployed to the blockchain.
+
 **Usage:**
 - Profile: Optional profile name (e.g., "dev", "release")
 
