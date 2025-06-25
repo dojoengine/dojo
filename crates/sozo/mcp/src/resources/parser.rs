@@ -8,7 +8,7 @@ use serde_json::json;
 /// Expected format: dojo://contract/{profile}/{name}/abi
 pub fn parse_contract_uri(uri: &str) -> Result<(&str, &str), McpError> {
     let parts: Vec<&str> = uri.split('/').collect();
-
+    dbg!(&parts);
     if parts.len() != 5
         || parts[0] != "dojo:"
         || parts[1] != ""

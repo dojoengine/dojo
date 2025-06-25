@@ -23,6 +23,9 @@ use crate::tools::{BuildRequest, ExecuteRequest, InspectRequest, MigrateRequest,
 mod resources;
 mod tools;
 
+#[cfg(test)]
+mod tests;
+
 const LOG_TARGET: &str = "sozo_mcp";
 
 #[derive(Clone, Debug)]

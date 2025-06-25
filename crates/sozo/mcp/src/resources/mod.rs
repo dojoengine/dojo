@@ -135,6 +135,7 @@ async fn handle_contract_abi_resource(
     uri: &str,
     manifest_path: Option<Utf8PathBuf>,
 ) -> Result<ReadResourceResult, McpError> {
+    dbg!(uri);
     let (profile, contract_name) = parse_contract_uri(uri)?;
     let world = load_world_local(manifest_path, profile).await?;
     let abi_json = get_contract_abi(&world, contract_name)?;
