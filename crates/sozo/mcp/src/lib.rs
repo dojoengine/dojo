@@ -1,6 +1,6 @@
 //! MCP server for Sozo.
 //!
-//! The current implementation sozo is actually a process that runs the sozo command.
+//! The current implementation sozo is actually a process that runs the sozo command, and not `sozo_ops` crate.
 //! This is not efficient, but limited by the nature of the Scarb's `Config` type.
 //!
 //! In future versions, this will not be necessary anymore.
@@ -20,6 +20,24 @@ use tokio::process::Command as AsyncCommand;
 use tracing::{debug, error};
 
 const LOG_TARGET: &str = "sozo_mcp";
+
+#[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
+pub struct BuildRequest {
+    #[schemars(description = "Profile to use for build. Default to `dev`.")]
+    pub profile: Option<String>,
+}
+
+#[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
+pub struct TestRequest {
+    #[schemars(description = "Profile to use for test. Default to `dev`.")]
+    pub profile: Option<String>,
+}
+
+#[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
+pub struct InspectRequest {
+    #[schemars(description = "Profile to use for inspect. Default to `dev`.")]
+    pub profile: Option<String>,
+}
 
 fn _create_resource_text(uri: &str, name: &str) -> Resource {
     RawResource {
@@ -57,9 +75,9 @@ impl SozoMcpServer {
                           the default profile `dev` is used.")]
     async fn build(
         &self,
-        Parameters(object): Parameters<JsonObject>,
+        Parameters(request): Parameters<BuildRequest>,
     ) -> Result<CallToolResult, McpError> {
-        let profile = object.get("profile").and_then(|v| v.as_str()).unwrap_or("dev");
+        let profile = &request.profile.unwrap_or("dev".to_string());
 
         let mut cmd = AsyncCommand::new("sozo");
         cmd.arg("build");
@@ -86,20 +104,55 @@ impl SozoMcpServer {
         }
     }
 
+    #[tool(description = "Test the project using the given profile. If no profile is provided, \
+                          the default profile `dev` is used.")]
+    async fn test(
+        &self,
+        Parameters(request): Parameters<TestRequest>,
+    ) -> Result<CallToolResult, McpError> {
+        let profile = &request.profile.unwrap_or("dev".to_string());
+
+        let mut cmd = AsyncCommand::new("sozo");
+        cmd.arg("test");
+        cmd.arg("--profile").arg(profile);
+
+        if let Some(manifest_path) = &self.manifest_path {
+            cmd.arg("--manifest-path").arg(manifest_path);
+        }
+
+        debug!(target: LOG_TARGET, profile, manifest_path = ?self.manifest_path, "Testing project.");
+
+        let output = cmd.output().await.map_err(|e| {
+            McpError::internal_error(
+                "test_failed",
+                Some(json!({ "reason": format!("Failed to test project: {}", e) })),
+            )
+        })?;
+
+        if output.status.success() {
+            Ok(CallToolResult::success(vec![Content::text("Tests passed".to_string())]))
+        } else {
+            let err = String::from_utf8_lossy(&output.stderr).to_string();
+            Ok(CallToolResult::error(vec![Content::text(err)]))
+        }
+    }
+
     #[tool(
         description = "Inspect the project to retrieve information about the resources, useful to retrieve models, contracts, events, namespaces, etc."
     )]
     async fn inspect(
         &self,
-        Parameters(object): Parameters<JsonObject>,
+        Parameters(request): Parameters<InspectRequest>,
     ) -> Result<CallToolResult, McpError> {
-        let profile = object.get("profile").and_then(|v| v.as_str()).unwrap_or("dev");
+        let profile = &request.profile.unwrap_or("dev".to_string());
 
         let mut cmd = AsyncCommand::new("/Users/glihm/cgg/dojo/target/release/sozo");
 
         if let Some(manifest_path) = &self.manifest_path {
             cmd.arg("--manifest-path").arg(manifest_path);
         }
+
+        debug!(target: LOG_TARGET, profile, manifest_path = ?self.manifest_path, "Inspecting project.");
 
         cmd.arg("--profile").arg(profile);
         cmd.arg("inspect");
