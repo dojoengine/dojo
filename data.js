@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1750732825252,
+  "lastUpdate": 1750872118962,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -63858,6 +63858,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 50877851565,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "valentin@pupucecorp.com",
+            "name": "Brother MartianGreed",
+            "username": "MartianGreed"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "53152443477c6a11d75ec28b2a0d050722c62b23",
+          "message": "feat(sozo): create standalone bindgen command (#3246)\n\n* feat: create standalone bindgen command\n\n* cleanup unused inputs\n\n* remove dbg\n\n* add meaningful error if project is not built\n\n---------\n\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2025-06-25T11:07:32-06:00",
+          "tree_id": "d3db74a92c0f4fc112978b829b3460aa805c9cb1",
+          "url": "https://github.com/dojoengine/dojo/commit/53152443477c6a11d75ec28b2a0d050722c62b23"
+        },
+        "date": 1750872114948,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 56193077418,
             "range": "± 0",
             "unit": "ns/iter"
           }
