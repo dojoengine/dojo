@@ -8540,6 +8540,7 @@ dependencies = [
  "dojo-types 1.6.0-alpha.0",
  "dojo-utils",
  "dojo-world",
+ "itertools 0.12.1",
  "notify",
  "reqwest 0.11.27",
  "resolve-path",

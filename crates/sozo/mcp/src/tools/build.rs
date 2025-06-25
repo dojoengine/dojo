@@ -5,31 +5,48 @@
 //! This will change in the next version with proc macros where only `ScarbMetadata` is used.
 
 use anyhow::Result;
-use serde_json::Value;
+use camino::Utf8PathBuf;
+use rmcp::model::{CallToolResult, Content};
+use serde_json::{json, Value};
 use tokio::process::Command as AsyncCommand;
+use tracing::debug;
 
-use crate::AppState;
+use crate::{McpError, LOG_TARGET};
+
+#[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
+pub struct BuildRequest {
+    #[schemars(description = "Profile to use for build. Default to `dev`.")]
+    pub profile: Option<String>,
+}
 
 /// Builds the project in which the MCP server has been started at.
 ///
 /// At the moment, the profile is configurable, but not the manifest path,
 /// which has been passed to the MCP server initialization.
-pub async fn build_project(args: &Value, state: AppState) -> Result<String, String> {
-    let profile = args["profile"].as_str().unwrap_or("dev");
+pub async fn build_project(manifest_path: Option<Utf8PathBuf>, args: BuildRequest) -> Result<CallToolResult, McpError> {
+    let profile = &args.profile.unwrap_or("dev".to_string());
 
     let mut cmd = AsyncCommand::new("sozo");
-    cmd.arg("build").arg("--profile").arg(profile);
+    cmd.arg("build");
+    cmd.arg("--profile").arg(profile);
 
-    // Add manifest path if provided
-    if let Some(manifest_path) = state.manifest_path {
+    if let Some(manifest_path) = &manifest_path {
         cmd.arg("--manifest-path").arg(manifest_path);
     }
 
-    let output = cmd.output().await.map_err(|e| format!("Failed to build project: {}", e))?;
+    debug!(target: LOG_TARGET, profile, manifest_path = ?manifest_path, "Building project.");
+
+    let output = cmd.output().await.map_err(|e| {
+        McpError::internal_error(
+            "build_failed",
+            Some(json!({ "reason": format!("Failed to build project: {}", e) })),
+        )
+    })?;
 
     if output.status.success() {
-        Ok(String::from_utf8_lossy(&output.stdout).to_string())
+        Ok(CallToolResult::success(vec![Content::text("Build successful".to_string())]))
     } else {
-        Err(String::from_utf8_lossy(&output.stderr).to_string())
+        let err = String::from_utf8_lossy(&output.stderr).to_string();
+        Ok(CallToolResult::error(vec![Content::text(err)]))
     }
 }

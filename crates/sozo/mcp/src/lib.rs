@@ -15,9 +15,9 @@ use rmcp::{
     service::RequestContext,
     tool, tool_handler, tool_router, transport,
 };
+use scarb::compiler::Profile;
 use scarb::core::Config;
 use scarb::ops;
-use scarb::compiler::Profile;
 use serde_json::{Value, json};
 use smol_str::SmolStr;
 use sozo_scarbext::WorkspaceExt;
@@ -26,25 +26,12 @@ use tokio::process::Command as AsyncCommand;
 use toml;
 use tracing::{debug, error};
 
+use crate::tools::{BuildRequest, ExecuteRequest, InspectRequest, MigrateRequest, TestRequest};
+
+mod resources;
+mod tools;
+
 const LOG_TARGET: &str = "sozo_mcp";
-
-#[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
-pub struct BuildRequest {
-    #[schemars(description = "Profile to use for build. Default to `dev`.")]
-    pub profile: Option<String>,
-}
-
-#[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
-pub struct TestRequest {
-    #[schemars(description = "Profile to use for test. Default to `dev`.")]
-    pub profile: Option<String>,
-}
-
-#[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
-pub struct InspectRequest {
-    #[schemars(description = "Profile to use for inspect. Default to `dev`.")]
-    pub profile: Option<String>,
-}
 
 #[derive(Clone)]
 pub struct SozoMcpServer {
@@ -67,82 +54,13 @@ impl SozoMcpServer {
         Ok(())
     }
 
-    /// Loads the world local from the manifest path and profile
-    async fn load_world_local(&self, profile: &str) -> Result<WorldLocal, McpError> {
-        let manifest_path = self.manifest_path.as_ref().ok_or_else(|| {
-            McpError::internal_error(
-                "no_manifest_path",
-                Some(json!({ "reason": "No manifest path provided" })),
-            )
-        })?;
-
-        let profile_enum = match profile {
-            "dev" => Profile::DEV,
-            "release" => Profile::RELEASE,
-            _ => Profile::new(SmolStr::from(profile)).map_err(|e| {
-                McpError::internal_error(
-                    "invalid_profile",
-                    Some(json!({ "reason": format!("Invalid profile: {}", e) })),
-                )
-            })?,
-        };
-
-        let config =
-            Config::builder(manifest_path.clone()).profile(profile_enum).build().map_err(|e| {
-                McpError::internal_error(
-                    "config_build_failed",
-                    Some(json!({ "reason": format!("Failed to build config: {}", e) })),
-                )
-            })?;
-
-        let ws = ops::read_workspace(config.manifest_path(), &config).map_err(|e| {
-            McpError::internal_error(
-                "workspace_read_failed",
-                Some(json!({ "reason": format!("Failed to read workspace: {}", e) })),
-            )
-        })?;
-
-        let world = ws.load_world_local().map_err(|e| {
-            McpError::internal_error(
-                "world_load_failed",
-                Some(json!({ "reason": format!("Failed to load world: {}", e) })),
-            )
-        })?;
-
-        Ok(world)
-    }
-
     #[tool(description = "Build the project using the given profile. If no profile is provided, \
                           the default profile `dev` is used.")]
     async fn build(
         &self,
         Parameters(request): Parameters<BuildRequest>,
     ) -> Result<CallToolResult, McpError> {
-        let profile = &request.profile.unwrap_or("dev".to_string());
-
-        let mut cmd = AsyncCommand::new("sozo");
-        cmd.arg("build");
-        cmd.arg("--profile").arg(profile);
-
-        if let Some(manifest_path) = &self.manifest_path {
-            cmd.arg("--manifest-path").arg(manifest_path);
-        }
-
-        debug!(target: LOG_TARGET, profile, manifest_path = ?self.manifest_path, "Building project.");
-
-        let output = cmd.output().await.map_err(|e| {
-            McpError::internal_error(
-                "build_failed",
-                Some(json!({ "reason": format!("Failed to build project: {}", e) })),
-            )
-        })?;
-
-        if output.status.success() {
-            Ok(CallToolResult::success(vec![Content::text("Build successful".to_string())]))
-        } else {
-            let err = String::from_utf8_lossy(&output.stderr).to_string();
-            Ok(CallToolResult::error(vec![Content::text(err)]))
-        }
+        tools::build::build_project(self.manifest_path.clone(), request).await
     }
 
     #[tool(description = "Test the project using the given profile. If no profile is provided, \
@@ -151,31 +69,7 @@ impl SozoMcpServer {
         &self,
         Parameters(request): Parameters<TestRequest>,
     ) -> Result<CallToolResult, McpError> {
-        let profile = &request.profile.unwrap_or("dev".to_string());
-
-        let mut cmd = AsyncCommand::new("sozo");
-        cmd.arg("test");
-        cmd.arg("--profile").arg(profile);
-
-        if let Some(manifest_path) = &self.manifest_path {
-            cmd.arg("--manifest-path").arg(manifest_path);
-        }
-
-        debug!(target: LOG_TARGET, profile, manifest_path = ?self.manifest_path, "Testing project.");
-
-        let output = cmd.output().await.map_err(|e| {
-            McpError::internal_error(
-                "test_failed",
-                Some(json!({ "reason": format!("Failed to test project: {}", e) })),
-            )
-        })?;
-
-        if output.status.success() {
-            Ok(CallToolResult::success(vec![Content::text("Tests passed".to_string())]))
-        } else {
-            let err = String::from_utf8_lossy(&output.stderr).to_string();
-            Ok(CallToolResult::error(vec![Content::text(err)]))
-        }
+        tools::test::test_project(self.manifest_path.clone(), request).await
     }
 
     #[tool(
@@ -185,43 +79,29 @@ impl SozoMcpServer {
         &self,
         Parameters(request): Parameters<InspectRequest>,
     ) -> Result<CallToolResult, McpError> {
-        let profile = &request.profile.unwrap_or("dev".to_string());
+        tools::inspect::inspect_project(self.manifest_path.clone(), request).await
+    }
 
-        let mut cmd = AsyncCommand::new("/Users/glihm/cgg/dojo/target/release/sozo");
+    #[tool(
+        description = "Migrate the project using the given profile. If no profile is provided, \
+                          the default profile `dev` is used."
+    )]
+    async fn migrate(
+        &self,
+        Parameters(request): Parameters<MigrateRequest>,
+    ) -> Result<CallToolResult, McpError> {
+        tools::migrate::migrate_project(self.manifest_path.clone(), request).await
+    }
 
-        if let Some(manifest_path) = &self.manifest_path {
-            cmd.arg("--manifest-path").arg(manifest_path);
-        }
-
-        debug!(target: LOG_TARGET, profile, manifest_path = ?self.manifest_path, "Inspecting project.");
-
-        cmd.arg("--profile").arg(profile);
-        cmd.arg("inspect");
-        cmd.arg("--json");
-
-        let output = cmd.output().await.map_err(|e| {
-            McpError::internal_error(
-                "inspect_failed",
-                Some(json!({ "reason": format!("Failed to inspect project: {}", e) })),
-            )
-        });
-
-        let output = output?;
-
-        if output.status.success() {
-            let stdout = String::from_utf8_lossy(&output.stdout);
-            match serde_json::from_str::<Value>(&stdout) {
-                Ok(json_value) => Ok(CallToolResult::success(vec![Content::json(json_value)?])),
-                Err(e) => {
-                    error!(target: LOG_TARGET, "Failed to parse JSON: {:?}", e);
-                    Ok(CallToolResult::error(vec![Content::text(e.to_string())]))
-                }
-            }
-        } else {
-            let err = String::from_utf8_lossy(&output.stderr).to_string();
-            error!(target: LOG_TARGET, "Failed to run inspect command: {:?}", err);
-            Ok(CallToolResult::error(vec![Content::text(err)]))
-        }
+    #[tool(
+        description = "Execute a transaction using the given profile. If no profile is provided, \
+                          the default profile `dev` is used."
+    )]
+    async fn execute(
+        &self,
+        Parameters(request): Parameters<ExecuteRequest>,
+    ) -> Result<CallToolResult, McpError> {
+        tools::execute::execute_transaction(self.manifest_path.clone(), request).await
     }
 }
 
@@ -273,29 +153,7 @@ impl ServerHandler for SozoMcpServer {
                     )
                 })?;
 
-                let manifest_content =
-                    tokio::fs::read_to_string(manifest_path).await.map_err(|e| {
-                        McpError::internal_error(
-                            "manifest_read_failed",
-                            Some(
-                                json!({ "reason": format!("Failed to read manifest file: {}", e) }),
-                            ),
-                        )
-                    })?;
-
-                let toml_value: toml::Value = toml::from_str(&manifest_content).map_err(|e| {
-                    McpError::internal_error(
-                        "manifest_parse_failed",
-                        Some(json!({ "reason": format!("Failed to parse TOML: {}", e) })),
-                    )
-                })?;
-
-                let manifest_json = serde_json::to_string_pretty(&toml_value).map_err(|e| {
-                    McpError::internal_error(
-                        "manifest_serialization_failed",
-                        Some(json!({ "reason": format!("Failed to serialize manifest: {}", e) })),
-                    )
-                })?;
+                let manifest_json = resources::toml_to_json(manifest_path.clone()).await?;
 
                 Ok(ReadResourceResult {
                     contents: vec![ResourceContents::text(manifest_json, uri)],
@@ -321,7 +179,8 @@ impl ServerHandler for SozoMcpServer {
                         )
                     })?;
 
-                let world = self.load_world_local(profile).await?;
+                let world =
+                    resources::load_world_local(self.manifest_path.clone(), profile).await?;
 
                 let contract = world
                     .resources
@@ -521,21 +380,27 @@ impl ServerHandler for SozoMcpServer {
             RawResourceTemplate {
                 uri_template: "dojo://contract/{profile}/{name}/abi".to_string(),
                 name: "Contract ABI".to_string(),
-                description: Some("Get the ABI for a specific contract in the given profile".to_string()),
+                description: Some(
+                    "Get the ABI for a specific contract in the given profile".to_string(),
+                ),
                 mime_type: Some("application/json".to_string()),
             }
             .no_annotation(),
             RawResourceTemplate {
                 uri_template: "dojo://model/{profile}/{name}/abi".to_string(),
                 name: "Model ABI".to_string(),
-                description: Some("Get the ABI for a specific model in the given profile".to_string()),
+                description: Some(
+                    "Get the ABI for a specific model in the given profile".to_string(),
+                ),
                 mime_type: Some("application/json".to_string()),
             }
             .no_annotation(),
             RawResourceTemplate {
                 uri_template: "dojo://event/{profile}/{name}/abi".to_string(),
                 name: "Event ABI".to_string(),
-                description: Some("Get the ABI for a specific event in the given profile".to_string()),
+                description: Some(
+                    "Get the ABI for a specific event in the given profile".to_string(),
+                ),
                 mime_type: Some("application/json".to_string()),
             }
             .no_annotation(),

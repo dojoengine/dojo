@@ -5,17 +5,32 @@
 //! This will change in the next version with proc macros where only `ScarbMetadata` is used.
 
 use anyhow::Result;
-use serde_json::Value;
+use camino::Utf8PathBuf;
+use rmcp::{model::{CallToolResult, Content}, Error};
+use serde_json::{json, Value};
 use tokio::process::Command as AsyncCommand;
 use itertools::Itertools;
 
-pub async fn execute_transaction(args: &Value) -> Result<String, String> {
-    let function_name = args["function_name"].as_str().ok_or("Missing function_name")?;
-    let contract_address =
-        args["contract_address"].as_str().ok_or("Missing contract_address")?;
-    let calldata = args["calldata"].as_array().ok_or("Missing calldata")?;
-    let calldata = calldata.iter().map(|x| x.as_str().unwrap_or("")).join(" ");
-    let profile = args["profile"].as_str().unwrap_or("dev");
+use crate::{McpError, LOG_TARGET};
+
+#[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
+pub struct ExecuteRequest {
+    #[schemars(description = "Profile to use for execute. Default to `dev`.")]
+    pub profile: Option<String>,
+    #[schemars(description = "The address of the contract to execute.")]
+    pub contract_address: String,
+    #[schemars(description = "The name of the function to execute.")]
+    pub function_name: String,
+    #[schemars(description = "The calldata to pass to the function. Currently the calldata is expected to be a list of felts already serialized.")]
+    pub calldata: Vec<String>,
+}
+
+pub async fn execute_transaction(manifest_path: Option<Utf8PathBuf>, args: ExecuteRequest) -> Result<CallToolResult, McpError> {
+
+    let profile = &args.profile.unwrap_or("dev".to_string());
+    let contract_address = &args.contract_address;
+    let function_name = &args.function_name;
+    let calldata = args.calldata.iter().map(|x| x.as_str()).join(" ");
 
     let mut cmd = AsyncCommand::new("sozo");
     cmd.arg("execute")
@@ -25,20 +40,17 @@ pub async fn execute_transaction(args: &Value) -> Result<String, String> {
         .arg(function_name)
         .arg(calldata);
 
-    if let Some(calldata) = args["calldata"].as_array() {
-        for param in calldata {
-            if let Some(param_str) = param.as_str() {
-                cmd.arg(param_str);
-            }
-        }
-    }
-
-    let output =
-        cmd.output().await.map_err(|e| format!("Failed to execute sozo transaction: {}", e))?;
+    let output = cmd.output().await.map_err(|e| {
+        McpError::internal_error(
+            "execute_failed",
+            Some(json!({ "reason": format!("Failed to execute sozo transaction: {}", e) })),
+        )
+    })?;
 
     if output.status.success() {
-        Ok(String::from_utf8_lossy(&output.stdout).to_string())
+        Ok(CallToolResult::success(vec![Content::text("Execute successful".to_string())]))
     } else {
-        Err(String::from_utf8_lossy(&output.stderr).to_string())
+        let err = String::from_utf8_lossy(&output.stderr).to_string();
+        Ok(CallToolResult::error(vec![Content::text(err)]))
     }
 }

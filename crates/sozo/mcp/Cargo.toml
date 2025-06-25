@@ -46,6 +46,7 @@ tracing-subscriber.workspace = true
 tokio.workspace = true
 url.workspace = true
 reqwest = { workspace = true, features = [ "json" ] }
+itertools.workspace = true
 
 # Use dev version of rmcp.
 rmcp = { git = "https://github.com/modelcontextprotocol/rust-sdk", rev = "e6effb327883d0a8a91f5efbb527194747eee57b", features = ["server", "transport-io"] }

@@ -1,96 +1,96 @@
 //! Resources for the MCP server.
-//!
-//! The resources are used to provide information to the client.
-//!
-//! Sozo doesn't have a database, however, Sozo knows about the project
-//! artifacts and files.
-use serde::{Deserialize, Serialize};
 
-/// A resource info that is returned when listing the resources.
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct ResourceInfo {
-    pub uri: String,
-    pub name: String,
-    pub title: String,
-    pub mime_type: String,
-    pub description: String,
+use anyhow::Result;
+use camino::Utf8PathBuf;
+use dojo_world::local::{ResourceLocal, WorldLocal};
+use rmcp::{
+    Error as McpError, RoleServer, ServerHandler, ServiceExt,
+    handler::server::{router::tool::ToolRouter, tool::Parameters},
+    model::*,
+    service::RequestContext,
+    tool, tool_handler, tool_router, transport,
+};
+use scarb::compiler::Profile;
+use scarb::core::Config;
+use scarb::ops;
+use serde_json::{Value, json};
+use smol_str::SmolStr;
+use sozo_scarbext::WorkspaceExt;
+use std::future::Future;
+use tokio::process::Command as AsyncCommand;
+use toml;
+use tracing::{debug, error};
+
+/// Converts a toml file into a json file.
+pub async fn toml_to_json(toml_path: Utf8PathBuf) -> Result<String, McpError> {
+    let content = tokio::fs::read_to_string(toml_path).await.map_err(|e| {
+        McpError::internal_error(
+            "manifest_read_failed",
+            Some(json!({ "reason": format!("Failed to read manifest file: {}", e) })),
+        )
+    })?;
+
+    let toml_value: toml::Value = toml::from_str(&content).map_err(|e| {
+        McpError::internal_error(
+            "manifest_parse_failed",
+            Some(json!({ "reason": format!("Failed to parse TOML: {}", e) })),
+        )
+    })?;
+
+    let json_value = serde_json::to_string_pretty(&toml_value).map_err(|e| {
+        McpError::internal_error(
+            "manifest_serialization_failed",
+            Some(json!({ "reason": format!("Failed to serialize manifest: {}", e) })),
+        )
+    })?;
+
+    Ok(json_value)
 }
 
-/// A template that is returned when listing the templates.
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct TemplateInfo {
-    pub uri_template: String,
-    pub name: String,
-    pub title: String,
-    pub mime_type: String,
-    pub description: String,
-}
+/// Loads the world local from the manifest path and profile.
+pub async fn load_world_local(
+    manifest_path: Option<Utf8PathBuf>,
+    profile: &str,
+) -> Result<WorldLocal, McpError> {
+    let manifest_path = manifest_path.as_ref().ok_or_else(|| {
+        McpError::internal_error(
+            "no_manifest_path",
+            Some(json!({ "reason": "No manifest path provided" })),
+        )
+    })?;
 
-#[derive(Debug, Default)]
-pub struct ResourceManager {
-    resources: Vec<ResourceInfo>,
-    templates: Vec<TemplateInfo>,
-}
+    let profile_enum = match profile {
+        "dev" => Profile::DEV,
+        "release" => Profile::RELEASE,
+        _ => Profile::new(SmolStr::from(profile)).map_err(|e| {
+            McpError::internal_error(
+                "invalid_profile",
+                Some(json!({ "reason": format!("Invalid profile: {}", e) })),
+            )
+        })?,
+    };
 
-impl ResourceManager {
-    /// Creates a new resource manager with all resources available.
-    pub fn new() -> Self {
-        Self {
-            resources: vec![Self::manifest_path()],
-            templates: vec![Self::abi(), Self::sierra_class()],
-        }
-    }
+    let config =
+        Config::builder(manifest_path.clone()).profile(profile_enum).build().map_err(|e| {
+            McpError::internal_error(
+                "config_build_failed",
+                Some(json!({ "reason": format!("Failed to build config: {}", e) })),
+            )
+        })?;
 
-    /// Returns the resources configured for the MCP server.
-    pub fn list_resources(&self) -> &[ResourceInfo] {
-        &self.resources
-    }
+    let ws = ops::read_workspace(config.manifest_path(), &config).map_err(|e| {
+        McpError::internal_error(
+            "workspace_read_failed",
+            Some(json!({ "reason": format!("Failed to read workspace: {}", e) })),
+        )
+    })?;
 
-    /// Returns the templates configured for the MCP server.
-    pub fn list_templates(&self) -> &[TemplateInfo] {
-        &self.templates
-    }
+    let world = ws.load_world_local().map_err(|e| {
+        McpError::internal_error(
+            "world_load_failed",
+            Some(json!({ "reason": format!("Failed to load world: {}", e) })),
+        )
+    })?;
 
-    /// Returns the resource for the current project manifest path.
-    pub fn manifest_path() -> ResourceInfo {
-        ResourceInfo {
-            uri: "sozo://config/manifest_path".to_string(),
-            name: "Current project manifest path".to_string(),
-            title: "Current project manifest path".to_string(),
-            description: "Current project manifest path, which corresponds to the path of the Scarb.toml file.".to_string(),
-            mime_type: "text/plain".to_string(),
-        }
-    }
-
-    /// Returns the sierra class (if present) for the given contract name.
-    ///
-    /// The sierra class is garanteed to be present if the project has been
-    /// built and the contract tag is valid.
-    ///
-    /// The contract tag must include the namespace (tag): `ns-contract1`.
-    pub fn sierra_class() -> TemplateInfo {
-        TemplateInfo {
-            uri_template: "sozo://contracts/{{tag}}/sierra_class".to_string(),
-            name: "Sierra class for the given contract tag.".to_string(),
-            title: "Sierra class for the given contract tag.".to_string(),
-            description: "Sierra class for the given contract tag.".to_string(),
-            mime_type: "application/json".to_string(),
-        }
-    }
-
-    /// Returns the ABI for the given contract tag.
-    ///
-    /// The ABI is garanteed to be present if the project has been
-    /// built and the contract tag is valid.
-    ///
-    /// The contract tag must include the namespace (tag): `ns-contract1`.
-    pub fn abi() -> TemplateInfo {
-        TemplateInfo {
-            uri_template: "sozo://contracts/{{tag}}/abi".to_string(),
-            name: "ABI for the given contract tag.".to_string(),
-            title: "ABI for the given contract tag.".to_string(),
-            description: "ABI for the given contract tag.".to_string(),
-            mime_type: "application/json".to_string(),
-        }
-    }
+    Ok(world)
 }
