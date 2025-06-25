@@ -5,31 +5,36 @@ pub struct GasCounter {
 
 #[generate_trait]
 pub impl GasCounterImpl of GasCounterTrait {
+    #[inline(always)]
     fn start() -> GasCounter {
         let start = core::testing::get_available_gas();
         core::gas::withdraw_gas().unwrap();
         GasCounter { start }
     }
 
-    fn end(self: GasCounter, name: ByteArray) {
+    #[inline(always)]
+    fn end(self: GasCounter) -> u128 {
         let end = core::testing::get_available_gas();
-        let gas_used = self.start - end;
-
-        println!("# GAS # {}: {}", Self::pad_start(name, 18), gas_used);
         core::gas::withdraw_gas().unwrap();
+        let gas_used = self.start - end;
+        gas_used
     }
 
-    fn pad_start(str: ByteArray, len: u32) -> ByteArray {
-        let mut missing: ByteArray = "";
-        let missing_len = if str.len() >= len {
-            0
-        } else {
-            len - str.len()
-        };
+    #[inline(always)]
+    fn end_label(self: GasCounter, name: ByteArray) -> u128 {
+        let end = core::testing::get_available_gas();
+        core::gas::withdraw_gas().unwrap();
+        let gas_used = self.start - end;
+        println!("#GAS# {}: {}", name, gas_used);
+        gas_used
+    }
 
-        while missing.len() < missing_len {
-            missing.append(@".");
-        }
-        missing + str
+    #[inline(always)]
+    fn end_csv(self: GasCounter, name: ByteArray) -> u128 {
+        let end = core::testing::get_available_gas();
+        core::gas::withdraw_gas().unwrap();
+        let gas_used = self.start - end;
+        println!("#GAS#{};{}", name, gas_used);
+        gas_used
     }
 }

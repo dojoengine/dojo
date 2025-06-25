@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 const BENCH_TEST_FILTER: &str = "bench_";
 
 // extract gas cost data using this prefix
-const GAS_TAG: &str = "#GAS#";
+const GAS_TAG: &str = "l2_gas";
 
 const BETTER_TAG: &str = "[BETTER]";
 const WORSE_TAG: &str = "[WORSE]";
@@ -198,20 +198,20 @@ fn parse_output(output: &str) -> Vec<TestCost> {
     let mut tests: Vec<TestCost> = output
         .lines()
         .filter(|line| line.contains(GAS_TAG))
-        .filter_map(|line| {
-            let line = line.replace(GAS_TAG, "");
-            let items = line.split(';').collect::<Vec<_>>();
-
-            if items.len() == 2 {
-                let name = items[0].to_string();
-                let cost = items[1]
-                    .parse::<u128>()
-                    .unwrap_or_else(|_| panic!("Failed to convert {} to u128", items[1]));
-
-                Some(TestCost { name, cost })
-            } else {
-                None
-            }
+        .map(|line| {
+            let items = line.split(" ").collect::<Vec<_>>();
+            let name = items[1]
+                .split("::")
+                .last()
+                .unwrap()
+                .strip_prefix(BENCH_TEST_FILTER)
+                .unwrap()
+                .to_string();
+            let cost = items.last().unwrap().strip_prefix("~").unwrap().strip_suffix(")").unwrap();
+            let cost = cost
+                .parse::<u128>()
+                .unwrap_or_else(|_| panic!("Failed to convert {} to u128", cost));
+            TestCost { name, cost }
         })
         .collect();
 
@@ -311,7 +311,8 @@ fn compare_tests(ref_tests: &[TestCost], new_tests: &[TestCost]) -> HashMap<Stri
                 ref_test = ref_it.next();
             }
             Ordering::Greater => {
-                result.insert(new_test_value.name.clone(), TestCompare::Created(new_test_value.cost));
+                result
+                    .insert(new_test_value.name.clone(), TestCompare::Created(new_test_value.cost));
                 new_test = new_it.next();
             }
             Ordering::Equal => {
@@ -441,10 +442,20 @@ fn print_compare_result(
             TestCompare::Updated((old_cost, new_cost)) => {
                 match new_cost.partial_cmp(old_cost).unwrap() {
                     Ordering::Less => {
-                        print_result(BETTER_TAG, name, *new_cost, &get_ratio_indicator(old_cost, new_cost));
+                        print_result(
+                            BETTER_TAG,
+                            name,
+                            *new_cost,
+                            &get_ratio_indicator(old_cost, new_cost),
+                        );
                     }
                     Ordering::Greater => {
-                        print_result(WORSE_TAG, name, *new_cost, &get_ratio_indicator(old_cost, new_cost));
+                        print_result(
+                            WORSE_TAG,
+                            name,
+                            *new_cost,
+                            &get_ratio_indicator(old_cost, new_cost),
+                        );
                     }
                     Ordering::Equal => print_result(EQUAL_TAG, name, *new_cost, ""),
                 };

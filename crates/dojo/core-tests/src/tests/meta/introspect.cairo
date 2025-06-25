@@ -690,7 +690,7 @@ fn test_array_upgrade() {
 fn test_primitive_upgrade_performance() {
     let gas = GasCounterTrait::start();
     let _ = Ty::Primitive('ClassHash').is_an_upgrade_of(@Ty::Primitive('ContractAddress'));
-    gas.end("Upgrade from ContractAddress to ClassHash");
+    gas.end_label("Upgrade from ContractAddress to ClassHash");
 }
 
 #[test]
