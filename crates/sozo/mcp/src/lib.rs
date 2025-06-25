@@ -7,6 +7,7 @@
 
 use anyhow::Result;
 use camino::Utf8PathBuf;
+use dojo_world::local::{ResourceLocal, WorldLocal};
 use rmcp::{
     Error as McpError, RoleServer, ServerHandler, ServiceExt,
     handler::server::{router::tool::ToolRouter, tool::Parameters},
@@ -14,9 +15,15 @@ use rmcp::{
     service::RequestContext,
     tool, tool_handler, tool_router, transport,
 };
+use scarb::core::Config;
+use scarb::ops;
+use scarb::compiler::Profile;
 use serde_json::{Value, json};
+use smol_str::SmolStr;
+use sozo_scarbext::WorkspaceExt;
 use std::future::Future;
 use tokio::process::Command as AsyncCommand;
+use toml;
 use tracing::{debug, error};
 
 const LOG_TARGET: &str = "sozo_mcp";
@@ -39,17 +46,6 @@ pub struct InspectRequest {
     pub profile: Option<String>,
 }
 
-fn _create_resource_text(uri: &str, name: &str) -> Resource {
-    RawResource {
-        uri: uri.to_string(),
-        name: name.to_string(),
-        description: Some(name.to_string()),
-        mime_type: Some("text/plain".to_string()),
-        size: None,
-    }
-    .no_annotation()
-}
-
 #[derive(Clone)]
 pub struct SozoMcpServer {
     manifest_path: Option<Utf8PathBuf>,
@@ -69,6 +65,51 @@ impl SozoMcpServer {
 
         service.waiting().await?;
         Ok(())
+    }
+
+    /// Loads the world local from the manifest path and profile
+    async fn load_world_local(&self, profile: &str) -> Result<WorldLocal, McpError> {
+        let manifest_path = self.manifest_path.as_ref().ok_or_else(|| {
+            McpError::internal_error(
+                "no_manifest_path",
+                Some(json!({ "reason": "No manifest path provided" })),
+            )
+        })?;
+
+        let profile_enum = match profile {
+            "dev" => Profile::DEV,
+            "release" => Profile::RELEASE,
+            _ => Profile::new(SmolStr::from(profile)).map_err(|e| {
+                McpError::internal_error(
+                    "invalid_profile",
+                    Some(json!({ "reason": format!("Invalid profile: {}", e) })),
+                )
+            })?,
+        };
+
+        let config =
+            Config::builder(manifest_path.clone()).profile(profile_enum).build().map_err(|e| {
+                McpError::internal_error(
+                    "config_build_failed",
+                    Some(json!({ "reason": format!("Failed to build config: {}", e) })),
+                )
+            })?;
+
+        let ws = ops::read_workspace(config.manifest_path(), &config).map_err(|e| {
+            McpError::internal_error(
+                "workspace_read_failed",
+                Some(json!({ "reason": format!("Failed to read workspace: {}", e) })),
+            )
+        })?;
+
+        let world = ws.load_world_local().map_err(|e| {
+            McpError::internal_error(
+                "world_load_failed",
+                Some(json!({ "reason": format!("Failed to load world: {}", e) })),
+            )
+        })?;
+
+        Ok(world)
     }
 
     #[tool(description = "Build the project using the given profile. If no profile is provided, \
@@ -203,13 +244,18 @@ impl ServerHandler for SozoMcpServer {
         _request: Option<PaginatedRequestParam>,
         _: RequestContext<RoleServer>,
     ) -> Result<ListResourcesResult, McpError> {
-        Ok(ListResourcesResult {
-            resources: vec![
-                _create_resource_text("str:////Users/to/some/path/", "cwd"),
-                _create_resource_text("memo://insights", "memo-name"),
-            ],
-            next_cursor: None,
-        })
+        let resources = vec![
+            RawResource {
+                uri: "dojo://scarb/manifest".to_string(),
+                name: "Scarb project manifest".to_string(),
+                description: Some("Scarb project manifest used by Scarb to build the project. This is the file that contains the project's dependencies and configuration.".to_string()),
+                mime_type: Some("application/json".to_string()),
+                size: None,
+            }
+            .no_annotation()
+        ];
+
+        Ok(ListResourcesResult { resources, next_cursor: None })
     }
 
     async fn read_resource(
@@ -218,13 +264,227 @@ impl ServerHandler for SozoMcpServer {
         _: RequestContext<RoleServer>,
     ) -> Result<ReadResourceResult, McpError> {
         match uri.as_str() {
-            "str:////Users/to/some/path/" => {
-                let cwd = "/Users/to/some/path/";
-                Ok(ReadResourceResult { contents: vec![ResourceContents::text(cwd, uri)] })
+            "dojo://scarb/manifest" => {
+                // Manifest is a toml file. Will be read and then converted to JSON.
+                let manifest_path = self.manifest_path.as_ref().ok_or_else(|| {
+                    McpError::resource_not_found(
+                        "no_manifest_path",
+                        Some(json!({ "reason": "No manifest path provided" })),
+                    )
+                })?;
+
+                let manifest_content =
+                    tokio::fs::read_to_string(manifest_path).await.map_err(|e| {
+                        McpError::internal_error(
+                            "manifest_read_failed",
+                            Some(
+                                json!({ "reason": format!("Failed to read manifest file: {}", e) }),
+                            ),
+                        )
+                    })?;
+
+                let toml_value: toml::Value = toml::from_str(&manifest_content).map_err(|e| {
+                    McpError::internal_error(
+                        "manifest_parse_failed",
+                        Some(json!({ "reason": format!("Failed to parse TOML: {}", e) })),
+                    )
+                })?;
+
+                let manifest_json = serde_json::to_string_pretty(&toml_value).map_err(|e| {
+                    McpError::internal_error(
+                        "manifest_serialization_failed",
+                        Some(json!({ "reason": format!("Failed to serialize manifest: {}", e) })),
+                    )
+                })?;
+
+                Ok(ReadResourceResult {
+                    contents: vec![ResourceContents::text(manifest_json, uri)],
+                })
             }
-            "memo://insights" => {
-                let memo = "Business Intelligence Memo\n\nAnalysis has revealed 5 key insights ...";
-                Ok(ReadResourceResult { contents: vec![ResourceContents::text(memo, uri)] })
+            uri if uri.starts_with("dojo://contract/") && uri.ends_with("/abi") => {
+                // Extract profile from URI: dojo://contract/{profile}/{name}/abi
+                let profile = uri.split("/").nth(1).ok_or_else(|| {
+                    McpError::internal_error(
+                        "invalid_contract_uri",
+                        Some(json!({ "reason": format!("Invalid contract URI: {}", uri) })),
+                    )
+                })?;
+
+                // Extract contract name from URI: dojo://contract/{profile}/{name}/abi
+                let contract_name = uri
+                    .strip_prefix(&format!("dojo://contract/{profile}/"))
+                    .and_then(|s| s.strip_suffix("/abi"))
+                    .ok_or_else(|| {
+                        McpError::resource_not_found(
+                            "invalid_contract_uri",
+                            Some(json!({ "uri": uri })),
+                        )
+                    })?;
+
+                let world = self.load_world_local(profile).await?;
+
+                let contract = world
+                    .resources
+                    .values()
+                    .find_map(|r| r.as_contract())
+                    .filter(|c| c.common.name == contract_name)
+                    .ok_or_else(|| {
+                        McpError::resource_not_found(
+                            "contract_not_found",
+                            Some(json!({ "contract_name": contract_name })),
+                        )
+                    })?;
+
+                // Convert ABI to JSON
+                let abi_json =
+                    serde_json::to_string_pretty(&contract.common.class.abi).map_err(|e| {
+                        McpError::internal_error(
+                            "abi_serialization_failed",
+                            Some(json!({ "reason": format!("Failed to serialize ABI: {}", e) })),
+                        )
+                    })?;
+
+                Ok(ReadResourceResult { contents: vec![ResourceContents::text(abi_json, uri)] })
+            }
+            uri if uri.starts_with("dojo://model/") && uri.ends_with("/abi") => {
+                // Extract model name from URI: dojo://model/{name}/abi
+                let model_name = uri
+                    .strip_prefix("dojo://model/")
+                    .and_then(|s| s.strip_suffix("/abi"))
+                    .ok_or_else(|| {
+                        McpError::resource_not_found(
+                            "invalid_model_uri",
+                            Some(json!({ "uri": uri })),
+                        )
+                    })?;
+
+                // Load world and find the model
+                let manifest_path = self.manifest_path.as_ref().ok_or_else(|| {
+                    McpError::resource_not_found(
+                        "no_manifest_path",
+                        Some(json!({ "reason": "No manifest path provided" })),
+                    )
+                })?;
+
+                let config = Config::builder(manifest_path.clone())
+                    .profile(Profile::DEV)
+                    .build()
+                    .map_err(|e| {
+                    McpError::internal_error(
+                        "config_build_failed",
+                        Some(json!({ "reason": format!("Failed to build config: {}", e) })),
+                    )
+                })?;
+
+                let ws = ops::read_workspace(config.manifest_path(), &config).map_err(|e| {
+                    McpError::internal_error(
+                        "workspace_read_failed",
+                        Some(json!({ "reason": format!("Failed to read workspace: {}", e) })),
+                    )
+                })?;
+
+                let world = ws.load_world_local().map_err(|e| {
+                    McpError::internal_error(
+                        "world_load_failed",
+                        Some(json!({ "reason": format!("Failed to load world: {}", e) })),
+                    )
+                })?;
+
+                let model = world
+                    .resources
+                    .values()
+                    .find_map(|r| match r {
+                        ResourceLocal::Model(m) => Some(m),
+                        _ => None,
+                    })
+                    .filter(|m| m.common.name == model_name)
+                    .ok_or_else(|| {
+                        McpError::resource_not_found(
+                            "model_not_found",
+                            Some(json!({ "model_name": model_name })),
+                        )
+                    })?;
+
+                // Convert ABI to JSON
+                let abi_json =
+                    serde_json::to_string_pretty(&model.common.class.abi).map_err(|e| {
+                        McpError::internal_error(
+                            "abi_serialization_failed",
+                            Some(json!({ "reason": format!("Failed to serialize ABI: {}", e) })),
+                        )
+                    })?;
+
+                Ok(ReadResourceResult { contents: vec![ResourceContents::text(abi_json, uri)] })
+            }
+            uri if uri.starts_with("dojo://event/") && uri.ends_with("/abi") => {
+                // Extract event name from URI: dojo://event/{name}/abi
+                let event_name = uri
+                    .strip_prefix("dojo://event/")
+                    .and_then(|s| s.strip_suffix("/abi"))
+                    .ok_or_else(|| {
+                        McpError::resource_not_found(
+                            "invalid_event_uri",
+                            Some(json!({ "uri": uri })),
+                        )
+                    })?;
+
+                // Load world and find the event
+                let manifest_path = self.manifest_path.as_ref().ok_or_else(|| {
+                    McpError::resource_not_found(
+                        "no_manifest_path",
+                        Some(json!({ "reason": "No manifest path provided" })),
+                    )
+                })?;
+
+                let config = Config::builder(manifest_path.clone())
+                    .profile(Profile::DEV)
+                    .build()
+                    .map_err(|e| {
+                    McpError::internal_error(
+                        "config_build_failed",
+                        Some(json!({ "reason": format!("Failed to build config: {}", e) })),
+                    )
+                })?;
+
+                let ws = ops::read_workspace(config.manifest_path(), &config).map_err(|e| {
+                    McpError::internal_error(
+                        "workspace_read_failed",
+                        Some(json!({ "reason": format!("Failed to read workspace: {}", e) })),
+                    )
+                })?;
+
+                let world = ws.load_world_local().map_err(|e| {
+                    McpError::internal_error(
+                        "world_load_failed",
+                        Some(json!({ "reason": format!("Failed to load world: {}", e) })),
+                    )
+                })?;
+
+                let event = world
+                    .resources
+                    .values()
+                    .find_map(|r| match r {
+                        ResourceLocal::Event(e) => Some(e),
+                        _ => None,
+                    })
+                    .filter(|e| e.common.name == event_name)
+                    .ok_or_else(|| {
+                        McpError::resource_not_found(
+                            "event_not_found",
+                            Some(json!({ "event_name": event_name })),
+                        )
+                    })?;
+
+                // Convert ABI to JSON
+                let abi_json =
+                    serde_json::to_string_pretty(&event.common.class.abi).map_err(|e| {
+                        McpError::internal_error(
+                            "abi_serialization_failed",
+                            Some(json!({ "reason": format!("Failed to serialize ABI: {}", e) })),
+                        )
+                    })?;
+
+                Ok(ReadResourceResult { contents: vec![ResourceContents::text(abi_json, uri)] })
             }
             _ => Err(McpError::resource_not_found(
                 "resource_not_found",
@@ -257,7 +517,31 @@ impl ServerHandler for SozoMcpServer {
         _request: Option<PaginatedRequestParam>,
         _: RequestContext<RoleServer>,
     ) -> Result<ListResourceTemplatesResult, McpError> {
-        Ok(ListResourceTemplatesResult { next_cursor: None, resource_templates: Vec::new() })
+        let resource_templates = vec![
+            RawResourceTemplate {
+                uri_template: "dojo://contract/{profile}/{name}/abi".to_string(),
+                name: "Contract ABI".to_string(),
+                description: Some("Get the ABI for a specific contract in the given profile".to_string()),
+                mime_type: Some("application/json".to_string()),
+            }
+            .no_annotation(),
+            RawResourceTemplate {
+                uri_template: "dojo://model/{profile}/{name}/abi".to_string(),
+                name: "Model ABI".to_string(),
+                description: Some("Get the ABI for a specific model in the given profile".to_string()),
+                mime_type: Some("application/json".to_string()),
+            }
+            .no_annotation(),
+            RawResourceTemplate {
+                uri_template: "dojo://event/{profile}/{name}/abi".to_string(),
+                name: "Event ABI".to_string(),
+                description: Some("Get the ABI for a specific event in the given profile".to_string()),
+                mime_type: Some("application/json".to_string()),
+            }
+            .no_annotation(),
+        ];
+
+        Ok(ListResourceTemplatesResult { next_cursor: None, resource_templates })
     }
 
     async fn initialize(
