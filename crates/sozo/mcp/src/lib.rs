@@ -99,10 +99,7 @@ impl ServerHandler for SozoMcpServer {
             protocol_version: ProtocolVersion::V_2025_03_26,
             capabilities: ServerCapabilities::builder().enable_resources().enable_tools().build(),
             server_info: Implementation::from_build_env(),
-            instructions: Some(
-                "This server provides tools to build and migrate a Dojo project using Sozo."
-                    .to_string(),
-            ),
+            instructions: Some(include_str!("../INSTRUCTIONS.md").to_string()),
         }
     }
 
