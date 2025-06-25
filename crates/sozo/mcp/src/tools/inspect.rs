@@ -7,11 +7,11 @@
 use anyhow::Result;
 use camino::Utf8PathBuf;
 use rmcp::model::{CallToolResult, Content};
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use tokio::process::Command as AsyncCommand;
 use tracing::{debug, error};
 
-use crate::{LOG_TARGET, McpError};
+use crate::{McpError, LOG_TARGET};
 
 #[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
 pub struct InspectRequest {

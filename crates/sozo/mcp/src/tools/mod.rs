@@ -5,9 +5,6 @@
 //!
 //! In the current implementation, the manifest path is passed at the server
 //! level, and not configurable at the tool level.
-use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
-
 pub mod build;
 pub mod execute;
 pub mod inspect;

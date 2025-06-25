@@ -51,6 +51,7 @@ reqwest = { workspace = true, features = [ "json" ] }
 dojo-test-utils = { workspace = true, features = [ "build-examples" ] }
 katana-runner.workspace = true
 serde_json.workspace = true
+tokio.workspace = true
 
 [features]
 default = [ "controller", "walnut" ]

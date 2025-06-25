@@ -112,22 +112,22 @@ pub fn run(sozo_args: SozoArgs, config: &Config) -> Result<()> {
     // useful to write tests for each command.
 
     match command {
-        Commands::Auth(args) => args.run(&config),
-        Commands::Build(args) => args.run(&config),
-        Commands::Dev(args) => args.run(&config),
-        Commands::Migrate(args) => args.run(&config),
-        Commands::Execute(args) => args.run(&config),
-        Commands::Inspect(args) => args.run(&config),
-        Commands::Clean(args) => args.run(&config),
-        Commands::Call(args) => args.run(&config),
-        Commands::Test(args) => args.run(&config),
-        Commands::Hash(args) => args.run(&config).map(|_| ()),
-        Commands::Init(args) => args.run(&config),
-        Commands::Model(args) => args.run(&config),
-        Commands::Events(args) => args.run(&config),
-        Commands::Mcp(args) => args.run(&config, sozo_args.manifest_path),
+        Commands::Auth(args) => args.run(config),
+        Commands::Build(args) => args.run(config),
+        Commands::Dev(args) => args.run(config),
+        Commands::Migrate(args) => args.run(config),
+        Commands::Execute(args) => args.run(config),
+        Commands::Inspect(args) => args.run(config),
+        Commands::Clean(args) => args.run(config),
+        Commands::Call(args) => args.run(config),
+        Commands::Test(args) => args.run(config),
+        Commands::Hash(args) => args.run(config).map(|_| ()),
+        Commands::Init(args) => args.run(config),
+        Commands::Model(args) => args.run(config),
+        Commands::Events(args) => args.run(config),
+        Commands::Mcp(args) => args.run(config, sozo_args.manifest_path),
         #[cfg(feature = "walnut")]
-        Commands::Walnut(args) => args.run(&config),
+        Commands::Walnut(args) => args.run(config),
     }
 }
 

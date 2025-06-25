@@ -7,7 +7,7 @@
 use anyhow::Result;
 use camino::Utf8PathBuf;
 use rmcp::model::{CallToolResult, Content};
-use serde_json::{json, Value};
+use serde_json::json;
 use tokio::process::Command as AsyncCommand;
 use tracing::debug;
 
@@ -23,7 +23,10 @@ pub struct BuildRequest {
 ///
 /// At the moment, the profile is configurable, but not the manifest path,
 /// which has been passed to the MCP server initialization.
-pub async fn build_project(manifest_path: Option<Utf8PathBuf>, args: BuildRequest) -> Result<CallToolResult, McpError> {
+pub async fn build_project(
+    manifest_path: Option<Utf8PathBuf>,
+    args: BuildRequest,
+) -> Result<CallToolResult, McpError> {
     let profile = &args.profile.unwrap_or("dev".to_string());
 
     let mut cmd = AsyncCommand::new("sozo");

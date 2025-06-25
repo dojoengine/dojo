@@ -285,29 +285,6 @@ struct JsonGranteeInfo {
     source: String,
 }
 
-// Helper functions for JSON output
-impl ResourceStatus {
-    fn to_string(&self) -> String {
-        match self {
-            ResourceStatus::Created => "Created".to_string(),
-            ResourceStatus::Updated => "Updated".to_string(),
-            ResourceStatus::Synced => "Synced".to_string(),
-            ResourceStatus::DirtyLocalPerms => "DirtyLocalPerms".to_string(),
-            ResourceStatus::MigrationSkipped => "MigrationSkipped".to_string(),
-        }
-    }
-}
-
-impl GranteeSource {
-    fn to_string(&self) -> String {
-        match self {
-            GranteeSource::Local => "Local".to_string(),
-            GranteeSource::Remote => "Remote".to_string(),
-            GranteeSource::Synced => "Synced".to_string(),
-        }
-    }
-}
-
 fn print_json<T: serde::Serialize>(data: &T) {
     println!("{}", serde_json::to_string_pretty(data).unwrap());
 }
@@ -321,11 +298,11 @@ fn inspect_element(element_name: &str, world_diff: &WorldDiff, json: bool) -> Re
     };
 
     if let Some(diff) = world_diff.resources.get(&selector) {
-        return inspect_resource(diff, world_diff, json);
+        inspect_resource(diff, world_diff, json)
     } else if let Some(diff) = world_diff.external_contracts.get(element_name) {
-        return inspect_external_contract(diff, json);
+        inspect_external_contract(diff, json)
     } else {
-        return Err(anyhow::anyhow!("Resource or external contract not found locally."));
+        Err(anyhow::anyhow!("Resource or external contract not found locally."))
     }
 }
 

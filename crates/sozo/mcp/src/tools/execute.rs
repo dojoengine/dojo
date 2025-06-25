@@ -6,12 +6,12 @@
 
 use anyhow::Result;
 use camino::Utf8PathBuf;
-use rmcp::{model::{CallToolResult, Content}, Error};
-use serde_json::{json, Value};
-use tokio::process::Command as AsyncCommand;
 use itertools::Itertools;
+use rmcp::model::{CallToolResult, Content};
+use serde_json::json;
+use tokio::process::Command as AsyncCommand;
 
-use crate::{McpError, LOG_TARGET};
+use crate::McpError;
 
 #[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
 pub struct ExecuteRequest {
@@ -21,12 +21,15 @@ pub struct ExecuteRequest {
     pub contract_address: String,
     #[schemars(description = "The name of the function to execute.")]
     pub function_name: String,
-    #[schemars(description = "The calldata to pass to the function. Currently the calldata is expected to be a list of felts already serialized.")]
+    #[schemars(description = "The calldata to pass to the function. Currently the calldata is \
+                              expected to be a list of felts already serialized.")]
     pub calldata: Vec<String>,
 }
 
-pub async fn execute_transaction(manifest_path: Option<Utf8PathBuf>, args: ExecuteRequest) -> Result<CallToolResult, McpError> {
-
+pub async fn execute_transaction(
+    _manifest_path: Option<Utf8PathBuf>,
+    args: ExecuteRequest,
+) -> Result<CallToolResult, McpError> {
     let profile = &args.profile.unwrap_or("dev".to_string());
     let contract_address = &args.contract_address;
     let function_name = &args.function_name;
