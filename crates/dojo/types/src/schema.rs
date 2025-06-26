@@ -352,7 +352,7 @@ impl Ty {
                 Primitive::U256(Some(v)) => Ok(json!(primitive.to_sql_value())),
                 Primitive::Felt252(Some(v)) => Ok(json!(primitive.to_sql_value())),
                 Primitive::ClassHash(Some(v)) => Ok(json!(primitive.to_sql_value())),
-                Primitive::ContractAddress(Some(v)) => Ok(json!(primitive.to_sql_value())),,
+                Primitive::ContractAddress(Some(v)) => Ok(json!(primitive.to_sql_value())),
                 Primitive::EthAddress(Some(v)) => Ok(json!(primitive.to_sql_value())),
                 _ => Err(PrimitiveError::MissingFieldElement),
             },
