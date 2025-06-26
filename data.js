@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1750979943857,
+  "lastUpdate": 1750981173946,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -63918,6 +63918,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 52057269869,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "59736843+Larkooo@users.noreply.github.com",
+            "name": "Larko",
+            "username": "Larkooo"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "cdf221fab8d2886096c9d320b86170dbbe141852",
+          "message": "refactor(types): schema json sql value (#3257)\n\n* refactor(types): schema json sql value\n\n* remove excess comma\n\n* fix clippy\n\n---------\n\nCo-authored-by: glihm <dev@glihm.net>",
+          "timestamp": "2025-06-26T17:25:18-06:00",
+          "tree_id": "cbc8225f6d19e70b24be750eb73051ad44b3f18e",
+          "url": "https://github.com/dojoengine/dojo/commit/cdf221fab8d2886096c9d320b86170dbbe141852"
+        },
+        "date": 1750981169994,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 53059815537,
             "range": "± 0",
             "unit": "ns/iter"
           }
