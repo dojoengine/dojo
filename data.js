@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1750872118962,
+  "lastUpdate": 1750979943857,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -63888,6 +63888,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 56193077418,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "85de77f8b2a633722d1e89876290e41a85e50330",
+          "message": "feat(sozo): add MCP sever (#3256)\n\n* feat(sozo): add mvp for mcp server\n\n* refacto: restructure MCP server\n\n* evaluate changes using official rust sdk\n\n* feat(mcp): add stdio support\n\n* refacto with rmcp crate\n\n* wip\n\n* bump rmcp\n\n* add testing support\n\n* wip\n\n* refacto\n\n* cleanup\n\n* add instructions\n\n* add instructions\n\n* wip test\n\n* refacto tests\n\n* add debugging\n\n* ignore test with katana at the moment\n\n* fix typos and sozo path\n\n* refacto uri parsing\n\n* remove dbg\n\n* disable test that should be run with katana\n\n* fix test, windows fails because of new reqwest version",
+          "timestamp": "2025-06-26T17:04:43-06:00",
+          "tree_id": "54eba78c2e4876aad197cf2654b147e86e1892fb",
+          "url": "https://github.com/dojoengine/dojo/commit/85de77f8b2a633722d1e89876290e41a85e50330"
+        },
+        "date": 1750979940336,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 52057269869,
             "range": "± 0",
             "unit": "ns/iter"
           }
