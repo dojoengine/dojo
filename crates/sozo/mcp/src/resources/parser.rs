@@ -8,12 +8,11 @@ use serde_json::json;
 /// Expected format: dojo://contract/{profile}/{name}/abi
 pub fn parse_contract_uri(uri: &str) -> Result<(&str, &str), McpError> {
     let parts: Vec<&str> = uri.split('/').collect();
-    dbg!(&parts);
-    if parts.len() != 5
+    if parts.len() < 4
         || parts[0] != "dojo:"
         || parts[1] != ""
         || parts[2] != "contract"
-        || parts[4] != "abi"
+        || parts[parts.len() - 1] != "abi"
     {
         return Err(McpError::resource_not_found(
             "invalid_contract_uri",
@@ -45,11 +44,11 @@ pub fn parse_contract_uri(uri: &str) -> Result<(&str, &str), McpError> {
 pub fn parse_model_uri(uri: &str) -> Result<(&str, &str), McpError> {
     let parts: Vec<&str> = uri.split('/').collect();
 
-    if parts.len() != 5
+    if parts.len() < 4
         || parts[0] != "dojo:"
         || parts[1] != ""
         || parts[2] != "model"
-        || parts[4] != "abi"
+        || parts[parts.len() - 1] != "abi"
     {
         return Err(McpError::resource_not_found(
             "invalid_model_uri",
@@ -81,11 +80,11 @@ pub fn parse_model_uri(uri: &str) -> Result<(&str, &str), McpError> {
 pub fn parse_event_uri(uri: &str) -> Result<(&str, &str), McpError> {
     let parts: Vec<&str> = uri.split('/').collect();
 
-    if parts.len() != 5
+    if parts.len() < 4
         || parts[0] != "dojo:"
         || parts[1] != ""
         || parts[2] != "event"
-        || parts[4] != "abi"
+        || parts[parts.len() - 1] != "abi"
     {
         return Err(McpError::resource_not_found(
             "invalid_event_uri",

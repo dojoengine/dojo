@@ -295,7 +295,7 @@ dojo = { git = "https://github.com/dojoengine/dojo" }
     Ok(())
 }
 
-/// Test call tool via STDIO
+/// Tests call tool via STDIO.
 #[tokio::test]
 async fn test_call_tool_stdio() -> Result<()> {
     let mut server = McpServerProcess::new(SPAWN_AND_MOVE_MANIFEST_PATH)?;
@@ -340,19 +340,14 @@ async fn test_read_contract_abi_stdio() -> Result<()> {
 
     let response = timeout(Duration::from_secs(5), server.send_request(read_request)).await??;
 
-    dbg!(&response);
-    
-    // This should either succeed with ABI content or fail gracefully
     if response.get("result").is_some() {
         let result = response.get("result").unwrap();
         let text_field = result["contents"][0]["text"].as_str().unwrap();
         println!("Contract ABI content: {}", text_field);
         
-        // Parse the JSON content to verify it's valid ABI
         let abi_json: serde_json::Value = serde_json::from_str(text_field)?;
         assert!(abi_json.is_array() || abi_json.is_object());
     } else {
-        // If it fails, it should be a proper error response
         assert!(response.get("error").is_some());
         println!("Contract ABI not available: {:?}", response.get("error"));
     }
@@ -361,15 +356,13 @@ async fn test_read_contract_abi_stdio() -> Result<()> {
     Ok(())
 }
 
-/// Test multiple requests in sequence
+/// Tests multiple requests in sequence.
 #[tokio::test]
 async fn test_multiple_requests_stdio() -> Result<()> {
     let mut server = McpServerProcess::new(SPAWN_AND_MOVE_MANIFEST_PATH)?;
 
-    // Initialize the connection first
     server.initialize().await?;
 
-    // List resources
     let list_request = json!({
         "jsonrpc": "2.0",
         "id": 2,
@@ -380,7 +373,6 @@ async fn test_multiple_requests_stdio() -> Result<()> {
     let list_response = timeout(Duration::from_secs(5), server.send_request(list_request)).await??;
     assert!(list_response.get("result").is_some());
 
-    // List tools
     let tools_request = json!({
         "jsonrpc": "2.0",
         "id": 3,
@@ -395,12 +387,11 @@ async fn test_multiple_requests_stdio() -> Result<()> {
     Ok(())
 }
 
-/// Test call build tool via STDIO
+/// Tests call build tool via STDIO.
 #[tokio::test]
 async fn test_call_build_tool_stdio() -> Result<()> {
     let mut server = McpServerProcess::new(SPAWN_AND_MOVE_MANIFEST_PATH)?;
 
-    // Initialize the connection first
     server.initialize().await?;
 
     let call_request = json!({
@@ -417,16 +408,13 @@ async fn test_call_build_tool_stdio() -> Result<()> {
 
     let response = timeout(Duration::from_secs(30), server.send_request(call_request)).await??;
     
-    // The build tool should be called successfully
     assert!(response.get("result").is_some());
     let result = response.get("result").unwrap();
-    
     // Verify the response structure
     assert!(result["content"].is_array());
     let content = result["content"].as_array().unwrap();
     assert!(!content.is_empty());
     
-    // The first content item should have text
     let first_content = &content[0];
     assert!(first_content["text"].is_string());
     
@@ -436,12 +424,11 @@ async fn test_call_build_tool_stdio() -> Result<()> {
     Ok(())
 }
 
-/// Test call inspect tool via STDIO
+/// Tests call inspect tool via STDIO.
 #[tokio::test]
 async fn test_call_inspect_tool_stdio() -> Result<()> {
     let mut server = McpServerProcess::new(SPAWN_AND_MOVE_MANIFEST_PATH)?;
 
-    // Initialize the connection first
     server.initialize().await?;
 
     let call_request = json!({
@@ -456,28 +443,24 @@ async fn test_call_inspect_tool_stdio() -> Result<()> {
         }
     });
 
-    let response = timeout(Duration::from_secs(60), server.send_request(call_request)).await??;
+    let response = timeout(Duration::from_secs(30), server.send_request(call_request)).await??;
     
-    // The inspect tool should be called successfully
     assert!(response.get("result").is_some());
     let result = response.get("result").unwrap();
     
-    // Verify the response structure
     assert!(result["content"].is_array());
     let content = result["content"].as_array().unwrap();
     assert!(!content.is_empty());
     
-    // The first content item should have text
     let first_content = &content[0];
     assert!(first_content["text"].is_string());
     
     let inspect_output = first_content["text"].as_str().unwrap();
     println!("Inspect tool output: {}", inspect_output);
     
-    // Verify it contains expected project information
     assert!(inspect_output.contains("dojo_examples"));
     assert!(inspect_output.contains("World"));
     
     server.cleanup()?;
     Ok(())
-} 
+}
