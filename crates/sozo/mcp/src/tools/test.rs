@@ -11,7 +11,7 @@ use serde_json::json;
 use tokio::process::Command as AsyncCommand;
 use tracing::debug;
 
-use crate::{McpError, LOG_TARGET};
+use crate::{McpError, LOG_TARGET, SOZO_PATH};
 
 #[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
 pub struct TestRequest {
@@ -29,7 +29,7 @@ pub async fn test_project(
 ) -> Result<CallToolResult, McpError> {
     let profile = &args.profile.unwrap_or("dev".to_string());
 
-    let mut cmd = AsyncCommand::new("sozo");
+    let mut cmd = AsyncCommand::new(SOZO_PATH);
     cmd.arg("test");
     cmd.arg("--profile").arg(profile);
 

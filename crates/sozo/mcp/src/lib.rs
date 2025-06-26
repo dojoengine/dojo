@@ -25,6 +25,10 @@ mod tools;
 
 const LOG_TARGET: &str = "sozo_mcp";
 
+/// Use sozo from the PATH.
+/// To work locally, you should point to the sozo binary you've just built.
+const SOZO_PATH: &str = "sozo";
+
 #[derive(Clone, Debug)]
 pub struct SozoMcpServer {
     manifest_path: Option<Utf8PathBuf>,

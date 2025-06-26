@@ -11,7 +11,7 @@ use serde_json::json;
 use tokio::process::Command as AsyncCommand;
 use tracing::debug;
 
-use crate::{McpError, LOG_TARGET};
+use crate::{McpError, LOG_TARGET, SOZO_PATH};
 
 #[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
 pub struct MigrateRequest {
@@ -29,7 +29,7 @@ pub async fn migrate_project(
 ) -> Result<CallToolResult, McpError> {
     let profile = &args.profile.unwrap_or("dev".to_string());
 
-    let mut cmd = AsyncCommand::new("sozo");
+    let mut cmd = AsyncCommand::new(SOZO_PATH);
     cmd.arg("migrate");
     cmd.arg("--profile").arg(profile);
 
@@ -37,12 +37,12 @@ pub async fn migrate_project(
         cmd.arg("--manifest-path").arg(manifest_path);
     }
 
-    debug!(target: LOG_TARGET, profile, manifest_path = ?manifest_path, "Building project.");
+    debug!(target: LOG_TARGET, profile, manifest_path = ?manifest_path, "Migrating the project.");
 
     let output = cmd.output().await.map_err(|e| {
         McpError::internal_error(
-            "build_failed",
-            Some(json!({ "reason": format!("Failed to build project: {}", e) })),
+            "migrate_failed",
+            Some(json!({ "reason": format!("Failed to migrate project: {}", e) })),
         )
     })?;
 

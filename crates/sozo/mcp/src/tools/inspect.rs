@@ -11,7 +11,7 @@ use serde_json::{json, Value};
 use tokio::process::Command as AsyncCommand;
 use tracing::{debug, error};
 
-use crate::{McpError, LOG_TARGET};
+use crate::{McpError, LOG_TARGET, SOZO_PATH};
 
 #[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
 pub struct InspectRequest {
@@ -29,7 +29,7 @@ pub async fn inspect_project(
 ) -> Result<CallToolResult, McpError> {
     let profile = &args.profile.unwrap_or("dev".to_string());
 
-    let mut cmd = AsyncCommand::new("/Users/glihm/cgg/dojo/target/release/sozo");
+    let mut cmd = AsyncCommand::new(SOZO_PATH);
 
     if let Some(manifest_path) = &manifest_path {
         cmd.arg("--manifest-path").arg(manifest_path);

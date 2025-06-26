@@ -11,7 +11,7 @@ use rmcp::model::{CallToolResult, Content};
 use serde_json::json;
 use tokio::process::Command as AsyncCommand;
 
-use crate::McpError;
+use crate::{McpError, SOZO_PATH};
 
 #[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
 pub struct ExecuteRequest {
@@ -45,7 +45,7 @@ pub async fn execute_transaction(
     let function_name = &args.function_name;
     let calldata = args.calldata.iter().map(|x| x.as_str()).join(" ");
 
-    let mut cmd = AsyncCommand::new("sozo");
+    let mut cmd = AsyncCommand::new(SOZO_PATH);
     cmd.arg("execute").arg("--profile").arg(profile);
 
     // Add manifest path if provided in the request, otherwise use server's manifest path.
