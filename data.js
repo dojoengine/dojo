@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1750981173946,
+  "lastUpdate": 1750981916144,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -63948,6 +63948,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 53059815537,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "distinct": true,
+          "id": "65737dc6dea6d8c64f1504db7f319e43fbf10e70",
+          "message": "chore: bump cairo packages to 1.6.0-alpha.0",
+          "timestamp": "2025-06-26T17:37:51-06:00",
+          "tree_id": "d90318baff37c7e2e3696f75e278bd5118fa7f92",
+          "url": "https://github.com/dojoengine/dojo/commit/65737dc6dea6d8c64f1504db7f319e43fbf10e70"
+        },
+        "date": 1750981912860,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 50171845073,
             "range": "± 0",
             "unit": "ns/iter"
           }
