@@ -9,6 +9,7 @@ use semver::{Version, VersionReq};
 use tracing::info_span;
 
 pub(crate) mod auth;
+pub(crate) mod bindgen;
 pub(crate) mod build;
 pub(crate) mod call;
 pub(crate) mod clean;
@@ -24,6 +25,7 @@ pub(crate) mod model;
 pub(crate) mod options;
 pub(crate) mod test;
 
+use bindgen::BindgenArgs;
 use build::BuildArgs;
 use call::CallArgs;
 use clean::CleanArgs;
@@ -49,6 +51,8 @@ pub enum Commands {
     Auth(Box<AuthArgs>),
     #[command(about = "Build the world, generating the necessary artifacts for deployment")]
     Build(Box<BuildArgs>),
+    #[command(about = "Generate bindings for the specified target from existing build artifacts")]
+    Bindgen(Box<BindgenArgs>),
     #[command(about = "Build and migrate the world every time a file changes")]
     Dev(Box<DevArgs>),
     #[command(about = "Run a migration, declaring and deploying contracts as necessary to update \
@@ -84,6 +88,7 @@ impl fmt::Display for Commands {
         match self {
             Commands::Auth(_) => write!(f, "Auth"),
             Commands::Build(_) => write!(f, "Build"),
+            Commands::Bindgen(_) => write!(f, "Bindgen"),
             Commands::Clean(_) => write!(f, "Clean"),
             Commands::Dev(_) => write!(f, "Dev"),
             Commands::Execute(_) => write!(f, "Execute"),
@@ -114,6 +119,7 @@ pub fn run(sozo_args: SozoArgs, config: &Config) -> Result<()> {
     match command {
         Commands::Auth(args) => args.run(config),
         Commands::Build(args) => args.run(config),
+        Commands::Bindgen(args) => args.run(config),
         Commands::Dev(args) => args.run(config),
         Commands::Migrate(args) => args.run(config),
         Commands::Execute(args) => args.run(config),

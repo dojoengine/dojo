@@ -13,6 +13,8 @@ pub enum Error {
     Format(String),
     #[error(transparent)]
     Anyhow(#[from] anyhow::Error),
+    #[error("Gathering dojo data failed: {0}")]
+    GatherDojoData(String),
 }
 
 pub type BindgenResult<T, E = Error> = Result<T, E>;

@@ -1235,13 +1235,13 @@ void ADojoHelpers::ExecuteRawDeprecated(const FAccount& account, const FString& 
 {{
     Async(EAsyncExecution::Thread, [this, account, to, selector, calldataParameter]()
     {{
-        std::vector<std::string> felts;
+        TArray<std::string> felts;
         if (strcmp(TCHAR_TO_UTF8(*calldataParameter), "") != 0) {{
             TArray<FString> Out;
             calldataParameter.ParseIntoArray(Out,TEXT(","),true);
             for (int i = 0; i < Out.Num(); i++) {{
                 std::string felt = TCHAR_TO_UTF8(*Out[i]);
-                felts.push_back(felt);
+                felts.Add(felt);
             }}
         }}
         FDojoModule::ExecuteRaw(account.account, TCHAR_TO_UTF8(*to), TCHAR_TO_UTF8(*selector), \
@@ -1254,13 +1254,13 @@ void ADojoHelpers::ExecuteFromOutside(const FControllerAccount& account, const F
 {{
     Async(EAsyncExecution::Thread, [this, account, to, selector, calldataParameter]()
     {{
-        std::vector<std::string> felts;
+        TArray<std::string> felts;
         if (strcmp(TCHAR_TO_UTF8(*calldataParameter), "") != 0) {{
             TArray<FString> Out;
             calldataParameter.ParseIntoArray(Out,TEXT(","),true);
             for (int i = 0; i < Out.Num(); i++) {{
                 std::string felt = TCHAR_TO_UTF8(*Out[i]);
-                felts.push_back(felt);
+                felts.Add(felt);
             }}
         }}
         FDojoModule::ExecuteFromOutside(account.account, TCHAR_TO_UTF8(*to), \
@@ -1271,23 +1271,21 @@ void ADojoHelpers::ExecuteFromOutside(const FControllerAccount& account, const F
 void ADojoHelpers::FetchExistingModels()
 {{
     Async(EAsyncExecution::Thread, [this]()
-            {{
-        ResultCArrayEntity resEntities =
-            FDojoModule::GetEntities(toriiClient, "{{ not used }}");
-        if (resEntities.tag == ErrCArrayEntity) {{
+    {{
+        ResultPageEntity resEntities = FDojoModule::GetEntities(toriiClient, 1000, nullptr);
+        if (resEntities.tag == ErrPageEntity) {{
             UE_LOG(LogTemp, Log, TEXT("Failed to fetch entities: %hs"), \
-             resEntities.err.message);
+            resEntities.err.message);
             return;
         }}
-        CArrayEntity *entities = &resEntities.ok;
-
+        CArrayEntity *entities = &resEntities.ok.items;
         for (int i = 0; i < entities->data_len; i++) {{
             CArrayStruct* models = &entities->data[i].models;
             this->ParseModelsAndSend(models);
         }}
         FDojoModule::CArrayFree(entities->data, entities->data_len);
     }});
-    }}
+}}
 
 void ADojoHelpers::SubscribeOnDojoModelUpdate()
 {{

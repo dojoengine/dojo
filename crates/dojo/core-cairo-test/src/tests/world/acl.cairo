@@ -44,7 +44,12 @@ fn test_grant_owner_not_registered_resource() {
 }
 
 #[test]
-#[should_panic(expected: ('CONTRACT_NOT_DEPLOYED', 'ENTRYPOINT_FAILED', 'ENTRYPOINT_FAILED'))]
+#[should_panic(
+    expected: (
+        "Contract `0xdead` does NOT have OWNER role on model (or its namespace) `Foo`",
+        'ENTRYPOINT_FAILED',
+    ),
+)]
 fn test_grant_owner_through_malicious_contract() {
     let (world, foo_selector) = deploy_world_and_foo();
     let world = world.dispatcher;
@@ -64,7 +69,7 @@ fn test_grant_owner_through_malicious_contract() {
 #[test]
 #[should_panic(
     expected: (
-        "Account `659918` does NOT have OWNER role on model (or its namespace) `Foo`",
+        "Account `0xa11ce` does NOT have OWNER role on model (or its namespace) `Foo`",
         'ENTRYPOINT_FAILED',
     ),
 )]
@@ -82,7 +87,12 @@ fn test_grant_owner_fails_for_non_owner() {
 }
 
 #[test]
-#[should_panic(expected: ('CONTRACT_NOT_DEPLOYED', 'ENTRYPOINT_FAILED', 'ENTRYPOINT_FAILED'))]
+#[should_panic(
+    expected: (
+        "Contract `0xdead` does NOT have OWNER role on model (or its namespace) `Foo`",
+        'ENTRYPOINT_FAILED',
+    ),
+)]
 fn test_revoke_owner_through_malicious_contract() {
     let (world, foo_selector) = deploy_world_and_foo();
     let world = world.dispatcher;
@@ -103,7 +113,7 @@ fn test_revoke_owner_through_malicious_contract() {
 #[test]
 #[should_panic(
     expected: (
-        "Account `659918` does NOT have OWNER role on model (or its namespace) `Foo`",
+        "Account `0xa11ce` does NOT have OWNER role on model (or its namespace) `Foo`",
         'ENTRYPOINT_FAILED',
     ),
 )]
@@ -147,7 +157,12 @@ fn test_writer_not_registered_resource() {
 }
 
 #[test]
-#[should_panic(expected: ('CONTRACT_NOT_DEPLOYED', 'ENTRYPOINT_FAILED', 'ENTRYPOINT_FAILED'))]
+#[should_panic(
+    expected: (
+        "Contract `0xdead` does NOT have OWNER role on model (or its namespace) `Foo`",
+        'ENTRYPOINT_FAILED',
+    ),
+)]
 fn test_grant_writer_through_malicious_contract() {
     let (world, foo_selector) = deploy_world_and_foo();
     let world = world.dispatcher;
@@ -167,7 +182,7 @@ fn test_grant_writer_through_malicious_contract() {
 #[test]
 #[should_panic(
     expected: (
-        "Account `659918` does NOT have OWNER role on model (or its namespace) `Foo`",
+        "Account `0xa11ce` does NOT have OWNER role on model (or its namespace) `Foo`",
         'ENTRYPOINT_FAILED',
     ),
 )]
@@ -185,7 +200,12 @@ fn test_grant_writer_fails_for_non_owner() {
 }
 
 #[test]
-#[should_panic(expected: ('CONTRACT_NOT_DEPLOYED', 'ENTRYPOINT_FAILED', 'ENTRYPOINT_FAILED'))]
+#[should_panic(
+    expected: (
+        "Contract `0xdead` does NOT have OWNER role on model (or its namespace) `Foo`",
+        'ENTRYPOINT_FAILED',
+    ),
+)]
 fn test_revoke_writer_through_malicious_contract() {
     let (world, foo_selector) = deploy_world_and_foo();
     let world = world.dispatcher;
@@ -206,7 +226,7 @@ fn test_revoke_writer_through_malicious_contract() {
 #[test]
 #[should_panic(
     expected: (
-        "Account `659918` does NOT have OWNER role on model (or its namespace) `Foo`",
+        "Account `0xa11ce` does NOT have OWNER role on model (or its namespace) `Foo`",
         'ENTRYPOINT_FAILED',
     ),
 )]
@@ -228,7 +248,7 @@ fn test_revoke_writer_fails_for_non_owner() {
 #[test]
 #[should_panic(
     expected: (
-        "Contract `foo_setter` does NOT have WRITER role on model (or its namespace) `Foo`",
+        "Dojo Contract `foo_setter` does NOT have WRITER role on model (or its namespace) `Foo`",
         'ENTRYPOINT_FAILED',
         'ENTRYPOINT_FAILED',
     ),
@@ -261,7 +281,7 @@ fn test_not_writer_with_known_contract() {
 #[test]
 #[should_panic(
     expected: (
-        "Account `7022365680606078322` does NOT have OWNER role on namespace `dojo`",
+        "Account `0x61747461636b6572` does NOT have OWNER role on namespace `dojo`",
         'ENTRYPOINT_FAILED',
     ),
 )]
@@ -293,7 +313,7 @@ fn test_register_model_namespace_not_owner() {
 #[test]
 #[should_panic(
     expected: (
-        "Account `7022365680606078322` does NOT have OWNER role on namespace `dojo`",
+        "Account `0x61747461636b6572` does NOT have OWNER role on namespace `dojo`",
         'ENTRYPOINT_FAILED',
     ),
 )]
