@@ -8,13 +8,11 @@ async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
 
     // Get manifest path from environment variable if set
-    let manifest_path = std::env::var("MANIFEST_PATH")
-        .ok()
-        .map(Utf8PathBuf::from);
+    let manifest_path = std::env::var("MANIFEST_PATH").ok().map(Utf8PathBuf::from);
 
     // Create and serve the MCP server
     let server = SozoMcpServer::new(manifest_path);
     server.serve_stdio().await?;
 
     Ok(())
-} 
+}

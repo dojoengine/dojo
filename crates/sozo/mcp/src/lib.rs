@@ -82,8 +82,8 @@ impl SozoMcpServer {
         tools::migrate::migrate_project(self.manifest_path.clone(), request).await
     }
 
-    #[tool(description = "Execute a transaction using the given profile. If no profile is \
-                          provided, the default profile `dev` is used.")]
+    #[tool(description = "Send a transaction to the blockchain using the given profile. If no \
+                          profile is provided, the default profile `dev` is used.")]
     async fn execute(
         &self,
         Parameters(request): Parameters<ExecuteRequest>,
