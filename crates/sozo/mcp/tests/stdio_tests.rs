@@ -2,6 +2,8 @@ use std::process::{Command, Stdio};
 use std::time::Duration;
 
 use anyhow::Result;
+use dojo_test_utils::compiler::CompilerTestSetup;
+use scarb::compiler::Profile;
 use serde_json::json;
 use tokio::time::timeout;
 
@@ -291,33 +293,6 @@ dojo = { git = "https://github.com/dojoengine/dojo" }
     Ok(())
 }
 
-/// Tests call tool via STDIO.
-#[tokio::test]
-async fn test_call_tool_stdio() -> Result<()> {
-    let mut server = McpServerProcess::new(SPAWN_AND_MOVE_MANIFEST_PATH)?;
-
-    server.initialize().await?;
-
-    let call_request = json!({
-        "jsonrpc": "2.0",
-        "id": 7,
-        "method": "tools/call",
-        "params": {
-            "name": "build",
-            "arguments": {
-                "profile": "dev"
-            }
-        }
-    });
-
-    let response = timeout(Duration::from_secs(10), server.send_request(call_request)).await??;
-
-    assert!(response.get("result").is_some());
-
-    server.cleanup()?;
-    Ok(())
-}
-
 /// Tests read contract ABI resource via STDIO.
 #[tokio::test]
 async fn test_read_contract_abi_stdio() -> Result<()> {
@@ -388,7 +363,11 @@ async fn test_multiple_requests_stdio() -> Result<()> {
 /// Tests call build tool via STDIO.
 #[tokio::test]
 async fn test_call_build_tool_stdio() -> Result<()> {
-    let mut server = McpServerProcess::new(SPAWN_AND_MOVE_MANIFEST_PATH)?;
+    // Ensure we first copy the project to a temporary directory to avoid modifying the original
+    // project.
+    let setup = CompilerTestSetup::from_examples("../../dojo/core", "../../../examples/");
+    let config = setup.build_test_config("spawn-and-move", Profile::DEV);
+    let mut server = McpServerProcess::new(config.manifest_path().to_string().as_str())?;
 
     server.initialize().await?;
 

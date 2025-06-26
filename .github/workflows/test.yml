@@ -103,7 +103,12 @@ jobs:
       - name: Install NASM
         uses: ilammy/setup-nasm@v1
         with:
-          version: "2.15.05"
+          version: "2.16.01"
+      # Debug: Check if NASM is properly installed
+      - name: Verify NASM installation
+        run: |
+          nasm --version
+          echo "NASM PATH: $env:PATH"
       - run: cargo build --target x86_64-pc-windows-msvc --bins
 
   cairofmt:

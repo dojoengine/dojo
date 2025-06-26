@@ -10,8 +10,6 @@ name = "sozo-mcp"
 path = "src/main.rs"
 
 [dependencies]
-slot = { workspace = true, optional = true }
-
 anyhow.workspace = true
 async-trait.workspace = true
 cainome.workspace = true
@@ -61,3 +59,4 @@ schemars = { version = "0.8.22", features = ["derive"] }
 tempfile = "3.8"
 tokio = { workspace = true, features = ["full", "test-util"] }
 serde_json = { workspace = true }
+dojo-test-utils.workspace = true
