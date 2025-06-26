@@ -427,6 +427,8 @@ async fn test_call_build_tool_stdio() -> Result<()> {
 /// In the CI, the project is built before the tests are run, but if run locally,
 /// ensures that the project is built before the test is run.
 #[tokio::test]
+#[ignore = "This test require a Katana to be setup and running on the port that is mentioned by \
+            the configuration. Currently only used locally for debugging."]
 async fn test_call_inspect_tool_stdio() -> Result<()> {
     let mut server = McpServerProcess::new(SPAWN_AND_MOVE_MANIFEST_PATH)?;
 
