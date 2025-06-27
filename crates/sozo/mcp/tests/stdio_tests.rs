@@ -235,7 +235,7 @@ async fn test_read_manifest_resource_stdio() -> Result<()> {
 
     assert!(manifest_json["package"].is_object());
     assert_eq!(manifest_json["package"]["name"], "dojo_examples");
-    assert_eq!(manifest_json["package"]["version"], "1.5.1");
+    assert_eq!(manifest_json["package"]["version"], "1.6.0-alpha.0");
     assert!(manifest_json["dependencies"].is_object());
     assert!(manifest_json["dependencies"]["dojo"].is_object());
 
