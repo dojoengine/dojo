@@ -3,6 +3,7 @@ resolver = "2"
 
 members = [
 	"bin/sozo",
+	"bin/cairo-bench",
 	"crates/dojo/bindgen",
 	"crates/dojo/core",
 	"crates/dojo/macros",

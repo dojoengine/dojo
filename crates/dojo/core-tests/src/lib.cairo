@@ -3,6 +3,23 @@ mod utils;
 
 #[cfg(test)]
 mod tests {
+    mod benches {
+        mod model {
+            mod access;
+        }
+        mod storage {
+            mod database;
+            mod layout;
+            mod packing;
+            mod storage;
+        }
+        mod utils {
+            mod layout;
+        }
+        mod bench_data;
+        mod bench_utils;
+    }
+
     mod contract;
 
     mod event {
@@ -56,7 +73,6 @@ mod tests {
         mod hash;
         mod key;
         mod layout;
-        mod misc;
         mod naming;
     }
 
