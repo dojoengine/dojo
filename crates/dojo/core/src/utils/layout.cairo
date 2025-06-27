@@ -4,21 +4,13 @@ use dojo::meta::{FieldLayout, Layout};
 pub fn find_field_layout(
     field_selector: felt252, field_layouts: Span<FieldLayout>,
 ) -> Option<Layout> {
-    let mut i = 0;
-    let layout = loop {
-        if i >= field_layouts.len() {
-            break Option::None;
+    for field_layout in field_layouts {
+        if field_selector == *field_layout.selector {
+            return Option::Some(*field_layout.layout);
         }
+    }
 
-        let field_layout = *field_layouts.at(i);
-        if field_selector == field_layout.selector {
-            break Option::Some(field_layout.layout);
-        }
-
-        i += 1;
-    };
-
-    layout
+    Option::None
 }
 
 /// Find the layout of a model field based on its selector.

@@ -1,8 +1,8 @@
 use cairo_lang_macro::Diagnostic;
 use cairo_lang_parser::utils::SimpleParserDatabase;
+use cairo_lang_syntax::node::TypedSyntaxNode;
 use cairo_lang_syntax::node::ast::{Expr, TypeClause};
 use cairo_lang_syntax::node::db::SyntaxGroup;
-use cairo_lang_syntax::node::TypedSyntaxNode;
 
 use super::utils::{
     get_array_item_type, get_tuple_item_types, is_array, is_byte_array, is_option, is_tuple,
@@ -124,27 +124,15 @@ pub fn generate_cairo_code_for_fixed_layout_with_custom_types(layouts: &[String]
         .join(",\n");
 
     format!(
-        "let mut layouts = array![
+        "let layouts = array![
             {layouts_repr}
         ];
         let mut merged_layout = ArrayTrait::<u8>::new();
 
-        loop {{
-            match ArrayTrait::pop_front(ref layouts) {{
-                Option::Some(mut layout) => {{
-                    match layout {{
-                        dojo::meta::Layout::Fixed(mut l) => {{
-                            loop {{
-                                match SpanTrait::pop_front(ref l) {{
-                                    Option::Some(x) => merged_layout.append(*x),
-                                    Option::None(_) => {{ break; }}
-                                }};
-                            }};
-                        }},
-                        _ => panic!(\"A packed model layout must contain Fixed layouts only.\"),
-                    }};
-                }},
-                Option::None(_) => {{ break; }}
+        for layout in layouts {{
+            match layout {{
+                dojo::meta::Layout::Fixed(l) => merged_layout.append_span(l),
+                _ => panic!(\"A packed model layout must contain Fixed layouts only.\"),
             }};
         }};
 

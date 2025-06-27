@@ -86,9 +86,6 @@ pub mod utils {
     pub mod layout;
     pub use layout::{find_field_layout, find_model_field_layout};
 
-    pub mod misc;
-    pub use misc::{any_none, sum};
-
     pub mod naming;
     pub use naming::is_name_valid;
 
