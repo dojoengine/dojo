@@ -5,8 +5,5 @@ pub fn serialize_inline<T, +Serde<T>>(value: @T) -> Span<felt252> {
 }
 
 pub fn deserialize_unwrap<T, +Serde<T>>(mut span: Span<felt252>) -> T {
-    match Serde::deserialize(ref span) {
-        Option::Some(value) => value,
-        Option::None => core::panic_with_felt252('Could not deserialize'),
-    }
+    Serde::deserialize(ref span).expect('Could not deserialize')
 }
