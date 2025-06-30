@@ -1,6 +1,6 @@
 use cairo_lang_macro::{Diagnostic, ProcMacroResult, TokenStream};
 use cairo_lang_parser::utils::SimpleParserDatabase;
-use cairo_lang_syntax::node::ast::{Expr, ItemStruct, Member};
+use cairo_lang_syntax::node::ast::{ItemStruct, Member};
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{Terminal, TypedSyntaxNode};
 use starknet::core::utils::get_selector_from_name;
@@ -262,35 +262,16 @@ impl DojoStructIntrospect {
             let member_ty =
                 member.type_clause(db).ty(db).as_syntax_node().get_text_without_trivia(db);
 
-            match member.type_clause(db).ty(db) {
-                Expr::Tuple(tuple) => {
-                    serialized_members.push(DojoFormatter::serialize_tuple_member_ty(
-                        db,
-                        &member_name,
-                        &tuple,
-                        true,
-                        false,
-                    ));
-                    deserialized_members.push(DojoFormatter::deserialize_tuple_member_ty(
-                        db,
-                        &member_name,
-                        &tuple,
-                        false,
-                    ));
-                }
-                _ => {
-                    serialized_members.push(DojoFormatter::serialize_primitive_member_ty(
-                        &member_name,
-                        true,
-                        false,
-                    ));
-                    deserialized_members.push(DojoFormatter::deserialize_primitive_member_ty(
-                        &member_name,
-                        &member_ty,
-                        false,
-                    ));
-                }
-            }
+            serialized_members.push(DojoFormatter::serialize_primitive_member_ty(
+                &member_name,
+                true,
+                false,
+            ));
+            deserialized_members.push(DojoFormatter::deserialize_primitive_member_ty(
+                &member_name,
+                &member_ty,
+                false,
+            ));
 
             member_names.push(member_name);
         }
