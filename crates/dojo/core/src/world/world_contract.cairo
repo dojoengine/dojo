@@ -25,6 +25,19 @@ pub mod world {
     use core::panic_with_felt252;
     use core::panics::panic_with_byte_array;
     use core::traits::Into;
+    use core::serde::Serde;
+
+    use starknet::{
+        get_caller_address, get_tx_info, ClassHash, ContractAddress,
+        syscalls::{deploy_syscall, replace_class_syscall, call_contract_syscall}, SyscallResult,
+        SyscallResultTrait, storage::Map,
+    };
+    pub use starknet::storage::{
+        StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess,
+        StoragePointerWriteAccess,
+    };
+
+    use dojo::world::errors;
     use dojo::contract::components::upgradeable::{
         IUpgradeableDispatcher, IUpgradeableDispatcherTrait,
     };
@@ -813,9 +826,15 @@ pub mod world {
                     // For the init, to ensure only the world can call the init function,
                     // the verification is done in the init function of the contract that is
                     // injected by the plugin.
+<<<<<<< HEAD
                     starknet::syscalls::call_contract_syscall(
                         contract_address, DOJO_INIT_SELECTOR, init_calldata,
                     )
+=======
+                    // <crates/compiler/src/plugin/attribute_macros/contract.rs#L275>
+
+                    call_contract_syscall(contract_address, DOJO_INIT_SELECTOR, init_calldata)
+>>>>>>> dojo/main
                         .unwrap_syscall();
 
                     self.initialized_contracts.write(selector, true);
@@ -1371,18 +1390,15 @@ pub mod world {
             };
 
             let caller_name = if caller == get_tx_info().account_contract_address {
-                format!("Account `{:?}`", caller)
+                format!("Account `0x{:x}`", caller)
             } else {
-                // If the caller is not a dojo contract, the `d.selector()` will fail. In the
-                // future we should use the SRC5 to first query the contract to see if
-                // it implements the `IDescriptor` interface.
-                // For now, we just assume that the caller is a dojo contract as it's 100% of
-                // the dojo use cases at the moment.
-                // If the contract is not an account or a dojo contract, tests will display
-                // "CONTRACT_NOT_DEPLOYED" as the error message. In production, the error message
-                // will display "ENTRYPOINT_NOT_FOUND".
-                let d = IDeployedResourceDispatcher { contract_address: caller };
-                format!("Contract `{}`", d.dojo_name())
+                match call_contract_syscall(caller, selector!("dojo_name"), [].span()) {
+                    Result::Ok(mut serialized_name) => {
+                        let name = Serde::<ByteArray>::deserialize(ref serialized_name).unwrap();
+                        format!("Dojo Contract `{}`", name)
+                    },
+                    _ => format!("Contract `0x{:x}`", caller),
+                }
             };
 
             panic_with_byte_array(

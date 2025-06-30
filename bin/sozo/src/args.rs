@@ -61,7 +61,7 @@ impl SozoArgs {
 
         let default_log_filter: &str = if verbose {
             "none,hyper=off,scarb=off,salsa=off,sozo=trace,dojo_world=trace,dojo_utils=trace,\
-             sozo_ops=trace"
+             sozo_ops=trace,sozo_mcp=trace"
         } else {
             "none,hyper=off,scarb=off,salsa=off,sozo=info,dojo_world=info,cairo=off"
         };

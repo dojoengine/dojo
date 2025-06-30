@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::{Result, anyhow, bail};
 use clap::Args;
 use dojo_world::config::calldata_decoder;
 use dojo_world::contracts::ContractInfo;
@@ -147,5 +147,17 @@ impl CallArgs {
         };
 
         Ok(())
+    }
+}
+
+fn format_execution_error(error: &starknet::core::types::ContractExecutionError) -> String {
+    match error {
+        starknet::core::types::ContractExecutionError::Message(msg) => msg.clone(),
+        starknet::core::types::ContractExecutionError::Nested(inner) => {
+            let address = format!("0x{:x}", inner.contract_address);
+            let selector = format!("0x{:x}", inner.selector);
+            let inner_error = format_execution_error(&inner.error);
+            format!("Error in contract at {address} when calling {selector}:\n  {inner_error}",)
+        }
     }
 }

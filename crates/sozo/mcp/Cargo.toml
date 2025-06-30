@@ -1,0 +1,59 @@
+[package]
+edition.workspace = true
+name = "sozo-mcp"
+version.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[[bin]]
+name = "sozo-mcp"
+path = "src/main.rs"
+
+[dependencies]
+anyhow.workspace = true
+async-trait.workspace = true
+cainome.workspace = true
+cairo-lang-sierra.workspace = true
+cairo-lang-test-plugin.workspace = true
+cairo-lang-test-runner.workspace = true
+camino.workspace = true
+clap.workspace = true
+clap-verbosity-flag.workspace = true
+colored.workspace = true
+dojo-bindgen.workspace = true
+dojo-types.workspace = true
+dojo-utils.workspace = true
+dojo-world.workspace = true
+notify = "7.0.0"
+resolve-path = "0.1.0"
+scarb-metadata.workspace = true
+semver.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+smol_str.workspace = true
+sozo-ops.workspace = true
+sozo-walnut = { workspace = true, optional = true }
+starknet.workspace = true
+starknet-crypto.workspace = true
+tabled = { version = "0.16.0", features = [ "ansi" ] }
+thiserror.workspace = true
+toml.workspace = true
+tower-http = { version = "0.5", features = ["cors"] }
+tracing.workspace = true
+tracing-log.workspace = true
+tracing-subscriber.workspace = true
+tokio.workspace = true
+url.workspace = true
+reqwest = { workspace = true, features = [ "json" ] }
+itertools.workspace = true
+
+# Use dev version of rmcp.
+rmcp = { git = "https://github.com/modelcontextprotocol/rust-sdk", rev = "e6effb327883d0a8a91f5efbb527194747eee57b", features = ["server", "transport-io"] }
+# This is currently required to ensure that the `derive` feature works. rmcp fails to compile otherwise.
+schemars = { version = "0.8.22", features = ["derive"] }
+
+[dev-dependencies]
+tempfile = "3.8"
+tokio = { workspace = true, features = ["full", "test-util"] }
+serde_json = { workspace = true }
+dojo-test-utils.workspace = true

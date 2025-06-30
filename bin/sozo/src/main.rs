@@ -51,6 +51,10 @@ async fn cli_main(args: SozoArgs, ui: &Ui) -> Result<()> {
 
         trace!(%scarb_metadata.runtime_manifest, "Configuration built successfully.");
 
+<<<<<<< HEAD
         commands::run(args.command, &scarb_metadata, ui).await
     }
+=======
+    commands::run(args, &config)
+>>>>>>> dojo/main
 }

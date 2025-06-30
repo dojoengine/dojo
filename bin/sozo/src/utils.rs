@@ -18,19 +18,18 @@ use starknet::core::types::Felt;
 use starknet::core::utils as snutils;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
-use tracing::{trace, warn};
+use tracing::trace;
 
 use crate::commands::options::account::{AccountOptions, SozoAccount};
 use crate::commands::options::starknet::StarknetOptions;
 use crate::commands::options::world::WorldOptions;
-use crate::commands::LOG_TARGET;
 
 /// The maximum number of blocks that will separate the `from_block` and the `to_block` in the
 /// event fetching, which if too high will cause the event fetching to fail in most of the node
 /// providers.
 pub const MAX_BLOCK_RANGE: u64 = 200_000;
 
-pub const RPC_SPEC_VERSION: &str = "0.7.1";
+pub const _RPC_SPEC_VERSION: &str = "0.7.1";
 
 pub const CALLDATA_DOC: &str = "
 Space separated values e.g., 0x12345 128 u256:9999999999 str:'hello world'.
@@ -113,14 +112,16 @@ and all resources will appeared as `Created`. Remote resources will not be fetch
     let spec_version = provider.spec_version().await?;
     trace!(spec_version);
 
-    if !is_compatible_version(&spec_version, RPC_SPEC_VERSION)? {
-        return Err(anyhow!(
-            "Unsupported Starknet RPC version: {}, expected {}.",
-            spec_version,
-            RPC_SPEC_VERSION
-        ));
-    }
-
+    // TODO: @remybar @glihm currently Katana is using new types, but doesn't
+    // return the correct spec version. We comment this test for now to ensure
+    // one can deploy on sepolia/mainnet but also Katana.
+    //     if !is_compatible_version(&spec_version, RPC_SPEC_VERSION)? {
+    // return Err(anyhow!(
+    // "Unsupported Starknet RPC version: {}, expected {}.",
+    // spec_version,
+    // RPC_SPEC_VERSION
+    // ));
+    // }
     let chain_id = provider.chain_id().await?;
     let chain_id = snutils::parse_cairo_short_string(&chain_id)
         .with_context(|| "Cannot parse chain_id as string")?;
@@ -176,19 +177,20 @@ pub async fn get_world_diff_and_account(
     Ok((world_diff, account, rpc_url))
 }
 
-// Checks if the provided version string is compatible with the expected version string using
-// semantic versioning rules. Includes specific backward compatibility rules, e.g., version 0.6 is
-// compatible with 0.7.
-//
-// # Arguments
-//
-// * `provided_version` - The version string provided by the user.
-// * `expected_version` - The expected version string.
-//
-// # Returns
-//
-// * `Result<bool>` - Returns `true` if the provided version is compatible with the expected
-//   version, `false` otherwise.
+/// Checks if the provided version string is compatible with the expected version string using
+/// semantic versioning rules. Includes specific backward compatibility rules, e.g., version 0.6 is
+/// compatible with 0.7.
+///
+/// # Arguments
+///
+/// * `provided_version` - The version string provided by the user.
+/// * `expected_version` - The expected version string.
+///
+/// # Returns
+///
+/// * `Result<bool>` - Returns `true` if the provided version is compatible with the expected
+///   version, `false` otherwise.
+#[allow(dead_code)]
 fn is_compatible_version(provided_version: &str, expected_version: &str) -> Result<bool> {
     let provided_ver = Version::parse(provided_version)
         .map_err(|e| anyhow!("Failed to parse provided version '{}': {}", provided_version, e))?;

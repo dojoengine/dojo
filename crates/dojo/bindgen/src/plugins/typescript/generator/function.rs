@@ -19,8 +19,8 @@ impl TsFunctionGenerator {
             buffer.insert(
                 1,
                 format!(
-                    "import {{ Account, AccountInterface, {}, CairoOption, CairoCustomEnum, \
-                     ByteArray }} from \"starknet\";",
+                    "import {{ Account, AccountInterface, {}, CairoOption, CairoCustomEnum }} \
+                     from \"starknet\";",
                     JS_BIGNUMBERISH
                 ),
             );

@@ -4,18 +4,18 @@
 //! to be imported by downstream crates.
 //!
 //! Usage:
-//! `cargo run -r -p dojo-abigen` form the workspace root to generate the bindings.
+//! `cargo run -r -p dojo-world-abigen` form the workspace root to generate the bindings.
 //! Don't forget the `-r` flag to run the program in release mode as Scarb is very slow
 //! in debug mode.
 //!
-//! To check if the bindings are up to date, run `cargo run -p dojo-abigen -- --check`.
+//! To check if the bindings are up to date, run `cargo run -p dojo-world-abigen -- --check`.
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 use std::process::Command;
 
 use anyhow::{anyhow, Result};
-use cainome::rs::Abigen;
+use cainome::rs::{Abigen, ExecutionVersion};
 use camino::Utf8PathBuf;
 use scarb_interop::{Features, Profile, Scarb};
 
@@ -29,6 +29,12 @@ const OUT_DIR: &str = "crates/dojo/world/src/contracts/abigen";
 /// contracts.
 fn main() -> Result<()> {
     let is_check_only = define_check_only();
+
+    if !is_check_only {
+        // Let's cleanup the world and model.rs, we only want empty files.
+    } else {
+        println!("Generating the bindings...");
+    }
 
     compile_dojo_core()?;
 
@@ -65,6 +71,7 @@ fn generate_bindings(
     let tmp_file = format!("/tmp/{contract_name}.rs");
 
     let abigen = Abigen::new(contract_name, contract_artifact_path)
+        .with_execution_version(ExecutionVersion::V3)
         .with_types_aliases(HashMap::from([(
             String::from("dojo::world::config::Config::Event"),
             String::from("DojoConfigEvent"),
@@ -126,7 +133,7 @@ fn generate_bindings(
             if existing_bindings != generated_bindings {
                 return Err(anyhow!(
                     "{contract_name} ABI bindings are not up to date. Consider generating them \
-                     running `cargo run -p dojo-abigen`.",
+                     running `cargo run -p dojo-world-abigen`.",
                 ));
             }
         } else {

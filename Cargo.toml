@@ -17,6 +17,7 @@ members = [
 	"crates/sozo/scarb_interop",
 	"crates/sozo/signers",
 	"crates/sozo/walnut",
+	"crates/sozo/mcp",
 	"examples/spawn-and-move",
 	"scripts/verify_db_balances",
 	"xtask/generate-test-db",
@@ -27,7 +28,7 @@ edition = "2021"
 license = "Apache-2.0"
 license-file = "LICENSE"
 repository = "https://github.com/dojoengine/dojo/"
-version = "1.5.1"
+version = "1.6.0-alpha.0"
 
 [profile.performance]
 codegen-units = 1
@@ -40,8 +41,8 @@ debug = true
 inherits = "release"
 
 [workspace.dependencies]
-cainome = { version = "0.5.0", features = [ "abigen-rs" ] }
-cainome-cairo-serde = { version = "0.1.0" }
+cainome = { version = "0.7.0", features = [ "abigen-rs" ] }
+cainome-cairo-serde = { version = "0.2.0" }
 
 dojo-utils = { path = "crates/dojo/utils" }
 
@@ -63,22 +64,25 @@ torii-client = { path = "crates/torii/client" }
 torii-graphql = { path = "crates/torii/graphql" }
 torii-grpc = { path = "crates/torii/grpc" }
 torii-indexer = { path = "crates/torii/indexer" }
+torii-mcp = { path = "crates/torii/mcp" }
 torii-relay = { path = "crates/torii/libp2p" }
 torii-runner = { path = "crates/torii/runner" }
 torii-server = { path = "crates/torii/server" }
 torii-sqlite = { path = "crates/torii/sqlite/sqlite" }
 torii-sqlite-types = { path = "crates/torii/sqlite/types" }
 torii-typed-data = { path = "crates/torii/typed-data" }
-torii-mcp = { path = "crates/torii/mcp" }
 
 # sozo
 sozo-ops = { path = "crates/sozo/ops" }
 scarb-interop = { path = "crates/sozo/scarb_interop" }
 sozo-signers = { path = "crates/sozo/signers" }
 sozo-walnut = { path = "crates/sozo/walnut" }
+sozo-mcp = { path = "crates/sozo/mcp" }
 
 # macros
 merge-options = { path = "crates/macros/merge-options" }
+
+katana-runner = { git = "https://github.com/dojoengine/katana", rev = "f472095" }
 
 anyhow = "1.0.89"
 arbitrary = { version = "1.3.2", features = [ "derive" ] }
@@ -193,9 +197,8 @@ walkdir = "2.5.0"
 ipfs-api-backend-hyper = { git = "https://github.com/ferristseng/rust-ipfs-api", rev = "af2c17f7b19ef5b9898f458d97a90055c3605633", features = [ "with-hyper-rustls", "with-send-sync" ] }
 mime_guess = "2.0"
 
-
 # server
-hyper = "0.14.27"
+hyper = "1.5"
 warp = "0.3"
 
 # gRPC
@@ -215,7 +218,7 @@ criterion = "0.5.1"
 pprof = { version = "0.13.0", features = [ "criterion", "flamegraph" ] }
 
 # Slot integration. Dojo don't need to manually include `account_sdk` as dependency as `slot` already re-exports it.
-slot = { git = "https://github.com/cartridge-gg/slot", rev = "1298a30" }
+slot = { git = "https://github.com/cartridge-gg/slot", rev = "adac33e" }
 
 # alloy core
 alloy-primitives = { version = "0.8", default-features = false }
@@ -230,7 +233,7 @@ alloy-rpc-types-eth = { version = "0.4", default-features = false }
 alloy-signer = { version = "0.4", default-features = false }
 alloy-transport = { version = "0.4", default-features = false }
 
-starknet = "0.12.0"
+starknet = "0.14.0"
 starknet-crypto = "0.7.1"
 starknet-types-core = { version = "0.1.7", features = [ "arbitrary", "hash" ] }
 
