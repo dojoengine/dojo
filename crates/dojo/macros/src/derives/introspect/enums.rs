@@ -4,7 +4,7 @@ use cairo_lang_syntax::node::ast::{ItemEnum, OptionTypeClause, Variant};
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{Terminal, TypedSyntaxNode};
 
-use crate::helpers::{DiagnosticsExt, DojoChecker, ProcMacroResultExt, debug_store_expand};
+use crate::helpers::{debug_store_expand, DiagnosticsExt, DojoChecker, ProcMacroResultExt};
 
 #[derive(Debug)]
 pub struct DojoEnumIntrospect {
@@ -314,8 +314,8 @@ impl DojoEnumIntrospect {
 
                     let deserialized = format!(
                         "{variant_index} => {{
-                            let variant_data = \
-                            dojo::storage::DojoStore::<{ty}>::deserialize(ref values)?;
+                            let variant_data = dojo::storage::DojoStore::<{ty}>::deserialize(ref \
+                         values)?;
                             Option::Some({full_variant_name}(variant_data))
                         }},",
                     );
