@@ -41,11 +41,11 @@ impl InspectArgs {
         let (world_diff, _, _) =
             utils::get_world_diff_and_provider(starknet.clone(), world, scarb_metadata).await?;
 
-            if let Some(element) = element {
-                inspect_element(&element, &world_diff, json)?;
-            } else {
-                inspect_world(&world_diff, json);
-            }
+        if let Some(element) = element {
+            inspect_element(&element, &world_diff, json)?;
+        } else {
+            inspect_world(&world_diff, json);
+        }
 
         Ok(())
     }

@@ -4488,7 +4488,7 @@ impl<A: starknet::accounts::ConnectedAccount + Sync> WorldContract<A> {
         instance_name: &cainome::cairo_serde::ByteArray,
         contract_address: &cainome::cairo_serde::ContractAddress,
         block_number: &u64,
-    ) -> starknet::accounts::ExecutionV1<A> {
+    ) -> starknet::accounts::ExecutionV3<A> {
         use cainome::cairo_serde::CairoSerde;
         let mut __calldata = vec![];
         __calldata.extend(cainome::cairo_serde::ByteArray::cairo_serialize(namespace));
@@ -4501,7 +4501,7 @@ impl<A: starknet::accounts::ConnectedAccount + Sync> WorldContract<A> {
             selector: starknet::macros::selector!("register_external_contract"),
             calldata: __calldata,
         };
-        self.account.execute_v1(vec![__call])
+        self.account.execute_v3(vec![__call])
     }
     #[allow(clippy::ptr_arg)]
     #[allow(clippy::too_many_arguments)]
@@ -4923,7 +4923,7 @@ impl<A: starknet::accounts::ConnectedAccount + Sync> WorldContract<A> {
         instance_name: &cainome::cairo_serde::ByteArray,
         contract_address: &cainome::cairo_serde::ContractAddress,
         block_number: &u64,
-    ) -> starknet::accounts::ExecutionV1<A> {
+    ) -> starknet::accounts::ExecutionV3<A> {
         use cainome::cairo_serde::CairoSerde;
         let mut __calldata = vec![];
         __calldata.extend(cainome::cairo_serde::ByteArray::cairo_serialize(namespace));
@@ -4935,7 +4935,7 @@ impl<A: starknet::accounts::ConnectedAccount + Sync> WorldContract<A> {
             selector: starknet::macros::selector!("upgrade_external_contract"),
             calldata: __calldata,
         };
-        self.account.execute_v1(vec![__call])
+        self.account.execute_v3(vec![__call])
     }
     #[allow(clippy::ptr_arg)]
     #[allow(clippy::too_many_arguments)]

@@ -27,17 +27,6 @@ pub mod world {
     use core::traits::Into;
     use core::serde::Serde;
 
-    use starknet::{
-        get_caller_address, get_tx_info, ClassHash, ContractAddress,
-        syscalls::{deploy_syscall, replace_class_syscall, call_contract_syscall}, SyscallResult,
-        SyscallResultTrait, storage::Map,
-    };
-    pub use starknet::storage::{
-        StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess,
-        StoragePointerWriteAccess,
-    };
-
-    use dojo::world::errors;
     use dojo::contract::components::upgradeable::{
         IUpgradeableDispatcher, IUpgradeableDispatcherTrait,
     };
@@ -58,7 +47,7 @@ pub mod world {
         StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess,
         StoragePointerWriteAccess,
     };
-    use starknet::syscalls::{deploy_syscall, get_class_hash_at_syscall, replace_class_syscall};
+    use starknet::syscalls::{deploy_syscall, get_class_hash_at_syscall, replace_class_syscall, call_contract_syscall};
     use starknet::{ClassHash, ContractAddress, SyscallResultTrait, get_caller_address, get_tx_info};
     use super::Permission;
 
@@ -826,15 +815,8 @@ pub mod world {
                     // For the init, to ensure only the world can call the init function,
                     // the verification is done in the init function of the contract that is
                     // injected by the plugin.
-<<<<<<< HEAD
-                    starknet::syscalls::call_contract_syscall(
-                        contract_address, DOJO_INIT_SELECTOR, init_calldata,
-                    )
-=======
                     // <crates/compiler/src/plugin/attribute_macros/contract.rs#L275>
-
                     call_contract_syscall(contract_address, DOJO_INIT_SELECTOR, init_calldata)
->>>>>>> dojo/main
                         .unwrap_syscall();
 
                     self.initialized_contracts.write(selector, true);

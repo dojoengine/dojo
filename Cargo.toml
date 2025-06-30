@@ -15,6 +15,7 @@ members = [
 	"crates/macros/merge-options/macro_test",
 	"crates/metrics",
 	"crates/sozo/scarb_interop",
+	"crates/sozo/scarb_metadata_ext",
 	"crates/sozo/signers",
 	"crates/sozo/walnut",
 	"crates/sozo/mcp",
@@ -75,6 +76,7 @@ torii-typed-data = { path = "crates/torii/typed-data" }
 # sozo
 sozo-ops = { path = "crates/sozo/ops" }
 scarb-interop = { path = "crates/sozo/scarb_interop" }
+scarb-metadata-ext = { path = "crates/sozo/scarb_metadata_ext" }
 sozo-signers = { path = "crates/sozo/signers" }
 sozo-walnut = { path = "crates/sozo/walnut" }
 sozo-mcp = { path = "crates/sozo/mcp" }

@@ -4,8 +4,8 @@ use std::path::Path;
 
 use console::{pad_str, Alignment, Style, StyledObject};
 use reqwest::StatusCode;
-use scarb_interop::MetadataDojoExt;
 use scarb_metadata::Metadata;
+use scarb_metadata_ext::MetadataDojoExt;
 use scarb_ui::Ui;
 use serde::Serialize;
 use serde_json::Value;

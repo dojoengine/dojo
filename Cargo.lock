@@ -2542,6 +2542,7 @@ dependencies = [
  "camino",
  "scarb-interop",
  "scarb-metadata",
+ "scarb-metadata-ext",
  "toml 0.8.22",
 ]
 
@@ -6521,7 +6522,6 @@ version = "1.6.0-alpha.0"
 dependencies = [
  "anyhow",
  "camino",
- "dojo-world",
  "dunce",
  "scarb-metadata",
  "serde",
@@ -6540,6 +6540,22 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror 2.0.12",
+]
+
+[[package]]
+name = "scarb-metadata-ext"
+version = "1.6.0-alpha.0"
+dependencies = [
+ "anyhow",
+ "camino",
+ "dojo-world",
+ "dunce",
+ "scarb-interop",
+ "scarb-metadata",
+ "serde",
+ "serde_json",
+ "smol_str",
+ "toml 0.8.22",
 ]
 
 [[package]]
@@ -7174,6 +7190,7 @@ dependencies = [
  "reqwest 0.11.27",
  "scarb-interop",
  "scarb-metadata",
+ "scarb-metadata-ext",
  "scarb-ui",
  "serde",
  "serde_json",

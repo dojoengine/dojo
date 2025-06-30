@@ -13,6 +13,7 @@ dojo-utils.workspace = true
 reqwest.workspace = true
 scarb-metadata.workspace = true
 scarb-interop.workspace = true
+scarb-metadata-ext.workspace = true
 scarb-ui.workspace = true
 serde.workspace = true
 serde_json.workspace = true
