@@ -131,6 +131,38 @@ struct ModelWithUnitType {
     a: ((), (u8, ())),
 }
 
+// To test DojoStore impls for tuples
+#[derive(Introspect, Serde, Drop, Default)]
+struct StructWithTuples {
+    x: (u8, u16, u32),
+    y: Array<(u128, u128)>,
+    z: (u8, (u16, Option<u32>), (), u32),
+}
+
+// To test DojoStore impls for tuples
+#[derive(Introspect, Serde, Drop, Default)]
+enum EnumWithTuples {
+    #[default]
+    A: (u8, u16, u32),
+    B: Array<(u128, u128)>,
+    C: (u8, (u16, Option<u32>), (), u32),
+}
+
+// To test DojoStore impls for tuples
+#[derive(IntrospectPacked, Serde, Drop, Default)]
+struct StructPackedWithTuples {
+    x: (u8, u16, u32),
+    y: (u8, (u16, u32), (), u32),
+}
+
+// To test DojoStore impls for tuples
+#[derive(IntrospectPacked, Serde, Drop, Default)]
+enum EnumPackedWithTuples {
+    #[default]
+    A: (u8, (u16, u32), (), u32),
+    B: (u8, (u16, u32), (), u32),
+}
+
 fn namespace_def() -> NamespaceDef {
     NamespaceDef {
         namespace: "dojo_core_test",

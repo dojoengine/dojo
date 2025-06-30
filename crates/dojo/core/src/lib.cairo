@@ -66,8 +66,10 @@ pub mod storage {
     pub mod dojo_store;
     pub mod entity_model;
     pub mod layout;
+    pub(crate) mod metaprogramming;
     pub mod packing;
     pub mod storage;
+    pub(crate) mod tuple;
     pub use dojo_store::DojoStore;
 }
 
