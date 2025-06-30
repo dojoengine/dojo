@@ -4,6 +4,7 @@ edition = "2024_07"
 description = "The Dojo Core library for autonomous worlds."
 name = "dojo"
 version = "1.6.0-alpha.0"
+experimental-features = ["negative_impls"]
 
 [dependencies]
 starknet = "=2.11.4"
