@@ -2,8 +2,8 @@ use std::process::{Command, Stdio};
 use std::time::Duration;
 
 use anyhow::Result;
-use dojo_test_utils::compiler::CompilerTestSetup;
-use scarb::compiler::Profile;
+use dojo_test_utils::setup::TestSetup;
+use scarb_interop::Profile;
 use serde_json::json;
 use tokio::time::timeout;
 
@@ -363,11 +363,9 @@ async fn test_multiple_requests_stdio() -> Result<()> {
 /// Tests call build tool via STDIO.
 #[tokio::test]
 async fn test_call_build_tool_stdio() -> Result<()> {
-    // Ensure we first copy the project to a temporary directory to avoid modifying the original
-    // project.
-    let setup = CompilerTestSetup::from_examples("../../dojo/core", "../../../examples/");
-    let config = setup.build_test_config("spawn-and-move", Profile::DEV);
-    let mut server = McpServerProcess::new(config.manifest_path().to_string().as_str())?;
+    let setup = TestSetup::from_examples("../../dojo/core", "../../../examples/");
+    let metadata = setup.load_metadata("spawn-and-move", Profile::DEV);
+    let mut server = McpServerProcess::new(metadata.runtime_manifest.as_str())?;
 
     server.initialize().await?;
 

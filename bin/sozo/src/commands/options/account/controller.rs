@@ -167,7 +167,8 @@ mod tests {
 
     use dojo_test_utils::setup::TestSetup;
     use dojo_world::contracts::ContractInfo;
-    use scarb_interop::{MetadataDojoExt, Profile};
+    use scarb_interop::Profile;
+    use scarb_metadata_ext::MetadataDojoExt;
     use starknet::macros::felt;
 
     use super::{collect_policies, PolicyMethod};
