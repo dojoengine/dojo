@@ -7,7 +7,7 @@ use dojo_world::contracts::naming::{self, get_namespace_from_tag};
 
 use crate::error::BindgenResult;
 use crate::plugins::BuiltinPlugin;
-use crate::{compare_tokens_by_type_name, DojoContract, DojoData, DojoModel};
+use crate::{DojoContract, DojoData, DojoModel, compare_tokens_by_type_name};
 
 #[derive(Debug)]
 pub struct UnityPlugin {}
@@ -55,13 +55,6 @@ impl UnityPlugin {
                     format!("({})", inners)
                 } else {
                     panic!("Invalid tuple token: {:?}", token);
-                }
-            }
-            "generic_arg" => {
-                if let Token::GenericArg(g) = &token {
-                    g.clone()
-                } else {
-                    panic!("Invalid generic arg token: {:?}", token);
                 }
             }
 
@@ -378,18 +371,7 @@ public class {}_{} : ModelInstance {{
                                         field.name.clone(),
                                         arg_name
                                     ),
-                                    &if let Token::GenericArg(generic_arg) = &field.token {
-                                        let generic_token = t
-                                            .generic_args
-                                            .iter()
-                                            .find(|(name, _)| name == generic_arg)
-                                            .unwrap()
-                                            .1
-                                            .clone();
-                                        generic_token
-                                    } else {
-                                        field.token.clone()
-                                    },
+                                    &field.token,
                                     Some(field.name.clone()),
                                 ))
                             });

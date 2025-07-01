@@ -12,8 +12,8 @@ dependencies = [
  "anyhow",
  "async-trait",
  "auto_impl",
- "cainome 0.6.1",
- "cainome-cairo-serde",
+ "cainome 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cainome-cairo-serde 0.2.1",
  "chrono",
  "futures",
  "hex",
@@ -901,7 +901,7 @@ dependencies = [
  "rustc-hash 1.1.0",
  "shlex",
  "syn 2.0.101",
- "which",
+ "which 4.4.2",
 ]
 
 [[package]]
@@ -1038,13 +1038,11 @@ checksum = "d71b6127be86fdcfddb610f7182ac57211d4b18a3e9c82eb2d17662f2227ad6a"
 [[package]]
 name = "cainome"
 version = "0.6.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1e04a357fdab01f56b676c8c41e11b154bb69eef184204cae47a4209eb4e0035"
 dependencies = [
  "anyhow",
  "async-trait",
- "cainome-cairo-serde",
- "cainome-cairo-serde-derive",
+ "cainome-cairo-serde 0.2.0",
+ "cainome-cairo-serde-derive 0.1.0",
  "cainome-parser 0.2.0",
  "cainome-rs 0.2.0",
  "cainome-rs-macro 0.2.0",
@@ -1064,17 +1062,17 @@ dependencies = [
 
 [[package]]
 name = "cainome"
-version = "0.7.0"
+version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5f719211329705ef7d3376d4eca0d63767c024b64e11ae00169bd7c54cb9354c"
+checksum = "1e04a357fdab01f56b676c8c41e11b154bb69eef184204cae47a4209eb4e0035"
 dependencies = [
  "anyhow",
  "async-trait",
- "cainome-cairo-serde",
- "cainome-cairo-serde-derive",
- "cainome-parser 0.3.0",
- "cainome-rs 0.3.1",
- "cainome-rs-macro 0.3.0",
+ "cainome-cairo-serde 0.2.1",
+ "cainome-cairo-serde-derive 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cainome-parser 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cainome-rs 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cainome-rs-macro 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "camino",
  "clap",
  "clap_complete",
@@ -1087,6 +1085,17 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "url",
+]
+
+[[package]]
+name = "cainome-cairo-serde"
+version = "0.2.0"
+dependencies = [
+ "num-bigint",
+ "serde",
+ "serde_with",
+ "starknet 0.14.0",
+ "thiserror 1.0.69",
 ]
 
 [[package]]
@@ -1105,6 +1114,16 @@ dependencies = [
 [[package]]
 name = "cainome-cairo-serde-derive"
 version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.101",
+ "unzip-n",
+]
+
+[[package]]
+name = "cainome-cairo-serde-derive"
+version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d272424141f0ced49ca5f40bc4b756235ee6e7c9cf6ab01f7ef5ac010f5f8864"
 dependencies = [
@@ -1112,6 +1131,18 @@ dependencies = [
  "quote",
  "syn 2.0.101",
  "unzip-n",
+]
+
+[[package]]
+name = "cainome-parser"
+version = "0.2.0"
+dependencies = [
+ "convert_case 0.6.0",
+ "quote",
+ "serde_json",
+ "starknet 0.14.0",
+ "syn 2.0.101",
+ "thiserror 1.0.69",
 ]
 
 [[package]]
@@ -1129,12 +1160,15 @@ dependencies = [
 ]
 
 [[package]]
-name = "cainome-parser"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "feaf4e3cba66ccc85bca9726e09ffd69d3b1be37f1305ed59e1b1d5a6e86fabc"
+name = "cainome-rs"
+version = "0.2.0"
 dependencies = [
- "convert_case 0.6.0",
+ "anyhow",
+ "cainome-cairo-serde 0.2.0",
+ "cainome-parser 0.2.0",
+ "camino",
+ "prettyplease",
+ "proc-macro2",
  "quote",
  "serde_json",
  "starknet 0.14.0",
@@ -1149,8 +1183,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "67adae2e76aeb14e514dcda34092c86170e0f84843727b1ad8e2b7398b3e0b56"
 dependencies = [
  "anyhow",
- "cainome-cairo-serde",
- "cainome-parser 0.2.0",
+ "cainome-cairo-serde 0.2.1",
+ "cainome-parser 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "camino",
  "prettyplease",
  "proc-macro2",
@@ -1162,32 +1196,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "cainome-rs"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b24e87fcf544b3112f70e36eb560c78c0f7e18ca5d6a1483fdf7b05e7e8302e9"
-dependencies = [
- "anyhow",
- "cainome-cairo-serde",
- "cainome-parser 0.3.0",
- "camino",
- "prettyplease",
- "proc-macro2",
- "quote",
- "serde_json",
- "starknet 0.15.1",
- "syn 2.0.101",
- "thiserror 2.0.12",
-]
-
-[[package]]
 name = "cainome-rs-macro"
 version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "40c4e39d654e8e5c94f31a59ae8583771abbd784f96215dae1d1592f1b7526b2"
 dependencies = [
  "anyhow",
- "cainome-cairo-serde",
+ "cainome-cairo-serde 0.2.0",
  "cainome-parser 0.2.0",
  "cainome-rs 0.2.0",
  "proc-macro-error",
@@ -1201,14 +1214,14 @@ dependencies = [
 
 [[package]]
 name = "cainome-rs-macro"
-version = "0.3.0"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "919354b1142e3ca398313b842a5f95b081b0261270164a8fcdf13c8c633193fd"
+checksum = "40c4e39d654e8e5c94f31a59ae8583771abbd784f96215dae1d1592f1b7526b2"
 dependencies = [
  "anyhow",
- "cainome-cairo-serde",
- "cainome-parser 0.3.0",
- "cainome-rs 0.3.1",
+ "cainome-cairo-serde 0.2.1",
+ "cainome-parser 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cainome-rs 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "proc-macro-error",
  "proc-macro2",
  "quote",
@@ -2385,6 +2398,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "dialoguer"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "658bce805d770f407bc62102fca7c2c64ceef2fbcb2b8bd19d2765ce093980de"
+dependencies = [
+ "console",
+ "shell-words",
+ "tempfile",
+ "thiserror 1.0.69",
+ "zeroize",
+]
+
+[[package]]
 name = "diff"
 version = "0.1.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2491,7 +2517,7 @@ dependencies = [
  "anyhow",
  "assert_matches",
  "async-trait",
- "cainome 0.7.0",
+ "cainome 0.6.1",
  "camino",
  "chrono",
  "convert_case 0.6.0",
@@ -2551,7 +2577,7 @@ name = "dojo-types"
 version = "1.6.0-alpha.0"
 dependencies = [
  "anyhow",
- "cainome 0.7.0",
+ "cainome 0.6.1",
  "crypto-bigint",
  "hex",
  "indexmap 2.9.0",
@@ -2592,7 +2618,7 @@ version = "1.6.0-alpha.0"
 dependencies = [
  "anyhow",
  "async-trait",
- "cainome 0.7.0",
+ "cainome 0.6.1",
  "cairo-lang-starknet-classes",
  "dojo-types",
  "futures",
@@ -2618,7 +2644,7 @@ name = "dojo-world-abigen"
 version = "1.6.0-alpha.0"
 dependencies = [
  "anyhow",
- "cainome 0.7.0",
+ "cainome 0.6.1",
  "cairo-lang-starknet",
  "cairo-lang-starknet-classes",
  "camino",
@@ -2633,8 +2659,8 @@ name = "dojo_macros"
 version = "1.6.0-alpha.0"
 dependencies = [
  "anyhow",
- "cainome 0.7.0",
- "cainome-cairo-serde",
+ "cainome 0.6.1",
+ "cainome-cairo-serde 0.2.1",
  "cairo-lang-defs",
  "cairo-lang-diagnostics",
  "cairo-lang-macro",
@@ -6004,6 +6030,7 @@ checksum = "d19c46a6fdd48bc4dab94b6103fccc55d34c67cc0ad04653aad4ea2a07cd7bbb"
 dependencies = [
  "base64 0.22.1",
  "bytes",
+ "futures-channel",
  "futures-core",
  "futures-util",
  "http 1.3.1",
@@ -6918,6 +6945,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "shell-words"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "24188a676b6ae68c3b2cb3a01be17fbf7240ce009799bb56d5b1409051e78fde"
+
+[[package]]
 name = "shlex"
 version = "1.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6971,18 +7004,21 @@ dependencies = [
 
 [[package]]
 name = "slot"
-version = "0.39.3"
-source = "git+https://github.com/cartridge-gg/slot?rev=adac33e#adac33ec683cca888ed9a5f449531b5467a84667"
+version = "0.47.0"
+source = "git+https://github.com/cartridge-gg/slot?rev=efb3029699d06d1d1ff1c83baf5a630dc0f98b31#efb3029699d06d1d1ff1c83baf5a630dc0f98b31"
 dependencies = [
  "account_sdk",
  "anyhow",
  "axum",
  "base64 0.22.1",
- "cainome-cairo-serde",
+ "cainome-cairo-serde 0.2.1",
+ "colored 2.2.0",
+ "dialoguer",
  "dirs 5.0.1",
  "graphql_client",
  "hyper 1.6.0",
  "num-bigint",
+ "regex",
  "reqwest 0.12.15",
  "serde",
  "serde_json",
@@ -6992,9 +7028,11 @@ dependencies = [
  "tokio",
  "tower-http",
  "tracing",
+ "update-informer",
  "url",
  "urlencoding",
  "webbrowser",
+ "which 5.0.0",
 ]
 
 [[package]]
@@ -7057,7 +7095,7 @@ version = "1.6.0-alpha.0"
 dependencies = [
  "anyhow",
  "async-trait",
- "cainome 0.7.0",
+ "cainome 0.6.1",
  "cairo-lang-test-runner",
  "camino",
  "clap",
@@ -7100,7 +7138,7 @@ version = "1.6.0-alpha.0"
 dependencies = [
  "anyhow",
  "async-trait",
- "cainome 0.7.0",
+ "cainome 0.6.1",
  "cairo-lang-sierra",
  "cairo-lang-test-plugin",
  "cairo-lang-test-runner",
@@ -7147,7 +7185,7 @@ dependencies = [
  "anyhow",
  "assert_fs",
  "async-trait",
- "cainome 0.7.0",
+ "cainome 0.6.1",
  "colored 2.2.0",
  "colored_json",
  "dojo-test-utils",
@@ -8658,6 +8696,38 @@ dependencies = [
 ]
 
 [[package]]
+name = "update-informer"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "53813bf5d5f0d8430794f8cc48e99521cc9e298066958d16383ccb8b39d182a7"
+dependencies = [
+ "etcetera",
+ "reqwest 0.12.15",
+ "semver 1.0.26",
+ "serde",
+ "serde_json",
+ "ureq",
+]
+
+[[package]]
+name = "ureq"
+version = "2.12.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "02d1a66277ed75f640d608235660df48c8e3c19f3b4edb6a263315626cc3c01d"
+dependencies = [
+ "base64 0.22.1",
+ "flate2",
+ "log",
+ "once_cell",
+ "rustls 0.23.27",
+ "rustls-pki-types",
+ "serde",
+ "serde_json",
+ "url",
+ "webpki-roots 0.26.11",
+]
+
+[[package]]
 name = "url"
 version = "2.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -9010,6 +9080,19 @@ dependencies = [
  "home",
  "once_cell",
  "rustix 0.38.44",
+]
+
+[[package]]
+name = "which"
+version = "5.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9bf3ea8596f3a0dd5980b46430f2058dfe2c36a27ccfbb1845d6fbfcd9ba6e14"
+dependencies = [
+ "either",
+ "home",
+ "once_cell",
+ "rustix 0.38.44",
+ "windows-sys 0.48.0",
 ]
 
 [[package]]
