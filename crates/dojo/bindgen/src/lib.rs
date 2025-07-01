@@ -245,7 +245,7 @@ pub fn compare_tokens_by_type_name(a: &Token, b: &Token) -> Ordering {
 #[cfg(test)]
 mod tests {
     use dojo_test_utils::setup::TestSetup;
-    use scarb_metadata::Metadata;
+    use scarb_interop::Profile;
     use scarb_metadata_ext::MetadataDojoExt;
 
     use super::*;
