@@ -620,7 +620,8 @@ mod tests {
     use std::io::Read;
 
     use dojo_test_utils::setup::TestSetup;
-    use scarb_interop::{MetadataDojoExt, Profile};
+    use scarb_metadata::Metadata;
+    use scarb_metadata_ext::MetadataDojoExt;
 
     use super::*;
     use crate::gather_dojo_data;

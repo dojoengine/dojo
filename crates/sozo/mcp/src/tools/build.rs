@@ -49,7 +49,8 @@ pub async fn build_project(
         "",
         scarb_interop::Features::AllFeatures,
         vec![],
-    ).map_err(|e| {
+    )
+    .map_err(|e| {
         McpError::internal_error(
             "scarb_build_failed",
             Some(json!({ "reason": format!("Failed to build project: {}", e) })),

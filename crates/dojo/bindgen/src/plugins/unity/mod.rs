@@ -7,7 +7,7 @@ use dojo_world::contracts::naming::{self, get_namespace_from_tag};
 
 use crate::error::BindgenResult;
 use crate::plugins::BuiltinPlugin;
-use crate::{DojoContract, DojoData, DojoModel, compare_tokens_by_type_name};
+use crate::{compare_tokens_by_type_name, DojoContract, DojoData, DojoModel};
 
 #[derive(Debug)]
 pub struct UnityPlugin {}

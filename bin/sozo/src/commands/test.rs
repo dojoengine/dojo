@@ -1,9 +1,9 @@
 //! Compiles and runs tests for a Dojo project using Scarb.
 use cairo_lang_test_runner::RunProfilerConfig;
 use clap::Args;
+use scarb_interop::Scarb;
 use scarb_metadata::Metadata;
 use scarb_metadata_ext::{MetadataDojoExt, TestRunner};
-use scarb_interop::Scarb;
 
 use crate::features::FeaturesSpec;
 

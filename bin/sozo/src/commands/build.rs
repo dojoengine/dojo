@@ -7,8 +7,8 @@ use dojo_bindgen::{BuiltinPlugins, PluginManager};
 use dojo_world::local::{ResourceLocal, WorldLocal};
 use dojo_world::ResourceType;
 use scarb_interop::{self, Scarb};
-use scarb_metadata_ext::MetadataDojoExt;
 use scarb_metadata::Metadata;
+use scarb_metadata_ext::MetadataDojoExt;
 use tabled::settings::Style;
 use tabled::{Table, Tabled};
 
