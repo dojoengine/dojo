@@ -5,12 +5,10 @@ use camino::Utf8PathBuf;
 use dojo_world::local::WorldLocal;
 use rmcp::model::{ReadResourceResult, ResourceContents};
 use rmcp::Error as McpError;
-use scarb::compiler::Profile;
-use scarb::core::Config;
-use scarb::ops;
+use scarb_interop::Profile;
 use serde_json::json;
 use smol_str::SmolStr;
-use sozo_scarbext::WorkspaceExt;
+use scarb_metadata_ext::MetadataDojoExt;
 
 pub mod abi;
 pub mod parser;

@@ -23,6 +23,7 @@ dojo-world.workspace = true
 resolve-path = "0.1.0"
 scarb-interop.workspace = true
 scarb-metadata.workspace = true
+scarb-metadata-ext.workspace = true
 scarb-ui.workspace = true
 semver.workspace = true
 serde.workspace = true

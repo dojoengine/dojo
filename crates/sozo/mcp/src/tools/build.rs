@@ -7,11 +7,14 @@
 use anyhow::Result;
 use camino::Utf8PathBuf;
 use rmcp::model::{CallToolResult, Content};
+use scarb_interop::Scarb;
+use scarb_metadata::{self, Metadata};
+use scarb_metadata_ext::MetadataDojoExt;
 use serde_json::json;
 use tokio::process::Command as AsyncCommand;
 use tracing::debug;
 
-use crate::{McpError, LOG_TARGET, SOZO_PATH};
+use crate::{LOG_TARGET, McpError, SOZO_PATH};
 
 #[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
 pub struct BuildRequest {
@@ -29,27 +32,31 @@ pub async fn build_project(
 ) -> Result<CallToolResult, McpError> {
     let profile = &args.profile.unwrap_or("dev".to_string());
 
-    let mut cmd = AsyncCommand::new(SOZO_PATH);
-    cmd.arg("build");
-    cmd.arg("--profile").arg(profile);
+    let default_manifest = Utf8PathBuf::from("Scarb.toml");
+    let manifest_path = manifest_path.as_ref().unwrap_or(&default_manifest);
 
-    if let Some(manifest_path) = &manifest_path {
-        cmd.arg("--manifest-path").arg(manifest_path);
-    }
-
-    debug!(target: LOG_TARGET, profile, manifest_path = ?manifest_path, "Building project.");
-
-    let output = cmd.output().await.map_err(|e| {
+    let scarb_metadata = Metadata::load(manifest_path, profile, false).map_err(|e| {
         McpError::internal_error(
-            "build_failed",
+            "scarb_metadata_load_failed",
+            Some(json!({ "reason": format!("Failed to load scarb metadata: {}", e) })),
+        )
+    })?;
+
+    scarb_metadata.clean_dir_profile();
+
+    Scarb::build(
+        &scarb_metadata.workspace.manifest_path,
+        scarb_metadata.current_profile.as_str(),
+        // Builds all packages.
+        "",
+        scarb_interop::Features::AllFeatures,
+        vec![],
+    ).map_err(|e| {
+        McpError::internal_error(
+            "scarb_build_failed",
             Some(json!({ "reason": format!("Failed to build project: {}", e) })),
         )
     })?;
 
-    if output.status.success() {
-        Ok(CallToolResult::success(vec![Content::text("Build successful".to_string())]))
-    } else {
-        let err = String::from_utf8_lossy(&output.stderr).to_string();
-        Ok(CallToolResult::error(vec![Content::text(err)]))
-    }
+    Ok(CallToolResult::success(vec![Content::text("Build successful".to_string())]))
 }
