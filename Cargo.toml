@@ -42,9 +42,10 @@ debug = true
 inherits = "release"
 
 [workspace.dependencies]
-#cainome = { version = "0.7.0", features = [ "abigen-rs" ] }
-cainome = { path = "/Users/glihm/cgg/cainome", features = [ "abigen-rs" ] }
-cainome-cairo-serde = { version = "0.2.0" }
+cainome = { git = "https://github.com/cartridge-gg/cainome", branch = "snip12", features = [
+    "abigen-rs",
+] }
+cainome-cairo-serde = { git = "https://github.com/cartridge-gg/cainome", branch = "snip12" }
 
 dojo-utils = { path = "crates/dojo/utils" }
 
@@ -161,7 +162,7 @@ pretty_assertions = "1.2.1"
 rand = "0.8.5"
 rayon = "1.8.0"
 regex = "1.10.3"
-reqwest = { version = "0.11.27", features = [ "json", "rustls-tls" ], default-features = false }
+reqwest = { version = "0.12.15", features = [ "json", "rustls-tls" ], default-features = false }
 rpassword = "7.2.0"
 rstest = "0.18.2"
 rstest_reuse = "0.6.0"
@@ -222,7 +223,7 @@ pprof = { version = "0.13.0", features = [ "criterion", "flamegraph" ] }
 
 # Slot integration. Dojo don't need to manually include `account_sdk` as dependency as `slot` already re-exports it.
 #slot = { git = "https://github.com/cartridge-gg/slot", rev = "adac33e" }
-slot = { git = "https://github.com/cartridge-gg/slot", rev = "efb3029699d06d1d1ff1c83baf5a630dc0f98b31" }
+slot = { path = "/Users/glihm/cgg/slot/slot" }
 
 # alloy core
 alloy-primitives = { version = "0.8", default-features = false }
@@ -237,8 +238,10 @@ alloy-rpc-types-eth = { version = "0.4", default-features = false }
 alloy-signer = { version = "0.4", default-features = false }
 alloy-transport = { version = "0.4", default-features = false }
 
-starknet = "0.14.0"
-starknet-crypto = "0.7.4"
+#starknet = "0.15"
+#starknet-crypto = "0.7.4"
+starknet = { git = "https://github.com/xJonathanLEI/starknet-rs", rev = "ff4222e" }
+starknet-crypto = { version = "0.7.3" }
 starknet-types-core = { version = "0.1.7", features = [ "arbitrary", "hash" ] }
 
 bitvec = "1.0.1"

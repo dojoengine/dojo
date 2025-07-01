@@ -4,8 +4,8 @@ use anyhow::{anyhow, bail, Result};
 use clap::Args;
 use dojo_world::config::calldata_decoder;
 use dojo_world::contracts::ContractInfo;
-use scarb_interop::MetadataDojoExt;
 use scarb_metadata::Metadata;
+use scarb_metadata_ext::MetadataDojoExt;
 use sozo_ops::resource_descriptor::ResourceDescriptor;
 use starknet::core::types::{BlockId, BlockTag, FunctionCall, StarknetError};
 use starknet::core::utils as snutils;
@@ -138,7 +138,7 @@ impl CallArgs {
                     contract_address,
                     match &e {
                         ProviderError::StarknetError(StarknetError::ContractError(e)) => {
-                            format!("Contract error: {}", e.revert_error.clone())
+                            format!("Contract error: {:?}", e.revert_error.clone())
                         }
                         _ => e.to_string(),
                     }

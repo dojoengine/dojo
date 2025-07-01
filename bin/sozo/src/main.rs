@@ -7,7 +7,7 @@ use args::SozoArgs;
 use camino::Utf8PathBuf;
 use clap::Parser;
 use commands::Commands;
-use scarb_interop::MetadataDojoExt;
+use scarb_metadata_ext::MetadataDojoExt;
 use scarb_metadata::Metadata;
 use scarb_ui::{OutputFormat, Ui};
 use tracing::trace;

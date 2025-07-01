@@ -8,7 +8,7 @@
 use anyhow::Result;
 use camino::Utf8PathBuf;
 use clap::Args;
-use scarb::core::Config;
+use scarb_metadata::Metadata;
 use sozo_mcp::SozoMcpServer;
 
 #[derive(Debug, Clone, Args)]
@@ -19,16 +19,16 @@ pub struct McpArgs {
 }
 
 impl McpArgs {
-    pub fn run(self, config: &Config, manifest_path: Option<Utf8PathBuf>) -> Result<()> {
-        config.tokio_handle().block_on(async {
-            let server = SozoMcpServer::new(manifest_path);
+    pub async fn run(self, scarb_metadata: &Metadata) -> Result<()> {
+        let manifest_path = scarb_metadata.runtime_manifest.clone();
 
-            if self.port == 0 {
-                server.serve_stdio().await.map_err(|e| anyhow::anyhow!("{}", e))?;
-                Ok(())
-            } else {
-                anyhow::bail!("HTTP mode is not supported yet")
-            }
-        })
+        let server = SozoMcpServer::new(Some(manifest_path));
+
+        if self.port == 0 {
+            server.serve_stdio().await.map_err(|e| anyhow::anyhow!("{}", e))?;
+            Ok(())
+        } else {
+            anyhow::bail!("HTTP mode is not supported yet")
+        }
     }
 }

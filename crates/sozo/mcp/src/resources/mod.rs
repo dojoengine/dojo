@@ -6,9 +6,10 @@ use dojo_world::local::WorldLocal;
 use rmcp::model::{ReadResourceResult, ResourceContents};
 use rmcp::Error as McpError;
 use scarb_interop::Profile;
+use scarb_metadata::{self, Metadata};
+use scarb_metadata_ext::MetadataDojoExt;
 use serde_json::json;
 use smol_str::SmolStr;
-use scarb_metadata_ext::MetadataDojoExt;
 
 pub mod abi;
 pub mod parser;
@@ -47,40 +48,17 @@ pub async fn load_world_local(
     manifest_path: Option<Utf8PathBuf>,
     profile: &str,
 ) -> Result<WorldLocal, McpError> {
-    let manifest_path = manifest_path.as_ref().ok_or_else(|| {
+    let default_manifest = Utf8PathBuf::from("Scarb.toml");
+    let manifest_path = manifest_path.as_ref().unwrap_or(&default_manifest);
+
+    let scarb_metadata = Metadata::load(manifest_path, profile, false).map_err(|e| {
         McpError::internal_error(
-            "no_manifest_path",
-            Some(json!({ "reason": "No manifest path provided" })),
+            "scarb_metadata_load_failed",
+            Some(json!({ "reason": format!("Failed to load scarb metadata: {}", e) })),
         )
     })?;
 
-    let profile_enum = match profile {
-        "dev" => Profile::DEV,
-        "release" => Profile::RELEASE,
-        _ => Profile::new(SmolStr::from(profile)).map_err(|e| {
-            McpError::internal_error(
-                "invalid_profile",
-                Some(json!({ "reason": format!("Invalid profile: {}", e) })),
-            )
-        })?,
-    };
-
-    let config =
-        Config::builder(manifest_path.clone()).profile(profile_enum).build().map_err(|e| {
-            McpError::internal_error(
-                "config_build_failed",
-                Some(json!({ "reason": format!("Failed to build config: {}", e) })),
-            )
-        })?;
-
-    let ws = ops::read_workspace(config.manifest_path(), &config).map_err(|e| {
-        McpError::internal_error(
-            "workspace_read_failed",
-            Some(json!({ "reason": format!("Failed to read workspace: {}", e) })),
-        )
-    })?;
-
-    let world = ws.load_world_local().map_err(|e| {
+    let world = scarb_metadata.load_dojo_world_local().map_err(|e| {
         McpError::internal_error(
             "world_load_failed",
             Some(json!({ "reason": format!("Failed to load world: {}", e) })),

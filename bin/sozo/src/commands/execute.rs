@@ -2,8 +2,8 @@ use anyhow::{anyhow, bail, Result};
 use clap::Args;
 use dojo_utils::{Invoker, TxnConfig};
 use dojo_world::config::calldata_decoder;
-use scarb_interop::MetadataDojoExt;
 use scarb_metadata::Metadata;
+use scarb_metadata_ext::MetadataDojoExt;
 use scarb_ui::Ui;
 use sozo_ops::resource_descriptor::ResourceDescriptor;
 #[cfg(feature = "walnut")]

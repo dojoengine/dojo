@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use clap::{Args, Subcommand};
 use dojo_world::config::calldata_decoder;
-use scarb_interop::MetadataDojoExt;
+use scarb_metadata_ext::MetadataDojoExt;
 use scarb_metadata::Metadata;
 use sozo_ops::model;
 use sozo_ops::resource_descriptor::ResourceDescriptor;

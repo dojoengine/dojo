@@ -1,8 +1,8 @@
 use anyhow::Result;
 use clap::{Args, ValueEnum};
 use dojo_bindgen::{BuiltinPlugins, PluginManager};
-use scarb::core::Config;
-use sozo_scarbext::WorkspaceExt;
+use scarb_metadata::Metadata;
+use scarb_metadata_ext::MetadataDojoExt;
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
 pub enum BindingTarget {
@@ -32,9 +32,9 @@ pub struct BindgenArgs {
 }
 
 impl BindgenArgs {
-    pub fn run(self, config: &Config) -> Result<()> {
-        let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
-        ws.profile_check()?;
+    pub async fn run(self, scarb_metadata: &Metadata) -> Result<()> {
+        let manifest_path = scarb_metadata.runtime_manifest.clone();
+        let profile_name = scarb_metadata.current_profile.to_string();
 
         let builtin_plugins = match self.binding_target {
             BindingTarget::Typescript => vec![BuiltinPlugins::Typescript],
@@ -45,18 +45,15 @@ impl BindgenArgs {
         };
 
         let bindgen = PluginManager {
-            profile_name: ws.current_profile().expect("Profile expected").to_string(),
-            root_package_name: ws
-                .root_package()
-                .map(|p| p.id.name.to_string())
-                .unwrap_or("NO_ROOT_PACKAGE".to_string()),
+            profile_name,
+            root_package_name: scarb_metadata.workspace_package_name()?,
             output_path: self.output_dir.into(),
-            manifest_path: config.manifest_path().to_path_buf(),
+            manifest_path,
             plugins: vec![],
             builtin_plugins,
         };
 
-        config.tokio_handle().block_on(bindgen.generate(None))?;
+        bindgen.generate(None).await?;
 
         Ok(())
     }

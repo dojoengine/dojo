@@ -53,8 +53,6 @@ pub enum Commands {
     Bindgen(Box<BindgenArgs>),
     #[command(about = "Build the world, generating the necessary artifacts for deployment")]
     Build(Box<BuildArgs>),
-    #[command(about = "Build and migrate the world every time a file changes")]
-    Dev(Box<DevArgs>),
     #[command(about = "Call a contract")]
     Call(Box<CallArgs>),
     #[command(about = "Inspect events emitted by the world")]
@@ -91,7 +89,6 @@ impl fmt::Display for Commands {
             Commands::Auth(_) => write!(f, "Auth"),
             Commands::Bindgen(_) => write!(f, "Bindgen"),
             Commands::Build(_) => write!(f, "Build"),
-            Commands::Dev(_) => write!(f, "Dev"),
             Commands::Call(_) => write!(f, "Call"),
             Commands::Clean(_) => write!(f, "Clean"),
             Commands::Events(_) => write!(f, "Events"),
@@ -110,31 +107,28 @@ impl fmt::Display for Commands {
     }
 }
 
-pub fn run(sozo_args: SozoArgs, config: &Config) -> Result<()> {
-    let command = sozo_args.command;
+pub async fn run(command: Commands, scarb_metadata: &Metadata, ui: &Ui) -> Result<()> {
     let name = command.to_string();
     let span = info_span!("Subcommand", name);
     let _span = span.enter();
 
     match command {
-        Commands::Auth(args) => args.run(config),
-        Commands::Build(args) => args.run(config),
-        Commands::Bindgen(args) => args.run(config),
-        Commands::Dev(args) => args.run(config),
-        Commands::Migrate(args) => args.run(config),
-        Commands::Execute(args) => args.run(config),
-        Commands::Inspect(args) => args.run(config),
-        Commands::Clean(args) => args.run(config),
-        Commands::Call(args) => args.run(config),
-        Commands::Test(args) => args.run(config),
-        Commands::Hash(args) => args.run(config).map(|_| ()),
-        Commands::Init(args) => args.run(config),
-        Commands::Model(args) => args.run(config),
-        Commands::Events(args) => args.run(config),
-        Commands::Mcp(args) => args.run(config, sozo_args.manifest_path),
-        #[cfg(feature = "walnut")]
-        Commands::Walnut(args) => args.run(scarb_metadata, ui),
+        Commands::Auth(args) => args.run(scarb_metadata).await,
+        Commands::Bindgen(args) => args.run(scarb_metadata).await,
+        Commands::Build(args) => args.run(scarb_metadata).await,
+        Commands::Call(args) => args.run(scarb_metadata).await,
+        Commands::Clean(args) => args.run(scarb_metadata),
+        Commands::Events(args) => args.run(scarb_metadata).await,
+        Commands::Execute(args) => args.run(scarb_metadata, ui).await,
+        Commands::Hash(args) => args.run(scarb_metadata),
+        Commands::Inspect(args) => args.run(scarb_metadata).await,
+        Commands::Mcp(args) => args.run(scarb_metadata).await,
+        Commands::Migrate(args) => args.run(scarb_metadata).await,
+        Commands::Model(args) => args.run(scarb_metadata).await,
+        Commands::Test(args) => args.run(scarb_metadata),
         Commands::Version(args) => args.run(scarb_metadata),
+        #[cfg(feature = "walnut")]
+        Commands::Walnut(args) => args.run(scarb_metadata, ui).await,
         Commands::Init(_) => {
             // `sozo init` is directly managed in main.rs as scarb metadata
             // cannot be loaded in this case (the project does not exist yet).
