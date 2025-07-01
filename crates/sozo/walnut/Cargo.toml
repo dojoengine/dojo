@@ -12,7 +12,6 @@ console.workspace = true
 dojo-utils.workspace = true
 reqwest.workspace = true
 scarb-metadata.workspace = true
-scarb-interop.workspace = true
 scarb-metadata-ext.workspace = true
 scarb-ui.workspace = true
 serde.workspace = true

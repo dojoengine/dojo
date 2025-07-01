@@ -6,7 +6,6 @@
 //! In future versions, this will not be necessary anymore.
 
 use anyhow::Result;
-use camino::Utf8PathBuf;
 use clap::Args;
 use scarb_metadata::Metadata;
 use sozo_mcp::SozoMcpServer;

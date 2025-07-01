@@ -41,8 +41,6 @@ use sozo_walnut::walnut::WalnutArgs;
 use test::TestArgs;
 use version::VersionArgs;
 
-use crate::args::SozoArgs;
-
 pub(crate) const LOG_TARGET: &str = "sozo::cli";
 
 #[derive(Debug, Subcommand)]

@@ -11,10 +11,8 @@ use scarb_interop::Scarb;
 use scarb_metadata::{self, Metadata};
 use scarb_metadata_ext::MetadataDojoExt;
 use serde_json::json;
-use tokio::process::Command as AsyncCommand;
-use tracing::debug;
 
-use crate::{LOG_TARGET, McpError, SOZO_PATH};
+use crate::McpError;
 
 #[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
 pub struct BuildRequest {

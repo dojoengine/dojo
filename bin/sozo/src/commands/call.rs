@@ -138,7 +138,7 @@ impl CallArgs {
                     contract_address,
                     match &e {
                         ProviderError::StarknetError(StarknetError::ContractError(e)) => {
-                            format!("Contract error: {:?}", e.revert_error.clone())
+                            format!("Contract error: {:?}", format_execution_error(&e.revert_error))
                         }
                         _ => e.to_string(),
                     }
