@@ -49,7 +49,9 @@ fn test_grant_owner_not_registered_resource() {
 }
 
 #[test]
-#[should_panic(expected: 'ENTRYPOINT_NOT_FOUND')]
+#[should_panic(
+    expected: "Contract `0xad1a512070e0702c92fd81395c28e9eea5f01e1852c2759785df1d5b1a0f91` does NOT have OWNER role on model (or its namespace) `Foo`",
+)]
 fn test_grant_owner_through_malicious_contract() {
     let (world, foo_selector) = deploy_world_and_foo();
     let world = world.dispatcher;
@@ -68,7 +70,7 @@ fn test_grant_owner_through_malicious_contract() {
 
 #[test]
 #[should_panic(
-    expected: "Account `659918` does NOT have OWNER role on model (or its namespace) `Foo`",
+    expected: "Account `0xa11ce` does NOT have OWNER role on model (or its namespace) `Foo`",
 )]
 fn test_grant_owner_fails_for_non_owner() {
     let (world, foo_selector) = deploy_world_and_foo();
@@ -84,7 +86,9 @@ fn test_grant_owner_fails_for_non_owner() {
 }
 
 #[test]
-#[should_panic(expected: 'ENTRYPOINT_NOT_FOUND')]
+#[should_panic(
+    expected: "Contract `0xad1a512070e0702c92fd81395c28e9eea5f01e1852c2759785df1d5b1a0f91` does NOT have OWNER role on model (or its namespace) `Foo`",
+)]
 fn test_revoke_owner_through_malicious_contract() {
     let (world, foo_selector) = deploy_world_and_foo();
     let world = world.dispatcher;
@@ -104,7 +108,7 @@ fn test_revoke_owner_through_malicious_contract() {
 
 #[test]
 #[should_panic(
-    expected: "Account `659918` does NOT have OWNER role on model (or its namespace) `Foo`",
+    expected: "Account `0xa11ce` does NOT have OWNER role on model (or its namespace) `Foo`",
 )]
 fn test_revoke_owner_fails_for_non_owner() {
     let (world, foo_selector) = deploy_world_and_foo();
@@ -145,7 +149,9 @@ fn test_writer_not_registered_resource() {
 }
 
 #[test]
-#[should_panic(expected: 'ENTRYPOINT_NOT_FOUND')]
+#[should_panic(
+    expected: "Contract `0xad1a512070e0702c92fd81395c28e9eea5f01e1852c2759785df1d5b1a0f91` does NOT have OWNER role on model (or its namespace) `Foo`",
+)]
 fn test_grant_writer_through_malicious_contract() {
     let (world, foo_selector) = deploy_world_and_foo();
     let world = world.dispatcher;
@@ -164,7 +170,7 @@ fn test_grant_writer_through_malicious_contract() {
 
 #[test]
 #[should_panic(
-    expected: "Account `659918` does NOT have OWNER role on model (or its namespace) `Foo`",
+    expected: "Account `0xa11ce` does NOT have OWNER role on model (or its namespace) `Foo`",
 )]
 fn test_grant_writer_fails_for_non_owner() {
     let (world, foo_selector) = deploy_world_and_foo();
@@ -180,7 +186,9 @@ fn test_grant_writer_fails_for_non_owner() {
 }
 
 #[test]
-#[should_panic(expected: 'ENTRYPOINT_NOT_FOUND')]
+#[should_panic(
+    expected: "Contract `0xad1a512070e0702c92fd81395c28e9eea5f01e1852c2759785df1d5b1a0f91` does NOT have OWNER role on model (or its namespace) `Foo`",
+)]
 fn test_revoke_writer_through_malicious_contract() {
     let (world, foo_selector) = deploy_world_and_foo();
     let world = world.dispatcher;
@@ -200,7 +208,7 @@ fn test_revoke_writer_through_malicious_contract() {
 
 #[test]
 #[should_panic(
-    expected: "Account `659918` does NOT have OWNER role on model (or its namespace) `Foo`",
+    expected: "Account `0xa11ce` does NOT have OWNER role on model (or its namespace) `Foo`",
 )]
 fn test_revoke_writer_fails_for_non_owner() {
     let (world, foo_selector) = deploy_world_and_foo();
@@ -236,7 +244,7 @@ fn test_not_writer_with_known_contract() {
 /// by registering a model in an other namespace.
 #[test]
 #[should_panic(
-    expected: "Account `7022365680606078322` does NOT have OWNER role on namespace `dojo`",
+    expected: "Account `0x61747461636b6572` does NOT have OWNER role on namespace `dojo`",
 )]
 fn test_register_model_namespace_not_owner() {
     let owner: ContractAddress = 'owner'.try_into().unwrap();
@@ -265,7 +273,7 @@ fn test_register_model_namespace_not_owner() {
 /// by deploying a contract in an other namespace.
 #[test]
 #[should_panic(
-    expected: "Account `7022365680606078322` does NOT have OWNER role on namespace `dojo`",
+    expected: "Account `0x61747461636b6572` does NOT have OWNER role on namespace `dojo`",
 )]
 fn test_register_contract_namespace_not_owner() {
     let owner: ContractAddress = 'owner'.try_into().unwrap();

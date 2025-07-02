@@ -196,7 +196,7 @@ fn test_deploy_contract_for_namespace_owner() {
 }
 
 #[test]
-#[should_panic(expected: "Account `2827` does NOT have OWNER role on namespace `dojo`")]
+#[should_panic(expected: "Account `0xb0b` does NOT have OWNER role on namespace `dojo`")]
 fn test_deploy_contract_for_namespace_writer() {
     let world = deploy_world();
     let world = world.dispatcher;
@@ -213,7 +213,7 @@ fn test_deploy_contract_for_namespace_writer() {
 }
 
 #[test]
-#[should_panic(expected: "Account `2827` does NOT have OWNER role on namespace `dojo`")]
+#[should_panic(expected: "Account `0xb0b` does NOT have OWNER role on namespace `dojo`")]
 fn test_deploy_contract_no_namespace_owner_access() {
     let world = deploy_world();
     let world = world.dispatcher;
@@ -240,7 +240,9 @@ fn test_deploy_contract_with_unregistered_namespace() {
 // It's ENTRYPOINT_NOT_FOUND for now as in this example the contract is not a dojo contract
 // and it's not the account that is calling the deploy_contract function.
 #[test]
-#[should_panic(expected: 'ENTRYPOINT_NOT_FOUND')]
+#[should_panic(
+    expected: "Contract `0xad1a512070e0702c92fd81395c28e9eea5f01e1852c2759785df1d5b1a0f91` does NOT have OWNER role on namespace `dojo`",
+)]
 fn test_deploy_contract_through_malicious_contract() {
     let world = deploy_world();
     let world = world.dispatcher;
@@ -296,7 +298,7 @@ fn test_upgrade_contract_from_resource_owner() {
 
 #[test]
 #[should_panic(
-    expected: "Account `659918` does NOT have OWNER role on contract (or its namespace) `test_contract`",
+    expected: "Account `0xa11ce` does NOT have OWNER role on contract (or its namespace) `test_contract`",
 )]
 fn test_upgrade_contract_from_resource_writer() {
     let world = deploy_world();
@@ -327,7 +329,7 @@ fn test_upgrade_contract_from_resource_writer() {
 
 #[test]
 #[should_panic(
-    expected: "Account `659918` does NOT have OWNER role on contract (or its namespace) `test_contract`",
+    expected: "Account `0xa11ce` does NOT have OWNER role on contract (or its namespace) `test_contract`",
 )]
 fn test_upgrade_contract_from_random_account() {
     let world = deploy_world();
@@ -346,7 +348,9 @@ fn test_upgrade_contract_from_random_account() {
 }
 
 #[test]
-#[should_panic(expected: 'ENTRYPOINT_NOT_FOUND')]
+#[should_panic(
+    expected: "Contract `0xad1a512070e0702c92fd81395c28e9eea5f01e1852c2759785df1d5b1a0f91` does NOT have OWNER role on contract (or its namespace) `test_contract`",
+)]
 fn test_upgrade_contract_through_malicious_contract() {
     let world = deploy_world();
     let world = world.dispatcher;
