@@ -223,8 +223,8 @@ criterion = "0.5.1"
 pprof = { version = "0.13.0", features = [ "criterion", "flamegraph" ] }
 
 # Slot integration. Dojo don't need to manually include `account_sdk` as dependency as `slot` already re-exports it.
-#slot = { git = "https://github.com/cartridge-gg/slot", rev = "adac33e" }
-slot = { path = "/Users/glihm/cgg/slot/slot" }
+# This rev uses deps from `starknet-rs` 0.15.1 bump.
+slot = { git = "https://github.com/cartridge-gg/slot", rev = "a2f8508ebe13a39127252ab7f6aafa0b26c1b375" }
 
 # alloy core
 alloy-primitives = { version = "0.8", default-features = false }
