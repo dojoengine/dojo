@@ -27,7 +27,7 @@ const LOG_TARGET: &str = "sozo_mcp";
 
 /// Use sozo from the PATH.
 /// To work locally, you should point to the sozo binary you've just built.
-const SOZO_PATH: &str = "sozo";
+const SOZO_PATH: &str = "/Users/glihm/cgg/dojo/target/release/sozo";
 
 #[derive(Clone, Debug)]
 pub struct SozoMcpServer {

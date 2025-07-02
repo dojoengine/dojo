@@ -363,9 +363,7 @@ async fn test_multiple_requests_stdio() -> Result<()> {
 /// Tests call build tool via STDIO.
 #[tokio::test]
 async fn test_call_build_tool_stdio() -> Result<()> {
-    let setup = TestSetup::from_examples("../../dojo/core", "../../../examples/");
-    let metadata = setup.load_metadata("spawn-and-move", Profile::DEV);
-    let mut server = McpServerProcess::new(metadata.runtime_manifest.as_str())?;
+    let mut server = McpServerProcess::new(SPAWN_AND_MOVE_MANIFEST_PATH)?;
 
     server.initialize().await?;
 

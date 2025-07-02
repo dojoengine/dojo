@@ -29,9 +29,11 @@ pub async fn build_project(
     args: BuildRequest,
 ) -> Result<CallToolResult, McpError> {
     let profile = &args.profile.unwrap_or("dev".to_string());
+    dbg!(profile);
 
     let default_manifest = Utf8PathBuf::from("Scarb.toml");
     let manifest_path = manifest_path.as_ref().unwrap_or(&default_manifest);
+    dbg!(manifest_path);
 
     let scarb_metadata = Metadata::load(manifest_path, profile, false).map_err(|e| {
         McpError::internal_error(
@@ -39,6 +41,7 @@ pub async fn build_project(
             Some(json!({ "reason": format!("Failed to load scarb metadata: {}", e) })),
         )
     })?;
+    dbg!(&scarb_metadata);
 
     scarb_metadata.clean_dir_profile();
 
