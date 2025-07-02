@@ -42,7 +42,7 @@ impl DojoStructIntrospect {
         is_packed: bool,
     ) -> TokenStream {
         let struct_name = struct_ast.name(db).text(db).into();
-        let struct_size = self.compute_struct_layout_size(db, struct_ast, is_packed);
+        let struct_size = self.compute_struct_layout_size(db, struct_ast);
         let ty = self.build_struct_ty(db, &struct_name, struct_ast);
 
         let layout = if is_packed {
@@ -96,11 +96,7 @@ impl DojoStructIntrospect {
         &self,
         db: &SimpleParserDatabase,
         struct_ast: &ItemStruct,
-        is_packed: bool,
     ) -> String {
-        let mut cumulated_sizes = 0;
-        let mut is_dynamic_size = false;
-
         let mut sizes = struct_ast
             .members(db)
             .elements(db)
@@ -109,22 +105,14 @@ impl DojoStructIntrospect {
                 if m.has_attr(db, "key") {
                     return None;
                 }
-
-                let (sizes, cumulated, is_dynamic) =
+                let member_size =
                     super::size::get_field_size_from_type_clause(db, &m.type_clause(db));
-
-                cumulated_sizes += cumulated;
-                is_dynamic_size |= is_dynamic;
-                Some(sizes)
+                Some(member_size)
             })
             .flatten()
             .collect::<Vec<_>>();
-        super::size::build_size_function_body(
-            &mut sizes,
-            cumulated_sizes,
-            is_dynamic_size,
-            is_packed,
-        )
+
+        super::size::build_size_function_body(&mut sizes)
     }
 
     pub fn build_member_ty(&self, db: &SimpleParserDatabase, member: &Member) -> String {

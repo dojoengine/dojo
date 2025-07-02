@@ -163,6 +163,16 @@ enum EnumPackedWithTuples {
     B: (u8, (u16, u32), (), u32),
 }
 
+// To test Option with tuple
+#[derive(PartialEq)]
+#[dojo::model]
+struct StructWithOptionWithTuple {
+    #[key]
+    k: u8,
+    x: Option<(u8, u16)>,
+    y: Option<u32>,
+}
+
 fn namespace_def() -> NamespaceDef {
     NamespaceDef {
         namespace: "dojo_core_test",
@@ -170,6 +180,7 @@ fn namespace_def() -> NamespaceDef {
             TestResource::Model("Foo"), TestResource::Model("Foo2"), TestResource::Model("Foo3"),
             TestResource::Model("Foo4"), TestResource::Model("ModelWithUnitType"),
             TestResource::Model("LegacyModel"), TestResource::Model("DojoStoreModel"),
+            TestResource::Model("StructWithOptionWithTuple"),
         ]
             .span(),
     }
@@ -466,6 +477,18 @@ fn test_access_with_unit_type() {
         },
         "Bad default model",
     )
+}
+
+#[test]
+fn test_struct_with_option_with_tuple() {
+    let mut world = spawn_foo_world();
+
+    let m = StructWithOptionWithTuple { k: 1, x: Option::Some((1, 2)), y: Option::Some(3) };
+    world.write_model(@m);
+
+    let read_m: StructWithOptionWithTuple = world.read_model(1);
+
+    assert!(m == read_m, "Bad model with Option with tuple");
 }
 
 #[test]

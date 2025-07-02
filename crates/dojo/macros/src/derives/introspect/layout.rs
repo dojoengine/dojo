@@ -4,10 +4,8 @@ use cairo_lang_syntax::node::ast::{Expr, TypeClause};
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::TypedSyntaxNode;
 
-use super::utils::{
-    get_array_item_type, get_tuple_item_types, is_array, is_byte_array, is_option, is_tuple,
-    is_unsupported_option_type,
-};
+use super::utils::{is_array, is_byte_array, is_option, is_tuple};
+use crate::derives::introspect::utils::get_tuple_item_types;
 use crate::helpers::DiagnosticsExt;
 
 /// Build a field layout describing the provided type clause.
@@ -16,94 +14,16 @@ pub(crate) fn get_layout_from_type_clause(
     diagnostics: &mut Vec<Diagnostic>,
     type_clause: &TypeClause,
 ) -> String {
-    match type_clause.ty(db) {
-        Expr::Path(path) => {
-            let path_type = path.as_syntax_node().get_text_without_trivia(db);
-            build_item_layout_from_type(diagnostics, &path_type)
-        }
-        Expr::Tuple(expr) => {
-            let tuple_type = expr.as_syntax_node().get_text_without_trivia(db);
-            build_tuple_layout_from_type(diagnostics, &tuple_type)
-        }
+    let type_str = match type_clause.ty(db) {
+        Expr::Path(path) => path.as_syntax_node().get_text_without_trivia(db),
+        Expr::Tuple(expr) => expr.as_syntax_node().get_text_without_trivia(db),
         _ => {
             diagnostics.push_error("Unexpected expression for variant data type.".to_string());
-            "".to_string()
+            return "".to_string();
         }
-    }
-}
+    };
 
-/// Build the array layout describing the provided array type.
-/// item_type could be something like `Array<u128>` for example.
-pub fn build_array_layout_from_type(diagnostics: &mut Vec<Diagnostic>, item_type: &str) -> String {
-    let array_item_type = get_array_item_type(item_type);
-
-    if is_tuple(&array_item_type) {
-        let layout = build_item_layout_from_type(diagnostics, &array_item_type);
-        format!(
-            "dojo::meta::Layout::Array(
-                array![
-                    {layout}
-                ].span()
-            )"
-        )
-    } else if is_array(&array_item_type) {
-        let layout = build_array_layout_from_type(diagnostics, &array_item_type);
-        format!(
-            "dojo::meta::Layout::Array(
-                array![
-                    {layout}
-                ].span()
-            )"
-        )
-    } else {
-        format!("dojo::meta::introspect::Introspect::<{}>::layout()", item_type)
-    }
-}
-
-/// Build the tuple layout describing the provided tuple type.
-/// item_type could be something like (u8, u32, u128) for example.
-pub fn build_tuple_layout_from_type(diagnostics: &mut Vec<Diagnostic>, item_type: &str) -> String {
-    let mut tuple_items = vec![];
-
-    for item in get_tuple_item_types(item_type).iter() {
-        let layout = build_item_layout_from_type(diagnostics, item);
-        tuple_items.push(layout);
-    }
-
-    format!(
-        "dojo::meta::Layout::Tuple(
-            array![
-            {}
-            ].span()
-        )",
-        tuple_items.join(",\n")
-    )
-}
-
-/// Build the layout describing the provided type.
-/// item_type could be any type (array, tuple, struct, ...)
-pub fn build_item_layout_from_type(diagnostics: &mut Vec<Diagnostic>, item_type: &str) -> String {
-    if is_array(item_type) {
-        build_array_layout_from_type(diagnostics, item_type)
-    } else if is_tuple(item_type) {
-        build_tuple_layout_from_type(diagnostics, item_type)
-    } else {
-        // For Option<T>, T cannot be a tuple
-        if is_unsupported_option_type(item_type) {
-            diagnostics.push_error(
-                "Option<T> cannot be used with tuples. Prefer using a struct.".to_string(),
-            );
-        }
-
-        // `usize` is forbidden because its size is architecture-dependent
-        if item_type == "usize" {
-            diagnostics.push_error(
-                "Use u32 rather than usize as usize size is architecture dependent.".to_string(),
-            );
-        }
-
-        format!("dojo::meta::introspect::Introspect::<{}>::layout()", item_type)
-    }
+    format!("dojo::meta::introspect::Introspect::<{}>::layout()", type_str)
 }
 
 pub fn is_custom_layout(layout: &str) -> bool {

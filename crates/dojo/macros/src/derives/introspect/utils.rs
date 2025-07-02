@@ -5,12 +5,6 @@ const SPAN_SUFFIX: &str = ">";
 const ARRAY_PREFIX: &str = "Array<";
 const ARRAY_SUFFIX: &str = ">";
 
-/// Check if the provided type is an unsupported `Option<T>`,
-/// because tuples are not supported with Option.
-pub fn is_unsupported_option_type(ty: &str) -> bool {
-    ty.starts_with("Option<(")
-}
-
 pub fn is_byte_array(ty: &str) -> bool {
     ty.eq("ByteArray")
 }
