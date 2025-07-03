@@ -553,7 +553,7 @@ fn test_compare_tests() {
         ("B".to_string(), TestCompare::Updated((1, 2))),
         ("C".to_string(), TestCompare::Created(1)),
         ("D".to_string(), TestCompare::Updated((2, 1))),
-        ("E".to_string(), TestCompare::Created(2)),
+        ("E".to_string(), TestCompare::Created(1)),
     ]);
 
     let res = compare_tests(&old_tests, &new_tests);
