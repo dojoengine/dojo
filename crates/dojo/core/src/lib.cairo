@@ -90,7 +90,7 @@ pub mod utils {
     pub use layout::{find_field_layout, find_model_field_layout};
 
     pub mod misc;
-    pub use misc::{any_none, sum};
+    pub use misc::sum_sizes;
 
     pub mod naming;
     pub use naming::is_name_valid;

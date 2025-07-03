@@ -9,19 +9,7 @@ pub fn build_size_function_body(sizes: &mut [String]) -> String {
         0 => "Option::None".to_string(),
         1 => sizes[0].clone(),
         _ => {
-            format!(
-                "let sizes : Array<Option<usize>> = array![
-                    {}
-                ];
-
-                if dojo::utils::any_none(@sizes) {{
-                    return Option::None;
-                }}
-
-                Option::Some(dojo::utils::sum(sizes))
-                ",
-                sizes.join(",\n")
-            )
+            format!("dojo::utils::sum_sizes(array![{}])", sizes.join(",\n"))
         }
     }
 }

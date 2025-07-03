@@ -6,6 +6,7 @@ use core::panics::panic_with_byte_array;
 
 use dojo::meta::Layout;
 use dojo::storage::packing;
+use dojo::utils::sum_sizes;
 
 // Each index matches with a primitive types in both arrays (main and nested).
 // The main array represents the source primitive while nested arrays represents
@@ -783,14 +784,9 @@ pub impl IntrospectTupleSize2<
 > of Introspect<(E0, E1)> {
     #[inline(always)]
     fn size() -> Option<usize> {
-        let mut it = array![I0::size(), I1::size()].into_iter();
-        if it.any(|x| x.is_none()) {
-            return Option::None;
-        }
-
-        let mut it = array![I0::size(), I1::size()].into_iter();
-        Some(it.fold(0, |acc, x| acc + x.unwrap()))
+        sum_sizes(array![I0::size(), I1::size()])
     }
+
     #[inline(always)]
     fn layout() -> Layout {
         Layout::Tuple([I0::layout(), I1::layout()].span())
@@ -807,14 +803,9 @@ pub impl IntrospectTupleSize3<
 > of Introspect<(E0, E1, E2)> {
     #[inline(always)]
     fn size() -> Option<usize> {
-        let mut it = array![I0::size(), I1::size(), I2::size()].into_iter();
-        if it.any(|x| x.is_none()) {
-            return Option::None;
-        }
-
-        let mut it = array![I0::size(), I1::size(), I2::size()].into_iter();
-        Some(it.fold(0, |acc, x| acc + x.unwrap()))
+        sum_sizes(array![I0::size(), I1::size(), I2::size()])
     }
+
     #[inline(always)]
     fn layout() -> Layout {
         Layout::Tuple([I0::layout(), I1::layout(), I2::layout()].span())
@@ -838,14 +829,9 @@ pub impl IntrospectTupleSize4<
 > of Introspect<(E0, E1, E2, E3)> {
     #[inline(always)]
     fn size() -> Option<usize> {
-        let mut it = array![I0::size(), I1::size(), I2::size(), I3::size()].into_iter();
-        if it.any(|x| x.is_none()) {
-            return Option::None;
-        }
-
-        let mut it = array![I0::size(), I1::size(), I2::size(), I3::size()].into_iter();
-        Some(it.fold(0, |acc, x| acc + x.unwrap()))
+        sum_sizes(array![I0::size(), I1::size(), I2::size(), I3::size()])
     }
+
     #[inline(always)]
     fn layout() -> Layout {
         Layout::Tuple([I0::layout(), I1::layout(), I2::layout(), I3::layout()].span())
@@ -871,14 +857,9 @@ pub impl IntrospectTupleSize5<
 > of Introspect<(E0, E1, E2, E3, E4)> {
     #[inline(always)]
     fn size() -> Option<usize> {
-        let mut it = array![I0::size(), I1::size(), I2::size(), I3::size(), I4::size()].into_iter();
-        if it.any(|x| x.is_none()) {
-            return Option::None;
-        }
-
-        let mut it = array![I0::size(), I1::size(), I2::size(), I3::size(), I4::size()].into_iter();
-        Some(it.fold(0, |acc, x| acc + x.unwrap()))
+        sum_sizes(array![I0::size(), I1::size(), I2::size(), I3::size(), I4::size()])
     }
+
     #[inline(always)]
     fn layout() -> Layout {
         Layout::Tuple([I0::layout(), I1::layout(), I2::layout(), I3::layout(), I4::layout()].span())
@@ -906,16 +887,9 @@ pub impl IntrospectTupleSize6<
 > of Introspect<(E0, E1, E2, E3, E4, E5)> {
     #[inline(always)]
     fn size() -> Option<usize> {
-        let mut it = array![I0::size(), I1::size(), I2::size(), I3::size(), I4::size(), I5::size()]
-            .into_iter();
-        if it.any(|x| x.is_none()) {
-            return Option::None;
-        }
-
-        let mut it = array![I0::size(), I1::size(), I2::size(), I3::size(), I4::size(), I5::size()]
-            .into_iter();
-        Some(it.fold(0, |acc, x| acc + x.unwrap()))
+        sum_sizes(array![I0::size(), I1::size(), I2::size(), I3::size(), I4::size(), I5::size()])
     }
+
     #[inline(always)]
     fn layout() -> Layout {
         Layout::Tuple(
@@ -949,20 +923,13 @@ pub impl IntrospectTupleSize7<
 > of Introspect<(E0, E1, E2, E3, E4, E5, E6)> {
     #[inline(always)]
     fn size() -> Option<usize> {
-        let mut it = array![
-            I0::size(), I1::size(), I2::size(), I3::size(), I4::size(), I5::size(), I6::size(),
-        ]
-            .into_iter();
-        if it.any(|x| x.is_none()) {
-            return Option::None;
-        }
-
-        let mut it = array![
-            I0::size(), I1::size(), I2::size(), I3::size(), I4::size(), I5::size(), I6::size(),
-        ]
-            .into_iter();
-        Some(it.fold(0, |acc, x| acc + x.unwrap()))
+        sum_sizes(
+            array![
+                I0::size(), I1::size(), I2::size(), I3::size(), I4::size(), I5::size(), I6::size(),
+            ],
+        )
     }
+
     #[inline(always)]
     fn layout() -> Layout {
         Layout::Tuple(
@@ -1001,22 +968,14 @@ pub impl IntrospectTupleSize8<
 > of Introspect<(E0, E1, E2, E3, E4, E5, E6, E7)> {
     #[inline(always)]
     fn size() -> Option<usize> {
-        let mut it = array![
-            I0::size(), I1::size(), I2::size(), I3::size(), I4::size(), I5::size(), I6::size(),
-            I7::size(),
-        ]
-            .into_iter();
-        if it.any(|x| x.is_none()) {
-            return Option::None;
-        }
-
-        let mut it = array![
-            I0::size(), I1::size(), I2::size(), I3::size(), I4::size(), I5::size(), I6::size(),
-            I7::size(),
-        ]
-            .into_iter();
-        Some(it.fold(0, |acc, x| acc + x.unwrap()))
+        sum_sizes(
+            array![
+                I0::size(), I1::size(), I2::size(), I3::size(), I4::size(), I5::size(), I6::size(),
+                I7::size(),
+            ],
+        )
     }
+
     #[inline(always)]
     fn layout() -> Layout {
         Layout::Tuple(
@@ -1059,22 +1018,14 @@ pub impl IntrospectTupleSize9<
 > of Introspect<(E0, E1, E2, E3, E4, E5, E6, E7, E8)> {
     #[inline(always)]
     fn size() -> Option<usize> {
-        let mut it = array![
-            I0::size(), I1::size(), I2::size(), I3::size(), I4::size(), I5::size(), I6::size(),
-            I7::size(), I8::size(),
-        ]
-            .into_iter();
-        if it.any(|x| x.is_none()) {
-            return Option::None;
-        }
-
-        let mut it = array![
-            I0::size(), I1::size(), I2::size(), I3::size(), I4::size(), I5::size(), I6::size(),
-            I7::size(), I8::size(),
-        ]
-            .into_iter();
-        Some(it.fold(0, |acc, x| acc + x.unwrap()))
+        sum_sizes(
+            array![
+                I0::size(), I1::size(), I2::size(), I3::size(), I4::size(), I5::size(), I6::size(),
+                I7::size(), I8::size(),
+            ],
+        )
     }
+
     #[inline(always)]
     fn layout() -> Layout {
         Layout::Tuple(
@@ -1123,22 +1074,14 @@ pub impl IntrospectTupleSize10<
 > of Introspect<(E0, E1, E2, E3, E4, E5, E6, E7, E8, E9)> {
     #[inline(always)]
     fn size() -> Option<usize> {
-        let mut it = array![
-            I0::size(), I1::size(), I2::size(), I3::size(), I4::size(), I5::size(), I6::size(),
-            I7::size(), I8::size(), I9::size(),
-        ]
-            .into_iter();
-        if it.any(|x| x.is_none()) {
-            return Option::None;
-        }
-
-        let mut it = array![
-            I0::size(), I1::size(), I2::size(), I3::size(), I4::size(), I5::size(), I6::size(),
-            I7::size(), I8::size(), I9::size(),
-        ]
-            .into_iter();
-        Some(it.fold(0, |acc, x| acc + x.unwrap()))
+        sum_sizes(
+            array![
+                I0::size(), I1::size(), I2::size(), I3::size(), I4::size(), I5::size(), I6::size(),
+                I7::size(), I8::size(), I9::size(),
+            ],
+        )
     }
+
     #[inline(always)]
     fn layout() -> Layout {
         Layout::Tuple(
@@ -1189,22 +1132,14 @@ pub impl IntrospectTupleSize11<
 > of Introspect<(E0, E1, E2, E3, E4, E5, E6, E7, E8, E9, E10)> {
     #[inline(always)]
     fn size() -> Option<usize> {
-        let mut it = array![
-            I0::size(), I1::size(), I2::size(), I3::size(), I4::size(), I5::size(), I6::size(),
-            I7::size(), I8::size(), I9::size(), I10::size(),
-        ]
-            .into_iter();
-        if it.any(|x| x.is_none()) {
-            return Option::None;
-        }
-
-        let mut it = array![
-            I0::size(), I1::size(), I2::size(), I3::size(), I4::size(), I5::size(), I6::size(),
-            I7::size(), I8::size(), I9::size(), I10::size(),
-        ]
-            .into_iter();
-        Some(it.fold(0, |acc, x| acc + x.unwrap()))
+        sum_sizes(
+            array![
+                I0::size(), I1::size(), I2::size(), I3::size(), I4::size(), I5::size(), I6::size(),
+                I7::size(), I8::size(), I9::size(), I10::size(),
+            ],
+        )
     }
+
     #[inline(always)]
     fn layout() -> Layout {
         Layout::Tuple(
@@ -1256,22 +1191,14 @@ pub impl IntrospectTupleSize12<
 > of Introspect<(E0, E1, E2, E3, E4, E5, E6, E7, E8, E9, E10, E11)> {
     #[inline(always)]
     fn size() -> Option<usize> {
-        let mut it = array![
-            I0::size(), I1::size(), I2::size(), I3::size(), I4::size(), I5::size(), I6::size(),
-            I7::size(), I8::size(), I9::size(), I10::size(), I11::size(),
-        ]
-            .into_iter();
-        if it.any(|x| x.is_none()) {
-            return Option::None;
-        }
-
-        let mut it = array![
-            I0::size(), I1::size(), I2::size(), I3::size(), I4::size(), I5::size(), I6::size(),
-            I7::size(), I8::size(), I9::size(), I10::size(), I11::size(),
-        ]
-            .into_iter();
-        Some(it.fold(0, |acc, x| acc + x.unwrap()))
+        sum_sizes(
+            array![
+                I0::size(), I1::size(), I2::size(), I3::size(), I4::size(), I5::size(), I6::size(),
+                I7::size(), I8::size(), I9::size(), I10::size(), I11::size(),
+            ],
+        )
     }
+
     #[inline(always)]
     fn layout() -> Layout {
         Layout::Tuple(
@@ -1327,22 +1254,14 @@ pub impl IntrospectTupleSize13<
 > of Introspect<(E0, E1, E2, E3, E4, E5, E6, E7, E8, E9, E10, E11, E12)> {
     #[inline(always)]
     fn size() -> Option<usize> {
-        let mut it = array![
-            I0::size(), I1::size(), I2::size(), I3::size(), I4::size(), I5::size(), I6::size(),
-            I7::size(), I8::size(), I9::size(), I10::size(), I11::size(), I12::size(),
-        ]
-            .into_iter();
-        if it.any(|x| x.is_none()) {
-            return Option::None;
-        }
-
-        let mut it = array![
-            I0::size(), I1::size(), I2::size(), I3::size(), I4::size(), I5::size(), I6::size(),
-            I7::size(), I8::size(), I9::size(), I10::size(), I11::size(), I12::size(),
-        ]
-            .into_iter();
-        Some(it.fold(0, |acc, x| acc + x.unwrap()))
+        sum_sizes(
+            array![
+                I0::size(), I1::size(), I2::size(), I3::size(), I4::size(), I5::size(), I6::size(),
+                I7::size(), I8::size(), I9::size(), I10::size(), I11::size(), I12::size(),
+            ],
+        )
     }
+
     #[inline(always)]
     fn layout() -> Layout {
         Layout::Tuple(
@@ -1400,22 +1319,15 @@ pub impl IntrospectTupleSize14<
 > of Introspect<(E0, E1, E2, E3, E4, E5, E6, E7, E8, E9, E10, E11, E12, E13)> {
     #[inline(always)]
     fn size() -> Option<usize> {
-        let mut it = array![
-            I0::size(), I1::size(), I2::size(), I3::size(), I4::size(), I5::size(), I6::size(),
-            I7::size(), I8::size(), I9::size(), I10::size(), I11::size(), I12::size(), I13::size(),
-        ]
-            .into_iter();
-        if it.any(|x| x.is_none()) {
-            return Option::None;
-        }
-
-        let mut it = array![
-            I0::size(), I1::size(), I2::size(), I3::size(), I4::size(), I5::size(), I6::size(),
-            I7::size(), I8::size(), I9::size(), I10::size(), I11::size(), I12::size(), I13::size(),
-        ]
-            .into_iter();
-        Some(it.fold(0, |acc, x| acc + x.unwrap()))
+        sum_sizes(
+            array![
+                I0::size(), I1::size(), I2::size(), I3::size(), I4::size(), I5::size(), I6::size(),
+                I7::size(), I8::size(), I9::size(), I10::size(), I11::size(), I12::size(),
+                I13::size(),
+            ],
+        )
     }
+
     #[inline(always)]
     fn layout() -> Layout {
         Layout::Tuple(
@@ -1475,24 +1387,15 @@ pub impl IntrospectTupleSize15<
 > of Introspect<(E0, E1, E2, E3, E4, E5, E6, E7, E8, E9, E10, E11, E12, E13, E14)> {
     #[inline(always)]
     fn size() -> Option<usize> {
-        let mut it = array![
-            I0::size(), I1::size(), I2::size(), I3::size(), I4::size(), I5::size(), I6::size(),
-            I7::size(), I8::size(), I9::size(), I10::size(), I11::size(), I12::size(), I13::size(),
-            I14::size(),
-        ]
-            .into_iter();
-        if it.any(|x| x.is_none()) {
-            return Option::None;
-        }
-
-        let mut it = array![
-            I0::size(), I1::size(), I2::size(), I3::size(), I4::size(), I5::size(), I6::size(),
-            I7::size(), I8::size(), I9::size(), I10::size(), I11::size(), I12::size(), I13::size(),
-            I14::size(),
-        ]
-            .into_iter();
-        Some(it.fold(0, |acc, x| acc + x.unwrap()))
+        sum_sizes(
+            array![
+                I0::size(), I1::size(), I2::size(), I3::size(), I4::size(), I5::size(), I6::size(),
+                I7::size(), I8::size(), I9::size(), I10::size(), I11::size(), I12::size(),
+                I13::size(), I14::size(),
+            ],
+        )
     }
+
     #[inline(always)]
     fn layout() -> Layout {
         Layout::Tuple(
@@ -1554,24 +1457,15 @@ pub impl IntrospectTupleSize16<
 > of Introspect<(E0, E1, E2, E3, E4, E5, E6, E7, E8, E9, E10, E11, E12, E13, E14, E15)> {
     #[inline(always)]
     fn size() -> Option<usize> {
-        let mut it = array![
-            I0::size(), I1::size(), I2::size(), I3::size(), I4::size(), I5::size(), I6::size(),
-            I7::size(), I8::size(), I9::size(), I10::size(), I11::size(), I12::size(), I13::size(),
-            I14::size(), I15::size(),
-        ]
-            .into_iter();
-        if it.any(|x| x.is_none()) {
-            return Option::None;
-        }
-
-        let mut it = array![
-            I0::size(), I1::size(), I2::size(), I3::size(), I4::size(), I5::size(), I6::size(),
-            I7::size(), I8::size(), I9::size(), I10::size(), I11::size(), I12::size(), I13::size(),
-            I14::size(), I15::size(),
-        ]
-            .into_iter();
-        Some(it.fold(0, |acc, x| acc + x.unwrap()))
+        sum_sizes(
+            array![
+                I0::size(), I1::size(), I2::size(), I3::size(), I4::size(), I5::size(), I6::size(),
+                I7::size(), I8::size(), I9::size(), I10::size(), I11::size(), I12::size(),
+                I13::size(), I14::size(), I15::size(),
+            ],
+        )
     }
+
     #[inline(always)]
     fn layout() -> Layout {
         Layout::Tuple(
