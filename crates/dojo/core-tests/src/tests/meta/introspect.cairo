@@ -14,6 +14,12 @@ struct WithArray {
 }
 
 #[derive(Drop, Introspect, Serde)]
+struct WithFixedArray {
+    value: u32,
+    arr: [u8; 3],
+}
+
+#[derive(Drop, Introspect, Serde)]
 struct WithByteArray {
     value: u32,
     arr: ByteArray,
@@ -122,6 +128,33 @@ struct StructWithOption {
     x: Option<u16>,
 }
 
+#[derive(Drop, Introspect)]
+struct StructWithFixedArray {
+    x: [u8; 3],
+}
+
+#[derive(Drop, Introspect)]
+struct StructWithComplexFixedArray {
+    x: [[EnumWithSameData; 2]; 3],
+}
+
+#[derive(Drop, Introspect, Default)]
+enum EnumWithFixedArray {
+    #[default]
+    A: [u8; 3],
+}
+
+#[derive(Drop, IntrospectPacked)]
+struct StructWithFixedArrayPacked {
+    x: [u8; 3],
+}
+
+#[derive(Drop, IntrospectPacked, Default)]
+enum EnumWithFixedArrayPacked {
+    #[default]
+    A: [u8; 3],
+}
+
 #[derive(Drop, Introspect, Serde)]
 struct GenericStruct<T> {
     value: T,
@@ -137,6 +170,10 @@ fn field(selector: felt252, layout: Layout) -> FieldLayout {
     FieldLayout { selector, layout }
 }
 
+fn fixed_array(inner_layout: Layout, size: u32) -> Layout {
+    Layout::FixedArray(array![(inner_layout, size)].span())
+}
+
 fn fixed(values: Array<u8>) -> Layout {
     Layout::Fixed(values.span())
 }
@@ -147,24 +184,15 @@ fn tuple(values: Array<Layout>) -> Layout {
 
 fn _enum(values: Array<Option<Layout>>) -> Layout {
     let mut items = array![];
-    let mut i = 0;
 
-    loop {
-        if i >= values.len() {
-            break;
-        }
-
-        let v = *values.at(i);
-
+    for (i, value) in values.into_iter().enumerate() {
         // in the new Dojo storage layout, variants start from 1.
         let variant = i + 1;
 
-        match v {
+        match value {
             Option::Some(v) => { items.append(field(variant.into(), v)); },
             Option::None => { items.append(field(variant.into(), fixed(array![]))) },
         }
-
-        i += 1;
     }
 
     Layout::Enum(items.span())
@@ -232,6 +260,13 @@ fn test_size_with_array() {
 }
 
 #[test]
+fn test_size_with_fixed_array() {
+    let size = Introspect::<WithFixedArray>::size();
+    assert!(size.is_some());
+    assert!(size.unwrap() == 4);
+}
+
+#[test]
 fn test_size_with_byte_array() {
     assert!(Introspect::<WithByteArray>::size().is_none());
 }
@@ -288,6 +323,41 @@ fn test_size_of_struct_with_option() {
 fn test_size_of_enum_with_variant_data() {
     let size = Introspect::<EnumWithVariousData>::size();
     assert!(size.is_none());
+}
+
+#[test]
+fn test_size_of_struct_with_fixed_array() {
+    let size = Introspect::<StructWithFixedArray>::size();
+    assert!(size.is_some());
+    assert!(size.unwrap() == 3);
+}
+
+#[test]
+fn test_size_of_struct_with_complex_fixed_array() {
+    let size = Introspect::<StructWithComplexFixedArray>::size();
+    assert!(size.is_some());
+    assert!(size.unwrap() == 18);
+}
+
+#[test]
+fn test_size_of_packed_struct_with_fixed_array() {
+    let size = Introspect::<StructWithFixedArrayPacked>::size();
+    assert!(size.is_some());
+    assert!(size.unwrap() == 3);
+}
+
+#[test]
+fn test_size_of_enum_with_fixed_array() {
+    let size = Introspect::<EnumWithFixedArray>::size();
+    assert!(size.is_some());
+    assert!(size.unwrap() == 4);
+}
+
+#[test]
+fn test_size_of_packed_enum_with_fixed_array() {
+    let size = Introspect::<EnumWithFixedArrayPacked>::size();
+    assert!(size.is_some());
+    assert!(size.unwrap() == 4);
 }
 
 #[test]
@@ -382,6 +452,7 @@ fn test_introspect_upgrade() {
     let t = Ty::Tuple([Ty::Primitive('u8')].span());
     let a = Ty::Array([Ty::Primitive('u8')].span());
     let b = Ty::ByteArray;
+    let f = Ty::FixedArray([(Ty::Primitive('u8'), 3)].span());
 
     assert!(p.is_an_upgrade_of(@p));
     assert!(!p.is_an_upgrade_of(@s));
@@ -389,6 +460,7 @@ fn test_introspect_upgrade() {
     assert!(!p.is_an_upgrade_of(@t));
     assert!(!p.is_an_upgrade_of(@a));
     assert!(!p.is_an_upgrade_of(@b));
+    assert!(!p.is_an_upgrade_of(@f));
 
     assert!(!s.is_an_upgrade_of(@p));
     assert!(s.is_an_upgrade_of(@s));
@@ -396,6 +468,7 @@ fn test_introspect_upgrade() {
     assert!(!s.is_an_upgrade_of(@t));
     assert!(!s.is_an_upgrade_of(@a));
     assert!(!s.is_an_upgrade_of(@b));
+    assert!(!s.is_an_upgrade_of(@f));
 
     assert!(!e.is_an_upgrade_of(@p));
     assert!(!e.is_an_upgrade_of(@s));
@@ -403,6 +476,7 @@ fn test_introspect_upgrade() {
     assert!(!e.is_an_upgrade_of(@t));
     assert!(!e.is_an_upgrade_of(@a));
     assert!(!e.is_an_upgrade_of(@b));
+    assert!(!e.is_an_upgrade_of(@f));
 
     assert!(!t.is_an_upgrade_of(@p));
     assert!(!t.is_an_upgrade_of(@s));
@@ -410,6 +484,7 @@ fn test_introspect_upgrade() {
     assert!(t.is_an_upgrade_of(@t));
     assert!(!t.is_an_upgrade_of(@a));
     assert!(!t.is_an_upgrade_of(@b));
+    assert!(!t.is_an_upgrade_of(@f));
 
     assert!(!a.is_an_upgrade_of(@p));
     assert!(!a.is_an_upgrade_of(@s));
@@ -417,6 +492,7 @@ fn test_introspect_upgrade() {
     assert!(!a.is_an_upgrade_of(@t));
     assert!(a.is_an_upgrade_of(@a));
     assert!(!a.is_an_upgrade_of(@b));
+    assert!(!a.is_an_upgrade_of(@f));
 
     assert!(!b.is_an_upgrade_of(@p));
     assert!(!b.is_an_upgrade_of(@s));
@@ -424,6 +500,15 @@ fn test_introspect_upgrade() {
     assert!(!b.is_an_upgrade_of(@t));
     assert!(!b.is_an_upgrade_of(@a));
     assert!(b.is_an_upgrade_of(@b));
+    assert!(!b.is_an_upgrade_of(@f));
+
+    assert!(!f.is_an_upgrade_of(@p));
+    assert!(!f.is_an_upgrade_of(@s));
+    assert!(!f.is_an_upgrade_of(@e));
+    assert!(!f.is_an_upgrade_of(@t));
+    assert!(!f.is_an_upgrade_of(@a));
+    assert!(!f.is_an_upgrade_of(@b));
+    assert!(f.is_an_upgrade_of(@f));
 }
 
 #[test]
@@ -683,6 +768,27 @@ fn test_array_upgrade() {
     // array item is not upgradable
     let upgraded = Ty::Array([Ty::Primitive('bool')].span());
     assert!(!upgraded.is_an_upgrade_of(@a));
+}
+
+#[test]
+fn test_fixed_array_upgrade() {
+    let a = Ty::FixedArray([(Ty::Primitive('u8'), 3)].span());
+
+    // fixed array item is upgradable
+    let upgraded = Ty::FixedArray([(Ty::Primitive('u16'), 3)].span());
+    assert!(upgraded.is_an_upgrade_of(@a));
+
+    // fixed array item is not upgradable
+    let upgraded = Ty::FixedArray([(Ty::Primitive('bool'), 3)].span());
+    assert!(!upgraded.is_an_upgrade_of(@a));
+
+    // fixed array length is smaller than before (not allowed)
+    let upgraded = Ty::FixedArray([(Ty::Primitive('u16'), 2)].span());
+    assert!(!upgraded.is_an_upgrade_of(@a));
+
+    // fixed array length is bigger than before (allowed)
+    let upgraded = Ty::FixedArray([(Ty::Primitive('u16'), 4)].span());
+    assert!(upgraded.is_an_upgrade_of(@a));
 }
 
 #[test]
