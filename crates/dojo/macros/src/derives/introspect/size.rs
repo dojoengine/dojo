@@ -22,6 +22,7 @@ pub fn build_size_function_body(
         0 => "None".to_string(),
         1 => sizes[0].clone(),
         _ => {
+            // TODO RBA: use sum_sizes() from the metaprogramming PR
             let size_items = sizes.join(",");
 
             let none_check = if is_packed {
