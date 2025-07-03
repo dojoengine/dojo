@@ -198,7 +198,6 @@ struct GranteeDisplay {
     source: GranteeSource,
 }
 
-
 // JSON output structures
 #[derive(Debug, Serialize)]
 struct JsonWorldInspect {
@@ -493,11 +492,8 @@ fn inspect_resource_json(resource_diff: &ResourceDiff, world_diff: &WorldDiff) -
         }
     };
 
-    let json_inspect = JsonResourceInspect {
-        resource: resource_json,
-        writers: writers_json,
-        owners: owners_json,
-    };
+    let json_inspect =
+        JsonResourceInspect { resource: resource_json, writers: writers_json, owners: owners_json };
 
     print_json(&json_inspect);
     Ok(())
@@ -768,7 +764,8 @@ fn inspect_world(world_diff: &WorldDiff, json: bool) {
                     ResourceInspect::Contract(c) => contracts_disp.push(c),
                     _ => unreachable!(),
                 },
-                ResourceType::ExternalContract => match resource_diff_display(world_diff, resource) {
+                ResourceType::ExternalContract => match resource_diff_display(world_diff, resource)
+                {
                     ResourceInspect::ExternalContract(c) => external_contracts_disp.push(c),
                     _ => unreachable!(),
                 },
