@@ -571,6 +571,9 @@ fn format_record_value(
         Ty::Struct(s) => format_struct(s, use_legacy_storage, values, level, start_indent),
         Ty::Enum(e) => format_enum(e, use_legacy_storage, values, level, start_indent),
         Ty::Array(a) => format_array(&a[0], use_legacy_storage, values, level, start_indent),
+        Ty::FixedSizeArray(a) => {
+            format_array(&a[0], use_legacy_storage, values, level, start_indent)
+        }
         Ty::Tuple(t) => format_tuple(t, use_legacy_storage, values, level, start_indent),
     }
 }
@@ -602,6 +605,7 @@ fn get_ty_repr(ty: &Ty) -> String {
             }
         }
         Ty::Array(items) => format!("Array<{}>", get_ty_repr(&items[0])),
+        Ty::FixedSizeArray(items) => format!("[{}; {}]", get_ty_repr(&items[0]), items.len()),
         Ty::ByteArray(_) => "ByteArray".to_string(),
     }
 }
@@ -649,6 +653,11 @@ fn get_printable_ty_list(root_ty: &Ty, ty_list: &mut Vec<Ty>) {
             }
         }
         Ty::Array(items_ty) => {
+            if !is_ty_already_in_list(ty_list, &items_ty[0]) {
+                get_printable_ty_list(&items_ty[0], ty_list)
+            }
+        }
+        Ty::FixedSizeArray(items_ty) => {
             if !is_ty_already_in_list(ty_list, &items_ty[0]) {
                 get_printable_ty_list(&items_ty[0], ty_list)
             }
