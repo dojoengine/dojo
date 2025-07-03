@@ -5,7 +5,9 @@ use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::TypedSyntaxNode;
 
 use super::utils::{is_array, is_byte_array, is_option, is_tuple};
-use crate::derives::introspect::utils::get_tuple_item_types;
+use crate::derives::introspect::utils::{
+    extract_fixed_array_type, get_tuple_item_types, is_fixed_size_array,
+};
 use crate::helpers::DiagnosticsExt;
 
 /// Build a field layout describing the provided type clause.
@@ -17,6 +19,7 @@ pub(crate) fn get_layout_from_type_clause(
     let type_str = match type_clause.ty(db) {
         Expr::Path(path) => path.as_syntax_node().get_text_without_trivia(db),
         Expr::Tuple(expr) => expr.as_syntax_node().get_text_without_trivia(db),
+        Expr::FixedSizeArray(expr) => expr.as_syntax_node().get_text_without_trivia(db),
         _ => {
             diagnostics.push_error("Unexpected expression for variant data type.".to_string());
             return "".to_string();
@@ -88,6 +91,10 @@ pub fn get_packed_field_layout_from_type_clause(
             let tuple_type = expr.as_syntax_node().get_text_without_trivia(db);
             get_packed_tuple_layout_from_type(diagnostics, &tuple_type)
         }
+        Expr::FixedSizeArray(expr) => {
+            let arr_type = expr.as_syntax_node().get_text_without_trivia(db);
+            get_packed_item_layout_from_type(diagnostics, &arr_type)
+        }
         _ => {
             diagnostics.push_error("Unexpected expression for variant data type.".to_string());
             vec![]
@@ -105,6 +112,8 @@ pub fn get_packed_item_layout_from_type(
         vec![]
     } else if is_tuple(item_type) {
         get_packed_tuple_layout_from_type(diagnostics, item_type)
+    } else if is_fixed_size_array(item_type) {
+        get_packed_fixed_array_layout_from_type(diagnostics, item_type)
     } else if is_option(item_type) {
         diagnostics.push_error(format!("{item_type} cannot be packed."));
         vec!["ERROR".to_string()]
@@ -126,6 +135,22 @@ pub fn get_packed_tuple_layout_from_type(
     for item in get_tuple_item_types(item_type).iter() {
         let layout = get_packed_item_layout_from_type(diagnostics, item);
         layouts.push(layout);
+    }
+
+    layouts.into_iter().flatten().collect::<Vec<_>>()
+}
+
+pub fn get_packed_fixed_array_layout_from_type(
+    diagnostics: &mut Vec<Diagnostic>,
+    item_type: &str,
+) -> Vec<String> {
+    let (item_type, size) = extract_fixed_array_type(item_type);
+    let layout = get_packed_item_layout_from_type(diagnostics, &item_type);
+
+    let mut layouts = vec![];
+
+    for _ in 0..size {
+        layouts.push(layout.clone());
     }
 
     layouts.into_iter().flatten().collect::<Vec<_>>()

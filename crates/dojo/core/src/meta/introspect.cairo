@@ -181,6 +181,7 @@ pub enum Ty {
     // And `Box` is not serializable. So using a Span, even if it's to have
     // one element, does the trick.
     Array: Span<Ty>,
+    FixedArray: Span<(Ty, u32)>,
     ByteArray,
 }
 
@@ -230,6 +231,14 @@ impl TyCompareImpl of TyCompareTrait<Ty> {
             (Ty::Primitive(n), Ty::Primitive(o)) => n.is_an_upgrade_of(o),
             (Ty::Struct(n), Ty::Struct(o)) => n.is_an_upgrade_of(o),
             (Ty::Array(n), Ty::Array(o)) => { (*n).at(0).is_an_upgrade_of((*o).at(0)) },
+            (
+                Ty::FixedArray(n), Ty::FixedArray(o),
+            ) => {
+                let (n_ty, n_len) = n.at(0);
+                let (o_ty, o_len) = o.at(0);
+
+                n_ty.is_an_upgrade_of(o_ty) && n_len >= o_len
+            },
             (
                 Ty::Tuple(n), Ty::Tuple(o),
             ) => {
@@ -720,6 +729,21 @@ pub impl Introspect_span<T, +Introspect<T>> of Introspect<Span<T>> {
     #[inline(always)]
     fn ty() -> Ty {
         Ty::Array([Introspect::<T>::ty()].span())
+    }
+}
+
+pub impl Introspect_FixedArray<T, const N: usize, +Introspect<T>> of Introspect<[T; N]> {
+    fn size() -> Option<usize> {
+        match Introspect::<T>::size() {
+            Option::Some(size) => Option::Some(size * N),
+            Option::None => Option::None,
+        }
+    }
+    fn layout() -> Layout {
+        Layout::FixedArray([(Introspect::<T>::layout(), N)].span())
+    }
+    fn ty() -> Ty {
+        Ty::FixedArray([(Introspect::<T>::ty(), N)].span())
     }
 }
 

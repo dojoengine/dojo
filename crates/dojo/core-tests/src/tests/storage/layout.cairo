@@ -1,10 +1,6 @@
 use dojo::meta::{FieldLayout, Layout};
 use dojo::storage::layout::{
-    delete_array_layout, delete_byte_array_layout, delete_enum_layout, delete_fixed_layout,
-    delete_struct_layout, delete_tuple_layout, read_array_layout, read_byte_array_layout,
-    read_enum_layout, read_fixed_layout, read_struct_layout, read_tuple_layout, write_array_layout,
-    write_byte_array_layout, write_enum_layout, write_fixed_layout, write_struct_layout,
-    write_tuple_layout,
+    *, delete_fixed_array_layout, read_fixed_array_layout, write_fixed_array_layout,
 };
 use dojo::storage::packing::PACKING_MAX_BITS;
 
@@ -454,4 +450,50 @@ fn test_enum_layout_unexisting_variant() {
 
     let mut offset = 0;
     write_enum_layout(MODEL_KEY, KEY, [3].span(), ref offset, layout);
+}
+
+#[test]
+fn test_fixed_array_layout() {
+    const MODEL_KEY: felt252 = 1;
+    const KEY: felt252 = 2;
+
+    // fixed array: [u8; 3]
+    let layout = [(Layout::Fixed([8].span()), 3)].span();
+
+    // first, read uninitialized data
+    let mut read_data = array![];
+    read_fixed_array_layout(MODEL_KEY, KEY, ref read_data, layout);
+
+    assert_eq!(read_data, array![0, 0, 0], "default fixed size array layout reading");
+
+    // then, write and read back data
+    let mut read_data = array![];
+    let values = array![1, 2, 3];
+    let mut offset = 0;
+
+    write_fixed_array_layout(MODEL_KEY, KEY, values.span(), ref offset, layout);
+    read_fixed_array_layout(MODEL_KEY, KEY, ref read_data, layout);
+
+    assert_eq!(read_data, values, "fixed size array layout writing/reading back");
+    assert_eq!(offset, 3, "fixed size array layout writing/reading back: bad offset");
+
+    // write and read back data with offset
+    let mut read_data = array![];
+    let values = array![1, 2, 3, 4, 5, 6, 7];
+    let mut offset = 4;
+
+    write_fixed_array_layout(MODEL_KEY, KEY, values.span(), ref offset, layout);
+    read_fixed_array_layout(MODEL_KEY, KEY, ref read_data, layout);
+
+    assert_eq!(
+        read_data, array![5, 6, 7], "fixed size array layout writing/reading back (with offset)",
+    );
+    assert_eq!(offset, 7, "fixed size array layout writing/reading back (with offset): bad offset");
+
+    // delete written data and read back default values
+    let mut read_data = array![];
+    delete_fixed_array_layout(MODEL_KEY, KEY, layout);
+    read_fixed_array_layout(MODEL_KEY, KEY, ref read_data, layout);
+
+    assert_eq!(read_data, array![0, 0, 0], "fixed size array layout deleting");
 }

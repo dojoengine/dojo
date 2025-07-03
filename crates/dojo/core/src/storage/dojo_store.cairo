@@ -1,3 +1,4 @@
+use crate::storage::fixed_sized_array::*;
 use crate::storage::metaprogramming::*;
 use crate::storage::tuple::*;
 
@@ -133,7 +134,7 @@ trait DojoSerializeTuple<T> {
 }
 
 // Implementation of `SerializeTuple` for snapshots of types with `DojoStore` implementation.
-impl DojoStoreBasedSerializeTuple<T, +DojoStore<T>> of DojoSerializeTuple<@T> {
+pub impl DojoStoreBasedSerializeTuple<T, +DojoStore<T>> of DojoSerializeTuple<@T> {
     fn serialize(value: @T, ref output: Array<felt252>) {
         DojoStore::<T>::serialize(value, ref output);
     }
@@ -145,19 +146,31 @@ trait DojoDeserializeTuple<T> {
 }
 
 // Base implementation of `SerializeTuple` for tuples.
-impl DojoSerializeTupleBaseTuple of DojoSerializeTuple<()> {
+pub impl DojoSerializeTupleBaseTuple of DojoSerializeTuple<()> {
     fn serialize(value: (), ref output: Array<felt252>) {}
 }
 
 // Base implementation of `DeserializeTuple` for tuples.
-impl DojoDeserializeTupleBaseTuple of DojoDeserializeTuple<()> {
+pub impl DojoDeserializeTupleBaseTuple of DojoDeserializeTuple<()> {
     fn deserialize(ref serialized: Span<felt252>) -> Option<()> {
         Some(())
     }
 }
 
+// Base implementation of `SerializeTuple` for fixed sized arrays.
+impl DojoSerializeTupleBaseFixedSizedArray<T> of DojoSerializeTuple<[@T; 0]> {
+    fn serialize(value: [@T; 0], ref output: Array<felt252>) {}
+}
+
+// Base implementation of `DeserializeTuple` for fixed sized arrays.
+impl DojoDeserializeTupleBaseFixedSizedArray<T> of DojoDeserializeTuple<[T; 0]> {
+    fn deserialize(ref serialized: Span<felt252>) -> Option<[T; 0]> {
+        Some([])
+    }
+}
+
 // Recursive implementation of `SerializeTuple` for tuple style structs.
-impl DojoSerializeTupleNext<
+pub impl DojoSerializeTupleNext<
     T,
     impl TS: crate::storage::metaprogramming::DojoTupleSplit<T>,
     +DojoSerializeTuple<TS::Head>,
@@ -172,7 +185,7 @@ impl DojoSerializeTupleNext<
 }
 
 // Recursive implementation of `DeserializeTuple` for tuple style structs.
-impl DeserializeTupleNext<
+pub impl DeserializeTupleNext<
     T,
     impl TS: crate::storage::metaprogramming::DojoTupleSplit<T>,
     +DojoStore<TS::Head>,

@@ -14,6 +14,10 @@ pub fn build_ty_from_type_clause(db: &dyn SyntaxGroup, type_clause: &TypeClause)
             let tuple_type = expr.as_syntax_node().get_text_without_trivia(db);
             build_item_ty_from_type(&tuple_type)
         }
+        Expr::FixedSizeArray(expr) => {
+            let arr_type = expr.as_syntax_node().get_text_without_trivia(db);
+            build_item_ty_from_type(&arr_type)
+        }
         _ => {
             // diagnostic message already handled in layout building
             "ERROR".to_string()

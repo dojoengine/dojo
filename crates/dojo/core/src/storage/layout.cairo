@@ -23,6 +23,9 @@ pub fn write_layout(
         Layout::Fixed(layout) => { write_fixed_layout(model, key, values, ref offset, layout); },
         Layout::Struct(layout) => { write_struct_layout(model, key, values, ref offset, layout); },
         Layout::Array(layout) => { write_array_layout(model, key, values, ref offset, layout); },
+        Layout::FixedArray(layout) => {
+            write_fixed_array_layout(model, key, values, ref offset, layout);
+        },
         Layout::Tuple(layout) => { write_tuple_layout(model, key, values, ref offset, layout); },
         Layout::ByteArray => { write_byte_array_layout(model, key, values, ref offset); },
         Layout::Enum(layout) => { write_enum_layout(model, key, values, ref offset, layout); },
@@ -79,6 +82,31 @@ pub fn write_array_layout(
         write_layout(model, key, values, ref offset, item_layout);
 
         i += 1;
+    };
+}
+
+
+/// Write fixed array layout model record to the world storage.
+///
+/// # Arguments
+/// * `model` - the model selector.
+/// * `key` - the model record key.
+/// * `values` - the model record values.
+/// * `offset` - the start of model record values in the `values` parameter.
+/// * `item_layout` - the model record layout (temporary a Span because of type recursion issue).
+pub fn write_fixed_array_layout(
+    model: felt252,
+    key: felt252,
+    values: Span<felt252>,
+    ref offset: u32,
+    mut item_layout: Span<(Layout, u32)>,
+) {
+    let (item_layout, array_len): (Layout, u32) = *item_layout.pop_front().unwrap();
+
+    // Note: no need to write the array length as it is fixed at compile-time
+    // and stored in the layout.
+    for i in 0..array_len {
+        write_layout(model, combine_key(key, i.into()), values, ref offset, item_layout);
     };
 }
 
@@ -213,6 +241,19 @@ pub fn delete_array_layout(model: felt252, key: felt252) {
     database::delete(model, key, [packing::PACKING_MAX_BITS].span());
 }
 
+/// Delete a fixed array layout model record from the world storage.
+///
+/// # Arguments
+///   * `model` - the model selector.
+///   * `key` - the model record key.
+///   * `layout` - the model layout.
+pub fn delete_fixed_array_layout(model: felt252, key: felt252, mut layout: Span<(Layout, u32)>) {
+    let (item_layout, array_len): (Layout, u32) = *layout.pop_front().unwrap();
+    for i in 0..array_len {
+        delete_layout(model, combine_key(key, i.into()), item_layout);
+    }
+}
+
 ///
 pub fn delete_byte_array_layout(model: felt252, key: felt252) {
     // The ByteArray internal structure is
@@ -242,6 +283,7 @@ pub fn delete_layout(model: felt252, key: felt252, layout: Layout) {
         Layout::Fixed(layout) => { delete_fixed_layout(model, key, layout); },
         Layout::Struct(layout) => { delete_struct_layout(model, key, layout); },
         Layout::Array(_) => { delete_array_layout(model, key); },
+        Layout::FixedArray(layout) => { delete_fixed_array_layout(model, key, layout); },
         Layout::Tuple(layout) => { delete_tuple_layout(model, key, layout); },
         Layout::ByteArray => { delete_byte_array_layout(model, key); },
         Layout::Enum(layout) => { delete_enum_layout(model, key, layout); },
@@ -333,6 +375,7 @@ pub fn read_layout(model: felt252, key: felt252, ref read_data: Array<felt252>, 
         Layout::Fixed(layout) => read_fixed_layout(model, key, ref read_data, layout),
         Layout::Struct(layout) => read_struct_layout(model, key, ref read_data, layout),
         Layout::Array(layout) => read_array_layout(model, key, ref read_data, layout),
+        Layout::FixedArray(layout) => read_fixed_array_layout(model, key, ref read_data, layout),
         Layout::Tuple(layout) => read_tuple_layout(model, key, ref read_data, layout),
         Layout::ByteArray => read_byte_array_layout(model, key, ref read_data),
         Layout::Enum(layout) => read_enum_layout(model, key, ref read_data, layout),
@@ -385,6 +428,22 @@ pub fn read_array_layout(
         read_layout(model, field_key, ref read_data, item_layout);
 
         i += 1;
+    };
+}
+
+/// Read a fixed array layout model record.
+///
+/// # Arguments
+///   * `model` - the model selector
+///   * `key` - model record key.
+///   * `read_data` - the read data.
+///   * `layout` - the array item layout
+pub fn read_fixed_array_layout(
+    model: felt252, key: felt252, ref read_data: Array<felt252>, mut layout: Span<(Layout, u32)>,
+) {
+    let (item_layout, array_len): (Layout, u32) = *layout.pop_front().unwrap();
+    for i in 0..array_len {
+        read_layout(model, combine_key(key, i.into()), ref read_data, item_layout);
     };
 }
 

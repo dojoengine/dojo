@@ -173,6 +173,13 @@ struct StructWithOptionWithTuple {
     y: Option<u32>,
 }
 
+#[dojo::model]
+struct ModelWithFixedArray {
+    #[key]
+    k1: u8,
+    v1: [u16; 3],
+}
+
 fn namespace_def() -> NamespaceDef {
     NamespaceDef {
         namespace: "dojo_core_test",
@@ -181,6 +188,7 @@ fn namespace_def() -> NamespaceDef {
             TestResource::Model("Foo4"), TestResource::Model("ModelWithUnitType"),
             TestResource::Model("LegacyModel"), TestResource::Model("DojoStoreModel"),
             TestResource::Model("StructWithOptionWithTuple"),
+            TestResource::Model("ModelWithFixedArray"),
         ]
             .span(),
     }
@@ -489,6 +497,22 @@ fn test_struct_with_option_with_tuple() {
     let read_m: StructWithOptionWithTuple = world.read_model(1);
 
     assert!(m == read_m, "Bad model with Option with tuple");
+}
+
+#[test]
+fn test_model_with_fixed_array() {
+    let mut world = spawn_foo_world();
+    let model = ModelWithFixedArray { k1: 1, v1: [4, 32, 256] };
+
+    world.write_model(@model);
+    let read_model: ModelWithFixedArray = world.read_model(model.keys());
+
+    assert!(model.v1 == read_model.v1);
+
+    world.erase_model(@model);
+    let read_model: ModelWithFixedArray = world.read_model(model.keys());
+
+    assert!(read_model.v1 == [0, 0, 0]);
 }
 
 #[test]

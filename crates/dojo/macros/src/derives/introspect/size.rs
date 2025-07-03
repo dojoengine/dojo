@@ -43,6 +43,10 @@ pub fn get_field_size_from_type_clause(
                 compute_item_size_from_type(&tuple_type)
             }
         }
+        Expr::FixedSizeArray(expr) => {
+            let arr_type = expr.as_syntax_node().get_text_without_trivia(db);
+            compute_item_size_from_type(&arr_type)
+        }
         _ => {
             // field type already checked while building the layout
             vec!["ERROR".to_string()]

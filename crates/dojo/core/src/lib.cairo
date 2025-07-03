@@ -65,6 +65,7 @@ pub mod storage {
     pub mod database;
     pub mod dojo_store;
     pub mod entity_model;
+    pub(crate) mod fixed_sized_array;
     pub mod layout;
     pub(crate) mod metaprogramming;
     pub mod packing;

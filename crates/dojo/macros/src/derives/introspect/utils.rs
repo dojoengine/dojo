@@ -4,6 +4,7 @@ const SPAN_PREFIX: &str = "Span<";
 const SPAN_SUFFIX: &str = ">";
 const ARRAY_PREFIX: &str = "Array<";
 const ARRAY_SUFFIX: &str = ">";
+const FIXED_ARRAY_PREFIX: &str = "[";
 
 pub fn is_byte_array(ty: &str) -> bool {
     ty.eq("ByteArray")
@@ -17,6 +18,10 @@ pub fn is_tuple(ty: &str) -> bool {
     ty.starts_with(TUPLE_PREFIX)
 }
 
+pub fn is_fixed_size_array(ty: &str) -> bool {
+    ty.starts_with(FIXED_ARRAY_PREFIX)
+}
+
 pub fn is_option(ty: &str) -> bool {
     ty.starts_with("Option<")
 }
@@ -27,6 +32,14 @@ pub fn get_array_item_type(ty: &str) -> String {
     } else {
         extract_composite_inner_type(ty, SPAN_PREFIX, SPAN_SUFFIX)
     }
+}
+
+pub fn extract_fixed_array_type(ty: &str) -> (String, u32) {
+    let re = regex::Regex::new(r"\[(.*);\s*(\d+)\]").unwrap();
+    let caps = re.captures(ty).unwrap_or_else(|| {
+        panic!("'{ty}' must follow the fixed size array format '[TYPE; SIZE]'.")
+    });
+    (caps[1].to_string(), caps[2].parse::<u32>().unwrap())
 }
 
 /// Extracts the inner type of a composite type such as tuple, array or span.
@@ -212,4 +225,47 @@ fn test_extract_composite_inner_type_with_spans() {
 #[should_panic(expected = "'u8, u16' must contain the 'Span<' prefix and the '>' suffix.")]
 fn test_extract_composite_inner_type_with_spans_bad_ty() {
     let _ = extract_composite_inner_type("u8, u16", SPAN_PREFIX, SPAN_SUFFIX);
+}
+
+#[test]
+fn test_extract_fixed_array_type() {
+    let test_cases = [
+        ("[u8;3]", ("u8", 3)),
+        ("[u8; 3]", ("u8", 3)),
+        ("[(u8, u16); 1]", ("(u8, u16)", 1)),
+        ("[[u16; 1]; 2]", ("[u16; 1]", 2)),
+        ("[[MyStruct; 1]; 2]", ("[MyStruct; 1]", 2)),
+        ("[[(); 1]; 2]", ("[(); 1]", 2)),
+    ];
+
+    for (ty, (expected_type, expected_size)) in test_cases {
+        let (item_type, size) = extract_fixed_array_type(ty);
+        assert!(
+            item_type == expected_type && size == expected_size,
+            "bad fixed array: {} result: ({}, {}) expected: ({}, {})",
+            ty,
+            item_type,
+            size,
+            expected_type,
+            expected_size
+        );
+    }
+}
+
+#[test]
+#[should_panic(expected = "'u8;3]' must follow the fixed size array format '[TYPE; SIZE]'.")]
+fn test_extract_fixed_array_type_missing_prefix() {
+    let _ = extract_fixed_array_type("u8;3]");
+}
+
+#[test]
+#[should_panic(expected = "'[u8;3' must follow the fixed size array format '[TYPE; SIZE]'.")]
+fn test_extract_fixed_array_type_missing_suffix() {
+    let _ = extract_fixed_array_type("[u8;3");
+}
+
+#[test]
+#[should_panic(expected = "'[u8,3]' must follow the fixed size array format '[TYPE; SIZE]'.")]
+fn test_extract_fixed_array_type_bad_separator() {
+    let _ = extract_fixed_array_type("[u8,3]");
 }
