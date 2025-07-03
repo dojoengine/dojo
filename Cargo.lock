@@ -1138,7 +1138,7 @@ dependencies = [
 
 [[package]]
 name = "cairo-bench"
-version = "1.5.1"
+version = "1.6.0-alpha.0"
 dependencies = [
  "anyhow",
  "camino",
