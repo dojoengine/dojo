@@ -104,7 +104,7 @@ fn test_register_event_for_namespace_owner() {
 }
 
 #[test]
-#[should_panic(expected: "Account `2827` does NOT have OWNER role on namespace `dojo`")]
+#[should_panic(expected: "Account `0xb0b` does NOT have OWNER role on namespace `dojo`")]
 fn test_register_event_for_namespace_writer() {
     let bob: ContractAddress = 0xb0b.try_into().unwrap();
 
@@ -255,7 +255,7 @@ fn test_upgrade_event_with_member_illegal_change() {
 
 #[test]
 #[should_panic(
-    expected: "Account `659918` does NOT have OWNER role on event (or its namespace) `FooEventMemberAdded`",
+    expected: "Account `0xa11ce` does NOT have OWNER role on event (or its namespace) `FooEventMemberAdded`",
 )]
 fn test_upgrade_event_from_event_writer() {
     let alice: ContractAddress = 0xa11ce.try_into().unwrap();
@@ -305,7 +305,9 @@ fn test_register_event_with_unregistered_namespace() {
 // It's ENTRYPOINT_NOT_FOUND for now as in this example the contract is not a dojo contract
 // and it's not the account that is calling the register_event function.
 #[test]
-#[should_panic(expected: 'ENTRYPOINT_NOT_FOUND')]
+#[should_panic(
+    expected: "Contract `0x1a5ee9565583195ae8bf4038b95cef58db4f6e78089dd80ce5da3a2518ba7a1` does NOT have OWNER role on namespace `dojo`",
+)]
 fn test_register_event_through_malicious_contract() {
     let bob: ContractAddress = 0xb0b.try_into().unwrap();
     let malicious_contract = dojo_snf_test::declare_and_deploy("malicious_contract");

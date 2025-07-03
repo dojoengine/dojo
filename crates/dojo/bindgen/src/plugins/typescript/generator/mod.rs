@@ -162,7 +162,7 @@ impl From<&str> for JsPrimitiveInputType {
         match value {
             CAIRO_FELT252 => JsPrimitiveInputType(JS_BIGNUMBERISH.to_owned()),
             CAIRO_CONTRACT_ADDRESS => JsPrimitiveInputType(JS_STRING.to_owned()),
-            CAIRO_BYTE_ARRAY => JsPrimitiveInputType(CAIRO_BYTE_ARRAY.to_owned()),
+            CAIRO_BYTE_ARRAY => JsPrimitiveInputType(JS_STRING.to_owned()),
             CAIRO_U8 => JsPrimitiveInputType(JS_BIGNUMBERISH.to_owned()),
             CAIRO_U16 => JsPrimitiveInputType(JS_BIGNUMBERISH.to_owned()),
             CAIRO_U32 => JsPrimitiveInputType(JS_BIGNUMBERISH.to_owned()),
@@ -376,13 +376,19 @@ mod tests {
         Tuple,
     };
 
-    use crate::plugins::typescript::generator::constants::JS_BIGNUMBERISH;
+    use crate::plugins::typescript::generator::constants::{JS_BIGNUMBERISH, JS_STRING};
     use crate::plugins::typescript::generator::{
-        generate_type_init, JsPrimitiveDefaultValue, JsPrimitiveType,
+        generate_type_init, JsPrimitiveDefaultValue, JsPrimitiveInputType, JsPrimitiveType,
     };
 
     impl PartialEq<JsPrimitiveType> for &str {
         fn eq(&self, other: &JsPrimitiveType) -> bool {
+            self == &other.0.as_str()
+        }
+    }
+
+    impl PartialEq<JsPrimitiveInputType> for &str {
+        fn eq(&self, other: &JsPrimitiveInputType) -> bool {
             self == &other.0.as_str()
         }
     }
@@ -450,10 +456,10 @@ mod tests {
                 inners: vec![],
                 generic_args: vec![
                         (
-                        "A".to_owned(), 
+                        "A".to_owned(),
                         Token::Composite(
                             Composite {
-                                type_path: "tournament::ls15_components::models::tournament::GatedType".to_owned(), 
+                                type_path: "tournament::ls15_components::models::tournament::GatedType".to_owned(),
                                 inners: vec![
                                     CompositeInner {
                                         index: 0,
@@ -865,6 +871,18 @@ mod tests {
             is_event: false,
             alias: None,
         }
+    }
+
+    #[test]
+    fn test_byte_array_input_type() {
+        assert_eq!(
+            JS_STRING,
+            JsPrimitiveInputType::from(&Token::CoreBasic(CoreBasic {
+                type_path: "core::byte_array::ByteArray".to_owned()
+            }))
+        );
+        // Also test with the short form
+        assert_eq!(JS_STRING, JsPrimitiveInputType::from("ByteArray"));
     }
 
     fn create_option_custom_enum_token() -> Composite {

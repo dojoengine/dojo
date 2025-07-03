@@ -1,7 +1,7 @@
 use anyhow::Result;
 use clap::Args;
-use scarb_interop::MetadataDojoExt;
 use scarb_metadata::Metadata;
+use scarb_metadata_ext::MetadataDojoExt;
 
 #[derive(Debug, Args)]
 pub struct CleanArgs {

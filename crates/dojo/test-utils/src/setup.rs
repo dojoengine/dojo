@@ -4,8 +4,9 @@ use std::io::Read;
 use std::{fs, io};
 
 use camino::Utf8PathBuf;
-use scarb_interop::{MetadataDojoExt, Profile};
+use scarb_interop::Profile;
 use scarb_metadata::Metadata;
+use scarb_metadata_ext::MetadataDojoExt;
 use toml::{Table, Value};
 
 #[derive(Debug)]

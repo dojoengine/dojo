@@ -92,7 +92,7 @@ fn test_register_external_contract_in_a_not_registered_namespace() {
 }
 
 #[test]
-#[should_panic(expected: "Account `2827` does NOT have OWNER role on namespace `dojo`")]
+#[should_panic(expected: "Account `0xb0b` does NOT have OWNER role on namespace `dojo`")]
 fn test_register_external_contract_without_owner_permission_on_namespace() {
     let world = deploy_world();
     let world = world.dispatcher;
@@ -165,7 +165,7 @@ fn test_upgrade_external_contract() {
 
 #[test]
 #[should_panic(
-    expected: "Account `2827` does NOT have OWNER role on external contract (at 0x676f6c64)",
+    expected: "Account `0xb0b` does NOT have OWNER role on external contract (at 0x676f6c64)",
 )]
 fn test_upgrade_external_contract_without_owner_permission() {
     let world = deploy_world();

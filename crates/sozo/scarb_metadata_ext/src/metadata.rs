@@ -7,10 +7,9 @@ use camino::Utf8PathBuf;
 use dojo_world::config::ProfileConfig;
 use dojo_world::diff::Manifest;
 use dojo_world::local::WorldLocal;
+use scarb_interop::fsx;
 use scarb_metadata::{DepKind, Metadata, MetadataCommand, MetadataCommandError};
 use serde::Serialize;
-
-use crate::fsx;
 
 #[derive(Debug, PartialEq)]
 pub enum TestRunner {

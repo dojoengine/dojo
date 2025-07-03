@@ -3,7 +3,7 @@ version = 1
 
 [[package]]
 name = "dojo"
-version = "1.6.0"
+version = "1.6.0-alpha.0"
 dependencies = [
  "dojo_macros",
 ]
@@ -21,7 +21,7 @@ version = "1.6.0"
 
 [[package]]
 name = "dojo_simple"
-version = "1.6.0"
+version = "1.6.0-alpha.0"
 dependencies = [
  "dojo",
  "dojo_cairo_test",

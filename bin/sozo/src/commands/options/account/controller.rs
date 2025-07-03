@@ -1,11 +1,11 @@
 use std::collections::HashMap;
-use std::sync::Arc;
 
 use anyhow::{bail, Result};
 use dojo_world::contracts::contract_info::ContractInfo;
-use slot::account_sdk::account::session::hash::{Policy, ProvedPolicy};
+use slot::account_sdk::account::session::account::SessionAccount;
 use slot::account_sdk::account::session::merkle::MerkleTree;
-use slot::account_sdk::account::session::SessionAccount;
+use slot::account_sdk::account::session::policy::{CallPolicy, MerkleLeaf, Policy, ProvedPolicy};
+use slot::account_sdk::provider::CartridgeJsonRpcProvider;
 use slot::session::{FullSessionInfo, PolicyMethod};
 use starknet::core::types::Felt;
 use starknet::core::utils::get_selector_from_name;
@@ -14,14 +14,8 @@ use starknet::providers::Provider;
 use tracing::trace;
 use url::Url;
 
-// Why the Arc? becaues the Controller account implementation over on `account_sdk` crate is
-// riddled with `+ Clone` bounds on its Provider generic. So we explicitly specify that the Provider
-// impl here is wrapped in an Arc to satisfy the Clone bound. Otherwise, you would get a 'trait
-// bound not satisfied' error.
-//
-// This type comes from account_sdk, which doesn't derive Debug.
 #[allow(missing_debug_implementations)]
-pub type ControllerSessionAccount<P> = SessionAccount<Arc<P>>;
+pub type ControllerAccount = SessionAccount;
 
 /// Create a new Catridge Controller account based on session key.
 ///
@@ -34,18 +28,14 @@ pub type ControllerSessionAccount<P> = SessionAccount<Arc<P>>;
 /// * Starknet mainnet
 /// * Starknet sepolia
 /// * Slot hosted networks
-#[tracing::instrument(name = "create_controller", skip(rpc_url, provider, contracts))]
-pub async fn create_controller<P>(
+#[tracing::instrument(name = "create_controller", skip(rpc_url, rpc_provider, contracts))]
+pub async fn create_controller(
     // Ideally we can get the url from the provider so we dont have to pass an extra url param here
     rpc_url: Url,
-    provider: P,
+    rpc_provider: CartridgeJsonRpcProvider,
     contracts: &HashMap<String, ContractInfo>,
-) -> Result<ControllerSessionAccount<P>>
-where
-    P: Provider,
-    P: Send + Sync,
-{
-    let chain_id = provider.chain_id().await?;
+) -> Result<ControllerAccount> {
+    let chain_id = rpc_provider.chain_id().await?;
 
     trace!(target: "account::controller", "Loading Slot credentials.");
     let credentials = slot::credential::Credentials::load()?;
@@ -62,7 +52,7 @@ where
     // Check if the session exists, if not create a new one
     let session_details = match slot::session::get(chain_id)? {
         Some(session) => {
-            trace!(target: "account::controller", expires_at = %session.session.expires_at, policies = session.session.policies.len(), "Found existing session.");
+            trace!(target: "account::controller", expires_at = %session.session.inner.expires_at, policies = session.session.proved_policies.len(), "Found existing session.");
 
             // Check if the policies have changed
             let is_equal = is_equal_to_existing(&policies, &session);
@@ -73,7 +63,7 @@ where
                 trace!(
                     target: "account::controller",
                     new_policies = policies.len(),
-                    existing_policies = session.session.policies.len(),
+                    existing_policies = session.session.requested_policies.len(),
                     "Policies have changed. Creating new session."
                 );
 
@@ -92,7 +82,7 @@ where
         }
     };
 
-    Ok(session_details.into_account(Arc::new(provider)))
+    Ok(session_details.into_account(rpc_provider))
 }
 
 // Check if the new policies are equal to the ones in the existing session
@@ -102,7 +92,13 @@ where
 fn is_equal_to_existing(new_policies: &[PolicyMethod], session_info: &FullSessionInfo) -> bool {
     let new_policies = new_policies
         .iter()
-        .map(|p| Policy::new(p.target, get_selector_from_name(&p.method).unwrap()))
+        .map(|p| {
+            Policy::Call(CallPolicy {
+                authorized: Some(true),
+                contract_address: p.target,
+                selector: get_selector_from_name(&p.method).expect("valid selector"),
+            })
+        })
         .collect::<Vec<Policy>>();
 
     // Copied from Session::new
@@ -118,7 +114,7 @@ fn is_equal_to_existing(new_policies: &[PolicyMethod], session_info: &FullSessio
         .collect::<Vec<ProvedPolicy>>();
 
     let new_policies_root = MerkleTree::compute_root(hashes[0], new_policies[0].proof.clone());
-    new_policies_root == session_info.session.authorization_root
+    new_policies_root == session_info.session.inner.allowed_policies_root
 }
 
 /// Policies are the building block of a session key. It's what defines what methods are allowed for
@@ -171,7 +167,8 @@ mod tests {
 
     use dojo_test_utils::setup::TestSetup;
     use dojo_world::contracts::ContractInfo;
-    use scarb_interop::{MetadataDojoExt, Profile};
+    use scarb_interop::Profile;
+    use scarb_metadata_ext::MetadataDojoExt;
     use starknet::macros::felt;
 
     use super::{collect_policies, PolicyMethod};

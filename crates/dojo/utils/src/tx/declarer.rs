@@ -16,9 +16,7 @@ use starknet::core::types::{
 use starknet::providers::{Provider, ProviderError};
 use tracing::trace;
 
-use crate::{
-    FeeConfig, TransactionError, TransactionExt, TransactionResult, TransactionWaiter, TxnConfig,
-};
+use crate::{TransactionError, TransactionExt, TransactionResult, TransactionWaiter, TxnConfig};
 
 #[derive(Debug, Clone)]
 pub struct LabeledClass {
@@ -103,21 +101,10 @@ where
             "Declaring class."
         );
 
-        let DeclareTransactionResult { transaction_hash, class_hash } = match txn_config.fee_config
-        {
-            FeeConfig::Strk(_) => {
-                account
-                    .declare_v3(Arc::new(labeled_class.class), casm_class_hash)
-                    .send_with_cfg(txn_config)
-                    .await?
-            }
-            FeeConfig::Eth(_) => {
-                account
-                    .declare_v2(Arc::new(labeled_class.class), casm_class_hash)
-                    .send_with_cfg(txn_config)
-                    .await?
-            }
-        };
+        let DeclareTransactionResult { transaction_hash, class_hash } = account
+            .declare_v3(Arc::new(labeled_class.class), casm_class_hash)
+            .send_with_cfg(txn_config)
+            .await?;
 
         trace!(
             label = labeled_class.label,

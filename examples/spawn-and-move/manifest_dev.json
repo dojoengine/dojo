@@ -1,7 +1,7 @@
 {
   "world": {
-    "class_hash": "0x21008ae5eb02fbad0dada5bf82838ab742d9b7a76f4974ad494e37a2cd13038",
-    "address": "0x723ee69ab5dfb81e9a294ae9bbc424e86bfc56ec7e3fde474712489066f8560",
+    "class_hash": "0x5712c3c83a5781bbacb1ac419eaf504a406597adfcb6fbdd2406ad9019a0930",
+    "address": "0x6dc122d3f22ddc05bd54d1e304d1fc8c6199de811203b93b17ccdbfd205b1ff",
     "seed": "dojo_examples",
     "name": "example",
     "entrypoints": [
@@ -71,10 +71,6 @@
             "type": "(core::starknet::contract_address::ContractAddress, core::felt252)"
           },
           {
-            "name": "ExternalContract",
-            "type": "(core::starknet::contract_address::ContractAddress, core::felt252)"
-          },
-          {
             "name": "Namespace",
             "type": "core::byte_array::ByteArray"
           },
@@ -89,6 +85,10 @@
           {
             "name": "Library",
             "type": "(core::starknet::class_hash::ClassHash, core::felt252)"
+          },
+          {
+            "name": "ExternalContract",
+            "type": "(core::starknet::contract_address::ContractAddress, core::felt252)"
           }
         ]
       },
@@ -1475,8 +1475,8 @@
   },
   "contracts": [
     {
-      "address": "0x7dd1e7fa6cf802e57bddcc48898ffff4e922aa4c4e2ebe9aa097a8b96f1aa57",
-      "class_hash": "0x23cbf0f9a6f46c8c7708ea566845b0b1e377afa6abc32968d980b955264fec3",
+      "address": "0x4d7da10d6ead8b0fa6a9363a6c535f0cf93a66b708700dab2922d54c9756c71",
+      "class_hash": "0x10f97c5bf06a668ee9071c7e6584d1b7deb9b14056ab43f11e78bb774e05ab9",
       "abi": [
         {
           "type": "impl",
@@ -1845,7 +1845,7 @@
       ]
     },
     {
-      "address": "0x233a6f8579b81a080b16db6480b6ba2dc8e07d5aa6310f35f34fe907dd077fe",
+      "address": "0x3e09edc7e36e057a790370e2d99191d6f06a772920a7283dce09d553c8255a1",
       "class_hash": "0x1372814d45ad33782ac108850c646b503a7984d47fe72c0bfb7b98b4801941e",
       "abi": [
         {
@@ -2039,7 +2039,7 @@
       ]
     },
     {
-      "address": "0x7945300e7431ef54f9d5e0ea36b3577dfb3947d058ae5300e367fcd1f21b111",
+      "address": "0x2c470936007d330e664513785bf7177bbb4655dd64c912be64528f3ed70ba26",
       "class_hash": "0x107e12907f077cccbf5414b63d18f667f087d29d5869864d7c9532833a5dab3",
       "abi": [
         {
@@ -2215,7 +2215,7 @@
       ]
     },
     {
-      "address": "0x201df17ea18f5727f4d09a8c34a46d1a0af71a9cc873c519743be2a216e0299",
+      "address": "0x75d095e411a69c335d7802089e3291739f5725e2f8c15b247bdb3b6edc5db5d",
       "class_hash": "0x1c824ab016a1000dff997f4e0c6451c7b04744ef59cc7f8fbac8a325c35ba82",
       "abi": [
         {
@@ -2398,8 +2398,8 @@
       ]
     },
     {
-      "address": "0x66bda49d580b081c61738dffbd44d8c882e3cb7b3b4a5f61daaa39c121d8f8",
-      "class_hash": "0x23cbf0f9a6f46c8c7708ea566845b0b1e377afa6abc32968d980b955264fec3",
+      "address": "0x46da5437c5591d9ba0528c1843676b7313e79b694c560c70015f113c64590dd",
+      "class_hash": "0x10f97c5bf06a668ee9071c7e6584d1b7deb9b14056ab43f11e78bb774e05ab9",
       "abi": [
         {
           "type": "impl",
@@ -2909,49 +2909,49 @@
   "models": [
     {
       "members": [],
-      "class_hash": "0x6f8c151c5128805ca469aab8f297815ee0c3daa9529e772bb56893406d4f29f",
+      "class_hash": "0x39808df3095eff323371efad3067863399368a7e77ca3811726218edcb2ec4a",
       "tag": "ns-Flatbow",
       "selector": "0x27a35f8bac96f1deebf4d3e83fc6b94a3da4e6d30a1ce34d5893d2fb602725d"
     },
     {
       "members": [],
-      "class_hash": "0x249536158f398cd79af0a2d38749f7bc2acfad6573feeb928e48dfd14be7874",
+      "class_hash": "0x180d824ba8b7c7a8f43d520cf05ed11a79198805f59beb57eb46e7a85c3571d",
       "tag": "ns-Message",
       "selector": "0x7e77b60a338fa7414998176fd93ff265e4ca04b93105ac98f155bcb2e9e8438"
     },
     {
       "members": [],
-      "class_hash": "0x3e2e40af9500488d8afa215f738319a884eb3d95811a4ea8db6e4a556482ece",
+      "class_hash": "0x4bce3ea8448010f894e4fd6f2ec1edf93b312bb350bd94d2cabc12d1512fb5a",
       "tag": "ns-MockToken",
       "selector": "0x23ee42c8f47d1d693b966176dcd5deca0ec147b33e42186382d9d027603a6fd"
     },
     {
       "members": [],
-      "class_hash": "0x6ccc95e43e9c68c25a992839e178937dfd35fb6e5cde7a3059b4c25369f01bd",
+      "class_hash": "0x56a5444452feedcd9d68db211aa8d55715ef0032b10ba7bc7ecc58e7e8382f6",
       "tag": "ns-Moves",
       "selector": "0x54104f060e63bdd9d68bb872f2dc6d40a101e168e18b999c10de348d06ea24a"
     },
     {
       "members": [],
-      "class_hash": "0x3f8265f2e3e3407ed3095b13b940c75405cfc9afb5fa879aaa1b4808c3d08b5",
+      "class_hash": "0x14394084bb1f0cdcae3710375026ecd0ddb945a56f05d6139227bbf467d035d",
       "tag": "ns-PlayerConfig",
       "selector": "0x3bea561c3e142a660a00d1471d7712b70695dc4ee3b173aeaefd5178f7a21af"
     },
     {
       "members": [],
-      "class_hash": "0x1b1a4c89727275dac16313e375aa8d7f63d040bc0f43c0821da82b59d6da666",
+      "class_hash": "0x3e331ab775f97acfeaffaac7aca1c3af68ec9227eff73ac4baf68b2175d866b",
       "tag": "ns-Position",
       "selector": "0x5e12c61e9cf30881c126a6d298975c8d79f95abed1a05c2d38b7803ed19445f"
     },
     {
       "members": [],
-      "class_hash": "0x7cef94d9ef08ec392ad19e59e379ccf323dbcbc7cb44805949a633b2bb9e30f",
+      "class_hash": "0x38cb55303fab754d9f213d75a2e3fca884a5a85628dcb431e9638e3692de787",
       "tag": "ns-RiverSkale",
       "selector": "0x47f763aa7de3b872f7fbec198275547e06751dbe26b66281b9cffaed9938f24"
     },
     {
       "members": [],
-      "class_hash": "0x734410260f53e168895cfa64a1af204e15ddaf899921dc1cc406d5c5506a1a7",
+      "class_hash": "0x1c1644387ec8946624c9236c6d34bee33a43cfd275471cfe3a4e2caf9751824",
       "tag": "ns-ServerProfile",
       "selector": "0x641dc5f178aff0c7935a8f1ae30c6038a3d3512ea164d486f98bc37b6beabf"
     }
@@ -2959,13 +2959,13 @@
   "events": [
     {
       "members": [],
-      "class_hash": "0x1e9da2f8bc32c72b27b29f668131c6055dd8a06ff12c453f0eddcc029f0f079",
+      "class_hash": "0x7d48266f5e79f9267e98dd89adeefcfcb1fd75246ccb14b65de49da942738e",
       "tag": "ns-Moved",
       "selector": "0x6d4c1ac3717ba997500153c52344a2acac5123bbfa0f78d3dcc04cb786826b0"
     },
     {
       "members": [],
-      "class_hash": "0x117fd970b631e1b013cc3400f59bae0e3a6b1b80d6c889ed01336598b9c6430",
+      "class_hash": "0x603cf85e2cc716111237d888ee067369f8b914f2122437a540081de92022b90",
       "tag": "ns-MyInit",
       "selector": "0xe1c030210beae7e2153a7b996d7d2ae6a428faf16a61f192f02178718b6f0"
     }
@@ -5500,51 +5500,11 @@
       "block_number": null
     },
     {
-      "class_hash": "0x6b1b124cf0e44c68e2f5bf3aa5b1bbda49d59b9199c280c603e4856071270d5",
+      "class_hash": "0x7bfd851dbbba64e84510940d3b114239a86b31b2d49789616faab3154db78f6",
       "contract_name": "Saloon",
       "tag": "ns-Saloon",
-      "address": "0x247d2a7d4346dbbe45ed401819e0c2bdacf0dcdd96f7ae813236290ad43078b",
+      "address": "0x2365c3683fc7042111a7088d051dcb7d10f874a6d5e5416e533eb06689df350",
       "abi": [
-        {
-          "type": "impl",
-          "name": "TotoImpl",
-          "interface_name": "dojo_examples::externals::saloon::ITotoTrait"
-        },
-        {
-          "type": "struct",
-          "name": "core::byte_array::ByteArray",
-          "members": [
-            {
-              "name": "data",
-              "type": "core::array::Array::<core::bytes_31::bytes31>"
-            },
-            {
-              "name": "pending_word",
-              "type": "core::felt252"
-            },
-            {
-              "name": "pending_word_len",
-              "type": "core::integer::u32"
-            }
-          ]
-        },
-        {
-          "type": "interface",
-          "name": "dojo_examples::externals::saloon::ITotoTrait",
-          "items": [
-            {
-              "type": "function",
-              "name": "toto",
-              "inputs": [],
-              "outputs": [
-                {
-                  "type": "core::byte_array::ByteArray"
-                }
-              ],
-              "state_mutability": "view"
-            }
-          ]
-        },
         {
           "type": "impl",
           "name": "UpgradeableImpl",

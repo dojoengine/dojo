@@ -7,17 +7,17 @@ version.workspace = true
 
 [dependencies]
 anyhow.workspace = true
+colored_json.workspace = true
 futures.workspace = true
 reqwest.workspace = true
 rpassword.workspace = true
+serde_json.workspace = true
 starknet.workspace = true
 thiserror.workspace = true
-tokio = { version = "1.39.2", features = [ "signal", "time", "macros" ], default-features = false }
+tokio = { version = "1.39.2", features = [ "macros", "signal", "time" ], default-features = false }
 tracing.workspace = true
-serde_json.workspace = true
-colored_json.workspace = true
 
 [dev-dependencies]
 assert_matches.workspace = true
 dojo-test-utils.workspace = true
-katana-runner = { git = "https://github.com/dojoengine/katana", rev = "5cb249c0fa59fa6b7c88b32557e7baf8944cdb3d" }
+katana-runner.workspace = true

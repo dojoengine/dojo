@@ -23,12 +23,14 @@ dojo-world.workspace = true
 resolve-path = "0.1.0"
 scarb-interop.workspace = true
 scarb-metadata.workspace = true
+scarb-metadata-ext.workspace = true
 scarb-ui.workspace = true
 semver.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 smol_str.workspace = true
 sozo-ops.workspace = true
+sozo-mcp.workspace = true
 sozo-walnut = { workspace = true, optional = true }
 starknet.workspace = true
 starknet-crypto.workspace = true
@@ -45,7 +47,7 @@ reqwest = { workspace = true, features = [ "json" ] }
 
 [dev-dependencies]
 dojo-test-utils = { workspace = true, features = [ "build-examples" ] }
-katana-runner = { git = "https://github.com/dojoengine/katana", rev = "5cb249c0fa59fa6b7c88b32557e7baf8944cdb3d" }
+katana-runner.workspace = true
 serde_json.workspace = true
 
 [features]

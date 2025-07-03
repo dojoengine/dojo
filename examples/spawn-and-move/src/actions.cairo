@@ -345,6 +345,8 @@ mod tests {
         let (actions_system_addr, _) = world.dns(@"actions").unwrap();
         let actions_system = IActionsDispatcher { contract_address: actions_system_addr };
 
+        starknet::testing::set_contract_address(caller);
+
         actions_system.spawn();
         let initial_moves: Moves = world.read_model(caller);
         let initial_position: Position = world.read_model(caller);

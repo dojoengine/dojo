@@ -7,8 +7,8 @@ use dojo_types::naming::{
     compute_bytearray_hash, compute_selector_from_tag, get_name_from_tag, get_namespace_from_tag,
     get_tag,
 };
-use scarb_interop::MetadataDojoExt;
 use scarb_metadata::Metadata;
+use scarb_metadata_ext::MetadataDojoExt;
 use starknet::core::types::Felt;
 use starknet::core::utils::{get_selector_from_name, starknet_keccak};
 use starknet_crypto::{poseidon_hash_many, poseidon_hash_single};

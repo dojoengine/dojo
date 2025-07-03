@@ -53,13 +53,6 @@ impl TypeScriptV2Plugin {
                     panic!("Invalid tuple token: {:?}", token);
                 }
             }
-            "generic_arg" => {
-                if let Token::GenericArg(generic_arg) = &token {
-                    generic_arg.clone()
-                } else {
-                    panic!("Invalid generic_arg token: {:?}", token);
-                }
-            }
 
             _ => {
                 let mut type_name = token.type_name();
@@ -627,7 +620,8 @@ mod tests {
     use std::io::Read;
 
     use dojo_test_utils::setup::TestSetup;
-    use scarb_interop::{MetadataDojoExt, Profile};
+    use scarb_interop::Profile;
+    use scarb_metadata_ext::MetadataDojoExt;
 
     use super::*;
     use crate::gather_dojo_data;
