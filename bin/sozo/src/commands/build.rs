@@ -155,21 +155,44 @@ impl BuildArgs {
         // directly during the compilation to get the data we need from it.
         config.tokio_handle().block_on(bindgen.generate(None)).expect("Error generating bindings");
 
-        if self.stats != StatOptions::default() {
-            let world = WorldLocal::from_directory(
-                ws.target_dir_profile().to_string(),
-                ws.load_profile_config().unwrap(),
-            )?;
+        let world = WorldLocal::from_directory(
+            ws.target_dir_profile().to_string(),
+            ws.load_profile_config().unwrap(),
+        )?;
+        let world_stat = world.to_stat_item();
+        let mut stats = vec![world_stat];
+        for r in world.resources.values() {
+            if r.resource_type() != ResourceType::Namespace {
+                stats.push(r.to_stat_item());
+            }
+        }
 
-            let world_stat = world.to_stat_item();
-            let mut stats = vec![world_stat];
-
-            for r in world.resources.values() {
-                if r.resource_type() != ResourceType::Namespace {
-                    stats.push(r.to_stat_item());
-                }
+        // Check limits and emit warnings for EVERY compilation
+        for stat in &stats {
+            // Sierra file size check (4,089,446 bytes)
+            if stat.sierra_file_size > 4_089_446 {
+                eprintln!(
+                    "{}: Sierra file size ({:.2}MB, {} bytes) exceeds network limit of 4,089,446 \
+                     bytes bytes - {}",
+                    "Warning".yellow().bold(),
+                    stat.sierra_file_size as f64 / (1024.0 * 1024.0),
+                    stat.sierra_file_size,
+                    stat.tag.bright_blue()
+                );
             }
 
+            // CASM felts check (81,920)
+            if stat.casm_bytecode_size > 81_920 {
+                eprintln!(
+                    "{}: CASM bytecode size ({} felts) exceeds network limit of 81,920 - {}",
+                    "Warning".yellow().bold(),
+                    stat.casm_bytecode_size,
+                    stat.tag.bright_blue()
+                );
+            }
+        }
+
+        if self.stats != StatOptions::default() {
             if self.stats.sort_by_tag {
                 stats.sort_by_key(|s| s.tag.clone());
             } else if self.stats.sort_by_sierra_mb {
