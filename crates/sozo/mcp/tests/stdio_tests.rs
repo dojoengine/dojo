@@ -2,8 +2,6 @@ use std::process::{Command, Stdio};
 use std::time::Duration;
 
 use anyhow::Result;
-use dojo_test_utils::setup::TestSetup;
-use scarb_interop::Profile;
 use serde_json::json;
 use tokio::time::timeout;
 
@@ -389,9 +387,20 @@ async fn test_call_build_tool_stdio() -> Result<()> {
     assert!(!content.is_empty());
 
     let first_content = &content[0];
-    assert!(first_content["text"].is_string());
+    
+    let build_json: serde_json::Value = if first_content.get("json").is_some() {
+        first_content["json"].clone()
+    } else if first_content.get("text").is_some() {
+        let text_content = first_content["text"].as_str().unwrap();
+        serde_json::from_str::<serde_json::Value>(text_content).unwrap()
+    } else {
+        panic!("Neither 'json' nor 'text' field found in response");
+    };
+    
+    assert_eq!(build_json["status"], "success");
+    assert_eq!(build_json["message"], "Build successful");
 
-    println!("Build tool output: {}", first_content["text"]);
+    println!("Build tool output: {}", build_json);
 
     server.cleanup()?;
     Ok(())

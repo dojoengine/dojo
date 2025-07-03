@@ -7,12 +7,11 @@
 use anyhow::Result;
 use camino::Utf8PathBuf;
 use rmcp::model::{CallToolResult, Content};
-use scarb_interop::Scarb;
-use scarb_metadata::{self, Metadata};
-use scarb_metadata_ext::MetadataDojoExt;
 use serde_json::json;
+use tokio::process::Command as AsyncCommand;
+use tracing::debug;
 
-use crate::McpError;
+use crate::{McpError, LOG_TARGET, SOZO_PATH};
 
 #[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
 pub struct BuildRequest {
@@ -29,36 +28,44 @@ pub async fn build_project(
     args: BuildRequest,
 ) -> Result<CallToolResult, McpError> {
     let profile = &args.profile.unwrap_or("dev".to_string());
-    dbg!(profile);
 
-    let default_manifest = Utf8PathBuf::from("Scarb.toml");
-    let manifest_path = manifest_path.as_ref().unwrap_or(&default_manifest);
-    dbg!(manifest_path);
+    debug!(target: LOG_TARGET, profile, manifest_path = ?manifest_path, "Building project.");
 
-    let scarb_metadata = Metadata::load(manifest_path, profile, false).map_err(|e| {
+    let mut cmd = AsyncCommand::new(SOZO_PATH);
+
+    if let Some(manifest_path) = &manifest_path {
+        cmd.arg("--manifest-path").arg(manifest_path);
+    }
+
+    cmd.arg("--profile").arg(profile);
+    cmd.arg("build");
+
+    let output = cmd.output().await.map_err(|e| {
         McpError::internal_error(
-            "scarb_metadata_load_failed",
-            Some(json!({ "reason": format!("Failed to load scarb metadata: {}", e) })),
-        )
-    })?;
-    dbg!(&scarb_metadata);
-
-    scarb_metadata.clean_dir_profile();
-
-    Scarb::build(
-        &scarb_metadata.workspace.manifest_path,
-        scarb_metadata.current_profile.as_str(),
-        // Builds all packages.
-        "",
-        scarb_interop::Features::AllFeatures,
-        vec![],
-    )
-    .map_err(|e| {
-        McpError::internal_error(
-            "scarb_build_failed",
+            "build_failed",
             Some(json!({ "reason": format!("Failed to build project: {}", e) })),
         )
     })?;
 
-    Ok(CallToolResult::success(vec![Content::text("Build successful".to_string())]))
+    if output.status.success() {
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let json_obj = serde_json::json!({
+            "status": "success",
+            "message": "Build successful",
+            "stdout": stdout,
+            "stderr": stderr
+        });
+        Ok(CallToolResult::success(vec![Content::json(json_obj)?]))
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+        let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+        let json_obj = serde_json::json!({
+            "status": "error",
+            "message": format!("Build failed with status: {}", output.status),
+            "stdout": stdout,
+            "stderr": stderr
+        });
+        Ok(CallToolResult::error(vec![Content::json(json_obj)?]))
+    }
 }
