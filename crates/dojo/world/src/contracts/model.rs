@@ -270,6 +270,14 @@ fn parse_schema(ty: &abigen::model::Ty) -> Result<Ty, ParseError> {
 
             Ok(Ty::Tuple(values))
         }
+        abigen::model::Ty::FixedArray(values) => {
+            let values = values
+                .iter()
+                .map(|(ty, _)| parse_schema(ty))
+                .collect::<Result<Vec<_>, ParseError>>()?;
+
+            Ok(Ty::FixedSizeArray(values))
+        }
         abigen::model::Ty::Array(values) => {
             let values = values.iter().map(parse_schema).collect::<Result<Vec<_>, ParseError>>()?;
 

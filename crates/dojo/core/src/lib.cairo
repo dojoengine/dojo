@@ -65,9 +65,12 @@ pub mod storage {
     pub mod database;
     pub mod dojo_store;
     pub mod entity_model;
+    pub(crate) mod fixed_sized_array;
     pub mod layout;
+    pub(crate) mod metaprogramming;
     pub mod packing;
     pub mod storage;
+    pub(crate) mod tuple;
     pub use dojo_store::DojoStore;
 }
 
@@ -87,7 +90,7 @@ pub mod utils {
     pub use layout::{find_field_layout, find_model_field_layout};
 
     pub mod misc;
-    pub use misc::{any_none, sum};
+    pub use misc::sum_sizes;
 
     pub mod naming;
     pub use naming::is_name_valid;

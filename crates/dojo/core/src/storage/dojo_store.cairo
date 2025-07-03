@@ -1,3 +1,7 @@
+use crate::storage::fixed_sized_array::*;
+use crate::storage::metaprogramming::*;
+use crate::storage::tuple::*;
+
 /// Handle data (de)serialization to be stored into the world storage.
 pub trait DojoStore<T> {
     fn serialize(self: @T, ref serialized: Array<felt252>);
@@ -106,5 +110,91 @@ impl DojoStore_span<T, +Drop<T>, +DojoStore<T>> of DojoStore<Span<T>> {
         let length = *values.pop_front()?;
         let mut arr = array![];
         Option::Some(deserialize_array_helper(ref values, arr, length)?.span())
+    }
+}
+
+// Implementation of `DojoStore` for tuple style structs.
+pub impl DojoStoreTuple<
+    T,
+    impl TSF: crate::storage::metaprogramming::DojoTupleSnapForward<T>,
+    impl Serialize: DojoSerializeTuple<TSF::SnapForward>,
+    impl Deserialize: DojoDeserializeTuple<T>,
+> of DojoStore<T> {
+    fn serialize(self: @T, ref serialized: Array<felt252>) {
+        Serialize::serialize(TSF::snap_forward(self), ref serialized);
+    }
+    fn deserialize(ref values: Span<felt252>) -> Option<T> {
+        Deserialize::deserialize(ref values)
+    }
+}
+
+// Helper trait for serializing tuple style structs.
+trait DojoSerializeTuple<T> {
+    fn serialize(value: T, ref output: Array<felt252>);
+}
+
+// Implementation of `SerializeTuple` for snapshots of types with `DojoStore` implementation.
+pub impl DojoStoreBasedSerializeTuple<T, +DojoStore<T>> of DojoSerializeTuple<@T> {
+    fn serialize(value: @T, ref output: Array<felt252>) {
+        DojoStore::<T>::serialize(value, ref output);
+    }
+}
+
+// Helper trait for deserializing tuple style structs.
+trait DojoDeserializeTuple<T> {
+    fn deserialize(ref serialized: Span<felt252>) -> Option<T>;
+}
+
+// Base implementation of `SerializeTuple` for tuples.
+pub impl DojoSerializeTupleBaseTuple of DojoSerializeTuple<()> {
+    fn serialize(value: (), ref output: Array<felt252>) {}
+}
+
+// Base implementation of `DeserializeTuple` for tuples.
+pub impl DojoDeserializeTupleBaseTuple of DojoDeserializeTuple<()> {
+    fn deserialize(ref serialized: Span<felt252>) -> Option<()> {
+        Some(())
+    }
+}
+
+// Base implementation of `SerializeTuple` for fixed sized arrays.
+impl DojoSerializeTupleBaseFixedSizedArray<T> of DojoSerializeTuple<[@T; 0]> {
+    fn serialize(value: [@T; 0], ref output: Array<felt252>) {}
+}
+
+// Base implementation of `DeserializeTuple` for fixed sized arrays.
+impl DojoDeserializeTupleBaseFixedSizedArray<T> of DojoDeserializeTuple<[T; 0]> {
+    fn deserialize(ref serialized: Span<felt252>) -> Option<[T; 0]> {
+        Some([])
+    }
+}
+
+// Recursive implementation of `SerializeTuple` for tuple style structs.
+pub impl DojoSerializeTupleNext<
+    T,
+    impl TS: crate::storage::metaprogramming::DojoTupleSplit<T>,
+    +DojoSerializeTuple<TS::Head>,
+    +DojoSerializeTuple<TS::Rest>,
+    +Drop<TS::Rest>,
+> of DojoSerializeTuple<T> {
+    fn serialize(value: T, ref output: Array<felt252>) {
+        let (head, rest) = TS::split_head(value);
+        DojoSerializeTuple::<TS::Head>::serialize(head, ref output);
+        DojoSerializeTuple::<TS::Rest>::serialize(rest, ref output);
+    }
+}
+
+// Recursive implementation of `DeserializeTuple` for tuple style structs.
+pub impl DeserializeTupleNext<
+    T,
+    impl TS: crate::storage::metaprogramming::DojoTupleSplit<T>,
+    +DojoStore<TS::Head>,
+    +DojoDeserializeTuple<TS::Rest>,
+    +Drop<TS::Head>,
+> of DojoDeserializeTuple<T> {
+    fn deserialize(ref serialized: Span<felt252>) -> Option<T> {
+        let head = DojoStore::<TS::Head>::deserialize(ref serialized)?;
+        let rest = DojoDeserializeTuple::<TS::Rest>::deserialize(ref serialized)?;
+        Some(TS::reconstruct(head, rest))
     }
 }

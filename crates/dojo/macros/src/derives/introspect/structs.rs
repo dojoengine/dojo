@@ -1,6 +1,6 @@
 use cairo_lang_macro::{Diagnostic, ProcMacroResult, TokenStream};
 use cairo_lang_parser::utils::SimpleParserDatabase;
-use cairo_lang_syntax::node::ast::{Expr, ItemStruct, Member};
+use cairo_lang_syntax::node::ast::{ItemStruct, Member};
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{Terminal, TypedSyntaxNode};
 use starknet::core::utils::get_selector_from_name;
@@ -42,7 +42,7 @@ impl DojoStructIntrospect {
         is_packed: bool,
     ) -> TokenStream {
         let struct_name = struct_ast.name(db).text(db).into();
-        let struct_size = self.compute_struct_layout_size(db, struct_ast, is_packed);
+        let struct_size = self.compute_struct_layout_size(db, struct_ast);
         let ty = self.build_struct_ty(db, &struct_name, struct_ast);
 
         let layout = if is_packed {
@@ -96,11 +96,7 @@ impl DojoStructIntrospect {
         &self,
         db: &SimpleParserDatabase,
         struct_ast: &ItemStruct,
-        is_packed: bool,
     ) -> String {
-        let mut cumulated_sizes = 0;
-        let mut is_dynamic_size = false;
-
         let mut sizes = struct_ast
             .members(db)
             .elements(db)
@@ -109,22 +105,14 @@ impl DojoStructIntrospect {
                 if m.has_attr(db, "key") {
                     return None;
                 }
-
-                let (sizes, cumulated, is_dynamic) =
+                let member_size =
                     super::size::get_field_size_from_type_clause(db, &m.type_clause(db));
-
-                cumulated_sizes += cumulated;
-                is_dynamic_size |= is_dynamic;
-                Some(sizes)
+                Some(member_size)
             })
             .flatten()
             .collect::<Vec<_>>();
-        super::size::build_size_function_body(
-            &mut sizes,
-            cumulated_sizes,
-            is_dynamic_size,
-            is_packed,
-        )
+
+        super::size::build_size_function_body(&mut sizes)
     }
 
     pub fn build_member_ty(&self, db: &SimpleParserDatabase, member: &Member) -> String {
@@ -262,35 +250,16 @@ impl DojoStructIntrospect {
             let member_ty =
                 member.type_clause(db).ty(db).as_syntax_node().get_text_without_trivia(db);
 
-            match member.type_clause(db).ty(db) {
-                Expr::Tuple(tuple) => {
-                    serialized_members.push(DojoFormatter::serialize_tuple_member_ty(
-                        db,
-                        &member_name,
-                        &tuple,
-                        true,
-                        false,
-                    ));
-                    deserialized_members.push(DojoFormatter::deserialize_tuple_member_ty(
-                        db,
-                        &member_name,
-                        &tuple,
-                        false,
-                    ));
-                }
-                _ => {
-                    serialized_members.push(DojoFormatter::serialize_primitive_member_ty(
-                        &member_name,
-                        true,
-                        false,
-                    ));
-                    deserialized_members.push(DojoFormatter::deserialize_primitive_member_ty(
-                        &member_name,
-                        &member_ty,
-                        false,
-                    ));
-                }
-            }
+            serialized_members.push(DojoFormatter::serialize_primitive_member_ty(
+                &member_name,
+                true,
+                false,
+            ));
+            deserialized_members.push(DojoFormatter::deserialize_primitive_member_ty(
+                &member_name,
+                &member_ty,
+                false,
+            ));
 
             member_names.push(member_name);
         }
