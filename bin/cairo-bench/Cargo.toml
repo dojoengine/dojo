@@ -1,0 +1,15 @@
+[package]
+name = "cairo-bench"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+clap = { workspace = true, features = ["derive"] }
+anyhow.workspace = true
+camino.workspace = true
+serde_json.workspace = true
+serde.workspace = true
+colored.workspace = true
+itertools.workspace = true

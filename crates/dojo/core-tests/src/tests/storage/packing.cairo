@@ -2,20 +2,9 @@ use core::array::ArrayTrait;
 use core::option::OptionTrait;
 use core::traits::{Into, TryInto};
 use dojo::storage::packing::{
-    calculate_packed_size, fpow, pack, pack_inner, pow2_const, shl, shr, unpack, unpack_inner,
+    calculate_packed_size, pack, pack_inner, pow2_const, shl, shr, unpack, unpack_inner,
 };
 use starknet::{ClassHash, ContractAddress};
-
-#[test]
-#[available_gas(l2_gas: 9000000)]
-fn test_bit_fpow() {
-    assert(
-        fpow(
-            2, 250,
-        ) == 1809251394333065553493296640760748560207343510400633813116524750123642650624_u256,
-        '',
-    )
-}
 
 
 #[test]

@@ -1,5 +1,5 @@
-// Computes the sum of the provided sizes.
-// If at least one size is None, returns None.
+/// Computes the sum of the provided sizes.
+/// If at least one size is None, returns None.
 #[inline(always)]
 pub fn sum_sizes(sizes: Array<Option<usize>>) -> Option<usize> {
     let mut total_size = 0;

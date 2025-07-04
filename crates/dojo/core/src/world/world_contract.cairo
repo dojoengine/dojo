@@ -1021,12 +1021,7 @@ pub mod world {
                     );
                 }
 
-                let mut i = 0;
-                loop {
-                    if i >= keys.len() {
-                        break;
-                    }
-
+                for i in 0..keys.len() {
                     self
                         .emit(
                             EventEmitted {
@@ -1036,8 +1031,6 @@ pub mod world {
                                 values: *values[i],
                             },
                         );
-
-                    i += 1;
                 }
             } else {
                 panic_with_byte_array(
@@ -1100,15 +1093,8 @@ pub mod world {
             if let Resource::Model((_, _)) = self.resources.read(model_selector) {
                 self.assert_caller_permissions(model_selector, Permission::Writer);
 
-                let mut i = 0;
-                loop {
-                    if i >= indexes.len() {
-                        break;
-                    }
-
+                for i in 0..indexes.len() {
                     self.set_entity_internal(model_selector, *indexes[i], *values[i], layout);
-
-                    i += 1;
                 };
             } else {
                 panic_with_byte_array(

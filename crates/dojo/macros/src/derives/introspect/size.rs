@@ -6,7 +6,7 @@ use super::utils::{is_array, is_byte_array};
 
 pub fn build_size_function_body(sizes: &mut [String]) -> String {
     match sizes.len() {
-        0 => "Option::None".to_string(),
+        0 => "None".to_string(),
         1 => sizes[0].clone(),
         _ => {
             format!("dojo::utils::sum_sizes(array![{}])", sizes.join(",\n"))
