@@ -77,7 +77,7 @@ struct Args {
     pub threshold: Option<u128>,
 
     #[arg(long, help = "Override the reference file corresponding to the provided manifest file.")]
-    pub update_ref: bool,
+    pub write: bool,
 
     #[arg(long, help = "Just show what has changed.")]
     pub change_only: bool,
@@ -516,7 +516,7 @@ fn main() {
         let ref_test_results = read_ref_tests(&ref_file);
         let results = compare_tests(&ref_test_results, &new_test_results);
 
-        if args.update_ref {
+        if args.write {
             write_ref_file(&ref_file, &new_test_results);
         }
 
