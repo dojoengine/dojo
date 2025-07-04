@@ -6,7 +6,7 @@ pub mod waiter;
 
 use std::fmt;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use colored_json::ToColoredJson;
 use reqwest::Url;
 use starknet::accounts::{
@@ -92,10 +92,8 @@ pub trait TransactionExt<T> {
     type R;
     type U;
 
-    /// Sets `fee_estimate_multiplier` and `max_fee_raw` from `TxnConfig` if its present before
+    /// Sets `l1_gas` and `l1_gas_price` from `TxnConfig` if its present before
     /// calling `send` method on the respective type.
-    /// NOTE: If both are specified `max_fee_raw` will take precedence and `fee_estimate_multiplier`
-    /// will be ignored by `starknet-rs`
     async fn send_with_cfg(self, txn_config: &TxnConfig) -> Result<Self::R, Self::U>;
 }
 
