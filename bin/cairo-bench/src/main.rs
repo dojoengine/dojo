@@ -73,13 +73,6 @@ struct Args {
     #[arg(long, help = "Override the reference file corresponding to the provided manifest file.")]
     pub update_ref: bool,
 
-    #[arg(
-        long,
-        help = "Update the test list of the reference file corresponding to the provided manifest \
-                file."
-    )]
-    pub update_ref_test_list: bool,
-
     #[arg(long, help = "Just show what has changed.")]
     pub change_only: bool,
 
@@ -124,11 +117,6 @@ impl BenchResultSorting {
 
 /// Check that there is no conflict between the provided arguments.
 fn validate_args(args: &Args) {
-    if args.update_ref_test_list && args.update_ref {
-        println!("[ERROR] Cannot update both the test list and the reference file.");
-        std::process::exit(1);
-    }
-
     if [args.change_only, args.worse_only, args.better_only].into_iter().filter(|b| *b).count() > 1
     {
         print!("[ERROR] change_only, worse_only, and better_only are mutually exclusive.");
@@ -468,34 +456,6 @@ fn print_compare_result(
     }
 }
 
-/// Update the reference file with the new test results.
-fn update_ref_file(
-    ref_file: &Utf8PathBuf,
-    ref_results: &[TestCost],
-    new_results: &[TestCost],
-    keep_ref_costs: bool,
-) {
-    if keep_ref_costs {
-        let mut updated_tests_results = new_results
-            .iter()
-            .map(|new_test| TestCost {
-                name: new_test.name.clone(),
-                cost: ref_results
-                    .iter()
-                    .find(|ref_test| ref_test.name == new_test.name)
-                    .map(|ref_test| ref_test.cost)
-                    .unwrap_or(new_test.cost),
-            })
-            .collect::<Vec<_>>();
-
-        sort_tests(&mut updated_tests_results);
-
-        write_ref_file(ref_file, &updated_tests_results);
-    } else {
-        write_ref_file(ref_file, new_results);
-    }
-}
-
 fn main() {
     let args = Args::parse();
 
@@ -520,13 +480,8 @@ fn main() {
         let ref_test_results = read_ref_tests(&ref_file);
         let results = compare_tests(&ref_test_results, &new_test_results);
 
-        if args.update_ref_test_list || args.update_ref {
-            update_ref_file(
-                &ref_file,
-                &ref_test_results,
-                &new_test_results,
-                args.update_ref_test_list,
-            );
+        if args.update_ref {
+            write_ref_file(&ref_file, &new_test_results);
         }
 
         print_compare_result(&results, bench_result_filtering, bench_result_sorting);
