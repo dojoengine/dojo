@@ -1,4 +1,4 @@
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use clap::Args;
 use dojo_utils::{FeeConfig, TxnAction, TxnConfig};
 

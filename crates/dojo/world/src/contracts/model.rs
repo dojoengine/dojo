@@ -7,8 +7,8 @@ use dojo_types::primitive::{Primitive, PrimitiveError};
 use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
 use starknet::core::types::{BlockId, Felt};
 use starknet::core::utils::{
-    CairoShortStringToFeltError, NonAsciiNameError, ParseCairoShortStringError,
-    cairo_short_string_to_felt, parse_cairo_short_string,
+    cairo_short_string_to_felt, parse_cairo_short_string, CairoShortStringToFeltError,
+    NonAsciiNameError, ParseCairoShortStringError,
 };
 use starknet::providers::{Provider, ProviderError};
 

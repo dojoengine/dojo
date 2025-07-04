@@ -6,7 +6,7 @@ pub mod waiter;
 
 use std::fmt;
 
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use colored_json::ToColoredJson;
 use reqwest::Url;
 use starknet::accounts::{
