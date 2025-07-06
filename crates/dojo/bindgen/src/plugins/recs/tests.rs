@@ -176,7 +176,7 @@ fn test_format_enum_model() {
     assert_eq!(formatted.replace([' ', '\n'], "").trim(), expected.replace([' ', '\n'], "").trim());
 }
 
-// // Helper function to create mock DojoData for testing
+// Helper function to create mock DojoData for testing
 fn create_mock_dojo_data() -> DojoData {
     DojoData {
         world: DojoWorld { name: 0x01.to_string() },

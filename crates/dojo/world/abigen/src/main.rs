@@ -154,7 +154,7 @@ fn rename_file(old_path: &str, new_path: &str) -> Result<()> {
     Ok(fs::rename(o, n)?)
 }
 
-/// Compiles dojo-core contracts programatically using Scarb.
+/// Compiles dojo-core contracts programmatically using Scarb.
 fn compile_dojo_core() -> Result<()> {
     let path = Utf8PathBuf::from(SCARB_MANIFEST);
     let config = Config::builder(path.canonicalize_utf8()?).build()?;

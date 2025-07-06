@@ -47,7 +47,7 @@ use syn::{parse_macro_input, Data, DeriveInput, Fields};
 ///     }
 /// }
 ///
-/// // This macro will generate the following code:
+/// This macro will generate the following code:
 /// impl MyOptions {
 ///     pub fn merge(&mut self, other: Option<&Self>) {
 ///         if let Some(other) = other {

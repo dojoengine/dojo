@@ -32,7 +32,7 @@ pub enum TransactionWaitingError {
 
 /// Utility for waiting on a transaction.
 ///
-/// The waiter will poll for the transaction receipt every `interval` miliseconds until it achieves
+/// The waiter will poll for the transaction receipt every `interval` milliseconds until it achieves
 /// the desired status or until `timeout` is reached.
 ///
 /// The waiter can be configured to wait for a specific finality status (e.g, `ACCEPTED_ON_L2`), by
