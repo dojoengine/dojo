@@ -13,6 +13,9 @@ use serde::{Deserialize, Serialize};
 // just keep test functions starting with this prefix
 const BENCH_TEST_FILTER: &str = "bench_";
 
+// default threshold for the ratio between the old and new costs
+const DEFAULT_THRESHOLD: u128 = 3;
+
 // extract gas cost data using this prefix
 const GAS_TAG: &str = "l2_gas";
 
@@ -70,15 +73,11 @@ struct Args {
     #[arg(short = 's', long, help = "Show the scarb test output.")]
     pub show_scarb_output: bool,
 
-    #[arg(long, help = "Override the reference file corresponding to the provided manifest file.")]
-    pub update_ref: bool,
+    #[arg(long, help = "Threshold for the ratio between the old and new costs (in %).")]
+    pub threshold: Option<u128>,
 
-    #[arg(
-        long,
-        help = "Update the test list of the reference file corresponding to the provided manifest \
-                file."
-    )]
-    pub update_ref_test_list: bool,
+    #[arg(long, help = "Override the reference file corresponding to the provided manifest file.")]
+    pub write: bool,
 
     #[arg(long, help = "Just show what has changed.")]
     pub change_only: bool,
@@ -124,11 +123,6 @@ impl BenchResultSorting {
 
 /// Check that there is no conflict between the provided arguments.
 fn validate_args(args: &Args) {
-    if args.update_ref_test_list && args.update_ref {
-        println!("[ERROR] Cannot update both the test list and the reference file.");
-        std::process::exit(1);
-    }
-
     if [args.change_only, args.worse_only, args.better_only].into_iter().filter(|b| *b).count() > 1
     {
         print!("[ERROR] change_only, worse_only, and better_only are mutually exclusive.");
@@ -365,14 +359,21 @@ fn filter_and_sort_result(
     result: &HashMap<String, TestCompare>,
     filtering_criteria: BenchResultFiltering,
     sorting_criteria: BenchResultSorting,
+    threshold: f64,
 ) -> Vec<(&String, &TestCompare)> {
     result
         .iter()
         .filter(|(_, status)| match status {
             TestCompare::Updated((old_cost, new_cost)) => match filtering_criteria {
-                BenchResultFiltering::ChangeOnly => old_cost != new_cost,
-                BenchResultFiltering::WorseOnly => new_cost > old_cost,
-                BenchResultFiltering::BetterOnly => new_cost < old_cost,
+                BenchResultFiltering::ChangeOnly => {
+                    compare_costs(new_cost, old_cost, threshold) != Ordering::Equal
+                }
+                BenchResultFiltering::WorseOnly => {
+                    compare_costs(new_cost, old_cost, threshold) == Ordering::Greater
+                }
+                BenchResultFiltering::BetterOnly => {
+                    compare_costs(new_cost, old_cost, threshold) == Ordering::Less
+                }
                 BenchResultFiltering::None => true,
             },
             TestCompare::Created(_) | TestCompare::Removed => {
@@ -386,8 +387,16 @@ fn filter_and_sort_result(
                         TestCompare::Updated((a_old_cost, a_new_cost)),
                         TestCompare::Updated((b_old_cost, b_new_cost)),
                     ) => {
-                        let (a_ratio, _) = get_ratio(*a_old_cost, *a_new_cost);
-                        let (b_ratio, _) = get_ratio(*b_old_cost, *b_new_cost);
+                        let (mut a_ratio, _) = get_ratio(*a_old_cost, *a_new_cost);
+                        let (mut b_ratio, _) = get_ratio(*b_old_cost, *b_new_cost);
+
+                        if a_ratio.abs() < threshold {
+                            a_ratio = 0.0;
+                        }
+
+                        if b_ratio.abs() < threshold {
+                            b_ratio = 0.0;
+                        }
 
                         let res = if let BenchResultSorting::WorstFirst = sorting_criteria {
                             b_ratio.partial_cmp(&a_ratio).unwrap()
@@ -412,7 +421,7 @@ fn filter_and_sort_result(
 }
 
 /// Print the result of a single test.
-fn print_result(tag: &str, name: &str, cost: u128, ratio: &str) {
+fn print_single_test_result(tag: &str, name: &str, cost: u128, ratio: &str) {
     let s = format!("{:<10} {:<48} {:<16} {}", tag, name, cost, ratio);
     let s = match tag {
         REMOVED_TAG | CREATED_TAG => s.bright_black(),
@@ -424,25 +433,39 @@ fn print_result(tag: &str, name: &str, cost: u128, ratio: &str) {
     println!("{}", s);
 }
 
+fn compare_costs(new_cost: &u128, old_cost: &u128, threshold: f64) -> Ordering {
+    let (ratio, _) = get_ratio(*old_cost, *new_cost);
+    if ratio > threshold {
+        Ordering::Greater
+    } else if ratio < -1.0 * threshold {
+        Ordering::Less
+    } else {
+        Ordering::Equal
+    }
+}
+
 /// Print the comparison results.
 fn print_compare_result(
     result: &HashMap<String, TestCompare>,
     filtering_criteria: BenchResultFiltering,
     sorting_criteria: BenchResultSorting,
+    threshold: f64,
 ) {
     let mut has_results = false;
 
     println!("{}", "Comparing tests...".blue());
 
-    for (name, status) in filter_and_sort_result(result, filtering_criteria, sorting_criteria) {
+    for (name, status) in
+        filter_and_sort_result(result, filtering_criteria, sorting_criteria, threshold)
+    {
         has_results = true;
         match status {
-            TestCompare::Removed => print_result(REMOVED_TAG, name, 0, ""),
-            TestCompare::Created(cost) => print_result(CREATED_TAG, name, *cost, ""),
+            TestCompare::Removed => print_single_test_result(REMOVED_TAG, name, 0, ""),
+            TestCompare::Created(cost) => print_single_test_result(CREATED_TAG, name, *cost, ""),
             TestCompare::Updated((old_cost, new_cost)) => {
-                match new_cost.partial_cmp(old_cost).unwrap() {
+                match compare_costs(new_cost, old_cost, threshold) {
                     Ordering::Less => {
-                        print_result(
+                        print_single_test_result(
                             BETTER_TAG,
                             name,
                             *new_cost,
@@ -450,14 +473,14 @@ fn print_compare_result(
                         );
                     }
                     Ordering::Greater => {
-                        print_result(
+                        print_single_test_result(
                             WORSE_TAG,
                             name,
                             *new_cost,
                             &get_ratio_indicator(old_cost, new_cost),
                         );
                     }
-                    Ordering::Equal => print_result(EQUAL_TAG, name, *new_cost, ""),
+                    Ordering::Equal => print_single_test_result(EQUAL_TAG, name, *new_cost, ""),
                 };
             }
         }
@@ -468,34 +491,6 @@ fn print_compare_result(
     }
 }
 
-/// Update the reference file with the new test results.
-fn update_ref_file(
-    ref_file: &Utf8PathBuf,
-    ref_results: &[TestCost],
-    new_results: &[TestCost],
-    keep_ref_costs: bool,
-) {
-    if keep_ref_costs {
-        let mut updated_tests_results = new_results
-            .iter()
-            .map(|new_test| TestCost {
-                name: new_test.name.clone(),
-                cost: ref_results
-                    .iter()
-                    .find(|ref_test| ref_test.name == new_test.name)
-                    .map(|ref_test| ref_test.cost)
-                    .unwrap_or(new_test.cost),
-            })
-            .collect::<Vec<_>>();
-
-        sort_tests(&mut updated_tests_results);
-
-        write_ref_file(ref_file, &updated_tests_results);
-    } else {
-        write_ref_file(ref_file, new_results);
-    }
-}
-
 fn main() {
     let args = Args::parse();
 
@@ -503,6 +498,7 @@ fn main() {
 
     let bench_result_filtering = BenchResultFiltering::from_args(&args);
     let bench_result_sorting = BenchResultSorting::from_args(&args);
+    let threshold = args.threshold.unwrap_or(DEFAULT_THRESHOLD) as f64;
 
     let manifest_path = get_manifest_path(args.manifest_path);
 
@@ -520,16 +516,11 @@ fn main() {
         let ref_test_results = read_ref_tests(&ref_file);
         let results = compare_tests(&ref_test_results, &new_test_results);
 
-        if args.update_ref_test_list || args.update_ref {
-            update_ref_file(
-                &ref_file,
-                &ref_test_results,
-                &new_test_results,
-                args.update_ref_test_list,
-            );
+        if args.write {
+            write_ref_file(&ref_file, &new_test_results);
         }
 
-        print_compare_result(&results, bench_result_filtering, bench_result_sorting);
+        print_compare_result(&results, bench_result_filtering, bench_result_sorting, threshold);
     } else {
         write_ref_file(&ref_file, &new_test_results);
     }
@@ -579,7 +570,7 @@ fn test_filtering_results_without_filtering() {
     let expected_names = vec!["A", "B", "C", "D", "E"];
 
     let filtered =
-        filter_and_sort_result(&result, BenchResultFiltering::None, BenchResultSorting::None);
+        filter_and_sort_result(&result, BenchResultFiltering::None, BenchResultSorting::None, 0.0);
 
     assert_eq!(
         filtered.iter().map(|x| x.0).collect::<Vec<_>>(),
@@ -599,8 +590,12 @@ fn test_filtering_results_change_only() {
     ]);
     let expected_names = vec!["A", "D"];
 
-    let filtered =
-        filter_and_sort_result(&result, BenchResultFiltering::ChangeOnly, BenchResultSorting::None);
+    let filtered = filter_and_sort_result(
+        &result,
+        BenchResultFiltering::ChangeOnly,
+        BenchResultSorting::None,
+        0.0,
+    );
 
     assert_eq!(
         filtered.iter().map(|x| x.0).collect::<Vec<_>>(),
@@ -620,8 +615,12 @@ fn test_filtering_results_better_only() {
     ]);
     let expected_names = vec!["D"];
 
-    let filtered =
-        filter_and_sort_result(&result, BenchResultFiltering::BetterOnly, BenchResultSorting::None);
+    let filtered = filter_and_sort_result(
+        &result,
+        BenchResultFiltering::BetterOnly,
+        BenchResultSorting::None,
+        0.0,
+    );
 
     assert_eq!(
         filtered.iter().map(|x| x.0).collect::<Vec<_>>(),
@@ -641,8 +640,12 @@ fn test_filtering_results_worse_only() {
     ]);
     let expected_names = vec!["A"];
 
-    let filtered =
-        filter_and_sort_result(&result, BenchResultFiltering::WorseOnly, BenchResultSorting::None);
+    let filtered = filter_and_sort_result(
+        &result,
+        BenchResultFiltering::WorseOnly,
+        BenchResultSorting::None,
+        0.0,
+    );
 
     assert_eq!(
         filtered.iter().map(|x| x.0).collect::<Vec<_>>(),
@@ -666,8 +669,12 @@ fn test_sorting_results_worst_first() {
 
     let expected_names = vec!["G", "F", "A", "Z", "C", "D", "B", "E"];
 
-    let filtered =
-        filter_and_sort_result(&result, BenchResultFiltering::None, BenchResultSorting::WorstFirst);
+    let filtered = filter_and_sort_result(
+        &result,
+        BenchResultFiltering::None,
+        BenchResultSorting::WorstFirst,
+        0.0,
+    );
 
     assert_eq!(
         filtered.iter().map(|x| x.0).collect::<Vec<_>>(),
@@ -691,8 +698,41 @@ fn test_sorting_results_best_first() {
 
     let expected_names = vec!["A", "D", "C", "Z", "F", "G", "B", "E"];
 
-    let filtered =
-        filter_and_sort_result(&result, BenchResultFiltering::None, BenchResultSorting::BestFirst);
+    let filtered = filter_and_sort_result(
+        &result,
+        BenchResultFiltering::None,
+        BenchResultSorting::BestFirst,
+        0.0,
+    );
+
+    assert_eq!(
+        filtered.iter().map(|x| x.0).collect::<Vec<_>>(),
+        expected_names,
+        "Should sort tests by worst first."
+    );
+}
+
+#[test]
+fn test_sorting_result_with_threshold() {
+    let result = HashMap::<String, TestCompare>::from([
+        ("Z".to_string(), TestCompare::Updated((10, 20))),
+        ("B".to_string(), TestCompare::Created(10)),
+        ("C".to_string(), TestCompare::Updated((10, 14))),
+        ("A".to_string(), TestCompare::Updated((10, 10))),
+        ("F".to_string(), TestCompare::Updated((10, 30))),
+        ("G".to_string(), TestCompare::Updated((10, 40))),
+        ("D".to_string(), TestCompare::Updated((13, 10))),
+        ("E".to_string(), TestCompare::Removed),
+    ]);
+
+    let expected_names = vec!["G", "F", "Z", "A", "C", "D", "B", "E"];
+
+    let filtered = filter_and_sort_result(
+        &result,
+        BenchResultFiltering::None,
+        BenchResultSorting::WorstFirst,
+        50.0,
+    );
 
     assert_eq!(
         filtered.iter().map(|x| x.0).collect::<Vec<_>>(),
