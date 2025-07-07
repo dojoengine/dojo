@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1751389569145,
+  "lastUpdate": 1751930845468,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -64038,6 +64038,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 50746058059,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "evergreenkary@gmail.com",
+            "name": "Ammar Arif",
+            "username": "kariy"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1616678de5de1c0d8804e1ede5ff5e1ce0b5b5a0",
+          "message": "refactor(sozo): check RPC spec compatibility (#3271)\n\ncheck rpc compatibility",
+          "timestamp": "2025-07-08T07:13:20+08:00",
+          "tree_id": "0eb8500baded50291bc2abd5c8c31ca21d64a64f",
+          "url": "https://github.com/dojoengine/dojo/commit/1616678de5de1c0d8804e1ede5ff5e1ce0b5b5a0"
+        },
+        "date": 1751930841361,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 51710056815,
             "range": "± 0",
             "unit": "ns/iter"
           }
