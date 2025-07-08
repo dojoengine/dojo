@@ -233,7 +233,7 @@ async fn test_read_manifest_resource_stdio() -> Result<()> {
 
     assert!(manifest_json["package"].is_object());
     assert_eq!(manifest_json["package"]["name"], "dojo_examples");
-    assert_eq!(manifest_json["package"]["version"], "1.6.0-alpha.0");
+    assert_eq!(manifest_json["package"]["version"], "1.6.0-alpha.1");
     assert!(manifest_json["dependencies"].is_object());
     assert!(manifest_json["dependencies"]["dojo"].is_object());
 
@@ -347,6 +347,7 @@ async fn test_call_build_tool_stdio() -> Result<()> {
         panic!("Neither 'json' nor 'text' field found in response");
     };
 
+    dbg!(&build_json);
     assert_eq!(build_json["status"], "success");
     assert_eq!(build_json["message"], "Build successful");
 
