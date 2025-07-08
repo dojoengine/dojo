@@ -61,7 +61,7 @@ impl HashArgs {
         }
 
         // Selector in starknet is used for types, which must starts with a letter.
-        if input.chars().next().map_or(false, |c| c.is_alphabetic()) {
+        if input.chars().next().is_some_and(|c| c.is_alphabetic()) {
             if input.len() > 32 {
                 return Err(anyhow::anyhow!(
                     "Input exceeds the 32-character limit for a Starknet selector"

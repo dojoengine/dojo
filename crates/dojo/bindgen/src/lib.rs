@@ -20,6 +20,8 @@ use plugins::unrealengine::UnrealEnginePlugin;
 use plugins::BuiltinPlugin;
 pub use plugins::BuiltinPlugins;
 
+use crate::error::Error;
+
 #[derive(Debug, PartialEq)]
 pub struct DojoModel {
     /// model tag.
@@ -136,6 +138,13 @@ fn gather_dojo_data(
     let profile_config =
         ProfileConfig::from_toml(root_dir.join(format!("dojo_{}.toml", profile_name)))?;
     let target_dir = root_dir.join("target").join(profile_name);
+
+    if !target_dir.exists() {
+        return Err(Error::GatherDojoData(format!(
+            "Target directory does not exist. Ensure you've built the project before generating \
+             bindings. Target directory: {target_dir}"
+        )));
+    }
 
     let world_local = WorldLocal::from_directory(&target_dir, profile_config)?;
 

@@ -292,7 +292,7 @@ mod tests {
 
     #[test]
     fn test_world_test_set() {
-        let caller = starknet::contract_address_const::<0x0>();
+        let caller = starknet::contract_address_const::<0xb0b>();
 
         let ndef = namespace_def();
         let mut world = spawn_test_world([ndef].span());
@@ -329,7 +329,7 @@ mod tests {
     #[test]
     #[available_gas(30000000)]
     fn test_move() {
-        let caller = starknet::contract_address_const::<0x0>();
+        let caller = starknet::contract_address_const::<0xb0b>();
 
         let ndef = namespace_def();
         let mut world = spawn_test_world([ndef].span());
@@ -337,6 +337,8 @@ mod tests {
 
         let (actions_system_addr, _) = world.dns(@"actions").unwrap();
         let actions_system = IActionsDispatcher { contract_address: actions_system_addr };
+
+        starknet::testing::set_contract_address(caller);
 
         actions_system.spawn();
         let initial_moves: Moves = world.read_model(caller);

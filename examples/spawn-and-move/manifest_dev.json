@@ -1,7 +1,7 @@
 {
   "world": {
-    "class_hash": "0x14f824e95baa23e1bf3e242e0316b7154f79787b08d818fc4a2c8e6b95520a4",
-    "address": "0x3e6abad7e2199acaa34a390c7cf3d0d732685ed3a4ea8493dbb7804f5e25002",
+    "class_hash": "0x7cff2f89a1171f82492b948638215592b953fb8441a740004598d0cc7cbcc02",
+    "address": "0x27bc5b6c346f69691b09e46e2cee996963ab2455858a0e1d985586e69dc81ae",
     "seed": "dojo_examples",
     "name": "example",
     "entrypoints": [
@@ -1364,7 +1364,7 @@
   },
   "contracts": [
     {
-      "address": "0xd4ed7610833263d1e01c38438541d1735507f40dad636bfb43b32293463335",
+      "address": "0x690aa26c8ab0df63ed7b45616015084a02ff959ebfb49e0cd253bf323f734bc",
       "class_hash": "0x5128a5331e9d78688affdf6fae7ff05fdcfd7ae68bebb0caffdd038caa51870",
       "abi": [
         {
@@ -1726,7 +1726,7 @@
       ]
     },
     {
-      "address": "0x95b4f2e73a88f2fc6052f958c8f43ea880e136873f565af1ab80f25ee272f5",
+      "address": "0x17727955a80783ea728cd9fff61148758aa48d07538b349572a1fd77aa3cc7d",
       "class_hash": "0x216b7f3b4d4d8f37e280a310881bdf11edb8c2f665d116388a3e0f6055929d2",
       "abi": [
         {
@@ -1920,7 +1920,7 @@
       ]
     },
     {
-      "address": "0x17be6c1ece001ffe3474c8733a37a595a07b558ac504e4f3355414e71e50975",
+      "address": "0x34ba450472c3112a4fe154b06b925b238bc36c1373d43615a2f2c76e04fb150",
       "class_hash": "0x6f8120a9adbe5b42764ef71dcb261eca97bbe19ff8ad2d43271cb751f35d226",
       "abi": [
         {
@@ -2096,7 +2096,7 @@
       ]
     },
     {
-      "address": "0x71cc34a38cda71e406a2c6372580ee7b3fde2bea8a7d3af77550a18c4195b2a",
+      "address": "0x31c6b805f1574e3d826b04a7cb4068ad750cee901dc5eca4434fedb48798855",
       "class_hash": "0x2171f2464ca252e6a717084210b5636b2788aa09a2b7fa53d67773262287a49",
       "abi": [
         {

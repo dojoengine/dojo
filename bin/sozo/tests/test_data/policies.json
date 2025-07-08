@@ -1,138 +1,138 @@
 [
   {
-    "target": "0x2fbd487dc4ccae7a01c767addb192df5c285fe07fe06756b463d7b5f3b43044",
+    "target": "0x77293d49c3c8b54ff2937cf998560ce8560fdb758feb90ee80d38d71e01c5a7",
     "method": "upgrade"
   },
   {
-    "target": "0x6460654b134506a238bf79b73d2be078f587718521048c80b78514fe90b6336",
+    "target": "0x7252eae2a3eb9834676e5bac9ec8c1ca5c05591927611c5cac0b709ae3afa96",
     "method": "upgrade"
   },
   {
-    "target": "0x73011d08f54413ec16fd768a0dcf1e61a6218e196b01b6ddfad09502f47e71d",
-    "method": "spawn"
-  },
-  {
-    "target": "0x73011d08f54413ec16fd768a0dcf1e61a6218e196b01b6ddfad09502f47e71d",
-    "method": "move"
-  },
-  {
-    "target": "0x73011d08f54413ec16fd768a0dcf1e61a6218e196b01b6ddfad09502f47e71d",
-    "method": "set_player_config"
-  },
-  {
-    "target": "0x73011d08f54413ec16fd768a0dcf1e61a6218e196b01b6ddfad09502f47e71d",
-    "method": "update_player_config_name"
-  },
-  {
-    "target": "0x73011d08f54413ec16fd768a0dcf1e61a6218e196b01b6ddfad09502f47e71d",
-    "method": "reset_player_config"
-  },
-  {
-    "target": "0x73011d08f54413ec16fd768a0dcf1e61a6218e196b01b6ddfad09502f47e71d",
-    "method": "set_player_server_profile"
-  },
-  {
-    "target": "0x73011d08f54413ec16fd768a0dcf1e61a6218e196b01b6ddfad09502f47e71d",
-    "method": "set_models"
-  },
-  {
-    "target": "0x73011d08f54413ec16fd768a0dcf1e61a6218e196b01b6ddfad09502f47e71d",
-    "method": "enter_dungeon"
-  },
-  {
-    "target": "0x73011d08f54413ec16fd768a0dcf1e61a6218e196b01b6ddfad09502f47e71d",
+    "target": "0x35072c010b1bcd92956301ed807e9a48bf23037f5adb7ed092c0e36956f62af",
     "method": "upgrade"
   },
   {
-    "target": "0x24334e79a3c56e5374c5bdd148c22ff2f0de3b4dc6e734e22ea49795f367221",
+    "target": "0x644e520f46d5e3e5437950d039f544e2be04d304f272595c4c082e8b063cf26",
     "method": "uuid"
   },
   {
-    "target": "0x24334e79a3c56e5374c5bdd148c22ff2f0de3b4dc6e734e22ea49795f367221",
+    "target": "0x644e520f46d5e3e5437950d039f544e2be04d304f272595c4c082e8b063cf26",
     "method": "set_metadata"
   },
   {
-    "target": "0x24334e79a3c56e5374c5bdd148c22ff2f0de3b4dc6e734e22ea49795f367221",
+    "target": "0x644e520f46d5e3e5437950d039f544e2be04d304f272595c4c082e8b063cf26",
     "method": "register_namespace"
   },
   {
-    "target": "0x24334e79a3c56e5374c5bdd148c22ff2f0de3b4dc6e734e22ea49795f367221",
+    "target": "0x644e520f46d5e3e5437950d039f544e2be04d304f272595c4c082e8b063cf26",
     "method": "register_event"
   },
   {
-    "target": "0x24334e79a3c56e5374c5bdd148c22ff2f0de3b4dc6e734e22ea49795f367221",
+    "target": "0x644e520f46d5e3e5437950d039f544e2be04d304f272595c4c082e8b063cf26",
     "method": "register_model"
   },
   {
-    "target": "0x24334e79a3c56e5374c5bdd148c22ff2f0de3b4dc6e734e22ea49795f367221",
+    "target": "0x644e520f46d5e3e5437950d039f544e2be04d304f272595c4c082e8b063cf26",
     "method": "register_contract"
   },
   {
-    "target": "0x24334e79a3c56e5374c5bdd148c22ff2f0de3b4dc6e734e22ea49795f367221",
+    "target": "0x644e520f46d5e3e5437950d039f544e2be04d304f272595c4c082e8b063cf26",
     "method": "register_library"
   },
   {
-    "target": "0x24334e79a3c56e5374c5bdd148c22ff2f0de3b4dc6e734e22ea49795f367221",
+    "target": "0x644e520f46d5e3e5437950d039f544e2be04d304f272595c4c082e8b063cf26",
     "method": "init_contract"
   },
   {
-    "target": "0x24334e79a3c56e5374c5bdd148c22ff2f0de3b4dc6e734e22ea49795f367221",
+    "target": "0x644e520f46d5e3e5437950d039f544e2be04d304f272595c4c082e8b063cf26",
     "method": "upgrade_event"
   },
   {
-    "target": "0x24334e79a3c56e5374c5bdd148c22ff2f0de3b4dc6e734e22ea49795f367221",
+    "target": "0x644e520f46d5e3e5437950d039f544e2be04d304f272595c4c082e8b063cf26",
     "method": "upgrade_model"
   },
   {
-    "target": "0x24334e79a3c56e5374c5bdd148c22ff2f0de3b4dc6e734e22ea49795f367221",
+    "target": "0x644e520f46d5e3e5437950d039f544e2be04d304f272595c4c082e8b063cf26",
     "method": "upgrade_contract"
   },
   {
-    "target": "0x24334e79a3c56e5374c5bdd148c22ff2f0de3b4dc6e734e22ea49795f367221",
+    "target": "0x644e520f46d5e3e5437950d039f544e2be04d304f272595c4c082e8b063cf26",
     "method": "emit_event"
   },
   {
-    "target": "0x24334e79a3c56e5374c5bdd148c22ff2f0de3b4dc6e734e22ea49795f367221",
+    "target": "0x644e520f46d5e3e5437950d039f544e2be04d304f272595c4c082e8b063cf26",
     "method": "emit_events"
   },
   {
-    "target": "0x24334e79a3c56e5374c5bdd148c22ff2f0de3b4dc6e734e22ea49795f367221",
+    "target": "0x644e520f46d5e3e5437950d039f544e2be04d304f272595c4c082e8b063cf26",
     "method": "set_entity"
   },
   {
-    "target": "0x24334e79a3c56e5374c5bdd148c22ff2f0de3b4dc6e734e22ea49795f367221",
+    "target": "0x644e520f46d5e3e5437950d039f544e2be04d304f272595c4c082e8b063cf26",
     "method": "set_entities"
   },
   {
-    "target": "0x24334e79a3c56e5374c5bdd148c22ff2f0de3b4dc6e734e22ea49795f367221",
+    "target": "0x644e520f46d5e3e5437950d039f544e2be04d304f272595c4c082e8b063cf26",
     "method": "delete_entity"
   },
   {
-    "target": "0x24334e79a3c56e5374c5bdd148c22ff2f0de3b4dc6e734e22ea49795f367221",
+    "target": "0x644e520f46d5e3e5437950d039f544e2be04d304f272595c4c082e8b063cf26",
     "method": "delete_entities"
   },
   {
-    "target": "0x24334e79a3c56e5374c5bdd148c22ff2f0de3b4dc6e734e22ea49795f367221",
+    "target": "0x644e520f46d5e3e5437950d039f544e2be04d304f272595c4c082e8b063cf26",
     "method": "grant_owner"
   },
   {
-    "target": "0x24334e79a3c56e5374c5bdd148c22ff2f0de3b4dc6e734e22ea49795f367221",
+    "target": "0x644e520f46d5e3e5437950d039f544e2be04d304f272595c4c082e8b063cf26",
     "method": "revoke_owner"
   },
   {
-    "target": "0x24334e79a3c56e5374c5bdd148c22ff2f0de3b4dc6e734e22ea49795f367221",
+    "target": "0x644e520f46d5e3e5437950d039f544e2be04d304f272595c4c082e8b063cf26",
     "method": "grant_writer"
   },
   {
-    "target": "0x24334e79a3c56e5374c5bdd148c22ff2f0de3b4dc6e734e22ea49795f367221",
+    "target": "0x644e520f46d5e3e5437950d039f544e2be04d304f272595c4c082e8b063cf26",
     "method": "revoke_writer"
   },
   {
-    "target": "0x24334e79a3c56e5374c5bdd148c22ff2f0de3b4dc6e734e22ea49795f367221",
+    "target": "0x644e520f46d5e3e5437950d039f544e2be04d304f272595c4c082e8b063cf26",
     "method": "upgrade"
   },
   {
-    "target": "0x64b964be7fb8d9d9161a34b39cb2709b7a36b46063e0180c93a62aabc899b52",
+    "target": "0x4b90458e67d04e9070ab96eaeca03955ce824bbb470cfc159d34ac88b1ba298",
+    "method": "spawn"
+  },
+  {
+    "target": "0x4b90458e67d04e9070ab96eaeca03955ce824bbb470cfc159d34ac88b1ba298",
+    "method": "move"
+  },
+  {
+    "target": "0x4b90458e67d04e9070ab96eaeca03955ce824bbb470cfc159d34ac88b1ba298",
+    "method": "set_player_config"
+  },
+  {
+    "target": "0x4b90458e67d04e9070ab96eaeca03955ce824bbb470cfc159d34ac88b1ba298",
+    "method": "update_player_config_name"
+  },
+  {
+    "target": "0x4b90458e67d04e9070ab96eaeca03955ce824bbb470cfc159d34ac88b1ba298",
+    "method": "reset_player_config"
+  },
+  {
+    "target": "0x4b90458e67d04e9070ab96eaeca03955ce824bbb470cfc159d34ac88b1ba298",
+    "method": "set_player_server_profile"
+  },
+  {
+    "target": "0x4b90458e67d04e9070ab96eaeca03955ce824bbb470cfc159d34ac88b1ba298",
+    "method": "set_models"
+  },
+  {
+    "target": "0x4b90458e67d04e9070ab96eaeca03955ce824bbb470cfc159d34ac88b1ba298",
+    "method": "enter_dungeon"
+  },
+  {
+    "target": "0x4b90458e67d04e9070ab96eaeca03955ce824bbb470cfc159d34ac88b1ba298",
     "method": "upgrade"
   },
   {

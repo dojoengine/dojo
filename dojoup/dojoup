@@ -600,7 +600,7 @@ welcome_msg() {
 
 Congratulations on successfully installing ${dojo}Dojo${clear} ${DOJOUP_VERSION}! 🥷
 
-For more info on how to get started, check out the Dojo Getting Started Guide: https://book.dojoengine.org/getting-started/quick-start
+For more info on getting started, check out the Dojo Starter guide: https://book.dojoengine.org/tutorials/dojo-starter
 
 ═════════════════════════════════════════════════════════════════════════
 

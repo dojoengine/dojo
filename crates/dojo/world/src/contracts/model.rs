@@ -162,7 +162,7 @@ where
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
-impl<'a, P> ModelReader<ModelError> for ModelRPCReader<'a, P>
+impl<P> ModelReader<ModelError> for ModelRPCReader<'_, P>
 where
     P: Provider + Sync + Send,
 {

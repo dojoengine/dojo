@@ -20,26 +20,25 @@ use starknet::core::types::Felt;
 use starknet::core::utils as snutils;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
-use tracing::{trace, warn};
+use tracing::trace;
 
 use crate::commands::options::account::{AccountOptions, SozoAccount};
 use crate::commands::options::starknet::StarknetOptions;
 use crate::commands::options::world::WorldOptions;
-use crate::commands::LOG_TARGET;
 
 /// The maximum number of blocks that will separate the `from_block` and the `to_block` in the
 /// event fetching, which if too high will cause the event fetching to fail in most of the node
 /// providers.
 pub const MAX_BLOCK_RANGE: u64 = 200_000;
 
-pub const RPC_SPEC_VERSION: &str = "0.7.1";
+pub const RPC_SPEC_VERSION: &str = "0.8.1";
 
 pub const CALLDATA_DOC: &str = "
 Space separated values e.g., 0x12345 128 u256:9999999999 str:'hello world'.
 Sozo supports some prefixes that you can use to automatically parse some types. The supported \
                                 prefixes are:
     - u256: A 256-bit unsigned integer.
-    - sstr: A cairo short string. 
+    - sstr: A cairo short string.
             If the string contains spaces it must be between quotes (ex: sstr:'hello world')
     - str: A cairo string (ByteArray).
             If the string contains spaces it must be between quotes (ex: sstr:'hello world')
@@ -140,7 +139,9 @@ pub async fn get_world_diff_and_provider(
     let (provider, rpc_url) = starknet.provider(env)?;
     let provider = Arc::new(provider);
     if (provider_utils::health_check_provider(provider.clone()).await).is_err() {
-        warn!(target: LOG_TARGET, "Provider health check failed during sozo inspect, inspecting locally and all resources will appeared as `Created`. Remote resources will not be fetched.");
+        // warn!(target: LOG_TARGET, "Provider health check failed during sozo inspect, inspecting
+        // locally and all resources will appeared as `Created`. Remote resources will not be
+        // fetched.");
         return Ok((
             WorldDiff::from_local(world_local)?,
             Arc::try_unwrap(provider).map_err(|_| anyhow!("Failed to unwrap Arc"))?,
@@ -156,9 +157,7 @@ pub async fn get_world_diff_and_provider(
 
     if !is_compatible_version(&spec_version, RPC_SPEC_VERSION)? {
         return Err(anyhow!(
-            "Unsupported Starknet RPC version: {}, expected {}.",
-            spec_version,
-            RPC_SPEC_VERSION
+            "Unsupported Starknet RPC version: {spec_version}, expected {RPC_SPEC_VERSION}.",
         ));
     }
 

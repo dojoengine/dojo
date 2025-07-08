@@ -22,7 +22,11 @@ impl TsSchemaGenerator {
 
     /// Generates the type definition for the schema
     fn handle_schema_type(&self, token: &Composite, buffer: &mut Buffer) {
-        let (ns, _namespace, type_name) = get_namespace_and_path(token);
+        let (_original_ns, _namespace, type_name) = get_namespace_and_path(token);
+
+        // Extract world name from buffer if available
+        let ns = self.get_world_name_from_buffer(buffer).unwrap_or(_original_ns);
+
         let schema_type = "export interface SchemaType extends ISchemaType";
         if !buffer.has(schema_type) {
             buffer.push(format!(
@@ -59,7 +63,11 @@ impl TsSchemaGenerator {
 
     /// Generates the default values for the schema
     fn handle_schema_const(&self, token: &Composite, buffer: &mut Buffer) {
-        let (ns, _namespace, type_name) = get_namespace_and_path(token);
+        let (_original_ns, _namespace, type_name) = get_namespace_and_path(token);
+
+        // Extract world name from buffer if available
+        let ns = self.get_world_name_from_buffer(buffer).unwrap_or(_original_ns);
+
         let const_type = "export const schema: SchemaType";
         if !buffer.has(const_type) {
             buffer.push(format!(
@@ -91,6 +99,17 @@ impl TsSchemaGenerator {
     /// Check if namespace is defined in schema
     fn namespace_is_defined(&self, buffer: &mut Buffer, ns: &str) -> bool {
         buffer.has(format!("\n\t{ns}: {{\n\t\t").as_str())
+    }
+
+    /// Extract world name from buffer
+    fn get_world_name_from_buffer(&self, buffer: &Buffer) -> Option<String> {
+        // Look for the special marker we added in the writer
+        for line in buffer.iter() {
+            if line.starts_with("// WORLD_NAME:") {
+                return Some(line.trim_start_matches("// WORLD_NAME:").to_string());
+            }
+        }
+        None
     }
 }
 
@@ -302,6 +321,40 @@ mod tests {
             is_event: false,
             alias: None,
         }
+    }
+
+    #[test]
+    fn test_imported_models_use_world_namespace() {
+        let generator = TsSchemaGenerator {};
+        let mut buffer = Buffer::new();
+
+        // Add world name marker
+        buffer.push("// WORLD_NAME:myworld".to_string());
+
+        // Create a model with different namespace (simulating imported model)
+        let imported_model = create_test_struct_token("Achievement", "arcade");
+        generator.handle_schema_type(&imported_model, &mut buffer);
+
+        // Should use world namespace "myworld" instead of "arcade"
+        assert!(buffer.has("\tmyworld: {\n\t\tAchievement: Achievement,"));
+        assert!(!buffer.has("\tarcade: {"));
+    }
+
+    #[test]
+    fn test_imported_models_use_world_namespace_in_const() {
+        let generator = TsSchemaGenerator {};
+        let mut buffer = Buffer::new();
+
+        // Add world name marker
+        buffer.push("// WORLD_NAME:myworld".to_string());
+
+        // Create a model with different namespace (simulating imported model)
+        let imported_model = create_test_struct_token("Achievement", "arcade");
+        generator.handle_schema_const(&imported_model, &mut buffer);
+
+        // Should use world namespace "myworld" instead of "arcade" in const
+        assert!(buffer.has("\tmyworld: {\n\t\tAchievement: {"));
+        assert!(!buffer.has("\tarcade: {"));
     }
 
     pub fn create_test_nested_struct_token(name: &str, namespace: &str) -> Composite {

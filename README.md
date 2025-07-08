@@ -2,8 +2,8 @@
 
 # Dojo: Provable Games and Applications [![discord](https://img.shields.io/badge/join-dojo-green?logo=discord&logoColor=white)](https://discord.com/invite/dojoengine) [![Telegram Chat][tg-badge]][tg-url] [![Github Actions][gha-badge]][gha-url]
 
-[gha-badge]: https://img.shields.io/github/actions/workflow/status/dojoengine/dojo/ci.yml?branch=main
-[gha-url]: https://github.com/dojoengine/dojo/actions/workflows/ci.yml?query=branch%3Amain
+[gha-badge]: https://img.shields.io/github/actions/workflow/status/dojoengine/dojo/test.yml?branch=main
+[gha-url]: https://github.com/dojoengine/dojo/actions/workflows/test.yml?query=branch%3Amain
 [tg-badge]: https://img.shields.io/endpoint?color=neon&logo=telegram&label=chat&style=flat-square&url=https%3A%2F%2Ftg.sumanjay.workers.dev%2Fdojoengine
 [tg-url]: https://t.me/dojoengine
 
@@ -13,7 +13,7 @@ It is designed to significantly reduce the complexity of developing provable app
 
 ## Getting Started
 
-See the [getting started](https://book.dojoengine.org/getting-started) section in the Dojo book to start building provable applications with Dojo.
+See the [getting started](https://book.dojoengine.org/tutorials/dojo-starter) section in the Dojo book to start building provable applications with Dojo.
 
 You can find more detailed documentation in the Dojo Book [here](https://book.dojoengine.org/).
 

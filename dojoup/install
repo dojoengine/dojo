@@ -73,9 +73,7 @@ SOURCE_COMMAND=". \"$ENV_FILE\""
 
 case $(basename "$SHELL") in
 zsh)
-	commands=(
-		$SOURCE_COMMAND
-	)
+	commands=("$SOURCE_COMMAND")
 
     zsh_config=$HOME/.zshrc
 
@@ -96,9 +94,7 @@ zsh)
     fi
     ;;
 bash)
-    commands=(
-    	$SOURCE_COMMAND
-    )
+    commands=("$SOURCE_COMMAND")
 
     bash_configs=(
         "$HOME/.bashrc"
