@@ -4,15 +4,15 @@ use std::process::Command;
 use std::str::FromStr;
 
 use anyhow::Result;
-use dojo_test_utils::compiler::CompilerTestSetup;
+use dojo_test_utils::setup::TestSetup;
 use dojo_utils::TxnConfig;
 use dojo_world::contracts::WorldContract;
 use dojo_world::diff::{Manifest, WorldDiff};
 use katana_runner::{KatanaRunner, KatanaRunnerConfig};
-use scarb::compiler::Profile;
+use scarb_interop::Profile;
+use scarb_metadata_ext::MetadataDojoExt;
 use sozo_ops::migrate::Migration;
 use sozo_ops::migration_ui::MigrationUi;
-use sozo_scarbext::WorkspaceExt;
 use starknet::core::types::Felt;
 
 async fn migrate_spawn_and_move(db_path: &Path) -> Result<Manifest> {
@@ -26,16 +26,15 @@ async fn migrate_spawn_and_move(db_path: &Path) -> Result<Manifest> {
     let runner = KatanaRunner::new_with_config(cfg)?;
 
     // setup scarb workspace
-    let setup = CompilerTestSetup::from_examples("crates/dojo/core", "examples/");
-    let cfg = setup.build_test_config("spawn-and-move", Profile::DEV);
-    let ws = scarb::ops::read_workspace(cfg.manifest_path(), &cfg)?;
+    let setup = TestSetup::from_examples("crates/dojo/core", "examples/");
+    let metadata = setup.load_metadata("spawn-and-move", Profile::DEV);
 
     let mut txn_config: TxnConfig = TxnConfig::init_wait();
     txn_config.wait = true;
 
-    let profile_config = ws.load_profile_config()?;
+    let profile_config = metadata.load_dojo_profile_config()?;
 
-    let world_local = ws.load_world_local()?;
+    let world_local = metadata.load_dojo_world_local()?;
 
     // In the case of testing, if the addresses are different it means that the example hasn't been
     // migrated correctly.

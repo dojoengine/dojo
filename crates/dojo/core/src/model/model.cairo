@@ -1,9 +1,8 @@
-use dojo::{
-    meta::{Layout, introspect::Struct, layout::compute_packed_size},
-    utils::{entity_id_from_serialized_keys, find_model_field_layout, entity_id_from_keys},
-};
-
-use super::{ModelDefinition, ModelDef, ModelIndex};
+use dojo::meta::Layout;
+use dojo::meta::introspect::Struct;
+use dojo::meta::layout::compute_packed_size;
+use dojo::utils::{entity_id_from_keys, entity_id_from_serialized_keys, find_model_field_layout};
+use super::{ModelDef, ModelDefinition, ModelIndex};
 /// Trait `KeyParser` defines a trait for parsing keys from a given model.
 ///
 /// A pointer to a model, which can be expressed by an entity id.
@@ -30,7 +29,7 @@ pub impl ModelPtrsImpl<M> of ModelPtrsTrait<M> {
         let mut ids = ArrayTrait::<ModelIndex>::new();
         for ptr in self {
             ids.append(ModelIndex::Id(*ptr.id));
-        };
+        }
         ids.span()
     }
 
@@ -38,7 +37,7 @@ pub impl ModelPtrsImpl<M> of ModelPtrsTrait<M> {
         let mut ids = ArrayTrait::<ModelIndex>::new();
         for ptr in self {
             ids.append(ModelIndex::MemberId((*ptr.id, field_selector)));
-        };
+        }
         ids.span()
     }
 }
@@ -50,6 +49,8 @@ pub trait KeyParser<M, K> {
 
 /// Defines a trait for parsing models, providing methods to serialize keys and values.
 pub trait ModelParser<M> {
+    /// Deserializes raw data into a model struct.
+    fn deserialize(ref values: Span<felt252>) -> Option<M>;
     /// Serializes the keys of the model.
     fn serialize_keys(self: @M) -> Span<felt252>;
     /// Serializes the values of the model.
@@ -79,6 +80,9 @@ pub trait Model<M> {
     fn layout() -> Layout;
     /// Returns the layout of a field in the model.
     fn field_layout(field_selector: felt252) -> Option<Layout>;
+    /// Indicates if the model uses the legacy storage (true), or
+    /// the new one (false).
+    fn use_legacy_storage() -> bool;
     /// Returns the unpacked size of the model. Only applicable for fixed size models.
     fn unpacked_size() -> Option<usize>;
     /// Returns the packed size of the model. Only applicable for fixed size models.
@@ -127,7 +131,7 @@ pub impl ModelImpl<M, +ModelParser<M>, +ModelDefinition<M>, +Serde<M>, +Drop<M>>
         serialized.append_span(values);
         let mut span = serialized.span();
 
-        Serde::<M>::deserialize(ref span)
+        ModelParser::<M>::deserialize(ref span)
     }
 
     fn name() -> ByteArray {
@@ -144,6 +148,10 @@ pub impl ModelImpl<M, +ModelParser<M>, +ModelDefinition<M>, +Serde<M>, +Drop<M>>
 
     fn field_layout(field_selector: felt252) -> Option<Layout> {
         find_model_field_layout(Self::layout(), field_selector)
+    }
+
+    fn use_legacy_storage() -> bool {
+        ModelDefinition::<M>::use_legacy_storage()
     }
 
     fn schema() -> Struct {
@@ -188,7 +196,7 @@ pub impl ModelImpl<M, +ModelParser<M>, +ModelDefinition<M>, +Serde<M>, +Drop<M>>
         let mut ptrs = ArrayTrait::<ModelPtr<M>>::new();
         for key in keys {
             ptrs.append(ModelPtr { id: entity_id_from_keys(key) });
-        };
+        }
         ptrs.span()
     }
 
@@ -196,7 +204,7 @@ pub impl ModelImpl<M, +ModelParser<M>, +ModelDefinition<M>, +Serde<M>, +Drop<M>>
         let mut ptrs = ArrayTrait::<ModelPtr<M>>::new();
         for key in keys {
             ptrs.append(Self::ptr_from_serialized_keys(*key));
-        };
+        }
         ptrs.span()
     }
 
@@ -204,7 +212,7 @@ pub impl ModelImpl<M, +ModelParser<M>, +ModelDefinition<M>, +Serde<M>, +Drop<M>>
         let mut ptrs = ArrayTrait::<ModelPtr<M>>::new();
         for entity_id in entity_ids {
             ptrs.append(Self::ptr_from_id(*entity_id));
-        };
+        }
         ptrs.span()
     }
 

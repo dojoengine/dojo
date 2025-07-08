@@ -8,11 +8,9 @@ pub trait IUpgradeable<T> {
 #[starknet::component]
 pub mod upgradeable_cpt {
     use core::num::traits::Zero;
-
-    use starknet::{ClassHash, get_caller_address};
-    use starknet::syscalls::replace_class_syscall;
-
     use dojo::contract::components::world_provider::IWorldProvider;
+    use starknet::syscalls::replace_class_syscall;
+    use starknet::{ClassHash, get_caller_address};
 
     #[storage]
     pub struct Storage {}

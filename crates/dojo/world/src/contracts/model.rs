@@ -58,6 +58,7 @@ pub trait ModelReader<E> {
     async fn packed_size(&self) -> Result<u32, E>;
     async fn unpacked_size(&self) -> Result<u32, E>;
     async fn layout(&self) -> Result<abigen::model::Layout, E>;
+    async fn use_legacy_storage(&self) -> Result<bool, E>;
 }
 
 #[derive(Debug)]
@@ -204,6 +205,10 @@ where
     async fn layout(&self) -> Result<abigen::model::Layout, ModelError> {
         Ok(self.model_reader.layout().call().await?)
     }
+
+    async fn use_legacy_storage(&self) -> Result<bool, ModelError> {
+        Ok(self.model_reader.use_legacy_storage().call().await?)
+    }
 }
 
 fn parse_schema(ty: &abigen::model::Ty) -> Result<Ty, ParseError> {
@@ -264,6 +269,11 @@ fn parse_schema(ty: &abigen::model::Ty) -> Result<Ty, ParseError> {
             let values = values.iter().map(parse_schema).collect::<Result<Vec<_>, ParseError>>()?;
 
             Ok(Ty::Tuple(values))
+        }
+        abigen::model::Ty::FixedArray(values) => {
+            let (item_ty, length) = &values[0];
+            let item_ty = parse_schema(item_ty)?;
+            Ok(Ty::FixedSizeArray(vec![(item_ty, *length)]))
         }
         abigen::model::Ty::Array(values) => {
             let values = values.iter().map(parse_schema).collect::<Result<Vec<_>, ParseError>>()?;

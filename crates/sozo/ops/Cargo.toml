@@ -26,6 +26,7 @@ starknet-crypto.workspace = true
 thiserror.workspace = true
 toml.workspace = true
 tracing.workspace = true
+scarb-interop.workspace = true
 
 dojo-test-utils = { workspace = true, features = [ "build-examples" ], optional = true }
 
@@ -33,9 +34,9 @@ dojo-test-utils = { workspace = true, features = [ "build-examples" ], optional 
 assert_fs.workspace = true
 dojo-test-utils = { workspace = true, features = [ "build-examples" ] }
 katana-runner.workspace = true
-scarb.workspace = true
-sozo-scarbext.workspace = true
 tokio.workspace = true
+scarb-metadata.workspace = true
+scarb-metadata-ext.workspace = true
 
 [features]
 test-utils = [ "dep:dojo-test-utils" ]

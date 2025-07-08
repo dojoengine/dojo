@@ -57,13 +57,6 @@ impl UnityPlugin {
                     panic!("Invalid tuple token: {:?}", token);
                 }
             }
-            "generic_arg" => {
-                if let Token::GenericArg(g) = &token {
-                    g.clone()
-                } else {
-                    panic!("Invalid generic arg token: {:?}", token);
-                }
-            }
 
             _ => {
                 let mut type_name = token.type_name().to_string();
@@ -378,18 +371,7 @@ public class {}_{} : ModelInstance {{
                                         field.name.clone(),
                                         arg_name
                                     ),
-                                    &if let Token::GenericArg(generic_arg) = &field.token {
-                                        let generic_token = t
-                                            .generic_args
-                                            .iter()
-                                            .find(|(name, _)| name == generic_arg)
-                                            .unwrap()
-                                            .1
-                                            .clone();
-                                        generic_token
-                                    } else {
-                                        field.token.clone()
-                                    },
+                                    &field.token,
                                     Some(field.name.clone()),
                                 ))
                             });

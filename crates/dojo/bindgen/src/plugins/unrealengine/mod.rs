@@ -53,13 +53,6 @@ impl UnrealEnginePlugin {
             "tuple" => {
                 panic!("Tuple type not handled");
             }
-            "generic_arg" => {
-                if let Token::GenericArg(g) = &token {
-                    g.clone()
-                } else {
-                    panic!("Invalid generic arg token: {:?}", token);
-                }
-            }
             _ => {
                 let mut type_name = token.type_name().to_string();
 

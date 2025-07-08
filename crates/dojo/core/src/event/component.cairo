@@ -1,5 +1,6 @@
-use dojo::event::{Event, IEvent, EventDef};
-use dojo::meta::{Layout, introspect::Struct};
+use dojo::event::{Event, EventDef, IEvent};
+use dojo::meta::Layout;
+use dojo::meta::introspect::Struct;
 
 #[starknet::embeddable]
 pub impl IDeployedEventImpl<
@@ -19,7 +20,14 @@ pub impl IStoredEventImpl<
     }
 
     fn layout(self: @TContractState) -> Layout {
-        Event::<E>::layout()
+        // as events use Serde instead of DojoStore,
+        // layout definition must remain as before.
+        // (enum variant index starts from 0, ...)
+        //
+        // Note that event layout is not used at the moment,
+        // because events are not stored in the world storage
+        // but emitted as real Starknet events.
+        dojo::meta::layout::build_legacy_layout(Event::<E>::layout())
     }
 }
 

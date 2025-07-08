@@ -39,6 +39,11 @@ where
         self.calls.extend(calls);
     }
 
+    /// Clean all the calls of the invoker.
+    pub fn clean_calls(&mut self) {
+        self.calls.clear();
+    }
+
     /// First uses the ordered calls, and then extends with the
     /// calls already added (considered as non-ordered).
     pub fn extends_ordered(&mut self, ordered_calls: Vec<Call>) {

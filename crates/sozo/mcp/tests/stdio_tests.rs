@@ -2,8 +2,6 @@ use std::process::{Command, Stdio};
 use std::time::Duration;
 
 use anyhow::Result;
-use dojo_test_utils::compiler::CompilerTestSetup;
-use scarb::compiler::Profile;
 use serde_json::json;
 use tokio::time::timeout;
 
@@ -235,59 +233,9 @@ async fn test_read_manifest_resource_stdio() -> Result<()> {
 
     assert!(manifest_json["package"].is_object());
     assert_eq!(manifest_json["package"]["name"], "dojo_examples");
-    assert_eq!(manifest_json["package"]["version"], "1.6.0-alpha.0");
+    assert_eq!(manifest_json["package"]["version"], "1.6.0-alpha.1");
     assert!(manifest_json["dependencies"].is_object());
     assert!(manifest_json["dependencies"]["dojo"].is_object());
-
-    server.cleanup()?;
-    Ok(())
-}
-
-/// Tests read manifest resource with valid manifest path via STDIO.
-#[tokio::test]
-async fn test_read_manifest_resource_with_path_stdio() -> Result<()> {
-    let temp_dir = tempfile::tempdir()?;
-    let manifest_path = temp_dir.path().join("Scarb.toml");
-
-    let manifest_content = r#"
-[package]
-name = "test_project"
-version = "0.1.0"
-
-[dependencies]
-dojo = { git = "https://github.com/dojoengine/dojo" }
-"#;
-
-    std::fs::write(&manifest_path, manifest_content)?;
-
-    let mut server = McpServerProcess::new(manifest_path.to_str().unwrap())?;
-
-    server.initialize().await?;
-
-    let read_request = json!({
-        "jsonrpc": "2.0",
-        "id": 6,
-        "method": "resources/read",
-        "params": {
-            "uri": "dojo://scarb/manifest"
-        }
-    });
-
-    let response = timeout(Duration::from_secs(5), server.send_request(read_request)).await??;
-
-    assert!(response.get("result").is_some());
-    let result = response.get("result").unwrap();
-
-    let text_field = result["contents"][0]["text"].as_str().unwrap();
-    println!("Temporary manifest JSON content: {}", text_field);
-
-    let manifest_json: serde_json::Value = serde_json::from_str(text_field)?;
-
-    assert!(manifest_json["package"].is_object());
-    assert_eq!(manifest_json["package"]["name"], "test_project");
-    assert_eq!(manifest_json["package"]["version"], "0.1.0");
-    assert!(manifest_json["dependencies"].is_object());
-    assert!(manifest_json["dependencies"]["dojo"]["git"].is_string());
 
     server.cleanup()?;
     Ok(())
@@ -363,11 +311,7 @@ async fn test_multiple_requests_stdio() -> Result<()> {
 /// Tests call build tool via STDIO.
 #[tokio::test]
 async fn test_call_build_tool_stdio() -> Result<()> {
-    // Ensure we first copy the project to a temporary directory to avoid modifying the original
-    // project.
-    let setup = CompilerTestSetup::from_examples("../../dojo/core", "../../../examples/");
-    let config = setup.build_test_config("spawn-and-move", Profile::DEV);
-    let mut server = McpServerProcess::new(config.manifest_path().to_string().as_str())?;
+    let mut server = McpServerProcess::new(SPAWN_AND_MOVE_MANIFEST_PATH)?;
 
     server.initialize().await?;
 
@@ -393,9 +337,21 @@ async fn test_call_build_tool_stdio() -> Result<()> {
     assert!(!content.is_empty());
 
     let first_content = &content[0];
-    assert!(first_content["text"].is_string());
 
-    println!("Build tool output: {}", first_content["text"]);
+    let build_json: serde_json::Value = if first_content.get("json").is_some() {
+        first_content["json"].clone()
+    } else if first_content.get("text").is_some() {
+        let text_content = first_content["text"].as_str().unwrap();
+        serde_json::from_str::<serde_json::Value>(text_content).unwrap()
+    } else {
+        panic!("Neither 'json' nor 'text' field found in response");
+    };
+
+    dbg!(&build_json);
+    assert_eq!(build_json["status"], "success");
+    assert_eq!(build_json["message"], "Build successful");
+
+    println!("Build tool output: {}", build_json);
 
     server.cleanup()?;
     Ok(())

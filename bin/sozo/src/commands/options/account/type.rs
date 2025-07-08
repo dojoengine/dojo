@@ -42,7 +42,7 @@ where
 {
     Standard(SingleOwnerAccount<Arc<P>, LocalWallet>),
     #[cfg(feature = "controller")]
-    Controller(ControllerAccount),
+    Controller(Box<ControllerAccount>),
 }
 
 pub struct SozoAccount<P>
@@ -74,7 +74,7 @@ where
         provider: CartridgeJsonRpcProvider,
         controller: ControllerAccount,
     ) -> Self {
-        let account = SozoAccountKind::Controller(controller);
+        let account = SozoAccountKind::Controller(Box::new(controller));
         let provider = EitherProvider::Right(provider);
         Self { account, provider }
     }

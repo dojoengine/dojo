@@ -52,13 +52,6 @@ impl TypescriptRecsPlugin {
                     panic!("Invalid array token: {:?}", token);
                 }
             }
-            "generic_arg" => {
-                if let Token::GenericArg(g) = &token {
-                    g.clone()
-                } else {
-                    panic!("Invalid generic arg token: {:?}", token);
-                }
-            }
 
             // we consider tuples as essentially objects
             _ => {

@@ -4,7 +4,9 @@ use std::path::Path;
 
 use console::{pad_str, Alignment, Style, StyledObject};
 use reqwest::StatusCode;
-use scarb::core::Workspace;
+use scarb_metadata::Metadata;
+use scarb_metadata_ext::MetadataDojoExt;
+use scarb_ui::Ui;
 use serde::Serialize;
 use serde_json::Value;
 use walkdir::WalkDir;
@@ -26,9 +28,7 @@ struct VerificationPayload {
 /// This function verifies all contracts and models in the workspace. It sends a single request to
 /// the Walnut backend with the source code. Walnut will then build the project and store
 /// the source code associated with the class hashes.
-pub async fn walnut_verify(ws: &Workspace<'_>) -> anyhow::Result<()> {
-    let ui = ws.config().ui();
-
+pub async fn walnut_verify(scarb_metadata: &Metadata, ui: &Ui) -> anyhow::Result<()> {
     // Notify start of verification
     ui.print(" ");
     ui.print("🌰 Verifying classes with Walnut...");
@@ -38,10 +38,11 @@ pub async fn walnut_verify(ws: &Workspace<'_>) -> anyhow::Result<()> {
     let api_url = walnut_get_api_url();
 
     // its path to a file so `parent` should never return `None`
-    let root_dir: &Path = ws.manifest_path().parent().unwrap().as_std_path();
+    let manifest = scarb_metadata.dojo_manifest_path_profile();
+    let root_dir: &Path = manifest.parent().unwrap().as_std_path();
 
     let source_code = collect_source_code(root_dir)?;
-    let cairo_version = scarb::version::get().version;
+    let cairo_version = scarb_metadata.version;
 
     let verification_payload =
         VerificationPayload { source_code, cairo_version: cairo_version.to_string() };

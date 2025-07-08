@@ -38,6 +38,17 @@ pub fn contract_already_registered(namespace: @ByteArray, name: @ByteArray) -> B
     format!("Resource (Contract) `{}-{}` is already registered", namespace, name)
 }
 
+pub fn external_contract_already_registered(
+    namespace: @ByteArray, contract_name: @ByteArray, instance_name: @ByteArray,
+) -> ByteArray {
+    format!(
+        "Resource (External Contract) `{}-{} ({})` is already registered",
+        namespace,
+        instance_name,
+        contract_name,
+    )
+}
+
 pub fn library_already_registered(namespace: @ByteArray, name: @ByteArray) -> ByteArray {
     format!(
         "Resource (Library) `{}-{}` is already registered. Libraries can't be updated, increment the version in the Dojo configuration file instead.",

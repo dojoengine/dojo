@@ -66,7 +66,7 @@ pub fn read_model_entity(
             super::layout::read_struct_layout(model_selector, entity_id, ref read_data, layout);
         },
         _ => { panic!("Unexpected layout type for a model."); },
-    };
+    }
 
     read_data.span()
 }

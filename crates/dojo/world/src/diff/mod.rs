@@ -17,14 +17,13 @@ use tracing::trace;
 use super::local::{ResourceLocal, WorldLocal};
 use super::remote::{ResourceRemote, WorldRemote};
 use crate::config::ProfileConfig;
+use crate::local::ExternalContractLocal;
 use crate::{utils, ContractAddress, DojoSelector, ResourceType};
 
 mod compare;
-mod external_contract;
 mod manifest;
 mod resource;
 
-pub use external_contract::*;
 pub use manifest::*;
 pub use resource::*;
 
@@ -72,10 +71,6 @@ pub struct WorldDiff {
     pub external_writers: HashMap<DojoSelector, HashSet<ContractAddress>>,
     /// The external owners.
     pub external_owners: HashMap<DojoSelector, HashSet<ContractAddress>>,
-    /// The external contract classes.
-    pub external_contract_classes: HashMap<String, ExternalContractClassDiff>,
-    /// The external contracts.
-    pub external_contracts: HashMap<String, ExternalContractDiff>,
 }
 
 impl WorldDiff {
@@ -95,8 +90,6 @@ impl WorldDiff {
             },
             namespaces: vec![],
             resources: HashMap::new(),
-            external_contracts: HashMap::new(),
-            external_contract_classes: HashMap::new(),
             profile_config: local.profile_config,
             external_writers: HashMap::new(),
             external_owners: HashMap::new(),
@@ -109,15 +102,6 @@ impl WorldDiff {
             }
 
             diff.resources.insert(selector, ResourceDiff::Created(resource));
-        }
-
-        for (name, class) in local.external_contract_classes {
-            diff.external_contract_classes.insert(name, ExternalContractClassDiff::Created(class));
-        }
-
-        for contract in local.external_contracts {
-            diff.external_contracts
-                .insert(contract.instance_name.clone(), ExternalContractDiff::Created(contract));
         }
 
         Ok(diff)
@@ -150,8 +134,6 @@ impl WorldDiff {
             profile_config: local.profile_config,
             external_writers: remote.external_writers.clone(),
             external_owners: remote.external_owners.clone(),
-            external_contract_classes: HashMap::new(),
-            external_contracts: HashMap::new(),
         };
 
         for (local_selector, local_resource) in local.resources {
@@ -166,28 +148,6 @@ impl WorldDiff {
                 diff.resources.insert(local_selector, local_resource.compare(remote_resource));
             } else {
                 diff.resources.insert(local_selector, ResourceDiff::Created(local_resource));
-            }
-        }
-
-        for (name, class) in local.external_contract_classes {
-            if remote.declared_external_contract_classes.contains(&name) {
-                diff.external_contract_classes
-                    .insert(name, ExternalContractClassDiff::Synced(class));
-            } else {
-                diff.external_contract_classes
-                    .insert(name, ExternalContractClassDiff::Created(class));
-            }
-        }
-
-        for contract in local.external_contracts {
-            if remote.deployed_external_contracts.contains(&contract.instance_name) {
-                diff.external_contracts
-                    .insert(contract.instance_name.clone(), ExternalContractDiff::Synced(contract));
-            } else {
-                diff.external_contracts.insert(
-                    contract.instance_name.clone(),
-                    ExternalContractDiff::Created(contract),
-                );
             }
         }
 
@@ -237,7 +197,7 @@ impl WorldDiff {
         };
 
         if is_deployed {
-            let mut world_remote = WorldRemote::from_events(
+            let world_remote = WorldRemote::from_events(
                 world_address,
                 &provider,
                 from_block,
@@ -245,25 +205,6 @@ impl WorldDiff {
                 namespaces,
             )
             .await?;
-
-            let mut external_contract_classes = vec![];
-            for (name, class) in &world_local.external_contract_classes {
-                external_contract_classes.push((name.clone(), class.class.class_hash()?));
-            }
-
-            let external_contracts: HashMap<_, _> = world_local
-                .external_contracts
-                .iter()
-                .map(|contract| (contract.instance_name.clone(), contract.address))
-                .collect();
-
-            world_remote
-                .load_external_contract_states(
-                    &provider,
-                    external_contract_classes,
-                    external_contracts,
-                )
-                .await?;
 
             Ok(Self::new(world_local, world_remote))
         } else {
@@ -431,6 +372,21 @@ impl WorldDiff {
                 }
                 ResourceDiff::Updated(_, ResourceRemote::Contract(c)) => Some(c.common.address),
                 ResourceDiff::Synced(_, ResourceRemote::Contract(c)) => Some(c.common.address),
+                ResourceDiff::Created(ResourceLocal::ExternalContract(c)) => {
+                    if let ExternalContractLocal::SozoManaged(c) = c {
+                        Some(c.computed_address)
+                    } else {
+                        None
+                    }
+                }
+                ResourceDiff::Updated(
+                    ResourceLocal::ExternalContract(_),
+                    ResourceRemote::ExternalContract(r),
+                )
+                | ResourceDiff::Synced(
+                    ResourceLocal::ExternalContract(_),
+                    ResourceRemote::ExternalContract(r),
+                ) => Some(r.common.address),
                 _ => unreachable!(),
             }
         } else {

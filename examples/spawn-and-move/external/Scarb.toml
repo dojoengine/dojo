@@ -1,0 +1,13 @@
+[package]
+name = "hello"
+version = "0.1.0"
+edition = "2024_07"
+
+[dependencies]
+starknet = "2.11.4"
+
+[[target.starknet-contract]]
+sierra = true
+
+[tool.scarb]
+allow-prebuilt-plugins = ["snforge_std"]

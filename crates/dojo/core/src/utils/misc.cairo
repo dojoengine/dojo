@@ -1,43 +1,15 @@
-use core::num::traits::Zero;
-use core::ops::AddAssign;
-use core::option::Option;
+/// Computes the sum of the provided sizes.
+/// If at least one size is None, returns None.
+#[inline(always)]
+pub fn sum_sizes(sizes: Array<Option<usize>>) -> Option<usize> {
+    let mut total_size = 0;
 
-
-/// Indicates if at least one array item is None.
-pub fn any_none<T>(arr: @Array<Option<T>>) -> bool {
-    let mut i = 0;
-    let mut res = false;
-    loop {
-        if i >= arr.len() {
-            break;
+    for s in sizes {
+        if s.is_none() {
+            return None;
         }
-
-        if arr.at(i).is_none() {
-            res = true;
-            break;
-        }
-        i += 1;
-    };
-    res
-}
-
-/// Compute the sum of array items.
-/// Note that there is no overflow check as we expect small array items.
-pub fn sum<T, +Drop<T>, +Copy<T>, +AddAssign<T, T>, +Zero<T>>(arr: Array<Option<T>>) -> T {
-    let mut i = 0;
-    let mut res = Zero::<T>::zero();
-
-    loop {
-        if i >= arr.len() {
-            break res;
-        }
-
-        match *arr.at(i) {
-            Option::Some(x) => res += x,
-            Option::None => {},
-        }
-
-        i += 1;
+        total_size += s.unwrap();
     }
-}
 
+    Some(total_size)
+}

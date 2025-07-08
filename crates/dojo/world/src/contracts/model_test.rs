@@ -1,10 +1,10 @@
 use camino::Utf8PathBuf;
-use dojo_test_utils::compiler::CompilerTestSetup;
 use dojo_test_utils::migration::{copy_spawn_and_move_db, prepare_migration_with_world_and_seed};
+use dojo_test_utils::setup::TestSetup;
 use dojo_types::primitive::Primitive;
 use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
 use katana_runner::RunnerCtx;
-use scarb::compiler::Profile;
+use scarb_interop::Profile;
 use starknet::accounts::ConnectedAccount;
 use starknet::macros::felt;
 
@@ -17,10 +17,9 @@ async fn test_model(sequencer: &RunnerCtx) {
     let account = sequencer.account(0);
     let provider = account.provider();
 
-    let setup = CompilerTestSetup::from_examples("../dojo/core", "../../examples/");
-    let config = setup.build_test_config("spawn-and-move", Profile::DEV);
+    let setup = TestSetup::from_examples("../dojo/core", "../../examples/");
 
-    let manifest_dir = config.manifest_path().parent().unwrap();
+    let manifest_dir = setup.manifest_dir("spawn-and-move");
     let target_dir = manifest_dir.join("target").join("dev");
 
     let (strat, _) = prepare_migration_with_world_and_seed(

@@ -3,25 +3,36 @@ version = 1
 
 [[package]]
 name = "armory"
-version = "0.1.0"
+version = "1.6.0-alpha.1"
 dependencies = [
  "dojo",
+ "dojo_cairo_test",
+ "dojo_macros",
 ]
 
 [[package]]
 name = "bestiary"
-version = "0.1.0"
+version = "1.6.0-alpha.1"
+dependencies = [
+ "dojo",
+ "dojo_cairo_test",
+ "dojo_macros",
+]
+
+[[package]]
+name = "dojo"
+version = "1.6.0-alpha.1"
+dependencies = [
+ "dojo_macros",
+]
+
+[[package]]
+name = "dojo_cairo_test"
+version = "1.6.0-alpha.1"
 dependencies = [
  "dojo",
 ]
 
 [[package]]
-name = "dojo"
-version = "1.1.2"
-dependencies = [
- "dojo_plugin",
-]
-
-[[package]]
-name = "dojo_plugin"
-version = "2.9.2"
+name = "dojo_macros"
+version = "1.6.0-alpha.1"

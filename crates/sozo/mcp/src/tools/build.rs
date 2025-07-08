@@ -29,15 +29,16 @@ pub async fn build_project(
 ) -> Result<CallToolResult, McpError> {
     let profile = &args.profile.unwrap_or("dev".to_string());
 
+    debug!(target: LOG_TARGET, profile, manifest_path = ?manifest_path, "Building project.");
+
     let mut cmd = AsyncCommand::new(SOZO_PATH);
-    cmd.arg("build");
-    cmd.arg("--profile").arg(profile);
 
     if let Some(manifest_path) = &manifest_path {
         cmd.arg("--manifest-path").arg(manifest_path);
     }
 
-    debug!(target: LOG_TARGET, profile, manifest_path = ?manifest_path, "Building project.");
+    cmd.arg("--profile").arg(profile);
+    cmd.arg("build");
 
     let output = cmd.output().await.map_err(|e| {
         McpError::internal_error(
@@ -47,9 +48,24 @@ pub async fn build_project(
     })?;
 
     if output.status.success() {
-        Ok(CallToolResult::success(vec![Content::text("Build successful".to_string())]))
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let json_obj = serde_json::json!({
+            "status": "success",
+            "message": "Build successful",
+            "stdout": stdout,
+            "stderr": stderr
+        });
+        Ok(CallToolResult::success(vec![Content::json(json_obj)?]))
     } else {
-        let err = String::from_utf8_lossy(&output.stderr).to_string();
-        Ok(CallToolResult::error(vec![Content::text(err)]))
+        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+        let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+        let json_obj = serde_json::json!({
+            "status": "error",
+            "message": format!("Build failed with status: {}", output.status),
+            "stdout": stdout,
+            "stderr": stderr
+        });
+        Ok(CallToolResult::error(vec![Content::json(json_obj)?]))
     }
 }

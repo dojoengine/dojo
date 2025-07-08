@@ -53,13 +53,6 @@ impl TypeScriptV2Plugin {
                     panic!("Invalid tuple token: {:?}", token);
                 }
             }
-            "generic_arg" => {
-                if let Token::GenericArg(generic_arg) = &token {
-                    generic_arg.clone()
-                } else {
-                    panic!("Invalid generic_arg token: {:?}", token);
-                }
-            }
 
             _ => {
                 let mut type_name = token.type_name();
@@ -626,9 +619,9 @@ mod tests {
     use std::fs;
     use std::io::Read;
 
-    use dojo_test_utils::compiler::CompilerTestSetup;
-    use scarb::compiler::Profile;
-    use sozo_scarbext::WorkspaceExt;
+    use dojo_test_utils::setup::TestSetup;
+    use scarb_interop::Profile;
+    use scarb_metadata_ext::MetadataDojoExt;
 
     use super::*;
     use crate::gather_dojo_data;
@@ -645,11 +638,10 @@ mod tests {
         let expected_output_without_header =
             expected_output.lines().skip(1).collect::<Vec<&str>>().join("\n");
 
-        let setup = CompilerTestSetup::from_examples("../dojo/core", "../../examples/");
-        let config = setup.build_test_config("spawn-and-move", Profile::DEV);
+        let setup = TestSetup::from_examples("../dojo/core", "../../examples/");
+        let metadata = setup.load_metadata("spawn-and-move", Profile::DEV);
 
-        let ws = scarb::ops::read_workspace(config.manifest_path(), &config).unwrap();
-        let profile_config = ws.load_profile_config().unwrap();
+        let profile_config = metadata.load_dojo_profile_config().unwrap();
 
         let skip_migrations = if let Some(migration) = profile_config.migration {
             let mut skip_migration = vec![];
@@ -662,7 +654,7 @@ mod tests {
         };
 
         let data = gather_dojo_data(
-            &config.manifest_path().to_path_buf(),
+            setup.manifest_path("spawn-and-move"),
             "dojo_examples",
             "dev",
             skip_migrations,
