@@ -29,7 +29,7 @@ pub mod world {
 
     use starknet::{
         get_caller_address, get_tx_info, ClassHash, ContractAddress,
-        syscalls::{deploy_syscall, replace_class_syscall, call_contract_syscall}, SyscallResult,
+        syscalls::{deploy_syscall, replace_class_syscall, call_contract_syscall},
         SyscallResultTrait, storage::Map,
     };
     pub use starknet::storage::{
