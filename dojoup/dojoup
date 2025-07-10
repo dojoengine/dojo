@@ -292,8 +292,8 @@ install_dojo() {
 
   # get the latest component version that is compatible with the given dojo version
   get_compatible_version() {
-    local binary=$1
-    compatible_version=$(jq -r ".[\"$DOJO_VERSION_NO_V\"][\"$binary\"][0]" "$VERSIONS_REGISTRY")
+    local binary=$1    
+    compatible_version=$(jq -r --arg v "$DOJO_VERSION_NO_V" --arg b "$binary" '.[$v][$b][0]' "$VERSIONS_REGISTRY")
     if [ "$compatible_version" = "null" ]; then
     err "No compatible version found for ${binary}"
     else
