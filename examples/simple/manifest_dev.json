@@ -1,7 +1,7 @@
 {
   "world": {
-    "class_hash": "0x2660e42e300e85d14619e31ab1c51520a98ecd6ff97accefb40b62b260aeafc",
-    "address": "0x7713068c5dbe907055038fa2246861b18010b7f28742c7a7750218662faf083",
+    "class_hash": "0x685ed02eefa98fe7e208aa295042e9bbad8029b0d3d6f0ba2b32546efe0a1f9",
+    "address": "0x11d89df5f01e83b7ef8a599de3f9422d1ea81b6465989ee877bba48c0938443",
     "seed": "simple",
     "name": "simple",
     "entrypoints": [
@@ -693,6 +693,22 @@
           },
           {
             "type": "function",
+            "name": "owners_count",
+            "inputs": [
+              {
+                "name": "resource",
+                "type": "core::felt252"
+              }
+            ],
+            "outputs": [
+              {
+                "type": "core::integer::u64"
+              }
+            ],
+            "state_mutability": "view"
+          },
+          {
+            "type": "function",
             "name": "is_writer",
             "inputs": [
               {
@@ -1312,7 +1328,7 @@
   },
   "contracts": [
     {
-      "address": "0x30fa16364847481346f2ddb84258405719875c111af26636d721daeabab5e8e",
+      "address": "0x788b1a43edfae621e5e8af8666cd389b76ae6a10ccfe0b736c6b2692c15c177",
       "class_hash": "0x33f6d1009b4d110715c005566373e954926db70029b0d4f74e70fe65b568f43",
       "abi": [
         {
@@ -1570,7 +1586,7 @@
       ]
     },
     {
-      "address": "0x22e6b6ac420871a47df0d97d03238fe7a91a99d249f6d102cc9313b33b8d2a1",
+      "address": "0x50aec78c3c4f06c991f12013e7f50205d9f42a40388f87253fb0eb441d40844",
       "class_hash": "0x76ab451233f45985cc56701473173c64bbec87ac2afa310120e2d0449e604b7",
       "abi": [
         {
@@ -1746,7 +1762,7 @@
       ]
     },
     {
-      "address": "0x57352ef141be179c4fe1fccf9ef07feae1adb29812a9db0d5fdeb5eeea3042d",
+      "address": "0x58f59b4f5d418b6d6576622d5ccf6519bcd5441ec0ba2d5089875442efe6823",
       "class_hash": "0x33f6d1009b4d110715c005566373e954926db70029b0d4f74e70fe65b568f43",
       "abi": [
         {
