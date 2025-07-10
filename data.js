@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1752121550569,
+  "lastUpdate": 1752167475573,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -64098,6 +64098,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 53693120497,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "dev@glihm.net",
+            "name": "glihm",
+            "username": "glihm"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5100dd35686876efcf5dfdeeeb69d3a903903e3f",
+          "message": "fix(core): allow fixed layout upgrade for class hash change (#3274)\n\n* fix(core): ensure fixed layout can be upgrade for class hash change only\n\n* fix warning and rebuild test db\n\n* fix test db with compatible katana version\n\n* rebuild test db\n\n* ci: bump katana for compatible version",
+          "timestamp": "2025-07-10T10:57:06-06:00",
+          "tree_id": "5a02269e0672d2badd6910899fdcf9c8d6dee5a6",
+          "url": "https://github.com/dojoengine/dojo/commit/5100dd35686876efcf5dfdeeeb69d3a903903e3f"
+        },
+        "date": 1752167471618,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 52834687472,
             "range": "± 0",
             "unit": "ns/iter"
           }
