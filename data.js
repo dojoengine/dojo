@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1751930845468,
+  "lastUpdate": 1752121550569,
   "repoUrl": "https://github.com/dojoengine/dojo",
   "entries": {
     "Benchmark": [
@@ -64068,6 +64068,36 @@ window.BENCHMARK_DATA = {
           {
             "name": "build/Sozo.Cold",
             "value": 51710056815,
+            "range": "± 0",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "155627174+rustfix@users.noreply.github.com",
+            "name": "rustfix",
+            "username": "rustfix"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3c7d61137c2ff8ae3ff8d367789a1518b4fe8139",
+          "message": "chore: fix some minor issues in the comments (#3268)\n\nSigned-off-by: rustfix <771054535@qq.com>",
+          "timestamp": "2025-07-10T12:11:40+08:00",
+          "tree_id": "0b02c20bb6a9c24eca8cab3d867eaf9ba12f8cd1",
+          "url": "https://github.com/dojoengine/dojo/commit/3c7d61137c2ff8ae3ff8d367789a1518b4fe8139"
+        },
+        "date": 1752121546908,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "build/Sozo.Cold",
+            "value": 53693120497,
             "range": "± 0",
             "unit": "ns/iter"
           }
