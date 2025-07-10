@@ -48,6 +48,6 @@ pub impl ModelValueImpl<V, +Serde<V>, +ModelDefinition<V>, +ModelValueParser<V>>
     }
 
     fn selector(namespace_hash: felt252) -> felt252 {
-        dojo::utils::selector_from_namespace_and_name(namespace_hash, @Self::name())
+        dojo::utils::selector_from_hashes(namespace_hash, ModelDefinition::<V>::SELECTOR)
     }
 }

@@ -19,6 +19,9 @@ impl $model_type$ModelValueKey of dojo::model::model_value::ModelValueKey<$model
 pub mod m_$model_type$_definition {
     use super::$model_type$;
     pub impl $model_type$DefinitionImpl<T> of dojo::model::ModelDefinition<T>{
+
+        const SELECTOR: felt252 = "$name_hash$";
+
         #[inline(always)]
         fn name() -> ByteArray {
             "$model_type$"

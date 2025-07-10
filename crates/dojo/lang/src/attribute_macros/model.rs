@@ -39,6 +39,7 @@ impl DojoModel {
         let mut diagnostics = vec![];
 
         let model_type = struct_ast.name(db).as_syntax_node().get_text(db).trim().to_string();
+        let name_hash = naming::compute_bytearray_hash(&model_type).to_hex_string();
 
         for (id, value) in [("name", &model_type)] {
             if !naming::is_name_valid(value) {
@@ -167,6 +168,7 @@ impl DojoModel {
             MODEL_CODE_PATCH,
             &UnorderedHashMap::from([
                 ("model_type".to_string(), RewriteNode::Text(model_type.clone())),
+                ("name_hash".to_string(), RewriteNode::Text(name_hash)),
                 ("serialized_keys".to_string(), RewriteNode::new_modified(serialized_keys)),
                 ("serialized_values".to_string(), RewriteNode::new_modified(serialized_values)),
                 ("keys_to_tuple".to_string(), RewriteNode::Text(keys_to_tuple)),
