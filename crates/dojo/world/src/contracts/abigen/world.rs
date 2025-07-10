@@ -854,6 +854,59 @@ impl StoreUpdateMember {
     }
 }
 #[derive(Clone, serde::Serialize, serde::Deserialize, PartialEq, Debug)]
+pub struct StoreUpdateMembers {
+    pub selector: starknet::core::types::Felt,
+    pub entity_id: starknet::core::types::Felt,
+    pub member_selectors: Vec<starknet::core::types::Felt>,
+    pub values: Vec<starknet::core::types::Felt>,
+}
+impl cainome::cairo_serde::CairoSerde for StoreUpdateMembers {
+    type RustType = Self;
+    const SERIALIZED_SIZE: std::option::Option<usize> = None;
+    #[inline]
+    fn cairo_serialized_size(__rust: &Self::RustType) -> usize {
+        let mut __size = 0;
+        __size += starknet::core::types::Felt::cairo_serialized_size(&__rust.selector);
+        __size += starknet::core::types::Felt::cairo_serialized_size(&__rust.entity_id);
+        __size +=
+            Vec::<starknet::core::types::Felt>::cairo_serialized_size(&__rust.member_selectors);
+        __size += Vec::<starknet::core::types::Felt>::cairo_serialized_size(&__rust.values);
+        __size
+    }
+    fn cairo_serialize(__rust: &Self::RustType) -> Vec<starknet::core::types::Felt> {
+        let mut __out: Vec<starknet::core::types::Felt> = vec![];
+        __out.extend(starknet::core::types::Felt::cairo_serialize(&__rust.selector));
+        __out.extend(starknet::core::types::Felt::cairo_serialize(&__rust.entity_id));
+        __out.extend(Vec::<starknet::core::types::Felt>::cairo_serialize(&__rust.member_selectors));
+        __out.extend(Vec::<starknet::core::types::Felt>::cairo_serialize(&__rust.values));
+        __out
+    }
+    fn cairo_deserialize(
+        __felts: &[starknet::core::types::Felt],
+        __offset: usize,
+    ) -> cainome::cairo_serde::Result<Self::RustType> {
+        let mut __offset = __offset;
+        let selector = starknet::core::types::Felt::cairo_deserialize(__felts, __offset)?;
+        __offset += starknet::core::types::Felt::cairo_serialized_size(&selector);
+        let entity_id = starknet::core::types::Felt::cairo_deserialize(__felts, __offset)?;
+        __offset += starknet::core::types::Felt::cairo_serialized_size(&entity_id);
+        let member_selectors =
+            Vec::<starknet::core::types::Felt>::cairo_deserialize(__felts, __offset)?;
+        __offset += Vec::<starknet::core::types::Felt>::cairo_serialized_size(&member_selectors);
+        let values = Vec::<starknet::core::types::Felt>::cairo_deserialize(__felts, __offset)?;
+        __offset += Vec::<starknet::core::types::Felt>::cairo_serialized_size(&values);
+        Ok(StoreUpdateMembers { selector, entity_id, member_selectors, values })
+    }
+}
+impl StoreUpdateMembers {
+    pub fn event_selector() -> starknet::core::types::Felt {
+        starknet::core::utils::get_selector_from_name("StoreUpdateMembers").unwrap()
+    }
+    pub fn event_name() -> &'static str {
+        "StoreUpdateMembers"
+    }
+}
+#[derive(Clone, serde::Serialize, serde::Deserialize, PartialEq, Debug)]
 pub struct StoreUpdateRecord {
     pub selector: starknet::core::types::Felt,
     pub entity_id: starknet::core::types::Felt,
@@ -1040,6 +1093,7 @@ pub enum Event {
     StoreSetRecord(StoreSetRecord),
     StoreUpdateRecord(StoreUpdateRecord),
     StoreUpdateMember(StoreUpdateMember),
+    StoreUpdateMembers(StoreUpdateMembers),
     StoreDelRecord(StoreDelRecord),
     WriterUpdated(WriterUpdated),
     OwnerUpdated(OwnerUpdated),
@@ -1066,6 +1120,7 @@ impl cainome::cairo_serde::CairoSerde for Event {
             Event::StoreSetRecord(val) => StoreSetRecord::cairo_serialized_size(val) + 1,
             Event::StoreUpdateRecord(val) => StoreUpdateRecord::cairo_serialized_size(val) + 1,
             Event::StoreUpdateMember(val) => StoreUpdateMember::cairo_serialized_size(val) + 1,
+            Event::StoreUpdateMembers(val) => StoreUpdateMembers::cairo_serialized_size(val) + 1,
             Event::StoreDelRecord(val) => StoreDelRecord::cairo_serialized_size(val) + 1,
             Event::WriterUpdated(val) => WriterUpdated::cairo_serialized_size(val) + 1,
             Event::OwnerUpdated(val) => OwnerUpdated::cairo_serialized_size(val) + 1,
@@ -1170,21 +1225,27 @@ impl cainome::cairo_serde::CairoSerde for Event {
                 temp.extend(StoreUpdateMember::cairo_serialize(val));
                 temp
             }
-            Event::StoreDelRecord(val) => {
+            Event::StoreUpdateMembers(val) => {
                 let mut temp = vec![];
                 temp.extend(usize::cairo_serialize(&16usize));
+                temp.extend(StoreUpdateMembers::cairo_serialize(val));
+                temp
+            }
+            Event::StoreDelRecord(val) => {
+                let mut temp = vec![];
+                temp.extend(usize::cairo_serialize(&17usize));
                 temp.extend(StoreDelRecord::cairo_serialize(val));
                 temp
             }
             Event::WriterUpdated(val) => {
                 let mut temp = vec![];
-                temp.extend(usize::cairo_serialize(&17usize));
+                temp.extend(usize::cairo_serialize(&18usize));
                 temp.extend(WriterUpdated::cairo_serialize(val));
                 temp
             }
             Event::OwnerUpdated(val) => {
                 let mut temp = vec![];
-                temp.extend(usize::cairo_serialize(&18usize));
+                temp.extend(usize::cairo_serialize(&19usize));
                 temp.extend(OwnerUpdated::cairo_serialize(val));
                 temp
             }
@@ -1255,13 +1316,17 @@ impl cainome::cairo_serde::CairoSerde for Event {
                 __felts,
                 __offset + 1,
             )?)),
-            16usize => {
+            16usize => Ok(Event::StoreUpdateMembers(StoreUpdateMembers::cairo_deserialize(
+                __felts,
+                __offset + 1,
+            )?)),
+            17usize => {
                 Ok(Event::StoreDelRecord(StoreDelRecord::cairo_deserialize(__felts, __offset + 1)?))
             }
-            17usize => {
+            18usize => {
                 Ok(Event::WriterUpdated(WriterUpdated::cairo_deserialize(__felts, __offset + 1)?))
             }
-            18usize => {
+            19usize => {
                 Ok(Event::OwnerUpdated(OwnerUpdated::cairo_deserialize(__felts, __offset + 1)?))
             }
             _ => {
@@ -2074,6 +2139,69 @@ impl TryFrom<&starknet::core::types::EmittedEvent> for Event {
                 selector,
                 entity_id,
                 member_selector,
+                values,
+            }));
+        }
+        let selector = event.keys[0];
+        if selector
+            == starknet::core::utils::get_selector_from_name("StoreUpdateMembers")
+                .unwrap_or_else(|_| panic!("Invalid selector for {}", "StoreUpdateMembers"))
+        {
+            let mut key_offset = 0 + 1;
+            let mut data_offset = 0;
+            let selector =
+                match starknet::core::types::Felt::cairo_deserialize(&event.keys, key_offset) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        return Err(format!(
+                            "Could not deserialize field {} for {}: {:?}",
+                            "selector", "StoreUpdateMembers", e
+                        ));
+                    }
+                };
+            key_offset += starknet::core::types::Felt::cairo_serialized_size(&selector);
+            let entity_id =
+                match starknet::core::types::Felt::cairo_deserialize(&event.keys, key_offset) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        return Err(format!(
+                            "Could not deserialize field {} for {}: {:?}",
+                            "entity_id", "StoreUpdateMembers", e
+                        ));
+                    }
+                };
+            key_offset += starknet::core::types::Felt::cairo_serialized_size(&entity_id);
+            let member_selectors = match Vec::<starknet::core::types::Felt>::cairo_deserialize(
+                &event.data,
+                data_offset,
+            ) {
+                Ok(v) => v,
+                Err(e) => {
+                    return Err(format!(
+                        "Could not deserialize field {} for {}: {:?}",
+                        "member_selectors", "StoreUpdateMembers", e
+                    ));
+                }
+            };
+            data_offset +=
+                Vec::<starknet::core::types::Felt>::cairo_serialized_size(&member_selectors);
+            let values = match Vec::<starknet::core::types::Felt>::cairo_deserialize(
+                &event.data,
+                data_offset,
+            ) {
+                Ok(v) => v,
+                Err(e) => {
+                    return Err(format!(
+                        "Could not deserialize field {} for {}: {:?}",
+                        "values", "StoreUpdateMembers", e
+                    ));
+                }
+            };
+            data_offset += Vec::<starknet::core::types::Felt>::cairo_serialized_size(&values);
+            return Ok(Event::StoreUpdateMembers(StoreUpdateMembers {
+                selector,
+                entity_id,
+                member_selectors,
                 values,
             }));
         }
@@ -3003,6 +3131,69 @@ impl TryFrom<&starknet::core::types::Event> for Event {
         }
         let selector = event.keys[0];
         if selector
+            == starknet::core::utils::get_selector_from_name("StoreUpdateMembers")
+                .unwrap_or_else(|_| panic!("Invalid selector for {}", "StoreUpdateMembers"))
+        {
+            let mut key_offset = 0 + 1;
+            let mut data_offset = 0;
+            let selector =
+                match starknet::core::types::Felt::cairo_deserialize(&event.keys, key_offset) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        return Err(format!(
+                            "Could not deserialize field {} for {}: {:?}",
+                            "selector", "StoreUpdateMembers", e
+                        ));
+                    }
+                };
+            key_offset += starknet::core::types::Felt::cairo_serialized_size(&selector);
+            let entity_id =
+                match starknet::core::types::Felt::cairo_deserialize(&event.keys, key_offset) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        return Err(format!(
+                            "Could not deserialize field {} for {}: {:?}",
+                            "entity_id", "StoreUpdateMembers", e
+                        ));
+                    }
+                };
+            key_offset += starknet::core::types::Felt::cairo_serialized_size(&entity_id);
+            let member_selectors = match Vec::<starknet::core::types::Felt>::cairo_deserialize(
+                &event.data,
+                data_offset,
+            ) {
+                Ok(v) => v,
+                Err(e) => {
+                    return Err(format!(
+                        "Could not deserialize field {} for {}: {:?}",
+                        "member_selectors", "StoreUpdateMembers", e
+                    ));
+                }
+            };
+            data_offset +=
+                Vec::<starknet::core::types::Felt>::cairo_serialized_size(&member_selectors);
+            let values = match Vec::<starknet::core::types::Felt>::cairo_deserialize(
+                &event.data,
+                data_offset,
+            ) {
+                Ok(v) => v,
+                Err(e) => {
+                    return Err(format!(
+                        "Could not deserialize field {} for {}: {:?}",
+                        "values", "StoreUpdateMembers", e
+                    ));
+                }
+            };
+            data_offset += Vec::<starknet::core::types::Felt>::cairo_serialized_size(&values);
+            return Ok(Event::StoreUpdateMembers(StoreUpdateMembers {
+                selector,
+                entity_id,
+                member_selectors,
+                values,
+            }));
+        }
+        let selector = event.keys[0];
+        if selector
             == starknet::core::utils::get_selector_from_name("StoreDelRecord")
                 .unwrap_or_else(|_| panic!("Invalid selector for {}", "StoreDelRecord"))
         {
@@ -3212,6 +3403,7 @@ pub enum ModelIndex {
     Keys(Vec<starknet::core::types::Felt>),
     Id(starknet::core::types::Felt),
     MemberId((starknet::core::types::Felt, starknet::core::types::Felt)),
+    Schema(starknet::core::types::Felt),
 }
 impl cainome::cairo_serde::CairoSerde for ModelIndex {
     type RustType = Self;
@@ -3228,6 +3420,7 @@ impl cainome::cairo_serde::CairoSerde for ModelIndex {
                     val,
                 ) + 1
             }
+            ModelIndex::Schema(val) => starknet::core::types::Felt::cairo_serialized_size(val) + 1,
             _ => 0,
         }
     }
@@ -3255,6 +3448,12 @@ impl cainome::cairo_serde::CairoSerde for ModelIndex {
                 );
                 temp
             }
+            ModelIndex::Schema(val) => {
+                let mut temp = vec![];
+                temp.extend(usize::cairo_serialize(&3usize));
+                temp.extend(starknet::core::types::Felt::cairo_serialize(val));
+                temp
+            }
             _ => vec![],
         }
     }
@@ -3278,6 +3477,10 @@ impl cainome::cairo_serde::CairoSerde for ModelIndex {
                 starknet::core::types::Felt,
             )>::cairo_deserialize(
                 __felts, __offset + 1
+            )?)),
+            3usize => Ok(ModelIndex::Schema(starknet::core::types::Felt::cairo_deserialize(
+                __felts,
+                __offset + 1,
             )?)),
             _ => {
                 return Err(cainome::cairo_serde::Error::Deserialize(format!(

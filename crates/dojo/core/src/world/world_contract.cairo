@@ -43,8 +43,8 @@ pub mod world {
     };
     use dojo::meta::{
         Layout, IStoredResourceDispatcher, IStoredResourceDispatcherTrait,
-        IDeployedResourceDispatcher, IDeployedResourceDispatcherTrait, LayoutCompareTrait,
-        IDeployedResourceLibraryDispatcher, TyCompareTrait,
+        IDeployedResourceDispatcher, IDeployedResourceDispatcherTrait, FieldLayoutsTrait,
+        LayoutTrait, IDeployedResourceLibraryDispatcher, TyCompareTrait,
     };
     use dojo::model::{Model, ResourceMetadata, metadata, ModelIndex};
     use dojo::storage;
@@ -76,6 +76,7 @@ pub mod world {
         StoreSetRecord: StoreSetRecord,
         StoreUpdateRecord: StoreUpdateRecord,
         StoreUpdateMember: StoreUpdateMember,
+        StoreUpdateMembers: StoreUpdateMembers,
         StoreDelRecord: StoreDelRecord,
         WriterUpdated: WriterUpdated,
         OwnerUpdated: OwnerUpdated,
@@ -199,6 +200,16 @@ pub mod world {
         pub entity_id: felt252,
         #[key]
         pub member_selector: felt252,
+        pub values: Span<felt252>,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    pub struct StoreUpdateMembers {
+        #[key]
+        pub selector: felt252,
+        #[key]
+        pub entity_id: felt252,
+        pub member_selectors: Span<felt252>,
         pub values: Span<felt252>,
     }
 
@@ -1304,6 +1315,20 @@ pub mod world {
                             },
                         );
                 },
+                ModelIndex::Schema(entity_id) => {
+                    let fields = layout.struct_fields();
+                    let mut offset = 0;
+                    storage::layout::write_struct_layout(
+                        model_selector, entity_id, values, ref offset, fields,
+                    );
+                    let member_selectors = fields.selectors().span();
+                    self
+                        .emit(
+                            StoreUpdateMembers {
+                                selector: model_selector, entity_id, member_selectors, values,
+                            },
+                        );
+                },
             }
         }
 
@@ -1328,6 +1353,7 @@ pub mod world {
                     self.emit(StoreDelRecord { selector: model_selector, entity_id });
                 },
                 ModelIndex::MemberId(_) => { panic_with_felt252(errors::DELETE_ENTITY_MEMBER); },
+                ModelIndex::Schema(_) => { panic_with_felt252(errors::DELETE_ENTITY_SCHEMA); },
             }
         }
 
@@ -1346,7 +1372,8 @@ pub mod world {
                     let entity_id = entity_id_from_serialized_keys(keys);
                     storage::entity_model::read_model_entity(model_selector, entity_id, layout)
                 },
-                ModelIndex::Id(entity_id) => {
+                ModelIndex::Id(entity_id) |
+                ModelIndex::Schema(entity_id) => {
                     storage::entity_model::read_model_entity(model_selector, entity_id, layout)
                 },
                 ModelIndex::MemberId((

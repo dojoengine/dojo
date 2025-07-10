@@ -1,6 +1,7 @@
 use starknet::ContractAddress;
 
 pub const DELETE_ENTITY_MEMBER: felt252 = 'Cannot delete entity member';
+pub const DELETE_ENTITY_SCHEMA: felt252 = 'Cannot delete entity schema';
 
 pub fn lengths_mismatch(a: @ByteArray, b: @ByteArray, context: @ByteArray) -> ByteArray {
     format!("Length mismatch: `{a}` and `{b}` in `{context}`")

@@ -36,7 +36,7 @@ struct Foo3 {
     v2: u32,
 }
 
-#[derive(Copy, Drop, Serde, Debug, Introspect)]
+#[derive(Copy, Drop, Serde, Debug, Introspect, PartialEq)]
 struct AStruct {
     a: u8,
     b: u8,
@@ -45,7 +45,7 @@ struct AStruct {
 }
 
 #[dojo::model]
-#[derive(Copy, Drop, Serde, Debug)]
+#[derive(Copy, Drop, Serde, Debug, PartialEq)]
 struct Foo4 {
     #[key]
     id: felt252,
@@ -55,7 +55,7 @@ struct Foo4 {
     v3: AStruct,
 }
 
-#[derive(Copy, Drop, Serde, Debug, Introspect)]
+#[derive(Copy, Drop, Serde, Debug, Introspect, PartialEq)]
 struct FooSchema {
     v0: u256,
     v3: AStruct,
@@ -303,6 +303,22 @@ fn test_write_members() {
     let v2s_read: Array<u32> = world.read_member_of_models(ptrs, selector!("v2"));
     assert!(v1s_read == v1s);
     assert!(v2s_read == array![foo.v2, foo2.v2]);
+}
+
+
+#[test]
+fn test_write_schema() {
+    let mut world = spawn_foo_world();
+    let foo = Foo4 { id: 1, v0: 2, v1: 3, v2: 4, v3: AStruct { a: 5, b: 6, c: 7, d: 8 } };
+    world.write_model(@foo);
+    let new_struct = AStruct { a: 10, b: 11, c: 12, d: 13 };
+    let schema = FooSchema { v0: 42, v3: new_struct };
+    let mut new_foo = foo;
+    new_foo.v0 = schema.v0;
+    new_foo.v3 = schema.v3;
+    world.write_schema(foo.ptr(), @schema);
+    let model: Foo4 = world.read_model(foo.id);
+    assert_eq!(model, new_foo);
 }
 
 #[test]

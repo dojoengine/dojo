@@ -1,7 +1,7 @@
 {
   "world": {
-    "class_hash": "0x4c60dc46a8ca8bb47675b7b914053cef769afbf0e340523187336b72bd71d1f",
-    "address": "0x644e520f46d5e3e5437950d039f544e2be04d304f272595c4c082e8b063cf26",
+    "class_hash": "0x7cff2f89a1171f82492b948638215592b953fb8441a740004598d0cc7cbcc02",
+    "address": "0x27bc5b6c346f69691b09e46e2cee996963ab2455858a0e1d985586e69dc81ae",
     "seed": "dojo_examples",
     "name": "example",
     "entrypoints": [
@@ -139,6 +139,10 @@
           {
             "name": "MemberId",
             "type": "(core::felt252, core::felt252)"
+          },
+          {
+            "name": "Schema",
+            "type": "core::felt252"
           }
         ]
       },
@@ -1163,6 +1167,33 @@
       },
       {
         "type": "event",
+        "name": "dojo::world::world_contract::world::StoreUpdateMembers",
+        "kind": "struct",
+        "members": [
+          {
+            "name": "selector",
+            "type": "core::felt252",
+            "kind": "key"
+          },
+          {
+            "name": "entity_id",
+            "type": "core::felt252",
+            "kind": "key"
+          },
+          {
+            "name": "member_selectors",
+            "type": "core::array::Span::<core::felt252>",
+            "kind": "data"
+          },
+          {
+            "name": "values",
+            "type": "core::array::Span::<core::felt252>",
+            "kind": "data"
+          }
+        ]
+      },
+      {
+        "type": "event",
         "name": "dojo::world::world_contract::world::StoreDelRecord",
         "kind": "struct",
         "members": [
@@ -1308,6 +1339,11 @@
             "kind": "nested"
           },
           {
+            "name": "StoreUpdateMembers",
+            "type": "dojo::world::world_contract::world::StoreUpdateMembers",
+            "kind": "nested"
+          },
+          {
             "name": "StoreDelRecord",
             "type": "dojo::world::world_contract::world::StoreDelRecord",
             "kind": "nested"
@@ -1328,8 +1364,8 @@
   },
   "contracts": [
     {
-      "address": "0x4b90458e67d04e9070ab96eaeca03955ce824bbb470cfc159d34ac88b1ba298",
-      "class_hash": "0x40eb7043c645e2960c2f3c06285199f3ae90351323855c758b7662177e47cea",
+      "address": "0x690aa26c8ab0df63ed7b45616015084a02ff959ebfb49e0cd253bf323f734bc",
+      "class_hash": "0x5128a5331e9d78688affdf6fae7ff05fdcfd7ae68bebb0caffdd038caa51870",
       "abi": [
         {
           "type": "impl",
@@ -1472,6 +1508,13 @@
                   "type": "core::byte_array::ByteArray"
                 }
               ],
+              "outputs": [],
+              "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "update_player_config_items",
+              "inputs": [],
               "outputs": [],
               "state_mutability": "external"
             },
@@ -1673,6 +1716,7 @@
         "spawn",
         "move",
         "set_player_config",
+        "update_player_config_items",
         "update_player_config_name",
         "reset_player_config",
         "set_player_server_profile",
@@ -1682,7 +1726,7 @@
       ]
     },
     {
-      "address": "0x7252eae2a3eb9834676e5bac9ec8c1ca5c05591927611c5cac0b709ae3afa96",
+      "address": "0x17727955a80783ea728cd9fff61148758aa48d07538b349572a1fd77aa3cc7d",
       "class_hash": "0x216b7f3b4d4d8f37e280a310881bdf11edb8c2f665d116388a3e0f6055929d2",
       "abi": [
         {
@@ -1876,8 +1920,8 @@
       ]
     },
     {
-      "address": "0x77293d49c3c8b54ff2937cf998560ce8560fdb758feb90ee80d38d71e01c5a7",
-      "class_hash": "0x3a3f7bfd636cd62fcbcb584ca47e9caf61f4668f0af33ece60c642da6cc25e7",
+      "address": "0x34ba450472c3112a4fe154b06b925b238bc36c1373d43615a2f2c76e04fb150",
+      "class_hash": "0x6f8120a9adbe5b42764ef71dcb261eca97bbe19ff8ad2d43271cb751f35d226",
       "abi": [
         {
           "type": "impl",
@@ -2052,7 +2096,7 @@
       ]
     },
     {
-      "address": "0x35072c010b1bcd92956301ed807e9a48bf23037f5adb7ed092c0e36956f62af",
+      "address": "0x31c6b805f1574e3d826b04a7cb4068ad750cee901dc5eca4434fedb48798855",
       "class_hash": "0x2171f2464ca252e6a717084210b5636b2788aa09a2b7fa53d67773262287a49",
       "abi": [
         {

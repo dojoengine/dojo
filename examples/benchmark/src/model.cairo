@@ -1,8 +1,8 @@
 use dojo::model::{Model, ModelStorage, ModelValueStorage};
 use dojo::world::WorldStorage;
-use dojo_cairo_test::{spawn_test_world, NamespaceDef, TestResource};
+use dojo_cairo_test::{NamespaceDef, TestResource, spawn_test_world};
 
-#[derive(Copy, Drop, Serde)]
+#[derive(Copy, Drop, Serde, PartialEq)]
 #[dojo::model]
 struct Single {
     #[key]
@@ -10,7 +10,7 @@ struct Single {
     v0: felt252,
 }
 
-#[derive(Copy, Drop, Serde)]
+#[derive(Copy, Drop, Serde, PartialEq)]
 #[dojo::model]
 struct Large {
     #[key]
@@ -24,9 +24,6 @@ struct Large {
     v4: felt252,
     v5: felt252,
 }
-
-const SINGLE: Single = Single { k0: 1, v0: 2 };
-const LARGE: Large = Large { k0: 1, k1: 2, v0: 3, v1: 4, v2: 5, v3: 6, v4: 7, v5: 8 };
 
 #[derive(Copy, Drop, Serde, Introspect)]
 struct SingleSchema {
@@ -45,6 +42,15 @@ struct LargeDoubleSchema {
 }
 
 #[derive(Copy, Drop, Serde, Introspect)]
+struct LargeQuintupleSchema {
+    v0: felt252,
+    v1: felt252,
+    v3: felt252,
+    v4: felt252,
+    v5: felt252,
+}
+
+#[derive(Copy, Drop, Serde, Introspect)]
 struct LargeSextupleSchema {
     v0: felt252,
     v1: felt252,
@@ -54,6 +60,29 @@ struct LargeSextupleSchema {
     v5: felt252,
 }
 
+const SINGLE: Single = Single { k0: 1, v0: 2 };
+const SINGLE_VALUE: SingleValue = SingleValue { v0: 2 };
+const SINGLE_SCHEMA: SingleSchema = SingleSchema { v0: 2 };
+
+const LARGE: Large = Large { k0: 1, k1: 2, v0: 3, v1: 4, v2: 5, v3: 6, v4: 7, v5: 8 };
+const LARGE_VALUE: LargeValue = LargeValue { v0: 3, v1: 4, v2: 5, v3: 6, v4: 7, v5: 8 };
+const LARGE_SCHEMA: LargeSextupleSchema = LargeSextupleSchema {
+    v0: 3, v1: 4, v2: 5, v3: 6, v4: 7, v5: 8,
+};
+
+const LARGE_SINGLE: Large = Large { k0: 1, k1: 2, v0: 0, v1: 0, v2: 0, v3: 0, v4: 0, v5: 8 };
+const LARGE_SINGLE_VALUE: LargeValue = LargeValue { v0: 0, v1: 0, v2: 0, v3: 0, v4: 0, v5: 8 };
+const LARGE_SINGLE_SCHEMA: LargeSingleSchema = LargeSingleSchema { v5: 8 };
+
+const LARGE_DOUBLE: Large = Large { k0: 1, k1: 2, v0: 3, v1: 0, v2: 0, v3: 0, v4: 0, v5: 8 };
+const LARGE_DOUBLE_VALUE: LargeValue = LargeValue { v0: 3, v1: 0, v2: 0, v3: 0, v4: 0, v5: 8 };
+const LARGE_DOUBLE_SCHEMA: LargeDoubleSchema = LargeDoubleSchema { v0: 3, v5: 8 };
+
+const LARGE_QUINTUPLE: Large = Large { k0: 1, k1: 2, v0: 3, v1: 4, v2: 0, v3: 6, v4: 7, v5: 8 };
+const LARGE_QUINTUPLE_VALUE: LargeValue = LargeValue { v0: 3, v1: 4, v2: 0, v3: 6, v4: 7, v5: 8 };
+const LARGE_QUINTUPLE_SCHEMA: LargeQuintupleSchema = LargeQuintupleSchema {
+    v0: 3, v1: 4, v3: 6, v4: 7, v5: 8,
+};
 
 fn namespace_def() -> NamespaceDef {
     NamespaceDef {
@@ -68,6 +97,22 @@ fn namespace_def() -> NamespaceDef {
 
 fn spawn_foo_world() -> WorldStorage {
     spawn_test_world([namespace_def()].span())
+}
+
+#[test]
+fn read_simple_comparison() {
+    let mut world = spawn_foo_world();
+    world.write_model(@SINGLE);
+
+    assert!(SINGLE.v0 == SINGLE.v0);
+}
+
+#[test]
+fn read_large_comparison() {
+    let mut world = spawn_foo_world();
+    world.write_model(@LARGE);
+
+    assert!(LARGE.v0 == LARGE.v0 && LARGE.v5 == LARGE.v5);
 }
 
 #[test]
@@ -183,6 +228,64 @@ fn read_double_member_large() {
 }
 
 #[test]
+fn read_quintuple_model_large() {
+    let mut world = spawn_foo_world();
+    world.write_model(@LARGE);
+
+    let model: Large = world.read_model((LARGE.k0, LARGE.k1));
+    assert!(
+        model.v0 == LARGE.v0
+            && model.v1 == LARGE.v1
+            && model.v3 == LARGE.v3
+            && model.v4 == LARGE.v4
+            && model.v5 == LARGE.v5,
+    );
+}
+
+#[test]
+fn read_quintuple_value_large() {
+    let mut world = spawn_foo_world();
+    world.write_model(@LARGE);
+
+    let value: LargeValue = world.read_value((LARGE.k0, LARGE.k1));
+    assert!(
+        value.v0 == LARGE.v0
+            && value.v1 == LARGE.v1
+            && value.v3 == LARGE.v3
+            && value.v4 == LARGE.v4
+            && value.v5 == LARGE.v5,
+    );
+}
+
+#[test]
+fn read_quintuple_schema_large() {
+    let mut world = spawn_foo_world();
+    world.write_model(@LARGE);
+
+    let schema: LargeQuintupleSchema = world.read_schema(LARGE.ptr());
+    assert!(
+        schema.v0 == LARGE.v0
+            && schema.v1 == LARGE.v1
+            && schema.v3 == LARGE.v3
+            && schema.v4 == LARGE.v4
+            && schema.v5 == LARGE.v5,
+    );
+}
+
+#[test]
+fn read_quintuple_member_large() {
+    let mut world = spawn_foo_world();
+    world.write_model(@LARGE);
+
+    let v0: felt252 = world.read_member(LARGE.ptr(), selector!("v0"));
+    let v1: felt252 = world.read_member(LARGE.ptr(), selector!("v1"));
+    let v3: felt252 = world.read_member(LARGE.ptr(), selector!("v3"));
+    let v4: felt252 = world.read_member(LARGE.ptr(), selector!("v4"));
+    let v5: felt252 = world.read_member(LARGE.ptr(), selector!("v5"));
+    assert!(v0 == LARGE.v0 && v1 == LARGE.v1 && v3 == LARGE.v3 && v4 == LARGE.v4 && v5 == LARGE.v5);
+}
+
+#[test]
 fn read_sextuple_model_large() {
     let mut world = spawn_foo_world();
     world.write_model(@LARGE);
@@ -250,3 +353,215 @@ fn read_sextuple_member_large() {
             && v5 == LARGE.v5,
     );
 }
+
+#[test]
+fn write_simple_comparison() {
+    let mut world = spawn_foo_world();
+
+    let model: Single = world.read_model(SINGLE.k0);
+    assert!(model == model);
+}
+
+#[test]
+fn write_large_comparison() {
+    let mut world = spawn_foo_world();
+
+    let model: Large = world.read_model((LARGE.k0, LARGE.k1));
+    assert!(model == model);
+}
+
+#[test]
+fn write_model_simple() {
+    let mut world = spawn_foo_world();
+    world.write_model(@SINGLE);
+
+    let model: Single = world.read_model(SINGLE.k0);
+    assert!(model == SINGLE);
+}
+
+#[test]
+fn write_value_simple() {
+    let mut world = spawn_foo_world();
+    world.write_value(SINGLE.k0, @SINGLE_VALUE);
+
+    let model: Single = world.read_model(SINGLE.k0);
+    assert!(model == SINGLE);
+}
+
+#[test]
+fn write_schema_simple() {
+    let mut world = spawn_foo_world();
+    world.write_schema(SINGLE.ptr(), @SINGLE_SCHEMA);
+
+    let model: Single = world.read_model(SINGLE.k0);
+    assert!(model == SINGLE);
+}
+
+#[test]
+fn write_member_simple() {
+    let mut world = spawn_foo_world();
+    world.write_member(SINGLE.ptr(), selector!("v0"), SINGLE.v0);
+
+    let model: Single = world.read_model(SINGLE.k0);
+    assert!(model == SINGLE);
+}
+
+#[test]
+fn write_single_model_large() {
+    let mut world = spawn_foo_world();
+
+    world.write_model(@LARGE_SINGLE);
+
+    let model: Large = world.read_model((LARGE.k0, LARGE.k1));
+    assert!(model == LARGE_SINGLE);
+}
+
+#[test]
+fn write_single_value_large() {
+    let mut world = spawn_foo_world();
+
+    world.write_value((LARGE.k0, LARGE.k1), @LARGE_SINGLE_VALUE);
+
+    let model: Large = world.read_model((LARGE.k0, LARGE.k1));
+    assert!(model == LARGE_SINGLE);
+}
+
+#[test]
+fn write_single_schema_large() {
+    let mut world = spawn_foo_world();
+
+    world.write_schema(LARGE.ptr(), @LARGE_SINGLE_SCHEMA);
+
+    let model: Large = world.read_model((LARGE.k0, LARGE.k1));
+    assert!(model == LARGE_SINGLE);
+}
+
+#[test]
+fn write_single_member_large() {
+    let mut world = spawn_foo_world();
+
+    world.write_member(LARGE.ptr(), selector!("v5"), LARGE.v5);
+
+    let model: Large = world.read_model((LARGE.k0, LARGE.k1));
+    assert!(model == LARGE_SINGLE);
+}
+
+#[test]
+fn write_double_model_large() {
+    let mut world = spawn_foo_world();
+
+    world.write_model(@LARGE_DOUBLE);
+
+    let model: Large = world.read_model((LARGE.k0, LARGE.k1));
+    assert!(model == LARGE_DOUBLE);
+}
+#[test]
+fn write_double_value_large() {
+    let mut world = spawn_foo_world();
+
+    world.write_value((LARGE.k0, LARGE.k1), @LARGE_DOUBLE_VALUE);
+
+    let model: Large = world.read_model((LARGE.k0, LARGE.k1));
+    assert!(model == LARGE_DOUBLE);
+}
+#[test]
+fn write_double_schema_large() {
+    let mut world = spawn_foo_world();
+
+    world.write_schema(LARGE.ptr(), @LARGE_DOUBLE_SCHEMA);
+
+    let model: Large = world.read_model((LARGE.k0, LARGE.k1));
+    assert!(model == LARGE_DOUBLE);
+}
+#[test]
+fn write_double_member_large() {
+    let mut world = spawn_foo_world();
+
+    world.write_member(LARGE.ptr(), selector!("v0"), LARGE.v0);
+    world.write_member(LARGE.ptr(), selector!("v5"), LARGE.v5);
+
+    let model: Large = world.read_model((LARGE.k0, LARGE.k1));
+    assert!(model == LARGE_DOUBLE);
+}
+#[test]
+fn write_quintuple_model_large() {
+    let mut world = spawn_foo_world();
+
+    world.write_model(@LARGE_QUINTUPLE);
+
+    let model: Large = world.read_model((LARGE.k0, LARGE.k1));
+    assert!(model == LARGE_QUINTUPLE);
+}
+#[test]
+fn write_quintuple_value_large() {
+    let mut world = spawn_foo_world();
+
+    world.write_value((LARGE.k0, LARGE.k1), @LARGE_QUINTUPLE_VALUE);
+
+    let model: Large = world.read_model((LARGE.k0, LARGE.k1));
+    assert!(model == LARGE_QUINTUPLE);
+}
+#[test]
+fn write_quintuple_schema_large() {
+    let mut world = spawn_foo_world();
+
+    world.write_schema(LARGE.ptr(), @LARGE_QUINTUPLE_SCHEMA);
+
+    let model: Large = world.read_model((LARGE.k0, LARGE.k1));
+    assert!(model == LARGE_QUINTUPLE);
+}
+#[test]
+fn write_quintuple_member_large() {
+    let mut world = spawn_foo_world();
+
+    world.write_member(LARGE.ptr(), selector!("v0"), LARGE.v0);
+    world.write_member(LARGE.ptr(), selector!("v1"), LARGE.v1);
+    world.write_member(LARGE.ptr(), selector!("v3"), LARGE.v3);
+    world.write_member(LARGE.ptr(), selector!("v4"), LARGE.v4);
+    world.write_member(LARGE.ptr(), selector!("v5"), LARGE.v5);
+
+    let model: Large = world.read_model((LARGE.k0, LARGE.k1));
+    assert!(model == LARGE_QUINTUPLE);
+}
+#[test]
+fn write_sextuple_model_large() {
+    let mut world = spawn_foo_world();
+
+    world.write_model(@LARGE);
+
+    let model: Large = world.read_model((LARGE.k0, LARGE.k1));
+    assert!(model == LARGE);
+}
+#[test]
+fn write_sextuple_value_large() {
+    let mut world = spawn_foo_world();
+
+    world.write_value((LARGE.k0, LARGE.k1), @LARGE_VALUE);
+
+    let model: Large = world.read_model((LARGE.k0, LARGE.k1));
+    assert!(model == LARGE);
+}
+#[test]
+fn write_sextuple_schema_large() {
+    let mut world = spawn_foo_world();
+
+    world.write_schema(LARGE.ptr(), @LARGE_SCHEMA);
+
+    let model: Large = world.read_model((LARGE.k0, LARGE.k1));
+    assert!(model == LARGE);
+}
+#[test]
+fn write_sextuple_member_large() {
+    let mut world = spawn_foo_world();
+
+    world.write_member(LARGE.ptr(), selector!("v0"), LARGE.v0);
+    world.write_member(LARGE.ptr(), selector!("v1"), LARGE.v1);
+    world.write_member(LARGE.ptr(), selector!("v2"), LARGE.v2);
+    world.write_member(LARGE.ptr(), selector!("v3"), LARGE.v3);
+    world.write_member(LARGE.ptr(), selector!("v4"), LARGE.v4);
+    world.write_member(LARGE.ptr(), selector!("v5"), LARGE.v5);
+
+    let model: Large = world.read_model((LARGE.k0, LARGE.k1));
+    assert!(model == LARGE);
+}
+
