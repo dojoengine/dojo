@@ -135,7 +135,7 @@ pub impl ModelImpl<M, +ModelParser<M>, +ModelDefinition<M>, +Serde<M>, +Drop<M>>
     }
 
     fn selector(namespace_hash: felt252) -> felt252 {
-        dojo::utils::selector_from_hashes(namespace_hash, ModelDefinition::<M>::SELECTOR)
+        dojo::utils::selector_from_hashes(namespace_hash, ModelDefinition::<M>::NAME_HASH)
     }
 
     fn layout() -> Layout {

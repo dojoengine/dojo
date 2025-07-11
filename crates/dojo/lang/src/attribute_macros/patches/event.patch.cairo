@@ -8,7 +8,7 @@ pub struct $type_name$Value {
 }
 
 pub impl $type_name$Definition of dojo::event::EventDefinition<$type_name$>{
-    const SELECTOR: felt252 = $name_hash$;
+    const NAME_HASH: felt252 = $name_hash$;
 
     #[inline(always)]
     fn name() -> ByteArray {
