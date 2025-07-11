@@ -29,7 +29,7 @@ pub mod world {
 
     use starknet::{
         get_caller_address, get_tx_info, ClassHash, ContractAddress,
-        syscalls::{deploy_syscall, replace_class_syscall, call_contract_syscall}, SyscallResult,
+        syscalls::{deploy_syscall, replace_class_syscall, call_contract_syscall},
         SyscallResultTrait, storage::Map,
     };
     pub use starknet::storage::{
@@ -1182,8 +1182,15 @@ pub mod world {
                 panic_with_byte_array(@errors::invalid_resource_layout_upgrade(namespace, name));
             }
 
+            // The layout of a resource using packed layout must remain the same.
+            // It is upgradeable since the class hash may have changed, but no fields have been
+            // changed.
             if let Layout::Fixed(_) = new_layout {
-                panic_with_byte_array(@errors::packed_layout_cannot_be_upgraded(namespace, name));
+                if new_layout != old_layout {
+                    panic_with_byte_array(
+                        @errors::packed_layout_cannot_be_upgraded(namespace, name),
+                    );
+                }
             }
 
             if !new_schema.is_an_upgrade_of(@old_schema) {

@@ -3,25 +3,25 @@ version = 1
 
 [[package]]
 name = "armory"
-version = "0.1.0"
+version = "1.6.0-alpha.0"
 dependencies = [
  "dojo",
 ]
 
 [[package]]
 name = "bestiary"
-version = "0.1.0"
+version = "1.6.0-alpha.0"
 dependencies = [
  "dojo",
 ]
 
 [[package]]
 name = "dojo"
-version = "1.1.2"
+version = "1.6.0-alpha.0"
 dependencies = [
  "dojo_plugin",
 ]
 
 [[package]]
 name = "dojo_plugin"
-version = "2.9.2"
+version = "2.10.1"
