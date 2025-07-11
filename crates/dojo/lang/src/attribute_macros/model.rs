@@ -192,9 +192,8 @@ impl DojoModel {
         builder.add_modified(node);
 
         let (code, code_mappings) = builder.build();
-
+        print!(code.clone());
         crate::debug_expand(&format!("MODEL PATCH: {model_type}"), &code);
-
         let aux_data = ModelAuxData { name: model_type.clone(), members };
 
         PluginResult {

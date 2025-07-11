@@ -18,6 +18,7 @@ pub enum ModelIndex {
 ///
 /// Definition of the model containing all the fields that makes up a model.
 pub trait ModelDefinition<T> {
+    const SELECTOR: felt252;
     fn name() -> ByteArray;
     fn layout() -> Layout;
     fn schema() -> Struct;
