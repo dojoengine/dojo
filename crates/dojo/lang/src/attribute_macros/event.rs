@@ -40,6 +40,7 @@ impl DojoEvent {
         let mut diagnostics = vec![];
 
         let event_name = struct_ast.name(db).as_syntax_node().get_text(db).trim().to_string();
+        let name_hash = naming::compute_bytearray_hash(&event_name).to_hex_string();
 
         for (id, value) in [("name", &event_name)] {
             if !naming::is_name_valid(value) {
@@ -130,6 +131,7 @@ impl DojoEvent {
             EVENT_PATCH,
             &UnorderedHashMap::from([
                 ("type_name".to_string(), RewriteNode::Text(event_name.clone())),
+                ("name_hash".to_string(), RewriteNode::Text(name_hash)),
                 ("member_names".to_string(), RewriteNode::new_modified(member_names)),
                 ("serialized_keys".to_string(), RewriteNode::new_modified(serialized_keys)),
                 ("serialized_values".to_string(), RewriteNode::new_modified(serialized_values)),
