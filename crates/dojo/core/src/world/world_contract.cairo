@@ -1300,6 +1300,8 @@ pub mod world {
             }
 
             // The layout of a resource using packed layout must remain the same.
+            // It is upgradeable since the class hash may have changed, but no fields have been
+            // changed.
             if let Layout::Fixed(_) = new_layout {
                 if new_layout != old_layout {
                     panic_with_byte_array(
