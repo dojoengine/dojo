@@ -50,6 +50,7 @@ pub enum Ty {
     Enum(Enum),
     Tuple(Vec<Ty>),
     Array(Vec<Ty>),
+    FixedSizeArray(Vec<(Ty, u32)>),
     ByteArray(String),
 }
 
@@ -65,6 +66,13 @@ impl Ty {
                     format!("Array<{}>", inner.name())
                 } else {
                     "Array".to_string()
+                }
+            }
+            Ty::FixedSizeArray(ty) => {
+                if let Some((ty, size)) = ty.first() {
+                    format!("[{}; {}]", ty.name(), size)
+                } else {
+                    "[; 0]".to_string()
                 }
             }
             Ty::ByteArray(_) => "ByteArray".to_string(),
@@ -116,6 +124,15 @@ impl Ty {
         }
     }
 
+    /// If the `Ty` is a fixed size array, returns the associated [`Vec<Ty>`]. Returns `None`
+    /// otherwise.
+    pub fn as_fixed_size_array(&self) -> Option<&Vec<(Ty, u32)>> {
+        match self {
+            Ty::FixedSizeArray(tys) => Some(tys),
+            _ => None,
+        }
+    }
+
     /// If the `Ty` is a byte array, returns the associated [`String`]. Returns `None` otherwise.
     pub fn as_byte_array(&self) -> Option<&String> {
         match self {
@@ -159,6 +176,12 @@ impl Ty {
                         felts,
                     );
                     for item_ty in items_ty {
+                        serialize_inner(item_ty, felts)?;
+                    }
+                }
+                Ty::FixedSizeArray(items_ty) => {
+                    let (item_ty, size) = &items_ty[0];
+                    for _ in 0..*size {
                         serialize_inner(item_ty, felts)?;
                     }
                 }
@@ -222,6 +245,13 @@ impl Ty {
                     let mut cur_item_ty = item_ty.clone();
                     cur_item_ty.deserialize(felts)?;
                     items_ty.push(cur_item_ty);
+                }
+            }
+            Ty::FixedSizeArray(items_ty) => {
+                let (item_ty, size) = &items_ty[0];
+                for _ in 0..*size {
+                    let mut cur_item_ty = item_ty.clone();
+                    cur_item_ty.deserialize(felts)?;
                 }
             }
             Ty::ByteArray(bytes) => {
@@ -313,6 +343,13 @@ impl Ty {
                     Some(Ty::Array(a1.clone()))
                 }
             }
+            (Ty::FixedSizeArray(a1), Ty::FixedSizeArray(a2)) => {
+                if a1 == a2 {
+                    None
+                } else {
+                    Some(Ty::FixedSizeArray(a1.clone()))
+                }
+            }
             (Ty::ByteArray(b1), Ty::ByteArray(b2)) => {
                 if b1 == b2 {
                     None
@@ -371,6 +408,11 @@ impl Ty {
             }
             Ty::Array(items) => {
                 let values: Result<Vec<_>, _> = items.iter().map(|ty| ty.to_json_value()).collect();
+                Ok(json!(values?))
+            }
+            Ty::FixedSizeArray(items) => {
+                let values: Result<Vec<_>, _> =
+                    items.iter().map(|(ty, _)| ty.to_json_value()).collect();
                 Ok(json!(values?))
             }
             Ty::Tuple(items) => {
@@ -490,6 +532,15 @@ impl Ty {
                     items.push(item);
                 }
             }
+            (Ty::FixedSizeArray(items), JsonValue::Array(values)) => {
+                let (template, length) = items[0].clone();
+                items.clear();
+                for value in values {
+                    let mut item = template.clone();
+                    item.from_json_value(value)?;
+                    items.push((item, length));
+                }
+            }
             (Ty::Tuple(items), JsonValue::Array(values)) => {
                 if items.len() != values.len() {
                     return Err(PrimitiveError::TypeMismatch);
@@ -559,6 +610,10 @@ impl std::fmt::Display for Ty {
                     Some(format!("tuple({})", tuple.iter().map(|ty| ty.name()).join(", ")))
                 }
                 Ty::Array(items_ty) => Some(format!("Array<{}>", items_ty[0].name())),
+                Ty::FixedSizeArray(items_ty) => {
+                    let (item_ty, length) = &items_ty[0];
+                    Some(format!("[{}; {}]", item_ty.name(), *length))
+                }
                 Ty::ByteArray(_) => Some("ByteArray".to_string()),
                 _ => None,
             })

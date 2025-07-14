@@ -1,0 +1,466 @@
+[
+  {
+    "name": "calculate_packed_size_big",
+    "cost": 4320000
+  },
+  {
+    "name": "calculate_packed_size_medium",
+    "cost": 1080000
+  },
+  {
+    "name": "calculate_packed_size_small",
+    "cost": 280000
+  },
+  {
+    "name": "delete_array_layout_big",
+    "cost": 120000
+  },
+  {
+    "name": "delete_array_layout_medium",
+    "cost": 120000
+  },
+  {
+    "name": "delete_array_layout_small",
+    "cost": 120000
+  },
+  {
+    "name": "delete_byte_array_layout_big",
+    "cost": 4240000
+  },
+  {
+    "name": "delete_byte_array_layout_medium",
+    "cost": 760000
+  },
+  {
+    "name": "delete_byte_array_layout_small",
+    "cost": 320000
+  },
+  {
+    "name": "delete_enum_layout_big",
+    "cost": 41880000
+  },
+  {
+    "name": "delete_enum_layout_medium",
+    "cost": 5520000
+  },
+  {
+    "name": "delete_enum_layout_small",
+    "cost": 960000
+  },
+  {
+    "name": "delete_fixed_layout_big",
+    "cost": 4760000
+  },
+  {
+    "name": "delete_fixed_layout_medium",
+    "cost": 1240000
+  },
+  {
+    "name": "delete_fixed_layout_small",
+    "cost": 640000
+  },
+  {
+    "name": "delete_model_layout_big",
+    "cost": 32400000
+  },
+  {
+    "name": "delete_model_layout_medium",
+    "cost": 3760000
+  },
+  {
+    "name": "delete_model_layout_small",
+    "cost": 920000
+  },
+  {
+    "name": "delete_struct_layout_big",
+    "cost": 39600000
+  },
+  {
+    "name": "delete_struct_layout_medium",
+    "cost": 9920000
+  },
+  {
+    "name": "delete_struct_layout_small",
+    "cost": 2520000
+  },
+  {
+    "name": "delete_tuple_layout_big",
+    "cost": 157120000
+  },
+  {
+    "name": "delete_tuple_layout_medium",
+    "cost": 19760000
+  },
+  {
+    "name": "delete_tuple_layout_small",
+    "cost": 2520000
+  },
+  {
+    "name": "erase_model_big",
+    "cost": 38888640
+  },
+  {
+    "name": "erase_model_big_packed",
+    "cost": 16422400
+  },
+  {
+    "name": "erase_model_medium",
+    "cost": 6057920
+  },
+  {
+    "name": "erase_model_medium_packed",
+    "cost": 3311360
+  },
+  {
+    "name": "erase_model_small",
+    "cost": 3165760
+  },
+  {
+    "name": "erase_model_small_packed",
+    "cost": 2805760
+  },
+  {
+    "name": "erase_models_big",
+    "cost": 13222080
+  },
+  {
+    "name": "erase_models_medium",
+    "cost": 7862080
+  },
+  {
+    "name": "erase_models_small",
+    "cost": 4102080
+  },
+  {
+    "name": "fill_with_zeroes",
+    "cost": 4840000
+  },
+  {
+    "name": "find_field_layout",
+    "cost": 2480000
+  },
+  {
+    "name": "get_many_big",
+    "cost": 43240000
+  },
+  {
+    "name": "get_many_medium",
+    "cost": 10840000
+  },
+  {
+    "name": "get_many_small",
+    "cost": 2720000
+  },
+  {
+    "name": "get_packed_array_big",
+    "cost": 1800000
+  },
+  {
+    "name": "get_packed_array_medium",
+    "cost": 480000
+  },
+  {
+    "name": "get_packed_array_small",
+    "cost": 160000
+  },
+  {
+    "name": "pack_big",
+    "cost": 23000000
+  },
+  {
+    "name": "pack_medium",
+    "cost": 5800000
+  },
+  {
+    "name": "pack_small",
+    "cost": 1520000
+  },
+  {
+    "name": "pow2_const_10",
+    "cost": 40000
+  },
+  {
+    "name": "pow2_const_255",
+    "cost": 40000
+  },
+  {
+    "name": "read_array_layout_big",
+    "cost": 343360000
+  },
+  {
+    "name": "read_array_layout_medium",
+    "cost": 43280000
+  },
+  {
+    "name": "read_array_layout_small",
+    "cost": 5600000
+  },
+  {
+    "name": "read_byte_array_layout_big",
+    "cost": 4840000
+  },
+  {
+    "name": "read_byte_array_layout_medium",
+    "cost": 800000
+  },
+  {
+    "name": "read_byte_array_layout_small",
+    "cost": 280000
+  },
+  {
+    "name": "read_enum_layout_big",
+    "cost": 48080000
+  },
+  {
+    "name": "read_enum_layout_medium",
+    "cost": 6200000
+  },
+  {
+    "name": "read_enum_layout_small",
+    "cost": 920000
+  },
+  {
+    "name": "read_fixed_layout_big",
+    "cost": 6120000
+  },
+  {
+    "name": "read_fixed_layout_medium",
+    "cost": 1560000
+  },
+  {
+    "name": "read_fixed_layout_small",
+    "cost": 800000
+  },
+  {
+    "name": "read_model_big",
+    "cost": 38217920
+  },
+  {
+    "name": "read_model_layout_big",
+    "cost": 55320000
+  },
+  {
+    "name": "read_model_layout_medium",
+    "cost": 4280000
+  },
+  {
+    "name": "read_model_layout_small",
+    "cost": 800000
+  },
+  {
+    "name": "read_model_medium",
+    "cost": 5787200
+  },
+  {
+    "name": "read_model_small",
+    "cost": 3095040
+  },
+  {
+    "name": "read_models_big",
+    "cost": 44897920
+  },
+  {
+    "name": "read_models_medium",
+    "cost": 10027200
+  },
+  {
+    "name": "read_models_small",
+    "cost": 4895040
+  },
+  {
+    "name": "read_struct_layout_big",
+    "cost": 48080000
+  },
+  {
+    "name": "read_struct_layout_medium",
+    "cost": 12080000
+  },
+  {
+    "name": "read_struct_layout_small",
+    "cost": 1560000
+  },
+  {
+    "name": "read_tuple_layout_big",
+    "cost": 191000000
+  },
+  {
+    "name": "read_tuple_layout_medium",
+    "cost": 24000000
+  },
+  {
+    "name": "read_tuple_layout_small",
+    "cost": 3040000
+  },
+  {
+    "name": "set_many_big",
+    "cost": 24680000
+  },
+  {
+    "name": "set_many_medium",
+    "cost": 6240000
+  },
+  {
+    "name": "set_many_small",
+    "cost": 1640000
+  },
+  {
+    "name": "set_packed_array_big",
+    "cost": 2400000
+  },
+  {
+    "name": "set_packed_array_medium",
+    "cost": 640000
+  },
+  {
+    "name": "set_packed_array_small",
+    "cost": 200000
+  },
+  {
+    "name": "shl_10",
+    "cost": 80000
+  },
+  {
+    "name": "shl_max",
+    "cost": 80000
+  },
+  {
+    "name": "shr_10",
+    "cost": 40000
+  },
+  {
+    "name": "shr_max",
+    "cost": 40000
+  },
+  {
+    "name": "unpack_big",
+    "cost": 39760000
+  },
+  {
+    "name": "unpack_medium",
+    "cost": 9960000
+  },
+  {
+    "name": "unpack_small",
+    "cost": 2520000
+  },
+  {
+    "name": "write_array_layout_big",
+    "cost": 153600000
+  },
+  {
+    "name": "write_array_layout_medium",
+    "cost": 19440000
+  },
+  {
+    "name": "write_array_layout_small",
+    "cost": 2600000
+  },
+  {
+    "name": "write_byte_array_layout_big",
+    "cost": 160000
+  },
+  {
+    "name": "write_byte_array_layout_medium",
+    "cost": 160000
+  },
+  {
+    "name": "write_byte_array_layout_small",
+    "cost": 160000
+  },
+  {
+    "name": "write_enum_layout_big",
+    "cost": 22120000
+  },
+  {
+    "name": "write_enum_layout_medium",
+    "cost": 2920000
+  },
+  {
+    "name": "write_enum_layout_small",
+    "cost": 520000
+  },
+  {
+    "name": "write_fixed_layout_big",
+    "cost": 4760000
+  },
+  {
+    "name": "write_fixed_layout_medium",
+    "cost": 1240000
+  },
+  {
+    "name": "write_fixed_layout_small",
+    "cost": 640000
+  },
+  {
+    "name": "write_model_big",
+    "cost": 35137920
+  },
+  {
+    "name": "write_model_big_packed",
+    "cost": 9111680
+  },
+  {
+    "name": "write_model_layout_big",
+    "cost": 30200000
+  },
+  {
+    "name": "write_model_layout_medium",
+    "cost": 2360000
+  },
+  {
+    "name": "write_model_layout_small",
+    "cost": 440000
+  },
+  {
+    "name": "write_model_medium",
+    "cost": 4307200
+  },
+  {
+    "name": "write_model_medium_packed",
+    "cost": 2600640
+  },
+  {
+    "name": "write_model_small",
+    "cost": 2455040
+  },
+  {
+    "name": "write_model_small_packed",
+    "cost": 2335040
+  },
+  {
+    "name": "write_models_big",
+    "cost": 165455680
+  },
+  {
+    "name": "write_models_medium",
+    "cost": 14462080
+  },
+  {
+    "name": "write_models_small",
+    "cost": 4441280
+  },
+  {
+    "name": "write_struct_layout_big",
+    "cost": 38160000
+  },
+  {
+    "name": "write_struct_layout_medium",
+    "cost": 9600000
+  },
+  {
+    "name": "write_struct_layout_small",
+    "cost": 1280000
+  },
+  {
+    "name": "write_tuple_layout_big",
+    "cost": 151440000
+  },
+  {
+    "name": "write_tuple_layout_medium",
+    "cost": 19080000
+  },
+  {
+    "name": "write_tuple_layout_small",
+    "cost": 2480000
+  }
+]

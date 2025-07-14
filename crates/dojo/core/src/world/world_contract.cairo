@@ -1,4 +1,4 @@
-use core::fmt::{Display, Formatter, Error};
+use core::fmt::{Display, Error, Formatter};
 
 #[derive(Copy, Drop, PartialEq)]
 pub enum Permission {
@@ -22,36 +22,34 @@ pub mod world {
     use core::array::ArrayTrait;
     use core::box::BoxTrait;
     use core::num::traits::Zero;
-    use core::traits::Into;
     use core::panic_with_felt252;
     use core::panics::panic_with_byte_array;
     use core::serde::Serde;
-
-    use starknet::{
-        get_caller_address, get_tx_info, ClassHash, ContractAddress,
-        syscalls::{deploy_syscall, replace_class_syscall, call_contract_syscall},
-        SyscallResultTrait, storage::Map,
-    };
-    pub use starknet::storage::{
-        StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess,
-        StoragePointerWriteAccess,
-    };
-
-    use dojo::world::errors;
+    use core::traits::Into;
     use dojo::contract::components::upgradeable::{
         IUpgradeableDispatcher, IUpgradeableDispatcherTrait,
     };
     use dojo::meta::{
-        Layout, IStoredResourceDispatcher, IStoredResourceDispatcherTrait,
-        IDeployedResourceDispatcher, IDeployedResourceDispatcherTrait, LayoutCompareTrait,
-        IDeployedResourceLibraryDispatcher, TyCompareTrait,
+        IDeployedResourceDispatcher, IDeployedResourceDispatcherTrait,
+        IDeployedResourceLibraryDispatcher, IStoredResourceDispatcher,
+        IStoredResourceDispatcherTrait, Layout, LayoutCompareTrait, TyCompareTrait,
     };
-    use dojo::model::{Model, ResourceMetadata, metadata, ModelIndex};
+    use dojo::model::{Model, ModelIndex, ResourceMetadata, metadata};
     use dojo::storage;
     use dojo::utils::{
-        entity_id_from_serialized_keys, bytearray_hash, selector_from_namespace_and_name,
+        bytearray_hash, default_address, default_class_hash, entity_id_from_serialized_keys,
+        selector_from_namespace_and_name,
     };
-    use dojo::world::{IWorld, IUpgradeableWorld, Resource, ResourceIsNoneTrait};
+    use dojo::world::{IUpgradeableWorld, IWorld, Resource, ResourceIsNoneTrait, errors};
+    use starknet::storage::Map;
+    pub use starknet::storage::{
+        StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess,
+        StoragePointerWriteAccess,
+    };
+    use starknet::syscalls::{
+        call_contract_syscall, deploy_syscall, get_class_hash_at_syscall, replace_class_syscall,
+    };
+    use starknet::{ClassHash, ContractAddress, SyscallResultTrait, get_caller_address, get_tx_info};
     use super::Permission;
 
     pub const WORLD: felt252 = 0;
@@ -66,6 +64,8 @@ pub mod world {
         ModelRegistered: ModelRegistered,
         EventRegistered: EventRegistered,
         ContractRegistered: ContractRegistered,
+        ExternalContractRegistered: ExternalContractRegistered,
+        ExternalContractUpgraded: ExternalContractUpgraded,
         ModelUpgraded: ModelUpgraded,
         EventUpgraded: EventUpgraded,
         ContractUpgraded: ContractUpgraded,
@@ -108,6 +108,34 @@ pub mod world {
         #[key]
         pub selector: felt252,
         pub class_hash: ClassHash,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    pub struct ExternalContractRegistered {
+        #[key]
+        pub namespace: ByteArray,
+        #[key]
+        pub contract_name: ByteArray,
+        #[key]
+        pub instance_name: ByteArray,
+        #[key]
+        pub contract_selector: felt252,
+        pub class_hash: ClassHash,
+        pub contract_address: ContractAddress,
+        pub block_number: u64,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    pub struct ExternalContractUpgraded {
+        #[key]
+        pub namespace: ByteArray,
+        #[key]
+        pub instance_name: ByteArray,
+        #[key]
+        pub contract_selector: felt252,
+        pub class_hash: ClassHash,
+        pub contract_address: ContractAddress,
+        pub block_number: u64,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -250,11 +278,11 @@ pub mod world {
         nonce: usize,
         models_salt: usize,
         events_salt: usize,
-        resources: Map::<felt252, Resource>,
-        owners: Map::<(felt252, ContractAddress), bool>,
-        writers: Map::<(felt252, ContractAddress), bool>,
-        owner_count: Map::<felt252, u64>,
-        initialized_contracts: Map::<felt252, bool>,
+        resources: Map<felt252, Resource>,
+        owners: Map<(felt252, ContractAddress), bool>,
+        writers: Map<(felt252, ContractAddress), bool>,
+        owner_count: Map<felt252, u64>,
+        initialized_contracts: Map<felt252, bool>,
     }
 
     /// Constructor for the world contract.
@@ -284,9 +312,7 @@ pub mod world {
             .resources
             .write(
                 metadata::resource_metadata_selector(internal_ns_hash),
-                Resource::Model(
-                    (metadata::default_address(), metadata::default_class_hash().into()),
-                ),
+                Resource::Model((default_address(), default_class_hash().into())),
             );
 
         self.emit(WorldSpawned { creator, class_hash: world_class_hash });
@@ -333,8 +359,9 @@ pub mod world {
         ) -> ContractAddress {
             match self.resources.read(contract_selector) {
                 Resource::Contract((a, _)) => a,
+                Resource::ExternalContract((a, _)) => a,
                 _ => core::panics::panic_with_byte_array(
-                    @format!("Contract not registered: {}", contract_selector),
+                    @format!("Contract/ExternalContract not registered: {}", contract_selector),
                 ),
             }
         }
@@ -525,7 +552,7 @@ pub mod world {
                         @format!("{}-{}", @namespace, @event_name), @"event",
                     ),
                 ),
-            };
+            }
 
             self
                 .assert_resource_upgradability(
@@ -631,7 +658,7 @@ pub mod world {
                         @format!("{}-{}", @namespace, @model_name), @"model",
                     ),
                 ),
-            };
+            }
 
             self
                 .assert_resource_upgradability(
@@ -661,7 +688,7 @@ pub mod world {
             let hash = bytearray_hash(@namespace);
 
             match self.resources.read(hash) {
-                Resource::Namespace => panic_with_byte_array(
+                Resource::Namespace(_) => panic_with_byte_array(
                     @errors::namespace_already_registered(@namespace),
                 ),
                 Resource::Unregistered => {
@@ -790,7 +817,6 @@ pub mod world {
                     // the verification is done in the init function of the contract that is
                     // injected by the plugin.
                     // <crates/compiler/src/plugin/attribute_macros/contract.rs#L275>
-
                     call_contract_syscall(contract_address, DOJO_INIT_SELECTOR, init_calldata)
                         .unwrap_syscall();
 
@@ -802,6 +828,109 @@ pub mod world {
                 panic_with_byte_array(
                     @errors::resource_conflict(@format!("{selector}"), @"contract"),
                 );
+            }
+        }
+
+        fn register_external_contract(
+            ref self: ContractState,
+            namespace: ByteArray,
+            contract_name: ByteArray,
+            instance_name: ByteArray,
+            contract_address: ContractAddress,
+            block_number: u64,
+        ) {
+            let caller = get_caller_address();
+            let class_hash = get_class_hash_at_syscall(contract_address).unwrap_syscall();
+
+            self.assert_name(@instance_name);
+
+            let namespace_hash = bytearray_hash(@namespace);
+            let contract_selector = selector_from_namespace_and_name(
+                namespace_hash, @instance_name,
+            );
+
+            let maybe_existing_contract = self.resources.read(contract_selector);
+            if !maybe_existing_contract.is_unregistered() {
+                panic_with_byte_array(
+                    @errors::external_contract_already_registered(
+                        @namespace, @contract_name, @instance_name,
+                    ),
+                );
+            }
+
+            if !self.is_namespace_registered(namespace_hash) {
+                panic_with_byte_array(@errors::namespace_not_registered(@namespace));
+            }
+
+            self.assert_caller_permissions(namespace_hash, Permission::Owner);
+
+            self.write_ownership(contract_selector, caller, true);
+            self
+                .resources
+                .write(
+                    contract_selector,
+                    Resource::ExternalContract((contract_address, namespace_hash)),
+                );
+
+            self
+                .emit(
+                    ExternalContractRegistered {
+                        namespace,
+                        contract_name,
+                        instance_name,
+                        contract_selector,
+                        class_hash,
+                        contract_address,
+                        block_number,
+                    },
+                );
+        }
+
+        fn upgrade_external_contract(
+            ref self: ContractState,
+            namespace: ByteArray,
+            instance_name: ByteArray,
+            contract_address: ContractAddress,
+            block_number: u64,
+        ) {
+            let class_hash = get_class_hash_at_syscall(contract_address).unwrap_syscall();
+
+            let namespace_hash = bytearray_hash(@namespace);
+            let contract_selector = selector_from_namespace_and_name(
+                namespace_hash, @instance_name,
+            );
+
+            match self.resources.read(contract_selector) {
+                Resource::ExternalContract(_) => {
+                    self.assert_caller_permissions(contract_selector, Permission::Owner);
+
+                    self
+                        .resources
+                        .write(
+                            contract_selector,
+                            Resource::ExternalContract((contract_address, namespace_hash)),
+                        );
+
+                    self
+                        .emit(
+                            ExternalContractUpgraded {
+                                namespace,
+                                instance_name,
+                                contract_selector,
+                                class_hash,
+                                contract_address,
+                                block_number,
+                            },
+                        );
+                },
+                Resource::Unregistered => panic_with_byte_array(
+                    @errors::resource_not_registered_details(@namespace, @instance_name),
+                ),
+                _ => panic_with_byte_array(
+                    @errors::resource_conflict(
+                        @format!("{}-{}", @namespace, @instance_name), @"external contract",
+                    ),
+                ),
             }
         }
 
@@ -892,12 +1021,7 @@ pub mod world {
                     );
                 }
 
-                let mut i = 0;
-                loop {
-                    if i >= keys.len() {
-                        break;
-                    }
-
+                for i in 0..keys.len() {
                     self
                         .emit(
                             EventEmitted {
@@ -907,8 +1031,6 @@ pub mod world {
                                 values: *values[i],
                             },
                         );
-
-                    i += 1;
                 }
             } else {
                 panic_with_byte_array(
@@ -933,7 +1055,7 @@ pub mod world {
 
             for i in indexes {
                 models.append(self.get_entity_internal(model_selector, *i, layout));
-            };
+            }
 
             models.span()
         }
@@ -971,15 +1093,8 @@ pub mod world {
             if let Resource::Model((_, _)) = self.resources.read(model_selector) {
                 self.assert_caller_permissions(model_selector, Permission::Writer);
 
-                let mut i = 0;
-                loop {
-                    if i >= indexes.len() {
-                        break;
-                    }
-
+                for i in 0..indexes.len() {
                     self.set_entity_internal(model_selector, *indexes[i], *values[i], layout);
-
-                    i += 1;
                 };
             } else {
                 panic_with_byte_array(
@@ -1111,10 +1226,12 @@ pub mod world {
                 return;
             }
 
-            // At this point, [`Resource::Contract`] and [`Resource::Model`] requires extra checks
+            // At this point, [`Resource::Contract`], [`Resource::ExternalContract`],
+            // [`Resource::Model`] and [`Resource::Event`] require extra checks
             // by switching to the namespace hash being the resource selector.
             let namespace_hash = match self.resources.read(resource_selector) {
                 Resource::Contract((_, namespace_hash)) => { namespace_hash },
+                Resource::ExternalContract((_, namespace_hash)) => { namespace_hash },
                 Resource::Model((_, namespace_hash)) => { namespace_hash },
                 Resource::Event((_, namespace_hash)) => { namespace_hash },
                 Resource::Unregistered => {
@@ -1217,6 +1334,9 @@ pub mod world {
                     let d = IDeployedResourceDispatcher { contract_address };
                     format!("contract (or its namespace) `{}`", d.dojo_name())
                 },
+                Resource::ExternalContract((
+                    contract_address, _,
+                )) => { format!("external contract (at 0x{:x})", contract_address) },
                 Resource::Event((
                     contract_address, _,
                 )) => {
@@ -1264,7 +1384,7 @@ pub mod world {
         #[inline(always)]
         fn is_namespace_registered(self: @ContractState, namespace_hash: felt252) -> bool {
             match self.resources.read(namespace_hash) {
-                Resource::Namespace => true,
+                Resource::Namespace(_) => true,
                 _ => false,
             }
         }

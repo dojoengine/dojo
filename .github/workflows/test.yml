@@ -25,7 +25,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  RUST_VERSION: 1.85.0
+  RUST_VERSION: 1.86.0
 
 jobs:
   build:
@@ -60,6 +60,9 @@ jobs:
       image: ghcr.io/dojoengine/dojo-dev:v1.6.0-alpha.1
     steps:
       - uses: actions/checkout@v3
+      - uses: software-mansion/setup-scarb@v1
+        with:
+          scarb-version: "nightly-2025-05-08"
       - uses: Swatinem/rust-cache@v2
       - uses: actions/download-artifact@v4
         with:
@@ -71,7 +74,7 @@ jobs:
       # This puts Katana in the path for integration tests.
       - name: Download Katana for integration tests
         run: |
-          curl -L https://github.com/dojoengine/katana/releases/download/v1.6.0-alpha.1/katana_v1.6.0-alpha.1_linux_amd64.tar.gz -o katana.tar.gz;
+          curl -L https://github.com/dojoengine/katana/releases/download/v1.6.2/katana_v1.6.2_linux_amd64.tar.gz -o katana.tar.gz;
           tar -C /usr/local/bin -xzf katana.tar.gz
 
       - run: |
@@ -117,12 +120,8 @@ jobs:
       - uses: actions/checkout@v3
       - uses: software-mansion/setup-scarb@v1
         with:
-          scarb-version: "2.10.1"
-      - run: |
-          scarb --manifest-path examples/spawn-and-move/Scarb.toml fmt --check
-          scarb --manifest-path examples/simple/Scarb.toml fmt --check
-          scarb --manifest-path crates/dojo/core/Scarb.toml fmt --check
-          scarb --manifest-path crates/dojo/core-cairo-test/Scarb.toml fmt --check
+          scarb-version: "nightly-2025-05-08"
+      - run: bash scripts/cairo_fmt.sh
 
   dojo-core-test:
     needs: build
@@ -130,7 +129,7 @@ jobs:
     steps:
       - uses: software-mansion/setup-scarb@v1
         with:
-          scarb-version: "2.10.1"
+          scarb-version: "nightly-2025-05-08"
       - uses: actions/download-artifact@v4
         with:
           name: dojo-bins
@@ -138,8 +137,7 @@ jobs:
       - uses: actions/checkout@v3
       - run: |
           chmod +x /tmp/bins/sozo
-          /tmp/bins/sozo --manifest-path crates/dojo/core/Scarb.toml test
-          /tmp/bins/sozo --manifest-path crates/dojo/core-cairo-test/Scarb.toml test
+          /tmp/bins/sozo --manifest-path crates/dojo/core-tests/Scarb.toml test
 
   dojo-examples-test:
     needs: build
@@ -147,7 +145,7 @@ jobs:
     steps:
       - uses: software-mansion/setup-scarb@v1
         with:
-          scarb-version: "2.10.1"
+          scarb-version: "nightly-2025-05-08"
       - uses: actions/download-artifact@v4
         with:
           name: dojo-bins

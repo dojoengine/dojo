@@ -5,7 +5,7 @@ use std::{fs, io};
 
 use anyhow::{ensure, Context, Result};
 use clap::Args;
-use scarb::core::Config;
+use scarb_ui::Ui;
 use tracing::trace;
 
 #[derive(Debug, Args)]
@@ -25,7 +25,7 @@ pub struct InitArgs {
 }
 
 impl InitArgs {
-    pub fn run(self, config: &Config) -> Result<()> {
+    pub fn run(self, ui: &Ui) -> Result<()> {
         trace!(args = ?self);
         let target_dir = match self.path {
             Some(path) => {
@@ -44,12 +44,12 @@ impl InitArgs {
         if target_dir.exists() {
             ensure!(
                 fs::read_dir(&target_dir)?.next().is_none(),
-                io::Error::new(io::ErrorKind::Other, "Target directory is not empty",)
+                io::Error::other("Target directory is not empty")
             );
         }
 
-        config.ui().print("\n\n ⛩️ ====== STARTING ====== ⛩️ \n");
-        config.ui().print("Setting up project directory tree...");
+        ui.print("\n\n ⛩️ ====== STARTING ====== ⛩️ \n");
+        ui.print("Setting up project directory tree...");
 
         let template = self.template;
         let repo_url = if template.starts_with("https://") {
@@ -65,7 +65,7 @@ impl InitArgs {
 
         trace!(repo_url = repo_url, sozo_version = sozo_version);
 
-        clone_repo(&repo_url, &target_dir, &sozo_version, config)?;
+        clone_repo(&repo_url, &target_dir, &sozo_version, ui)?;
 
         // Navigate to the newly cloned repo.
         let initial_dir = current_dir()?;
@@ -74,12 +74,12 @@ impl InitArgs {
         // Modify the git history.
         modify_git_history(&repo_url, self.git)?;
 
-        config.ui().print("\n🎉 Successfully created a new ⛩️ Dojo project!");
+        ui.print("\n🎉 Successfully created a new ⛩️ Dojo project!");
 
         // Navigate back.
         set_current_dir(initial_dir)?;
 
-        config.ui().print(
+        ui.print(
             "\n====== SETUP COMPLETE! ======\n\n\nTo start using your new project, try running: \
              `sozo build`",
         );
@@ -118,12 +118,12 @@ fn check_tag_exists(url: &str, version: &str) -> Result<bool> {
     Ok(tag_exists)
 }
 
-fn clone_repo(url: &str, path: &Path, version: &str, config: &Config) -> Result<()> {
+fn clone_repo(url: &str, path: &Path, version: &str, ui: &Ui) -> Result<()> {
     // Check if the version tag exists in the repository
     let tag_exists = check_tag_exists(url, version)?;
 
     if tag_exists {
-        config.ui().print(format!("Cloning project template from {}...", url));
+        ui.print(format!("Cloning project template from {}...", url));
         Command::new("git")
             .args([
                 "clone",
@@ -136,8 +136,8 @@ fn clone_repo(url: &str, path: &Path, version: &str, config: &Config) -> Result<
             ])
             .output()?;
     } else {
-        config.ui().warn(
-            "Couldn't find template for your current sozo version. Getting the latest version 
+        ui.warn(
+            "Couldn't find template for your current sozo version. Getting the latest version
             instead.",
         );
         Command::new("git").args(["clone", "--recursive", url, path.to_str().unwrap()]).output()?;
