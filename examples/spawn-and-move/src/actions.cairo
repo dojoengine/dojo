@@ -39,6 +39,7 @@ pub mod actions {
     use dojo_examples::lib_math::{SimpleMathDispatcherTrait, SimpleMathLibraryDispatcher};
     use dojo_examples::models::{
         Direction, Moves, MovesValue, PlayerConfig, PlayerItem, Position, ServerProfile, Vec2,
+        PlayerConfigItems,
     };
     use dojo_examples::utils::next_position;
     use starknet::{ContractAddress, get_caller_address};
