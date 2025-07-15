@@ -4,6 +4,7 @@ use cairo_lang_macro::{quote, Diagnostic, ProcMacroResult, TokenStream};
 use cairo_lang_parser::utils::SimpleParserDatabase;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
+use dojo_types::naming;
 
 use crate::constants::{
     DOJO_INTROSPECT_DERIVE, DOJO_LEGACY_STORAGE_DERIVE, DOJO_PACKED_DERIVE,
@@ -17,6 +18,8 @@ use crate::helpers::{
 #[derive(Debug)]
 pub struct DojoModel {
     diagnostics: Vec<Diagnostic>,
+    name_hash: String,
+
     model_type: String,
     model_value_derive_attr_names: Vec<String>,
     members_values: Vec<String>,
@@ -37,6 +40,7 @@ impl DojoModel {
         Self {
             diagnostics: vec![],
             model_type: String::default(),
+            name_hash: String::default(),
             model_value_derive_attr_names: vec![],
             members_values: vec![],
             key_type: String::default(),
@@ -65,6 +69,7 @@ impl DojoModel {
         let mut model = DojoModel::new();
 
         model.model_type = struct_ast.name(db).as_syntax_node().get_text(db).trim().to_string();
+        model.name_hash = naming::compute_bytearray_hash(&model.model_type).to_hex_string();
 
         if let Some(failure) = DojoChecker::is_name_valid("model", &model.model_type) {
             return failure;
@@ -255,6 +260,7 @@ impl DojoModel {
     fn generate_model_code(&self) -> TokenStream {
         let (
             model_type,
+            name_hash,
             model_value_derive_attr_names,
             members_values,
             key_type,
@@ -269,6 +275,7 @@ impl DojoModel {
             deserialized_modelvalue,
         ) = (
             &self.model_type,
+            &self.name_hash,
             format!("#[derive({})]", self.model_value_derive_attr_names.join(", ")),
             self.members_values.join(""),
             &self.key_type,
@@ -307,6 +314,8 @@ impl {model_type}ModelValueKey of dojo::model::model_value::ModelValueKey<{model
 pub mod m_{model_type}_definition {{
     use super::{model_type};
     pub impl {model_type}DefinitionImpl<T> of dojo::model::ModelDefinition<T>{{
+        const NAME_HASH: felt252 = {name_hash};
+            
         #[inline(always)]
         fn name() -> ByteArray {{
             \"{model_type}\"

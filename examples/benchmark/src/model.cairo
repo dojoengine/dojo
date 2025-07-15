@@ -1,4 +1,4 @@
-use dojo::model::{Model, ModelStorage, ModelValueStorage};
+use dojo::model::{Model, ModelStorage, ModelValueStorage, ModelDefinition};
 use dojo::world::WorldStorage;
 use dojo_cairo_test::{NamespaceDef, TestResource, spawn_test_world};
 
@@ -234,7 +234,6 @@ fn read_sextuple_schema_large() {
 fn read_sextuple_member_large() {
     let mut world = spawn_foo_world();
     world.write_model(@LARGE);
-
     let v0: felt252 = world.read_member(LARGE.ptr(), selector!("v0"));
     let v1: felt252 = world.read_member(LARGE.ptr(), selector!("v1"));
     let v2: felt252 = world.read_member(LARGE.ptr(), selector!("v2"));
