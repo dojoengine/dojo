@@ -1,4 +1,6 @@
-use dojo::{model::{ModelPtr, model_value::ModelValueKey}, meta::Introspect};
+use dojo::meta::Introspect;
+use dojo::model::ModelPtr;
+use dojo::model::model_value::ModelValueKey;
 
 // TODO: define the right interface for member accesses.
 

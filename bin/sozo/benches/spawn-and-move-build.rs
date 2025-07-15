@@ -1,40 +1,14 @@
 use std::time::Instant;
 
-use dojo_test_utils::compiler::CompilerTestSetup;
-use scarb::compiler::Profile;
-use scarb::core::TargetKind;
-use scarb::ops::{CompileOpts, FeaturesOpts, FeaturesSelector};
+use scarb_interop::Scarb;
 
 // Criterion enforces at least 10 iterations, in the case of Sozo, we only need to compile the code
 // once to have a baseline and compiling 10 times would have been too long for the CI.
 // We also output the result in the `bencher` format which is the same as the one used in the
 // `bench.yml` action.
-
 fn build_spawn_and_move() {
-    let setup = CompilerTestSetup::from_examples("../../crates/dojo/core", "../../examples/");
-
-    let config = setup.build_test_config("spawn-and-move", Profile::DEV);
-
-    let ws = scarb::ops::read_workspace(config.manifest_path(), &config)
-        .expect("Failed to read workspace");
-
-    let packages: Vec<_> = ws.members().collect();
-
-    scarb::ops::compile(
-        packages.iter().map(|p| p.id).collect(),
-        CompileOpts {
-            ignore_cairo_version: false,
-            include_target_names: vec![],
-            include_target_kinds: vec![],
-            exclude_target_kinds: vec![TargetKind::TEST],
-            features: FeaturesOpts {
-                features: FeaturesSelector::AllFeatures,
-                no_default_features: false,
-            },
-        },
-        &ws,
-    )
-    .expect("Failed to build spawn and move");
+    Scarb::build_simple_dev("../../examples/spawn-and-move/Scarb.toml".into())
+        .expect("Failed to build spawn and move");
 }
 
 fn main() {

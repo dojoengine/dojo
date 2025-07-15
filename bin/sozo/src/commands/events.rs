@@ -6,9 +6,9 @@ use clap::Args;
 use colored::Colorize;
 use dojo_world::contracts::abigen::world::{self, Event as WorldEvent};
 use dojo_world::diff::WorldDiff;
-use scarb::core::Config;
+use scarb_metadata::Metadata;
+use scarb_metadata_ext::MetadataDojoExt;
 use sozo_ops::model;
-use sozo_scarbext::WorkspaceExt;
 use starknet::core::types::{BlockId, BlockTag, EventFilter, Felt};
 use starknet::core::utils::starknet_keccak;
 use starknet::macros::felt;
@@ -56,105 +56,101 @@ pub struct EventsArgs {
 }
 
 impl EventsArgs {
-    pub fn run(self, config: &Config) -> Result<()> {
-        config.tokio_handle().block_on(async {
-            let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
-            let profile_config = ws.load_profile_config()?;
+    pub async fn run(self, scarb_metadata: &Metadata) -> Result<()> {
+        let profile_config = scarb_metadata.load_dojo_profile_config()?;
 
-            let (world_diff, provider, _) =
-                utils::get_world_diff_and_provider(self.starknet, self.world, &ws).await?;
-            let provider = Arc::new(provider);
+        let (world_diff, provider, _) =
+            utils::get_world_diff_and_provider(self.starknet, self.world, scarb_metadata).await?;
+        let provider = Arc::new(provider);
 
-            let latest_block = provider.block_number().await?;
-            let from_block = if let Some(world_block) =
-                profile_config.env.as_ref().and_then(|e| e.world_block)
-            {
+        let latest_block = provider.block_number().await?;
+        let from_block =
+            if let Some(world_block) = profile_config.env.as_ref().and_then(|e| e.world_block) {
                 world_block
             } else {
                 self.from_block.unwrap_or(0)
             };
-            let to_block = self.to_block.unwrap_or(latest_block);
+        let to_block = self.to_block.unwrap_or(latest_block);
 
-            let chain_id = provider.chain_id().await?;
-            // Katana if it's not `SN_SEPOLIA` or `SN_MAIN`.
-            let is_katana = chain_id != felt!("0x534e5f5345504f4c4941")
-                && chain_id != felt!("0x534e5f4d41494e");
+        let chain_id = provider.chain_id().await?;
+        // Katana if it's not `SN_SEPOLIA` or `SN_MAIN`.
+        let is_katana =
+            chain_id != felt!("0x534e5f5345504f4c4941") && chain_id != felt!("0x534e5f4d41494e");
 
-            let mut current_from = from_block;
-            let mut events = Vec::new();
+        let mut current_from = from_block;
+        let mut events = Vec::new();
 
-            while current_from <= to_block {
-                let current_to = std::cmp::min(current_from + self.max_block_range - 1, to_block);
+        while current_from <= to_block {
+            let current_to = std::cmp::min(current_from + self.max_block_range - 1, to_block);
 
-                let filter = EventFilter {
-                    from_block: Some(BlockId::Number(current_from)),
-                    to_block: Some(BlockId::Number(current_to)),
-                    address: Some(world_diff.world_info.address),
-                    keys: self.events.as_ref().map(|e| {
-                        vec![e.iter().map(|event| starknet_keccak(event.as_bytes())).collect()]
-                    }),
-                };
-
-                trace!(
-                    world_address = format!("{:#066x}", world_diff.world_info.address),
-                    self.chunk_size,
-                    ?filter,
-                    "Fetching remote world events for block range {}-{}.",
-                    current_from,
-                    current_to
-                );
-
-                let mut continuation_token = None;
-                loop {
-                    let page = provider
-                        .get_events(filter.clone(), continuation_token, self.chunk_size)
-                        .await?;
-
-                    if is_katana && page.events.is_empty() {
-                        break;
-                    }
-
-                    events.extend(page.events);
-
-                    continuation_token = page.continuation_token;
-                    if continuation_token.is_none() {
-                        break;
-                    }
-                }
-
-                current_from = current_to + 1;
-            }
+            let filter = EventFilter {
+                from_block: Some(BlockId::Number(current_from)),
+                to_block: Some(BlockId::Number(current_to)),
+                address: Some(world_diff.world_info.address),
+                keys: self.events.as_ref().map(|e| {
+                    vec![e.iter().map(|event| starknet_keccak(event.as_bytes())).collect()]
+                }),
+            };
 
             trace!(
-                events_count = events.len(),
                 world_address = format!("{:#066x}", world_diff.world_info.address),
-                "Fetched events for world."
+                self.chunk_size,
+                ?filter,
+                "Fetching remote world events for block range {}-{}.",
+                current_from,
+                current_to
             );
 
-            for event in &events {
-                match world::Event::try_from(event) {
-                    Ok(ev) => {
-                        trace!(?ev, "Processing world event.");
-                        match_event(
-                            &ev,
-                            &world_diff,
-                            event.block_number,
-                            event.transaction_hash,
-                            &provider,
-                        )
-                        .await?;
-                    }
-                    Err(e) => {
-                        tracing::error!(
-                            ?e,
-                            "Failed to parse remote world event which is supposed to be valid."
-                        );
-                    }
+            let mut continuation_token = None;
+            loop {
+                let page = provider
+                    .get_events(filter.clone(), continuation_token, self.chunk_size)
+                    .await?;
+
+                if is_katana && page.events.is_empty() {
+                    break;
+                }
+
+                events.extend(page.events);
+
+                continuation_token = page.continuation_token;
+                if continuation_token.is_none() {
+                    break;
                 }
             }
 
-            Ok(())
-        })
+            current_from = current_to + 1;
+        }
+
+        trace!(
+            events_count = events.len(),
+            world_address = format!("{:#066x}", world_diff.world_info.address),
+            "Fetched events for world."
+        );
+
+        for event in &events {
+            match world::Event::try_from(event) {
+                Ok(ev) => {
+                    trace!(?ev, "Processing world event.");
+                    match_event(
+                        &ev,
+                        &world_diff,
+                        event.block_number,
+                        event.transaction_hash,
+                        &provider,
+                    )
+                    .await?;
+                }
+                Err(e) => {
+                    tracing::error!(
+                        ?e,
+                        "Failed to parse remote world event which is supposed to be valid."
+                    );
+                }
+            }
+        }
+
+        Ok(())
     }
 }
 
@@ -428,7 +424,44 @@ async fn match_event<P: Provider + Send + Sync>(
                 ),
             )
         }
-        _ => ("Unprocessed event".to_string(), format!("Event: {:?}", event)),
+        WorldEvent::ExternalContractRegistered(e) => (
+            "External contract registered".to_string(),
+            format!(
+                "Namespace: {}\nContract Name: {}\nInstance Name: {}\nClassHash \
+                 {:#066x}\nAddress: {:#066x}\nBlock number: {}",
+                e.namespace.to_string()?,
+                e.contract_name.to_string()?,
+                e.instance_name.to_string()?,
+                e.class_hash.0,
+                e.contract_address.0,
+                e.block_number
+            ),
+        ),
+        WorldEvent::ExternalContractUpgraded(e) => (
+            "External contract upgraded".to_string(),
+            format!(
+                "Namespace: {}\nInstance Name: {}\nClassHash {:#066x}\nAddress: {:#066x}\nBlock \
+                 number: {}",
+                e.namespace.to_string()?,
+                e.instance_name.to_string()?,
+                e.class_hash.0,
+                e.contract_address.0,
+                e.block_number
+            ),
+        ),
+        WorldEvent::LibraryRegistered(e) => (
+            "Library upgraded".to_string(),
+            format!(
+                "Namespace: {}\nName: {}\nClassHash {:#066x}",
+                e.namespace.to_string()?,
+                e.name.to_string()?,
+                e.class_hash.0,
+            ),
+        ),
+        WorldEvent::MetadataUpdate(e) => (
+            "Metadata update".to_string(),
+            format!("Resource: {}\nURI: {}\nHash {}", e.resource, e.uri.to_string()?, e.hash,),
+        ),
     };
 
     let block_str = block_number.map(|n| n.to_string()).unwrap_or("pending".to_string());

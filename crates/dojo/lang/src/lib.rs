@@ -24,7 +24,7 @@ pub const EVENTS_DIR: &str = "events";
 pub const MANIFESTS_DIR: &str = "manifests";
 pub const MANIFESTS_BASE_DIR: &str = "base";
 
-/// Prints the given string only if the `DOJO_EXPAND` environemnt variable is set.
+/// Prints the given string only if the `DOJO_EXPAND` environment variable is set.
 /// This is useful for debugging the compiler with verbose output.
 ///
 /// # Arguments

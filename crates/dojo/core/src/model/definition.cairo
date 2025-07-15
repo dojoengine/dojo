@@ -22,6 +22,7 @@ pub enum ModelIndex {
 pub trait ModelDefinition<T> {
     fn name() -> ByteArray;
     fn layout() -> Layout;
+    fn use_legacy_storage() -> bool;
     fn schema() -> Struct;
     fn size() -> Option<usize>;
 }

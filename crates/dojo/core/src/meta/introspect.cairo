@@ -1,3 +1,4 @@
+use core::panics::panic_with_byte_array;
 /// This file contains the implementation of the `Introspect` trait.
 ///
 /// The introspection is used to get the size and layout of a type.
@@ -5,7 +6,7 @@
 
 use dojo::meta::Layout;
 use dojo::storage::packing;
-use core::panics::panic_with_byte_array;
+use dojo::utils::sum_sizes;
 
 // Each index matches with a primitive types in both arrays (main and nested).
 // The main array represents the source primitive while nested arrays represents
@@ -181,6 +182,7 @@ pub enum Ty {
     // And `Box` is not serializable. So using a Span, even if it's to have
     // one element, does the trick.
     Array: Span<Ty>,
+    FixedArray: Span<(Ty, u32)>,
     ByteArray,
 }
 
@@ -230,6 +232,14 @@ impl TyCompareImpl of TyCompareTrait<Ty> {
             (Ty::Primitive(n), Ty::Primitive(o)) => n.is_an_upgrade_of(o),
             (Ty::Struct(n), Ty::Struct(o)) => n.is_an_upgrade_of(o),
             (Ty::Array(n), Ty::Array(o)) => { (*n).at(0).is_an_upgrade_of((*o).at(0)) },
+            (
+                Ty::FixedArray(n), Ty::FixedArray(o),
+            ) => {
+                let (n_ty, n_len) = n.at(0);
+                let (o_ty, o_len) = o.at(0);
+
+                n_ty.is_an_upgrade_of(o_ty) && n_len >= o_len
+            },
             (
                 Ty::Tuple(n), Ty::Tuple(o),
             ) => {
@@ -670,9 +680,9 @@ pub impl Introspect_option<T, +Introspect<T>> of Introspect<Option<T>> {
         Layout::Enum(
             [
                 dojo::meta::FieldLayout { // Some
-                selector: 0, layout: Introspect::<T>::layout() },
+                selector: 1, layout: Introspect::<T>::layout() },
                 dojo::meta::FieldLayout { // None
-                selector: 1, layout: Layout::Fixed([].span()) },
+                selector: 2, layout: Layout::Fixed([].span()) },
             ]
                 .span(),
         )
@@ -720,5 +730,763 @@ pub impl Introspect_span<T, +Introspect<T>> of Introspect<Span<T>> {
     #[inline(always)]
     fn ty() -> Ty {
         Ty::Array([Introspect::<T>::ty()].span())
+    }
+}
+
+pub impl Introspect_FixedArray<T, const N: usize, +Introspect<T>> of Introspect<[T; N]> {
+    fn size() -> Option<usize> {
+        match Introspect::<T>::size() {
+            Option::Some(size) => Option::Some(size * N),
+            Option::None => Option::None,
+        }
+    }
+    fn layout() -> Layout {
+        Layout::FixedArray([(Introspect::<T>::layout(), N)].span())
+    }
+    fn ty() -> Ty {
+        Ty::FixedArray([(Introspect::<T>::ty(), N)].span())
+    }
+}
+
+pub impl IntrospectTupleSize0 of Introspect<()> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        Option::Some(0)
+    }
+    #[inline(always)]
+    fn layout() -> Layout {
+        Layout::Tuple([].span())
+    }
+    #[inline(always)]
+    fn ty() -> Ty {
+        Ty::Tuple([].span())
+    }
+}
+
+pub impl IntrospectTupleSize1<E0, impl I0: Introspect<E0>> of Introspect<(E0,)> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        I0::size()
+    }
+    #[inline(always)]
+    fn layout() -> Layout {
+        Layout::Tuple([I0::layout()].span())
+    }
+
+    #[inline(always)]
+    fn ty() -> Ty {
+        Ty::Tuple([I0::ty()].span())
+    }
+}
+
+pub impl IntrospectTupleSize2<
+    E0, E1, impl I0: Introspect<E0>, impl I1: Introspect<E1>,
+> of Introspect<(E0, E1)> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        sum_sizes(array![I0::size(), I1::size()])
+    }
+
+    #[inline(always)]
+    fn layout() -> Layout {
+        Layout::Tuple([I0::layout(), I1::layout()].span())
+    }
+
+    #[inline(always)]
+    fn ty() -> Ty {
+        Ty::Tuple([I0::ty(), I1::ty()].span())
+    }
+}
+
+pub impl IntrospectTupleSize3<
+    E0, E1, E2, impl I0: Introspect<E0>, impl I1: Introspect<E1>, impl I2: Introspect<E2>,
+> of Introspect<(E0, E1, E2)> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        sum_sizes(array![I0::size(), I1::size(), I2::size()])
+    }
+
+    #[inline(always)]
+    fn layout() -> Layout {
+        Layout::Tuple([I0::layout(), I1::layout(), I2::layout()].span())
+    }
+
+    #[inline(always)]
+    fn ty() -> Ty {
+        Ty::Tuple([I0::ty(), I1::ty(), I2::ty()].span())
+    }
+}
+
+pub impl IntrospectTupleSize4<
+    E0,
+    E1,
+    E2,
+    E3,
+    impl I0: Introspect<E0>,
+    impl I1: Introspect<E1>,
+    impl I2: Introspect<E2>,
+    impl I3: Introspect<E3>,
+> of Introspect<(E0, E1, E2, E3)> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        sum_sizes(array![I0::size(), I1::size(), I2::size(), I3::size()])
+    }
+
+    #[inline(always)]
+    fn layout() -> Layout {
+        Layout::Tuple([I0::layout(), I1::layout(), I2::layout(), I3::layout()].span())
+    }
+
+    #[inline(always)]
+    fn ty() -> Ty {
+        Ty::Tuple([I0::ty(), I1::ty(), I2::ty(), I3::ty()].span())
+    }
+}
+
+pub impl IntrospectTupleSize5<
+    E0,
+    E1,
+    E2,
+    E3,
+    E4,
+    impl I0: Introspect<E0>,
+    impl I1: Introspect<E1>,
+    impl I2: Introspect<E2>,
+    impl I3: Introspect<E3>,
+    impl I4: Introspect<E4>,
+> of Introspect<(E0, E1, E2, E3, E4)> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        sum_sizes(array![I0::size(), I1::size(), I2::size(), I3::size(), I4::size()])
+    }
+
+    #[inline(always)]
+    fn layout() -> Layout {
+        Layout::Tuple([I0::layout(), I1::layout(), I2::layout(), I3::layout(), I4::layout()].span())
+    }
+
+    #[inline(always)]
+    fn ty() -> Ty {
+        Ty::Tuple([I0::ty(), I1::ty(), I2::ty(), I3::ty(), I4::ty()].span())
+    }
+}
+
+pub impl IntrospectTupleSize6<
+    E0,
+    E1,
+    E2,
+    E3,
+    E4,
+    E5,
+    impl I0: Introspect<E0>,
+    impl I1: Introspect<E1>,
+    impl I2: Introspect<E2>,
+    impl I3: Introspect<E3>,
+    impl I4: Introspect<E4>,
+    impl I5: Introspect<E5>,
+> of Introspect<(E0, E1, E2, E3, E4, E5)> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        sum_sizes(array![I0::size(), I1::size(), I2::size(), I3::size(), I4::size(), I5::size()])
+    }
+
+    #[inline(always)]
+    fn layout() -> Layout {
+        Layout::Tuple(
+            [I0::layout(), I1::layout(), I2::layout(), I3::layout(), I4::layout(), I5::layout()]
+                .span(),
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> Ty {
+        Ty::Tuple([I0::ty(), I1::ty(), I2::ty(), I3::ty(), I4::ty(), I5::ty()].span())
+    }
+}
+
+
+pub impl IntrospectTupleSize7<
+    E0,
+    E1,
+    E2,
+    E3,
+    E4,
+    E5,
+    E6,
+    impl I0: Introspect<E0>,
+    impl I1: Introspect<E1>,
+    impl I2: Introspect<E2>,
+    impl I3: Introspect<E3>,
+    impl I4: Introspect<E4>,
+    impl I5: Introspect<E5>,
+    impl I6: Introspect<E6>,
+> of Introspect<(E0, E1, E2, E3, E4, E5, E6)> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        sum_sizes(
+            array![
+                I0::size(), I1::size(), I2::size(), I3::size(), I4::size(), I5::size(), I6::size(),
+            ],
+        )
+    }
+
+    #[inline(always)]
+    fn layout() -> Layout {
+        Layout::Tuple(
+            [
+                I0::layout(), I1::layout(), I2::layout(), I3::layout(), I4::layout(), I5::layout(),
+                I6::layout(),
+            ]
+                .span(),
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> Ty {
+        Ty::Tuple([I0::ty(), I1::ty(), I2::ty(), I3::ty(), I4::ty(), I5::ty(), I6::ty()].span())
+    }
+}
+
+
+pub impl IntrospectTupleSize8<
+    E0,
+    E1,
+    E2,
+    E3,
+    E4,
+    E5,
+    E6,
+    E7,
+    impl I0: Introspect<E0>,
+    impl I1: Introspect<E1>,
+    impl I2: Introspect<E2>,
+    impl I3: Introspect<E3>,
+    impl I4: Introspect<E4>,
+    impl I5: Introspect<E5>,
+    impl I6: Introspect<E6>,
+    impl I7: Introspect<E7>,
+> of Introspect<(E0, E1, E2, E3, E4, E5, E6, E7)> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        sum_sizes(
+            array![
+                I0::size(), I1::size(), I2::size(), I3::size(), I4::size(), I5::size(), I6::size(),
+                I7::size(),
+            ],
+        )
+    }
+
+    #[inline(always)]
+    fn layout() -> Layout {
+        Layout::Tuple(
+            [
+                I0::layout(), I1::layout(), I2::layout(), I3::layout(), I4::layout(), I5::layout(),
+                I6::layout(), I7::layout(),
+            ]
+                .span(),
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> Ty {
+        Ty::Tuple(
+            [I0::ty(), I1::ty(), I2::ty(), I3::ty(), I4::ty(), I5::ty(), I6::ty(), I7::ty()].span(),
+        )
+    }
+}
+
+
+pub impl IntrospectTupleSize9<
+    E0,
+    E1,
+    E2,
+    E3,
+    E4,
+    E5,
+    E6,
+    E7,
+    E8,
+    impl I0: Introspect<E0>,
+    impl I1: Introspect<E1>,
+    impl I2: Introspect<E2>,
+    impl I3: Introspect<E3>,
+    impl I4: Introspect<E4>,
+    impl I5: Introspect<E5>,
+    impl I6: Introspect<E6>,
+    impl I7: Introspect<E7>,
+    impl I8: Introspect<E8>,
+> of Introspect<(E0, E1, E2, E3, E4, E5, E6, E7, E8)> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        sum_sizes(
+            array![
+                I0::size(), I1::size(), I2::size(), I3::size(), I4::size(), I5::size(), I6::size(),
+                I7::size(), I8::size(),
+            ],
+        )
+    }
+
+    #[inline(always)]
+    fn layout() -> Layout {
+        Layout::Tuple(
+            [
+                I0::layout(), I1::layout(), I2::layout(), I3::layout(), I4::layout(), I5::layout(),
+                I6::layout(), I7::layout(), I8::layout(),
+            ]
+                .span(),
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> Ty {
+        Ty::Tuple(
+            [
+                I0::ty(), I1::ty(), I2::ty(), I3::ty(), I4::ty(), I5::ty(), I6::ty(), I7::ty(),
+                I8::ty(),
+            ]
+                .span(),
+        )
+    }
+}
+
+
+pub impl IntrospectTupleSize10<
+    E0,
+    E1,
+    E2,
+    E3,
+    E4,
+    E5,
+    E6,
+    E7,
+    E8,
+    E9,
+    impl I0: Introspect<E0>,
+    impl I1: Introspect<E1>,
+    impl I2: Introspect<E2>,
+    impl I3: Introspect<E3>,
+    impl I4: Introspect<E4>,
+    impl I5: Introspect<E5>,
+    impl I6: Introspect<E6>,
+    impl I7: Introspect<E7>,
+    impl I8: Introspect<E8>,
+    impl I9: Introspect<E9>,
+> of Introspect<(E0, E1, E2, E3, E4, E5, E6, E7, E8, E9)> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        sum_sizes(
+            array![
+                I0::size(), I1::size(), I2::size(), I3::size(), I4::size(), I5::size(), I6::size(),
+                I7::size(), I8::size(), I9::size(),
+            ],
+        )
+    }
+
+    #[inline(always)]
+    fn layout() -> Layout {
+        Layout::Tuple(
+            [
+                I0::layout(), I1::layout(), I2::layout(), I3::layout(), I4::layout(), I5::layout(),
+                I6::layout(), I7::layout(), I8::layout(), I9::layout(),
+            ]
+                .span(),
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> Ty {
+        Ty::Tuple(
+            [
+                I0::ty(), I1::ty(), I2::ty(), I3::ty(), I4::ty(), I5::ty(), I6::ty(), I7::ty(),
+                I8::ty(), I9::ty(),
+            ]
+                .span(),
+        )
+    }
+}
+
+
+pub impl IntrospectTupleSize11<
+    E0,
+    E1,
+    E2,
+    E3,
+    E4,
+    E5,
+    E6,
+    E7,
+    E8,
+    E9,
+    E10,
+    impl I0: Introspect<E0>,
+    impl I1: Introspect<E1>,
+    impl I2: Introspect<E2>,
+    impl I3: Introspect<E3>,
+    impl I4: Introspect<E4>,
+    impl I5: Introspect<E5>,
+    impl I6: Introspect<E6>,
+    impl I7: Introspect<E7>,
+    impl I8: Introspect<E8>,
+    impl I9: Introspect<E9>,
+    impl I10: Introspect<E10>,
+> of Introspect<(E0, E1, E2, E3, E4, E5, E6, E7, E8, E9, E10)> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        sum_sizes(
+            array![
+                I0::size(), I1::size(), I2::size(), I3::size(), I4::size(), I5::size(), I6::size(),
+                I7::size(), I8::size(), I9::size(), I10::size(),
+            ],
+        )
+    }
+
+    #[inline(always)]
+    fn layout() -> Layout {
+        Layout::Tuple(
+            [
+                I0::layout(), I1::layout(), I2::layout(), I3::layout(), I4::layout(), I5::layout(),
+                I6::layout(), I7::layout(), I8::layout(), I9::layout(), I10::layout(),
+            ]
+                .span(),
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> Ty {
+        Ty::Tuple(
+            [
+                I0::ty(), I1::ty(), I2::ty(), I3::ty(), I4::ty(), I5::ty(), I6::ty(), I7::ty(),
+                I8::ty(), I9::ty(), I10::ty(),
+            ]
+                .span(),
+        )
+    }
+}
+
+pub impl IntrospectTupleSize12<
+    E0,
+    E1,
+    E2,
+    E3,
+    E4,
+    E5,
+    E6,
+    E7,
+    E8,
+    E9,
+    E10,
+    E11,
+    impl I0: Introspect<E0>,
+    impl I1: Introspect<E1>,
+    impl I2: Introspect<E2>,
+    impl I3: Introspect<E3>,
+    impl I4: Introspect<E4>,
+    impl I5: Introspect<E5>,
+    impl I6: Introspect<E6>,
+    impl I7: Introspect<E7>,
+    impl I8: Introspect<E8>,
+    impl I9: Introspect<E9>,
+    impl I10: Introspect<E10>,
+    impl I11: Introspect<E11>,
+> of Introspect<(E0, E1, E2, E3, E4, E5, E6, E7, E8, E9, E10, E11)> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        sum_sizes(
+            array![
+                I0::size(), I1::size(), I2::size(), I3::size(), I4::size(), I5::size(), I6::size(),
+                I7::size(), I8::size(), I9::size(), I10::size(), I11::size(),
+            ],
+        )
+    }
+
+    #[inline(always)]
+    fn layout() -> Layout {
+        Layout::Tuple(
+            [
+                I0::layout(), I1::layout(), I2::layout(), I3::layout(), I4::layout(), I5::layout(),
+                I6::layout(), I7::layout(), I8::layout(), I9::layout(), I10::layout(),
+                I11::layout(),
+            ]
+                .span(),
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> Ty {
+        Ty::Tuple(
+            [
+                I0::ty(), I1::ty(), I2::ty(), I3::ty(), I4::ty(), I5::ty(), I6::ty(), I7::ty(),
+                I8::ty(), I9::ty(), I10::ty(), I11::ty(),
+            ]
+                .span(),
+        )
+    }
+}
+
+
+pub impl IntrospectTupleSize13<
+    E0,
+    E1,
+    E2,
+    E3,
+    E4,
+    E5,
+    E6,
+    E7,
+    E8,
+    E9,
+    E10,
+    E11,
+    E12,
+    impl I0: Introspect<E0>,
+    impl I1: Introspect<E1>,
+    impl I2: Introspect<E2>,
+    impl I3: Introspect<E3>,
+    impl I4: Introspect<E4>,
+    impl I5: Introspect<E5>,
+    impl I6: Introspect<E6>,
+    impl I7: Introspect<E7>,
+    impl I8: Introspect<E8>,
+    impl I9: Introspect<E9>,
+    impl I10: Introspect<E10>,
+    impl I11: Introspect<E11>,
+    impl I12: Introspect<E12>,
+> of Introspect<(E0, E1, E2, E3, E4, E5, E6, E7, E8, E9, E10, E11, E12)> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        sum_sizes(
+            array![
+                I0::size(), I1::size(), I2::size(), I3::size(), I4::size(), I5::size(), I6::size(),
+                I7::size(), I8::size(), I9::size(), I10::size(), I11::size(), I12::size(),
+            ],
+        )
+    }
+
+    #[inline(always)]
+    fn layout() -> Layout {
+        Layout::Tuple(
+            [
+                I0::layout(), I1::layout(), I2::layout(), I3::layout(), I4::layout(), I5::layout(),
+                I6::layout(), I7::layout(), I8::layout(), I9::layout(), I10::layout(),
+                I11::layout(), I12::layout(),
+            ]
+                .span(),
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> Ty {
+        Ty::Tuple(
+            [
+                I0::ty(), I1::ty(), I2::ty(), I3::ty(), I4::ty(), I5::ty(), I6::ty(), I7::ty(),
+                I8::ty(), I9::ty(), I10::ty(), I11::ty(), I12::ty(),
+            ]
+                .span(),
+        )
+    }
+}
+
+
+pub impl IntrospectTupleSize14<
+    E0,
+    E1,
+    E2,
+    E3,
+    E4,
+    E5,
+    E6,
+    E7,
+    E8,
+    E9,
+    E10,
+    E11,
+    E12,
+    E13,
+    impl I0: Introspect<E0>,
+    impl I1: Introspect<E1>,
+    impl I2: Introspect<E2>,
+    impl I3: Introspect<E3>,
+    impl I4: Introspect<E4>,
+    impl I5: Introspect<E5>,
+    impl I6: Introspect<E6>,
+    impl I7: Introspect<E7>,
+    impl I8: Introspect<E8>,
+    impl I9: Introspect<E9>,
+    impl I10: Introspect<E10>,
+    impl I11: Introspect<E11>,
+    impl I12: Introspect<E12>,
+    impl I13: Introspect<E13>,
+> of Introspect<(E0, E1, E2, E3, E4, E5, E6, E7, E8, E9, E10, E11, E12, E13)> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        sum_sizes(
+            array![
+                I0::size(), I1::size(), I2::size(), I3::size(), I4::size(), I5::size(), I6::size(),
+                I7::size(), I8::size(), I9::size(), I10::size(), I11::size(), I12::size(),
+                I13::size(),
+            ],
+        )
+    }
+
+    #[inline(always)]
+    fn layout() -> Layout {
+        Layout::Tuple(
+            [
+                I0::layout(), I1::layout(), I2::layout(), I3::layout(), I4::layout(), I5::layout(),
+                I6::layout(), I7::layout(), I8::layout(), I9::layout(), I10::layout(),
+                I11::layout(), I12::layout(), I13::layout(),
+            ]
+                .span(),
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> Ty {
+        Ty::Tuple(
+            [
+                I0::ty(), I1::ty(), I2::ty(), I3::ty(), I4::ty(), I5::ty(), I6::ty(), I7::ty(),
+                I8::ty(), I9::ty(), I10::ty(), I11::ty(), I12::ty(), I13::ty(),
+            ]
+                .span(),
+        )
+    }
+}
+
+
+pub impl IntrospectTupleSize15<
+    E0,
+    E1,
+    E2,
+    E3,
+    E4,
+    E5,
+    E6,
+    E7,
+    E8,
+    E9,
+    E10,
+    E11,
+    E12,
+    E13,
+    E14,
+    impl I0: Introspect<E0>,
+    impl I1: Introspect<E1>,
+    impl I2: Introspect<E2>,
+    impl I3: Introspect<E3>,
+    impl I4: Introspect<E4>,
+    impl I5: Introspect<E5>,
+    impl I6: Introspect<E6>,
+    impl I7: Introspect<E7>,
+    impl I8: Introspect<E8>,
+    impl I9: Introspect<E9>,
+    impl I10: Introspect<E10>,
+    impl I11: Introspect<E11>,
+    impl I12: Introspect<E12>,
+    impl I13: Introspect<E13>,
+    impl I14: Introspect<E14>,
+> of Introspect<(E0, E1, E2, E3, E4, E5, E6, E7, E8, E9, E10, E11, E12, E13, E14)> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        sum_sizes(
+            array![
+                I0::size(), I1::size(), I2::size(), I3::size(), I4::size(), I5::size(), I6::size(),
+                I7::size(), I8::size(), I9::size(), I10::size(), I11::size(), I12::size(),
+                I13::size(), I14::size(),
+            ],
+        )
+    }
+
+    #[inline(always)]
+    fn layout() -> Layout {
+        Layout::Tuple(
+            [
+                I0::layout(), I1::layout(), I2::layout(), I3::layout(), I4::layout(), I5::layout(),
+                I6::layout(), I7::layout(), I8::layout(), I9::layout(), I10::layout(),
+                I11::layout(), I12::layout(), I13::layout(), I14::layout(),
+            ]
+                .span(),
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> Ty {
+        Ty::Tuple(
+            [
+                I0::ty(), I1::ty(), I2::ty(), I3::ty(), I4::ty(), I5::ty(), I6::ty(), I7::ty(),
+                I8::ty(), I9::ty(), I10::ty(), I11::ty(), I12::ty(), I13::ty(), I14::ty(),
+            ]
+                .span(),
+        )
+    }
+}
+
+
+pub impl IntrospectTupleSize16<
+    E0,
+    E1,
+    E2,
+    E3,
+    E4,
+    E5,
+    E6,
+    E7,
+    E8,
+    E9,
+    E10,
+    E11,
+    E12,
+    E13,
+    E14,
+    E15,
+    impl I0: Introspect<E0>,
+    impl I1: Introspect<E1>,
+    impl I2: Introspect<E2>,
+    impl I3: Introspect<E3>,
+    impl I4: Introspect<E4>,
+    impl I5: Introspect<E5>,
+    impl I6: Introspect<E6>,
+    impl I7: Introspect<E7>,
+    impl I8: Introspect<E8>,
+    impl I9: Introspect<E9>,
+    impl I10: Introspect<E10>,
+    impl I11: Introspect<E11>,
+    impl I12: Introspect<E12>,
+    impl I13: Introspect<E13>,
+    impl I14: Introspect<E14>,
+    impl I15: Introspect<E15>,
+> of Introspect<(E0, E1, E2, E3, E4, E5, E6, E7, E8, E9, E10, E11, E12, E13, E14, E15)> {
+    #[inline(always)]
+    fn size() -> Option<usize> {
+        sum_sizes(
+            array![
+                I0::size(), I1::size(), I2::size(), I3::size(), I4::size(), I5::size(), I6::size(),
+                I7::size(), I8::size(), I9::size(), I10::size(), I11::size(), I12::size(),
+                I13::size(), I14::size(), I15::size(),
+            ],
+        )
+    }
+
+    #[inline(always)]
+    fn layout() -> Layout {
+        Layout::Tuple(
+            [
+                I0::layout(), I1::layout(), I2::layout(), I3::layout(), I4::layout(), I5::layout(),
+                I6::layout(), I7::layout(), I8::layout(), I9::layout(), I10::layout(),
+                I11::layout(), I12::layout(), I13::layout(), I14::layout(), I15::layout(),
+            ]
+                .span(),
+        )
+    }
+
+    #[inline(always)]
+    fn ty() -> Ty {
+        Ty::Tuple(
+            [
+                I0::ty(), I1::ty(), I2::ty(), I3::ty(), I4::ty(), I5::ty(), I6::ty(), I7::ty(),
+                I8::ty(), I9::ty(), I10::ty(), I11::ty(), I12::ty(), I13::ty(), I14::ty(),
+                I15::ty(),
+            ]
+                .span(),
+        )
     }
 }

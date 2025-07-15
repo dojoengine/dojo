@@ -1,0 +1,2872 @@
+{
+  "version": 1,
+  "app_exe": "/Users/remybaranx/.asdf/installs/scarb/nightly-2025-05-08/bin/scarb",
+  "app_version_info": {
+    "version": "2.11.4+nightly-2025-05-08",
+    "commit_info": {
+      "short_commit_hash": "ec41d23ba",
+      "commit_hash": "ec41d23bab300e968be843c160426859df6aa27c",
+      "commit_date": "2025-05-08"
+    },
+    "cairo": {
+      "version": "2.11.4",
+      "commit_info": {
+        "short_commit_hash": "e9b93d81f",
+        "commit_hash": "e9b93d81ff70d0ffd8829d8b4313681b4dedc098",
+        "commit_date": null
+      }
+    }
+  },
+  "target_dir": "/Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/spawn-and-move/target",
+  "runtime_manifest": "/Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/spawn-and-move/Scarb.toml",
+  "workspace": {
+    "manifest_path": "/Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/spawn-and-move/Scarb.toml",
+    "root": "/Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/spawn-and-move",
+    "members": [
+      "dojo_examples 1.5.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/spawn-and-move/Scarb.toml)"
+    ]
+  },
+  "packages": [
+    {
+      "id": "armory 0.1.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/game-lib/armory/Scarb.toml)",
+      "name": "armory",
+      "version": "0.1.0",
+      "edition": "2024_07",
+      "source": "path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/game-lib/armory/Scarb.toml",
+      "manifest_path": "/Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/game-lib/armory/Scarb.toml",
+      "root": "/Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/game-lib/armory",
+      "dependencies": [
+        {
+          "name": "core",
+          "version_req": "=2.11.4",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        },
+        {
+          "name": "dojo",
+          "version_req": "*",
+          "source": "path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/core/Scarb.toml",
+          "kind": null
+        },
+        {
+          "name": "dojo_macros",
+          "version_req": "*",
+          "source": "path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/macros/Scarb.toml",
+          "kind": null
+        },
+        {
+          "name": "starknet",
+          "version_req": "=2.11.4",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        }
+      ],
+      "targets": [
+        {
+          "kind": "lib",
+          "name": "armory",
+          "source_path": "/Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/game-lib/armory/src/lib.cairo",
+          "params": {}
+        },
+        {
+          "kind": "test",
+          "name": "armory_unittest",
+          "source_path": "/Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/game-lib/armory/src/lib.cairo",
+          "params": {
+            "build-external-contracts": [],
+            "test-type": "unit"
+          }
+        }
+      ],
+      "authors": null,
+      "description": "An armory of epic weapons.",
+      "documentation": null,
+      "homepage": null,
+      "keywords": null,
+      "license": null,
+      "license_file": null,
+      "readme": null,
+      "repository": null,
+      "urls": null,
+      "tool": null,
+      "experimental_features": []
+    },
+    {
+      "id": "assert_macros 2.11.4 (std)",
+      "name": "assert_macros",
+      "version": "2.11.4",
+      "edition": "2023_01",
+      "source": "std",
+      "manifest_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/std/e9b93d81f/assert_macros/Scarb.toml",
+      "root": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/std/e9b93d81f/assert_macros",
+      "dependencies": [],
+      "targets": [
+        {
+          "kind": "cairo-plugin",
+          "name": "assert_macros",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/std/e9b93d81f/assert_macros/src/lib.cairo",
+          "params": {
+            "builtin": true
+          }
+        }
+      ],
+      "authors": null,
+      "description": null,
+      "documentation": null,
+      "homepage": null,
+      "keywords": null,
+      "license": null,
+      "license_file": null,
+      "readme": null,
+      "repository": null,
+      "urls": null,
+      "tool": null,
+      "experimental_features": []
+    },
+    {
+      "id": "bestiary 0.1.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/game-lib/bestiary/Scarb.toml)",
+      "name": "bestiary",
+      "version": "0.1.0",
+      "edition": "2024_07",
+      "source": "path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/game-lib/bestiary/Scarb.toml",
+      "manifest_path": "/Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/game-lib/bestiary/Scarb.toml",
+      "root": "/Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/game-lib/bestiary",
+      "dependencies": [
+        {
+          "name": "core",
+          "version_req": "=2.11.4",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        },
+        {
+          "name": "dojo",
+          "version_req": "*",
+          "source": "path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/core/Scarb.toml",
+          "kind": null
+        },
+        {
+          "name": "dojo_macros",
+          "version_req": "*",
+          "source": "path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/macros/Scarb.toml",
+          "kind": null
+        },
+        {
+          "name": "starknet",
+          "version_req": "=2.11.4",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        }
+      ],
+      "targets": [
+        {
+          "kind": "lib",
+          "name": "bestiary",
+          "source_path": "/Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/game-lib/bestiary/src/lib.cairo",
+          "params": {}
+        },
+        {
+          "kind": "test",
+          "name": "bestiary_unittest",
+          "source_path": "/Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/game-lib/bestiary/src/lib.cairo",
+          "params": {
+            "build-external-contracts": [],
+            "test-type": "unit"
+          }
+        }
+      ],
+      "authors": null,
+      "description": "Some scary foes to fight.",
+      "documentation": null,
+      "homepage": null,
+      "keywords": null,
+      "license": null,
+      "license_file": null,
+      "readme": null,
+      "repository": null,
+      "urls": null,
+      "tool": null,
+      "experimental_features": []
+    },
+    {
+      "id": "core 2.11.4 (std)",
+      "name": "core",
+      "version": "2.11.4",
+      "edition": "2024_07",
+      "source": "std",
+      "manifest_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/std/e9b93d81f/core/Scarb.toml",
+      "root": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/std/e9b93d81f/core",
+      "dependencies": [
+        {
+          "name": "cairo_test",
+          "version_req": "^2.11.4",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": "dev"
+        }
+      ],
+      "targets": [
+        {
+          "kind": "lib",
+          "name": "core",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/std/e9b93d81f/core/src/lib.cairo",
+          "params": {}
+        },
+        {
+          "kind": "test",
+          "name": "core_unittest",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/std/e9b93d81f/core/src/lib.cairo",
+          "params": {
+            "build-external-contracts": [],
+            "test-type": "unit"
+          }
+        }
+      ],
+      "authors": null,
+      "description": null,
+      "documentation": null,
+      "homepage": null,
+      "keywords": null,
+      "license": null,
+      "license_file": null,
+      "readme": null,
+      "repository": null,
+      "urls": null,
+      "tool": null,
+      "experimental_features": [
+        "coupons",
+        "negative_impls",
+        "associated_item_constraints"
+      ]
+    },
+    {
+      "id": "dojo 1.5.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/core/Scarb.toml)",
+      "name": "dojo",
+      "version": "1.5.0",
+      "edition": "2024_07",
+      "source": "path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/core/Scarb.toml",
+      "manifest_path": "/Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/core/Scarb.toml",
+      "root": "/Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/core",
+      "dependencies": [
+        {
+          "name": "cairo_test",
+          "version_req": "=2.11.4",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": "dev"
+        },
+        {
+          "name": "core",
+          "version_req": "=2.11.4",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        },
+        {
+          "name": "dojo_macros",
+          "version_req": "*",
+          "source": "path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/macros/Scarb.toml",
+          "kind": null
+        },
+        {
+          "name": "starknet",
+          "version_req": "=2.11.4",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        }
+      ],
+      "targets": [
+        {
+          "kind": "lib",
+          "name": "dojo",
+          "source_path": "/Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/core/src/lib.cairo",
+          "params": {}
+        },
+        {
+          "kind": "starknet-contract",
+          "name": "dojo",
+          "source_path": "/Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/core/src/lib.cairo",
+          "params": {
+            "sierra": true
+          }
+        },
+        {
+          "kind": "test",
+          "name": "dojo_unittest",
+          "source_path": "/Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/core/src/lib.cairo",
+          "params": {
+            "build-external-contracts": [],
+            "test-type": "unit"
+          }
+        }
+      ],
+      "authors": null,
+      "description": "The Dojo Core library for autonomous worlds.",
+      "documentation": null,
+      "homepage": null,
+      "keywords": null,
+      "license": null,
+      "license_file": null,
+      "readme": null,
+      "repository": null,
+      "urls": null,
+      "tool": null,
+      "experimental_features": []
+    },
+    {
+      "id": "dojo_examples 1.5.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/spawn-and-move/Scarb.toml)",
+      "name": "dojo_examples",
+      "version": "1.5.0",
+      "edition": "2024_07",
+      "source": "path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/spawn-and-move/Scarb.toml",
+      "manifest_path": "/Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/spawn-and-move/Scarb.toml",
+      "root": "/Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/spawn-and-move",
+      "dependencies": [
+        {
+          "name": "armory",
+          "version_req": "*",
+          "source": "path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/game-lib/armory/Scarb.toml",
+          "kind": null
+        },
+        {
+          "name": "assert_macros",
+          "version_req": "^2.11.4",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": "dev"
+        },
+        {
+          "name": "bestiary",
+          "version_req": "*",
+          "source": "path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/game-lib/bestiary/Scarb.toml",
+          "kind": null
+        },
+        {
+          "name": "core",
+          "version_req": "=2.11.4",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        },
+        {
+          "name": "dojo",
+          "version_req": "*",
+          "source": "path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/core/Scarb.toml",
+          "kind": null
+        },
+        {
+          "name": "dojo_macros",
+          "version_req": "*",
+          "source": "path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/macros/Scarb.toml",
+          "kind": null
+        },
+        {
+          "name": "dojo_snf_test",
+          "version_req": "*",
+          "source": "path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/dojo-snf-test/Scarb.toml",
+          "kind": "dev"
+        },
+        {
+          "name": "openzeppelin",
+          "version_req": "^0.20.0",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        },
+        {
+          "name": "snforge_std",
+          "version_req": "^0.40.0",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": "dev"
+        },
+        {
+          "name": "starknet",
+          "version_req": "^2.11.4",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        }
+      ],
+      "targets": [
+        {
+          "kind": "starknet-contract",
+          "name": "dojo_examples",
+          "source_path": "/Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/spawn-and-move/src/lib.cairo",
+          "params": {
+            "allowed-libfuncs-list": {
+              "name": "experimental"
+            },
+            "build-external-contracts": [
+              "dojo::world::world_contract::world",
+              "armory::m_Flatbow",
+              "bestiary::m_RiverSkale"
+            ]
+          }
+        },
+        {
+          "kind": "test",
+          "name": "dojo_examples_unittest",
+          "source_path": "/Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/spawn-and-move/src/lib.cairo",
+          "params": {
+            "build-external-contracts": [
+              "armory::m_Flatbow",
+              "bestiary::m_RiverSkale",
+              "dojo::world::world_contract::world"
+            ],
+            "test-type": "unit"
+          }
+        }
+      ],
+      "authors": null,
+      "description": "Dojo example to showcase Dojo features.",
+      "documentation": null,
+      "homepage": null,
+      "keywords": null,
+      "license": null,
+      "license_file": null,
+      "readme": "/Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/spawn-and-move/README.md",
+      "repository": null,
+      "urls": null,
+      "tool": {
+        "scarb": {
+          "allow-prebuilt-plugins": [
+            "snforge_std"
+          ]
+        }
+      },
+      "experimental_features": []
+    },
+    {
+      "id": "dojo_macros 1.6.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/macros/Scarb.toml)",
+      "name": "dojo_macros",
+      "version": "1.6.0",
+      "edition": "2024_07",
+      "source": "path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/macros/Scarb.toml",
+      "manifest_path": "/Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/macros/Scarb.toml",
+      "root": "/Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/macros",
+      "dependencies": [
+        {
+          "name": "core",
+          "version_req": "=2.11.4",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        }
+      ],
+      "targets": [
+        {
+          "kind": "cairo-plugin",
+          "name": "dojo_macros",
+          "source_path": "/Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/macros/src/lib.cairo",
+          "params": {}
+        }
+      ],
+      "authors": null,
+      "description": "Dojo proc macros.",
+      "documentation": null,
+      "homepage": null,
+      "keywords": null,
+      "license": null,
+      "license_file": null,
+      "readme": null,
+      "repository": null,
+      "urls": null,
+      "tool": null,
+      "experimental_features": []
+    },
+    {
+      "id": "dojo_snf_test 1.6.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/dojo-snf-test/Scarb.toml)",
+      "name": "dojo_snf_test",
+      "version": "1.6.0",
+      "edition": "2024_07",
+      "source": "path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/dojo-snf-test/Scarb.toml",
+      "manifest_path": "/Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/dojo-snf-test/Scarb.toml",
+      "root": "/Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/dojo-snf-test",
+      "dependencies": [
+        {
+          "name": "assert_macros",
+          "version_req": "^2.11.4",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        },
+        {
+          "name": "core",
+          "version_req": "=2.11.4",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        },
+        {
+          "name": "dojo",
+          "version_req": "*",
+          "source": "path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/core/Scarb.toml",
+          "kind": null
+        },
+        {
+          "name": "snforge_std",
+          "version_req": "^0.40.0",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        },
+        {
+          "name": "starknet",
+          "version_req": "=2.11.4",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        }
+      ],
+      "targets": [
+        {
+          "kind": "lib",
+          "name": "dojo_snf_test",
+          "source_path": "/Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/dojo-snf-test/src/lib.cairo",
+          "params": {}
+        },
+        {
+          "kind": "test",
+          "name": "dojo_snf_test_unittest",
+          "source_path": "/Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/dojo-snf-test/src/lib.cairo",
+          "params": {
+            "build-external-contracts": [],
+            "test-type": "unit"
+          }
+        }
+      ],
+      "authors": null,
+      "description": "Testing library for Dojo using snfoundry test runner.",
+      "documentation": null,
+      "homepage": null,
+      "keywords": null,
+      "license": null,
+      "license_file": null,
+      "readme": null,
+      "repository": null,
+      "urls": null,
+      "tool": {
+        "scarb": {
+          "allow-prebuilt-plugins": [
+            "snforge_std"
+          ]
+        }
+      },
+      "experimental_features": []
+    },
+    {
+      "id": "openzeppelin 0.20.0 (registry+https://scarbs.xyz/)",
+      "name": "openzeppelin",
+      "version": "0.20.0",
+      "edition": "2024_07",
+      "source": "registry+https://scarbs.xyz/",
+      "manifest_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin-0.20.0/Scarb.toml",
+      "root": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin-0.20.0",
+      "dependencies": [
+        {
+          "name": "core",
+          "version_req": "=2.11.4",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        },
+        {
+          "name": "openzeppelin_access",
+          "version_req": "^0.20.0",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        },
+        {
+          "name": "openzeppelin_account",
+          "version_req": "^0.20.0",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        },
+        {
+          "name": "openzeppelin_finance",
+          "version_req": "^0.20.0",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        },
+        {
+          "name": "openzeppelin_governance",
+          "version_req": "^0.20.0",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        },
+        {
+          "name": "openzeppelin_introspection",
+          "version_req": "^0.20.0",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        },
+        {
+          "name": "openzeppelin_merkle_tree",
+          "version_req": "^0.20.0",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        },
+        {
+          "name": "openzeppelin_presets",
+          "version_req": "^0.20.0",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        },
+        {
+          "name": "openzeppelin_security",
+          "version_req": "^0.20.0",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        },
+        {
+          "name": "openzeppelin_token",
+          "version_req": "^0.20.0",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        },
+        {
+          "name": "openzeppelin_upgrades",
+          "version_req": "^0.20.0",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        },
+        {
+          "name": "openzeppelin_utils",
+          "version_req": "^0.20.0",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        },
+        {
+          "name": "starknet",
+          "version_req": "^2.9.1",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        }
+      ],
+      "targets": [
+        {
+          "kind": "lib",
+          "name": "openzeppelin",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin-0.20.0/src/lib.cairo",
+          "params": {}
+        },
+        {
+          "kind": "test",
+          "name": "openzeppelin_unittest",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin-0.20.0/src/lib.cairo",
+          "params": {
+            "build-external-contracts": [],
+            "test-type": "unit"
+          }
+        }
+      ],
+      "authors": null,
+      "description": null,
+      "documentation": null,
+      "homepage": null,
+      "keywords": [
+        "openzeppelin",
+        "starknet",
+        "contracts",
+        "security",
+        "standards"
+      ],
+      "license": null,
+      "license_file": null,
+      "readme": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin-0.20.0/README.md",
+      "repository": null,
+      "urls": null,
+      "tool": {
+        "fmt": {
+          "sort-module-level-items": true
+        }
+      },
+      "experimental_features": []
+    },
+    {
+      "id": "openzeppelin_access 0.20.0 (registry+https://scarbs.xyz/)",
+      "name": "openzeppelin_access",
+      "version": "0.20.0",
+      "edition": "2024_07",
+      "source": "registry+https://scarbs.xyz/",
+      "manifest_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_access-0.20.0/Scarb.toml",
+      "root": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_access-0.20.0",
+      "dependencies": [
+        {
+          "name": "core",
+          "version_req": "=2.11.4",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        },
+        {
+          "name": "openzeppelin_introspection",
+          "version_req": "^0.20.0",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        },
+        {
+          "name": "starknet",
+          "version_req": "^2.9.1",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        }
+      ],
+      "targets": [
+        {
+          "kind": "lib",
+          "name": "openzeppelin_access",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_access-0.20.0/src/lib.cairo",
+          "params": {}
+        },
+        {
+          "kind": "test",
+          "name": "openzeppelin_access_unittest",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_access-0.20.0/src/lib.cairo",
+          "params": {
+            "build-external-contracts": [],
+            "test-type": "unit"
+          }
+        }
+      ],
+      "authors": [
+        "OpenZeppelin Community <maintainers@openzeppelin.org>"
+      ],
+      "description": "OpenZeppelin Contracts written in Cairo for Starknet, a decentralized ZK Rollup",
+      "documentation": "https://docs.openzeppelin.com/contracts-cairo",
+      "homepage": null,
+      "keywords": [
+        "openzeppelin",
+        "starknet",
+        "contracts",
+        "standards",
+        "access"
+      ],
+      "license": null,
+      "license_file": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_access-0.20.0/LICENSE",
+      "readme": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_access-0.20.0/README.md",
+      "repository": "https://github.com/OpenZeppelin/cairo-contracts",
+      "urls": null,
+      "tool": {
+        "fmt": {
+          "sort-module-level-items": true
+        }
+      },
+      "experimental_features": []
+    },
+    {
+      "id": "openzeppelin_account 0.20.0 (registry+https://scarbs.xyz/)",
+      "name": "openzeppelin_account",
+      "version": "0.20.0",
+      "edition": "2024_07",
+      "source": "registry+https://scarbs.xyz/",
+      "manifest_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_account-0.20.0/Scarb.toml",
+      "root": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_account-0.20.0",
+      "dependencies": [
+        {
+          "name": "core",
+          "version_req": "=2.11.4",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        },
+        {
+          "name": "openzeppelin_introspection",
+          "version_req": "^0.20.0",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        },
+        {
+          "name": "openzeppelin_utils",
+          "version_req": "^0.20.0",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        },
+        {
+          "name": "starknet",
+          "version_req": "^2.9.1",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        }
+      ],
+      "targets": [
+        {
+          "kind": "lib",
+          "name": "openzeppelin_account",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_account-0.20.0/src/lib.cairo",
+          "params": {}
+        },
+        {
+          "kind": "test",
+          "name": "openzeppelin_account_unittest",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_account-0.20.0/src/lib.cairo",
+          "params": {
+            "build-external-contracts": [],
+            "test-type": "unit"
+          }
+        }
+      ],
+      "authors": [
+        "OpenZeppelin Community <maintainers@openzeppelin.org>"
+      ],
+      "description": "OpenZeppelin Contracts written in Cairo for Starknet, a decentralized ZK Rollup",
+      "documentation": "https://docs.openzeppelin.com/contracts-cairo",
+      "homepage": null,
+      "keywords": [
+        "openzeppelin",
+        "starknet",
+        "contracts",
+        "standards",
+        "account"
+      ],
+      "license": null,
+      "license_file": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_account-0.20.0/LICENSE",
+      "readme": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_account-0.20.0/README.md",
+      "repository": "https://github.com/OpenZeppelin/cairo-contracts",
+      "urls": null,
+      "tool": {
+        "fmt": {
+          "sort-module-level-items": true
+        }
+      },
+      "experimental_features": []
+    },
+    {
+      "id": "openzeppelin_finance 0.20.0 (registry+https://scarbs.xyz/)",
+      "name": "openzeppelin_finance",
+      "version": "0.20.0",
+      "edition": "2024_07",
+      "source": "registry+https://scarbs.xyz/",
+      "manifest_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_finance-0.20.0/Scarb.toml",
+      "root": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_finance-0.20.0",
+      "dependencies": [
+        {
+          "name": "core",
+          "version_req": "=2.11.4",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        },
+        {
+          "name": "openzeppelin_access",
+          "version_req": "^0.20.0",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        },
+        {
+          "name": "openzeppelin_token",
+          "version_req": "^0.20.0",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        },
+        {
+          "name": "starknet",
+          "version_req": "^2.9.1",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        }
+      ],
+      "targets": [
+        {
+          "kind": "lib",
+          "name": "openzeppelin_finance",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_finance-0.20.0/src/lib.cairo",
+          "params": {}
+        },
+        {
+          "kind": "test",
+          "name": "openzeppelin_finance_unittest",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_finance-0.20.0/src/lib.cairo",
+          "params": {
+            "build-external-contracts": [],
+            "test-type": "unit"
+          }
+        }
+      ],
+      "authors": [
+        "OpenZeppelin Community <maintainers@openzeppelin.org>"
+      ],
+      "description": "OpenZeppelin Contracts written in Cairo for Starknet, a decentralized ZK Rollup",
+      "documentation": "https://docs.openzeppelin.com/contracts-cairo",
+      "homepage": null,
+      "keywords": [
+        "openzeppelin",
+        "starknet",
+        "contracts",
+        "finance",
+        "vesting"
+      ],
+      "license": null,
+      "license_file": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_finance-0.20.0/LICENSE",
+      "readme": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_finance-0.20.0/README.md",
+      "repository": "https://github.com/OpenZeppelin/cairo-contracts",
+      "urls": null,
+      "tool": {
+        "fmt": {
+          "sort-module-level-items": true
+        }
+      },
+      "experimental_features": []
+    },
+    {
+      "id": "openzeppelin_governance 0.20.0 (registry+https://scarbs.xyz/)",
+      "name": "openzeppelin_governance",
+      "version": "0.20.0",
+      "edition": "2024_07",
+      "source": "registry+https://scarbs.xyz/",
+      "manifest_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_governance-0.20.0/Scarb.toml",
+      "root": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_governance-0.20.0",
+      "dependencies": [
+        {
+          "name": "core",
+          "version_req": "=2.11.4",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        },
+        {
+          "name": "openzeppelin_access",
+          "version_req": "^0.20.0",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        },
+        {
+          "name": "openzeppelin_account",
+          "version_req": "^0.20.0",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        },
+        {
+          "name": "openzeppelin_introspection",
+          "version_req": "^0.20.0",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        },
+        {
+          "name": "openzeppelin_token",
+          "version_req": "^0.20.0",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        },
+        {
+          "name": "openzeppelin_utils",
+          "version_req": "^0.20.0",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        },
+        {
+          "name": "starknet",
+          "version_req": "^2.9.1",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        }
+      ],
+      "targets": [
+        {
+          "kind": "lib",
+          "name": "openzeppelin_governance",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_governance-0.20.0/src/lib.cairo",
+          "params": {}
+        },
+        {
+          "kind": "test",
+          "name": "openzeppelin_governance_unittest",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_governance-0.20.0/src/lib.cairo",
+          "params": {
+            "build-external-contracts": [],
+            "test-type": "unit"
+          }
+        }
+      ],
+      "authors": [
+        "OpenZeppelin Community <maintainers@openzeppelin.org>"
+      ],
+      "description": "OpenZeppelin Contracts written in Cairo for Starknet, a decentralized ZK Rollup",
+      "documentation": "https://docs.openzeppelin.com/contracts-cairo",
+      "homepage": null,
+      "keywords": [
+        "openzeppelin",
+        "starknet",
+        "contracts",
+        "standards",
+        "governance"
+      ],
+      "license": null,
+      "license_file": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_governance-0.20.0/LICENSE",
+      "readme": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_governance-0.20.0/README.md",
+      "repository": "https://github.com/OpenZeppelin/cairo-contracts",
+      "urls": null,
+      "tool": {
+        "fmt": {
+          "sort-module-level-items": true
+        }
+      },
+      "experimental_features": []
+    },
+    {
+      "id": "openzeppelin_introspection 0.20.0 (registry+https://scarbs.xyz/)",
+      "name": "openzeppelin_introspection",
+      "version": "0.20.0",
+      "edition": "2024_07",
+      "source": "registry+https://scarbs.xyz/",
+      "manifest_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_introspection-0.20.0/Scarb.toml",
+      "root": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_introspection-0.20.0",
+      "dependencies": [
+        {
+          "name": "core",
+          "version_req": "=2.11.4",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        },
+        {
+          "name": "starknet",
+          "version_req": "^2.9.1",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        }
+      ],
+      "targets": [
+        {
+          "kind": "lib",
+          "name": "openzeppelin_introspection",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_introspection-0.20.0/src/lib.cairo",
+          "params": {}
+        },
+        {
+          "kind": "test",
+          "name": "openzeppelin_introspection_unittest",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_introspection-0.20.0/src/lib.cairo",
+          "params": {
+            "build-external-contracts": [],
+            "test-type": "unit"
+          }
+        }
+      ],
+      "authors": [
+        "OpenZeppelin Community <maintainers@openzeppelin.org>"
+      ],
+      "description": "OpenZeppelin Contracts written in Cairo for Starknet, a decentralized ZK Rollup",
+      "documentation": "https://docs.openzeppelin.com/contracts-cairo",
+      "homepage": null,
+      "keywords": [
+        "openzeppelin",
+        "starknet",
+        "contracts",
+        "standards",
+        "introspection"
+      ],
+      "license": null,
+      "license_file": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_introspection-0.20.0/LICENSE",
+      "readme": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_introspection-0.20.0/README.md",
+      "repository": "https://github.com/OpenZeppelin/cairo-contracts",
+      "urls": null,
+      "tool": {
+        "fmt": {
+          "sort-module-level-items": true
+        }
+      },
+      "experimental_features": []
+    },
+    {
+      "id": "openzeppelin_merkle_tree 0.20.0 (registry+https://scarbs.xyz/)",
+      "name": "openzeppelin_merkle_tree",
+      "version": "0.20.0",
+      "edition": "2024_07",
+      "source": "registry+https://scarbs.xyz/",
+      "manifest_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_merkle_tree-0.20.0/Scarb.toml",
+      "root": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_merkle_tree-0.20.0",
+      "dependencies": [
+        {
+          "name": "core",
+          "version_req": "=2.11.4",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        }
+      ],
+      "targets": [
+        {
+          "kind": "lib",
+          "name": "openzeppelin_merkle_tree",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_merkle_tree-0.20.0/src/lib.cairo",
+          "params": {}
+        },
+        {
+          "kind": "test",
+          "name": "openzeppelin_merkle_tree_unittest",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_merkle_tree-0.20.0/src/lib.cairo",
+          "params": {
+            "build-external-contracts": [],
+            "test-type": "unit"
+          }
+        }
+      ],
+      "authors": [
+        "OpenZeppelin Community <maintainers@openzeppelin.org>"
+      ],
+      "description": "OpenZeppelin Contracts written in Cairo for Starknet, a decentralized ZK Rollup",
+      "documentation": "https://docs.openzeppelin.com/contracts-cairo",
+      "homepage": null,
+      "keywords": [
+        "openzeppelin",
+        "cairo",
+        "merkle_tree"
+      ],
+      "license": null,
+      "license_file": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_merkle_tree-0.20.0/LICENSE",
+      "readme": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_merkle_tree-0.20.0/README.md",
+      "repository": "https://github.com/OpenZeppelin/cairo-contracts",
+      "urls": null,
+      "tool": {
+        "fmt": {
+          "sort-module-level-items": true
+        }
+      },
+      "experimental_features": []
+    },
+    {
+      "id": "openzeppelin_presets 0.20.0 (registry+https://scarbs.xyz/)",
+      "name": "openzeppelin_presets",
+      "version": "0.20.0",
+      "edition": "2024_07",
+      "source": "registry+https://scarbs.xyz/",
+      "manifest_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_presets-0.20.0/Scarb.toml",
+      "root": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_presets-0.20.0",
+      "dependencies": [
+        {
+          "name": "core",
+          "version_req": "=2.11.4",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        },
+        {
+          "name": "openzeppelin_access",
+          "version_req": "^0.20.0",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        },
+        {
+          "name": "openzeppelin_account",
+          "version_req": "^0.20.0",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        },
+        {
+          "name": "openzeppelin_finance",
+          "version_req": "^0.20.0",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        },
+        {
+          "name": "openzeppelin_introspection",
+          "version_req": "^0.20.0",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        },
+        {
+          "name": "openzeppelin_token",
+          "version_req": "^0.20.0",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        },
+        {
+          "name": "openzeppelin_upgrades",
+          "version_req": "^0.20.0",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        },
+        {
+          "name": "openzeppelin_utils",
+          "version_req": "^0.20.0",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        },
+        {
+          "name": "starknet",
+          "version_req": "^2.9.1",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        }
+      ],
+      "targets": [
+        {
+          "kind": "lib",
+          "name": "openzeppelin_presets",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_presets-0.20.0/src/lib.cairo",
+          "params": {}
+        },
+        {
+          "kind": "test",
+          "name": "openzeppelin_presets_unittest",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_presets-0.20.0/src/lib.cairo",
+          "params": {
+            "build-external-contracts": [],
+            "test-type": "unit"
+          }
+        }
+      ],
+      "authors": [
+        "OpenZeppelin Community <maintainers@openzeppelin.org>"
+      ],
+      "description": "OpenZeppelin Contracts written in Cairo for Starknet, a decentralized ZK Rollup",
+      "documentation": "https://docs.openzeppelin.com/contracts-cairo",
+      "homepage": null,
+      "keywords": [
+        "openzeppelin",
+        "starknet",
+        "contracts",
+        "presets"
+      ],
+      "license": null,
+      "license_file": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_presets-0.20.0/LICENSE",
+      "readme": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_presets-0.20.0/README.md",
+      "repository": "https://github.com/OpenZeppelin/cairo-contracts",
+      "urls": null,
+      "tool": {
+        "fmt": {
+          "sort-module-level-items": true
+        }
+      },
+      "experimental_features": []
+    },
+    {
+      "id": "openzeppelin_security 0.20.0 (registry+https://scarbs.xyz/)",
+      "name": "openzeppelin_security",
+      "version": "0.20.0",
+      "edition": "2024_07",
+      "source": "registry+https://scarbs.xyz/",
+      "manifest_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_security-0.20.0/Scarb.toml",
+      "root": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_security-0.20.0",
+      "dependencies": [
+        {
+          "name": "core",
+          "version_req": "=2.11.4",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        },
+        {
+          "name": "starknet",
+          "version_req": "^2.9.1",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        }
+      ],
+      "targets": [
+        {
+          "kind": "lib",
+          "name": "openzeppelin_security",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_security-0.20.0/src/lib.cairo",
+          "params": {}
+        },
+        {
+          "kind": "test",
+          "name": "openzeppelin_security_unittest",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_security-0.20.0/src/lib.cairo",
+          "params": {
+            "build-external-contracts": [],
+            "test-type": "unit"
+          }
+        }
+      ],
+      "authors": [
+        "OpenZeppelin Community <maintainers@openzeppelin.org>"
+      ],
+      "description": "OpenZeppelin Contracts written in Cairo for Starknet, a decentralized ZK Rollup",
+      "documentation": "https://docs.openzeppelin.com/contracts-cairo",
+      "homepage": null,
+      "keywords": [
+        "openzeppelin",
+        "starknet",
+        "contracts",
+        "security"
+      ],
+      "license": null,
+      "license_file": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_security-0.20.0/LICENSE",
+      "readme": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_security-0.20.0/README.md",
+      "repository": "https://github.com/OpenZeppelin/cairo-contracts",
+      "urls": null,
+      "tool": {
+        "fmt": {
+          "sort-module-level-items": true
+        }
+      },
+      "experimental_features": []
+    },
+    {
+      "id": "openzeppelin_token 0.20.0 (registry+https://scarbs.xyz/)",
+      "name": "openzeppelin_token",
+      "version": "0.20.0",
+      "edition": "2024_07",
+      "source": "registry+https://scarbs.xyz/",
+      "manifest_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_token-0.20.0/Scarb.toml",
+      "root": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_token-0.20.0",
+      "dependencies": [
+        {
+          "name": "core",
+          "version_req": "=2.11.4",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        },
+        {
+          "name": "openzeppelin_access",
+          "version_req": "^0.20.0",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        },
+        {
+          "name": "openzeppelin_account",
+          "version_req": "^0.20.0",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        },
+        {
+          "name": "openzeppelin_introspection",
+          "version_req": "^0.20.0",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        },
+        {
+          "name": "openzeppelin_utils",
+          "version_req": "^0.20.0",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        },
+        {
+          "name": "starknet",
+          "version_req": "^2.9.1",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        }
+      ],
+      "targets": [
+        {
+          "kind": "lib",
+          "name": "openzeppelin_token",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_token-0.20.0/src/lib.cairo",
+          "params": {}
+        },
+        {
+          "kind": "test",
+          "name": "openzeppelin_token_unittest",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_token-0.20.0/src/lib.cairo",
+          "params": {
+            "build-external-contracts": [],
+            "test-type": "unit"
+          }
+        }
+      ],
+      "authors": [
+        "OpenZeppelin Community <maintainers@openzeppelin.org>"
+      ],
+      "description": "OpenZeppelin Contracts written in Cairo for Starknet, a decentralized ZK Rollup",
+      "documentation": "https://docs.openzeppelin.com/contracts-cairo",
+      "homepage": null,
+      "keywords": [
+        "openzeppelin",
+        "starknet",
+        "contracts",
+        "standards",
+        "token"
+      ],
+      "license": null,
+      "license_file": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_token-0.20.0/LICENSE",
+      "readme": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_token-0.20.0/README.md",
+      "repository": "https://github.com/OpenZeppelin/cairo-contracts",
+      "urls": null,
+      "tool": {
+        "fmt": {
+          "sort-module-level-items": true
+        }
+      },
+      "experimental_features": []
+    },
+    {
+      "id": "openzeppelin_upgrades 0.20.0 (registry+https://scarbs.xyz/)",
+      "name": "openzeppelin_upgrades",
+      "version": "0.20.0",
+      "edition": "2024_07",
+      "source": "registry+https://scarbs.xyz/",
+      "manifest_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_upgrades-0.20.0/Scarb.toml",
+      "root": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_upgrades-0.20.0",
+      "dependencies": [
+        {
+          "name": "core",
+          "version_req": "=2.11.4",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        },
+        {
+          "name": "starknet",
+          "version_req": "^2.9.1",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        }
+      ],
+      "targets": [
+        {
+          "kind": "lib",
+          "name": "openzeppelin_upgrades",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_upgrades-0.20.0/src/lib.cairo",
+          "params": {}
+        },
+        {
+          "kind": "test",
+          "name": "openzeppelin_upgrades_unittest",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_upgrades-0.20.0/src/lib.cairo",
+          "params": {
+            "build-external-contracts": [],
+            "test-type": "unit"
+          }
+        }
+      ],
+      "authors": [
+        "OpenZeppelin Community <maintainers@openzeppelin.org>"
+      ],
+      "description": "OpenZeppelin Contracts written in Cairo for Starknet, a decentralized ZK Rollup",
+      "documentation": "https://docs.openzeppelin.com/contracts-cairo",
+      "homepage": null,
+      "keywords": [
+        "openzeppelin",
+        "starknet",
+        "contracts",
+        "upgrades"
+      ],
+      "license": null,
+      "license_file": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_upgrades-0.20.0/LICENSE",
+      "readme": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_upgrades-0.20.0/README.md",
+      "repository": "https://github.com/OpenZeppelin/cairo-contracts",
+      "urls": null,
+      "tool": {
+        "fmt": {
+          "sort-module-level-items": true
+        }
+      },
+      "experimental_features": []
+    },
+    {
+      "id": "openzeppelin_utils 0.20.0 (registry+https://scarbs.xyz/)",
+      "name": "openzeppelin_utils",
+      "version": "0.20.0",
+      "edition": "2024_07",
+      "source": "registry+https://scarbs.xyz/",
+      "manifest_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_utils-0.20.0/Scarb.toml",
+      "root": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_utils-0.20.0",
+      "dependencies": [
+        {
+          "name": "core",
+          "version_req": "=2.11.4",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        },
+        {
+          "name": "starknet",
+          "version_req": "^2.9.1",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        }
+      ],
+      "targets": [
+        {
+          "kind": "lib",
+          "name": "openzeppelin_utils",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_utils-0.20.0/src/lib.cairo",
+          "params": {}
+        },
+        {
+          "kind": "test",
+          "name": "openzeppelin_utils_unittest",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_utils-0.20.0/src/lib.cairo",
+          "params": {
+            "build-external-contracts": [],
+            "test-type": "unit"
+          }
+        }
+      ],
+      "authors": [
+        "OpenZeppelin Community <maintainers@openzeppelin.org>"
+      ],
+      "description": "OpenZeppelin Contracts written in Cairo for Starknet, a decentralized ZK Rollup",
+      "documentation": "https://docs.openzeppelin.com/contracts-cairo",
+      "homepage": null,
+      "keywords": [
+        "openzeppelin",
+        "starknet",
+        "contracts",
+        "standards",
+        "utils"
+      ],
+      "license": null,
+      "license_file": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_utils-0.20.0/LICENSE",
+      "readme": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_utils-0.20.0/README.md",
+      "repository": "https://github.com/OpenZeppelin/cairo-contracts",
+      "urls": null,
+      "tool": {
+        "fmt": {
+          "sort-module-level-items": true
+        }
+      },
+      "experimental_features": []
+    },
+    {
+      "id": "snforge_scarb_plugin 0.40.0 (registry+https://scarbs.xyz/)",
+      "name": "snforge_scarb_plugin",
+      "version": "0.40.0",
+      "edition": "2024_07",
+      "source": "registry+https://scarbs.xyz/",
+      "manifest_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/snforge_scarb_plugin-0.40.0/Scarb.toml",
+      "root": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/snforge_scarb_plugin-0.40.0",
+      "dependencies": [
+        {
+          "name": "core",
+          "version_req": "=2.11.4",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        }
+      ],
+      "targets": [
+        {
+          "kind": "cairo-plugin",
+          "name": "snforge_scarb_plugin",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/snforge_scarb_plugin-0.40.0/src/lib.cairo",
+          "params": {}
+        }
+      ],
+      "authors": null,
+      "description": null,
+      "documentation": null,
+      "homepage": null,
+      "keywords": null,
+      "license": null,
+      "license_file": null,
+      "readme": null,
+      "repository": null,
+      "urls": null,
+      "tool": null,
+      "experimental_features": []
+    },
+    {
+      "id": "snforge_std 0.40.0 (registry+https://scarbs.xyz/)",
+      "name": "snforge_std",
+      "version": "0.40.0",
+      "edition": "2024_07",
+      "source": "registry+https://scarbs.xyz/",
+      "manifest_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/snforge_std-0.40.0/Scarb.toml",
+      "root": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/snforge_std-0.40.0",
+      "dependencies": [
+        {
+          "name": "core",
+          "version_req": "=2.11.4",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        },
+        {
+          "name": "snforge_scarb_plugin",
+          "version_req": "^0.40.0",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        }
+      ],
+      "targets": [
+        {
+          "kind": "lib",
+          "name": "snforge_std",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/snforge_std-0.40.0/src/lib.cairo",
+          "params": {}
+        },
+        {
+          "kind": "test",
+          "name": "snforge_std_unittest",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/snforge_std-0.40.0/src/lib.cairo",
+          "params": {
+            "build-external-contracts": [],
+            "test-type": "unit"
+          }
+        }
+      ],
+      "authors": null,
+      "description": "Cairo testing library",
+      "documentation": "https://foundry-rs.github.io/starknet-foundry/appendix/snforge-library.html",
+      "homepage": null,
+      "keywords": null,
+      "license": null,
+      "license_file": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/snforge_std-0.40.0/LICENSE",
+      "readme": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/snforge_std-0.40.0/README.md",
+      "repository": "https://github.com/foundry-rs/starknet-foundry",
+      "urls": null,
+      "tool": null,
+      "experimental_features": []
+    },
+    {
+      "id": "starknet 2.11.4 (std)",
+      "name": "starknet",
+      "version": "2.11.4",
+      "edition": "2023_01",
+      "source": "std",
+      "manifest_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/std/e9b93d81f/starknet/Scarb.toml",
+      "root": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/std/e9b93d81f/starknet",
+      "dependencies": [
+        {
+          "name": "core",
+          "version_req": "=2.11.4",
+          "source": "registry+https://scarbs.xyz/",
+          "kind": null
+        }
+      ],
+      "targets": [
+        {
+          "kind": "cairo-plugin",
+          "name": "starknet",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/std/e9b93d81f/starknet/src/lib.cairo",
+          "params": {
+            "builtin": true
+          }
+        }
+      ],
+      "authors": null,
+      "description": null,
+      "documentation": null,
+      "homepage": null,
+      "keywords": null,
+      "license": null,
+      "license_file": null,
+      "readme": null,
+      "repository": null,
+      "urls": null,
+      "tool": null,
+      "experimental_features": []
+    }
+  ],
+  "compilation_units": [
+    {
+      "id": "dojo_examples-k0751taeugjbo",
+      "package": "dojo_examples 1.5.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/spawn-and-move/Scarb.toml)",
+      "target": {
+        "kind": "starknet-contract",
+        "name": "dojo_examples",
+        "source_path": "/Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/spawn-and-move/src/lib.cairo",
+        "params": {
+          "allowed-libfuncs-list": {
+            "name": "experimental"
+          },
+          "build-external-contracts": [
+            "dojo::world::world_contract::world",
+            "armory::m_Flatbow",
+            "bestiary::m_RiverSkale"
+          ]
+        }
+      },
+      "compiler_config": {
+        "allow_warnings": true,
+        "enable_gas": true,
+        "inlining_strategy": "default",
+        "panic_backtrace": false,
+        "sierra_replace_ids": true,
+        "unstable_add_statements_code_locations_debug_info": false,
+        "unstable_add_statements_functions_debug_info": false
+      },
+      "components_data": [
+        {
+          "package": "armory 0.1.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/game-lib/armory/Scarb.toml)",
+          "name": "armory",
+          "source_path": "/Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/game-lib/armory/src/lib.cairo",
+          "cfg": null,
+          "id": "armory 0.1.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/game-lib/armory/Scarb.toml)",
+          "discriminator": "armory 0.1.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/game-lib/armory/Scarb.toml)",
+          "dependencies": [
+            {
+              "id": "armory 0.1.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/game-lib/armory/Scarb.toml)"
+            },
+            {
+              "id": "core 2.11.4 (std)"
+            },
+            {
+              "id": "dojo 1.5.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/core/Scarb.toml)"
+            },
+            {
+              "id": "dojo_macros 1.6.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/macros/Scarb.toml)"
+            },
+            {
+              "id": "starknet 2.11.4 (std)"
+            }
+          ]
+        },
+        {
+          "package": "bestiary 0.1.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/game-lib/bestiary/Scarb.toml)",
+          "name": "bestiary",
+          "source_path": "/Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/game-lib/bestiary/src/lib.cairo",
+          "cfg": null,
+          "id": "bestiary 0.1.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/game-lib/bestiary/Scarb.toml)",
+          "discriminator": "bestiary 0.1.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/game-lib/bestiary/Scarb.toml)",
+          "dependencies": [
+            {
+              "id": "bestiary 0.1.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/game-lib/bestiary/Scarb.toml)"
+            },
+            {
+              "id": "core 2.11.4 (std)"
+            },
+            {
+              "id": "dojo 1.5.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/core/Scarb.toml)"
+            },
+            {
+              "id": "dojo_macros 1.6.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/macros/Scarb.toml)"
+            },
+            {
+              "id": "starknet 2.11.4 (std)"
+            }
+          ]
+        },
+        {
+          "package": "core 2.11.4 (std)",
+          "name": "core",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/std/e9b93d81f/core/src/lib.cairo",
+          "cfg": null,
+          "id": "core 2.11.4 (std)",
+          "discriminator": null,
+          "dependencies": [
+            {
+              "id": "core 2.11.4 (std)"
+            }
+          ]
+        },
+        {
+          "package": "dojo 1.5.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/core/Scarb.toml)",
+          "name": "dojo",
+          "source_path": "/Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/core/src/lib.cairo",
+          "cfg": null,
+          "id": "dojo 1.5.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/core/Scarb.toml)",
+          "discriminator": "dojo 1.5.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/core/Scarb.toml)",
+          "dependencies": [
+            {
+              "id": "core 2.11.4 (std)"
+            },
+            {
+              "id": "dojo 1.5.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/core/Scarb.toml)"
+            },
+            {
+              "id": "dojo_macros 1.6.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/macros/Scarb.toml)"
+            },
+            {
+              "id": "starknet 2.11.4 (std)"
+            }
+          ]
+        },
+        {
+          "package": "dojo_examples 1.5.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/spawn-and-move/Scarb.toml)",
+          "name": "dojo_examples",
+          "source_path": "/Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/spawn-and-move/src/lib.cairo",
+          "cfg": [
+            [
+              "feature",
+              "dungeon"
+            ],
+            [
+              "target",
+              "starknet-contract"
+            ]
+          ],
+          "id": "dojo_examples 1.5.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/spawn-and-move/Scarb.toml)",
+          "discriminator": "dojo_examples 1.5.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/spawn-and-move/Scarb.toml)",
+          "dependencies": [
+            {
+              "id": "armory 0.1.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/game-lib/armory/Scarb.toml)"
+            },
+            {
+              "id": "bestiary 0.1.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/game-lib/bestiary/Scarb.toml)"
+            },
+            {
+              "id": "core 2.11.4 (std)"
+            },
+            {
+              "id": "dojo 1.5.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/core/Scarb.toml)"
+            },
+            {
+              "id": "dojo_examples 1.5.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/spawn-and-move/Scarb.toml)"
+            },
+            {
+              "id": "dojo_macros 1.6.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/macros/Scarb.toml)"
+            },
+            {
+              "id": "openzeppelin 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "starknet 2.11.4 (std)"
+            }
+          ]
+        },
+        {
+          "package": "openzeppelin 0.20.0 (registry+https://scarbs.xyz/)",
+          "name": "openzeppelin",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin-0.20.0/src/lib.cairo",
+          "cfg": null,
+          "id": "openzeppelin 0.20.0 (registry+https://scarbs.xyz/)",
+          "discriminator": "openzeppelin 0.20.0 (registry+https://scarbs.xyz/)",
+          "dependencies": [
+            {
+              "id": "core 2.11.4 (std)"
+            },
+            {
+              "id": "openzeppelin 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_access 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_account 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_finance 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_governance 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_introspection 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_merkle_tree 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_presets 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_security 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_token 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_upgrades 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_utils 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "starknet 2.11.4 (std)"
+            }
+          ]
+        },
+        {
+          "package": "openzeppelin_access 0.20.0 (registry+https://scarbs.xyz/)",
+          "name": "openzeppelin_access",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_access-0.20.0/src/lib.cairo",
+          "cfg": null,
+          "id": "openzeppelin_access 0.20.0 (registry+https://scarbs.xyz/)",
+          "discriminator": "openzeppelin_access 0.20.0 (registry+https://scarbs.xyz/)",
+          "dependencies": [
+            {
+              "id": "core 2.11.4 (std)"
+            },
+            {
+              "id": "openzeppelin_access 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_introspection 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "starknet 2.11.4 (std)"
+            }
+          ]
+        },
+        {
+          "package": "openzeppelin_account 0.20.0 (registry+https://scarbs.xyz/)",
+          "name": "openzeppelin_account",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_account-0.20.0/src/lib.cairo",
+          "cfg": null,
+          "id": "openzeppelin_account 0.20.0 (registry+https://scarbs.xyz/)",
+          "discriminator": "openzeppelin_account 0.20.0 (registry+https://scarbs.xyz/)",
+          "dependencies": [
+            {
+              "id": "core 2.11.4 (std)"
+            },
+            {
+              "id": "openzeppelin_account 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_introspection 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_utils 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "starknet 2.11.4 (std)"
+            }
+          ]
+        },
+        {
+          "package": "openzeppelin_finance 0.20.0 (registry+https://scarbs.xyz/)",
+          "name": "openzeppelin_finance",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_finance-0.20.0/src/lib.cairo",
+          "cfg": null,
+          "id": "openzeppelin_finance 0.20.0 (registry+https://scarbs.xyz/)",
+          "discriminator": "openzeppelin_finance 0.20.0 (registry+https://scarbs.xyz/)",
+          "dependencies": [
+            {
+              "id": "core 2.11.4 (std)"
+            },
+            {
+              "id": "openzeppelin_access 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_finance 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_token 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "starknet 2.11.4 (std)"
+            }
+          ]
+        },
+        {
+          "package": "openzeppelin_governance 0.20.0 (registry+https://scarbs.xyz/)",
+          "name": "openzeppelin_governance",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_governance-0.20.0/src/lib.cairo",
+          "cfg": null,
+          "id": "openzeppelin_governance 0.20.0 (registry+https://scarbs.xyz/)",
+          "discriminator": "openzeppelin_governance 0.20.0 (registry+https://scarbs.xyz/)",
+          "dependencies": [
+            {
+              "id": "core 2.11.4 (std)"
+            },
+            {
+              "id": "openzeppelin_access 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_account 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_governance 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_introspection 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_token 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_utils 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "starknet 2.11.4 (std)"
+            }
+          ]
+        },
+        {
+          "package": "openzeppelin_introspection 0.20.0 (registry+https://scarbs.xyz/)",
+          "name": "openzeppelin_introspection",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_introspection-0.20.0/src/lib.cairo",
+          "cfg": null,
+          "id": "openzeppelin_introspection 0.20.0 (registry+https://scarbs.xyz/)",
+          "discriminator": "openzeppelin_introspection 0.20.0 (registry+https://scarbs.xyz/)",
+          "dependencies": [
+            {
+              "id": "core 2.11.4 (std)"
+            },
+            {
+              "id": "openzeppelin_introspection 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "starknet 2.11.4 (std)"
+            }
+          ]
+        },
+        {
+          "package": "openzeppelin_merkle_tree 0.20.0 (registry+https://scarbs.xyz/)",
+          "name": "openzeppelin_merkle_tree",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_merkle_tree-0.20.0/src/lib.cairo",
+          "cfg": null,
+          "id": "openzeppelin_merkle_tree 0.20.0 (registry+https://scarbs.xyz/)",
+          "discriminator": "openzeppelin_merkle_tree 0.20.0 (registry+https://scarbs.xyz/)",
+          "dependencies": [
+            {
+              "id": "core 2.11.4 (std)"
+            },
+            {
+              "id": "openzeppelin_merkle_tree 0.20.0 (registry+https://scarbs.xyz/)"
+            }
+          ]
+        },
+        {
+          "package": "openzeppelin_presets 0.20.0 (registry+https://scarbs.xyz/)",
+          "name": "openzeppelin_presets",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_presets-0.20.0/src/lib.cairo",
+          "cfg": null,
+          "id": "openzeppelin_presets 0.20.0 (registry+https://scarbs.xyz/)",
+          "discriminator": "openzeppelin_presets 0.20.0 (registry+https://scarbs.xyz/)",
+          "dependencies": [
+            {
+              "id": "core 2.11.4 (std)"
+            },
+            {
+              "id": "openzeppelin_access 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_account 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_finance 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_introspection 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_presets 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_token 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_upgrades 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_utils 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "starknet 2.11.4 (std)"
+            }
+          ]
+        },
+        {
+          "package": "openzeppelin_security 0.20.0 (registry+https://scarbs.xyz/)",
+          "name": "openzeppelin_security",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_security-0.20.0/src/lib.cairo",
+          "cfg": null,
+          "id": "openzeppelin_security 0.20.0 (registry+https://scarbs.xyz/)",
+          "discriminator": "openzeppelin_security 0.20.0 (registry+https://scarbs.xyz/)",
+          "dependencies": [
+            {
+              "id": "core 2.11.4 (std)"
+            },
+            {
+              "id": "openzeppelin_security 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "starknet 2.11.4 (std)"
+            }
+          ]
+        },
+        {
+          "package": "openzeppelin_token 0.20.0 (registry+https://scarbs.xyz/)",
+          "name": "openzeppelin_token",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_token-0.20.0/src/lib.cairo",
+          "cfg": null,
+          "id": "openzeppelin_token 0.20.0 (registry+https://scarbs.xyz/)",
+          "discriminator": "openzeppelin_token 0.20.0 (registry+https://scarbs.xyz/)",
+          "dependencies": [
+            {
+              "id": "core 2.11.4 (std)"
+            },
+            {
+              "id": "openzeppelin_access 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_account 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_introspection 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_token 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_utils 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "starknet 2.11.4 (std)"
+            }
+          ]
+        },
+        {
+          "package": "openzeppelin_upgrades 0.20.0 (registry+https://scarbs.xyz/)",
+          "name": "openzeppelin_upgrades",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_upgrades-0.20.0/src/lib.cairo",
+          "cfg": null,
+          "id": "openzeppelin_upgrades 0.20.0 (registry+https://scarbs.xyz/)",
+          "discriminator": "openzeppelin_upgrades 0.20.0 (registry+https://scarbs.xyz/)",
+          "dependencies": [
+            {
+              "id": "core 2.11.4 (std)"
+            },
+            {
+              "id": "openzeppelin_upgrades 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "starknet 2.11.4 (std)"
+            }
+          ]
+        },
+        {
+          "package": "openzeppelin_utils 0.20.0 (registry+https://scarbs.xyz/)",
+          "name": "openzeppelin_utils",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_utils-0.20.0/src/lib.cairo",
+          "cfg": null,
+          "id": "openzeppelin_utils 0.20.0 (registry+https://scarbs.xyz/)",
+          "discriminator": "openzeppelin_utils 0.20.0 (registry+https://scarbs.xyz/)",
+          "dependencies": [
+            {
+              "id": "core 2.11.4 (std)"
+            },
+            {
+              "id": "openzeppelin_utils 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "starknet 2.11.4 (std)"
+            }
+          ]
+        }
+      ],
+      "cairo_plugins": [
+        {
+          "package": "dojo_macros 1.6.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/macros/Scarb.toml)",
+          "component_dependency_id": "dojo_macros 1.6.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/macros/Scarb.toml)",
+          "prebuilt_allowed": false
+        },
+        {
+          "package": "starknet 2.11.4 (std)",
+          "component_dependency_id": "starknet 2.11.4 (std)",
+          "prebuilt_allowed": false
+        }
+      ],
+      "cfg": [
+        [
+          "target",
+          "starknet-contract"
+        ]
+      ],
+      "components": [
+        "armory 0.1.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/game-lib/armory/Scarb.toml)",
+        "bestiary 0.1.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/game-lib/bestiary/Scarb.toml)",
+        "core 2.11.4 (std)",
+        "dojo 1.5.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/core/Scarb.toml)",
+        "dojo_examples 1.5.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/spawn-and-move/Scarb.toml)",
+        "openzeppelin 0.20.0 (registry+https://scarbs.xyz/)",
+        "openzeppelin_access 0.20.0 (registry+https://scarbs.xyz/)",
+        "openzeppelin_account 0.20.0 (registry+https://scarbs.xyz/)",
+        "openzeppelin_finance 0.20.0 (registry+https://scarbs.xyz/)",
+        "openzeppelin_governance 0.20.0 (registry+https://scarbs.xyz/)",
+        "openzeppelin_introspection 0.20.0 (registry+https://scarbs.xyz/)",
+        "openzeppelin_merkle_tree 0.20.0 (registry+https://scarbs.xyz/)",
+        "openzeppelin_presets 0.20.0 (registry+https://scarbs.xyz/)",
+        "openzeppelin_security 0.20.0 (registry+https://scarbs.xyz/)",
+        "openzeppelin_token 0.20.0 (registry+https://scarbs.xyz/)",
+        "openzeppelin_upgrades 0.20.0 (registry+https://scarbs.xyz/)",
+        "openzeppelin_utils 0.20.0 (registry+https://scarbs.xyz/)"
+      ]
+    },
+    {
+      "id": "dojo_examples-irabnb1lggpq8",
+      "package": "dojo_examples 1.5.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/spawn-and-move/Scarb.toml)",
+      "target": {
+        "kind": "test",
+        "name": "dojo_examples_unittest",
+        "source_path": "/Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/spawn-and-move/src/lib.cairo",
+        "params": {
+          "build-external-contracts": [
+            "armory::m_Flatbow",
+            "bestiary::m_RiverSkale",
+            "dojo::world::world_contract::world"
+          ],
+          "test-type": "unit"
+        }
+      },
+      "compiler_config": {
+        "allow_warnings": true,
+        "enable_gas": true,
+        "inlining_strategy": "default",
+        "panic_backtrace": false,
+        "sierra_replace_ids": true,
+        "unstable_add_statements_code_locations_debug_info": false,
+        "unstable_add_statements_functions_debug_info": false
+      },
+      "components_data": [
+        {
+          "package": "armory 0.1.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/game-lib/armory/Scarb.toml)",
+          "name": "armory",
+          "source_path": "/Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/game-lib/armory/src/lib.cairo",
+          "cfg": [
+            [
+              "target",
+              "test"
+            ]
+          ],
+          "id": "armory 0.1.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/game-lib/armory/Scarb.toml)",
+          "discriminator": "armory 0.1.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/game-lib/armory/Scarb.toml)",
+          "dependencies": [
+            {
+              "id": "armory 0.1.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/game-lib/armory/Scarb.toml)"
+            },
+            {
+              "id": "core 2.11.4 (std)"
+            },
+            {
+              "id": "dojo 1.5.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/core/Scarb.toml)"
+            },
+            {
+              "id": "dojo_macros 1.6.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/macros/Scarb.toml)"
+            },
+            {
+              "id": "starknet 2.11.4 (std)"
+            }
+          ]
+        },
+        {
+          "package": "bestiary 0.1.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/game-lib/bestiary/Scarb.toml)",
+          "name": "bestiary",
+          "source_path": "/Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/game-lib/bestiary/src/lib.cairo",
+          "cfg": [
+            [
+              "target",
+              "test"
+            ]
+          ],
+          "id": "bestiary 0.1.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/game-lib/bestiary/Scarb.toml)",
+          "discriminator": "bestiary 0.1.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/game-lib/bestiary/Scarb.toml)",
+          "dependencies": [
+            {
+              "id": "bestiary 0.1.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/game-lib/bestiary/Scarb.toml)"
+            },
+            {
+              "id": "core 2.11.4 (std)"
+            },
+            {
+              "id": "dojo 1.5.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/core/Scarb.toml)"
+            },
+            {
+              "id": "dojo_macros 1.6.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/macros/Scarb.toml)"
+            },
+            {
+              "id": "starknet 2.11.4 (std)"
+            }
+          ]
+        },
+        {
+          "package": "core 2.11.4 (std)",
+          "name": "core",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/std/e9b93d81f/core/src/lib.cairo",
+          "cfg": [
+            [
+              "target",
+              "test"
+            ]
+          ],
+          "id": "core 2.11.4 (std)",
+          "discriminator": null,
+          "dependencies": [
+            {
+              "id": "core 2.11.4 (std)"
+            }
+          ]
+        },
+        {
+          "package": "dojo 1.5.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/core/Scarb.toml)",
+          "name": "dojo",
+          "source_path": "/Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/core/src/lib.cairo",
+          "cfg": [
+            [
+              "target",
+              "test"
+            ]
+          ],
+          "id": "dojo 1.5.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/core/Scarb.toml)",
+          "discriminator": "dojo 1.5.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/core/Scarb.toml)",
+          "dependencies": [
+            {
+              "id": "core 2.11.4 (std)"
+            },
+            {
+              "id": "dojo 1.5.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/core/Scarb.toml)"
+            },
+            {
+              "id": "dojo_macros 1.6.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/macros/Scarb.toml)"
+            },
+            {
+              "id": "starknet 2.11.4 (std)"
+            }
+          ]
+        },
+        {
+          "package": "dojo_examples 1.5.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/spawn-and-move/Scarb.toml)",
+          "name": "dojo_examples",
+          "source_path": "/Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/spawn-and-move/src/lib.cairo",
+          "cfg": [
+            [
+              "feature",
+              "dungeon"
+            ],
+            [
+              "target",
+              "test"
+            ],
+            "test"
+          ],
+          "id": "dojo_examples 1.5.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/spawn-and-move/Scarb.toml)",
+          "discriminator": "dojo_examples 1.5.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/spawn-and-move/Scarb.toml)",
+          "dependencies": [
+            {
+              "id": "armory 0.1.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/game-lib/armory/Scarb.toml)"
+            },
+            {
+              "id": "assert_macros 2.11.4 (std)"
+            },
+            {
+              "id": "bestiary 0.1.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/game-lib/bestiary/Scarb.toml)"
+            },
+            {
+              "id": "core 2.11.4 (std)"
+            },
+            {
+              "id": "dojo 1.5.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/core/Scarb.toml)"
+            },
+            {
+              "id": "dojo_examples 1.5.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/spawn-and-move/Scarb.toml)"
+            },
+            {
+              "id": "dojo_macros 1.6.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/macros/Scarb.toml)"
+            },
+            {
+              "id": "dojo_snf_test 1.6.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/dojo-snf-test/Scarb.toml)"
+            },
+            {
+              "id": "openzeppelin 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "snforge_scarb_plugin 0.40.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "snforge_std 0.40.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "starknet 2.11.4 (std)"
+            }
+          ]
+        },
+        {
+          "package": "dojo_snf_test 1.6.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/dojo-snf-test/Scarb.toml)",
+          "name": "dojo_snf_test",
+          "source_path": "/Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/dojo-snf-test/src/lib.cairo",
+          "cfg": [
+            [
+              "target",
+              "test"
+            ]
+          ],
+          "id": "dojo_snf_test 1.6.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/dojo-snf-test/Scarb.toml)",
+          "discriminator": "dojo_snf_test 1.6.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/dojo-snf-test/Scarb.toml)",
+          "dependencies": [
+            {
+              "id": "assert_macros 2.11.4 (std)"
+            },
+            {
+              "id": "core 2.11.4 (std)"
+            },
+            {
+              "id": "dojo 1.5.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/core/Scarb.toml)"
+            },
+            {
+              "id": "dojo_snf_test 1.6.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/dojo-snf-test/Scarb.toml)"
+            },
+            {
+              "id": "snforge_scarb_plugin 0.40.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "snforge_std 0.40.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "starknet 2.11.4 (std)"
+            }
+          ]
+        },
+        {
+          "package": "openzeppelin 0.20.0 (registry+https://scarbs.xyz/)",
+          "name": "openzeppelin",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin-0.20.0/src/lib.cairo",
+          "cfg": [
+            [
+              "target",
+              "test"
+            ]
+          ],
+          "id": "openzeppelin 0.20.0 (registry+https://scarbs.xyz/)",
+          "discriminator": "openzeppelin 0.20.0 (registry+https://scarbs.xyz/)",
+          "dependencies": [
+            {
+              "id": "core 2.11.4 (std)"
+            },
+            {
+              "id": "openzeppelin 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_access 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_account 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_finance 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_governance 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_introspection 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_merkle_tree 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_presets 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_security 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_token 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_upgrades 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_utils 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "starknet 2.11.4 (std)"
+            }
+          ]
+        },
+        {
+          "package": "openzeppelin_access 0.20.0 (registry+https://scarbs.xyz/)",
+          "name": "openzeppelin_access",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_access-0.20.0/src/lib.cairo",
+          "cfg": [
+            [
+              "target",
+              "test"
+            ]
+          ],
+          "id": "openzeppelin_access 0.20.0 (registry+https://scarbs.xyz/)",
+          "discriminator": "openzeppelin_access 0.20.0 (registry+https://scarbs.xyz/)",
+          "dependencies": [
+            {
+              "id": "core 2.11.4 (std)"
+            },
+            {
+              "id": "openzeppelin_access 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_introspection 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "starknet 2.11.4 (std)"
+            }
+          ]
+        },
+        {
+          "package": "openzeppelin_account 0.20.0 (registry+https://scarbs.xyz/)",
+          "name": "openzeppelin_account",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_account-0.20.0/src/lib.cairo",
+          "cfg": [
+            [
+              "target",
+              "test"
+            ]
+          ],
+          "id": "openzeppelin_account 0.20.0 (registry+https://scarbs.xyz/)",
+          "discriminator": "openzeppelin_account 0.20.0 (registry+https://scarbs.xyz/)",
+          "dependencies": [
+            {
+              "id": "core 2.11.4 (std)"
+            },
+            {
+              "id": "openzeppelin_account 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_introspection 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_utils 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "starknet 2.11.4 (std)"
+            }
+          ]
+        },
+        {
+          "package": "openzeppelin_finance 0.20.0 (registry+https://scarbs.xyz/)",
+          "name": "openzeppelin_finance",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_finance-0.20.0/src/lib.cairo",
+          "cfg": [
+            [
+              "target",
+              "test"
+            ]
+          ],
+          "id": "openzeppelin_finance 0.20.0 (registry+https://scarbs.xyz/)",
+          "discriminator": "openzeppelin_finance 0.20.0 (registry+https://scarbs.xyz/)",
+          "dependencies": [
+            {
+              "id": "core 2.11.4 (std)"
+            },
+            {
+              "id": "openzeppelin_access 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_finance 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_token 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "starknet 2.11.4 (std)"
+            }
+          ]
+        },
+        {
+          "package": "openzeppelin_governance 0.20.0 (registry+https://scarbs.xyz/)",
+          "name": "openzeppelin_governance",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_governance-0.20.0/src/lib.cairo",
+          "cfg": [
+            [
+              "target",
+              "test"
+            ]
+          ],
+          "id": "openzeppelin_governance 0.20.0 (registry+https://scarbs.xyz/)",
+          "discriminator": "openzeppelin_governance 0.20.0 (registry+https://scarbs.xyz/)",
+          "dependencies": [
+            {
+              "id": "core 2.11.4 (std)"
+            },
+            {
+              "id": "openzeppelin_access 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_account 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_governance 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_introspection 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_token 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_utils 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "starknet 2.11.4 (std)"
+            }
+          ]
+        },
+        {
+          "package": "openzeppelin_introspection 0.20.0 (registry+https://scarbs.xyz/)",
+          "name": "openzeppelin_introspection",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_introspection-0.20.0/src/lib.cairo",
+          "cfg": [
+            [
+              "target",
+              "test"
+            ]
+          ],
+          "id": "openzeppelin_introspection 0.20.0 (registry+https://scarbs.xyz/)",
+          "discriminator": "openzeppelin_introspection 0.20.0 (registry+https://scarbs.xyz/)",
+          "dependencies": [
+            {
+              "id": "core 2.11.4 (std)"
+            },
+            {
+              "id": "openzeppelin_introspection 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "starknet 2.11.4 (std)"
+            }
+          ]
+        },
+        {
+          "package": "openzeppelin_merkle_tree 0.20.0 (registry+https://scarbs.xyz/)",
+          "name": "openzeppelin_merkle_tree",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_merkle_tree-0.20.0/src/lib.cairo",
+          "cfg": [
+            [
+              "target",
+              "test"
+            ]
+          ],
+          "id": "openzeppelin_merkle_tree 0.20.0 (registry+https://scarbs.xyz/)",
+          "discriminator": "openzeppelin_merkle_tree 0.20.0 (registry+https://scarbs.xyz/)",
+          "dependencies": [
+            {
+              "id": "core 2.11.4 (std)"
+            },
+            {
+              "id": "openzeppelin_merkle_tree 0.20.0 (registry+https://scarbs.xyz/)"
+            }
+          ]
+        },
+        {
+          "package": "openzeppelin_presets 0.20.0 (registry+https://scarbs.xyz/)",
+          "name": "openzeppelin_presets",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_presets-0.20.0/src/lib.cairo",
+          "cfg": [
+            [
+              "target",
+              "test"
+            ]
+          ],
+          "id": "openzeppelin_presets 0.20.0 (registry+https://scarbs.xyz/)",
+          "discriminator": "openzeppelin_presets 0.20.0 (registry+https://scarbs.xyz/)",
+          "dependencies": [
+            {
+              "id": "core 2.11.4 (std)"
+            },
+            {
+              "id": "openzeppelin_access 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_account 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_finance 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_introspection 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_presets 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_token 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_upgrades 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_utils 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "starknet 2.11.4 (std)"
+            }
+          ]
+        },
+        {
+          "package": "openzeppelin_security 0.20.0 (registry+https://scarbs.xyz/)",
+          "name": "openzeppelin_security",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_security-0.20.0/src/lib.cairo",
+          "cfg": [
+            [
+              "target",
+              "test"
+            ]
+          ],
+          "id": "openzeppelin_security 0.20.0 (registry+https://scarbs.xyz/)",
+          "discriminator": "openzeppelin_security 0.20.0 (registry+https://scarbs.xyz/)",
+          "dependencies": [
+            {
+              "id": "core 2.11.4 (std)"
+            },
+            {
+              "id": "openzeppelin_security 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "starknet 2.11.4 (std)"
+            }
+          ]
+        },
+        {
+          "package": "openzeppelin_token 0.20.0 (registry+https://scarbs.xyz/)",
+          "name": "openzeppelin_token",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_token-0.20.0/src/lib.cairo",
+          "cfg": [
+            [
+              "target",
+              "test"
+            ]
+          ],
+          "id": "openzeppelin_token 0.20.0 (registry+https://scarbs.xyz/)",
+          "discriminator": "openzeppelin_token 0.20.0 (registry+https://scarbs.xyz/)",
+          "dependencies": [
+            {
+              "id": "core 2.11.4 (std)"
+            },
+            {
+              "id": "openzeppelin_access 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_account 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_introspection 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_token 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "openzeppelin_utils 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "starknet 2.11.4 (std)"
+            }
+          ]
+        },
+        {
+          "package": "openzeppelin_upgrades 0.20.0 (registry+https://scarbs.xyz/)",
+          "name": "openzeppelin_upgrades",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_upgrades-0.20.0/src/lib.cairo",
+          "cfg": [
+            [
+              "target",
+              "test"
+            ]
+          ],
+          "id": "openzeppelin_upgrades 0.20.0 (registry+https://scarbs.xyz/)",
+          "discriminator": "openzeppelin_upgrades 0.20.0 (registry+https://scarbs.xyz/)",
+          "dependencies": [
+            {
+              "id": "core 2.11.4 (std)"
+            },
+            {
+              "id": "openzeppelin_upgrades 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "starknet 2.11.4 (std)"
+            }
+          ]
+        },
+        {
+          "package": "openzeppelin_utils 0.20.0 (registry+https://scarbs.xyz/)",
+          "name": "openzeppelin_utils",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/openzeppelin_utils-0.20.0/src/lib.cairo",
+          "cfg": [
+            [
+              "target",
+              "test"
+            ]
+          ],
+          "id": "openzeppelin_utils 0.20.0 (registry+https://scarbs.xyz/)",
+          "discriminator": "openzeppelin_utils 0.20.0 (registry+https://scarbs.xyz/)",
+          "dependencies": [
+            {
+              "id": "core 2.11.4 (std)"
+            },
+            {
+              "id": "openzeppelin_utils 0.20.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "starknet 2.11.4 (std)"
+            }
+          ]
+        },
+        {
+          "package": "snforge_std 0.40.0 (registry+https://scarbs.xyz/)",
+          "name": "snforge_std",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/snforge_std-0.40.0/src/lib.cairo",
+          "cfg": [
+            [
+              "target",
+              "test"
+            ]
+          ],
+          "id": "snforge_std 0.40.0 (registry+https://scarbs.xyz/)",
+          "discriminator": "snforge_std 0.40.0 (registry+https://scarbs.xyz/)",
+          "dependencies": [
+            {
+              "id": "core 2.11.4 (std)"
+            },
+            {
+              "id": "snforge_scarb_plugin 0.40.0 (registry+https://scarbs.xyz/)"
+            },
+            {
+              "id": "snforge_std 0.40.0 (registry+https://scarbs.xyz/)"
+            }
+          ]
+        }
+      ],
+      "cairo_plugins": [
+        {
+          "package": "assert_macros 2.11.4 (std)",
+          "component_dependency_id": "assert_macros 2.11.4 (std)",
+          "prebuilt_allowed": false
+        },
+        {
+          "package": "dojo_macros 1.6.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/macros/Scarb.toml)",
+          "component_dependency_id": "dojo_macros 1.6.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/macros/Scarb.toml)",
+          "prebuilt_allowed": false
+        },
+        {
+          "package": "snforge_scarb_plugin 0.40.0 (registry+https://scarbs.xyz/)",
+          "component_dependency_id": "snforge_scarb_plugin 0.40.0 (registry+https://scarbs.xyz/)",
+          "prebuilt_allowed": true
+        },
+        {
+          "package": "starknet 2.11.4 (std)",
+          "component_dependency_id": "starknet 2.11.4 (std)",
+          "prebuilt_allowed": false
+        }
+      ],
+      "cfg": [
+        [
+          "target",
+          "test"
+        ],
+        "test"
+      ],
+      "components": [
+        "armory 0.1.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/game-lib/armory/Scarb.toml)",
+        "bestiary 0.1.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/game-lib/bestiary/Scarb.toml)",
+        "core 2.11.4 (std)",
+        "dojo 1.5.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/core/Scarb.toml)",
+        "dojo_examples 1.5.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/spawn-and-move/Scarb.toml)",
+        "dojo_snf_test 1.6.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/dojo-snf-test/Scarb.toml)",
+        "openzeppelin 0.20.0 (registry+https://scarbs.xyz/)",
+        "openzeppelin_access 0.20.0 (registry+https://scarbs.xyz/)",
+        "openzeppelin_account 0.20.0 (registry+https://scarbs.xyz/)",
+        "openzeppelin_finance 0.20.0 (registry+https://scarbs.xyz/)",
+        "openzeppelin_governance 0.20.0 (registry+https://scarbs.xyz/)",
+        "openzeppelin_introspection 0.20.0 (registry+https://scarbs.xyz/)",
+        "openzeppelin_merkle_tree 0.20.0 (registry+https://scarbs.xyz/)",
+        "openzeppelin_presets 0.20.0 (registry+https://scarbs.xyz/)",
+        "openzeppelin_security 0.20.0 (registry+https://scarbs.xyz/)",
+        "openzeppelin_token 0.20.0 (registry+https://scarbs.xyz/)",
+        "openzeppelin_upgrades 0.20.0 (registry+https://scarbs.xyz/)",
+        "openzeppelin_utils 0.20.0 (registry+https://scarbs.xyz/)",
+        "snforge_std 0.40.0 (registry+https://scarbs.xyz/)"
+      ]
+    },
+    {
+      "id": "dojo_macros-880krol0pvmeg",
+      "package": "dojo_macros 1.6.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/macros/Scarb.toml)",
+      "target": {
+        "kind": "cairo-plugin",
+        "name": "dojo_macros",
+        "source_path": "/Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/macros/src/lib.cairo",
+        "params": {}
+      },
+      "compiler_config": null,
+      "components_data": [
+        {
+          "package": "dojo_macros 1.6.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/macros/Scarb.toml)",
+          "name": "dojo_macros",
+          "source_path": "/Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/macros/src/lib.cairo",
+          "cfg": null,
+          "id": "dojo_macros 1.6.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/macros/Scarb.toml)",
+          "discriminator": "dojo_macros 1.6.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/macros/Scarb.toml)",
+          "dependencies": []
+        }
+      ],
+      "cairo_plugins": [],
+      "cfg": []
+    },
+    {
+      "id": "snforge_scarb_plugin-5khcfk8v1t4cq",
+      "package": "snforge_scarb_plugin 0.40.0 (registry+https://scarbs.xyz/)",
+      "target": {
+        "kind": "cairo-plugin",
+        "name": "snforge_scarb_plugin",
+        "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/snforge_scarb_plugin-0.40.0/src/lib.cairo",
+        "params": {}
+      },
+      "compiler_config": null,
+      "components_data": [
+        {
+          "package": "snforge_scarb_plugin 0.40.0 (registry+https://scarbs.xyz/)",
+          "name": "snforge_scarb_plugin",
+          "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/src/scarbs.xyz-9djtpev4jug5q/snforge_scarb_plugin-0.40.0/src/lib.cairo",
+          "cfg": null,
+          "id": "snforge_scarb_plugin 0.40.0 (registry+https://scarbs.xyz/)",
+          "discriminator": "snforge_scarb_plugin 0.40.0 (registry+https://scarbs.xyz/)",
+          "dependencies": []
+        }
+      ],
+      "cairo_plugins": [],
+      "cfg": []
+    }
+  ],
+  "current_profile": "dev",
+  "profiles": [
+    "dev",
+    "release",
+    "saya"
+  ]
+}

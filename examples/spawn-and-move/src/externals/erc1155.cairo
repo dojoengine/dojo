@@ -3,16 +3,20 @@
 
 #[starknet::contract]
 mod ERC1155Token {
+    use OwnableComponent::InternalTrait;
     use openzeppelin::access::ownable::OwnableComponent;
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc1155::{ERC1155Component, ERC1155HooksEmptyImpl};
-    use starknet::ContractAddress;
+    use openzeppelin::upgrades::UpgradeableComponent;
+    use openzeppelin::upgrades::interface::IUpgradeable;
+    use starknet::{ClassHash, ContractAddress};
     use crate::externals::components::erc4906::ERC4906Component;
 
     component!(path: ERC1155Component, storage: erc1155, event: ERC1155Event);
     component!(path: SRC5Component, storage: src5, event: SRC5Event);
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
     component!(path: ERC4906Component, storage: erc4906, event: ERC4906Event);
+    component!(path: UpgradeableComponent, storage: upgradeable, event: UpgradeableEvent);
 
     // External
     #[abi(embed_v0)]
@@ -25,6 +29,7 @@ mod ERC1155Token {
     // Internal
     impl ERC1155InternalImpl = ERC1155Component::InternalImpl<ContractState>;
     impl OwnableInternalImpl = OwnableComponent::InternalImpl<ContractState>;
+    impl UpgradeableInternalImpl = UpgradeableComponent::InternalImpl<ContractState>;
 
     #[storage]
     struct Storage {
@@ -36,6 +41,8 @@ mod ERC1155Token {
         ownable: OwnableComponent::Storage,
         #[substorage(v0)]
         erc4906: ERC4906Component::Storage,
+        #[substorage(v0)]
+        upgradeable: UpgradeableComponent::Storage,
     }
 
     #[event]
@@ -49,7 +56,11 @@ mod ERC1155Token {
         OwnableEvent: OwnableComponent::Event,
         #[flat]
         ERC4906Event: ERC4906Component::Event,
+        #[flat]
+        UpgradeableEvent: UpgradeableComponent::Event,
     }
+
+    const NULL_ADDRESS: ContractAddress = 0.try_into().unwrap();
 
     #[constructor]
     fn constructor(ref self: ContractState, owner: ContractAddress, base_uri: ByteArray) {
@@ -75,7 +86,7 @@ mod ERC1155Token {
             self
                 .erc1155
                 .update(
-                    starknet::contract_address_const::<0x0>(),
+                    NULL_ADDRESS,
                     starknet::get_caller_address(),
                     array![token_id].span(),
                     array![value].span(),
@@ -99,14 +110,7 @@ mod ERC1155Token {
 
         #[external(v0)]
         fn batch_mint(ref self: ContractState, token_ids: Span<u256>, values: Span<u256>) {
-            self
-                .erc1155
-                .update(
-                    starknet::contract_address_const::<0x0>(),
-                    starknet::get_caller_address(),
-                    token_ids,
-                    values,
-                );
+            self.erc1155.update(NULL_ADDRESS, starknet::get_caller_address(), token_ids, values);
             // Seems to not be supported by default dojo account.
         // self.erc1155.batch_mint_with_acceptance_check(account, token_ids, values, data);
         }
@@ -146,6 +150,14 @@ mod ERC1155Token {
                 self.erc4906.emit_metadata_update(*token_ids.at(i));
                 i += 1;
             }
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl UpgradeableImpl of IUpgradeable<ContractState> {
+        fn upgrade(ref self: ContractState, new_class_hash: ClassHash) {
+            self.ownable.assert_only_owner();
+            self.upgradeable.upgrade(new_class_hash);
         }
     }
 }

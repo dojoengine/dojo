@@ -9,11 +9,13 @@ use dojo::utils::serialize_inline;
 /// # Returns
 ///
 /// The entity id.
+#[inline(always)]
 pub fn entity_id_from_serialized_keys(keys: Span<felt252>) -> felt252 {
     core::poseidon::poseidon_hash_span(keys)
 }
 
 /// Combine parent and child keys to build one full key.
+#[inline(always)]
 pub fn combine_key(parent_key: felt252, child_key: felt252) -> felt252 {
     core::poseidon::poseidon_hash_span([parent_key, child_key].span())
 }

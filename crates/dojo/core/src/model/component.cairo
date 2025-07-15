@@ -1,5 +1,6 @@
-use dojo::model::{Model, IModel, ModelDef};
-use dojo::meta::{Layout, introspect::Struct};
+use dojo::meta::Layout;
+use dojo::meta::introspect::Struct;
+use dojo::model::{IModel, Model, ModelDef};
 
 #[starknet::embeddable]
 pub impl IDeployedModelImpl<
@@ -35,5 +36,9 @@ pub impl IModelImpl<TContractState, M, +Model<M>> of IModel<TContractState> {
 
     fn definition(self: @TContractState) -> ModelDef {
         Model::<M>::definition()
+    }
+
+    fn use_legacy_storage(self: @TContractState) -> bool {
+        Model::<M>::use_legacy_storage()
     }
 }
