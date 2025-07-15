@@ -1,138 +1,182 @@
 [
   {
-    "target": "0x662658ab061ebe27e3fbc4e85ef0dc629ef8248969be594d3ebb34a5bf7a41e",
+    "target": "0x24c2f8075163bbdcc44670869f15a282019d0e9b602bbb95b365d8350fc8a41",
     "method": "uuid"
   },
   {
-    "target": "0x662658ab061ebe27e3fbc4e85ef0dc629ef8248969be594d3ebb34a5bf7a41e",
+    "target": "0x24c2f8075163bbdcc44670869f15a282019d0e9b602bbb95b365d8350fc8a41",
     "method": "set_metadata"
   },
   {
-    "target": "0x662658ab061ebe27e3fbc4e85ef0dc629ef8248969be594d3ebb34a5bf7a41e",
+    "target": "0x24c2f8075163bbdcc44670869f15a282019d0e9b602bbb95b365d8350fc8a41",
     "method": "register_namespace"
   },
   {
-    "target": "0x662658ab061ebe27e3fbc4e85ef0dc629ef8248969be594d3ebb34a5bf7a41e",
+    "target": "0x24c2f8075163bbdcc44670869f15a282019d0e9b602bbb95b365d8350fc8a41",
     "method": "register_event"
   },
   {
-    "target": "0x662658ab061ebe27e3fbc4e85ef0dc629ef8248969be594d3ebb34a5bf7a41e",
+    "target": "0x24c2f8075163bbdcc44670869f15a282019d0e9b602bbb95b365d8350fc8a41",
     "method": "register_model"
   },
   {
-    "target": "0x662658ab061ebe27e3fbc4e85ef0dc629ef8248969be594d3ebb34a5bf7a41e",
+    "target": "0x24c2f8075163bbdcc44670869f15a282019d0e9b602bbb95b365d8350fc8a41",
     "method": "register_contract"
   },
   {
-    "target": "0x662658ab061ebe27e3fbc4e85ef0dc629ef8248969be594d3ebb34a5bf7a41e",
+    "target": "0x24c2f8075163bbdcc44670869f15a282019d0e9b602bbb95b365d8350fc8a41",
+    "method": "register_external_contract"
+  },
+  {
+    "target": "0x24c2f8075163bbdcc44670869f15a282019d0e9b602bbb95b365d8350fc8a41",
     "method": "register_library"
   },
   {
-    "target": "0x662658ab061ebe27e3fbc4e85ef0dc629ef8248969be594d3ebb34a5bf7a41e",
+    "target": "0x24c2f8075163bbdcc44670869f15a282019d0e9b602bbb95b365d8350fc8a41",
     "method": "init_contract"
   },
   {
-    "target": "0x662658ab061ebe27e3fbc4e85ef0dc629ef8248969be594d3ebb34a5bf7a41e",
+    "target": "0x24c2f8075163bbdcc44670869f15a282019d0e9b602bbb95b365d8350fc8a41",
     "method": "upgrade_event"
   },
   {
-    "target": "0x662658ab061ebe27e3fbc4e85ef0dc629ef8248969be594d3ebb34a5bf7a41e",
+    "target": "0x24c2f8075163bbdcc44670869f15a282019d0e9b602bbb95b365d8350fc8a41",
     "method": "upgrade_model"
   },
   {
-    "target": "0x662658ab061ebe27e3fbc4e85ef0dc629ef8248969be594d3ebb34a5bf7a41e",
+    "target": "0x24c2f8075163bbdcc44670869f15a282019d0e9b602bbb95b365d8350fc8a41",
     "method": "upgrade_contract"
   },
   {
-    "target": "0x662658ab061ebe27e3fbc4e85ef0dc629ef8248969be594d3ebb34a5bf7a41e",
+    "target": "0x24c2f8075163bbdcc44670869f15a282019d0e9b602bbb95b365d8350fc8a41",
+    "method": "upgrade_external_contract"
+  },
+  {
+    "target": "0x24c2f8075163bbdcc44670869f15a282019d0e9b602bbb95b365d8350fc8a41",
     "method": "emit_event"
   },
   {
-    "target": "0x662658ab061ebe27e3fbc4e85ef0dc629ef8248969be594d3ebb34a5bf7a41e",
+    "target": "0x24c2f8075163bbdcc44670869f15a282019d0e9b602bbb95b365d8350fc8a41",
     "method": "emit_events"
   },
   {
-    "target": "0x662658ab061ebe27e3fbc4e85ef0dc629ef8248969be594d3ebb34a5bf7a41e",
+    "target": "0x24c2f8075163bbdcc44670869f15a282019d0e9b602bbb95b365d8350fc8a41",
     "method": "set_entity"
   },
   {
-    "target": "0x662658ab061ebe27e3fbc4e85ef0dc629ef8248969be594d3ebb34a5bf7a41e",
+    "target": "0x24c2f8075163bbdcc44670869f15a282019d0e9b602bbb95b365d8350fc8a41",
     "method": "set_entities"
   },
   {
-    "target": "0x662658ab061ebe27e3fbc4e85ef0dc629ef8248969be594d3ebb34a5bf7a41e",
+    "target": "0x24c2f8075163bbdcc44670869f15a282019d0e9b602bbb95b365d8350fc8a41",
     "method": "delete_entity"
   },
   {
-    "target": "0x662658ab061ebe27e3fbc4e85ef0dc629ef8248969be594d3ebb34a5bf7a41e",
+    "target": "0x24c2f8075163bbdcc44670869f15a282019d0e9b602bbb95b365d8350fc8a41",
     "method": "delete_entities"
   },
   {
-    "target": "0x662658ab061ebe27e3fbc4e85ef0dc629ef8248969be594d3ebb34a5bf7a41e",
+    "target": "0x24c2f8075163bbdcc44670869f15a282019d0e9b602bbb95b365d8350fc8a41",
     "method": "grant_owner"
   },
   {
-    "target": "0x662658ab061ebe27e3fbc4e85ef0dc629ef8248969be594d3ebb34a5bf7a41e",
+    "target": "0x24c2f8075163bbdcc44670869f15a282019d0e9b602bbb95b365d8350fc8a41",
     "method": "revoke_owner"
   },
   {
-    "target": "0x662658ab061ebe27e3fbc4e85ef0dc629ef8248969be594d3ebb34a5bf7a41e",
+    "target": "0x24c2f8075163bbdcc44670869f15a282019d0e9b602bbb95b365d8350fc8a41",
     "method": "grant_writer"
   },
   {
-    "target": "0x662658ab061ebe27e3fbc4e85ef0dc629ef8248969be594d3ebb34a5bf7a41e",
+    "target": "0x24c2f8075163bbdcc44670869f15a282019d0e9b602bbb95b365d8350fc8a41",
     "method": "revoke_writer"
   },
   {
-    "target": "0x662658ab061ebe27e3fbc4e85ef0dc629ef8248969be594d3ebb34a5bf7a41e",
+    "target": "0x24c2f8075163bbdcc44670869f15a282019d0e9b602bbb95b365d8350fc8a41",
     "method": "upgrade"
   },
   {
-    "target": "0x79891cbfc9d500a32306a5ee37fbf67417b5e3cd75ff9b35fcf1931614aa884",
+    "target": "0x70a8affc84f3579965260068ab7fbc398d55e679ea82f1a13a05f4be114e78b",
     "method": "upgrade"
   },
   {
-    "target": "0x43fe56116318901832b52917b21dc8e4504c375f41d38d3ade51b55ef026cb6",
+    "target": "0x3580240e1c114feed8f52ce3a270bf1760ed4ffd1547c94c1afa9c372034812",
+    "method": "upgrade"
+  },
+  {
+    "target": "0x3ef577d87507fab1ca1dbb63fe0f23439912dacf6112045590ca8a8ce16f162",
+    "method": "upgrade"
+  },
+  {
+    "target": "0x347c49458f9dca2ae0a67cbd0b0afabb52bc726755ad2c425f94f3645d21e7c",
     "method": "spawn"
   },
   {
-    "target": "0x43fe56116318901832b52917b21dc8e4504c375f41d38d3ade51b55ef026cb6",
+    "target": "0x347c49458f9dca2ae0a67cbd0b0afabb52bc726755ad2c425f94f3645d21e7c",
     "method": "move"
   },
   {
-    "target": "0x43fe56116318901832b52917b21dc8e4504c375f41d38d3ade51b55ef026cb6",
+    "target": "0x347c49458f9dca2ae0a67cbd0b0afabb52bc726755ad2c425f94f3645d21e7c",
     "method": "set_player_config"
   },
   {
-    "target": "0x43fe56116318901832b52917b21dc8e4504c375f41d38d3ade51b55ef026cb6",
+    "target": "0x347c49458f9dca2ae0a67cbd0b0afabb52bc726755ad2c425f94f3645d21e7c",
     "method": "update_player_config_name"
   },
   {
-    "target": "0x43fe56116318901832b52917b21dc8e4504c375f41d38d3ade51b55ef026cb6",
+    "target": "0x347c49458f9dca2ae0a67cbd0b0afabb52bc726755ad2c425f94f3645d21e7c",
     "method": "reset_player_config"
   },
   {
-    "target": "0x43fe56116318901832b52917b21dc8e4504c375f41d38d3ade51b55ef026cb6",
+    "target": "0x347c49458f9dca2ae0a67cbd0b0afabb52bc726755ad2c425f94f3645d21e7c",
     "method": "set_player_server_profile"
   },
   {
-    "target": "0x43fe56116318901832b52917b21dc8e4504c375f41d38d3ade51b55ef026cb6",
+    "target": "0x347c49458f9dca2ae0a67cbd0b0afabb52bc726755ad2c425f94f3645d21e7c",
     "method": "set_models"
   },
   {
-    "target": "0x43fe56116318901832b52917b21dc8e4504c375f41d38d3ade51b55ef026cb6",
+    "target": "0x347c49458f9dca2ae0a67cbd0b0afabb52bc726755ad2c425f94f3645d21e7c",
     "method": "enter_dungeon"
   },
   {
-    "target": "0x43fe56116318901832b52917b21dc8e4504c375f41d38d3ade51b55ef026cb6",
+    "target": "0x347c49458f9dca2ae0a67cbd0b0afabb52bc726755ad2c425f94f3645d21e7c",
     "method": "upgrade"
   },
   {
-    "target": "0x15747aa8a49d256ab0dcfc175bc87c166ec4620f3b34ffcf1a97d46fd732e64",
-    "method": "upgrade"
+    "target": "0x208170ef32e88fc4872316c85624dc90c21232327a17eccb5b0f55d07a5d72c",
+    "method": "spawn"
   },
   {
-    "target": "0x5966c7d78ea0a0ed0080b26a6ef06bd28a024703770cdf2c99178eef72f97f8",
+    "target": "0x208170ef32e88fc4872316c85624dc90c21232327a17eccb5b0f55d07a5d72c",
+    "method": "move"
+  },
+  {
+    "target": "0x208170ef32e88fc4872316c85624dc90c21232327a17eccb5b0f55d07a5d72c",
+    "method": "set_player_config"
+  },
+  {
+    "target": "0x208170ef32e88fc4872316c85624dc90c21232327a17eccb5b0f55d07a5d72c",
+    "method": "update_player_config_name"
+  },
+  {
+    "target": "0x208170ef32e88fc4872316c85624dc90c21232327a17eccb5b0f55d07a5d72c",
+    "method": "reset_player_config"
+  },
+  {
+    "target": "0x208170ef32e88fc4872316c85624dc90c21232327a17eccb5b0f55d07a5d72c",
+    "method": "set_player_server_profile"
+  },
+  {
+    "target": "0x208170ef32e88fc4872316c85624dc90c21232327a17eccb5b0f55d07a5d72c",
+    "method": "set_models"
+  },
+  {
+    "target": "0x208170ef32e88fc4872316c85624dc90c21232327a17eccb5b0f55d07a5d72c",
+    "method": "enter_dungeon"
+  },
+  {
+    "target": "0x208170ef32e88fc4872316c85624dc90c21232327a17eccb5b0f55d07a5d72c",
     "method": "upgrade"
   },
   {

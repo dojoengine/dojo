@@ -1,6 +1,6 @@
 //! World's resources.
 
-use starknet::{ContractAddress, ClassHash};
+use starknet::{ClassHash, ContractAddress};
 
 /// Resource is the type of the resource that can be registered in the world.
 ///
@@ -46,6 +46,7 @@ pub enum Resource {
     #[default]
     Unregistered,
     Library: (ClassHash, felt252),
+    ExternalContract: (ContractAddress, felt252),
 }
 
 #[generate_trait]

@@ -1,17 +1,17 @@
 //! A simple storage abstraction for the world's storage.
 
 use core::panic_with_felt252;
-use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait, Resource};
-use dojo::model::{
-    Model, ModelIndex, ModelValueKey, ModelValue, ModelStorage, ModelPtr, ModelPtrsTrait,
-};
 use dojo::event::{Event, EventStorage};
-use dojo::meta::{Layout, FieldLayout, Introspect};
-use dojo::utils::{
-    entity_id_from_keys, entity_id_from_serialized_keys, serialize_inline, find_model_field_layout,
-    deserialize_unwrap,
+use dojo::meta::{FieldLayout, Introspect, Layout};
+use dojo::model::{
+    Model, ModelIndex, ModelPtr, ModelPtrsTrait, ModelStorage, ModelValue, ModelValueKey,
 };
-use starknet::{ContractAddress, ClassHash};
+use dojo::utils::{
+    deserialize_unwrap, entity_id_from_keys, entity_id_from_serialized_keys,
+    find_model_field_layout, serialize_inline,
+};
+use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait, Resource};
+use starknet::{ClassHash, ContractAddress};
 
 #[derive(Drop, Copy)]
 pub struct WorldStorage {
@@ -33,7 +33,7 @@ fn make_partial_struct_layout<M, +Model<M>>(field_selectors: Span<felt252>) -> L
             .append(
                 FieldLayout { selector: *selector, layout: field_layout_unwrap::<M>(*selector) },
             );
-    };
+    }
     Layout::Struct(layouts.span())
 }
 
@@ -76,9 +76,16 @@ pub impl WorldStorageInternalImpl of WorldStorageTrait {
                     .expect('Failed to get class hash');
                 Option::Some((contract_address, class_hash))
             },
+            Resource::ExternalContract((
+                contract_address, _,
+            )) => {
+                let class_hash = starknet::syscalls::get_class_hash_at_syscall(contract_address)
+                    .expect('Failed to get class hash');
+                Option::Some((contract_address, class_hash))
+            },
             Resource::Library((
                 class_hash, _,
-            )) => { Option::Some((starknet::contract_address_const::<0>(), class_hash)) },
+            )) => { Option::Some((0.try_into().unwrap(), class_hash)) },
             _ => Option::None,
         }
     }
@@ -139,7 +146,7 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
             let sk = serialize_inline::<K>(k);
             serialized_keys.append(sk);
             indexes.append(ModelIndex::Id(entity_id_from_serialized_keys(sk)));
-        };
+        }
 
         let all_values = IWorldDispatcherTrait::entities(
             *self.dispatcher,
@@ -159,10 +166,10 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
                         "Model: deserialization failed. Ensure the length of the keys tuple is matching the number of #[key] fields in the model struct.",
                     )
                 },
-            };
+            }
 
             i += 1;
-        };
+        }
         models
     }
 
@@ -182,7 +189,7 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
         for m in models {
             keys.append(ModelIndex::Keys(Model::<M>::serialized_keys(*m)));
             values.append(Model::<M>::serialized_values(*m));
-        };
+        }
 
         IWorldDispatcherTrait::set_entities(
             self.dispatcher,
@@ -206,7 +213,7 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
         let mut ids: Array<ModelIndex> = array![];
         for m in models {
             ids.append(ModelIndex::Id(Model::<M>::entity_id(*m)));
-        };
+        }
 
         IWorldDispatcherTrait::delete_entities(
             self.dispatcher,
@@ -249,7 +256,7 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
             field_layout_unwrap::<M>(field_selector),
         ) {
             values.append(deserialize_unwrap(*entity));
-        };
+        }
         values
     }
 
@@ -271,7 +278,7 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
         let mut serialized_values = ArrayTrait::<Span<felt252>>::new();
         for value in values {
             serialized_values.append(serialize_inline(value));
-        };
+        }
         IWorldDispatcherTrait::set_entities(
             self.dispatcher,
             Model::<M>::selector(self.namespace_hash),
@@ -285,7 +292,7 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
         let mut indexes: Array<ModelIndex> = array![];
         for ptr in ptrs {
             indexes.append(ModelIndex::Id(*ptr.id));
-        };
+        }
 
         IWorldDispatcherTrait::delete_entities(
             self.dispatcher,
@@ -318,7 +325,7 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
             Introspect::<T>::layout(),
         ) {
             values.append(deserialize_unwrap(*entity));
-        };
+        }
         values
     }
 
@@ -357,7 +364,7 @@ impl ModelValueStorageWorldStorageImpl<
         let mut entity_ids: Array<felt252> = array![];
         for k in keys {
             entity_ids.append(entity_id_from_keys(k));
-        };
+        }
 
         Self::read_values_from_ids(self, entity_ids.span())
     }
@@ -366,7 +373,7 @@ impl ModelValueStorageWorldStorageImpl<
         let mut indexes: Array<ModelIndex> = array![];
         for id in entity_ids {
             indexes.append(ModelIndex::Id(*id));
-        };
+        }
         let mut values = array![];
         for v in IWorldDispatcherTrait::entities(
             *self.dispatcher,
@@ -383,7 +390,7 @@ impl ModelValueStorageWorldStorageImpl<
                     )
                 },
             }
-        };
+        }
         values
     }
 
@@ -406,7 +413,7 @@ impl ModelValueStorageWorldStorageImpl<
         let mut ids: Array<felt252> = array![];
         for k in keys {
             ids.append(entity_id_from_keys(k));
-        };
+        }
 
         Self::write_values_from_ids(ref self, ids.span(), values);
     }
@@ -435,7 +442,7 @@ impl ModelValueStorageWorldStorageImpl<
             all_values.append(ModelValue::<V>::serialized_values(*values[i]));
 
             i += 1;
-        };
+        }
 
         IWorldDispatcherTrait::set_entities(
             self.dispatcher,
@@ -555,7 +562,7 @@ pub impl ModelValueStorageTestWorldStorageImpl<
         let mut ids: Array<felt252> = array![];
         for k in keys {
             ids.append(entity_id_from_keys(k));
-        };
+        }
 
         Self::write_values_from_ids_test(ref self, ids.span(), values);
     }

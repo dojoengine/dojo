@@ -1,0 +1,7 @@
+[package]
+name = "dojo_macros"
+description = "Dojo proc macros."
+version = "1.6.0-alpha.1"
+edition = "2024_07"
+
+[cairo-plugin]

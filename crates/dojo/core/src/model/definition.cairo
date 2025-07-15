@@ -1,4 +1,5 @@
-use dojo::meta::{Layout, introspect::Struct};
+use dojo::meta::Layout;
+use dojo::meta::introspect::Struct;
 
 /// The `ModelIndex` provides encapsulation for different ways to access
 /// a model's data.
@@ -21,6 +22,7 @@ pub trait ModelDefinition<T> {
     const NAME_HASH: felt252;
     fn name() -> ByteArray;
     fn layout() -> Layout;
+    fn use_legacy_storage() -> bool;
     fn schema() -> Struct;
     fn size() -> Option<usize>;
 }

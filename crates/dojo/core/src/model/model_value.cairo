@@ -1,9 +1,12 @@
-use dojo::{meta::{Layout}, model::{ModelDefinition}};
+use dojo::meta::Layout;
+use dojo::model::ModelDefinition;
 
 pub trait ModelValueKey<V, K> {}
 
 /// Trait `ModelValueParser` defines the interface for parsing and serializing entities of type `V`.
 pub trait ModelValueParser<V> {
+    /// Deserializes the values of the model into a ModelValue struct.
+    fn deserialize(ref values: Span<felt252>) -> Option<V>;
     /// Serializes the values of the model and returns them as a `Span<felt252>`.
     fn serialize_values(self: @V) -> Span<felt252>;
 }
@@ -32,7 +35,7 @@ pub impl ModelValueImpl<V, +Serde<V>, +ModelDefinition<V>, +ModelValueParser<V>>
     }
 
     fn from_serialized(mut values: Span<felt252>) -> Option<V> {
-        Serde::<V>::deserialize(ref values)
+        ModelValueParser::<V>::deserialize(ref values)
     }
 
     fn name() -> ByteArray {

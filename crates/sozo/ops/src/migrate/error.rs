@@ -36,4 +36,6 @@ where
     TransactionError(#[from] TransactionError<S>),
     #[error("Declaration of class failed: {0}")]
     DeclareClassError(String),
+    #[error(transparent)]
+    DeployExternalContractError(anyhow::Error),
 }

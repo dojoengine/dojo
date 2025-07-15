@@ -1,7 +1,7 @@
 #[dojo::contract]
 pub mod others {
-    use starknet::{ContractAddress, get_caller_address};
     use dojo::event::EventStorage;
+    use starknet::{ContractAddress, get_caller_address};
 
     #[derive(Copy, Drop, Serde)]
     #[dojo::event]

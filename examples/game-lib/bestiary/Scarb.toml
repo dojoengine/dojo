@@ -1,11 +1,17 @@
 [package]
 name = "bestiary"
-version = "1.6.0-alpha.0"
+version = "1.6.0-alpha.1"
 description = "Some scary foes to fight."
 edition.workspace = true
 cairo-version.workspace = true
 
 [dependencies]
+starknet.workspace = true
 dojo.workspace = true
+dojo_macros.workspace = true
+
+[dev-dependencies]
+cairo_test = "2.11.4"
+dojo_cairo_test = { path = "../../../crates/dojo/dojo-cairo-test" }
 
 [lib]

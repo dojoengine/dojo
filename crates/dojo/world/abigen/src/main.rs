@@ -4,11 +4,11 @@
 //! to be imported by downstream crates.
 //!
 //! Usage:
-//! `cargo run -r -p dojo-abigen` form the workspace root to generate the bindings.
+//! `cargo run -r -p dojo-world-abigen` form the workspace root to generate the bindings.
 //! Don't forget the `-r` flag to run the program in release mode as Scarb is very slow
 //! in debug mode.
 //!
-//! To check if the bindings are up to date, run `cargo run -p dojo-abigen -- --check`.
+//! To check if the bindings are up to date, run `cargo run -p dojo-world-abigen -- --check`.
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
@@ -17,8 +17,7 @@ use std::process::Command;
 use anyhow::{anyhow, Result};
 use cainome::rs::{Abigen, ExecutionVersion};
 use camino::Utf8PathBuf;
-use scarb::core::{Config, TargetKind};
-use scarb::ops::{CompileOpts, FeaturesOpts, FeaturesSelector};
+use scarb_interop::{Features, Profile, Scarb};
 
 const SCARB_MANIFEST: &str = "crates/dojo/core/Scarb.toml";
 const WORLD_ARTIFACT: &str = "crates/dojo/core/target/dev/dojo_world.contract_class.json";
@@ -30,6 +29,12 @@ const OUT_DIR: &str = "crates/dojo/world/src/contracts/abigen";
 /// contracts.
 fn main() -> Result<()> {
     let is_check_only = define_check_only();
+
+    if !is_check_only {
+        // Let's cleanup the world and model.rs, we only want empty files.
+    } else {
+        println!("Generating the bindings...");
+    }
 
     compile_dojo_core()?;
 
@@ -128,7 +133,7 @@ fn generate_bindings(
             if existing_bindings != generated_bindings {
                 return Err(anyhow!(
                     "{contract_name} ABI bindings are not up to date. Consider generating them \
-                     running `cargo run -p dojo-abigen`.",
+                     running `cargo run -p dojo-world-abigen`.",
                 ));
             }
         } else {
@@ -156,23 +161,11 @@ fn rename_file(old_path: &str, new_path: &str) -> Result<()> {
 
 /// Compiles dojo-core contracts programmatically using Scarb.
 fn compile_dojo_core() -> Result<()> {
-    let path = Utf8PathBuf::from(SCARB_MANIFEST);
-    let config = Config::builder(path.canonicalize_utf8()?).build()?;
-    let ws = scarb::ops::read_workspace(config.manifest_path(), &config)?;
-    let packages = ws.members().map(|p| p.id).collect();
-
-    let features_opts =
-        FeaturesOpts { features: FeaturesSelector::AllFeatures, no_default_features: false };
-
-    scarb::ops::compile(
-        packages,
-        CompileOpts {
-            include_target_names: vec![],
-            include_target_kinds: vec![],
-            exclude_target_kinds: vec![TargetKind::TEST],
-            features: features_opts,
-            ignore_cairo_version: false,
-        },
-        &ws,
+    Scarb::build(
+        &Utf8PathBuf::from(SCARB_MANIFEST),
+        Profile::DEV.as_str(),
+        "",
+        Features::AllFeatures,
+        vec![],
     )
 }

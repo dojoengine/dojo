@@ -6,15 +6,13 @@ use colored::{ColoredString, Colorize};
 use dojo_bindgen::{BuiltinPlugins, PluginManager};
 use dojo_world::local::{ResourceLocal, WorldLocal};
 use dojo_world::ResourceType;
-use scarb::core::{Config, Package, TargetKind};
-use scarb::ops::CompileOpts;
-use scarb_ui::args::{FeaturesSpec, PackagesFilter};
-use sozo_scarbext::WorkspaceExt;
+use scarb_interop::{self, Scarb};
+use scarb_metadata::Metadata;
+use scarb_metadata_ext::MetadataDojoExt;
 use tabled::settings::Style;
 use tabled::{Table, Tabled};
-use tracing::debug;
 
-use crate::commands::check_package_dojo_version;
+use crate::features::FeaturesSpec;
 
 #[derive(Debug, Clone, Args)]
 pub struct BuildArgs {
@@ -42,14 +40,14 @@ pub struct BuildArgs {
     #[arg(help = "Output directory.", default_value = "bindings")]
     pub bindings_output: String,
 
+    /// Specify packages to build.
+    /// Packages to run this command on, can be a concrete package name (`foobar`) or
+    /// a prefix glob (`foo*`).
+    #[arg(short, long, value_delimiter = ',', env = "SCARB_PACKAGES_FILTER")]
+    pub packages: Vec<String>,
     /// Specify the features to activate.
     #[command(flatten)]
     pub features: FeaturesSpec,
-
-    /// Specify packages to build.
-    #[command(flatten)]
-    pub packages: Option<PackagesFilter>,
-
     /// Display statistics about the compiled contracts.
     #[command(flatten)]
     pub stats: StatOptions,
@@ -60,60 +58,39 @@ pub struct BuildArgs {
 pub struct StatOptions {
     #[arg(long = "stats.by-tag")]
     #[arg(help = "Sort the stats by tag.")]
-    #[arg(conflicts_with_all = ["stats.by-sierra-mb", "stats.by-sierra-felts", "stats.by-casm-felts"])]
+    #[arg(conflicts_with_all = ["sort_by_sierra_mb", "sort_by_sierra_felts", "sort_by_casm_felts"])]
     #[arg(default_value_t = false)]
     pub sort_by_tag: bool,
 
     #[arg(long = "stats.by-sierra-mb")]
     #[arg(help = "Sort the stats by Sierra file size in MB.")]
-    #[arg(conflicts_with_all = ["stats.by-tag", "stats.by-sierra-felts", "stats.by-casm-felts"])]
+    #[arg(conflicts_with_all = ["sort_by_tag", "sort_by_sierra_felts", "sort_by_casm_felts"])]
     #[arg(default_value_t = false)]
     pub sort_by_sierra_mb: bool,
 
     #[arg(long = "stats.by-sierra-felts")]
     #[arg(help = "Sort the stats by Sierra program size in felts.")]
-    #[arg(conflicts_with_all = ["stats.by-tag", "stats.by-sierra-mb", "stats.by-casm-felts"])]
+    #[arg(conflicts_with_all = ["sort_by_tag", "sort_by_sierra_mb", "sort_by_casm_felts"])]
     #[arg(default_value_t = false)]
     pub sort_by_sierra_felts: bool,
 
     #[arg(long = "stats.by-casm-felts")]
     #[arg(help = "Sort the stats by Casm bytecode size in felts.")]
-    #[arg(conflicts_with_all = ["stats.by-tag", "stats.by-sierra-mb", "stats.by-sierra-felts"])]
+    #[arg(conflicts_with_all = ["sort_by_tag", "sort_by_sierra_mb", "sort_by_sierra_felts"])]
     #[arg(default_value_t = false)]
     pub sort_by_casm_felts: bool,
 }
 
 impl BuildArgs {
-    pub fn run(self, config: &Config) -> Result<()> {
-        let ws = scarb::ops::read_workspace(config.manifest_path(), config)?;
-        ws.profile_check()?;
+    pub async fn run(self, scarb_metadata: &Metadata) -> Result<()> {
+        scarb_metadata.clean_dir_profile();
 
-        // Ensure we don't have old contracts in the build dir, since the local artifacts
-        // guides the migration.
-        ws.clean_dir_profile();
-
-        let packages: Vec<Package> = if let Some(filter) = self.packages {
-            filter.match_many(&ws)?.into_iter().collect()
-        } else {
-            ws.members().collect()
-        };
-
-        for p in &packages {
-            check_package_dojo_version(&ws, p)?;
-        }
-
-        debug!(?packages);
-
-        scarb::ops::compile(
-            packages.iter().map(|p| p.id).collect(),
-            CompileOpts {
-                include_target_names: vec![],
-                include_target_kinds: vec![],
-                exclude_target_kinds: vec![TargetKind::TEST],
-                features: self.features.try_into()?,
-                ignore_cairo_version: false,
-            },
-            &ws,
+        Scarb::build(
+            &scarb_metadata.workspace.manifest_path,
+            scarb_metadata.current_profile.as_str(),
+            &self.packages.join(","),
+            self.features.into(),
+            vec![],
         )?;
 
         let mut builtin_plugins = vec![];
@@ -140,25 +117,22 @@ impl BuildArgs {
 
         // Custom plugins are always empty for now.
         let bindgen = PluginManager {
-            profile_name: ws.current_profile().expect("Profile expected").to_string(),
-            root_package_name: ws
-                .root_package()
-                .map(|p| p.id.name.to_string())
-                .unwrap_or("NO_ROOT_PACKAGE".to_string()),
+            profile_name: scarb_metadata.current_profile.to_string(),
+            root_package_name: scarb_metadata.workspace_package_name()?,
             output_path: self.bindings_output.into(),
-            manifest_path: config.manifest_path().to_path_buf(),
+            manifest_path: scarb_metadata.dojo_manifest_path_profile(),
             plugins: vec![],
             builtin_plugins,
         };
 
         // TODO: check about the skip migration as now we process the metadata
         // directly during the compilation to get the data we need from it.
-        config.tokio_handle().block_on(bindgen.generate(None)).expect("Error generating bindings");
+        bindgen.generate(None).await?;
 
         if self.stats != StatOptions::default() {
             let world = WorldLocal::from_directory(
-                ws.target_dir_profile().to_string(),
-                ws.load_profile_config().unwrap(),
+                scarb_metadata.target_dir_profile(),
+                scarb_metadata.load_dojo_profile_config().unwrap(),
             )?;
 
             let world_stat = world.to_stat_item();
@@ -206,7 +180,6 @@ casm = true
                  information about the public networks limits."
             );
         }
-
         Ok(())
     }
 }
@@ -218,6 +191,7 @@ impl Default for BuildArgs {
 
         Self {
             features,
+            packages: vec![],
             typescript: false,
             typescript_v2: false,
             recs: false,
@@ -225,7 +199,6 @@ impl Default for BuildArgs {
             unrealengine: false,
             bindings_output: "bindings".to_string(),
             stats: StatOptions::default(),
-            packages: None,
         }
     }
 }

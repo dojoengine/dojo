@@ -28,6 +28,7 @@ dojo-world.workspace = true
 [dev-dependencies]
 assert_matches.workspace = true
 dojo-test-utils = { workspace = true, features = [ "build-examples" ] }
-scarb = { workspace = true }
+scarb-interop.workspace = true
+scarb-metadata.workspace = true
+scarb-metadata-ext.workspace = true
 tokio.workspace = true
-sozo-scarbext = { workspace = true }
