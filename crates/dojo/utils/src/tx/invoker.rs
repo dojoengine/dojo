@@ -70,32 +70,77 @@ where
         Ok(TransactionResult::Hash(tx.transaction_hash))
     }
 
-    /// Invokes all the calls in one single transaction.
-    pub async fn multicall(&self) -> Result<TransactionResult, TransactionError<A::SignError>> {
+    /// Invokes all the calls in a multicall fashion. If the calls are too many,
+    /// it will split them into multiple transactions using the `max_calls` config.
+    /// By default there is no limit, but this may cause the transaction to fail if the calls are
+    /// too many, and the resources to execute the transaction are too high.
+    pub async fn multicall(
+        &self,
+    ) -> Result<Vec<TransactionResult>, TransactionError<A::SignError>> {
         if self.calls.is_empty() {
-            return Ok(TransactionResult::Noop);
+            return Ok(vec![TransactionResult::Noop]);
         }
 
         trace!(?self.calls, "Invoke contract multicall.");
 
-        let tx =
-            self.account.execute_v3(self.calls.clone()).send_with_cfg(&self.txn_config).await?;
+        if let Some(max_calls) = self.txn_config.max_calls {
+            // Split the calls into multiple transactions, using the max_calls as the number of
+            // calls per transaction.
+            let mut results = vec![];
+            let calls_chunks = self.calls.chunks(max_calls);
 
-        trace!(
-            transaction_hash = format!("{:#066x}", tx.transaction_hash),
-            "Invoke contract multicall."
-        );
+            for chunk in calls_chunks {
+                let tx =
+                    self.account.execute_v3(chunk.to_vec()).send_with_cfg(&self.txn_config).await?;
 
-        if self.txn_config.wait {
-            let receipt =
-                TransactionWaiter::new(tx.transaction_hash, &self.account.provider()).await?;
+                trace!(
+                    transaction_hash = format!("{:#066x}", tx.transaction_hash),
+                    "Invoke contract multicall chunk."
+                );
 
-            if self.txn_config.receipt {
-                return Ok(TransactionResult::HashReceipt(tx.transaction_hash, Box::new(receipt)));
+                if self.txn_config.wait {
+                    let receipt =
+                        TransactionWaiter::new(tx.transaction_hash, &self.account.provider())
+                            .await?;
+
+                    if self.txn_config.receipt {
+                        results.push(TransactionResult::HashReceipt(
+                            tx.transaction_hash,
+                            Box::new(receipt),
+                        ));
+                    } else {
+                        results.push(TransactionResult::Hash(tx.transaction_hash));
+                    }
+                } else {
+                    results.push(TransactionResult::Hash(tx.transaction_hash));
+                }
             }
-        }
 
-        Ok(TransactionResult::Hash(tx.transaction_hash))
+            Ok(results)
+        } else {
+            // No max_calls limit, execute all calls in a single transaction
+            let tx =
+                self.account.execute_v3(self.calls.clone()).send_with_cfg(&self.txn_config).await?;
+
+            trace!(
+                transaction_hash = format!("{:#066x}", tx.transaction_hash),
+                "Invoke contract multicall."
+            );
+
+            if self.txn_config.wait {
+                let receipt =
+                    TransactionWaiter::new(tx.transaction_hash, &self.account.provider()).await?;
+
+                if self.txn_config.receipt {
+                    return Ok(vec![TransactionResult::HashReceipt(
+                        tx.transaction_hash,
+                        Box::new(receipt),
+                    )]);
+                }
+            }
+
+            Ok(vec![TransactionResult::Hash(tx.transaction_hash)])
+        }
     }
 
     /// Invokes all the calls individually, usually used for debugging if a multicall failed.

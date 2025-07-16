@@ -169,14 +169,16 @@ impl ExecuteArgs {
                 });
             }
 
-            let tx_result = invoker.multicall().await?;
+            let tx_results = invoker.multicall().await?;
+            println!("{:?}", tx_results);
 
             #[cfg(feature = "walnut")]
             if let Some(walnut_debugger) = walnut_debugger {
-                walnut_debugger.debug_transaction(&config.ui(), &tx_result)?;
+                for tx_res in tx_results {
+                    walnut_debugger.debug_transaction(&config.ui(), &tx_res)?;
+                }
             }
 
-            println!("{}", tx_result);
             Ok(())
         })
     }
