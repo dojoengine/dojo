@@ -167,9 +167,8 @@ impl ExecuteArgs {
         }
 
         let txs_results = invoker.multicall().await?;
-
-        for tx_result in &txs_results {
-            println!("{}", tx_result);
+        for r in &txs_results {
+            println!("{}", r);
         }
 
         #[cfg(feature = "walnut")]
