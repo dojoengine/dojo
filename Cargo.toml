@@ -29,7 +29,7 @@ edition = "2021"
 license = "Apache-2.0"
 license-file = "LICENSE"
 repository = "https://github.com/dojoengine/dojo/"
-version = "1.6.0-alpha.2"
+version = "1.6.0"
 
 [profile.performance]
 codegen-units = 1

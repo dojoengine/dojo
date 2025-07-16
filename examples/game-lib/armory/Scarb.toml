@@ -1,6 +1,6 @@
 [package]
 name = "armory"
-version = "1.6.0-alpha.0"
+version = "1.6.0"
 description = "An armory of epic weapons."
 edition.workspace = true
 cairo-version.workspace = true
