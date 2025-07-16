@@ -1,8 +1,8 @@
 {
   "world": {
-    "class_hash": "0x4b767fda48530353c2e44e4b9433f4d75c6c9974aaff43ecc00de9455eb71b8",
-    "address": "0x60b5af1dbe01ba39aba022cf73d0990e5139df0aab76937630c2373e407d0c9",
-    "seed": "simple2",
+    "class_hash": "0x685ed02eefa98fe7e208aa295042e9bbad8029b0d3d6f0ba2b32546efe0a1f9",
+    "address": "0x2e6f1b79a680ec85f6ed34da331c2b6b6a4c641b5050394003dfed51a4a9af7",
+    "seed": "simple-123",
     "name": "simple",
     "entrypoints": [
       "uuid",
@@ -11,6 +11,7 @@
       "register_event",
       "register_model",
       "register_contract",
+      "register_library",
       "init_contract",
       "upgrade_event",
       "upgrade_model",
@@ -78,6 +79,10 @@
           {
             "name": "Unregistered",
             "type": "()"
+          },
+          {
+            "name": "Library",
+            "type": "(core::starknet::class_hash::ClassHash, core::felt252)"
           }
         ]
       },
@@ -358,6 +363,34 @@
             "outputs": [
               {
                 "type": "core::starknet::contract_address::ContractAddress"
+              }
+            ],
+            "state_mutability": "external"
+          },
+          {
+            "type": "function",
+            "name": "register_library",
+            "inputs": [
+              {
+                "name": "namespace",
+                "type": "core::byte_array::ByteArray"
+              },
+              {
+                "name": "class_hash",
+                "type": "core::starknet::class_hash::ClassHash"
+              },
+              {
+                "name": "name",
+                "type": "core::byte_array::ByteArray"
+              },
+              {
+                "name": "version",
+                "type": "core::byte_array::ByteArray"
+              }
+            ],
+            "outputs": [
+              {
+                "type": "core::starknet::class_hash::ClassHash"
               }
             ],
             "state_mutability": "external"
@@ -657,6 +690,22 @@
             ],
             "outputs": [],
             "state_mutability": "external"
+          },
+          {
+            "type": "function",
+            "name": "owners_count",
+            "inputs": [
+              {
+                "name": "resource",
+                "type": "core::felt252"
+              }
+            ],
+            "outputs": [
+              {
+                "type": "core::integer::u64"
+              }
+            ],
+            "state_mutability": "view"
           },
           {
             "type": "function",
@@ -967,6 +1016,28 @@
       },
       {
         "type": "event",
+        "name": "dojo::world::world_contract::world::LibraryRegistered",
+        "kind": "struct",
+        "members": [
+          {
+            "name": "name",
+            "type": "core::byte_array::ByteArray",
+            "kind": "key"
+          },
+          {
+            "name": "namespace",
+            "type": "core::byte_array::ByteArray",
+            "kind": "key"
+          },
+          {
+            "name": "class_hash",
+            "type": "core::starknet::class_hash::ClassHash",
+            "kind": "data"
+          }
+        ]
+      },
+      {
+        "type": "event",
         "name": "dojo::world::world_contract::world::EventEmitted",
         "kind": "struct",
         "members": [
@@ -1207,6 +1278,11 @@
             "kind": "nested"
           },
           {
+            "name": "LibraryRegistered",
+            "type": "dojo::world::world_contract::world::LibraryRegistered",
+            "kind": "nested"
+          },
+          {
             "name": "EventEmitted",
             "type": "dojo::world::world_contract::world::EventEmitted",
             "kind": "nested"
@@ -1252,8 +1328,8 @@
   },
   "contracts": [
     {
-      "address": "0x1fc128b5f494f198ce3548468d2795f87c6927cb353f6376dd71b224781189b",
-      "class_hash": "0x4f8b513b49ec2fdb194efa3a8d041aef0e66346a6e8a9a999b1f4eb2fb17045",
+      "address": "0x78365cd166420c8ab20fd3cb94d8f34c645074947a20eaf95b939fc96bbd5a5",
+      "class_hash": "0x33f6d1009b4d110715c005566373e954926db70029b0d4f74e70fe65b568f43",
       "abi": [
         {
           "type": "impl",
@@ -1510,8 +1586,8 @@
       ]
     },
     {
-      "address": "0x685b51107b14cce85420d228f6c733165fb66edad4b1ac5da796bd895a9db9a",
-      "class_hash": "0x61abffb3fd1eee27cba6298be11b8252c21eb3f69c8730ff44e9859e173cfb8",
+      "address": "0x37067aea33c4333d8586d45e47562442e15926514c95aef1919f1fa6762c1ad",
+      "class_hash": "0x76ab451233f45985cc56701473173c64bbec87ac2afa310120e2d0449e604b7",
       "abi": [
         {
           "type": "impl",
@@ -1686,8 +1762,8 @@
       ]
     },
     {
-      "address": "0x4ed6c59dccd98f5b7916bf00be00258e4bc93b1aa670546f2f182fa2a057455",
-      "class_hash": "0x4f8b513b49ec2fdb194efa3a8d041aef0e66346a6e8a9a999b1f4eb2fb17045",
+      "address": "0x368982743546730363f26f7e7e6688e6361508d511a0897609273dcfc6de423",
+      "class_hash": "0x33f6d1009b4d110715c005566373e954926db70029b0d4f74e70fe65b568f43",
       "abi": [
         {
           "type": "impl",
@@ -1948,13 +2024,13 @@
   "models": [
     {
       "members": [],
-      "class_hash": "0x1df58a3ea6de0001ca46fd906276d7189856a306c4e3002040c36c183d94296",
+      "class_hash": "0x1c0dec6ff33dfafff8e24ac42d3f5913e1f57fa8ee045fd2ea41fbb45a58e1e",
       "tag": "ns-M",
       "selector": "0x50aac05281bbfaa5393cacacc12e86f59ab7d5f3ee619427dd33a0756526f24"
     },
     {
       "members": [],
-      "class_hash": "0x1df58a3ea6de0001ca46fd906276d7189856a306c4e3002040c36c183d94296",
+      "class_hash": "0x1c0dec6ff33dfafff8e24ac42d3f5913e1f57fa8ee045fd2ea41fbb45a58e1e",
       "tag": "ns2-M",
       "selector": "0x3b26427a55dd1d51738b0e3e989fe6f25649e1311295f30f0a4fa2db439aa2c"
     }
@@ -1962,13 +2038,13 @@
   "events": [
     {
       "members": [],
-      "class_hash": "0x59d5383613416bc60ebabaff3f908509cf6df91d0fdd67d2c73723619c17ae4",
+      "class_hash": "0x7f4064dc6ca3814b414eeb58867a326d978c52e4be969c9d7096da5e69439c4",
       "tag": "ns-E",
       "selector": "0x260e0511a6fa454a7d4ed8bea5fa52fc80fc588e33ba4cb58c65bbeeadf7565"
     },
     {
       "members": [],
-      "class_hash": "0x1c07ad25f96c43cd5d0f4ed4f60eb111e5e4819b7ad8858c8e1e91d3386e614",
+      "class_hash": "0x2e932016b1f85cde8fdb5ad8482412b19c418c1da9ca4e39f49d9fe9611164b",
       "tag": "ns-EH",
       "selector": "0x4c6c7772b19b700cf97d078d02a419670d11d2b689a7a3647eac311b2817ced"
     }

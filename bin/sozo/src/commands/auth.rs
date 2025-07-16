@@ -378,7 +378,9 @@ async fn clone_permissions(
     }
 
     let res = invoker.multicall().await?;
-    println!("{:?}", res);
+    for tx_res in &res {
+        println!("{}", tx_res);
+    }
 
     Ok(())
 }
@@ -595,7 +597,9 @@ async fn update_owners(
     }
 
     let res = invoker.multicall().await?;
-    println!("{:?}", res);
+    for tx_res in &res {
+        println!("{}", tx_res);
+    }
 
     Ok(())
 }
@@ -637,7 +641,9 @@ async fn update_writers(
     }
 
     let res = invoker.multicall().await?;
-    println!("{:?}", res);
+    for tx_res in &res {
+        println!("{}", tx_res);
+    }
 
     Ok(())
 }

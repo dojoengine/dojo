@@ -89,11 +89,18 @@ where
             let mut results = vec![];
             let calls_chunks = self.calls.chunks(max_calls);
 
-            for chunk in calls_chunks {
+            trace!(
+                n_chunks = calls_chunks.len(),
+                ?calls_chunks,
+                "Invoke contract multicall chunks."
+            );
+
+            for (i, chunk) in calls_chunks.enumerate() {
                 let tx =
                     self.account.execute_v3(chunk.to_vec()).send_with_cfg(&self.txn_config).await?;
 
                 trace!(
+                    chunk = i,
                     transaction_hash = format!("{:#066x}", tx.transaction_hash),
                     "Invoke contract multicall chunk."
                 );
