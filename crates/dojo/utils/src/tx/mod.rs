@@ -40,11 +40,21 @@ pub struct TxnConfig {
     pub walnut: bool,
     /// The fee configuration to use for the transaction.
     pub fee_config: FeeConfig,
+    /// The maximum number of calls to send in a single transaction.
+    /// This number could vary depending on the calls content, and is mostly
+    /// here to ensure the migration is not stuck if too much resources have to be registered.
+    pub max_calls: Option<usize>,
 }
 
 #[derive(Debug, Clone)]
 pub enum TxnAction {
-    Send { wait: bool, receipt: bool, fee_config: FeeConfig, walnut: bool },
+    Send {
+        wait: bool,
+        receipt: bool,
+        fee_config: FeeConfig,
+        walnut: bool,
+        max_calls: Option<usize>,
+    },
     Estimate,
     Simulate,
 }

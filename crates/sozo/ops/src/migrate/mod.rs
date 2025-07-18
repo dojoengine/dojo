@@ -569,12 +569,17 @@ where
 
             invoker.extend_calls(deploy_calls.values().cloned().collect());
 
-            let tx = invoker.multicall().await?;
+            let txs_results = invoker.multicall().await?;
 
-            // if some external contracts have been deployed, we need to
+            // If some external contracts have been deployed, we need to
             // get the block number of the multicall tx.
+            // Since the multicall may be split into multiple transactions, we take the block number
+            // of the first transaction.
             if !deploy_calls.is_empty() {
-                if let TransactionResult::Hash(tx_hash) = tx {
+                // TODO: @remybar, wondering if here we should
+                // also handle the case when it contains the receipt
+                // already, due to the tx configuration.
+                if let TransactionResult::Hash(tx_hash) = txs_results[0] {
                     let receipt =
                         TransactionWaiter::new(tx_hash, &self.world.account.provider()).await?;
                     let block_number =
