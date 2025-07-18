@@ -36,7 +36,7 @@ pub mod meta {
     pub use introspect::{Introspect, Ty, TyCompareTrait};
 
     pub mod layout;
-    pub use layout::{FieldLayout, Layout, LayoutCompareTrait};
+    pub use layout::{FieldLayout, FieldLayoutsTrait, Layout, LayoutTrait};
 }
 
 pub mod model {

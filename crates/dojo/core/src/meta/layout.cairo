@@ -24,7 +24,7 @@ pub enum Layout {
 }
 
 #[generate_trait]
-pub impl LayoutCompareImpl of LayoutCompareTrait {
+pub impl LayoutImpl of LayoutTrait {
     fn is_same_type_of(self: @Layout, old: @Layout) -> bool {
         match (self, old) {
             (Layout::Fixed(_), Layout::Fixed(_)) => true,
@@ -36,6 +36,23 @@ pub impl LayoutCompareImpl of LayoutCompareTrait {
             (Layout::Enum(_), Layout::Enum(_)) => true,
             _ => false,
         }
+    }
+    fn struct_fields(self: @Layout) -> Span<FieldLayout> {
+        match self {
+            Layout::Struct(fields) => *fields,
+            _ => { panic!("Unexpected layout type for a Struct.") },
+        }
+    }
+}
+
+#[generate_trait]
+pub impl FieldLayoutsImpl of FieldLayoutsTrait {
+    fn selectors(self: Span<FieldLayout>) -> Array<felt252> {
+        let mut selectors: Array<felt252> = Default::default();
+        for field_layout in self {
+            selectors.append(*field_layout.selector);
+        };
+        selectors
     }
 }
 
