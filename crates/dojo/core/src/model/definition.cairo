@@ -19,6 +19,7 @@ pub enum ModelIndex {
 ///
 /// Definition of the model containing all the fields that makes up a model.
 pub trait ModelDefinition<T> {
+    const NAME_HASH: felt252;
     fn name() -> ByteArray;
     fn layout() -> Layout;
     fn use_legacy_storage() -> bool;

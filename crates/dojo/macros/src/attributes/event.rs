@@ -2,6 +2,7 @@ use cairo_lang_macro::{quote, Diagnostic, ProcMacroResult, TokenStream};
 use cairo_lang_parser::utils::SimpleParserDatabase;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
+use dojo_types::naming;
 
 use crate::constants::{DOJO_INTROSPECT_DERIVE, DOJO_PACKED_DERIVE, EXPECTED_DERIVE_ATTR_NAMES};
 use crate::helpers::{
@@ -12,6 +13,7 @@ use crate::helpers::{
 pub struct DojoEvent {
     diagnostics: Vec<Diagnostic>,
     event_name: String,
+    name_hash: String,
     members_values: Vec<String>,
     serialized_keys: Vec<String>,
     serialized_values: Vec<String>,
@@ -24,6 +26,7 @@ impl DojoEvent {
         Self {
             diagnostics: vec![],
             event_name: String::default(),
+            name_hash: String::default(),
             members_values: vec![],
             serialized_keys: vec![],
             serialized_values: vec![],
@@ -46,6 +49,7 @@ impl DojoEvent {
         let mut event = DojoEvent::new();
 
         event.event_name = struct_ast.name(db).as_syntax_node().get_text(db).trim().to_string();
+        event.name_hash = naming::compute_bytearray_hash(&event.event_name).to_hex_string();
 
         if let Some(failure) = DojoChecker::is_name_valid("event", &event.event_name) {
             return failure;
@@ -157,6 +161,7 @@ impl DojoEvent {
     fn generate_event_code(&self) -> TokenStream {
         let (
             type_name,
+            name_hash,
             members_values,
             serialized_keys,
             serialized_values,
@@ -164,6 +169,7 @@ impl DojoEvent {
             unique_hash,
         ) = (
             &self.event_name,
+            &self.name_hash,
             self.members_values.join("\n"),
             self.serialized_keys.join("\n"),
             self.serialized_values.join("\n"),
@@ -182,6 +188,8 @@ pub struct {type_name}Value {{
 }}
 
 pub impl {type_name}Definition of dojo::event::EventDefinition<{type_name}> {{
+    const NAME_HASH: felt252 = {name_hash};
+
     #[inline(always)]
     fn name() -> ByteArray {{
         \"{type_name}\"

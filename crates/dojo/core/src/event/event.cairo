@@ -10,6 +10,7 @@ pub struct EventDef {
 }
 
 pub trait EventDefinition<E> {
+    const NAME_HASH: felt252;
     fn name() -> ByteArray;
 }
 
@@ -47,6 +48,6 @@ pub impl EventImpl<E, +ModelParser<E>, +EventDefinition<E>, +Serde<E>, +Introspe
         ModelParser::<E>::serialize_values(self)
     }
     fn selector(namespace_hash: felt252) -> felt252 {
-        dojo::utils::selector_from_namespace_and_name(namespace_hash, @Self::name())
+        dojo::utils::selector_from_hashes(namespace_hash, EventDefinition::<E>::NAME_HASH)
     }
 }
