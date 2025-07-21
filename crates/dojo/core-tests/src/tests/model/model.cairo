@@ -593,10 +593,11 @@ fn test_legacy_model() {
         "LegacyModel: serialize_values failed",
     );
 
-    let mut values = [42, 83, 1234, 0, 987, 0, 0, 5432].span();
+    let mut keys = [42].span();
+    let mut values = [83, 1234, 0, 987, 0, 0, 5432].span();
 
     assert_eq!(
-        dojo::model::model::ModelParser::<LegacyModel>::deserialize(ref values),
+        dojo::model::model::ModelParser::<LegacyModel>::deserialize(ref keys, ref values),
         Option::Some(m),
         "LegacyModel: deserialize failed",
     );
@@ -676,10 +677,11 @@ fn test_dojo_store_model() {
         "DojoStoreModel: serialize_values failed",
     );
 
-    let mut values = [42, 83, 1234, 1, 987, 1, 1, 5432].span();
+    let mut keys = [42].span();
+    let mut values = [83, 1234, 1, 987, 1, 1, 5432].span();
 
     assert_eq!(
-        dojo::model::model::ModelParser::<DojoStoreModel>::deserialize(ref values),
+        dojo::model::model::ModelParser::<DojoStoreModel>::deserialize(ref keys, ref values),
         Option::Some(m),
         "DojoStoreModel: deserialize failed",
     );
