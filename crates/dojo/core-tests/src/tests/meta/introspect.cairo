@@ -534,42 +534,39 @@ fn test_primitive_upgrade() {
     ]
         .span();
 
-    loop {
-        match allowed_upgrades.pop_front() {
-            Option::Some((
-                src, allowed,
-            )) => {
-                for dest in primitives {
-                    let expected = if src == dest {
-                        true
-                    } else {
-                        let allowed = *allowed;
-                        let mut i = 0;
+    for (src, allowed) in allowed_upgrades {
+        for dest in primitives {
+            let expected = if src == dest {
+                true
+            } else {
+                let mut res = false;
 
-                        loop {
-                            if i >= allowed.len() {
-                                break false;
-                            }
-
-                            if *allowed.at(i) == *dest {
-                                break true;
-                            }
-
-                            i += 1;
-                        }
-                    };
-
-                    assert_eq!(
-                        Ty::Primitive(*dest).is_an_upgrade_of(@Ty::Primitive(*src)),
-                        expected,
-                        "src: {} dest: {}",
-                        *src,
-                        *dest,
-                    );
+                for a in allowed {
+                    if *a == *dest {
+                        res = true;
+                        break;
+                    }
                 }
-            },
-            Option::None => { break; },
-        };
+
+                res
+            };
+
+            assert_eq!(
+                Ty::Primitive(*dest).is_an_upgrade_of(@Ty::Primitive(*src)),
+                expected,
+                "src: {} dest: {}",
+                *src,
+                *dest,
+            );
+
+            assert_eq!(
+                Ty::Primitive(*dest).is_a_key_upgrade_of(@Ty::Primitive(*src)),
+                expected,
+                "src: {} dest: {}",
+                *src,
+                *dest,
+            );
+        }
     }
 }
 
@@ -792,15 +789,220 @@ fn test_fixed_array_upgrade() {
 }
 
 #[test]
+fn test_byte_array_upgrade() {
+    assert!(Ty::ByteArray.is_an_upgrade_of(@Ty::ByteArray));
+}
+
+#[test]
 #[available_gas(l2_gas: 360000)]
 fn test_primitive_upgrade_performance() {
     let gas = GasCounterTrait::start();
     let _ = Ty::Primitive('ClassHash').is_an_upgrade_of(@Ty::Primitive('ContractAddress'));
     gas.end_label("Upgrade from ContractAddress to ClassHash");
 }
+#[test]
+fn test_struct_key_upgrade() {
+    let s = Struct {
+        name: 's',
+        attrs: ['one'].span(),
+        children: [
+            Member { name: 'x', attrs: ['two'].span(), ty: Ty::Primitive('u8') },
+            Member { name: 'y', attrs: ['three'].span(), ty: Ty::Primitive('u16') },
+        ]
+            .span(),
+    };
+
+    // different name
+    let mut upgraded = s;
+    upgraded.name = 'upgraded';
+    assert!(!upgraded.is_a_key_upgrade_of(@s), "different name");
+
+    // different attributes
+    let mut upgraded = s;
+    upgraded.attrs = [].span();
+    assert!(!upgraded.is_a_key_upgrade_of(@s), "different attributes");
+
+    // member name changed
+    let mut upgraded = s;
+    upgraded
+        .children =
+            [
+                Member { name: 'new', attrs: ['two'].span(), ty: Ty::Primitive('u8') },
+                Member { name: 'y', attrs: ['three'].span(), ty: Ty::Primitive('u16') },
+            ]
+        .span();
+    assert!(!upgraded.is_a_key_upgrade_of(@s), "member name changed");
+
+    // member attr changed
+    let mut upgraded = s;
+    upgraded
+        .children =
+            [
+                Member { name: 'x', attrs: [].span(), ty: Ty::Primitive('u8') },
+                Member { name: 'y', attrs: ['three'].span(), ty: Ty::Primitive('u16') },
+            ]
+        .span();
+    assert!(!upgraded.is_a_key_upgrade_of(@s), "member attr changed");
+
+    // allowed member change
+    let mut upgraded = s;
+    upgraded
+        .children =
+            [
+                Member { name: 'x', attrs: ['two'].span(), ty: Ty::Primitive('u16') },
+                Member { name: 'y', attrs: ['three'].span(), ty: Ty::Primitive('u16') },
+            ]
+        .span();
+    assert!(upgraded.is_a_key_upgrade_of(@s), "allowed member change");
+
+    // wrong member change
+    let mut upgraded = s;
+    upgraded
+        .children =
+            [
+                Member { name: 'x', attrs: ['two'].span(), ty: Ty::Primitive('u8') },
+                Member { name: 'y', attrs: ['three'].span(), ty: Ty::Primitive('u8') },
+            ]
+        .span();
+    assert!(!upgraded.is_a_key_upgrade_of(@s), "wrong member change");
+
+    // new member (not allowed)
+    let mut upgraded = s;
+    upgraded
+        .children =
+            [
+                Member { name: 'x', attrs: ['two'].span(), ty: Ty::Primitive('u8') },
+                Member { name: 'y', attrs: ['three'].span(), ty: Ty::Primitive('u16') },
+                Member { name: 'z', attrs: ['four'].span(), ty: Ty::Primitive('u32') },
+            ]
+        .span();
+    assert!(!upgraded.is_a_key_upgrade_of(@s), "new member");
+}
 
 #[test]
-fn test_key_member_upgrade() {
+fn test_enum_key_upgrade() {
+    let e = Enum {
+        name: 'e',
+        attrs: ['one'].span(),
+        children: [('x', Ty::Primitive('u8')), ('y', Ty::Primitive('u16'))].span(),
+    };
+
+    // different name
+    let mut upgraded = e;
+    upgraded.name = 'upgraded';
+    assert!(!upgraded.is_a_key_upgrade_of(@e), "different name");
+
+    // different attributes
+    let mut upgraded = e;
+    upgraded.attrs = [].span();
+    assert!(!upgraded.is_a_key_upgrade_of(@e), "different attrs");
+
+    // variant name changed
+    let mut upgraded = e;
+    upgraded.children = [('new', Ty::Primitive('u8')), ('y', Ty::Primitive('u16'))].span();
+    assert!(!upgraded.is_a_key_upgrade_of(@e), "variant name changed");
+
+    // allowed variant change
+    let mut upgraded = e;
+    upgraded.children = [('x', Ty::Primitive('u16')), ('y', Ty::Primitive('u16'))].span();
+    assert!(upgraded.is_a_key_upgrade_of(@e), "allowed variant change");
+
+    // wrong variant change
+    let mut upgraded = e;
+    upgraded.children = [('x', Ty::Primitive('u8')), ('y', Ty::Primitive('u8'))].span();
+    assert!(!upgraded.is_a_key_upgrade_of(@e), "wrong variant change");
+
+    // new member
+    let mut upgraded = e;
+    upgraded
+        .children =
+            [('x', Ty::Primitive('u8')), ('y', Ty::Primitive('u16')), ('z', Ty::Primitive('u32'))]
+        .span();
+    assert!(upgraded.is_a_key_upgrade_of(@e), "new member");
+
+    let e = Enum {
+        name: 'e',
+        attrs: [].span(),
+        children: [('x', Ty::Tuple([].span())), ('y', Ty::Tuple([].span()))].span(),
+    };
+
+    // A variant without data (empty tuple / unit type) cannot be upgraded with data
+    let mut upgraded = e;
+    upgraded.children = [('x', Ty::Primitive('u8')), ('y', Ty::Tuple([].span()))].span();
+
+    assert!(!upgraded.is_a_key_upgrade_of(@e), "variant without data");
+
+    // special case: Option<T>
+    let e = Introspect::<Option<u8>>::ty();
+    let upgraded = Introspect::<Option<u32>>::ty();
+
+    assert!(upgraded.is_a_key_upgrade_of(@e), "Option<T>");
+}
+
+#[test]
+fn test_array_key_upgrade() {
+    let a = Ty::Array([Ty::Primitive('u8')].span());
+
+    // array item is upgradable
+    let upgraded = Ty::Array([Ty::Primitive('u16')].span());
+    assert!(upgraded.is_a_key_upgrade_of(@a));
+
+    // array item is not upgradable
+    let upgraded = Ty::Array([Ty::Primitive('bool')].span());
+    assert!(!upgraded.is_a_key_upgrade_of(@a));
+}
+
+#[test]
+fn test_tuple_key_upgrade() {
+    let t = Ty::Tuple([Ty::Primitive('u8'), Ty::Primitive('u16')].span());
+
+    // tuple item is upgradable
+    let upgraded = Ty::Tuple([Ty::Primitive('u16'), Ty::Primitive('u16')].span());
+    assert!(upgraded.is_a_key_upgrade_of(@t));
+
+    // tuple item is not upgradable
+    let upgraded = Ty::Tuple([Ty::Primitive('bool'), Ty::Primitive('u16')].span());
+    assert!(!upgraded.is_a_key_upgrade_of(@t));
+
+    // tuple length is smaller than before (not allowed)
+    let upgraded = Ty::Tuple([Ty::Primitive('u8')].span());
+    assert!(!upgraded.is_a_key_upgrade_of(@t));
+
+    // tuple length is bigger than before (not allowed)
+    let upgraded = Ty::Tuple(
+        [Ty::Primitive('u8'), Ty::Primitive('u16'), Ty::Primitive('u32')].span(),
+    );
+    assert!(!upgraded.is_a_key_upgrade_of(@t));
+}
+
+#[test]
+fn test_fixed_array_key_upgrade() {
+    let a = Ty::FixedArray([(Ty::Primitive('u8'), 3)].span());
+
+    // fixed array item is upgradable
+    let upgraded = Ty::FixedArray([(Ty::Primitive('u16'), 3)].span());
+    assert!(upgraded.is_a_key_upgrade_of(@a));
+
+    // fixed array item is not upgradable
+    let upgraded = Ty::FixedArray([(Ty::Primitive('bool'), 3)].span());
+    assert!(!upgraded.is_a_key_upgrade_of(@a));
+
+    // fixed array length is smaller than before (not allowed)
+    let upgraded = Ty::FixedArray([(Ty::Primitive('u16'), 2)].span());
+    assert!(!upgraded.is_a_key_upgrade_of(@a));
+
+    // fixed array length is bigger than before (not allowed)
+    let upgraded = Ty::FixedArray([(Ty::Primitive('u16'), 4)].span());
+    assert!(!upgraded.is_a_key_upgrade_of(@a));
+}
+
+#[test]
+fn test_byte_array_key_upgrade() {
+    assert!(Ty::ByteArray.is_a_key_upgrade_of(@Ty::ByteArray));
+}
+
+#[test]
+fn test_key_member_upgrade_with_nested_enum() {
     let s = Struct {
         name: 's',
         attrs: [].span(),
@@ -811,9 +1013,25 @@ fn test_key_member_upgrade() {
                 attrs: ['key'].span(),
                 ty: Ty::Enum(
                     Enum {
-                        name: 'e',
+                        name: 'MainEnum',
                         attrs: [].span(),
-                        children: [('A', Ty::Primitive('u8')), ('B', Ty::Primitive('u16'))].span(),
+                        children: [
+                            ('A', Ty::Primitive('u8')),
+                            (
+                                'B',
+                                Ty::Enum(
+                                    Enum {
+                                        name: 'NestedEnum',
+                                        attrs: [].span(),
+                                        children: [
+                                            ('X', Ty::Primitive('u8')), ('Y', Ty::Primitive('u16')),
+                                        ]
+                                            .span(),
+                                    },
+                                ),
+                            ),
+                        ]
+                            .span(),
                     },
                 ),
             },
@@ -821,16 +1039,7 @@ fn test_key_member_upgrade() {
             .span(),
     };
 
-    // primitive type
-    let mut upgraded = s;
-    upgraded
-        .children =
-            [Member { name: 'x', attrs: ['key'].span(), ty: Ty::Primitive('u128') }, *s.children[1]]
-        .span();
-
-    assert!(upgraded.is_an_upgrade_of(@s), "key primitive type upgrade");
-
-    // enum type / new variant
+    // add new variant to nested enum (allowed)
     let mut upgraded = s;
     upgraded
         .children =
@@ -841,11 +1050,25 @@ fn test_key_member_upgrade() {
                     attrs: ['key'].span(),
                     ty: Ty::Enum(
                         Enum {
-                            name: 'e',
+                            name: 'MainEnum',
                             attrs: [].span(),
                             children: [
-                                ('A', Ty::Primitive('u8')), ('B', Ty::Primitive('u16')),
-                                ('C', Ty::Primitive('u32')),
+                                ('A', Ty::Primitive('u8')),
+                                (
+                                    'B',
+                                    Ty::Enum(
+                                        Enum {
+                                            name: 'NestedEnum',
+                                            attrs: [].span(),
+                                            children: [
+                                                ('X', Ty::Primitive('u8')),
+                                                ('Y', Ty::Primitive('u16')),
+                                                ('Z', Ty::Primitive('u32')),
+                                            ]
+                                                .span(),
+                                        },
+                                    ),
+                                ),
                             ]
                                 .span(),
                         },
@@ -854,9 +1077,9 @@ fn test_key_member_upgrade() {
             ]
         .span();
 
-    assert!(upgraded.is_an_upgrade_of(@s), "key enum type upgrade (variant added)");
+    assert!(upgraded.is_an_upgrade_of(@s), "nested enum upgrade (new variant added)");
 
-    // enum type / variant data upgrade (not allowed)
+    // modify a variant of nested enum following the key rules (u16 -> u32, allowed)
     let mut upgraded = s;
     upgraded
         .children =
@@ -867,45 +1090,24 @@ fn test_key_member_upgrade() {
                     attrs: ['key'].span(),
                     ty: Ty::Enum(
                         Enum {
-                            name: 'e',
-                            attrs: [].span(),
-                            children: [('A', Ty::Primitive('u8')), ('B', Ty::Primitive('u32'))]
-                                .span(),
-                        },
-                    ),
-                },
-            ]
-        .span();
-
-    assert!(!upgraded.is_an_upgrade_of(@s), "key enum type upgrade (variant data upgraded)");
-
-    // struct type (not allowed)
-    let s = Struct {
-        name: 's',
-        attrs: [].span(),
-        children: [
-            Member {
-                name: 'x',
-                attrs: ['key'].span(),
-                ty: Ty::Struct(Struct { name: 'n', attrs: [].span(), children: [].span() }),
-            },
-        ]
-            .span(),
-    };
-
-    let mut upgraded = s;
-    upgraded
-        .children =
-            [
-                Member {
-                    name: 'x',
-                    attrs: ['key'].span(),
-                    ty: Ty::Struct(
-                        Struct {
-                            name: 'n',
+                            name: 'MainEnum',
                             attrs: [].span(),
                             children: [
-                                Member { name: 'y', attrs: [].span(), ty: Ty::Primitive('u16') },
+                                ('A', Ty::Primitive('u8')),
+                                (
+                                    'B',
+                                    Ty::Enum(
+                                        Enum {
+                                            name: 'NestedEnum',
+                                            attrs: [].span(),
+                                            children: [
+                                                ('X', Ty::Primitive('u8')),
+                                                ('Y', Ty::Primitive('u32')),
+                                            ]
+                                                .span(),
+                                        },
+                                    ),
+                                ),
                             ]
                                 .span(),
                         },
@@ -914,53 +1116,44 @@ fn test_key_member_upgrade() {
             ]
         .span();
 
-    assert!(!upgraded.is_an_upgrade_of(@s), "key struct type upgrade");
+    assert!(upgraded.is_an_upgrade_of(@s), "nested enum upgrade (modify variant data u16 -> u32)");
 
-    // array type (not allowed)
-    let s = Struct {
-        name: 's',
-        attrs: [].span(),
-        children: [
-            Member {
-                name: 'x', attrs: ['key'].span(), ty: Ty::Array([Ty::Primitive('u8')].span()),
-            },
-        ]
-            .span(),
-    };
-
+    // modify a variant of nested enum without following the key rules (u16 -> u8, not allowed)
     let mut upgraded = s;
     upgraded
         .children =
             [
+                *s.children[0],
                 Member {
-                    name: 'x', attrs: ['key'].span(), ty: Ty::Array([Ty::Primitive('u16')].span()),
+                    name: 'y',
+                    attrs: ['key'].span(),
+                    ty: Ty::Enum(
+                        Enum {
+                            name: 'MainEnum',
+                            attrs: [].span(),
+                            children: [
+                                ('A', Ty::Primitive('u8')),
+                                (
+                                    'B',
+                                    Ty::Enum(
+                                        Enum {
+                                            name: 'NestedEnum',
+                                            attrs: [].span(),
+                                            children: [
+                                                ('X', Ty::Primitive('u8')),
+                                                ('Y', Ty::Primitive('u8')),
+                                            ]
+                                                .span(),
+                                        },
+                                    ),
+                                ),
+                            ]
+                                .span(),
+                        },
+                    ),
                 },
             ]
         .span();
 
-    assert!(!upgraded.is_an_upgrade_of(@s), "key array type upgrade");
-
-    // tuple type (not allowed)
-    let s = Struct {
-        name: 's',
-        attrs: [].span(),
-        children: [
-            Member {
-                name: 'x', attrs: ['key'].span(), ty: Ty::Tuple([Ty::Primitive('u8')].span()),
-            },
-        ]
-            .span(),
-    };
-
-    let mut upgraded = s;
-    upgraded
-        .children =
-            [
-                Member {
-                    name: 'x', attrs: ['key'].span(), ty: Ty::Tuple([Ty::Primitive('u16')].span()),
-                },
-            ]
-        .span();
-
-    assert!(!upgraded.is_an_upgrade_of(@s), "key tuple type upgrade");
+    assert!(!upgraded.is_an_upgrade_of(@s), "nested enum upgrade (modify variant data u16 -> u8)");
 }
