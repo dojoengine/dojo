@@ -8,19 +8,19 @@ use dojo_world::contracts::WorldContract;
 use dojo_world::services::IpfsService;
 use scarb_metadata::Metadata;
 use scarb_metadata_ext::MetadataDojoExt;
-use sozo_ops::migrate::{Migration, MigrationResult, VerificationConfig};
+use sozo_ops::migrate::{Migration, MigrationResult};
 use sozo_ops::migration_ui::MigrationUi;
 use starknet::core::utils::parse_cairo_short_string;
 use starknet::providers::Provider;
 use tabled::settings::Style;
 use tabled::{Table, Tabled};
 use tracing::{error, trace};
-use url::Url;
 
 use super::options::account::AccountOptions;
 use super::options::ipfs::IpfsOptions;
 use super::options::starknet::StarknetOptions;
 use super::options::transaction::TransactionOptions;
+use super::options::verify::VerifyOptions;
 use super::options::world::WorldOptions;
 use crate::commands::LOG_TARGET;
 use crate::utils;
@@ -40,20 +40,10 @@ pub struct MigrateArgs {
     pub account: AccountOptions,
 
     #[command(flatten)]
+    pub verify: VerifyOptions,
+
+    #[command(flatten)]
     pub ipfs: IpfsOptions,
-
-    /// Enable contract verification with specified service
-    /// Supported services: voyager, custom
-    #[arg(long, value_name = "SERVICE")]
-    pub verify: Option<String>,
-
-    /// Custom verification API URL (used when --verify=custom)
-    #[arg(long, value_name = "URL")]
-    pub verify_url: Option<String>,
-
-    /// Watch verification progress until completion
-    #[arg(long, default_value_t = false)]
-    pub verify_watch: bool,
 }
 
 impl MigrateArgs {
@@ -69,8 +59,6 @@ impl MigrateArgs {
             account,
             ipfs,
             verify,
-            verify_url,
-            verify_watch,
             transaction,
         } = self;
 
@@ -93,11 +81,7 @@ impl MigrateArgs {
         let profile_config = scarb_metadata.load_dojo_profile_config()?;
 
         // Create verification configuration if requested
-        let verification_config = if let Some(verify_service) = &verify {
-            Some(create_verification_config(verify_service, &verify_url, verify_watch)?)
-        } else {
-            None
-        };
+        let verification_config = verify.create_verification_config()?;
 
         let mut txn_config: TxnConfig = transaction.try_into()?;
         txn_config.wait = true;
@@ -192,40 +176,6 @@ impl MigrateArgs {
 
         Ok(())
     }
-}
-
-/// Creates verification configuration based on the specified service
-fn create_verification_config(
-    service: &str,
-    verify_url: &Option<String>,
-    verify_watch: bool,
-) -> Result<VerificationConfig> {
-    let api_url = match service.to_lowercase().as_str() {
-        "voyager" => Url::parse("https://api.voyager.online/beta")?,
-        "voyager-sepolia" => Url::parse("https://sepolia-api.voyager.online/beta")?,
-        "voyager-dev" => Url::parse("https://dev-api.voyager.online/beta")?,
-        "custom" => {
-            if let Some(ref url) = verify_url {
-                Url::parse(url)?
-            } else {
-                return Err(anyhow!("--verify-url is required when using --verify=custom"));
-            }
-        }
-        _ => {
-            return Err(anyhow!(
-                "Unsupported verification service: {}. Supported services: voyager, \
-                 voyager-sepolia, voyager-dev, custom",
-                service
-            ));
-        }
-    };
-
-    Ok(VerificationConfig {
-        api_url,
-        watch: verify_watch,
-        include_tests: true, // Default to including tests for Dojo projects
-        timeout: 300,        // 5 minutes default timeout
-    })
 }
 
 #[derive(Debug, Tabled)]
