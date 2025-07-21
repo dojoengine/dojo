@@ -1,7 +1,7 @@
-use cairo_lang_macro::{quote, Diagnostic, ProcMacroResult, TokenStream};
+use cairo_lang_macro::{Diagnostic, ProcMacroResult, TokenStream, quote};
 use cairo_lang_parser::utils::SimpleParserDatabase;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
-use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
+use cairo_lang_syntax::node::{TypedSyntaxNode, ast};
 
 use crate::constants::{DOJO_INTROSPECT_DERIVE, DOJO_PACKED_DERIVE, EXPECTED_DERIVE_ATTR_NAMES};
 use crate::helpers::{
@@ -189,9 +189,13 @@ pub impl {type_name}Definition of dojo::event::EventDefinition<{type_name}> {{
 }}
 
 pub impl {type_name}ModelParser of dojo::model::model::ModelParser<{type_name}> {{
-    fn deserialize(ref values: Span<felt252>) -> Option<{type_name}> {{
+    fn deserialize(ref keys: Span<felt252>, ref values: Span<felt252>) -> Option<{type_name}> {{
+        let mut serialized: Array<felt252> = keys.into();
+        serialized.append_span(values);
+        let mut data = serialized.span();
+
         // always use Serde as event data are never stored in the world storage.
-        core::serde::Serde::<{type_name}>::deserialize(ref values)
+        core::serde::Serde::<{type_name}>::deserialize(ref data)
     }}
     fn serialize_keys(self: @{type_name}) -> Span<felt252> {{
         let mut serialized = core::array::ArrayTrait::new();

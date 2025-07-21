@@ -46,6 +46,7 @@ impl DojoFormatter {
         db: &dyn SyntaxGroup,
         member_ast: &MemberAst,
         use_serde: bool,
+        input_name: &str,
     ) -> String {
         let member_name = member_ast.name(db).text(db).to_string();
         let member_ty = match member_ast.type_clause(db).ty(db) {
@@ -53,16 +54,17 @@ impl DojoFormatter {
             _ => member_ast.type_clause(db).ty(db).as_syntax_node().get_text_without_trivia(db),
         };
 
-        Self::deserialize_primitive_member_ty(&member_name, &member_ty, use_serde)
+        Self::deserialize_primitive_member_ty(&member_name, &member_ty, use_serde, input_name)
     }
 
     pub fn deserialize_primitive_member_ty(
         member_name: &String,
         member_ty: &String,
         use_serde: bool,
+        input_name: &str,
     ) -> String {
         let path = get_serialization_path(use_serde);
-        format!("let {member_name} = {path}::<{member_ty}>::deserialize(ref values)?;\n")
+        format!("let {member_name} = {path}::<{member_ty}>::deserialize(ref {input_name})?;\n")
     }
 
     pub fn serialize_keys_and_values(

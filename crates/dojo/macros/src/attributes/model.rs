@@ -1,17 +1,17 @@
 use std::collections::HashSet;
 
-use cairo_lang_macro::{quote, Diagnostic, ProcMacroResult, TokenStream};
+use cairo_lang_macro::{Diagnostic, ProcMacroResult, TokenStream, quote};
 use cairo_lang_parser::utils::SimpleParserDatabase;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
-use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
+use cairo_lang_syntax::node::{TypedSyntaxNode, ast};
 
 use crate::constants::{
     DOJO_INTROSPECT_DERIVE, DOJO_LEGACY_STORAGE_DERIVE, DOJO_PACKED_DERIVE, DOJO_STORE_DERIVE,
     EXPECTED_DERIVE_ATTR_NAMES,
 };
 use crate::helpers::{
-    self, get_serialization_path, DiagnosticsExt, DojoChecker, DojoFormatter, DojoParser,
-    DojoTokenizer, Member, ProcMacroResultExt,
+    self, DiagnosticsExt, DojoChecker, DojoFormatter, DojoParser, DojoTokenizer, Member,
+    ProcMacroResultExt, get_serialization_path,
 };
 
 #[derive(Debug)]
@@ -28,8 +28,10 @@ pub struct DojoModel {
     model_layout: String,
     use_legacy_storage: bool,
     model_deserialize_path: String,
+    deserialized_keys: Vec<String>,
     deserialized_values: Vec<String>,
     deserialized_modelvalue: String,
+    deserialize_body: String,
 }
 
 impl DojoModel {
@@ -47,8 +49,10 @@ impl DojoModel {
             model_layout: String::default(),
             use_legacy_storage: false,
             model_deserialize_path: String::default(),
+            deserialized_keys: vec![],
             deserialized_values: vec![],
             deserialized_modelvalue: String::default(),
+            deserialize_body: String::default(),
         }
     }
     pub fn process(token_stream: TokenStream) -> ProcMacroResult {
@@ -108,15 +112,20 @@ impl DojoModel {
             model.use_legacy_storage,
         );
 
-        struct_ast.members(db).elements(db).iter().filter(|m| !m.has_attr(db, "key")).for_each(
-            |member_ast| {
+        struct_ast.members(db).elements(db).iter().for_each(|member_ast| {
+            if member_ast.has_attr(db, "key") {
+                model
+                    .deserialized_keys
+                    .push(DojoFormatter::deserialize_member_ty(db, member_ast, true, "keys"));
+            } else {
                 model.deserialized_values.push(DojoFormatter::deserialize_member_ty(
                     db,
                     member_ast,
                     model.use_legacy_storage,
+                    "values",
                 ));
-            },
-        );
+            }
+        });
 
         members.iter().for_each(|member| {
             if member.key {
@@ -234,6 +243,36 @@ impl DojoModel {
             format!("dojo::meta::Introspect::<{}>::layout()", model.model_type)
         };
 
+        model.deserialize_body = if model.use_legacy_storage {
+            format!(
+                "
+                let mut serialized: Array<felt252> = keys.into();
+                serialized.append_span(values);
+                let mut data = serialized.span();
+
+                core::serde::Serde::<{}>::deserialize(ref data)
+                ",
+                model.model_type
+            )
+        } else {
+            format!(
+                "
+            {deserialized_keys}
+            {deserialized_values}
+
+            Some({model_type} {{
+                {keys},
+                {values},
+            }})
+            ",
+                deserialized_keys = model.deserialized_keys.join("\n"),
+                deserialized_values = model.deserialized_values.join("\n"),
+                model_type = model.model_type,
+                keys = keys.iter().map(|k| k.name.clone()).collect::<Vec<_>>().join(",\n"),
+                values = values.iter().map(|v| v.name.clone()).collect::<Vec<_>>().join(",\n"),
+            )
+        };
+
         let model_code = model.generate_model_code();
 
         let original_struct = DojoTokenizer::rebuild_original_struct(db, struct_ast);
@@ -272,6 +311,7 @@ impl DojoModel {
             model_deserialize_path,
             deserialized_values,
             deserialized_modelvalue,
+            deserialize_body,
         ) = (
             &self.model_type,
             format!("#[derive({})]", self.model_value_derive_attr_names.join(", ")),
@@ -286,6 +326,7 @@ impl DojoModel {
             &self.model_deserialize_path,
             &self.deserialized_values.join(""),
             &self.deserialized_modelvalue,
+            &self.deserialize_body,
         );
 
         let content = format!(
@@ -351,8 +392,8 @@ pub impl {model_type}ModelValueDefinition = \
              m_{model_type}_definition::{model_type}DefinitionImpl<{model_type}Value>;
 
 pub impl {model_type}ModelParser of dojo::model::model::ModelParser<{model_type}> {{
-    fn deserialize(ref values: Span<felt252>) -> Option<{model_type}> {{
-        {model_deserialize_path}::<{model_type}>::deserialize(ref values)
+    fn deserialize(ref keys: Span<felt252>, ref values: Span<felt252>) -> Option<{model_type}> {{
+        {deserialize_body}
     }}
     fn serialize_keys(self: @{model_type}) -> Span<felt252> {{
         let mut serialized = core::array::ArrayTrait::new();

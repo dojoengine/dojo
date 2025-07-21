@@ -6,7 +6,13 @@ use cairo_lang_syntax::node::{Terminal, TypedSyntaxNode};
 use starknet::core::utils::get_selector_from_name;
 
 use crate::constants::CAIRO_DELIMITERS;
+<<<<<<< HEAD
 use crate::helpers::{DiagnosticsExt, DojoChecker, DojoFormatter, ProcMacroResultExt};
+=======
+use crate::helpers::{
+    DiagnosticsExt, DojoChecker, DojoFormatter, ProcMacroResultExt, debug_store_expand,
+};
+>>>>>>> 226bd721 (fix model deserializing when Serde and DojoStore are mixed)
 
 #[derive(Debug)]
 pub struct DojoStructIntrospect {
@@ -214,6 +220,76 @@ impl DojoStructIntrospect {
             )
         }
     }
+<<<<<<< HEAD
+=======
+
+    pub fn build_struct_dojo_store(
+        db: &SimpleParserDatabase,
+        name: &String,
+        struct_ast: &ItemStruct,
+        generic_types: &[String],
+        generic_impls: &String,
+    ) -> String {
+        let mut serialized_members = vec![];
+        let mut deserialized_members = vec![];
+        let mut member_names = vec![];
+
+        for member in struct_ast.members(db).elements(db).iter() {
+            let member_name = member.name(db).text(db).to_string();
+
+            let member_ty =
+                member.type_clause(db).ty(db).as_syntax_node().get_text_without_trivia(db);
+
+            serialized_members.push(DojoFormatter::serialize_primitive_member_ty(
+                &member_name,
+                true,
+                false,
+            ));
+            deserialized_members.push(DojoFormatter::deserialize_primitive_member_ty(
+                &member_name,
+                &member_ty,
+                false,
+                "values",
+            ));
+
+            member_names.push(member_name);
+        }
+
+        let serialized_members = serialized_members.join("");
+        let deserialized_members = deserialized_members.join("");
+        let member_names = member_names.join(",\n");
+
+        let generic_params = if generic_types.is_empty() {
+            "".to_string()
+        } else {
+            format!("<{}>", generic_types.join(", "))
+        };
+
+        let impl_decl = if generic_types.is_empty() {
+            format!("impl {name}DojoStore of dojo::storage::DojoStore<{name}>")
+        } else {
+            format!(
+                "impl {name}DojoStore<{generic_impls}> of \
+                 dojo::storage::DojoStore<{name}{generic_params}>"
+            )
+        };
+
+        format!(
+            "{impl_decl} {{
+        fn serialize(self: @{name}{generic_params}, ref serialized: Array<felt252>) {{
+            {serialized_members}
+        }}
+        fn deserialize(ref values: Span<felt252>) -> Option<{name}{generic_params}> {{
+            {deserialized_members}
+            Option::Some({name}{} {{
+                {member_names}
+            }})
+        }}
+    }}",
+            if generic_types.is_empty() { "".to_string() } else { format!("::{generic_params}") }
+        )
+    }
+>>>>>>> 226bd721 (fix model deserializing when Serde and DojoStore are mixed)
 }
 
 fn type_contains_usize(type_str: String) -> bool {
