@@ -63,7 +63,16 @@ impl MigrateArgs {
 
         scarb_metadata.ensure_profile_artifacts()?;
 
-        let MigrateArgs { world, starknet, account, ipfs, .. } = self;
+        let MigrateArgs {
+            world,
+            starknet,
+            account,
+            ipfs,
+            verify,
+            verify_url,
+            verify_watch,
+            transaction,
+        } = self;
 
         print_banner(scarb_metadata, &starknet).await?;
 
@@ -83,12 +92,17 @@ impl MigrateArgs {
         let world_address = world_diff.world_info.address;
         let profile_config = scarb_metadata.load_dojo_profile_config()?;
 
-        let mut txn_config: TxnConfig = self.transaction.try_into()?;
+        // Create verification configuration if requested
+        let verification_config = if let Some(verify_service) = &verify {
+            Some(create_verification_config(verify_service, &verify_url, verify_watch)?)
+        } else {
+            None
+        };
+
+        let mut txn_config: TxnConfig = transaction.try_into()?;
         txn_config.wait = true;
 
-        // Create verification configuration if requested
-        let migration = if let Some(verify_service) = &self.verify {
-            let verification_config = self.create_verification_config(verify_service)?;
+        let migration = if let Some(verification_config) = verification_config {
             Migration::with_verification(
                 world_diff,
                 WorldContract::new(world_address, &account),
@@ -159,36 +173,40 @@ impl MigrateArgs {
 
         Ok(())
     }
+}
 
-    /// Creates verification configuration based on the specified service
-    fn create_verification_config(&self, service: &str) -> Result<VerificationConfig> {
-        let api_url = match service.to_lowercase().as_str() {
-            "voyager" => Url::parse("https://api.voyager.online/beta")?,
-            "voyager-sepolia" => Url::parse("https://sepolia-api.voyager.online/beta")?,
-            "voyager-dev" => Url::parse("https://dev-api.voyager.online/beta")?,
-            "custom" => {
-                if let Some(ref url) = self.verify_url {
-                    Url::parse(url)?
-                } else {
-                    return Err(anyhow!("--verify-url is required when using --verify=custom"));
-                }
+/// Creates verification configuration based on the specified service
+fn create_verification_config(
+    service: &str,
+    verify_url: &Option<String>,
+    verify_watch: bool,
+) -> Result<VerificationConfig> {
+    let api_url = match service.to_lowercase().as_str() {
+        "voyager" => Url::parse("https://api.voyager.online/beta")?,
+        "voyager-sepolia" => Url::parse("https://sepolia-api.voyager.online/beta")?,
+        "voyager-dev" => Url::parse("https://dev-api.voyager.online/beta")?,
+        "custom" => {
+            if let Some(ref url) = verify_url {
+                Url::parse(url)?
+            } else {
+                return Err(anyhow!("--verify-url is required when using --verify=custom"));
             }
-            _ => {
-                return Err(anyhow!(
-                    "Unsupported verification service: {}. Supported services: voyager, \
-                     voyager-sepolia, voyager-dev, custom",
-                    service
-                ));
-            }
-        };
+        }
+        _ => {
+            return Err(anyhow!(
+                "Unsupported verification service: {}. Supported services: voyager, \
+                 voyager-sepolia, voyager-dev, custom",
+                service
+            ));
+        }
+    };
 
-        Ok(VerificationConfig {
-            api_url,
-            watch: self.verify_watch,
-            include_tests: true, // Default to including tests for Dojo projects
-            timeout: 300,        // 5 minutes default timeout
-        })
-    }
+    Ok(VerificationConfig {
+        api_url,
+        watch: verify_watch,
+        include_tests: true, // Default to including tests for Dojo projects
+        timeout: 300,        // 5 minutes default timeout
+    })
 }
 
 #[derive(Debug, Tabled)]
