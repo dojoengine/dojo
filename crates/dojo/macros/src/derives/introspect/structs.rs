@@ -7,7 +7,7 @@ use starknet::core::utils::get_selector_from_name;
 
 use crate::constants::CAIRO_DELIMITERS;
 use crate::helpers::{
-    debug_store_expand, DiagnosticsExt, DojoChecker, DojoFormatter, ProcMacroResultExt,
+    DiagnosticsExt, DojoChecker, DojoFormatter, ProcMacroResultExt, debug_store_expand,
 };
 
 #[derive(Debug)]
@@ -259,6 +259,7 @@ impl DojoStructIntrospect {
                 &member_name,
                 &member_ty,
                 false,
+                "values",
             ));
 
             member_names.push(member_name);
