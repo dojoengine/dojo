@@ -8,13 +8,14 @@ use dojo_world::contracts::WorldContract;
 use dojo_world::services::IpfsService;
 use scarb_metadata::Metadata;
 use scarb_metadata_ext::MetadataDojoExt;
-use sozo_ops::migrate::{Migration, MigrationResult};
+use sozo_ops::migrate::{Migration, MigrationResult, VerificationConfig};
 use sozo_ops::migration_ui::MigrationUi;
 use starknet::core::utils::parse_cairo_short_string;
 use starknet::providers::Provider;
 use tabled::settings::Style;
 use tabled::{Table, Tabled};
 use tracing::{error, trace};
+use url::Url;
 
 use super::options::account::AccountOptions;
 use super::options::ipfs::IpfsOptions;
@@ -40,6 +41,19 @@ pub struct MigrateArgs {
 
     #[command(flatten)]
     pub ipfs: IpfsOptions,
+
+    /// Enable contract verification with specified service
+    /// Supported services: voyager, custom
+    #[arg(long, value_name = "SERVICE")]
+    pub verify: Option<String>,
+
+    /// Custom verification API URL (used when --verify=custom)
+    #[arg(long, value_name = "URL")]
+    pub verify_url: Option<String>,
+
+    /// Watch verification progress until completion
+    #[arg(long, default_value_t = false)]
+    pub verify_watch: bool,
 }
 
 impl MigrateArgs {
@@ -72,14 +86,28 @@ impl MigrateArgs {
         let mut txn_config: TxnConfig = self.transaction.try_into()?;
         txn_config.wait = true;
 
-        let migration = Migration::new(
-            world_diff,
-            WorldContract::new(world_address, &account),
-            txn_config,
-            profile_config.clone(),
-            rpc_url,
-            is_guest,
-        );
+        // Create verification configuration if requested
+        let migration = if let Some(verify_service) = &self.verify {
+            let verification_config = self.create_verification_config(verify_service)?;
+            Migration::with_verification(
+                world_diff,
+                WorldContract::new(world_address, &account),
+                txn_config,
+                profile_config.clone(),
+                rpc_url,
+                is_guest,
+                verification_config,
+            )
+        } else {
+            Migration::new(
+                world_diff,
+                WorldContract::new(world_address, &account),
+                txn_config,
+                profile_config.clone(),
+                rpc_url,
+                is_guest,
+            )
+        };
 
         let MigrationResult { manifest, has_changes, verification_results } =
             migration.migrate(&mut spinner).await.context("Migration failed.")?;
@@ -130,6 +158,36 @@ impl MigrateArgs {
         spinner.stop_and_persist_boxed(symbol, end_text);
 
         Ok(())
+    }
+
+    /// Creates verification configuration based on the specified service
+    fn create_verification_config(&self, service: &str) -> Result<VerificationConfig> {
+        let api_url = match service.to_lowercase().as_str() {
+            "voyager" => Url::parse("https://api.voyager.online/beta")?,
+            "voyager-sepolia" => Url::parse("https://sepolia-api.voyager.online/beta")?,
+            "voyager-dev" => Url::parse("https://dev-api.voyager.online/beta")?,
+            "custom" => {
+                if let Some(ref url) = self.verify_url {
+                    Url::parse(url)?
+                } else {
+                    return Err(anyhow!("--verify-url is required when using --verify=custom"));
+                }
+            }
+            _ => {
+                return Err(anyhow!(
+                    "Unsupported verification service: {}. Supported services: voyager, \
+                     voyager-sepolia, voyager-dev, custom",
+                    service
+                ));
+            }
+        };
+
+        Ok(VerificationConfig {
+            api_url,
+            watch: self.verify_watch,
+            include_tests: true, // Default to including tests for Dojo projects
+            timeout: 300,        // 5 minutes default timeout
+        })
     }
 }
 
