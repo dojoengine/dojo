@@ -131,8 +131,27 @@ impl MigrateArgs {
             if !results.is_empty() {
                 println!();
                 println!("{}", "📊 Contract Verification Results:".bright_cyan());
+
+                let mut has_failures = false;
                 for result in &results {
-                    println!("   {}", result.display_message());
+                    let message = result.display_message();
+                    if result.display_message().contains("❌") {
+                        println!("   {}", message.bright_red());
+                        has_failures = true;
+                    } else if result.display_message().contains("✅") {
+                        println!("   {}", message.bright_green());
+                    } else {
+                        println!("   {}", message.bright_yellow());
+                    }
+                }
+
+                if has_failures {
+                    println!();
+                    println!(
+                        "{}",
+                        "ℹ️  Note: Verification failures do not affect the migration success."
+                            .bright_blue()
+                    );
                 }
                 println!();
             }

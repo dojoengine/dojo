@@ -135,7 +135,16 @@ where
 
         // Optional contract verification step
         let verification_results = if let Some(verification_config) = &self.verification_config {
-            Some(self.verify_contracts(ui, verification_config).await?)
+            match self.verify_contracts(ui, verification_config).await {
+                Ok(results) => Some(results),
+                Err(e) => {
+                    // Log verification error but don't fail the migration
+                    tracing::warn!("Contract verification failed: {}", e);
+                    ui.stop_and_persist_boxed("⚠️", format!("Verification failed: {}", e));
+                    ui.restart("Continuing migration...");
+                    None
+                }
+            }
         } else {
             None
         };
