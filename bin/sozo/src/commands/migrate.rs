@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use clap::Args;
 use colored::*;
-use dojo_utils::{self, provider as provider_utils, TxnConfig};
+use dojo_utils::{self, TxnConfig, provider as provider_utils};
 use dojo_world::contracts::WorldContract;
 use dojo_world::services::IpfsService;
 use scarb_metadata::Metadata;
@@ -81,8 +81,20 @@ impl MigrateArgs {
             is_guest,
         );
 
-        let MigrationResult { manifest, has_changes } =
+        let MigrationResult { manifest, has_changes, verification_results } =
             migration.migrate(&mut spinner).await.context("Migration failed.")?;
+
+        // Display verification results if any
+        if let Some(results) = verification_results {
+            if !results.is_empty() {
+                println!();
+                println!("{}", "📊 Contract Verification Results:".bright_cyan());
+                for result in &results {
+                    println!("   {}", result.display_message());
+                }
+                println!();
+            }
+        }
 
         let ipfs_config =
             ipfs.config().or(profile_config.env.map(|env| env.ipfs_config).unwrap_or(None));

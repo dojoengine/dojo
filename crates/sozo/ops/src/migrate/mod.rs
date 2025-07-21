@@ -19,6 +19,7 @@
 //!    initialization of contracts can mutate resources.
 
 use std::collections::HashMap;
+use std::path::PathBuf;
 
 use anyhow::anyhow;
 use cainome::cairo_serde::{ByteArray, ClassHash, ContractAddress};
@@ -27,16 +28,16 @@ use dojo_utils::{
     Declarer, Deployer, Invoker, LabeledClass, TransactionResult, TransactionWaiter, TxnConfig,
 };
 use dojo_world::config::calldata_decoder::decode_calldata;
-use dojo_world::config::{metadata_config, ProfileConfig, ResourceConfig, WorldMetadata};
+use dojo_world::config::{ProfileConfig, ResourceConfig, WorldMetadata, metadata_config};
 use dojo_world::constants::WORLD;
-use dojo_world::contracts::abigen::world::ResourceMetadata;
 use dojo_world::contracts::WorldContract;
+use dojo_world::contracts::abigen::world::ResourceMetadata;
 use dojo_world::diff::{Manifest, ResourceDiff, WorldDiff, WorldStatus};
 use dojo_world::local::{ExternalContractLocal, ResourceLocal, UPGRADE_CONTRACT_FN_NAME};
 use dojo_world::metadata::MetadataStorage;
 use dojo_world::remote::ResourceRemote;
 use dojo_world::services::UploadService;
-use dojo_world::{utils, ResourceType};
+use dojo_world::{ResourceType, utils};
 use starknet::accounts::{ConnectedAccount, SingleOwnerAccount};
 use starknet::core::types::Call;
 use starknet::core::utils as snutils;
@@ -48,7 +49,10 @@ use tracing::trace;
 use crate::migration_ui::MigrationUi;
 
 pub mod error;
+pub mod verification;
+
 pub use error::MigrationError;
+pub use verification::{ContractVerifier, VerificationConfig, VerificationResult};
 
 #[derive(Debug)]
 pub struct Migration<A>
@@ -63,12 +67,15 @@ where
     // Ideally, we want this rpc url to be exposed from the world.account.provider().
     rpc_url: String,
     guest: bool,
+    // Optional verification configuration
+    verification_config: Option<VerificationConfig>,
 }
 
 #[derive(Debug)]
 pub struct MigrationResult {
     pub has_changes: bool,
     pub manifest: Manifest,
+    pub verification_results: Option<Vec<VerificationResult>>,
 }
 
 impl<A> Migration<A>
@@ -84,7 +91,28 @@ where
         rpc_url: String,
         guest: bool,
     ) -> Self {
-        Self { diff, world, txn_config, profile_config, rpc_url, guest }
+        Self { diff, world, txn_config, profile_config, rpc_url, guest, verification_config: None }
+    }
+
+    /// Creates a new migration with verification enabled.
+    pub fn with_verification(
+        diff: WorldDiff,
+        world: WorldContract<A>,
+        txn_config: TxnConfig,
+        profile_config: ProfileConfig,
+        rpc_url: String,
+        guest: bool,
+        verification_config: VerificationConfig,
+    ) -> Self {
+        Self {
+            diff,
+            world,
+            txn_config,
+            profile_config,
+            rpc_url,
+            guest,
+            verification_config: Some(verification_config),
+        }
     }
 
     /// Migrates the world by syncing the namespaces, resources, permissions and initializing the
@@ -105,12 +133,20 @@ where
 
         let contracts_have_changed = self.initialize_contracts(ui).await?;
 
+        // Optional contract verification step
+        let verification_results = if let Some(verification_config) = &self.verification_config {
+            Some(self.verify_contracts(ui, verification_config).await?)
+        } else {
+            None
+        };
+
         Ok(MigrationResult {
             has_changes: world_has_changed
                 || resources_have_changed
                 || permissions_have_changed
                 || contracts_have_changed,
             manifest: Manifest::new(&self.diff),
+            verification_results,
         })
     }
 
@@ -1182,6 +1218,83 @@ where
         };
 
         Ok(true)
+    }
+
+    /// Verify contracts that were declared during migration.
+    async fn verify_contracts(
+        &self,
+        ui: &mut MigrationUi,
+        verification_config: &VerificationConfig,
+    ) -> Result<Vec<VerificationResult>, MigrationError<A::SignError>> {
+        // Get project root from the world's manifest path
+        let project_root = self.get_project_root();
+
+        // Create verifier
+        let verifier = ContractVerifier::new(project_root, verification_config.clone());
+
+        // Collect declared classes for contracts only
+        let mut contract_classes = HashMap::new();
+        for resource in self.diff.resources.values() {
+            if resource.resource_type() == ResourceType::Contract {
+                match resource {
+                    ResourceDiff::Created(ResourceLocal::Contract(contract)) => {
+                        let labeled_class =
+                            LabeledClass {
+                                label: resource.tag(),
+                                casm_class_hash: contract.common.casm_class_hash,
+                                class: contract.common.class.clone().flatten().map_err(|e| {
+                                    MigrationError::DeclareClassError(e.to_string())
+                                })?,
+                            };
+                        contract_classes.insert(contract.common.class_hash, labeled_class);
+                    }
+                    ResourceDiff::Updated(ResourceLocal::Contract(contract), _) => {
+                        let labeled_class =
+                            LabeledClass {
+                                label: resource.tag(),
+                                casm_class_hash: contract.common.casm_class_hash,
+                                class: contract.common.class.clone().flatten().map_err(|e| {
+                                    MigrationError::DeclareClassError(e.to_string())
+                                })?,
+                            };
+                        contract_classes.insert(contract.common.class_hash, labeled_class);
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        if contract_classes.is_empty() {
+            return Ok(vec![]);
+        }
+
+        // Get version info - we'll use default values since the exact path may vary
+        let cairo_version = "2.8.0"; // Default Cairo version
+        let scarb_version = "2.8.0"; // Default Scarb version
+
+        // Verify contracts
+        let results = verifier
+            .verify_declared_contracts(ui, &contract_classes, cairo_version, scarb_version)
+            .await
+            .map_err(|e| MigrationError::DeclareClassError(e.to_string()))?;
+
+        // Display results
+        if !results.is_empty() {
+            ui.stop_and_persist_boxed("📊", "Contract Verification Results:".to_string());
+            for result in &results {
+                println!("   {}", result.display_message());
+            }
+            ui.restart("Continuing...");
+        }
+
+        Ok(results)
+    }
+
+    /// Get the project root directory from the world's metadata
+    fn get_project_root(&self) -> PathBuf {
+        // Fallback to current directory for now
+        // TODO: Extract proper project root from world diff
+        std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
     }
 
     /// Returns the accounts to use for the migration.

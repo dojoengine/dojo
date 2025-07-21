@@ -12,8 +12,8 @@ use dojo_world::services::MockUploadService;
 use katana_runner::RunnerCtx;
 use scarb_interop::Profile;
 use scarb_metadata_ext::MetadataDojoExt;
-use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
+use starknet::providers::jsonrpc::HttpTransport;
 use starknet_crypto::Felt;
 
 use crate::migrate::{Migration, MigrationResult};
@@ -85,7 +85,8 @@ async fn migrate_spawn_and_move(sequencer: &RunnerCtx, with_metadata: bool) -> M
 #[tokio::test(flavor = "multi_thread")]
 #[katana_runner::test(accounts = 10)]
 async fn migrate_from_local(sequencer: &RunnerCtx) {
-    let MigrationResult { manifest, has_changes } = migrate_spawn_and_move(sequencer, false).await;
+    let MigrationResult { manifest, has_changes, .. } =
+        migrate_spawn_and_move(sequencer, false).await;
 
     assert!(has_changes);
     assert_eq!(manifest.contracts.len(), 5);
@@ -95,7 +96,8 @@ async fn migrate_from_local(sequencer: &RunnerCtx) {
 #[tokio::test(flavor = "multi_thread")]
 #[katana_runner::test(accounts = 10, db_dir = copy_spawn_and_move_db().as_str())]
 async fn migrate_no_change(sequencer: &RunnerCtx) {
-    let MigrationResult { manifest, has_changes } = migrate_spawn_and_move(sequencer, false).await;
+    let MigrationResult { manifest, has_changes, .. } =
+        migrate_spawn_and_move(sequencer, false).await;
 
     assert!(!has_changes);
     assert_eq!(manifest.contracts.len(), 5);

@@ -16,6 +16,7 @@ dojo-utils.workspace = true
 dojo-world = { workspace = true, features = [ "ipfs" ] }
 futures.workspace = true
 num-traits.workspace = true
+reqwest = { version = "0.11", features = ["blocking", "multipart", "json"] }
 serde.workspace = true
 serde_json.workspace = true
 serde_with.workspace = true
@@ -24,8 +25,10 @@ spinoff.workspace = true
 starknet.workspace = true
 starknet-crypto.workspace = true
 thiserror.workspace = true
+tokio = { workspace = true, features = ["time"] }
 toml.workspace = true
 tracing.workspace = true
+url = { version = "2.4" }
 scarb-interop.workspace = true
 
 dojo-test-utils = { workspace = true, features = [ "build-examples" ], optional = true }
