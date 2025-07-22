@@ -49,10 +49,9 @@ use tracing::trace;
 use crate::migration_ui::MigrationUi;
 
 pub mod error;
-pub mod verification;
 
 pub use error::MigrationError;
-pub use verification::{ContractVerifier, VerificationConfig, VerificationResult};
+pub use sozo_voyager::{ContractVerifier, VerificationConfig, VerificationResult};
 
 #[derive(Debug)]
 pub struct Migration<A>

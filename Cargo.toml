@@ -2,8 +2,8 @@
 resolver = "2"
 
 members = [
-	"bin/sozo",
 	"bin/cairo-bench",
+	"bin/sozo",
 	"crates/dojo/bindgen",
 	"crates/dojo/core",
 	"crates/dojo/macros",
@@ -15,11 +15,12 @@ members = [
 	"crates/macros/merge-options",
 	"crates/macros/merge-options/macro_test",
 	"crates/metrics",
+	"crates/sozo/mcp",
 	"crates/sozo/scarb_interop",
 	"crates/sozo/scarb_metadata_ext",
 	"crates/sozo/signers",
+	"crates/sozo/voyager",
 	"crates/sozo/walnut",
-	"crates/sozo/mcp",
 	"examples/spawn-and-move",
 	"scripts/verify_db_balances",
 	"xtask/generate-test-db",
@@ -43,9 +44,7 @@ debug = true
 inherits = "release"
 
 [workspace.dependencies]
-cainome = { git = "https://github.com/cartridge-gg/cainome", branch = "snip12", features = [
-    "abigen-rs",
-] }
+cainome = { git = "https://github.com/cartridge-gg/cainome", branch = "snip12", features = [ "abigen-rs" ] }
 cainome-cairo-serde = { git = "https://github.com/cartridge-gg/cainome", branch = "snip12" }
 
 dojo-utils = { path = "crates/dojo/utils" }
@@ -77,12 +76,13 @@ torii-sqlite-types = { path = "crates/torii/sqlite/types" }
 torii-typed-data = { path = "crates/torii/typed-data" }
 
 # sozo
-sozo-ops = { path = "crates/sozo/ops" }
 scarb-interop = { path = "crates/sozo/scarb_interop" }
 scarb-metadata-ext = { path = "crates/sozo/scarb_metadata_ext" }
-sozo-signers = { path = "crates/sozo/signers" }
-sozo-walnut = { path = "crates/sozo/walnut" }
 sozo-mcp = { path = "crates/sozo/mcp" }
+sozo-ops = { path = "crates/sozo/ops" }
+sozo-signers = { path = "crates/sozo/signers" }
+sozo-voyager = { path = "crates/sozo/voyager" }
+sozo-walnut = { path = "crates/sozo/walnut" }
 
 # macros
 merge-options = { path = "crates/macros/merge-options" }
@@ -103,7 +103,6 @@ bytes = "1.6"
 # refer to Scarb git while `cairo-lang-macro` 0.2.0 (new api) is deployed on crates.io
 cairo-lang-macro = { version = "0.2.0", git = "https://github.com/software-mansion/scarb.git" }
 
-cairo-lang-primitive-token = "1"
 cairo-lang-compiler = "*"
 cairo-lang-debug = "*"
 cairo-lang-defs = "*"
@@ -113,6 +112,7 @@ cairo-lang-formatter = "*"
 cairo-lang-lowering = "*"
 cairo-lang-parser = "*"
 cairo-lang-plugins = { version = "*", features = [ "testing" ] }
+cairo-lang-primitive-token = "1"
 cairo-lang-project = "*"
 cairo-lang-semantic = "*"
 cairo-lang-sierra = "*"
@@ -171,8 +171,8 @@ rstest_reuse = "0.6.0"
 salsa = "0.16.1"
 
 # version 2.11.4+nightly-2025-05-08
-scarb-metadata = { git = "https://github.com/software-mansion/scarb", rev="4fdeb7810" }
-scarb-ui = { git = "https://github.com/software-mansion/scarb", rev="4fdeb7810" }
+scarb-metadata = { git = "https://github.com/software-mansion/scarb", rev = "4fdeb7810" }
+scarb-ui = { git = "https://github.com/software-mansion/scarb", rev = "4fdeb7810" }
 
 semver = "1.0.5"
 serde = { version = "1.0", features = [ "derive" ] }
@@ -254,13 +254,6 @@ quote = "1.0"
 syn = { version = "2.0", default-features = false }
 
 [patch.crates-io]
-starknet = { git = "https://github.com/xJonathanLEI/starknet-rs", rev = "ff4222e" }
-starknet-providers = { git = "https://github.com/xJonathanLEI/starknet-rs", rev = "ff4222e" }
-starknet-accounts = { git = "https://github.com/xJonathanLEI/starknet-rs", rev = "ff4222e" }
-starknet-contract = { git = "https://github.com/xJonathanLEI/starknet-rs", rev = "ff4222e" }
-starknet-core = { git = "https://github.com/xJonathanLEI/starknet-rs", rev = "ff4222e" }
-starknet-signers = { git = "https://github.com/xJonathanLEI/starknet-rs", rev = "ff4222e" }
-starknet-macros = { git = "https://github.com/xJonathanLEI/starknet-rs", rev = "ff4222e" }
 cairo-lang-casm = { git = "https://github.com/starkware-libs/cairo", rev = "64b88f06c6261ac67c6b478434c844d4af81e5a3" }
 cairo-lang-compiler = { git = "https://github.com/starkware-libs/cairo", rev = "64b88f06c6261ac67c6b478434c844d4af81e5a3" }
 cairo-lang-debug = { git = "https://github.com/starkware-libs/cairo", rev = "64b88f06c6261ac67c6b478434c844d4af81e5a3" }
@@ -291,3 +284,10 @@ cairo-lang-test-plugin = { git = "https://github.com/starkware-libs/cairo", rev 
 cairo-lang-test-runner = { git = "https://github.com/starkware-libs/cairo", rev = "64b88f06c6261ac67c6b478434c844d4af81e5a3" }
 cairo-lang-test-utils = { git = "https://github.com/starkware-libs/cairo", rev = "64b88f06c6261ac67c6b478434c844d4af81e5a3" }
 cairo-lang-utils = { git = "https://github.com/starkware-libs/cairo", rev = "64b88f06c6261ac67c6b478434c844d4af81e5a3" }
+starknet = { git = "https://github.com/xJonathanLEI/starknet-rs", rev = "ff4222e" }
+starknet-accounts = { git = "https://github.com/xJonathanLEI/starknet-rs", rev = "ff4222e" }
+starknet-contract = { git = "https://github.com/xJonathanLEI/starknet-rs", rev = "ff4222e" }
+starknet-core = { git = "https://github.com/xJonathanLEI/starknet-rs", rev = "ff4222e" }
+starknet-macros = { git = "https://github.com/xJonathanLEI/starknet-rs", rev = "ff4222e" }
+starknet-providers = { git = "https://github.com/xJonathanLEI/starknet-rs", rev = "ff4222e" }
+starknet-signers = { git = "https://github.com/xJonathanLEI/starknet-rs", rev = "ff4222e" }

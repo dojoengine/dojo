@@ -7,40 +7,35 @@ version.workspace = true
 
 [dependencies]
 anyhow.workspace = true
-async-trait.workspace = true
 cainome.workspace = true
 colored.workspace = true
-colored_json.workspace = true
 dojo-types.workspace = true
 dojo-utils.workspace = true
 dojo-world = { workspace = true, features = [ "ipfs" ] }
 futures.workspace = true
 num-traits.workspace = true
-reqwest = { version = "0.11", features = ["blocking", "multipart", "json"] }
-serde.workspace = true
+scarb-interop.workspace = true
 serde_json.workspace = true
-serde_with.workspace = true
+sozo-voyager.workspace = true
 sozo-walnut = { workspace = true, optional = true }
 spinoff.workspace = true
 starknet.workspace = true
 starknet-crypto.workspace = true
 thiserror.workspace = true
-tokio = { workspace = true, features = ["time"] }
-toml.workspace = true
+tokio = { workspace = true, features = [ "time" ] }
 tracing.workspace = true
-url = { version = "2.4" }
-scarb-interop.workspace = true
 
 dojo-test-utils = { workspace = true, features = [ "build-examples" ], optional = true }
 
 [dev-dependencies]
-assert_fs.workspace = true
 dojo-test-utils = { workspace = true, features = [ "build-examples" ] }
 katana-runner.workspace = true
-tokio.workspace = true
-scarb-metadata.workspace = true
 scarb-metadata-ext.workspace = true
+tokio.workspace = true
 
 [features]
 test-utils = [ "dep:dojo-test-utils" ]
 walnut = [ "dep:sozo-walnut" ]
+
+[package.metadata.cargo-machete]
+ignored = ["sozo-walnut"]
