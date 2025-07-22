@@ -1241,49 +1241,13 @@ where
         // Create verifier
         let verifier = ContractVerifier::new(project_root, verification_config.clone());
 
-        // Collect declared classes for contracts only
-        let mut contract_classes = HashMap::new();
-        for resource in self.diff.resources.values() {
-            if resource.resource_type() == ResourceType::Contract {
-                match resource {
-                    ResourceDiff::Created(ResourceLocal::Contract(contract)) => {
-                        let labeled_class =
-                            LabeledClass {
-                                label: resource.tag(),
-                                casm_class_hash: contract.common.casm_class_hash,
-                                class: contract.common.class.clone().flatten().map_err(|e| {
-                                    MigrationError::DeclareClassError(e.to_string())
-                                })?,
-                            };
-                        contract_classes.insert(contract.common.class_hash, labeled_class);
-                    }
-                    ResourceDiff::Updated(ResourceLocal::Contract(contract), _) => {
-                        let labeled_class =
-                            LabeledClass {
-                                label: resource.tag(),
-                                casm_class_hash: contract.common.casm_class_hash,
-                                class: contract.common.class.clone().flatten().map_err(|e| {
-                                    MigrationError::DeclareClassError(e.to_string())
-                                })?,
-                            };
-                        contract_classes.insert(contract.common.class_hash, labeled_class);
-                    }
-                    _ => {}
-                }
-            }
-        }
-
-        if contract_classes.is_empty() {
-            return Ok(vec![]);
-        }
-
         // Get version info - we'll use default values since the exact path may vary
         let cairo_version = "2.8.0"; // Default Cairo version
         let scarb_version = "2.8.0"; // Default Scarb version
 
-        // Verify contracts
+        // Verify contracts using manifest file (includes all contracts, models, events)
         let results = verifier
-            .verify_declared_contracts(ui, &contract_classes, cairo_version, scarb_version)
+            .verify_deployed_contracts(ui, cairo_version, scarb_version)
             .await
             .map_err(|e| MigrationError::DeclareClassError(e.to_string()))?;
 
@@ -1301,9 +1265,32 @@ where
 
     /// Get the project root directory from the world's metadata
     fn get_project_root(&self) -> PathBuf {
-        // Fallback to current directory for now
-        // TODO: Extract proper project root from world diff
-        std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
+        // Try to find project root by looking for manifest files
+        let current_dir = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+
+        // Try to get project root from profile config if available
+        // Note: For now we'll search from current directory
+
+        // Search upward from current directory for project markers
+        let mut search_dir = current_dir.clone();
+        loop {
+            // Check for Scarb.toml or manifest_dev.json
+            if search_dir.join("Scarb.toml").exists()
+                || search_dir.join("manifest_dev.json").exists()
+            {
+                return search_dir;
+            }
+
+            // Move to parent directory
+            if let Some(parent) = search_dir.parent() {
+                search_dir = parent.to_path_buf();
+            } else {
+                break;
+            }
+        }
+
+        // Fallback to current directory
+        current_dir
     }
 
     /// Returns the accounts to use for the migration.
