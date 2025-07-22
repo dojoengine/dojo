@@ -185,72 +185,14 @@ impl VerificationClient {
             form = form.text("dojo_version", dojo_version.clone());
         }
 
-        // Add source files using CLI format: files[{path}] for each file
-        info!("Adding {} source files to verification request:", files.len());
-        info!("=== ALL FILES BEING PROCESSED ===");
-        for (i, file) in files.iter().enumerate() {
-            info!("  [{}] {} -> {}", i + 1, file.name, file.path.display());
-        }
-        info!("=== END FILE LIST ===");
-
+        // Add source files to verification request
         for file in files {
             let content = fs::read_to_string(&file.path)
                 .map_err(|e| anyhow!("Failed to read file {}: {}", file.path.display(), e))?;
 
             let field_name = format!("files[{}]", file.name);
-            info!("  Adding form field: {} ({} bytes)", field_name, content.len());
-
-            // Attach the file content under the expected field name
             form = form.text(field_name, content);
         }
-
-        // Debug: Log the complete form data being sent
-        info!("=== VERIFICATION PAYLOAD DEBUG ===");
-        info!("API URL: {}", url);
-        info!("Contract name: {}", contract_name);
-        info!("Class hash: {:#066x}", class_hash);
-        info!("Package name: {}", metadata.package_name);
-        info!("Contract file: {}", metadata.contract_file);
-        info!("Build tool: {}", metadata.build_tool);
-        if let Some(ref dojo_version) = metadata.dojo_version {
-            info!("Dojo version: {}", dojo_version);
-        }
-        info!("Total files in payload: {}", files.len());
-
-        // Debug: Log raw form field data
-        info!("=== RAW FORM FIELDS ===");
-        info!("compiler_version: {}", metadata.cairo_version);
-        info!("scarb_version: {}", metadata.scarb_version);
-        info!("package_name: {}", metadata.package_name);
-        info!("name: {}", contract_name);
-        info!("contract_file: {}", metadata.contract_file);
-        info!("contract-name: {}", contract_name);
-        info!("project_dir_path: {}", metadata.project_dir_path);
-        info!("build_tool: {}", metadata.build_tool);
-        info!("license: MIT");
-        if let Some(ref dojo_version) = metadata.dojo_version {
-            info!("dojo_version: {}", dojo_version);
-        }
-
-        info!("=== FILE FIELDS ===");
-        for file in files {
-            let content = fs::read_to_string(&file.path)
-                .map_err(|e| anyhow!("Failed to read file {}: {}", file.path.display(), e))?;
-            info!("files[{}]: {} bytes", file.name, content.len());
-            info!("  First 100 chars: {}", &content.chars().take(100).collect::<String>());
-            info!(
-                "  Last 100 chars: {}",
-                &content
-                    .chars()
-                    .rev()
-                    .take(100)
-                    .collect::<String>()
-                    .chars()
-                    .rev()
-                    .collect::<String>()
-            );
-        }
-        info!("=== END RAW PAYLOAD DEBUG ===");
 
         info!("Sending verification request to: {}", url);
         let response = self.client.post(url.clone()).multipart(form).send().await?;
@@ -342,7 +284,6 @@ impl ProjectAnalyzer {
 
         // Try to find the manifest file (usually manifest_dev.json for dev profile)
         let manifest_path = self.find_manifest_file()?;
-        info!("Reading manifest from: {}", manifest_path.display());
 
         let content = fs::read_to_string(&manifest_path).map_err(|e| {
             anyhow!("Failed to read manifest file {}: {}", manifest_path.display(), e)
@@ -360,7 +301,6 @@ impl ProjectAnalyzer {
             })?;
 
             let name = self.extract_contract_name_from_tag(&contract.tag, &ArtifactType::Contract);
-            info!("Found contract: {} -> {:#066x}", name, class_hash);
 
             artifacts.push(ContractArtifact {
                 name,
@@ -376,7 +316,6 @@ impl ProjectAnalyzer {
             })?;
 
             let name = self.extract_contract_name_from_tag(&model.tag, &ArtifactType::Model);
-            info!("Found model: {} -> {:#066x}", name, class_hash);
 
             artifacts.push(ContractArtifact {
                 name,
@@ -392,7 +331,6 @@ impl ProjectAnalyzer {
             })?;
 
             let name = self.extract_contract_name_from_tag(&event.tag, &ArtifactType::Event);
-            info!("Found event: {} -> {:#066x}", name, class_hash);
 
             artifacts.push(ContractArtifact {
                 name,
@@ -405,7 +343,6 @@ impl ProjectAnalyzer {
             return Err(anyhow!("No contract artifacts found in manifest"));
         }
 
-        info!("Discovered {} total artifacts from manifest", artifacts.len());
         Ok(artifacts)
     }
 
@@ -428,7 +365,7 @@ impl ProjectAnalyzer {
     /// e.g., "dojo_starter-DirectionsAvailable" -> "m_DirectionsAvailable" (model)
     /// e.g., "dojo_starter-Moved" -> "e_Moved" (event)
     fn extract_contract_name_from_tag(&self, tag: &str, artifact_type: &ArtifactType) -> String {
-        if let Some(package_name) = self.extract_package_name().ok() {
+        if let Ok(package_name) = self.extract_package_name() {
             let prefix = format!("{}-", package_name);
             if let Some(base_name) = tag.strip_prefix(&prefix) {
                 return match artifact_type {
@@ -445,29 +382,6 @@ impl ProjectAnalyzer {
 
     /// Collect source files (without using scarb metadata)
     pub fn collect_source_files(&self, include_tests: bool) -> Result<Vec<FileInfo>> {
-        info!("Collecting source files from project root: {}", self.project_root.display());
-        info!("Current working directory: {:?}", std::env::current_dir());
-
-        // Check if src directory exists
-        let src_dir = self.project_root.join("src");
-        info!("Checking for src directory: {} (exists: {})", src_dir.display(), src_dir.exists());
-
-        // List contents of project root
-        if let Ok(entries) = fs::read_dir(&self.project_root) {
-            info!("Contents of project root:");
-            for entry in entries {
-                if let Ok(entry) = entry {
-                    let path = entry.path();
-                    let file_type = if path.is_dir() { "DIR" } else { "FILE" };
-                    info!(
-                        "  {} {}",
-                        file_type,
-                        path.file_name().unwrap_or_default().to_string_lossy()
-                    );
-                }
-            }
-        }
-
         let mut files = Vec::new();
 
         // Start by recursively collecting all Cairo files from the entire project
@@ -527,11 +441,6 @@ impl ProjectAnalyzer {
 
         // Validate collected files
         self.validate_files(&files)?;
-
-        info!("Collected {} files for verification", files.len());
-        for file in &files {
-            info!("  - {} ({})", file.name, file.path.display());
-        }
 
         Ok(files)
     }
@@ -636,17 +545,13 @@ impl ProjectAnalyzer {
 
     /// Find the main contract file for a given contract name
     pub fn find_contract_file(&self, contract_name: &str) -> Result<String> {
-        info!("🔍 Finding contract file for: {}", contract_name);
-
-        // Step 1: For Dojo models (m_) and events (e_), use lib.cairo as entry point
+        // For Dojo models (m_) and events (e_), use lib.cairo as entry point
         if contract_name.starts_with("m_") || contract_name.starts_with("e_") {
-            info!("📋 Using lib.cairo for Dojo model/event: {}", contract_name);
             return Ok("src/lib.cairo".to_string());
         }
 
-        // Step 2: For regular contracts, search for specific files
+        // For regular contracts, search for specific files
         let files = self.collect_source_files(false)?;
-        info!("📁 Searching through {} source files for contract: {}", files.len(), contract_name);
 
         // Step 3: Try to find a file that contains the contract definition
         for file in &files {
@@ -654,14 +559,10 @@ impl ProjectAnalyzer {
                 continue;
             }
 
-            info!("🔎 Checking file: {}", file.name);
             if let Ok(content) = fs::read_to_string(&file.path) {
                 // Check if this file contains the contract/struct/trait definition
                 if self.file_contains_definition(&content, contract_name) {
-                    info!("✅ Found contract definition for {} in: {}", contract_name, file.name);
                     return Ok(file.name.clone());
-                } else {
-                    info!("❌ No definition found for {} in: {}", contract_name, file.name);
                 }
             }
         }
@@ -676,7 +577,6 @@ impl ProjectAnalyzer {
             let file_stem = file.path.file_stem().and_then(|s| s.to_str()).unwrap_or("");
 
             if potential_names.contains(&file_stem.to_string()) {
-                info!("Found filename match for {} in: {}", contract_name, file.name);
                 return Ok(file.name.clone());
             }
         }
@@ -685,7 +585,6 @@ impl ProjectAnalyzer {
         let conventional_files = ["src/lib.cairo", "src/main.cairo"];
         for conv_file in conventional_files {
             if let Some(file) = files.iter().find(|f| f.name == conv_file) {
-                info!("Using conventional entry file for {}: {}", contract_name, file.name);
                 return Ok(file.name.clone());
             }
         }
@@ -693,7 +592,6 @@ impl ProjectAnalyzer {
         // Step 5: Use first non-test Cairo file as absolute fallback
         for file in &files {
             if file.name.ends_with(".cairo") && !file.name.contains("test") {
-                info!("Using first Cairo file as fallback for {}: {}", contract_name, file.name);
                 return Ok(file.name.clone());
             }
         }
@@ -738,13 +636,10 @@ impl ProjectAnalyzer {
     /// Check if a file contains a definition for the given contract name
     fn file_contains_definition(&self, content: &str, contract_name: &str) -> bool {
         // Strip prefixes for pattern matching
-        let base_name = if contract_name.starts_with("m_") {
-            &contract_name[2..]
-        } else if contract_name.starts_with("e_") {
-            &contract_name[2..]
-        } else {
-            contract_name
-        };
+        let base_name = contract_name
+            .strip_prefix("m_")
+            .or_else(|| contract_name.strip_prefix("e_"))
+            .unwrap_or(contract_name);
 
         // Look for various Cairo definition patterns
         let patterns = [
@@ -774,15 +669,9 @@ impl ProjectAnalyzer {
             format!("use super::{}", base_name),
         ];
 
-        info!(
-            "🔍 Searching for patterns with contract_name='{}', base_name='{}'",
-            contract_name, base_name
-        );
-
         // Check exact patterns first
         for pattern in &patterns {
             if content.contains(pattern) {
-                info!("✅ Found pattern: '{}'", pattern);
                 return true;
             }
         }
@@ -790,12 +679,9 @@ impl ProjectAnalyzer {
         // Check loose patterns
         for pattern in &loose_patterns {
             if content.contains(pattern) {
-                info!("✅ Found loose pattern: '{}'", pattern);
                 return true;
             }
         }
-
-        info!("❌ No patterns found");
         false
     }
 }
@@ -834,12 +720,6 @@ impl ContractVerifier {
         // Collect source files once for all contracts
         let files = self.analyzer.collect_source_files(self.config.include_tests)?;
 
-        // Debug: Print all collected files
-        info!("Collected {} files for verification:", files.len());
-        for file in &files {
-            info!("  - {} (path: {})", file.name, file.path.display());
-        }
-
         for artifact in artifacts {
             ui.update_text_boxed(format!("Verifying {}...", artifact.name));
 
@@ -858,8 +738,6 @@ impl ContractVerifier {
                     // Always wait for verification to complete before proceeding to next contract
                     let result = self.wait_for_verification(&job_id, &artifact.name).await;
                     results.push(result);
-
-                    info!("Verification completed for {}. Proceeding to next...", artifact.name);
                 }
                 Err(e) => {
                     warn!("Failed to verify contract {}: {}", artifact.name, e);
@@ -908,13 +786,10 @@ impl ContractVerifier {
         const MAX_ATTEMPTS: u32 = 60; // 5 minutes with 5-second intervals
         const POLL_INTERVAL: Duration = Duration::from_secs(5);
 
-        info!("Waiting for verification of {} (job: {})...", contract_name, job_id);
-
         for attempt in 1..=MAX_ATTEMPTS {
             match self.client.check_verification_status(job_id).await {
                 Ok(job) => match job.status {
                     VerifyJobStatus::Success => {
-                        info!("✅ Verification successful for {}", contract_name);
                         return VerificationResult::Verified {
                             job_id: job_id.to_string(),
                             class_hash: job.class_hash.unwrap_or_default(),
