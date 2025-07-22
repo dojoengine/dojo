@@ -1251,14 +1251,7 @@ where
             .await
             .map_err(|e| MigrationError::DeclareClassError(e.to_string()))?;
 
-        // Display results
-        if !results.is_empty() {
-            ui.stop_and_persist_boxed("📊", "Contract Verification Results:".to_string());
-            for result in &results {
-                println!("   {}", result.display_message());
-            }
-            ui.restart("Continuing...");
-        }
+        // Results will be displayed by the calling command
 
         Ok(results)
     }

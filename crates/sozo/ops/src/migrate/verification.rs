@@ -15,7 +15,7 @@ use serde::Deserialize;
 use serde_json;
 use starknet_crypto::Felt;
 use tokio::time;
-use tracing::{info, warn};
+use tracing::{debug, warn};
 use url::Url;
 
 use crate::migration_ui::MigrationUi;
@@ -286,7 +286,7 @@ impl VerificationClient {
 
         // Add Dojo version if available
         if let Some(ref dojo_version) = metadata.dojo_version {
-            info!("Adding dojo_version to verification request: {}", dojo_version);
+            debug!("Adding dojo_version to verification request: {}", dojo_version);
             form = form.text("dojo_version", dojo_version.clone());
         }
 
@@ -299,13 +299,13 @@ impl VerificationClient {
             form = form.text(field_name, content);
         }
 
-        info!("Sending verification request for contract: {}", contract_name);
+        debug!("Sending verification request for contract: {}", contract_name);
         let response = self.client.post(url.clone()).multipart(form).send().await?;
 
         match response.status() {
             StatusCode::OK => {
                 let job_dispatch: VerificationJobDispatch = response.json().await?;
-                info!("Contract verification submitted with job ID: {}", job_dispatch.job_id);
+                debug!("Contract verification submitted with job ID: {}", job_dispatch.job_id);
                 Ok(job_dispatch.job_id)
             }
             StatusCode::BAD_REQUEST => {
@@ -608,7 +608,7 @@ impl ProjectAnalyzer {
 
     /// Discover contract artifacts from manifest file
     pub fn discover_contract_artifacts(&self) -> Result<Vec<ContractArtifact>> {
-        info!(
+        debug!(
             "Discovering contract artifacts from manifest file in: {}",
             self.project_root.display()
         );
@@ -701,7 +701,7 @@ impl ProjectAnalyzer {
                                     anyhow!("Failed to parse starknet artifacts file: {}", e)
                                 })?;
 
-                            info!("Found starknet artifacts file: {}", path.display());
+                            debug!("Found starknet artifacts file: {}", path.display());
                             return Ok(artifacts);
                         }
                     }
@@ -762,7 +762,7 @@ impl ProjectAnalyzer {
         // Validate collected files
         self.validate_files(&files)?;
 
-        info!("Collected {} files for verification using starknet_artifacts.json", files.len());
+        debug!("Collected {} files for verification using starknet_artifacts.json", files.len());
         Ok(files)
     }
 
@@ -1327,8 +1327,6 @@ impl ContractVerifier {
         cairo_version: &str,
         scarb_version: &str,
     ) -> Result<Vec<VerificationResult>> {
-        ui.update_text("Verifying contracts...");
-
         let mut results = Vec::new();
         let dojo_version = self.analyzer.extract_dojo_version();
 
@@ -1354,7 +1352,7 @@ impl ContractVerifier {
             {
                 Ok(job_id) => {
                     // Always wait for verification to complete before proceeding to next contract
-                    let result = self.wait_for_verification(&job_id, &artifact.name).await;
+                    let result = self.wait_for_verification(&job_id, &artifact.name, ui).await;
                     results.push(result);
                 }
                 Err(e) => {
@@ -1395,7 +1393,12 @@ impl ContractVerifier {
         self.client.verify_contract(class_hash, contract_name, &metadata, files).await
     }
 
-    async fn wait_for_verification(&self, job_id: &str, contract_name: &str) -> VerificationResult {
+    async fn wait_for_verification(
+        &self,
+        job_id: &str,
+        contract_name: &str,
+        ui: &mut MigrationUi,
+    ) -> VerificationResult {
         const INITIAL_INTERVAL: Duration = Duration::from_secs(2);
         const MAX_INTERVAL: Duration = Duration::from_secs(30);
         const BACKOFF_MULTIPLIER: f64 = 1.5;
@@ -1408,8 +1411,8 @@ impl ContractVerifier {
                 Ok(job) => {
                     match job.status {
                         VerifyJobStatus::Success => {
-                            info!("✅ Verification completed successfully for {}", contract_name);
                             return VerificationResult::Verified {
+                                contract_name: contract_name.to_string(),
                                 job_id: job_id.to_string(),
                                 class_hash: job.class_hash.unwrap_or_default(),
                             };
@@ -1434,6 +1437,7 @@ impl ContractVerifier {
                         }
                         _ => {
                             // Still processing, continue polling with backoff
+                            ui.update_text_boxed(format!("Verifying {}...", contract_name));
 
                             // Don't sleep on the last attempt
                             if attempt < max_attempts {
@@ -1466,7 +1470,10 @@ impl ContractVerifier {
         }
 
         warn!("Verification timeout for {} after {} attempts", contract_name, max_attempts);
-        VerificationResult::Timeout { job_id: job_id.to_string() }
+        VerificationResult::Timeout {
+            contract_name: contract_name.to_string(),
+            job_id: job_id.to_string(),
+        }
     }
 }
 
@@ -1474,23 +1481,31 @@ impl ContractVerifier {
 #[derive(Debug)]
 pub enum VerificationResult {
     /// Verification was submitted successfully
-    Submitted { job_id: String },
+    Submitted { contract_name: String, job_id: String },
     /// Contract was verified successfully
-    Verified { job_id: String, class_hash: String },
+    Verified { contract_name: String, job_id: String, class_hash: String },
     /// Verification failed
     Failed { contract_name: String, error: String },
     /// Verification timed out
-    Timeout { job_id: String },
+    Timeout { contract_name: String, job_id: String },
 }
 
 impl VerificationResult {
     /// Get a display message for this result
     pub fn display_message(&self) -> String {
         match self {
-            Self::Submitted { job_id } => format!("⏳ Submitted (job: {})", job_id),
-            Self::Verified { class_hash, .. } => format!("✅ Verified (class: {})", class_hash),
-            Self::Failed { error, .. } => format!("❌ Failed: {}", error),
-            Self::Timeout { job_id } => format!("⏱️ Timeout (job: {})", job_id),
+            Self::Submitted { contract_name, job_id } => {
+                format!("⏳ Submitted {} (job: {})", contract_name, job_id)
+            }
+            Self::Verified { contract_name, class_hash, .. } => {
+                format!("✅ Verified {} (class: {})", contract_name, class_hash)
+            }
+            Self::Failed { contract_name, error } => {
+                format!("❌ Failed {}: {}", contract_name, error)
+            }
+            Self::Timeout { contract_name, job_id } => {
+                format!("⏱️ Timeout {} (job: {})", contract_name, job_id)
+            }
         }
     }
 
