@@ -7,10 +7,12 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use anyhow::{Result, anyhow};
 use reqwest::{Client, StatusCode, multipart};
 use serde::Deserialize;
+use serde_json;
 use starknet_crypto::Felt;
 use tokio::time;
 use tracing::{info, warn};
@@ -29,6 +31,10 @@ pub struct VerificationConfig {
     pub include_tests: bool,
     /// Timeout for verification requests in seconds
     pub timeout: u64,
+    /// Maximum time to wait for verification completion in seconds
+    pub verification_timeout: u64,
+    /// Maximum number of retry attempts for status checking
+    pub max_attempts: u32,
 }
 
 impl Default for VerificationConfig {
@@ -37,7 +43,9 @@ impl Default for VerificationConfig {
             api_url: Url::parse("https://api.voyager.online/beta").unwrap(),
             watch: false,
             include_tests: true,
-            timeout: 300,
+            timeout: 300,               // 5 minutes for HTTP requests
+            verification_timeout: 1800, // 30 minutes total for verification
+            max_attempts: 30,
         }
     }
 }
@@ -63,6 +71,28 @@ pub enum ArtifactType {
     Contract,
     Model,
     Event,
+}
+
+/// Starknet artifacts file structure
+#[derive(Debug, Deserialize)]
+pub struct StarknetArtifacts {
+    pub version: u32,
+    pub contracts: Vec<ArtifactContract>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ArtifactContract {
+    pub id: String,
+    pub package_name: String,
+    pub contract_name: String,
+    pub module_path: String,
+    pub artifacts: ArtifactFiles,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ArtifactFiles {
+    pub sierra: String,
+    pub casm: Option<String>,
 }
 
 /// Manifest file structure (simplified)
@@ -103,16 +133,21 @@ pub struct ProjectMetadata {
     pub dojo_version: Option<String>,
 }
 
-/// Verification job status from API
+/// Verification job status from API (numeric values)
 #[derive(Debug, Deserialize)]
-#[serde(rename_all = "snake_case")]
 pub enum VerifyJobStatus {
-    Success,
-    Fail,
-    CompileFailed,
-    Processing,
+    #[serde(rename = "0")]
     Submitted,
+    #[serde(rename = "1")]
     Compiled,
+    #[serde(rename = "2")]
+    CompileFailed,
+    #[serde(rename = "3")]
+    Fail,
+    #[serde(rename = "4")]
+    Success,
+    #[serde(rename = "5")]
+    InProgress,
     #[serde(other)]
     Unknown,
 }
@@ -123,14 +158,37 @@ pub struct VerificationJobDispatch {
     pub job_id: String,
 }
 
-/// API response for verification job status
+/// API response for verification job status  
 #[derive(Debug, Deserialize)]
 pub struct VerificationJob {
     pub job_id: String,
     pub status: VerifyJobStatus,
+    #[serde(default)]
     pub status_description: Option<String>,
+    #[serde(default)]
     pub message: Option<String>,
+    #[serde(default)]
+    pub error_category: Option<String>,
+    #[serde(default)]
     pub class_hash: Option<String>,
+    #[serde(default)]
+    pub created_timestamp: Option<f64>,
+    #[serde(default)]
+    pub updated_timestamp: Option<f64>,
+    #[serde(default)]
+    pub address: Option<String>,
+    #[serde(default)]
+    pub contract_file: Option<String>,
+    #[serde(default)]
+    pub name: Option<String>,
+    #[serde(default)]
+    pub version: Option<String>,
+    #[serde(default)]
+    pub license: Option<String>,
+    #[serde(default)]
+    pub dojo_version: Option<String>,
+    #[serde(default)]
+    pub build_tool: Option<String>,
 }
 
 /// API error response
@@ -139,10 +197,56 @@ pub struct ApiError {
     pub error: String,
 }
 
+/// Simple circuit breaker for API calls
+#[derive(Debug)]
+struct CircuitBreaker {
+    failure_count: u32,
+    last_failure_time: Option<SystemTime>,
+    failure_threshold: u32,
+    recovery_timeout: Duration,
+}
+
+impl CircuitBreaker {
+    fn new() -> Self {
+        Self {
+            failure_count: 0,
+            last_failure_time: None,
+            failure_threshold: 5, // Open circuit after 5 consecutive failures
+            recovery_timeout: Duration::from_secs(60), // Wait 1 minute before retry
+        }
+    }
+
+    fn should_allow_request(&self) -> bool {
+        if self.failure_count < self.failure_threshold {
+            return true;
+        }
+
+        // Check if enough time has passed for recovery
+        if let Some(last_failure) = self.last_failure_time {
+            if let Ok(elapsed) = last_failure.elapsed() {
+                return elapsed > self.recovery_timeout;
+            }
+        }
+
+        false
+    }
+
+    fn record_success(&mut self) {
+        self.failure_count = 0;
+        self.last_failure_time = None;
+    }
+
+    fn record_failure(&mut self) {
+        self.failure_count += 1;
+        self.last_failure_time = Some(SystemTime::now());
+    }
+}
+
 /// Verification client for interacting with the verification API
 pub struct VerificationClient {
     client: Client,
     config: VerificationConfig,
+    circuit_breaker: std::sync::Mutex<CircuitBreaker>,
 }
 
 impl VerificationClient {
@@ -154,6 +258,7 @@ impl VerificationClient {
                 .build()
                 .expect("Failed to create HTTP client"),
             config,
+            circuit_breaker: std::sync::Mutex::new(CircuitBreaker::new()),
         }
     }
 
@@ -194,7 +299,7 @@ impl VerificationClient {
             form = form.text(field_name, content);
         }
 
-        info!("Sending verification request to: {}", url);
+        info!("Sending verification request for contract: {}", contract_name);
         let response = self.client.post(url.clone()).multipart(form).send().await?;
 
         match response.status() {
@@ -219,19 +324,245 @@ impl VerificationClient {
 
     /// Check the status of a verification job
     pub async fn check_verification_status(&self, job_id: &str) -> Result<VerificationJob> {
-        let url = self.config.api_url.join(&format!("class-verify/job/{}", job_id))?;
-        let response = self.client.get(url).send().await?;
+        // Check circuit breaker before making request
+        {
+            let cb = self.circuit_breaker.lock().unwrap();
+            if !cb.should_allow_request() {
+                return Err(anyhow!(
+                    "Circuit breaker is open - verification API is experiencing issues. Will retry after recovery timeout."
+                ));
+            }
+        }
 
-        match response.status() {
-            StatusCode::OK => {
-                let job: VerificationJob = response.json().await?;
-                Ok(job)
+        let url = self.config.api_url.join(&format!("class-verify/job/{}", job_id))?;
+        let start_time = std::time::Instant::now();
+
+        let result = self.client.get(url).send().await;
+        let response_time = start_time.elapsed();
+
+        match result {
+            Ok(response) => {
+                let status = response.status();
+                match status {
+                    StatusCode::OK => {
+                        // Get response text first to allow debugging on parse failures
+                        let response_text = response.text().await?;
+
+                        // Parse selectively to avoid malformed files field
+                        let json_value: serde_json::Value = match serde_json::from_str(
+                            &response_text,
+                        ) {
+                            Ok(value) => value,
+                            Err(_) => {
+                                // If parsing fails due to malformed files field, remove it first
+                                match self.remove_files_field(&response_text) {
+                                    Ok(cleaned_json) => {
+                                        serde_json::from_str(&cleaned_json).map_err(|e| {
+                                            anyhow!(
+                                                "Failed to parse verification status response for job {}: {}",
+                                                job_id,
+                                                e
+                                            )
+                                        })?
+                                    },
+                                    Err(e) => {
+                                        return Err(anyhow!(
+                                            "Failed to parse verification status response for job {}: {}",
+                                            job_id,
+                                            e
+                                        ));
+                                    }
+                                }
+                            }
+                        };
+
+                        // Extract only the fields we need
+                        let job = VerificationJob {
+                            job_id: json_value
+                                .get("jobid")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("unknown")
+                                .to_string(),
+                            status: match json_value.get("status").and_then(|v| v.as_u64()) {
+                                Some(0) => VerifyJobStatus::Submitted,
+                                Some(1) => VerifyJobStatus::Compiled,
+                                Some(2) => VerifyJobStatus::CompileFailed,
+                                Some(3) => VerifyJobStatus::Fail,
+                                Some(4) => VerifyJobStatus::Success,
+                                Some(5) => VerifyJobStatus::InProgress,
+                                _ => VerifyJobStatus::Unknown,
+                            },
+                            status_description: json_value
+                                .get("status_description")
+                                .and_then(|v| v.as_str())
+                                .map(|s| s.to_string()),
+                            message: json_value
+                                .get("message")
+                                .and_then(|v| v.as_str())
+                                .map(|s| s.to_string()),
+                            error_category: json_value
+                                .get("error_category")
+                                .and_then(|v| v.as_str())
+                                .map(|s| s.to_string()),
+                            class_hash: json_value
+                                .get("class_hash")
+                                .and_then(|v| v.as_str())
+                                .map(|s| s.to_string()),
+                            created_timestamp: json_value
+                                .get("created_timestamp")
+                                .and_then(|v| v.as_f64()),
+                            updated_timestamp: json_value
+                                .get("updated_timestamp")
+                                .and_then(|v| v.as_f64()),
+                            address: json_value
+                                .get("address")
+                                .and_then(|v| v.as_str())
+                                .map(|s| s.to_string()),
+                            contract_file: json_value
+                                .get("contract_file")
+                                .and_then(|v| v.as_str())
+                                .map(|s| s.to_string()),
+                            name: json_value
+                                .get("name")
+                                .and_then(|v| v.as_str())
+                                .map(|s| s.to_string()),
+                            version: json_value
+                                .get("version")
+                                .and_then(|v| v.as_str())
+                                .map(|s| s.to_string()),
+                            license: json_value
+                                .get("license")
+                                .and_then(|v| v.as_str())
+                                .map(|s| s.to_string()),
+                            dojo_version: json_value
+                                .get("dojo_version")
+                                .and_then(|v| v.as_str())
+                                .map(|s| s.to_string()),
+                            build_tool: json_value
+                                .get("build_tool")
+                                .and_then(|v| v.as_str())
+                                .map(|s| s.to_string()),
+                        };
+
+                        // Log slow responses for monitoring
+                        if response_time > Duration::from_secs(5) {
+                            warn!(
+                                "Slow verification API response: {}ms for job {}",
+                                response_time.as_millis(),
+                                job_id
+                            );
+                        }
+
+                        // Record success for circuit breaker
+                        self.circuit_breaker.lock().unwrap().record_success();
+
+                        Ok(job)
+                    }
+                    StatusCode::NOT_FOUND => {
+                        // 404 is not a server error, don't count towards circuit breaker
+                        Err(anyhow!("Verification job {} not found", job_id))
+                    }
+                    status if status.is_server_error() => {
+                        // Record server errors for circuit breaker
+                        self.circuit_breaker.lock().unwrap().record_failure();
+                        let error_text = response.text().await.unwrap_or_default();
+                        Err(anyhow!(
+                            "Server error checking verification status {}: {}",
+                            status,
+                            error_text
+                        ))
+                    }
+                    status => {
+                        let error_text = response.text().await.unwrap_or_default();
+                        Err(anyhow!(
+                            "Failed to check verification status {}: {}",
+                            status,
+                            error_text
+                        ))
+                    }
+                }
             }
-            StatusCode::NOT_FOUND => Err(anyhow!("Verification job {} not found", job_id)),
-            status => {
-                let error_text = response.text().await.unwrap_or_default();
-                Err(anyhow!("Failed to check verification status {}: {}", status, error_text))
+            Err(e) => {
+                // Record network errors for circuit breaker
+                self.circuit_breaker.lock().unwrap().record_failure();
+                Err(anyhow!("Network error checking verification status for job {}: {}", job_id, e))
             }
+        }
+    }
+
+    /// Remove the problematic files field from JSON response
+    fn remove_files_field(&self, json_text: &str) -> Result<String> {
+        // Find the files field
+        if let Some(files_start) = json_text.find(r#""files":"#) {
+            // Find the opening brace of the files object
+            let search_start = files_start + 8; // length of "files":
+
+            // Skip whitespace to find the opening brace
+            let mut object_start = None;
+            for (i, c) in json_text[search_start..].char_indices() {
+                if c == '{' {
+                    object_start = Some(search_start + i);
+                    break;
+                } else if !c.is_whitespace() {
+                    // If we encounter a non-whitespace character that's not '{', bail out
+                    return Ok(json_text.to_string());
+                }
+            }
+
+            if let Some(start) = object_start {
+                // Find the matching closing brace
+                let mut brace_count = 0;
+                let mut in_string = false;
+                let mut escaped = false;
+                let mut object_end = json_text.len();
+
+                for (i, c) in json_text[start..].char_indices() {
+                    if escaped {
+                        escaped = false;
+                        continue;
+                    }
+
+                    match c {
+                        '\\' if in_string => escaped = true,
+                        '"' => in_string = !in_string,
+                        '{' if !in_string => {
+                            brace_count += 1;
+                        }
+                        '}' if !in_string => {
+                            brace_count -= 1;
+                            if brace_count == 0 {
+                                object_end = start + i + 1;
+                                break;
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+
+                // Construct the JSON without the files field
+                let before_files = &json_text[0..files_start];
+                let after_files =
+                    if object_end < json_text.len() { &json_text[object_end..] } else { "" };
+
+                // Clean up commas
+                let before_files = before_files.trim_end_matches(',');
+                let after_files = after_files.trim_start_matches(',');
+
+                let result = if after_files.is_empty() || after_files.trim_start().starts_with('}')
+                {
+                    format!("{}{}", before_files, after_files)
+                } else {
+                    format!("{},{}", before_files, after_files)
+                };
+
+                Ok(result)
+            } else {
+                // No opening brace found, return original
+                Ok(json_text.to_string())
+            }
+        } else {
+            // No files field found, return original
+            Ok(json_text.to_string())
         }
     }
 }
@@ -346,6 +677,41 @@ impl ProjectAnalyzer {
         Ok(artifacts)
     }
 
+    /// Find and parse the starknet_artifacts.json file
+    pub fn find_starknet_artifacts(&self) -> Result<StarknetArtifacts> {
+        // Look for starknet_artifacts.json in target/dev directory first
+        let target_dev_path = self.project_root.join("target/dev");
+        if target_dev_path.exists() {
+            // Look for files matching pattern <package_name>.starknet_artifacts.json
+            if let Ok(entries) = fs::read_dir(&target_dev_path) {
+                for entry in entries.flatten() {
+                    let path = entry.path();
+                    if let Some(file_name) = path.file_name().and_then(|n| n.to_str()) {
+                        if file_name.ends_with(".starknet_artifacts.json") {
+                            let content = fs::read_to_string(&path).map_err(|e| {
+                                anyhow!(
+                                    "Failed to read starknet artifacts file {}: {}",
+                                    path.display(),
+                                    e
+                                )
+                            })?;
+
+                            let artifacts: StarknetArtifacts = serde_json::from_str(&content)
+                                .map_err(|e| {
+                                    anyhow!("Failed to parse starknet artifacts file: {}", e)
+                                })?;
+
+                            info!("Found starknet artifacts file: {}", path.display());
+                            return Ok(artifacts);
+                        }
+                    }
+                }
+            }
+        }
+
+        Err(anyhow!("No starknet_artifacts.json file found in target/dev directory"))
+    }
+
     /// Find the manifest file (try different naming patterns)
     fn find_manifest_file(&self) -> Result<PathBuf> {
         let possible_names = ["manifest_dev.json", "manifest.json", "manifest_release.json"];
@@ -380,14 +746,30 @@ impl ProjectAnalyzer {
         tag.to_string()
     }
 
-    /// Collect source files (without using scarb metadata)
+    /// Collect source files using starknet_artifacts.json (simplified approach)
     pub fn collect_source_files(&self, include_tests: bool) -> Result<Vec<FileInfo>> {
         let mut files = Vec::new();
 
-        // Start by recursively collecting all Cairo files from the entire project
-        self.collect_all_cairo_files(&self.project_root, &mut files, include_tests)?;
+        // Get the artifacts info to determine what files we need
+        let artifacts = self.find_starknet_artifacts()?;
 
-        // Add Scarb.toml if it exists (essential for compilation)
+        // Add essential project files
+        self.add_essential_project_files(&mut files)?;
+
+        // Add source files referenced by the artifacts
+        self.add_source_files_for_artifacts(&artifacts, &mut files, include_tests)?;
+
+        // Validate collected files
+        self.validate_files(&files)?;
+
+        info!("Collected {} files for verification using starknet_artifacts.json", files.len());
+        Ok(files)
+    }
+
+    /// Add essential project files (Scarb.toml, Scarb.lock, LICENSE, README)
+    /// Also includes any files referenced in Scarb.toml
+    fn add_essential_project_files(&self, files: &mut Vec<FileInfo>) -> Result<()> {
+        // Add Scarb.toml (required for compilation)
         let scarb_toml = self.project_root.join("Scarb.toml");
         if scarb_toml.exists() {
             let relative_path = scarb_toml
@@ -439,16 +821,240 @@ impl ProjectAnalyzer {
             }
         }
 
-        // Validate collected files
-        self.validate_files(&files)?;
+        // Add any files referenced in Scarb.toml
+        self.add_scarb_referenced_files(files)?;
 
-        Ok(files)
+        Ok(())
     }
 
-    fn collect_all_cairo_files(
+    /// Add files that are referenced in Scarb.toml (like specific README or LICENSE files)
+    fn add_scarb_referenced_files(&self, files: &mut Vec<FileInfo>) -> Result<()> {
+        let scarb_toml_path = self.project_root.join("Scarb.toml");
+        if !scarb_toml_path.exists() {
+            return Ok(());
+        }
+
+        let contents = fs::read_to_string(&scarb_toml_path)
+            .map_err(|e| anyhow!("Failed to read Scarb.toml: {}", e))?;
+
+        let parsed: toml::Value =
+            toml::from_str(&contents).map_err(|e| anyhow!("Failed to parse Scarb.toml: {}", e))?;
+
+        let mut added_files = std::collections::HashSet::new();
+
+        // Check for package.readme
+        if let Some(readme_path) =
+            parsed.get("package").and_then(|p| p.get("readme")).and_then(|r| r.as_str())
+        {
+            let full_path = self.project_root.join(readme_path);
+            if full_path.exists() && added_files.insert(readme_path.to_string()) {
+                files.push(FileInfo { name: readme_path.to_string(), path: full_path });
+            }
+        }
+
+        // Check for package.license-file
+        if let Some(license_path) =
+            parsed.get("package").and_then(|p| p.get("license-file")).and_then(|l| l.as_str())
+        {
+            let full_path = self.project_root.join(license_path);
+            if full_path.exists() && added_files.insert(license_path.to_string()) {
+                files.push(FileInfo { name: license_path.to_string(), path: full_path });
+            }
+        }
+
+        // Check for any other file references in the TOML that might be important
+        // This is a more general approach to catch any file paths mentioned
+        self.find_file_references_in_toml(&parsed, "", &mut added_files, files)?;
+
+        Ok(())
+    }
+
+    /// Recursively search for file references in TOML structure
+    fn find_file_references_in_toml(
+        &self,
+        value: &toml::Value,
+        path_prefix: &str,
+        added_files: &mut std::collections::HashSet<String>,
+        files: &mut Vec<FileInfo>,
+    ) -> Result<()> {
+        match value {
+            toml::Value::String(s) => {
+                // Check if this looks like a file path and the file exists
+                if self.looks_like_file_path(s) {
+                    let full_path = self.project_root.join(s);
+                    if full_path.exists()
+                        && self.is_text_file(&full_path)
+                        && added_files.insert(s.clone())
+                    {
+                        files.push(FileInfo { name: s.clone(), path: full_path });
+                    }
+                }
+            }
+            toml::Value::Table(table) => {
+                for (key, val) in table {
+                    let new_prefix = if path_prefix.is_empty() {
+                        key.clone()
+                    } else {
+                        format!("{}.{}", path_prefix, key)
+                    };
+                    self.find_file_references_in_toml(val, &new_prefix, added_files, files)?;
+                }
+            }
+            toml::Value::Array(arr) => {
+                for item in arr {
+                    self.find_file_references_in_toml(item, path_prefix, added_files, files)?;
+                }
+            }
+            _ => {}
+        }
+        Ok(())
+    }
+
+    /// Check if a string looks like a file path
+    fn looks_like_file_path(&self, s: &str) -> bool {
+        // Simple heuristics for file paths
+        s.contains('.')
+            && (s.ends_with(".md")
+                || s.ends_with(".txt")
+                || s.ends_with(".toml")
+                || s.ends_with(".lock")
+                || s.starts_with("LICENSE")
+                || s.starts_with("README")
+                || s.starts_with("COPYING")
+                || s.starts_with("NOTICE"))
+    }
+
+    /// Check if a file is a text file we should include
+    fn is_text_file(&self, path: &Path) -> bool {
+        if let Some(ext) = path.extension().and_then(|s| s.to_str()) {
+            matches!(ext, "md" | "txt" | "toml" | "lock" | "cairo")
+        } else {
+            // Files without extension might be LICENSE, README, etc.
+            if let Some(name) = path.file_name().and_then(|s| s.to_str()) {
+                name.starts_with("LICENSE")
+                    || name.starts_with("README")
+                    || name.starts_with("COPYING")
+                    || name.starts_with("NOTICE")
+            } else {
+                false
+            }
+        }
+    }
+
+    /// Add source files based on artifact module paths
+    fn add_source_files_for_artifacts(
+        &self,
+        artifacts: &StarknetArtifacts,
+        files: &mut Vec<FileInfo>,
+        include_tests: bool,
+    ) -> Result<()> {
+        let mut added_files = std::collections::HashSet::new();
+
+        // Always add src/lib.cairo as it's the main entry point
+        let lib_cairo = self.project_root.join("src/lib.cairo");
+        if lib_cairo.exists() {
+            let relative_path = "src/lib.cairo".to_string();
+            if added_files.insert(relative_path.clone()) {
+                files.push(FileInfo { name: relative_path, path: lib_cairo });
+            }
+        }
+
+        // Analyze module paths from artifacts to determine required source files
+        for contract in &artifacts.contracts {
+            // Extract potential file paths from module path
+            let potential_files = self.extract_file_paths_from_module(&contract.module_path);
+
+            for file_path in potential_files {
+                let full_path = self.project_root.join(&file_path);
+                if full_path.exists() {
+                    // Skip test files if not included
+                    if !include_tests && self.is_test_file(&full_path) {
+                        continue;
+                    }
+
+                    if added_files.insert(file_path.clone()) {
+                        files.push(FileInfo { name: file_path, path: full_path });
+                    }
+                }
+            }
+        }
+
+        // Add any remaining Cairo files in src/ directory that might be needed
+        self.add_remaining_src_files(files, &mut added_files, include_tests)?;
+
+        Ok(())
+    }
+
+    /// Extract potential file paths from a module path
+    /// e.g., "dojo_starter::models::m_Position" -> ["src/models.cairo", "src/models/mod.cairo"]
+    fn extract_file_paths_from_module(&self, module_path: &str) -> Vec<String> {
+        let parts: Vec<&str> = module_path.split("::").skip(1).collect(); // Skip package name
+        let mut paths = Vec::new();
+
+        if parts.is_empty() {
+            return paths;
+        }
+
+        // Generate different potential file paths based on common Dojo patterns
+        if parts.len() == 1 {
+            // Simple case: package::module -> src/module.cairo
+            paths.push(format!("src/{}.cairo", parts[0]));
+        } else if parts.len() >= 2 {
+            // Multi-level: package::systems::actions -> src/systems/actions.cairo, src/systems.cairo, etc.
+            for i in 1..parts.len() {
+                let file_parts = &parts[0..i];
+                let file_name = parts[i - 1];
+
+                if file_parts.len() == 1 {
+                    // src/systems.cairo (for systems::actions)
+                    paths.push(format!("src/{}.cairo", file_parts[0]));
+                } else {
+                    // src/systems/mod.cairo or src/systems/actions.cairo
+                    let dir_path = file_parts.join("/");
+                    paths.push(format!("src/{}/{}.cairo", dir_path, file_name));
+                    paths.push(format!("src/{}/mod.cairo", dir_path));
+                }
+            }
+
+            // Also try the full path as a file
+            let full_file_path = parts.join("/");
+            paths.push(format!("src/{}.cairo", full_file_path));
+        }
+
+        // Always add common files
+        if parts.contains(&"models") {
+            paths.push("src/models.cairo".to_string());
+        }
+        if parts.contains(&"systems") {
+            paths.push("src/systems.cairo".to_string());
+            paths.push("src/systems/mod.cairo".to_string());
+        }
+
+        paths.sort();
+        paths.dedup();
+        paths
+    }
+
+    /// Add any remaining Cairo files in src/ that might be needed
+    fn add_remaining_src_files(
+        &self,
+        files: &mut Vec<FileInfo>,
+        added_files: &mut std::collections::HashSet<String>,
+        include_tests: bool,
+    ) -> Result<()> {
+        let src_dir = self.project_root.join("src");
+        if src_dir.exists() {
+            self.collect_remaining_cairo_files(&src_dir, "src", files, added_files, include_tests)?;
+        }
+        Ok(())
+    }
+
+    fn collect_remaining_cairo_files(
         &self,
         dir: &PathBuf,
+        relative_prefix: &str,
         files: &mut Vec<FileInfo>,
+        added_files: &mut std::collections::HashSet<String>,
         include_tests: bool,
     ) -> Result<()> {
         if !dir.exists() {
@@ -460,40 +1066,33 @@ impl ProjectAnalyzer {
             let path = entry.path();
 
             if path.is_dir() {
-                // Skip certain directories that are typically not needed for compilation
                 let dir_name = path.file_name().unwrap_or_default().to_string_lossy();
-
-                // Always skip target, build artifacts, git, and IDE directories
-                if dir_name == "target"
-                    || dir_name == ".git"
-                    || dir_name == ".vscode"
-                    || dir_name == ".idea"
-                    || dir_name == "node_modules"
-                {
-                    continue;
-                }
 
                 // Skip test directories if tests are not included
                 if !include_tests && (dir_name == "tests" || dir_name == "test") {
                     continue;
                 }
 
-                // Recursively process subdirectories
-                self.collect_all_cairo_files(&path, files, include_tests)?;
+                let new_prefix = format!("{}/{}", relative_prefix, dir_name);
+                self.collect_remaining_cairo_files(
+                    &path,
+                    &new_prefix,
+                    files,
+                    added_files,
+                    include_tests,
+                )?;
             } else if path.extension().and_then(|s| s.to_str()) == Some("cairo") {
                 // Skip test files if tests are not included
                 if !include_tests && self.is_test_file(&path) {
                     continue;
                 }
 
-                let relative_path = path
-                    .strip_prefix(&self.project_root)
-                    .map_err(|e| {
-                        anyhow!("Failed to get relative path for {}: {}", path.display(), e)
-                    })?
-                    .to_string_lossy()
-                    .to_string();
-                files.push(FileInfo { name: relative_path, path });
+                let relative_path =
+                    format!("{}/{}", relative_prefix, path.file_name().unwrap().to_string_lossy());
+
+                if added_files.insert(relative_path.clone()) {
+                    files.push(FileInfo { name: relative_path, path });
+                }
             }
         }
         Ok(())
@@ -553,7 +1152,7 @@ impl ProjectAnalyzer {
         // For regular contracts, search for specific files
         let files = self.collect_source_files(false)?;
 
-        // Step 3: Try to find a file that contains the contract definition
+        // Step 2: Try to find a file that contains the contract definition
         for file in &files {
             if !file.name.ends_with(".cairo") || file.name.contains("test") {
                 continue;
@@ -702,6 +1301,25 @@ impl ContractVerifier {
         Self { client, analyzer, config }
     }
 
+    /// Add jitter to backoff duration to prevent thundering herd
+    fn add_jitter(&self, duration: Duration) -> Duration {
+        // Use a simple linear congruential generator for jitter
+        // This avoids needing external random dependencies
+        let seed = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or(Duration::from_secs(0))
+            .as_nanos() as u64;
+
+        let jitter_ms = seed % 1000; // 0-999ms jitter
+        let base_ms = duration.as_millis() as u64;
+
+        // Add ±25% jitter
+        let jitter_range = base_ms / 4; // 25% of base duration
+        let actual_jitter = (jitter_ms % (jitter_range * 2)).saturating_sub(jitter_range);
+
+        Duration::from_millis(base_ms.saturating_add(actual_jitter))
+    }
+
     /// Verify contracts from manifest file
     pub async fn verify_deployed_contracts(
         &self,
@@ -717,7 +1335,7 @@ impl ContractVerifier {
         // Discover contracts from manifest
         let artifacts = self.analyzer.discover_contract_artifacts()?;
 
-        // Collect source files once for all contracts
+        // Collect source files once for all contracts using the simplified artifacts approach
         let files = self.analyzer.collect_source_files(self.config.include_tests)?;
 
         for artifact in artifacts {
@@ -774,57 +1392,80 @@ impl ContractVerifier {
             dojo_version: dojo_version.clone(),
         };
 
-        info!(
-            "Verification metadata for {}: package_name={}, contract_file={}",
-            contract_name, metadata.package_name, metadata.contract_file
-        );
-
         self.client.verify_contract(class_hash, contract_name, &metadata, files).await
     }
 
     async fn wait_for_verification(&self, job_id: &str, contract_name: &str) -> VerificationResult {
-        const MAX_ATTEMPTS: u32 = 60; // 5 minutes with 5-second intervals
-        const POLL_INTERVAL: Duration = Duration::from_secs(5);
+        const INITIAL_INTERVAL: Duration = Duration::from_secs(2);
+        const MAX_INTERVAL: Duration = Duration::from_secs(30);
+        const BACKOFF_MULTIPLIER: f64 = 1.5;
 
-        for attempt in 1..=MAX_ATTEMPTS {
+        let max_attempts = self.config.max_attempts;
+        let mut current_interval = INITIAL_INTERVAL;
+
+        for attempt in 1..=max_attempts {
             match self.client.check_verification_status(job_id).await {
-                Ok(job) => match job.status {
-                    VerifyJobStatus::Success => {
-                        return VerificationResult::Verified {
-                            job_id: job_id.to_string(),
-                            class_hash: job.class_hash.unwrap_or_default(),
-                        };
-                    }
-                    VerifyJobStatus::Fail | VerifyJobStatus::CompileFailed => {
-                        warn!(
-                            "❌ Verification failed for {}: {}",
-                            contract_name,
-                            job.message.as_deref().unwrap_or("Unknown error")
-                        );
-                        return VerificationResult::Failed {
-                            contract_name: contract_name.to_string(),
-                            error: job.message.unwrap_or_else(|| "Verification failed".to_string()),
-                        };
-                    }
-                    _ => {
-                        // Still processing, continue polling
-                        if self.config.watch {
-                            info!(
-                                "⏳ Verification in progress for {} (attempt {}/{}): {:?}",
-                                contract_name, attempt, MAX_ATTEMPTS, job.status
-                            );
+                Ok(job) => {
+                    match job.status {
+                        VerifyJobStatus::Success => {
+                            info!("✅ Verification completed successfully for {}", contract_name);
+                            return VerificationResult::Verified {
+                                job_id: job_id.to_string(),
+                                class_hash: job.class_hash.unwrap_or_default(),
+                            };
                         }
-                        time::sleep(POLL_INTERVAL).await;
+                        VerifyJobStatus::Fail | VerifyJobStatus::CompileFailed => {
+                            let error_msg = job
+                                .message
+                                .or_else(|| job.status_description.clone())
+                                .unwrap_or_else(|| match job.status {
+                                    VerifyJobStatus::CompileFailed => {
+                                        "Compilation failed".to_string()
+                                    }
+                                    VerifyJobStatus::Fail => "Verification failed".to_string(),
+                                    _ => "Unknown error".to_string(),
+                                });
+
+                            warn!("❌ Verification failed for {}: {}", contract_name, error_msg);
+                            return VerificationResult::Failed {
+                                contract_name: contract_name.to_string(),
+                                error: error_msg,
+                            };
+                        }
+                        _ => {
+                            // Still processing, continue polling with backoff
+
+                            // Don't sleep on the last attempt
+                            if attempt < max_attempts {
+                                let jittered_interval = self.add_jitter(current_interval);
+                                time::sleep(jittered_interval).await;
+
+                                // Increase interval for next attempt with exponential backoff
+                                current_interval = Duration::from_secs(std::cmp::min(
+                                    (current_interval.as_secs() as f64 * BACKOFF_MULTIPLIER) as u64,
+                                    MAX_INTERVAL.as_secs(),
+                                ));
+                            }
+                        }
                     }
-                },
+                }
                 Err(e) => {
                     warn!("Error checking verification status for {}: {}", contract_name, e);
-                    break;
+
+                    // Apply backoff even for errors to avoid overwhelming the API
+                    if attempt < max_attempts {
+                        let jittered_interval = self.add_jitter(current_interval);
+                        time::sleep(jittered_interval).await;
+                        current_interval = Duration::from_secs(std::cmp::min(
+                            (current_interval.as_secs() as f64 * BACKOFF_MULTIPLIER) as u64,
+                            MAX_INTERVAL.as_secs(),
+                        ));
+                    }
                 }
             }
         }
 
-        warn!("⏱️ Verification timeout for {} after {} attempts", contract_name, MAX_ATTEMPTS);
+        warn!("Verification timeout for {} after {} attempts", contract_name, max_attempts);
         VerificationResult::Timeout { job_id: job_id.to_string() }
     }
 }

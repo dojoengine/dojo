@@ -49,6 +49,8 @@ impl VerifyOptions {
                 watch: self.verify_watch,
                 include_tests: true, // Default to including tests for Dojo projects
                 timeout: 300,        // 5 minutes default timeout
+                verification_timeout: 1800, // 30 minutes total for verification
+                max_attempts: 30,    // Maximum retry attempts
             }))
         } else {
             Ok(None)
