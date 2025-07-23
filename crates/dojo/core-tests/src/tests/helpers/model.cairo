@@ -39,7 +39,7 @@ pub fn old_model_with_nested_enum_key_layout() -> dojo::meta::layout::Layout {
     dojo::meta::layout::Layout::Struct(
         [
             dojo::meta::layout::FieldLayout {
-                selector: 'a', layout: dojo::meta::layout::Layout::Fixed([8].span()),
+                selector: selector!("a"), layout: dojo::meta::layout::Layout::Fixed([8].span()),
             },
         ]
             .span(),
@@ -319,7 +319,7 @@ pub mod m_OldFooModelMemberIllegalChange {
 
 #[starknet::contract]
 pub mod m_OldModelWithNestedEnumKey {
-    // In the old version of ModelWithNestedEnumKey, the type of the key member `k` is:
+    // In this old version of ModelWithNestedEnumKey, the type of the key member `k` is:
     // ```
     // enum MyNestedEnum {
     //     A: MyEnum,

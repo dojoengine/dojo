@@ -10,7 +10,7 @@ use crate::constants::CAIRO_DELIMITERS;
 use crate::helpers::{DiagnosticsExt, DojoChecker, DojoFormatter, ProcMacroResultExt};
 =======
 use crate::helpers::{
-    DiagnosticsExt, DojoChecker, DojoFormatter, ProcMacroResultExt, debug_store_expand,
+    debug_store_expand, DiagnosticsExt, DojoChecker, DojoFormatter, ProcMacroResultExt,
 };
 >>>>>>> 226bd721 (fix model deserializing when Serde and DojoStore are mixed)
 
