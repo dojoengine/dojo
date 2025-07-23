@@ -3,8 +3,8 @@
 use std::fs;
 use std::time::{Duration, SystemTime};
 
-use anyhow::{Result, anyhow};
-use reqwest::{Client, StatusCode, multipart};
+use anyhow::{anyhow, Result};
+use reqwest::{multipart, Client, StatusCode};
 use serde_json;
 use starknet_crypto::Felt;
 use tracing::{debug, warn};
@@ -146,7 +146,8 @@ impl VerificationClient {
             let cb = self.circuit_breaker.lock().unwrap();
             if !cb.should_allow_request() {
                 return Err(anyhow!(
-                    "Circuit breaker is open - verification API is experiencing issues. Will retry after recovery timeout."
+                    "Circuit breaker is open - verification API is experiencing issues. Will \
+                     retry after recovery timeout."
                 ));
             }
         }
@@ -166,32 +167,33 @@ impl VerificationClient {
                         let response_text = response.text().await?;
 
                         // Parse selectively to avoid malformed files field
-                        let json_value: serde_json::Value = match serde_json::from_str(
-                            &response_text,
-                        ) {
-                            Ok(value) => value,
-                            Err(_) => {
-                                // If parsing fails due to malformed files field, remove it first
-                                match self.remove_files_field(&response_text) {
-                                    Ok(cleaned_json) => {
-                                        serde_json::from_str(&cleaned_json).map_err(|e| {
-                                            anyhow!(
-                                                "Failed to parse verification status response for job {}: {}",
+                        let json_value: serde_json::Value =
+                            match serde_json::from_str(&response_text) {
+                                Ok(value) => value,
+                                Err(_) => {
+                                    // If parsing fails due to malformed files field, remove it
+                                    // first
+                                    match self.remove_files_field(&response_text) {
+                                        Ok(cleaned_json) => serde_json::from_str(&cleaned_json)
+                                            .map_err(|e| {
+                                                anyhow!(
+                                                    "Failed to parse verification status response \
+                                                     for job {}: {}",
+                                                    job_id,
+                                                    e
+                                                )
+                                            })?,
+                                        Err(e) => {
+                                            return Err(anyhow!(
+                                                "Failed to parse verification status response for \
+                                                 job {}: {}",
                                                 job_id,
                                                 e
-                                            )
-                                        })?
-                                    },
-                                    Err(e) => {
-                                        return Err(anyhow!(
-                                            "Failed to parse verification status response for job {}: {}",
-                                            job_id,
-                                            e
-                                        ));
+                                            ));
+                                        }
                                     }
                                 }
-                            }
-                        };
+                            };
 
                         // Extract only the fields we need
                         let job = VerificationJob {

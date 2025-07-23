@@ -3,7 +3,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use serde_json;
 use starknet_crypto::Felt;
 use tracing::debug;
@@ -443,7 +443,8 @@ impl ProjectAnalyzer {
             // Simple case: package::module -> src/module.cairo
             paths.push(format!("src/{}.cairo", parts[0]));
         } else if parts.len() >= 2 {
-            // Multi-level: package::systems::actions -> src/systems/actions.cairo, src/systems.cairo, etc.
+            // Multi-level: package::systems::actions -> src/systems/actions.cairo,
+            // src/systems.cairo, etc.
             for i in 1..parts.len() {
                 let file_parts = &parts[0..i];
                 let file_name = parts[i - 1];

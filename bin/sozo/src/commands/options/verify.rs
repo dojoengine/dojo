@@ -1,4 +1,4 @@
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use clap::Args;
 use sozo_ops::migrate::VerificationConfig;
 use url::Url;

@@ -12,8 +12,8 @@ use dojo_world::services::MockUploadService;
 use katana_runner::RunnerCtx;
 use scarb_interop::Profile;
 use scarb_metadata_ext::MetadataDojoExt;
-use starknet::providers::JsonRpcClient;
 use starknet::providers::jsonrpc::HttpTransport;
+use starknet::providers::JsonRpcClient;
 use starknet_crypto::Felt;
 
 use crate::migrate::{Migration, MigrationResult};

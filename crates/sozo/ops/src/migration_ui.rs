@@ -4,7 +4,7 @@ use std::fmt;
 
 use sozo_voyager::VerificationUi;
 use spinoff::spinners::SpinnerFrames;
-use spinoff::{Spinner, spinner, spinners};
+use spinoff::{spinner, spinners, Spinner};
 
 /// A simple UI for the migration that can be used to display a spinner.
 pub struct MigrationUi {

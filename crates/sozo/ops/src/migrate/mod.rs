@@ -28,16 +28,16 @@ use dojo_utils::{
     Declarer, Deployer, Invoker, LabeledClass, TransactionResult, TransactionWaiter, TxnConfig,
 };
 use dojo_world::config::calldata_decoder::decode_calldata;
-use dojo_world::config::{ProfileConfig, ResourceConfig, WorldMetadata, metadata_config};
+use dojo_world::config::{metadata_config, ProfileConfig, ResourceConfig, WorldMetadata};
 use dojo_world::constants::WORLD;
-use dojo_world::contracts::WorldContract;
 use dojo_world::contracts::abigen::world::ResourceMetadata;
+use dojo_world::contracts::WorldContract;
 use dojo_world::diff::{Manifest, ResourceDiff, WorldDiff, WorldStatus};
 use dojo_world::local::{ExternalContractLocal, ResourceLocal, UPGRADE_CONTRACT_FN_NAME};
 use dojo_world::metadata::MetadataStorage;
 use dojo_world::remote::ResourceRemote;
 use dojo_world::services::UploadService;
-use dojo_world::{ResourceType, utils};
+use dojo_world::{utils, ResourceType};
 use starknet::accounts::{ConnectedAccount, SingleOwnerAccount};
 use starknet::core::types::Call;
 use starknet::core::utils as snutils;
