@@ -1,0 +1,20 @@
+[package]
+edition.workspace = true
+license.workspace = true
+name = "sozo-voyager"
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+reqwest = { workspace = true, features = [ "multipart" ] }
+serde = { workspace = true, features = [ "derive" ] }
+serde_json.workspace = true
+starknet-crypto.workspace = true
+tokio = { workspace = true, features = [ "time" ] }
+toml.workspace = true
+tracing.workspace = true
+url.workspace = true
+
+[dev-dependencies]
+tempfile = "3.13"

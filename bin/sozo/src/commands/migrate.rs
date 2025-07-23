@@ -20,6 +20,7 @@ use super::options::account::AccountOptions;
 use super::options::ipfs::IpfsOptions;
 use super::options::starknet::StarknetOptions;
 use super::options::transaction::TransactionOptions;
+use super::options::verify::VerifyOptions;
 use super::options::world::WorldOptions;
 use crate::commands::LOG_TARGET;
 use crate::utils;
@@ -39,6 +40,9 @@ pub struct MigrateArgs {
     pub account: AccountOptions,
 
     #[command(flatten)]
+    pub verify: VerifyOptions,
+
+    #[command(flatten)]
     pub ipfs: IpfsOptions,
 }
 
@@ -51,7 +55,7 @@ impl MigrateArgs {
         ws.profile_check()?;
         ws.ensure_profile_artifacts()?;
 
-        let MigrateArgs { world, starknet, account, ipfs, .. } = self;
+        let MigrateArgs { world, starknet, account, verify, ipfs, .. } = self;
 
         config.tokio_handle().block_on(async {
             print_banner(&ws, &starknet).await?;
@@ -72,20 +76,71 @@ impl MigrateArgs {
             let world_address = world_diff.world_info.address;
             let profile_config = ws.load_profile_config()?;
 
+            // Create verification configuration if requested
+            let verification_config = verify.create_verification_config()?;
+
             let mut txn_config: TxnConfig = self.transaction.try_into()?;
             txn_config.wait = true;
 
-            let migration = Migration::new(
-                world_diff,
-                WorldContract::new(world_address, &account),
-                txn_config,
-                ws.load_profile_config()?,
-                rpc_url,
-                is_guest,
-            );
+            let migration = if let Some(verification_config) = verification_config {
+                Migration::with_verification(
+                    world_diff,
+                    WorldContract::new(world_address, &account),
+                    txn_config,
+                    profile_config.clone(),
+                    rpc_url,
+                    is_guest,
+                    verification_config,
+                )
+            } else {
+                Migration::new(
+                    world_diff,
+                    WorldContract::new(world_address, &account),
+                    txn_config,
+                    profile_config.clone(),
+                    rpc_url,
+                    is_guest,
+                )
+            };
 
-            let MigrationResult { manifest, has_changes } =
+            let MigrationResult { manifest, has_changes, verification_results } =
                 migration.migrate(&mut spinner).await.context("Migration failed.")?;
+
+            // Display verification results if any
+            if let Some(results) = verification_results {
+                if !results.is_empty() {
+                    let mut verification_spinner = MigrationUi::new(Some("Processing verification results..."));
+                    verification_spinner.stop_and_persist_boxed("📊 ", "Contract Verification Results:".bright_cyan().to_string());
+
+                    let mut has_failures = false;
+                    for result in &results {
+                        let message = result.display_message();
+                        let mut result_spinner = MigrationUi::new(None);
+                        match result {
+                            sozo_ops::migrate::VerificationResult::Failed { .. } => {
+                                result_spinner.stop_and_persist_boxed("   ❌ ", message.bright_red().to_string());
+                                has_failures = true;
+                            }
+                            sozo_ops::migrate::VerificationResult::Verified { .. }
+                            | sozo_ops::migrate::VerificationResult::AlreadyVerified { .. } => {
+                                result_spinner.stop_and_persist_boxed("   ✅ ", message.bright_green().to_string());
+                            }
+                            sozo_ops::migrate::VerificationResult::Submitted { .. }
+                            | sozo_ops::migrate::VerificationResult::Timeout { .. } => {
+                                result_spinner.stop_and_persist_boxed("   ⚠️ ", message.bright_yellow().to_string());
+                            }
+                        }
+                    }
+
+                    if has_failures {
+                        let mut note_spinner = MigrationUi::new(None);
+                        note_spinner.stop_and_persist_boxed(
+                            "ℹ️  ",
+                            "Note: Verification failures do not affect the migration success.".bright_blue().to_string()
+                        );
+                    }
+                }
+            }
 
             let ipfs_config =
                 ipfs.config().or(profile_config.env.map(|env| env.ipfs_config).unwrap_or(None));
@@ -98,10 +153,10 @@ impl MigrateArgs {
                     .await
                     .context("Metadata upload failed.")?;
             } else {
-                println!();
-                println!(
-                    "{}",
-                    "IPFS credentials not found. Metadata upload skipped. To upload metadata, configure IPFS credentials in your profile config or environment variables: https://book.dojoengine.org/framework/world/metadata.".bright_yellow()
+                let mut ipfs_spinner = MigrationUi::new(None);
+                ipfs_spinner.stop_and_persist_boxed(
+                    "⚠️ ",
+                    "IPFS credentials not found. Metadata upload skipped. To upload metadata, configure IPFS credentials in your profile config or environment variables: https://book.dojoengine.org/framework/world/metadata.".bright_yellow().to_string()
                 );
             };
 
@@ -163,9 +218,11 @@ async fn print_banner(ws: &Workspace<'_>, starknet: &StarknetOptions) -> Result<
         rpc_url,
     };
 
-    println!();
-    println!("{}", Table::new(&[banner]).with(Style::psql()));
-    println!();
+    let mut banner_spinner = MigrationUi::new(None);
+    banner_spinner.stop_and_persist_boxed(
+        "📋 ",
+        format!("\n{}\n", Table::new(&[banner]).with(Style::psql())),
+    );
 
     Ok(())
 }

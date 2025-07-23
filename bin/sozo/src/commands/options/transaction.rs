@@ -7,13 +7,11 @@ use dojo_utils::{FeeConfig, TxnAction, TxnConfig};
 pub struct TransactionOptions {
     #[arg(help_heading = "Transaction options - STRK")]
     #[arg(long, help = "Maximum L1 gas amount.")]
-    #[arg(conflicts_with_all = ["max_fee_raw", "fee_estimate_multiplier"])]
     #[arg(global = true)]
     pub gas: Option<u64>,
 
     #[arg(help_heading = "Transaction options - STRK")]
     #[arg(long, help = "Maximum L1 gas price in STRK.")]
-    #[arg(conflicts_with_all = ["max_fee_raw", "fee_estimate_multiplier"])]
     #[arg(global = true)]
     pub gas_price: Option<u128>,
 

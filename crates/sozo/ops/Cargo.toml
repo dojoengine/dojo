@@ -26,6 +26,8 @@ starknet-crypto.workspace = true
 thiserror.workspace = true
 toml.workspace = true
 tracing.workspace = true
+sozo-voyager.workspace = true
+tokio = { workspace = true, features = [ "time" ] }
 
 dojo-test-utils = { workspace = true, features = [ "build-examples" ], optional = true }
 

@@ -17,6 +17,7 @@ use super::options::starknet::StarknetOptions;
 use super::options::transaction::TransactionOptions;
 use super::options::world::WorldOptions;
 use crate::commands::options::ipfs::IpfsOptions;
+use crate::commands::options::verify::VerifyOptions;
 
 #[derive(Debug, Args)]
 pub struct DevArgs {
@@ -55,6 +56,9 @@ pub struct DevArgs {
     /// Specify packages to build.
     #[command(flatten)]
     pub packages: Option<PackagesFilter>,
+
+    #[command(flatten)]
+    pub verify: VerifyOptions,
 }
 
 impl DevArgs {
@@ -92,6 +96,7 @@ impl DevArgs {
             starknet: self.starknet,
             account: self.account,
             transaction: self.transaction,
+            verify: self.verify,
             ipfs: IpfsOptions::default(),
         };
 

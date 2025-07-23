@@ -47,6 +47,10 @@ use crate::migration_ui::MigrationUi;
 
 pub mod error;
 pub use error::MigrationError;
+pub use sozo_voyager::{
+    get_project_root, get_project_versions, ContractVerifier, VerificationConfig,
+    VerificationResult,
+};
 
 #[derive(Debug)]
 pub struct Migration<A>
@@ -61,12 +65,15 @@ where
     // Ideally, we want this rpc url to be exposed from the world.account.provider().
     rpc_url: String,
     guest: bool,
+    // Optional verification configuration
+    verification_config: Option<VerificationConfig>,
 }
 
 #[derive(Debug)]
 pub struct MigrationResult {
     pub has_changes: bool,
     pub manifest: Manifest,
+    pub verification_results: Option<Vec<VerificationResult>>,
 }
 
 impl<A> Migration<A>
@@ -82,7 +89,28 @@ where
         rpc_url: String,
         guest: bool,
     ) -> Self {
-        Self { diff, world, txn_config, profile_config, rpc_url, guest }
+        Self { diff, world, txn_config, profile_config, rpc_url, guest, verification_config: None }
+    }
+
+    /// Creates a new migration with verification enabled.
+    pub fn with_verification(
+        diff: WorldDiff,
+        world: WorldContract<A>,
+        txn_config: TxnConfig,
+        profile_config: ProfileConfig,
+        rpc_url: String,
+        guest: bool,
+        verification_config: VerificationConfig,
+    ) -> Self {
+        Self {
+            diff,
+            world,
+            txn_config,
+            profile_config,
+            rpc_url,
+            guest,
+            verification_config: Some(verification_config),
+        }
     }
 
     /// Migrates the world by syncing the namespaces, resources, permissions and initializing the
@@ -105,6 +133,22 @@ where
 
         let external_contracts_have_changed = self.sync_external_contracts(ui).await?;
 
+        // Optional contract verification step
+        let verification_results = if let Some(verification_config) = &self.verification_config {
+            match self.verify_contracts(ui, verification_config).await {
+                Ok(results) => Some(results),
+                Err(e) => {
+                    // Log verification error but don't fail the migration
+                    tracing::warn!("Contract verification failed: {}", e);
+                    ui.stop_and_persist_boxed("⚠️", format!("Verification failed: {}", e));
+                    ui.restart("Continuing migration...");
+                    None
+                }
+            }
+        } else {
+            None
+        };
+
         Ok(MigrationResult {
             has_changes: world_has_changed
                 || resources_have_changed
@@ -112,6 +156,7 @@ where
                 || external_contracts_have_changed
                 || contracts_have_changed,
             manifest: Manifest::new(&self.diff),
+            verification_results,
         })
     }
 
@@ -1006,6 +1051,36 @@ where
         };
 
         Ok(true)
+    }
+
+    /// Verify contracts that were declared during migration.
+    async fn verify_contracts(
+        &self,
+        ui: &mut MigrationUi,
+        verification_config: &VerificationConfig,
+    ) -> Result<Vec<VerificationResult>, MigrationError<A::SignError>> {
+        // Get project root from the world's manifest path
+        let project_root = get_project_root();
+
+        // Create verifier
+        let verifier = ContractVerifier::new(project_root, verification_config.clone())
+            .map_err(MigrationError::DeployExternalContractError)?;
+
+        // Get version info from project configuration
+        let (cairo_version, scarb_version) = get_project_versions().unwrap_or_else(|_| {
+            // Fallback to default values if unable to detect versions
+            ("2.8.0".to_string(), "2.8.0".to_string())
+        });
+
+        // Verify contracts using manifest file (includes all contracts, models, events)
+        let results = verifier
+            .verify_deployed_contracts(ui, &cairo_version, &scarb_version)
+            .await
+            .map_err(|e| MigrationError::DeclareClassError(e.to_string()))?;
+
+        // Results will be displayed by the calling command
+
+        Ok(results)
     }
 
     /// Returns the accounts to use for the migration.
