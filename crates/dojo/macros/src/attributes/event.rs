@@ -1,7 +1,7 @@
-use cairo_lang_macro::{Diagnostic, ProcMacroResult, TokenStream, quote};
+use cairo_lang_macro::{quote, Diagnostic, ProcMacroResult, TokenStream};
 use cairo_lang_parser::utils::SimpleParserDatabase;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
-use cairo_lang_syntax::node::{TypedSyntaxNode, ast};
+use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
 
 use crate::constants::{DOJO_INTROSPECT_DERIVE, DOJO_PACKED_DERIVE, EXPECTED_DERIVE_ATTR_NAMES};
 use crate::helpers::{
