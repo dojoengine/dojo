@@ -32,7 +32,7 @@ impl ContractVerifier {
     }
 
     /// Add jitter to backoff duration to prevent thundering herd
-    fn add_jitter(&self, duration: Duration) -> Duration {
+    pub(crate) fn add_jitter(&self, duration: Duration) -> Duration {
         // Use a simple linear congruential generator for jitter
         // This avoids needing external random dependencies
         let seed = SystemTime::now()
@@ -43,9 +43,17 @@ impl ContractVerifier {
         let jitter_ms = seed % 1000; // 0-999ms jitter
         let base_ms = duration.as_millis() as u64;
 
-        // Add ±25% jitter
-        let jitter_range = base_ms / 4; // 25% of base duration
-        let actual_jitter = (jitter_ms % (jitter_range * 2)).saturating_sub(jitter_range);
+        // Add ±25% jitter, but handle zero duration case
+        let actual_jitter = if base_ms == 0 {
+            jitter_ms % 100 // Just add up to 100ms for zero duration
+        } else {
+            let jitter_range = base_ms / 4; // 25% of base duration
+            if jitter_range == 0 {
+                jitter_ms % 100 // Fallback for very small durations
+            } else {
+                (jitter_ms % (jitter_range * 2)).saturating_sub(jitter_range)
+            }
+        };
 
         Duration::from_millis(base_ms.saturating_add(actual_jitter))
     }

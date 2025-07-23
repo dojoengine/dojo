@@ -16,7 +16,7 @@ use crate::config::{
 
 /// Simple circuit breaker for API calls
 #[derive(Debug)]
-struct CircuitBreaker {
+pub(crate) struct CircuitBreaker {
     failure_count: u32,
     last_failure_time: Option<SystemTime>,
     failure_threshold: u32,
@@ -24,7 +24,7 @@ struct CircuitBreaker {
 }
 
 impl CircuitBreaker {
-    fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             failure_count: 0,
             last_failure_time: None,
@@ -33,7 +33,7 @@ impl CircuitBreaker {
         }
     }
 
-    fn should_allow_request(&self) -> bool {
+    pub(crate) fn should_allow_request(&self) -> bool {
         if self.failure_count < self.failure_threshold {
             return true;
         }
@@ -48,12 +48,12 @@ impl CircuitBreaker {
         false
     }
 
-    fn record_success(&mut self) {
+    pub(crate) fn record_success(&mut self) {
         self.failure_count = 0;
         self.last_failure_time = None;
     }
 
-    fn record_failure(&mut self) {
+    pub(crate) fn record_failure(&mut self) {
         self.failure_count += 1;
         self.last_failure_time = Some(SystemTime::now());
     }

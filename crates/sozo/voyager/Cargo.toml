@@ -15,3 +15,6 @@ tokio = { workspace = true, features = [ "time" ] }
 toml.workspace = true
 tracing.workspace = true
 url.workspace = true
+
+[dev-dependencies]
+tempfile = "3.13"

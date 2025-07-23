@@ -189,7 +189,11 @@ impl ProjectAnalyzer {
     /// e.g., "dojo_starter-actions" -> "actions" (contract)
     /// e.g., "dojo_starter-DirectionsAvailable" -> "m_DirectionsAvailable" (model)
     /// e.g., "dojo_starter-Moved" -> "e_Moved" (event)
-    fn extract_contract_name_from_tag(&self, tag: &str, artifact_type: &ArtifactType) -> String {
+    pub(crate) fn extract_contract_name_from_tag(
+        &self,
+        tag: &str,
+        artifact_type: &ArtifactType,
+    ) -> String {
         if let Ok(package_name) = self.extract_package_name() {
             let prefix = format!("{}-", package_name);
             if let Some(base_name) = tag.strip_prefix(&prefix) {
@@ -370,7 +374,7 @@ impl ProjectAnalyzer {
     }
 
     /// Check if a string looks like a file path
-    fn looks_like_file_path(&self, s: &str) -> bool {
+    pub(crate) fn looks_like_file_path(&self, s: &str) -> bool {
         // Simple heuristics for file paths
         s.contains('.')
             && (s.ends_with(".md")
@@ -582,7 +586,7 @@ impl ProjectAnalyzer {
                 .unwrap_or(false)
     }
 
-    fn validate_files(&self, files: &[FileInfo]) -> Result<()> {
+    pub(crate) fn validate_files(&self, files: &[FileInfo]) -> Result<()> {
         const MAX_FILE_SIZE: u64 = 20 * 1024 * 1024; // 20MB
 
         for file in files {
