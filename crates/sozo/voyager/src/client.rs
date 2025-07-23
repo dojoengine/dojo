@@ -11,7 +11,7 @@ use tracing::{debug, warn};
 
 use crate::config::{
     ApiError, FileInfo, ProjectMetadata, VerificationConfig, VerificationJob,
-    VerificationJobDispatch, VerifyJobStatus,
+    VerificationJobDispatch, VerificationJobDto,
 };
 
 /// Simple circuit breaker for API calls
@@ -60,6 +60,7 @@ impl CircuitBreaker {
 }
 
 /// Verification client for interacting with the verification API
+#[derive(Debug)]
 pub struct VerificationClient {
     client: Client,
     config: VerificationConfig,
@@ -68,15 +69,13 @@ pub struct VerificationClient {
 
 impl VerificationClient {
     /// Create a new verification client
-    pub fn new(config: VerificationConfig) -> Self {
-        Self {
-            client: Client::builder()
-                .timeout(Duration::from_secs(config.timeout))
-                .build()
-                .expect("Failed to create HTTP client"),
-            config,
-            circuit_breaker: std::sync::Mutex::new(CircuitBreaker::new()),
-        }
+    pub fn new(config: VerificationConfig) -> Result<Self> {
+        let client = Client::builder()
+            .timeout(Duration::from_secs(config.timeout))
+            .build()
+            .map_err(|e| anyhow!("Failed to create HTTP client: {}", e))?;
+
+        Ok(Self { client, config, circuit_breaker: std::sync::Mutex::new(CircuitBreaker::new()) })
     }
 
     /// Submit a contract for verification
@@ -99,7 +98,7 @@ impl VerificationClient {
             .text("contract-name", contract_name.to_string())
             .text("project_dir_path", metadata.project_dir_path.clone())
             .text("build_tool", metadata.build_tool.clone())
-            .text("license", "MIT".to_string()); // Default license
+            .text("license", metadata.license.as_deref().unwrap_or("MIT").to_string());
 
         // Add Dojo version if available
         if let Some(ref dojo_version) = metadata.dojo_version {
@@ -167,101 +166,31 @@ impl VerificationClient {
                         let response_text = response.text().await?;
 
                         // Parse selectively to avoid malformed files field
-                        let json_value: serde_json::Value =
-                            match serde_json::from_str(&response_text) {
-                                Ok(value) => value,
-                                Err(_) => {
-                                    // If parsing fails due to malformed files field, remove it
-                                    // first
-                                    match self.remove_files_field(&response_text) {
-                                        Ok(cleaned_json) => serde_json::from_str(&cleaned_json)
-                                            .map_err(|e| {
-                                                anyhow!(
-                                                    "Failed to parse verification status response \
-                                                     for job {}: {}",
-                                                    job_id,
-                                                    e
-                                                )
-                                            })?,
-                                        Err(e) => {
-                                            return Err(anyhow!(
-                                                "Failed to parse verification status response for \
-                                                 job {}: {}",
-                                                job_id,
-                                                e
-                                            ));
-                                        }
-                                    }
-                                }
-                            };
-
-                        // Extract only the fields we need
-                        let job = VerificationJob {
-                            job_id: json_value
-                                .get("jobid")
-                                .and_then(|v| v.as_str())
-                                .unwrap_or("unknown")
-                                .to_string(),
-                            status: match json_value.get("status").and_then(|v| v.as_u64()) {
-                                Some(0) => VerifyJobStatus::Submitted,
-                                Some(1) => VerifyJobStatus::Compiled,
-                                Some(2) => VerifyJobStatus::CompileFailed,
-                                Some(3) => VerifyJobStatus::Fail,
-                                Some(4) => VerifyJobStatus::Success,
-                                Some(5) => VerifyJobStatus::InProgress,
-                                _ => VerifyJobStatus::Unknown,
-                            },
-                            status_description: json_value
-                                .get("status_description")
-                                .and_then(|v| v.as_str())
-                                .map(|s| s.to_string()),
-                            message: json_value
-                                .get("message")
-                                .and_then(|v| v.as_str())
-                                .map(|s| s.to_string()),
-                            error_category: json_value
-                                .get("error_category")
-                                .and_then(|v| v.as_str())
-                                .map(|s| s.to_string()),
-                            class_hash: json_value
-                                .get("class_hash")
-                                .and_then(|v| v.as_str())
-                                .map(|s| s.to_string()),
-                            created_timestamp: json_value
-                                .get("created_timestamp")
-                                .and_then(|v| v.as_f64()),
-                            updated_timestamp: json_value
-                                .get("updated_timestamp")
-                                .and_then(|v| v.as_f64()),
-                            address: json_value
-                                .get("address")
-                                .and_then(|v| v.as_str())
-                                .map(|s| s.to_string()),
-                            contract_file: json_value
-                                .get("contract_file")
-                                .and_then(|v| v.as_str())
-                                .map(|s| s.to_string()),
-                            name: json_value
-                                .get("name")
-                                .and_then(|v| v.as_str())
-                                .map(|s| s.to_string()),
-                            version: json_value
-                                .get("version")
-                                .and_then(|v| v.as_str())
-                                .map(|s| s.to_string()),
-                            license: json_value
-                                .get("license")
-                                .and_then(|v| v.as_str())
-                                .map(|s| s.to_string()),
-                            dojo_version: json_value
-                                .get("dojo_version")
-                                .and_then(|v| v.as_str())
-                                .map(|s| s.to_string()),
-                            build_tool: json_value
-                                .get("build_tool")
-                                .and_then(|v| v.as_str())
-                                .map(|s| s.to_string()),
+                        let dto = match serde_json::from_str::<VerificationJobDto>(&response_text) {
+                            Ok(d) => d,
+                            Err(err) if err.classify() == serde_json::error::Category::Syntax => {
+                                let cleaned = self.remove_files_field(&response_text)?;
+                                serde_json::from_str::<VerificationJobDto>(&cleaned).map_err(
+                                    |e| {
+                                        anyhow!(
+                                            "Failed to parse verification status response for job \
+                                             {} after stripping files: {}",
+                                            job_id,
+                                            e
+                                        )
+                                    },
+                                )?
+                            }
+                            Err(err) => {
+                                return Err(anyhow!(
+                                    "Failed to parse verification status response for job {}: {}",
+                                    job_id,
+                                    err
+                                ));
+                            }
                         };
+
+                        let job = VerificationJob::from(dto);
 
                         // Log slow responses for monitoring
                         if response_time > Duration::from_secs(5) {
@@ -311,77 +240,10 @@ impl VerificationClient {
 
     /// Remove the problematic files field from JSON response
     fn remove_files_field(&self, json_text: &str) -> Result<String> {
-        // Find the files field
-        if let Some(files_start) = json_text.find(r#""files":"#) {
-            // Find the opening brace of the files object
-            let search_start = files_start + 8; // length of "files":
-
-            // Skip whitespace to find the opening brace
-            let mut object_start = None;
-            for (i, c) in json_text[search_start..].char_indices() {
-                if c == '{' {
-                    object_start = Some(search_start + i);
-                    break;
-                } else if !c.is_whitespace() {
-                    // If we encounter a non-whitespace character that's not '{', bail out
-                    return Ok(json_text.to_string());
-                }
-            }
-
-            if let Some(start) = object_start {
-                // Find the matching closing brace
-                let mut brace_count = 0;
-                let mut in_string = false;
-                let mut escaped = false;
-                let mut object_end = json_text.len();
-
-                for (i, c) in json_text[start..].char_indices() {
-                    if escaped {
-                        escaped = false;
-                        continue;
-                    }
-
-                    match c {
-                        '\\' if in_string => escaped = true,
-                        '"' => in_string = !in_string,
-                        '{' if !in_string => {
-                            brace_count += 1;
-                        }
-                        '}' if !in_string => {
-                            brace_count -= 1;
-                            if brace_count == 0 {
-                                object_end = start + i + 1;
-                                break;
-                            }
-                        }
-                        _ => {}
-                    }
-                }
-
-                // Construct the JSON without the files field
-                let before_files = &json_text[0..files_start];
-                let after_files =
-                    if object_end < json_text.len() { &json_text[object_end..] } else { "" };
-
-                // Clean up commas
-                let before_files = before_files.trim_end_matches(',');
-                let after_files = after_files.trim_start_matches(',');
-
-                let result = if after_files.is_empty() || after_files.trim_start().starts_with('}')
-                {
-                    format!("{}{}", before_files, after_files)
-                } else {
-                    format!("{},{}", before_files, after_files)
-                };
-
-                Ok(result)
-            } else {
-                // No opening brace found, return original
-                Ok(json_text.to_string())
-            }
-        } else {
-            // No files field found, return original
-            Ok(json_text.to_string())
+        let mut value: serde_json::Value = serde_json::from_str(json_text)?;
+        if let Some(obj) = value.as_object_mut() {
+            obj.remove("files");
         }
+        Ok(serde_json::to_string(&value)?)
     }
 }

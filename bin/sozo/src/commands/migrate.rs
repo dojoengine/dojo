@@ -112,13 +112,18 @@ impl MigrateArgs {
                 let mut has_failures = false;
                 for result in &results {
                     let message = result.display_message();
-                    if result.display_message().contains("❌") {
-                        println!("   {}", message.bright_red());
-                        has_failures = true;
-                    } else if result.display_message().contains("✅") {
-                        println!("   {}", message.bright_green());
-                    } else {
-                        println!("   {}", message.bright_yellow());
+                    match result {
+                        sozo_ops::migrate::VerificationResult::Failed { .. } => {
+                            println!("   {}", message.bright_red());
+                            has_failures = true;
+                        }
+                        sozo_ops::migrate::VerificationResult::Verified { .. } => {
+                            println!("   {}", message.bright_green());
+                        }
+                        sozo_ops::migrate::VerificationResult::Submitted { .. }
+                        | sozo_ops::migrate::VerificationResult::Timeout { .. } => {
+                            println!("   {}", message.bright_yellow());
+                        }
                     }
                 }
 

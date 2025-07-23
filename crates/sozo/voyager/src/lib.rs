@@ -7,6 +7,7 @@
 pub mod analyzer;
 pub mod client;
 pub mod config;
+pub mod utils;
 pub mod verifier;
 
 // Re-export the main types and traits for convenience
@@ -16,4 +17,5 @@ pub use config::{
     ArtifactType, ContractArtifact, FileInfo, ProjectMetadata, VerificationConfig,
     VerificationResult, VerifyJobStatus,
 };
+pub use utils::{get_project_root, get_project_versions};
 pub use verifier::{ContractVerifier, VerificationUi};

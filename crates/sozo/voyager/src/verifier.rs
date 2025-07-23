@@ -15,6 +15,7 @@ use crate::config::{
 };
 
 /// Verifier for handling contract verification during migration
+#[derive(Debug)]
 pub struct ContractVerifier {
     client: VerificationClient,
     analyzer: ProjectAnalyzer,
@@ -23,11 +24,11 @@ pub struct ContractVerifier {
 
 impl ContractVerifier {
     /// Create a new contract verifier
-    pub fn new(project_root: PathBuf, config: VerificationConfig) -> Self {
-        let client = VerificationClient::new(config.clone());
+    pub fn new(project_root: PathBuf, config: VerificationConfig) -> Result<Self> {
+        let client = VerificationClient::new(config.clone())?;
         let analyzer = ProjectAnalyzer::new(project_root);
 
-        Self { client, analyzer, config }
+        Ok(Self { client, analyzer, config })
     }
 
     /// Add jitter to backoff duration to prevent thundering herd
@@ -108,6 +109,7 @@ impl ContractVerifier {
     ) -> Result<String> {
         let contract_file = self.analyzer.find_contract_file(contract_name)?;
         let package_name = self.analyzer.extract_package_name()?;
+        let license = self.analyzer.extract_license();
 
         let metadata = ProjectMetadata {
             cairo_version: cairo_version.to_string(),
@@ -117,6 +119,7 @@ impl ContractVerifier {
             package_name,
             build_tool: "sozo".to_string(), // Always sozo for Dojo projects
             dojo_version: dojo_version.clone(),
+            license,
         };
 
         self.client.verify_contract(class_hash, contract_name, &metadata, files).await

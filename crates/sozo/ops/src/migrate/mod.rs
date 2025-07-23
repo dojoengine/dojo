@@ -19,7 +19,6 @@
 //!    initialization of contracts can mutate resources.
 
 use std::collections::HashMap;
-use std::path::PathBuf;
 
 use anyhow::anyhow;
 use cainome::cairo_serde::{ByteArray, ClassHash, ContractAddress};
@@ -51,7 +50,10 @@ use crate::migration_ui::MigrationUi;
 pub mod error;
 
 pub use error::MigrationError;
-pub use sozo_voyager::{ContractVerifier, VerificationConfig, VerificationResult};
+pub use sozo_voyager::{
+    get_project_root, get_project_versions, ContractVerifier, VerificationConfig,
+    VerificationResult,
+};
 
 #[derive(Debug)]
 pub struct Migration<A>
@@ -1235,54 +1237,27 @@ where
         verification_config: &VerificationConfig,
     ) -> Result<Vec<VerificationResult>, MigrationError<A::SignError>> {
         // Get project root from the world's manifest path
-        let project_root = self.get_project_root();
+        let project_root = get_project_root();
 
         // Create verifier
-        let verifier = ContractVerifier::new(project_root, verification_config.clone());
+        let verifier = ContractVerifier::new(project_root, verification_config.clone())
+            .map_err(MigrationError::DeployExternalContractError)?;
 
-        // Get version info - we'll use default values since the exact path may vary
-        let cairo_version = "2.8.0"; // Default Cairo version
-        let scarb_version = "2.8.0"; // Default Scarb version
+        // Get version info from project configuration
+        let (cairo_version, scarb_version) = get_project_versions().unwrap_or_else(|_| {
+            // Fallback to default values if unable to detect versions
+            ("2.8.0".to_string(), "2.8.0".to_string())
+        });
 
         // Verify contracts using manifest file (includes all contracts, models, events)
         let results = verifier
-            .verify_deployed_contracts(ui, cairo_version, scarb_version)
+            .verify_deployed_contracts(ui, &cairo_version, &scarb_version)
             .await
             .map_err(|e| MigrationError::DeclareClassError(e.to_string()))?;
 
         // Results will be displayed by the calling command
 
         Ok(results)
-    }
-
-    /// Get the project root directory from the world's metadata
-    fn get_project_root(&self) -> PathBuf {
-        // Try to find project root by looking for manifest files
-        let current_dir = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
-
-        // Try to get project root from profile config if available
-        // Note: For now we'll search from current directory
-
-        // Search upward from current directory for project markers
-        let mut search_dir = current_dir.clone();
-        loop {
-            // Check for Scarb.toml or manifest_dev.json
-            if search_dir.join("Scarb.toml").exists()
-                || search_dir.join("manifest_dev.json").exists()
-            {
-                return search_dir;
-            }
-
-            // Move to parent directory
-            if let Some(parent) = search_dir.parent() {
-                search_dir = parent.to_path_buf();
-            } else {
-                break;
-            }
-        }
-
-        // Fallback to current directory
-        current_dir
     }
 
     /// Returns the accounts to use for the migration.

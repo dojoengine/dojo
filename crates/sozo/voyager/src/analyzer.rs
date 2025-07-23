@@ -11,6 +11,7 @@ use tracing::debug;
 use crate::config::{ArtifactType, ContractArtifact, FileInfo, Manifest, StarknetArtifacts};
 
 /// Project analyzer for extracting Dojo project information
+#[derive(Debug)]
 pub struct ProjectAnalyzer {
     project_root: PathBuf,
 }
@@ -47,6 +48,21 @@ impl ProjectAnalyzer {
             .and_then(|n| n.as_str())
             .map(|s| s.to_string())
             .ok_or_else(|| anyhow!("No package name found in Scarb.toml"))
+    }
+
+    /// Extract license from Scarb.toml
+    pub fn extract_license(&self) -> Option<String> {
+        let scarb_toml_path = self.project_root.join("Scarb.toml");
+
+        let contents = fs::read_to_string(&scarb_toml_path).ok()?;
+        let parsed: toml::Value = toml::from_str(&contents).ok()?;
+
+        // Look for package.license
+        parsed
+            .get("package")
+            .and_then(|p| p.get("license"))
+            .and_then(|l| l.as_str())
+            .map(|s| s.to_string())
     }
 
     /// Discover contract artifacts from manifest file
@@ -488,7 +504,14 @@ impl ProjectAnalyzer {
     ) -> Result<()> {
         let src_dir = self.project_root.join("src");
         if src_dir.exists() {
-            self.collect_remaining_cairo_files(&src_dir, "src", files, added_files, include_tests)?;
+            self.collect_remaining_cairo_files(
+                &src_dir,
+                "src",
+                files,
+                added_files,
+                include_tests,
+                0,
+            )?;
         }
         Ok(())
     }
@@ -500,7 +523,14 @@ impl ProjectAnalyzer {
         files: &mut Vec<FileInfo>,
         added_files: &mut std::collections::HashSet<String>,
         include_tests: bool,
+        depth: usize,
     ) -> Result<()> {
+        const MAX_DEPTH: usize = 20;
+        if depth > MAX_DEPTH {
+            tracing::warn!("Skipping deep directory: {}", dir.display());
+            return Ok(());
+        }
+
         if !dir.exists() {
             return Ok(());
         }
@@ -524,6 +554,7 @@ impl ProjectAnalyzer {
                     files,
                     added_files,
                     include_tests,
+                    depth + 1,
                 )?;
             } else if path.extension().and_then(|s| s.to_str()) == Some("cairo") {
                 // Skip test files if tests are not included

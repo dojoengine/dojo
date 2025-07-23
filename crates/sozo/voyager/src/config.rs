@@ -69,6 +69,7 @@ pub struct ProjectMetadata {
     pub package_name: String,
     pub build_tool: String,
     pub dojo_version: Option<String>,
+    pub license: Option<String>,
 }
 
 /// Verification job status from API (numeric values)
@@ -94,6 +95,30 @@ pub enum VerifyJobStatus {
 #[derive(Debug, Deserialize)]
 pub struct VerificationJobDispatch {
     pub job_id: String,
+}
+
+/// DTO for deserializing API response matching exact JSON field names
+#[derive(Debug, Deserialize)]
+pub struct VerificationJobDto {
+    #[serde(rename = "jobid")]
+    pub job_id: String,
+    pub status: u64,
+    #[serde(rename = "status_description")]
+    pub status_description: Option<String>,
+    pub message: Option<String>,
+    #[serde(rename = "error_category")]
+    pub error_category: Option<String>,
+    #[serde(rename = "class_hash")]
+    pub class_hash: Option<String>,
+    pub created_timestamp: Option<f64>,
+    pub updated_timestamp: Option<f64>,
+    pub address: Option<String>,
+    pub contract_file: Option<String>,
+    pub name: Option<String>,
+    pub version: Option<String>,
+    pub license: Option<String>,
+    pub dojo_version: Option<String>,
+    pub build_tool: Option<String>,
 }
 
 /// API response for verification job status  
@@ -127,6 +152,36 @@ pub struct VerificationJob {
     pub dojo_version: Option<String>,
     #[serde(default)]
     pub build_tool: Option<String>,
+}
+
+impl From<VerificationJobDto> for VerificationJob {
+    fn from(dto: VerificationJobDto) -> Self {
+        Self {
+            job_id: dto.job_id,
+            status: match dto.status {
+                0 => VerifyJobStatus::Submitted,
+                1 => VerifyJobStatus::Compiled,
+                2 => VerifyJobStatus::CompileFailed,
+                3 => VerifyJobStatus::Fail,
+                4 => VerifyJobStatus::Success,
+                5 => VerifyJobStatus::InProgress,
+                _ => VerifyJobStatus::Unknown,
+            },
+            status_description: dto.status_description,
+            message: dto.message,
+            error_category: dto.error_category,
+            class_hash: dto.class_hash,
+            created_timestamp: dto.created_timestamp,
+            updated_timestamp: dto.updated_timestamp,
+            address: dto.address,
+            contract_file: dto.contract_file,
+            name: dto.name,
+            version: dto.version,
+            license: dto.license,
+            dojo_version: dto.dojo_version,
+            build_tool: dto.build_tool,
+        }
+    }
 }
 
 /// API error response
