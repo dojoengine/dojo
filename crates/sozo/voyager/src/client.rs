@@ -14,6 +14,26 @@ use crate::config::{
     VerificationJobDispatch, VerificationJobDto,
 };
 
+/// Verification-specific error types
+#[derive(Debug)]
+pub enum VerificationError {
+    /// Contract or class is already verified
+    AlreadyVerified(String),
+    /// Other verification error
+    Other(anyhow::Error),
+}
+
+impl std::fmt::Display for VerificationError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            VerificationError::AlreadyVerified(msg) => write!(f, "{}", msg),
+            VerificationError::Other(err) => write!(f, "{}", err),
+        }
+    }
+}
+
+impl std::error::Error for VerificationError {}
+
 /// Simple circuit breaker for API calls
 #[derive(Debug)]
 pub(crate) struct CircuitBreaker {
@@ -85,8 +105,12 @@ impl VerificationClient {
         contract_name: &str,
         metadata: &ProjectMetadata,
         files: &[FileInfo],
-    ) -> Result<String> {
-        let url = self.config.api_url.join(&format!("class-verify/{:#066x}", class_hash))?;
+    ) -> Result<String, VerificationError> {
+        let url = self
+            .config
+            .api_url
+            .join(&format!("class-verify/{:#066x}", class_hash))
+            .map_err(|e| VerificationError::Other(anyhow::Error::from(e)))?;
 
         let mut form = multipart::Form::new()
             .percent_encode_noop()
@@ -108,32 +132,61 @@ impl VerificationClient {
 
         // Add source files to verification request
         for file in files {
-            let content = fs::read_to_string(&file.path)
-                .map_err(|e| anyhow!("Failed to read file {}: {}", file.path.display(), e))?;
+            let content = fs::read_to_string(&file.path).map_err(|e| {
+                VerificationError::Other(anyhow!(
+                    "Failed to read file {}: {}",
+                    file.path.display(),
+                    e
+                ))
+            })?;
 
             let field_name = format!("files[{}]", file.name);
             form = form.text(field_name, content);
         }
 
         debug!("Sending verification request for contract: {}", contract_name);
-        let response = self.client.post(url.clone()).multipart(form).send().await?;
+        let response = self
+            .client
+            .post(url.clone())
+            .multipart(form)
+            .send()
+            .await
+            .map_err(|e| VerificationError::Other(anyhow::Error::from(e)))?;
 
         match response.status() {
             StatusCode::OK => {
-                let job_dispatch: VerificationJobDispatch = response.json().await?;
+                let job_dispatch: VerificationJobDispatch = response
+                    .json()
+                    .await
+                    .map_err(|e| VerificationError::Other(anyhow::Error::from(e)))?;
                 debug!("Contract verification submitted with job ID: {}", job_dispatch.job_id);
                 Ok(job_dispatch.job_id)
             }
             StatusCode::BAD_REQUEST => {
-                let error: ApiError = response.json().await?;
-                Err(anyhow!("Verification request failed: {}", error.error))
+                let error: ApiError = response
+                    .json()
+                    .await
+                    .map_err(|e| VerificationError::Other(anyhow::Error::from(e)))?;
+                // Check if this is an "already verified" error
+                if error.error.contains("Contract or class already verified") {
+                    Err(VerificationError::AlreadyVerified(error.error))
+                } else {
+                    Err(VerificationError::Other(anyhow!(
+                        "Verification request failed: {}",
+                        error.error
+                    )))
+                }
             }
-            StatusCode::PAYLOAD_TOO_LARGE => {
-                Err(anyhow!("Request payload too large. Maximum allowed size is 10MB."))
-            }
+            StatusCode::PAYLOAD_TOO_LARGE => Err(VerificationError::Other(anyhow!(
+                "Request payload too large. Maximum allowed size is 10MB."
+            ))),
             status => {
                 let error_text = response.text().await.unwrap_or_default();
-                Err(anyhow!("Verification request failed with status {}: {}", status, error_text))
+                Err(VerificationError::Other(anyhow!(
+                    "Verification request failed with status {}: {}",
+                    status,
+                    error_text
+                )))
             }
         }
     }

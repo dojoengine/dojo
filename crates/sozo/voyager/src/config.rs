@@ -245,6 +245,8 @@ pub enum VerificationResult {
     Submitted { contract_name: String, job_id: String },
     /// Contract was verified successfully
     Verified { contract_name: String, job_id: String, class_hash: String },
+    /// Contract was already verified
+    AlreadyVerified { contract_name: String, class_hash: String },
     /// Verification failed
     Failed { contract_name: String, error: String },
     /// Verification timed out
@@ -261,6 +263,9 @@ impl VerificationResult {
             Self::Verified { contract_name, class_hash, .. } => {
                 format!("✅ Verified {} (class: {})", contract_name, class_hash)
             }
+            Self::AlreadyVerified { contract_name, class_hash } => {
+                format!("✅ Already verified {} (class: {})", contract_name, class_hash)
+            }
             Self::Failed { contract_name, error } => {
                 format!("❌ Failed {}: {}", contract_name, error)
             }
@@ -272,6 +277,6 @@ impl VerificationResult {
 
     /// Check if this result represents a successful verification
     pub fn is_success(&self) -> bool {
-        matches!(self, Self::Verified { .. })
+        matches!(self, Self::Verified { .. } | Self::AlreadyVerified { .. })
     }
 }

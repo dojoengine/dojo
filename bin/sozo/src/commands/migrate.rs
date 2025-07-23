@@ -117,7 +117,8 @@ impl MigrateArgs {
                             println!("   {}", message.bright_red());
                             has_failures = true;
                         }
-                        sozo_ops::migrate::VerificationResult::Verified { .. } => {
+                        sozo_ops::migrate::VerificationResult::Verified { .. }
+                        | sozo_ops::migrate::VerificationResult::AlreadyVerified { .. } => {
                             println!("   {}", message.bright_green());
                         }
                         sozo_ops::migrate::VerificationResult::Submitted { .. }

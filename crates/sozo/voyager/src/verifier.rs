@@ -9,7 +9,7 @@ use tokio::time;
 use tracing::warn;
 
 use crate::analyzer::ProjectAnalyzer;
-use crate::client::VerificationClient;
+use crate::client::{VerificationClient, VerificationError};
 use crate::config::{
     FileInfo, ProjectMetadata, VerificationConfig, VerificationResult, VerifyJobStatus,
 };
@@ -93,13 +93,21 @@ impl ContractVerifier {
                     let result = self.wait_for_verification(&job_id, &artifact.name, ui).await;
                     results.push(result);
                 }
-                Err(e) => {
-                    warn!("Failed to verify contract {}: {}", artifact.name, e);
-                    results.push(VerificationResult::Failed {
-                        contract_name: artifact.name.clone(),
-                        error: e.to_string(),
-                    });
-                }
+                Err(e) => match e {
+                    VerificationError::AlreadyVerified(_) => {
+                        results.push(VerificationResult::AlreadyVerified {
+                            contract_name: artifact.name.clone(),
+                            class_hash: format!("{:#066x}", artifact.class_hash),
+                        });
+                    }
+                    VerificationError::Other(err) => {
+                        warn!("Failed to verify contract {}: {}", artifact.name, err);
+                        results.push(VerificationResult::Failed {
+                            contract_name: artifact.name.clone(),
+                            error: err.to_string(),
+                        });
+                    }
+                },
             }
         }
 
@@ -114,9 +122,11 @@ impl ContractVerifier {
         scarb_version: &str,
         dojo_version: &Option<String>,
         files: &[FileInfo],
-    ) -> Result<String> {
-        let contract_file = self.analyzer.find_contract_file(contract_name)?;
-        let package_name = self.analyzer.extract_package_name()?;
+    ) -> Result<String, VerificationError> {
+        let contract_file =
+            self.analyzer.find_contract_file(contract_name).map_err(VerificationError::Other)?;
+        let package_name =
+            self.analyzer.extract_package_name().map_err(VerificationError::Other)?;
         let license = self.analyzer.extract_license();
 
         let metadata = ProjectMetadata {
