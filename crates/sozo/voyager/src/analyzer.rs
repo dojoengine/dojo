@@ -4,6 +4,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Result};
+use dojo_world::local::{ResourceLocal, WorldLocal};
 use serde_json;
 use starknet_crypto::Felt;
 use tracing::debug;
@@ -65,7 +66,45 @@ impl ProjectAnalyzer {
             .map(|s| s.to_string())
     }
 
-    /// Discover contract artifacts from manifest file
+    /// Discover contract artifacts from WorldLocal (preferred method)
+    pub fn discover_contract_artifacts_from_world(
+        &self,
+        world: &WorldLocal,
+    ) -> Result<Vec<ContractArtifact>> {
+        debug!("Discovering contract artifacts from WorldLocal");
+
+        let mut artifacts = Vec::new();
+
+        // Process all resources from the world
+        for resource in world.resources.values() {
+            let (name, class_hash, artifact_type) = match resource {
+                ResourceLocal::Contract(contract) => (
+                    contract.common.name.clone(),
+                    contract.common.class_hash,
+                    ArtifactType::Contract,
+                ),
+                ResourceLocal::Model(model) => (
+                    format!("m_{}", model.common.name), // Prefix models with 'm_'
+                    model.common.class_hash,
+                    ArtifactType::Model,
+                ),
+                ResourceLocal::Event(event) => (
+                    format!("e_{}", event.common.name), // Prefix events with 'e_'
+                    event.common.class_hash,
+                    ArtifactType::Event,
+                ),
+                _ => continue, // Skip other resource types for verification
+            };
+
+            artifacts.push(ContractArtifact { name, class_hash, artifact_type });
+        }
+
+        debug!("Found {} artifacts from WorldLocal", artifacts.len());
+        Ok(artifacts)
+    }
+
+    /// Discover contract artifacts from manifest file (deprecated - use
+    /// discover_contract_artifacts_from_world)
     pub fn discover_contract_artifacts(&self) -> Result<Vec<ContractArtifact>> {
         debug!(
             "Discovering contract artifacts from manifest file in: {}",

@@ -7,6 +7,7 @@ version.workspace = true
 
 [dependencies]
 anyhow.workspace = true
+dojo-world.workspace = true
 reqwest = { workspace = true, features = [ "multipart" ] }
 serde = { workspace = true, features = [ "derive" ] }
 serde_json.workspace = true

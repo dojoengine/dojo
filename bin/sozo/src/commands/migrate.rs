@@ -87,7 +87,9 @@ impl MigrateArgs {
                 profile_config.clone(),
                 rpc_url,
                 is_guest,
-            ).with_verification(verify.build()?);
+            )
+            .with_verification(verify.build()?)
+            .with_target_directory(ws.target_dir_profile().to_string());
 
             let MigrationResult { manifest, has_changes, verification_results } =
                 migration.migrate(&mut spinner).await.context("Migration failed.")?;

@@ -66,6 +66,8 @@ where
     rpc_url: String,
     guest: bool,
     verification_config: VerificationConfig,
+    // Target directory for loading WorldLocal artifacts
+    target_directory: Option<String>,
 }
 
 #[derive(Debug)]
@@ -96,12 +98,18 @@ where
             rpc_url,
             guest,
             verification_config: VerificationConfig::None,
+            target_directory: None,
         }
     }
 
     /// Builder method to add verification to an existing migration
     pub fn with_verification(self, verification_config: VerificationConfig) -> Self {
         Self { verification_config, ..self }
+    }
+
+    /// Builder method to set the target directory for loading artifacts
+    pub fn with_target_directory(self, target_directory: String) -> Self {
+        Self { target_directory: Some(target_directory), ..self }
     }
 
     /// Migrates the world by syncing the namespaces, resources, permissions and initializing the
@@ -1054,6 +1062,23 @@ where
         // Get project root from the world's manifest path
         let project_root = get_project_root();
 
+        // Load WorldLocal from artifacts using the correct target directory
+        let target_dir = if let Some(target_dir) = &self.target_directory {
+            target_dir.clone()
+        } else {
+            // Fallback to dev profile if no target directory was provided
+            project_root.join("target").join("dev").to_string_lossy().to_string()
+        };
+
+        let world =
+            dojo_world::local::WorldLocal::from_directory(target_dir, self.profile_config.clone())
+                .map_err(|e| {
+                    MigrationError::ContractVerificationError(anyhow::anyhow!(
+                        "Failed to load WorldLocal: {}",
+                        e
+                    ))
+                })?;
+
         // Create verifier
         let verifier = ContractVerifier::new(project_root, verification_config.clone())
             .map_err(MigrationError::ContractVerificationError)?;
@@ -1064,9 +1089,9 @@ where
             ("2.8.0".to_string(), "2.8.0".to_string())
         });
 
-        // Verify contracts using manifest file (includes all contracts, models, events)
+        // Verify contracts using WorldLocal (includes all contracts, models, events)
         let results = verifier
-            .verify_deployed_contracts(ui, &cairo_version, &scarb_version)
+            .verify_deployed_contracts_from_world(ui, &cairo_version, &scarb_version, &world)
             .await
             .map_err(|e| MigrationError::DeclareClassError(e.to_string()))?;
 

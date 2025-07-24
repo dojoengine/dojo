@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use anyhow::Result;
+use dojo_world::local::WorldLocal;
 use starknet_crypto::Felt;
 use tokio::time;
 use tracing::warn;
@@ -75,7 +76,70 @@ impl ContractVerifier {
         Duration::from_millis(base_ms.saturating_add(actual_jitter))
     }
 
-    /// Verify contracts from manifest file
+    /// Verify contracts using WorldLocal (preferred method)
+    pub async fn verify_deployed_contracts_from_world<T: VerificationUi>(
+        &self,
+        ui: &mut T,
+        cairo_version: &str,
+        scarb_version: &str,
+        world: &WorldLocal,
+    ) -> Result<Vec<VerificationResult>> {
+        let mut results = Vec::new();
+        let dojo_version = self.analyzer.extract_dojo_version();
+
+        // Discover contracts from WorldLocal
+        let artifacts = self.analyzer.discover_contract_artifacts_from_world(world)?;
+
+        // Collect source files once for all contracts using the simplified artifacts approach
+        let voyager_config = self.voyager_config()?;
+        let files = self.analyzer.collect_source_files(voyager_config.include_tests)?;
+
+        for artifact in artifacts {
+            ui.update_text_boxed(format!("Verifying {}...", artifact.name));
+
+            match self
+                .verify_single_contract(
+                    &artifact.class_hash,
+                    &artifact.name,
+                    cairo_version,
+                    scarb_version,
+                    &dojo_version,
+                    &files,
+                )
+                .await
+            {
+                Ok(job_id) => {
+                    // Always wait for verification to complete before proceeding to next contract
+                    let result = self.wait_for_verification(&job_id, &artifact.name, ui).await;
+                    results.push(result);
+                }
+                Err(e) => match e {
+                    VerificationError::AlreadyVerified(msg) => {
+                        results.push(VerificationResult::AlreadyVerified {
+                            contract_name: artifact.name.clone(),
+                            class_hash: format!("{:#066x}", artifact.class_hash),
+                        });
+                        ui.update_text_boxed(format!("✅ {}", msg));
+                    }
+                    VerificationError::Other(e) => {
+                        results.push(VerificationResult::Failed {
+                            contract_name: artifact.name.clone(),
+                            error: e.to_string(),
+                        });
+                        ui.update_text_boxed(format!(
+                            "❌ Failed to verify {}: {}",
+                            artifact.name, e
+                        ));
+                    }
+                },
+            }
+        }
+
+        Ok(results)
+    }
+
+    /// Verify contracts from manifest file (deprecated - use verify_deployed_contracts_from_world)
+    ///
     pub async fn verify_deployed_contracts<T: VerificationUi>(
         &self,
         ui: &mut T,
