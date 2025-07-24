@@ -99,23 +99,9 @@ where
         }
     }
 
-    /// Creates a new migration with verification enabled.
-    pub fn with_verification(
-        diff: WorldDiff,
-        world: WorldContract<A>,
-        txn_config: TxnConfig,
-        profile_config: ProfileConfig,
-        rpc_url: String,
-        guest: bool,
-        verification_config: VerificationConfig,
-    ) -> Self {
-        Self { diff, world, txn_config, profile_config, rpc_url, guest, verification_config }
-    }
-
     /// Builder method to add verification to an existing migration
-    pub fn with_verification_config(mut self, verification_config: VerificationConfig) -> Self {
-        self.verification_config = verification_config;
-        self
+    pub fn with_verification(self, verification_config: VerificationConfig) -> Self {
+        Self { verification_config, ..self }
     }
 
     /// Migrates the world by syncing the namespaces, resources, permissions and initializing the
