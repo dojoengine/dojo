@@ -65,7 +65,6 @@ where
     // Ideally, we want this rpc url to be exposed from the world.account.provider().
     rpc_url: String,
     guest: bool,
-    // Verification configuration
     verification_config: VerificationConfig,
 }
 

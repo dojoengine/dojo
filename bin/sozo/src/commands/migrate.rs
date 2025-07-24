@@ -92,7 +92,6 @@ impl MigrateArgs {
             let MigrationResult { manifest, has_changes, verification_results } =
                 migration.migrate(&mut spinner).await.context("Migration failed.")?;
 
-            // Display verification results if any
             if let Some(results) = verification_results {
                 if !results.is_empty() {
                     let mut verification_spinner = MigrationUi::new(Some("Processing verification results..."));
