@@ -138,63 +138,6 @@ impl ContractVerifier {
         Ok(results)
     }
 
-    /// Verify contracts from manifest file (deprecated - use verify_deployed_contracts_from_world)
-    pub async fn verify_deployed_contracts<T: VerificationUi>(
-        &self,
-        ui: &mut T,
-        cairo_version: &str,
-        scarb_version: &str,
-    ) -> Result<Vec<VerificationResult>> {
-        let mut results = Vec::new();
-        let dojo_version = self.analyzer.extract_dojo_version();
-
-        // Discover contracts from manifest
-        let artifacts = self.analyzer.discover_contract_artifacts()?;
-
-        // Collect source files once for all contracts using the simplified artifacts approach
-        let voyager_config = self.voyager_config()?;
-        let files = self.analyzer.collect_source_files(voyager_config.include_tests)?;
-
-        for artifact in artifacts {
-            ui.update_text_boxed(format!("Verifying {}...", artifact.name));
-
-            match self
-                .verify_single_contract(
-                    &artifact.class_hash,
-                    &artifact.name,
-                    cairo_version,
-                    scarb_version,
-                    &dojo_version,
-                    &files,
-                )
-                .await
-            {
-                Ok(job_id) => {
-                    // Always wait for verification to complete before proceeding to next contract
-                    let result = self.wait_for_verification(&job_id, &artifact.name, ui).await;
-                    results.push(result);
-                }
-                Err(e) => match e {
-                    VerificationError::AlreadyVerified(_) => {
-                        results.push(VerificationResult::AlreadyVerified {
-                            contract_name: artifact.name.clone(),
-                            class_hash: format!("{:#066x}", artifact.class_hash),
-                        });
-                    }
-                    VerificationError::Other(err) => {
-                        warn!("Failed to verify contract {}: {}", artifact.name, err);
-                        results.push(VerificationResult::Failed {
-                            contract_name: artifact.name.clone(),
-                            error: err.to_string(),
-                        });
-                    }
-                },
-            }
-        }
-
-        Ok(results)
-    }
-
     async fn verify_single_contract(
         &self,
         class_hash: &Felt,
