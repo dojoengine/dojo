@@ -1056,7 +1056,7 @@ where
 
         // Create verifier
         let verifier = ContractVerifier::new(project_root, verification_config.clone())
-            .map_err(MigrationError::DeployExternalContractError)?;
+            .map_err(MigrationError::ContractVerificationError)?;
 
         // Get version info from project configuration
         let (cairo_version, scarb_version) = get_project_versions().unwrap_or_else(|_| {

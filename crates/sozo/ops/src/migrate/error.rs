@@ -37,5 +37,5 @@ where
     #[error("Declaration of class failed: {0}")]
     DeclareClassError(String),
     #[error(transparent)]
-    DeployExternalContractError(anyhow::Error),
+    ContractVerificationError(anyhow::Error),
 }
