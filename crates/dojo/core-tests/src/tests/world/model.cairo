@@ -259,7 +259,6 @@ fn test_upgrade_model_with_nested_enum_key() {
 
     // values previously set in deploy_world_for_model_upgrades
     let read: ModelWithNestedEnumKey = world_storage.read_model(MyNestedEnum::A(MyEnum::X(8)));
-    println!("read: {:?}", read);
     assert!(read.a == 42);
 }
 
