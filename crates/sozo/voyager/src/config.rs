@@ -6,10 +6,19 @@ use serde::Deserialize;
 use starknet_crypto::Felt;
 use url::Url;
 
-/// Configuration for contract verification
+/// Configuration for contract verification services
 #[derive(Debug, Clone)]
-pub struct VerificationConfig {
-    /// API endpoint URL for verification service
+pub enum VerificationConfig {
+    /// No verification enabled
+    None,
+    /// Voyager verification service
+    Voyager(VoyagerConfig),
+}
+
+/// Configuration specific to Voyager verification service
+#[derive(Debug, Clone)]
+pub struct VoyagerConfig {
+    /// API endpoint URL for Voyager service
     pub api_url: Url,
     /// Whether to watch verification progress
     pub watch: bool,
@@ -25,12 +34,32 @@ pub struct VerificationConfig {
 
 impl Default for VerificationConfig {
     fn default() -> Self {
+        Self::None
+    }
+}
+
+impl Default for VoyagerConfig {
+    fn default() -> Self {
         Self {
             api_url: Url::parse("https://api.voyager.online/beta").unwrap(),
             watch: false,
             include_tests: true,
             timeout: 300,               // 5 minutes for HTTP requests
             verification_timeout: 1800, // 30 minutes total for verification
+            max_attempts: 30,
+        }
+    }
+}
+
+impl VoyagerConfig {
+    /// Create a new VoyagerConfig with the specified API URL
+    pub fn new(api_url: Url, watch: bool) -> Self {
+        Self {
+            api_url,
+            watch,
+            include_tests: true,
+            timeout: 300,
+            verification_timeout: 1800,
             max_attempts: 30,
         }
     }

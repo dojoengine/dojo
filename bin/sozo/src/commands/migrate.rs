@@ -82,26 +82,15 @@ impl MigrateArgs {
             let mut txn_config: TxnConfig = self.transaction.try_into()?;
             txn_config.wait = true;
 
-            let migration = if let Some(verification_config) = verification_config {
-                Migration::with_verification(
-                    world_diff,
-                    WorldContract::new(world_address, &account),
-                    txn_config,
-                    profile_config.clone(),
-                    rpc_url,
-                    is_guest,
-                    verification_config,
-                )
-            } else {
-                Migration::new(
-                    world_diff,
-                    WorldContract::new(world_address, &account),
-                    txn_config,
-                    profile_config.clone(),
-                    rpc_url,
-                    is_guest,
-                )
-            };
+            let migration = Migration::with_verification(
+                world_diff,
+                WorldContract::new(world_address, &account),
+                txn_config,
+                profile_config.clone(),
+                rpc_url,
+                is_guest,
+                verification_config,
+            );
 
             let MigrationResult { manifest, has_changes, verification_results } =
                 migration.migrate(&mut spinner).await.context("Migration failed.")?;

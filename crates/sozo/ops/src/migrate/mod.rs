@@ -49,7 +49,7 @@ pub mod error;
 pub use error::MigrationError;
 pub use sozo_voyager::{
     get_project_root, get_project_versions, ContractVerifier, VerificationConfig,
-    VerificationResult,
+    VerificationResult, VoyagerConfig,
 };
 
 #[derive(Debug)]
@@ -65,8 +65,8 @@ where
     // Ideally, we want this rpc url to be exposed from the world.account.provider().
     rpc_url: String,
     guest: bool,
-    // Optional verification configuration
-    verification_config: Option<VerificationConfig>,
+    // Verification configuration
+    verification_config: VerificationConfig,
 }
 
 #[derive(Debug)]
@@ -89,7 +89,15 @@ where
         rpc_url: String,
         guest: bool,
     ) -> Self {
-        Self { diff, world, txn_config, profile_config, rpc_url, guest, verification_config: None }
+        Self {
+            diff,
+            world,
+            txn_config,
+            profile_config,
+            rpc_url,
+            guest,
+            verification_config: VerificationConfig::None,
+        }
     }
 
     /// Creates a new migration with verification enabled.
@@ -102,15 +110,7 @@ where
         guest: bool,
         verification_config: VerificationConfig,
     ) -> Self {
-        Self {
-            diff,
-            world,
-            txn_config,
-            profile_config,
-            rpc_url,
-            guest,
-            verification_config: Some(verification_config),
-        }
+        Self { diff, world, txn_config, profile_config, rpc_url, guest, verification_config }
     }
 
     /// Migrates the world by syncing the namespaces, resources, permissions and initializing the
@@ -134,19 +134,20 @@ where
         let external_contracts_have_changed = self.sync_external_contracts(ui).await?;
 
         // Optional contract verification step
-        let verification_results = if let Some(verification_config) = &self.verification_config {
-            match self.verify_contracts(ui, verification_config).await {
-                Ok(results) => Some(results),
-                Err(e) => {
-                    // Log verification error but don't fail the migration
-                    tracing::warn!("Contract verification failed: {}", e);
-                    ui.stop_and_persist_boxed("⚠️", format!("Verification failed: {}", e));
-                    ui.restart("Continuing migration...");
-                    None
+        let verification_results = match &self.verification_config {
+            VerificationConfig::None => None,
+            _ => {
+                match self.verify_contracts(ui, &self.verification_config).await {
+                    Ok(results) => Some(results),
+                    Err(e) => {
+                        // Log verification error but don't fail the migration
+                        tracing::warn!("Contract verification failed: {}", e);
+                        ui.stop_and_persist_boxed("⚠️", format!("Verification failed: {}", e));
+                        ui.restart("Continuing migration...");
+                        None
+                    }
                 }
             }
-        } else {
-            None
         };
 
         Ok(MigrationResult {

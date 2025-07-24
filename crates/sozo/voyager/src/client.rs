@@ -10,8 +10,8 @@ use starknet_crypto::Felt;
 use tracing::{debug, warn};
 
 use crate::config::{
-    ApiError, FileInfo, ProjectMetadata, VerificationConfig, VerificationJob,
-    VerificationJobDispatch, VerificationJobDto,
+    ApiError, FileInfo, ProjectMetadata, VerificationJob, VerificationJobDispatch,
+    VerificationJobDto, VoyagerConfig,
 };
 
 /// Verification-specific error types
@@ -83,13 +83,13 @@ impl CircuitBreaker {
 #[derive(Debug)]
 pub struct VerificationClient {
     client: Client,
-    config: VerificationConfig,
+    config: VoyagerConfig,
     circuit_breaker: std::sync::Mutex<CircuitBreaker>,
 }
 
 impl VerificationClient {
     /// Create a new verification client
-    pub fn new(config: VerificationConfig) -> Result<Self> {
+    pub fn new(config: VoyagerConfig) -> Result<Self> {
         let client = Client::builder()
             .timeout(Duration::from_secs(config.timeout))
             .build()

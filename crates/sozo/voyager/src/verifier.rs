@@ -25,10 +25,27 @@ pub struct ContractVerifier {
 impl ContractVerifier {
     /// Create a new contract verifier
     pub fn new(project_root: PathBuf, config: VerificationConfig) -> Result<Self> {
-        let client = VerificationClient::new(config.clone())?;
+        // Extract the client configuration based on the service type
+        let client = match &config {
+            VerificationConfig::None => {
+                return Err(anyhow::anyhow!("No verification service configured"));
+            }
+            VerificationConfig::Voyager(voyager_config) => {
+                VerificationClient::new(voyager_config.clone())?
+            }
+        };
+
         let analyzer = ProjectAnalyzer::new(project_root);
 
         Ok(Self { client, analyzer, config })
+    }
+
+    /// Get the voyager config from the verification config
+    fn voyager_config(&self) -> anyhow::Result<&crate::config::VoyagerConfig> {
+        match &self.config {
+            VerificationConfig::Voyager(config) => Ok(config),
+            VerificationConfig::None => Err(anyhow::anyhow!("No verification service configured")),
+        }
     }
 
     /// Add jitter to backoff duration to prevent thundering herd
@@ -72,7 +89,8 @@ impl ContractVerifier {
         let artifacts = self.analyzer.discover_contract_artifacts()?;
 
         // Collect source files once for all contracts using the simplified artifacts approach
-        let files = self.analyzer.collect_source_files(self.config.include_tests)?;
+        let voyager_config = self.voyager_config()?;
+        let files = self.analyzer.collect_source_files(voyager_config.include_tests)?;
 
         for artifact in artifacts {
             ui.update_text_boxed(format!("Verifying {}...", artifact.name));
@@ -153,7 +171,8 @@ impl ContractVerifier {
         const MAX_INTERVAL: Duration = Duration::from_secs(30);
         const BACKOFF_MULTIPLIER: f64 = 1.5;
 
-        let max_attempts = self.config.max_attempts;
+        let voyager_config = self.voyager_config().unwrap(); // Safe because we only call this from verify_single_contract
+        let max_attempts = voyager_config.max_attempts;
         let mut current_interval = INITIAL_INTERVAL;
 
         for attempt in 1..=max_attempts {

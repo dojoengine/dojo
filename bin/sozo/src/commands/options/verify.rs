@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Result};
 use clap::{Args, ValueEnum};
-use sozo_ops::migrate::VerificationConfig;
+use sozo_ops::migrate::{VerificationConfig, VoyagerConfig};
 use url::Url;
 
 #[derive(Debug, Clone, ValueEnum)]
@@ -19,11 +19,19 @@ pub enum VerificationService {
 #[command(next_help_heading = "Contract verification options")]
 pub struct ContractVerifyOption {
     /// Enable contract verification with specified service
-    #[arg(long = "verify", value_enum, help = "Enable contract verification with specified service")]
+    #[arg(
+        long = "verify",
+        value_enum,
+        help = "Enable contract verification with specified service"
+    )]
     pub service: Option<VerificationService>,
 
     /// Custom verification API URL (required when --verify=custom)
-    #[arg(long = "verify-url", value_name = "URL", help = "Custom verification API URL (required when --verify=custom)")]
+    #[arg(
+        long = "verify-url",
+        value_name = "URL",
+        help = "Custom verification API URL (required when --verify=custom)"
+    )]
     pub custom_url: Option<String>,
 
     /// Watch verification progress until completion
@@ -40,19 +48,23 @@ pub struct VerifyOptions {
 
 impl VerifyOptions {
     /// Creates verification configuration based on the specified service
-    pub fn create_verification_config(&self) -> Result<Option<VerificationConfig>> {
+    pub fn create_verification_config(&self) -> Result<VerificationConfig> {
         self.contract.create_verification_config()
     }
 }
 
 impl ContractVerifyOption {
     /// Creates verification configuration based on the specified service
-    pub fn create_verification_config(&self) -> Result<Option<VerificationConfig>> {
+    pub fn create_verification_config(&self) -> Result<VerificationConfig> {
         if let Some(ref service) = self.service {
             let api_url = match service {
                 VerificationService::Voyager => Url::parse("https://api.voyager.online/beta")?,
-                VerificationService::VoyagerSepolia => Url::parse("https://sepolia-api.voyager.online/beta")?,
-                VerificationService::VoyagerDev => Url::parse("https://dev-api.voyager.online/beta")?,
+                VerificationService::VoyagerSepolia => {
+                    Url::parse("https://sepolia-api.voyager.online/beta")?
+                }
+                VerificationService::VoyagerDev => {
+                    Url::parse("https://dev-api.voyager.online/beta")?
+                }
                 VerificationService::Custom => {
                     if let Some(ref url) = self.custom_url {
                         Url::parse(url)?
@@ -62,16 +74,9 @@ impl ContractVerifyOption {
                 }
             };
 
-            Ok(Some(VerificationConfig {
-                api_url,
-                watch: self.watch,
-                include_tests: true, // Default to including tests for Dojo projects
-                timeout: 300,        // 5 minutes default timeout
-                verification_timeout: 1800, // 30 minutes total for verification
-                max_attempts: 30,    // Maximum retry attempts
-            }))
+            Ok(VerificationConfig::Voyager(VoyagerConfig::new(api_url, self.watch)))
         } else {
-            Ok(None)
+            Ok(VerificationConfig::None)
         }
     }
 }
