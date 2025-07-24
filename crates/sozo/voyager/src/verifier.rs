@@ -139,7 +139,6 @@ impl ContractVerifier {
     }
 
     /// Verify contracts from manifest file (deprecated - use verify_deployed_contracts_from_world)
-    ///
     pub async fn verify_deployed_contracts<T: VerificationUi>(
         &self,
         ui: &mut T,
