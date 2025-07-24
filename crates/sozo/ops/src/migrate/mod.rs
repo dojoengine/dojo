@@ -113,6 +113,12 @@ where
         Self { diff, world, txn_config, profile_config, rpc_url, guest, verification_config }
     }
 
+    /// Builder method to add verification to an existing migration
+    pub fn with_verification_config(mut self, verification_config: VerificationConfig) -> Self {
+        self.verification_config = verification_config;
+        self
+    }
+
     /// Migrates the world by syncing the namespaces, resources, permissions and initializing the
     /// contracts.
     ///

@@ -77,20 +77,17 @@ impl MigrateArgs {
             let profile_config = ws.load_profile_config()?;
 
             // Create verification configuration if requested
-            let verification_config = verify.create_verification_config()?;
-
             let mut txn_config: TxnConfig = self.transaction.try_into()?;
             txn_config.wait = true;
 
-            let migration = Migration::with_verification(
+            let migration = Migration::new(
                 world_diff,
                 WorldContract::new(world_address, &account),
                 txn_config,
                 profile_config.clone(),
                 rpc_url,
                 is_guest,
-                verification_config,
-            );
+            ).with_verification_config(verify.build()?);
 
             let MigrationResult { manifest, has_changes, verification_results } =
                 migration.migrate(&mut spinner).await.context("Migration failed.")?;

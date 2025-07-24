@@ -51,6 +51,11 @@ impl VerifyOptions {
     pub fn create_verification_config(&self) -> Result<VerificationConfig> {
         self.contract.create_verification_config()
     }
+
+    /// Builder method to create verification configuration
+    pub fn build(&self) -> Result<VerificationConfig> {
+        self.create_verification_config()
+    }
 }
 
 impl ContractVerifyOption {
