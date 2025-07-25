@@ -1059,6 +1059,25 @@ where
         ui: &mut MigrationUi,
         verification_config: &VerificationConfig,
     ) -> Result<Vec<VerificationResult>, MigrationError<A::SignError>> {
+        use tracing::debug;
+
+        match verification_config {
+            VerificationConfig::None => {
+                debug!("Verification disabled, skipping contract verification");
+                Ok(vec![])
+            }
+            VerificationConfig::Voyager(voyager_config) => {
+                self.verify_contracts_with_voyager(ui, voyager_config).await
+            }
+        }
+    }
+
+    /// Verify contracts using Voyager verification service.
+    async fn verify_contracts_with_voyager(
+        &self,
+        ui: &mut MigrationUi,
+        voyager_config: &VoyagerConfig,
+    ) -> Result<Vec<VerificationResult>, MigrationError<A::SignError>> {
         // Get project root from the world's manifest path
         let project_root = get_project_root();
 
@@ -1079,8 +1098,9 @@ where
                     ))
                 })?;
 
-        // Create verifier
-        let verifier = ContractVerifier::new(project_root, verification_config.clone())
+        // Create verifier with Voyager configuration
+        let verification_config = VerificationConfig::Voyager(voyager_config.clone());
+        let verifier = ContractVerifier::new(project_root, verification_config)
             .map_err(MigrationError::ContractVerificationError)?;
 
         // Get version info from project configuration
@@ -1094,8 +1114,6 @@ where
             .verify_deployed_contracts_from_world(ui, &cairo_version, &scarb_version, &world)
             .await
             .map_err(|e| MigrationError::DeclareClassError(e.to_string()))?;
-
-        // Results will be displayed by the calling command
 
         Ok(results)
     }
