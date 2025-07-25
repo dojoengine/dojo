@@ -82,44 +82,94 @@ impl ContractVerifier {
         let voyager_config = self.voyager_config();
         let files = self.analyzer.collect_source_files(voyager_config.include_tests)?;
 
-        for artifact in artifacts {
-            ui.update_text_boxed(format!("Verifying {}...", artifact.name));
+        if voyager_config.watch {
+            // Watch mode: sequential verification with waiting
+            for artifact in artifacts {
+                ui.update_text_boxed(format!("Verifying {}...", artifact.name));
 
-            match self
-                .verify_single_contract(
-                    &artifact.class_hash,
-                    &artifact.name,
-                    cairo_version,
-                    scarb_version,
-                    &dojo_version,
-                    &files,
-                )
-                .await
-            {
-                Ok(job_id) => {
-                    // Always wait for verification to complete before proceeding to next contract
-                    let result = self.wait_for_verification(&job_id, &artifact.name, ui).await;
-                    results.push(result);
-                }
-                Err(e) => match e {
-                    VerificationError::AlreadyVerified(msg) => {
-                        results.push(VerificationResult::AlreadyVerified {
-                            contract_name: artifact.name.clone(),
-                            class_hash: format!("{:#066x}", artifact.class_hash),
-                        });
-                        ui.update_text_boxed(format!("✅ {}", msg));
+                match self
+                    .verify_single_contract(
+                        &artifact.class_hash,
+                        &artifact.name,
+                        cairo_version,
+                        scarb_version,
+                        &dojo_version,
+                        &files,
+                    )
+                    .await
+                {
+                    Ok(job_id) => {
+                        // Wait for verification to complete before proceeding to next contract
+                        let result = self.wait_for_verification(&job_id, &artifact.name, ui).await;
+                        results.push(result);
                     }
-                    VerificationError::Other(e) => {
-                        results.push(VerificationResult::Failed {
+                    Err(e) => match e {
+                        VerificationError::AlreadyVerified(msg) => {
+                            results.push(VerificationResult::AlreadyVerified {
+                                contract_name: artifact.name.clone(),
+                                class_hash: format!("{:#066x}", artifact.class_hash),
+                            });
+                            ui.update_text_boxed(format!("✅ {}", msg));
+                        }
+                        VerificationError::Other(e) => {
+                            results.push(VerificationResult::Failed {
+                                contract_name: artifact.name.clone(),
+                                error: e.to_string(),
+                            });
+                            ui.update_text_boxed(format!(
+                                "❌ Failed to verify {}: {}",
+                                artifact.name, e
+                            ));
+                        }
+                    },
+                }
+            }
+        } else {
+            // Default mode: submit all contracts in parallel without waiting
+            ui.update_text_boxed("Submitting all contracts for verification...".to_string());
+
+            for artifact in artifacts {
+                match self
+                    .verify_single_contract(
+                        &artifact.class_hash,
+                        &artifact.name,
+                        cairo_version,
+                        scarb_version,
+                        &dojo_version,
+                        &files,
+                    )
+                    .await
+                {
+                    Ok(job_id) => {
+                        results.push(VerificationResult::Submitted {
                             contract_name: artifact.name.clone(),
-                            error: e.to_string(),
+                            job_id: job_id.clone(),
                         });
                         ui.update_text_boxed(format!(
-                            "❌ Failed to verify {}: {}",
-                            artifact.name, e
+                            "⏳ Submitted {} for verification (job: {})",
+                            artifact.name, job_id
                         ));
                     }
-                },
+                    Err(e) => match e {
+                        VerificationError::AlreadyVerified(msg) => {
+                            results.push(VerificationResult::AlreadyVerified {
+                                contract_name: artifact.name.clone(),
+                                class_hash: format!("{:#066x}", artifact.class_hash),
+                            });
+                            ui.update_text_boxed(format!("✅ {}", msg));
+                        }
+                        VerificationError::Other(e) => {
+                            results.push(VerificationResult::Failed {
+                                contract_name: artifact.name.clone(),
+                                error: e.to_string(),
+                            });
+                            ui.update_text_boxed(format!(
+                                "❌ Failed to verify {}: {}",
+                                artifact.name, e
+                            ));
+                        }
+                    },
+                }
             }
         }
 

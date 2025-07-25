@@ -99,9 +99,15 @@ impl MigrateArgs {
                     let mut verification_spinner = MigrationUi::new(Some("Processing verification results..."));
                     verification_spinner.stop_and_persist_boxed("📊 ", "Contract Verification Results:".bright_cyan().to_string());
 
+                    let verification_config = verify.build()?;
                     let mut has_failures = false;
                     for result in &results {
-                        let message = result.display_message();
+                        let message = match &verification_config {
+                            sozo_ops::migrate::VerificationConfig::Voyager(voyager_config) => {
+                                result.display_message_with_url(&voyager_config.api_url)
+                            }
+                            _ => result.display_message(),
+                        };
                         let mut result_spinner = MigrationUi::new(None);
                         match result {
                             sozo_ops::migrate::VerificationResult::Failed { .. } => {
@@ -115,6 +121,28 @@ impl MigrateArgs {
                             sozo_ops::migrate::VerificationResult::Submitted { .. }
                             | sozo_ops::migrate::VerificationResult::Timeout { .. } => {
                                 result_spinner.stop_and_persist_boxed("   ⚠️ ", message.bright_yellow().to_string());
+                            }
+                        }
+                    }
+
+                    // Show status URLs summary for non-watch mode
+                    if let sozo_ops::migrate::VerificationConfig::Voyager(voyager_config) = &verification_config {
+                        if !voyager_config.watch {
+                            let submitted_jobs: Vec<_> = results.iter()
+                                .filter_map(|result| match result {
+                                    sozo_ops::migrate::VerificationResult::Submitted { job_id, .. } |
+                                    sozo_ops::migrate::VerificationResult::Timeout { job_id, .. } => Some(job_id.as_str()),
+                                    _ => None,
+                                })
+                                .collect();
+                            if !submitted_jobs.is_empty() {
+                                let mut url_spinner = MigrationUi::new(None);
+                                url_spinner.stop_and_persist_boxed(
+                                    "🔗 ",
+                                    format!("Track verification status at: {}/class-verify", 
+                                           voyager_config.api_url.as_str().trim_end_matches('/'))
+                                        .bright_cyan().to_string()
+                                );
                             }
                         }
                     }

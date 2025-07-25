@@ -289,6 +289,45 @@ impl VerificationResult {
         }
     }
 
+    /// Get a display message with status URL for this result
+    pub fn display_message_with_url(&self, api_url: &Url) -> String {
+        match self {
+            Self::Submitted { contract_name, job_id } => {
+                let status_url = format!(
+                    "{}/class-verify/job/{}",
+                    api_url.as_str().trim_end_matches('/'),
+                    job_id
+                );
+                format!("⏳ Submitted {} - Status: {}", contract_name, status_url)
+            }
+            Self::Verified { contract_name, class_hash, job_id } => {
+                let status_url = format!(
+                    "{}/class-verify/job/{}",
+                    api_url.as_str().trim_end_matches('/'),
+                    job_id
+                );
+                format!(
+                    "✅ Verified {} (class: {}) - Status: {}",
+                    contract_name, class_hash, status_url
+                )
+            }
+            Self::AlreadyVerified { contract_name, class_hash } => {
+                format!("✅ Already verified {} (class: {})", contract_name, class_hash)
+            }
+            Self::Failed { contract_name, error } => {
+                format!("❌ Failed {}: {}", contract_name, error)
+            }
+            Self::Timeout { contract_name, job_id } => {
+                let status_url = format!(
+                    "{}/class-verify/job/{}",
+                    api_url.as_str().trim_end_matches('/'),
+                    job_id
+                );
+                format!("⏱️ Timeout {} - Status: {}", contract_name, status_url)
+            }
+        }
+    }
+
     /// Check if this result represents a successful verification
     pub fn is_success(&self) -> bool {
         matches!(self, Self::Verified { .. } | Self::AlreadyVerified { .. })
