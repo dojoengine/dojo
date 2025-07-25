@@ -11,9 +11,7 @@ pub trait IActions<T> {
     fn spawn(ref self: T);
     fn move(ref self: T, direction: Direction);
     fn set_player_config(ref self: T, name: ByteArray);
-    fn update_player_config_items(
-        ref self: T, items: Array<PlayerItem>, favorite_item: Option<u32>,
-    );
+    fn update_player_config_items(ref self: T, items: Array<PlayerItem>);
     fn update_player_config_name(ref self: T, name: ByteArray);
     fn get_player_position(self: @T) -> Position;
     fn reset_player_config(ref self: T);
@@ -146,11 +144,14 @@ pub mod actions {
             world.write_model(@config);
         }
 
-        fn update_player_config_items(
-            ref self: ContractState, items: Array<PlayerItem>, favorite_item: Option<u32>,
-        ) {
+        fn update_player_config_items(ref self: ContractState, items: Array<PlayerItem>) {
             let mut world = self.world_default();
             let player = get_caller_address();
+            let len = items.len();
+            let favorite_item = match len > 0 {
+                true => Some(len - 1),
+                false => None,
+            };
             let player_items = PlayerConfigItems { items, favorite_item };
 
             // Don't need to read the model here, we directly overwrite the member "items".
