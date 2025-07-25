@@ -14,8 +14,8 @@ pub mod verifier;
 pub use analyzer::ProjectAnalyzer;
 pub use client::VerificationClient;
 pub use config::{
-    ArtifactType, ContractArtifact, FileInfo, ProjectMetadata, VerificationConfig,
-    VerificationResult, VerifyJobStatus, VoyagerConfig,
+    ArtifactType, ContractArtifact, FileInfo, ProjectMetadata, VerificationResult, VerifyJobStatus,
+    VoyagerConfig,
 };
 pub use utils::{get_project_root, get_project_versions};
 pub use verifier::{ContractVerifier, VerificationUi};
@@ -113,8 +113,9 @@ dojo = { tag = "v1.0.0" }
         fn test_add_jitter_produces_valid_duration() {
             let temp_dir = create_temp_project();
             let voyager_config = super::config::VoyagerConfig::default();
-            let config = VerificationConfig::Voyager(voyager_config);
-            let verifier = ContractVerifier::new(temp_dir.path().to_path_buf(), config).unwrap();
+            let verifier =
+                ContractVerifier::new_with_voyager(temp_dir.path().to_path_buf(), voyager_config)
+                    .unwrap();
 
             let base_duration = Duration::from_secs(10);
             let jittered = verifier.add_jitter(base_duration);
@@ -128,8 +129,9 @@ dojo = { tag = "v1.0.0" }
         fn test_add_jitter_handles_zero_duration() {
             let temp_dir = create_temp_project();
             let voyager_config = super::config::VoyagerConfig::default();
-            let config = VerificationConfig::Voyager(voyager_config);
-            let verifier = ContractVerifier::new(temp_dir.path().to_path_buf(), config).unwrap();
+            let verifier =
+                ContractVerifier::new_with_voyager(temp_dir.path().to_path_buf(), voyager_config)
+                    .unwrap();
 
             let zero_duration = Duration::from_secs(0);
             let jittered = verifier.add_jitter(zero_duration);
@@ -142,21 +144,10 @@ dojo = { tag = "v1.0.0" }
         fn test_verifier_creation_requires_valid_project() {
             let invalid_path = PathBuf::from("/nonexistent/path");
             let voyager_config = super::config::VoyagerConfig::default();
-            let config = VerificationConfig::Voyager(voyager_config);
 
             // Should create verifier even with invalid path (ProjectAnalyzer just stores the path)
-            let result = ContractVerifier::new(invalid_path, config);
+            let result = ContractVerifier::new_with_voyager(invalid_path, voyager_config);
             assert!(result.is_ok());
-        }
-
-        #[test]
-        fn test_verifier_creation_fails_with_none_config() {
-            let invalid_path = PathBuf::from("/nonexistent/path");
-            let config = VerificationConfig::None;
-
-            // Should fail to create verifier with None config
-            let result = ContractVerifier::new(invalid_path, config);
-            assert!(result.is_err());
         }
     }
 
@@ -280,7 +271,6 @@ dojo = { tag = "v1.0.0" }
     }
 
     mod client_tests {
-        use super::*;
 
         #[test]
         fn test_circuit_breaker_allows_initial_requests() {
@@ -330,9 +320,12 @@ dojo = { tag = "v1.0.0" }
         }
 
         #[test]
-        fn test_verification_enum_default_is_none() {
-            let config = VerificationConfig::default();
-            assert!(matches!(config, VerificationConfig::None));
+        fn test_voyager_config_new_method() {
+            use url::Url;
+            let api_url = Url::parse("https://custom.api.url").unwrap();
+            let config = super::config::VoyagerConfig::new(api_url.clone(), true);
+            assert_eq!(config.api_url, api_url);
+            assert!(config.watch);
         }
 
         #[test]

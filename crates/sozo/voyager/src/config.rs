@@ -6,15 +6,6 @@ use serde::Deserialize;
 use starknet_crypto::Felt;
 use url::Url;
 
-/// Configuration for contract verification services
-#[derive(Debug, Clone)]
-pub enum VerificationConfig {
-    /// No verification enabled
-    None,
-    /// Voyager verification service
-    Voyager(VoyagerConfig),
-}
-
 /// Configuration specific to Voyager verification service
 #[derive(Debug, Clone)]
 pub struct VoyagerConfig {
@@ -30,12 +21,6 @@ pub struct VoyagerConfig {
     pub verification_timeout: u64,
     /// Maximum number of retry attempts for status checking
     pub max_attempts: u32,
-}
-
-impl Default for VerificationConfig {
-    fn default() -> Self {
-        Self::None
-    }
 }
 
 impl Default for VoyagerConfig {

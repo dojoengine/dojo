@@ -48,9 +48,23 @@ use crate::migration_ui::MigrationUi;
 pub mod error;
 pub use error::MigrationError;
 pub use sozo_voyager::{
-    get_project_root, get_project_versions, ContractVerifier, VerificationConfig,
-    VerificationResult, VoyagerConfig,
+    get_project_root, get_project_versions, ContractVerifier, VerificationResult, VoyagerConfig,
 };
+
+/// Configuration for contract verification services
+#[derive(Debug, Clone)]
+pub enum VerificationConfig {
+    /// No verification enabled
+    None,
+    /// Voyager verification service
+    Voyager(VoyagerConfig),
+}
+
+impl Default for VerificationConfig {
+    fn default() -> Self {
+        Self::None
+    }
+}
 
 #[derive(Debug)]
 pub struct Migration<A>
@@ -1099,8 +1113,7 @@ where
                 })?;
 
         // Create verifier with Voyager configuration
-        let verification_config = VerificationConfig::Voyager(voyager_config.clone());
-        let verifier = ContractVerifier::new(project_root, verification_config)
+        let verifier = ContractVerifier::new_with_voyager(project_root, voyager_config.clone())
             .map_err(MigrationError::ContractVerificationError)?;
 
         // Get version info from project configuration

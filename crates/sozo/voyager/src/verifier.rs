@@ -12,7 +12,7 @@ use tracing::warn;
 use crate::analyzer::ProjectAnalyzer;
 use crate::client::{VerificationClient, VerificationError};
 use crate::config::{
-    FileInfo, ProjectMetadata, VerificationConfig, VerificationResult, VerifyJobStatus,
+    FileInfo, ProjectMetadata, VerificationResult, VerifyJobStatus, VoyagerConfig,
 };
 
 /// Verifier for handling contract verification during migration
@@ -20,33 +20,21 @@ use crate::config::{
 pub struct ContractVerifier {
     client: VerificationClient,
     analyzer: ProjectAnalyzer,
-    config: VerificationConfig,
+    config: VoyagerConfig,
 }
 
 impl ContractVerifier {
-    /// Create a new contract verifier
-    pub fn new(project_root: PathBuf, config: VerificationConfig) -> Result<Self> {
-        // Extract the client configuration based on the service type
-        let client = match &config {
-            VerificationConfig::None => {
-                return Err(anyhow::anyhow!("No verification service configured"));
-            }
-            VerificationConfig::Voyager(voyager_config) => {
-                VerificationClient::new(voyager_config.clone())?
-            }
-        };
-
+    /// Create a new contract verifier with Voyager config
+    pub fn new_with_voyager(project_root: PathBuf, config: VoyagerConfig) -> Result<Self> {
+        let client = VerificationClient::new(config.clone())?;
         let analyzer = ProjectAnalyzer::new(project_root);
 
         Ok(Self { client, analyzer, config })
     }
 
-    /// Get the voyager config from the verification config
-    fn voyager_config(&self) -> anyhow::Result<&crate::config::VoyagerConfig> {
-        match &self.config {
-            VerificationConfig::Voyager(config) => Ok(config),
-            VerificationConfig::None => Err(anyhow::anyhow!("No verification service configured")),
-        }
+    /// Get the voyager config
+    fn voyager_config(&self) -> &VoyagerConfig {
+        &self.config
     }
 
     /// Add jitter to backoff duration to prevent thundering herd
@@ -91,7 +79,7 @@ impl ContractVerifier {
         let artifacts = self.analyzer.discover_contract_artifacts_from_world(world)?;
 
         // Collect source files once for all contracts using the simplified artifacts approach
-        let voyager_config = self.voyager_config()?;
+        let voyager_config = self.voyager_config();
         let files = self.analyzer.collect_source_files(voyager_config.include_tests)?;
 
         for artifact in artifacts {
@@ -177,7 +165,7 @@ impl ContractVerifier {
         const MAX_INTERVAL: Duration = Duration::from_secs(30);
         const BACKOFF_MULTIPLIER: f64 = 1.5;
 
-        let voyager_config = self.voyager_config().unwrap(); // Safe because we only call this from verify_single_contract
+        let voyager_config = self.voyager_config();
         let max_attempts = voyager_config.max_attempts;
         let mut current_interval = INITIAL_INTERVAL;
 
