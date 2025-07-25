@@ -1,4 +1,4 @@
-use dojo_examples::models::{Direction, Position};
+use dojo_examples::models::{Direction, PlayerItem, Position};
 
 // Interface of a self-managed external contract "ns-Hello"
 #[starknet::interface]
@@ -11,7 +11,9 @@ pub trait IActions<T> {
     fn spawn(ref self: T);
     fn move(ref self: T, direction: Direction);
     fn set_player_config(ref self: T, name: ByteArray);
-    fn update_player_config_items(ref self: T);
+    fn update_player_config_items(
+        ref self: T, items: Array<PlayerItem>, favorite_item: Option<u32>,
+    );
     fn update_player_config_name(ref self: T, name: ByteArray);
     fn get_player_position(self: @T) -> Position;
     fn reset_player_config(ref self: T);
@@ -38,8 +40,8 @@ pub mod actions {
     use dojo_examples::dungeon::{IDungeonDispatcher, IDungeonDispatcherTrait};
     use dojo_examples::lib_math::{SimpleMathDispatcherTrait, SimpleMathLibraryDispatcher};
     use dojo_examples::models::{
-        Direction, Moves, MovesValue, PlayerConfig, PlayerItem, Position, ServerProfile, Vec2,
-        PlayerConfigItems,
+        Direction, Moves, MovesValue, PlayerConfig, PlayerConfigItems, PlayerItem, Position,
+        ServerProfile, Vec2,
     };
     use dojo_examples::utils::next_position;
     use starknet::{ContractAddress, get_caller_address};
@@ -144,14 +146,11 @@ pub mod actions {
             world.write_model(@config);
         }
 
-        fn update_player_config_items(ref self: ContractState) {
+        fn update_player_config_items(
+            ref self: ContractState, items: Array<PlayerItem>, favorite_item: Option<u32>,
+        ) {
             let mut world = self.world_default();
             let player = get_caller_address();
-            let items = array![
-                PlayerItem { item_id: 1, quantity: 12, score: 8 },
-                PlayerItem { item_id: 2, quantity: 42, score: -123 },
-            ];
-            let favorite_item = Option::Some(2);
             let player_items = PlayerConfigItems { items, favorite_item };
 
             // Don't need to read the model here, we directly overwrite the member "items".
