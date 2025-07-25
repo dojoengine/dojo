@@ -14,7 +14,7 @@ pub struct ModelRegistered {
     pub class_hash: Felt,
 }
 
-/// The event emmitted when a model value of an entity is set.
+/// The event emitted when a model value of an entity is set.
 #[derive(Clone, Debug)]
 pub struct StoreSetRecord {
     pub table_id: Felt,
@@ -23,7 +23,7 @@ pub struct StoreSetRecord {
     pub value: Vec<Felt>,
 }
 
-/// The event emmitted when a model is deleted from an entity.
+/// The event emitted when a model is deleted from an entity.
 #[derive(Clone, Debug)]
 pub struct StoreDelRecord {
     pub table_id: Felt,

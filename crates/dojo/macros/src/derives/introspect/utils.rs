@@ -62,7 +62,7 @@ pub fn extract_composite_inner_type(ty: &str, prefix: &str, suffix: &str) -> Str
     caps[1].to_string().replace(" ", "")
 }
 
-/// split a tuple in array of items (nested tuples are not splitted).
+/// split a tuple in array of items (nested tuples are not split).
 /// example (u8, (u16, u32), u128) -> ["u8", "(u16, u32)", "u128"]
 pub fn get_tuple_item_types(ty: &str) -> Vec<String> {
     let tuple_str = extract_composite_inner_type(ty, TUPLE_PREFIX, TUPLE_SUFFIX);

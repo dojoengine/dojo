@@ -29,7 +29,7 @@ pub trait IWorld<T> {
     /// Issues an autoincremented id to the caller.
     /// This functionalities is useful to generate unique, but sequential ids.
     ///
-    /// Note: This functionalities may impact performances since transaction paralellisation can't
+    /// Note: This functionalities may impact performances since transaction parallelisation can't
     /// be achieved since the same storage slot is being written.
     fn uuid(ref self: T) -> usize;
 
