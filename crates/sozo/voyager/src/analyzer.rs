@@ -6,10 +6,9 @@ use std::path::{Path, PathBuf};
 use anyhow::{anyhow, Result};
 use dojo_world::local::{ResourceLocal, WorldLocal};
 use serde_json;
-use starknet_crypto::Felt;
 use tracing::debug;
 
-use crate::config::{ArtifactType, ContractArtifact, FileInfo, Manifest, StarknetArtifacts};
+use crate::config::{ArtifactType, ContractArtifact, FileInfo, StarknetArtifacts};
 
 /// Project analyzer for extracting Dojo project information
 #[derive(Debug)]
@@ -103,78 +102,6 @@ impl ProjectAnalyzer {
         Ok(artifacts)
     }
 
-    /// Discover contract artifacts from manifest file (deprecated - use
-    /// discover_contract_artifacts_from_world)
-    pub fn discover_contract_artifacts(&self) -> Result<Vec<ContractArtifact>> {
-        debug!(
-            "Discovering contract artifacts from manifest file in: {}",
-            self.project_root.display()
-        );
-
-        // Try to find the manifest file (usually manifest_dev.json for dev profile)
-        let manifest_path = self.find_manifest_file()?;
-
-        let content = fs::read_to_string(&manifest_path).map_err(|e| {
-            anyhow!("Failed to read manifest file {}: {}", manifest_path.display(), e)
-        })?;
-
-        let manifest: Manifest = serde_json::from_str(&content)
-            .map_err(|e| anyhow!("Failed to parse manifest file: {}", e))?;
-
-        let mut artifacts = Vec::new();
-
-        // Add contracts
-        for contract in manifest.contracts {
-            let class_hash = Felt::from_hex(&contract.class_hash).map_err(|e| {
-                anyhow!("Invalid class hash in manifest {}: {}", contract.class_hash, e)
-            })?;
-
-            let name = self.extract_contract_name_from_tag(&contract.tag, &ArtifactType::Contract);
-
-            artifacts.push(ContractArtifact {
-                name,
-                class_hash,
-                artifact_type: ArtifactType::Contract,
-            });
-        }
-
-        // Add models
-        for model in manifest.models {
-            let class_hash = Felt::from_hex(&model.class_hash).map_err(|e| {
-                anyhow!("Invalid class hash in manifest {}: {}", model.class_hash, e)
-            })?;
-
-            let name = self.extract_contract_name_from_tag(&model.tag, &ArtifactType::Model);
-
-            artifacts.push(ContractArtifact {
-                name,
-                class_hash,
-                artifact_type: ArtifactType::Model,
-            });
-        }
-
-        // Add events
-        for event in manifest.events {
-            let class_hash = Felt::from_hex(&event.class_hash).map_err(|e| {
-                anyhow!("Invalid class hash in manifest {}: {}", event.class_hash, e)
-            })?;
-
-            let name = self.extract_contract_name_from_tag(&event.tag, &ArtifactType::Event);
-
-            artifacts.push(ContractArtifact {
-                name,
-                class_hash,
-                artifact_type: ArtifactType::Event,
-            });
-        }
-
-        if artifacts.is_empty() {
-            return Err(anyhow!("No contract artifacts found in manifest"));
-        }
-
-        Ok(artifacts)
-    }
-
     /// Find and parse the starknet_artifacts.json file
     pub fn find_starknet_artifacts(&self) -> Result<StarknetArtifacts> {
         // Look for starknet_artifacts.json in target/dev directory first
@@ -208,44 +135,6 @@ impl ProjectAnalyzer {
         }
 
         Err(anyhow!("No starknet_artifacts.json file found in target/dev directory"))
-    }
-
-    /// Find the manifest file (try different naming patterns)
-    fn find_manifest_file(&self) -> Result<PathBuf> {
-        let possible_names = ["manifest_dev.json", "manifest.json", "manifest_release.json"];
-
-        for name in &possible_names {
-            let path = self.project_root.join(name);
-            if path.exists() {
-                return Ok(path);
-            }
-        }
-
-        Err(anyhow!("No manifest file found. Expected one of: {:?}", possible_names))
-    }
-
-    /// Extract contract name from tag with proper prefixes
-    /// e.g., "dojo_starter-actions" -> "actions" (contract)
-    /// e.g., "dojo_starter-DirectionsAvailable" -> "m_DirectionsAvailable" (model)
-    /// e.g., "dojo_starter-Moved" -> "e_Moved" (event)
-    pub(crate) fn extract_contract_name_from_tag(
-        &self,
-        tag: &str,
-        artifact_type: &ArtifactType,
-    ) -> String {
-        if let Ok(package_name) = self.extract_package_name() {
-            let prefix = format!("{}-", package_name);
-            if let Some(base_name) = tag.strip_prefix(&prefix) {
-                return match artifact_type {
-                    ArtifactType::Contract => base_name.to_string(),
-                    ArtifactType::Model => format!("m_{}", base_name),
-                    ArtifactType::Event => format!("e_{}", base_name),
-                };
-            }
-        }
-
-        // Fallback: use the full tag if prefix doesn't match
-        tag.to_string()
     }
 
     /// Collect source files using starknet_artifacts.json (simplified approach)
