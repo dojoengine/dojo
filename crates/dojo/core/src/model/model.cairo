@@ -21,6 +21,7 @@ pub struct ModelPtr<M> {
 ///   Converts the span of model pointers to a span of model indexes.
 pub trait ModelPtrsTrait<M> {
     fn to_indexes(self: Span<ModelPtr<M>>) -> Span<ModelIndex>;
+    fn to_schemas(self: Span<ModelPtr<M>>) -> Span<ModelIndex>;
     fn to_member_indexes(self: Span<ModelPtr<M>>, field_selector: felt252) -> Span<ModelIndex>;
 }
 
@@ -30,6 +31,14 @@ pub impl ModelPtrsImpl<M> of ModelPtrsTrait<M> {
         for ptr in self {
             ids.append(ModelIndex::Id(*ptr.id));
         }
+        ids.span()
+    }
+
+    fn to_schemas(self: Span<ModelPtr<M>>) -> Span<ModelIndex> {
+        let mut ids = ArrayTrait::<ModelIndex>::new();
+        for ptr in self {
+            ids.append(ModelIndex::Schema(*ptr.id));
+        };
         ids.span()
     }
 

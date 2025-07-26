@@ -1,7 +1,7 @@
 {
   "world": {
-    "class_hash": "0x1d0991eab5221c28225755937ec958aa073617c9b1d4f5e3c82b9f27cf85ea4",
-    "address": "0x24c2f8075163bbdcc44670869f15a282019d0e9b602bbb95b365d8350fc8a41",
+    "class_hash": "0x7cff2f89a1171f82492b948638215592b953fb8441a740004598d0cc7cbcc02",
+    "address": "0x27bc5b6c346f69691b09e46e2cee996963ab2455858a0e1d985586e69dc81ae",
     "seed": "dojo_examples",
     "name": "example",
     "entrypoints": [
@@ -11,13 +11,11 @@
       "register_event",
       "register_model",
       "register_contract",
-      "register_external_contract",
       "register_library",
       "init_contract",
       "upgrade_event",
       "upgrade_model",
       "upgrade_contract",
-      "upgrade_external_contract",
       "emit_event",
       "emit_events",
       "set_entity",
@@ -85,10 +83,6 @@
           {
             "name": "Library",
             "type": "(core::starknet::class_hash::ClassHash, core::felt252)"
-          },
-          {
-            "name": "ExternalContract",
-            "type": "(core::starknet::contract_address::ContractAddress, core::felt252)"
           }
         ]
       },
@@ -145,6 +139,10 @@
           {
             "name": "MemberId",
             "type": "(core::felt252, core::felt252)"
+          },
+          {
+            "name": "Schema",
+            "type": "core::felt252"
           }
         ]
       },
@@ -193,16 +191,6 @@
         ]
       },
       {
-        "type": "struct",
-        "name": "core::array::Span::<(dojo::meta::layout::Layout, core::integer::u32)>",
-        "members": [
-          {
-            "name": "snapshot",
-            "type": "@core::array::Array::<(dojo::meta::layout::Layout, core::integer::u32)>"
-          }
-        ]
-      },
-      {
         "type": "enum",
         "name": "dojo::meta::layout::Layout",
         "variants": [
@@ -221,10 +209,6 @@
           {
             "name": "Array",
             "type": "core::array::Span::<dojo::meta::layout::Layout>"
-          },
-          {
-            "name": "FixedArray",
-            "type": "core::array::Span::<(dojo::meta::layout::Layout, core::integer::u32)>"
           },
           {
             "name": "ByteArray",
@@ -389,34 +373,6 @@
           },
           {
             "type": "function",
-            "name": "register_external_contract",
-            "inputs": [
-              {
-                "name": "namespace",
-                "type": "core::byte_array::ByteArray"
-              },
-              {
-                "name": "contract_name",
-                "type": "core::byte_array::ByteArray"
-              },
-              {
-                "name": "instance_name",
-                "type": "core::byte_array::ByteArray"
-              },
-              {
-                "name": "contract_address",
-                "type": "core::starknet::contract_address::ContractAddress"
-              },
-              {
-                "name": "block_number",
-                "type": "core::integer::u64"
-              }
-            ],
-            "outputs": [],
-            "state_mutability": "external"
-          },
-          {
-            "type": "function",
             "name": "register_library",
             "inputs": [
               {
@@ -509,30 +465,6 @@
                 "type": "core::starknet::class_hash::ClassHash"
               }
             ],
-            "state_mutability": "external"
-          },
-          {
-            "type": "function",
-            "name": "upgrade_external_contract",
-            "inputs": [
-              {
-                "name": "namespace",
-                "type": "core::byte_array::ByteArray"
-              },
-              {
-                "name": "instance_name",
-                "type": "core::byte_array::ByteArray"
-              },
-              {
-                "name": "contract_address",
-                "type": "core::starknet::contract_address::ContractAddress"
-              },
-              {
-                "name": "block_number",
-                "type": "core::integer::u64"
-              }
-            ],
-            "outputs": [],
             "state_mutability": "external"
           },
           {
@@ -1000,85 +932,6 @@
       },
       {
         "type": "event",
-        "name": "dojo::world::world_contract::world::ExternalContractRegistered",
-        "kind": "struct",
-        "members": [
-          {
-            "name": "namespace",
-            "type": "core::byte_array::ByteArray",
-            "kind": "key"
-          },
-          {
-            "name": "contract_name",
-            "type": "core::byte_array::ByteArray",
-            "kind": "key"
-          },
-          {
-            "name": "instance_name",
-            "type": "core::byte_array::ByteArray",
-            "kind": "key"
-          },
-          {
-            "name": "contract_selector",
-            "type": "core::felt252",
-            "kind": "key"
-          },
-          {
-            "name": "class_hash",
-            "type": "core::starknet::class_hash::ClassHash",
-            "kind": "data"
-          },
-          {
-            "name": "contract_address",
-            "type": "core::starknet::contract_address::ContractAddress",
-            "kind": "data"
-          },
-          {
-            "name": "block_number",
-            "type": "core::integer::u64",
-            "kind": "data"
-          }
-        ]
-      },
-      {
-        "type": "event",
-        "name": "dojo::world::world_contract::world::ExternalContractUpgraded",
-        "kind": "struct",
-        "members": [
-          {
-            "name": "namespace",
-            "type": "core::byte_array::ByteArray",
-            "kind": "key"
-          },
-          {
-            "name": "instance_name",
-            "type": "core::byte_array::ByteArray",
-            "kind": "key"
-          },
-          {
-            "name": "contract_selector",
-            "type": "core::felt252",
-            "kind": "key"
-          },
-          {
-            "name": "class_hash",
-            "type": "core::starknet::class_hash::ClassHash",
-            "kind": "data"
-          },
-          {
-            "name": "contract_address",
-            "type": "core::starknet::contract_address::ContractAddress",
-            "kind": "data"
-          },
-          {
-            "name": "block_number",
-            "type": "core::integer::u64",
-            "kind": "data"
-          }
-        ]
-      },
-      {
-        "type": "event",
         "name": "dojo::world::world_contract::world::ModelUpgraded",
         "kind": "struct",
         "members": [
@@ -1314,6 +1167,33 @@
       },
       {
         "type": "event",
+        "name": "dojo::world::world_contract::world::StoreUpdateMembers",
+        "kind": "struct",
+        "members": [
+          {
+            "name": "selector",
+            "type": "core::felt252",
+            "kind": "key"
+          },
+          {
+            "name": "entity_id",
+            "type": "core::felt252",
+            "kind": "key"
+          },
+          {
+            "name": "member_selectors",
+            "type": "core::array::Span::<core::felt252>",
+            "kind": "data"
+          },
+          {
+            "name": "values",
+            "type": "core::array::Span::<core::felt252>",
+            "kind": "data"
+          }
+        ]
+      },
+      {
+        "type": "event",
         "name": "dojo::world::world_contract::world::StoreDelRecord",
         "kind": "struct",
         "members": [
@@ -1409,16 +1289,6 @@
             "kind": "nested"
           },
           {
-            "name": "ExternalContractRegistered",
-            "type": "dojo::world::world_contract::world::ExternalContractRegistered",
-            "kind": "nested"
-          },
-          {
-            "name": "ExternalContractUpgraded",
-            "type": "dojo::world::world_contract::world::ExternalContractUpgraded",
-            "kind": "nested"
-          },
-          {
             "name": "ModelUpgraded",
             "type": "dojo::world::world_contract::world::ModelUpgraded",
             "kind": "nested"
@@ -1469,6 +1339,11 @@
             "kind": "nested"
           },
           {
+            "name": "StoreUpdateMembers",
+            "type": "dojo::world::world_contract::world::StoreUpdateMembers",
+            "kind": "nested"
+          },
+          {
             "name": "StoreDelRecord",
             "type": "dojo::world::world_contract::world::StoreDelRecord",
             "kind": "nested"
@@ -1489,8 +1364,8 @@
   },
   "contracts": [
     {
-      "address": "0x208170ef32e88fc4872316c85624dc90c21232327a17eccb5b0f55d07a5d72c",
-      "class_hash": "0x5730d8d9fffa4679ddd6262e9c975859c9f3eb44d7a73f5d67c90aaf6685c64",
+      "address": "0x690aa26c8ab0df63ed7b45616015084a02ff959ebfb49e0cd253bf323f734bc",
+      "class_hash": "0x5128a5331e9d78688affdf6fae7ff05fdcfd7ae68bebb0caffdd038caa51870",
       "abi": [
         {
           "type": "impl",
@@ -1504,7 +1379,7 @@
         },
         {
           "type": "impl",
-          "name": "DojoDeployedContractImpl",
+          "name": "actions__DeployedContractImpl",
           "interface_name": "dojo::meta::interface::IDeployedResource"
         },
         {
@@ -1638,6 +1513,13 @@
             },
             {
               "type": "function",
+              "name": "update_player_config_items",
+              "inputs": [],
+              "outputs": [],
+              "state_mutability": "external"
+            },
+            {
+              "type": "function",
               "name": "update_player_config_name",
               "inputs": [
                 {
@@ -1709,22 +1591,6 @@
               ],
               "outputs": [],
               "state_mutability": "external"
-            },
-            {
-              "type": "function",
-              "name": "say_hello",
-              "inputs": [
-                {
-                  "name": "name",
-                  "type": "core::byte_array::ByteArray"
-                }
-              ],
-              "outputs": [
-                {
-                  "type": "core::byte_array::ByteArray"
-                }
-              ],
-              "state_mutability": "view"
             }
           ]
         },
@@ -1850,6 +1716,7 @@
         "spawn",
         "move",
         "set_player_config",
+        "update_player_config_items",
         "update_player_config_name",
         "reset_player_config",
         "set_player_server_profile",
@@ -1859,8 +1726,8 @@
       ]
     },
     {
-      "address": "0x70a8affc84f3579965260068ab7fbc398d55e679ea82f1a13a05f4be114e78b",
-      "class_hash": "0x1372814d45ad33782ac108850c646b503a7984d47fe72c0bfb7b98b4801941e",
+      "address": "0x17727955a80783ea728cd9fff61148758aa48d07538b349572a1fd77aa3cc7d",
+      "class_hash": "0x216b7f3b4d4d8f37e280a310881bdf11edb8c2f665d116388a3e0f6055929d2",
       "abi": [
         {
           "type": "impl",
@@ -1874,7 +1741,7 @@
         },
         {
           "type": "impl",
-          "name": "DojoDeployedContractImpl",
+          "name": "dungeon__DeployedContractImpl",
           "interface_name": "dojo::meta::interface::IDeployedResource"
         },
         {
@@ -2053,8 +1920,8 @@
       ]
     },
     {
-      "address": "0x3ef577d87507fab1ca1dbb63fe0f23439912dacf6112045590ca8a8ce16f162",
-      "class_hash": "0x57209c73bbd617a4fae6d7ff18875b6f3d0a763f4d1ecad753bc1edfd563902",
+      "address": "0x34ba450472c3112a4fe154b06b925b238bc36c1373d43615a2f2c76e04fb150",
+      "class_hash": "0x6f8120a9adbe5b42764ef71dcb261eca97bbe19ff8ad2d43271cb751f35d226",
       "abi": [
         {
           "type": "impl",
@@ -2068,7 +1935,7 @@
         },
         {
           "type": "impl",
-          "name": "DojoDeployedContractImpl",
+          "name": "mock_token__DeployedContractImpl",
           "interface_name": "dojo::meta::interface::IDeployedResource"
         },
         {
@@ -2229,8 +2096,8 @@
       ]
     },
     {
-      "address": "0x3580240e1c114feed8f52ce3a270bf1760ed4ffd1547c94c1afa9c372034812",
-      "class_hash": "0x454cf67b6232c82737744be5aa4727a6542848d19c2eb00692e144a52acaaf5",
+      "address": "0x31c6b805f1574e3d826b04a7cb4068ad750cee901dc5eca4434fedb48798855",
+      "class_hash": "0x2171f2464ca252e6a717084210b5636b2788aa09a2b7fa53d67773262287a49",
       "abi": [
         {
           "type": "impl",
@@ -2244,7 +2111,7 @@
         },
         {
           "type": "impl",
-          "name": "DojoDeployedContractImpl",
+          "name": "others__DeployedContractImpl",
           "interface_name": "dojo::meta::interface::IDeployedResource"
         },
         {
@@ -2410,381 +2277,11 @@
       "systems": [
         "upgrade"
       ]
-    },
-    {
-      "address": "0x347c49458f9dca2ae0a67cbd0b0afabb52bc726755ad2c425f94f3645d21e7c",
-      "class_hash": "0x5730d8d9fffa4679ddd6262e9c975859c9f3eb44d7a73f5d67c90aaf6685c64",
-      "abi": [
-        {
-          "type": "impl",
-          "name": "actions__ContractImpl",
-          "interface_name": "dojo::contract::interface::IContract"
-        },
-        {
-          "type": "interface",
-          "name": "dojo::contract::interface::IContract",
-          "items": []
-        },
-        {
-          "type": "impl",
-          "name": "DojoDeployedContractImpl",
-          "interface_name": "dojo::meta::interface::IDeployedResource"
-        },
-        {
-          "type": "struct",
-          "name": "core::byte_array::ByteArray",
-          "members": [
-            {
-              "name": "data",
-              "type": "core::array::Array::<core::bytes_31::bytes31>"
-            },
-            {
-              "name": "pending_word",
-              "type": "core::felt252"
-            },
-            {
-              "name": "pending_word_len",
-              "type": "core::integer::u32"
-            }
-          ]
-        },
-        {
-          "type": "interface",
-          "name": "dojo::meta::interface::IDeployedResource",
-          "items": [
-            {
-              "type": "function",
-              "name": "dojo_name",
-              "inputs": [],
-              "outputs": [
-                {
-                  "type": "core::byte_array::ByteArray"
-                }
-              ],
-              "state_mutability": "view"
-            }
-          ]
-        },
-        {
-          "type": "impl",
-          "name": "ActionsImpl",
-          "interface_name": "dojo_examples::actions::IActions"
-        },
-        {
-          "type": "enum",
-          "name": "dojo_examples::models::Direction",
-          "variants": [
-            {
-              "name": "None",
-              "type": "()"
-            },
-            {
-              "name": "Left",
-              "type": "()"
-            },
-            {
-              "name": "Right",
-              "type": "()"
-            },
-            {
-              "name": "Up",
-              "type": "()"
-            },
-            {
-              "name": "Down",
-              "type": "()"
-            }
-          ]
-        },
-        {
-          "type": "struct",
-          "name": "dojo_examples::models::Vec2",
-          "members": [
-            {
-              "name": "x",
-              "type": "core::integer::u32"
-            },
-            {
-              "name": "y",
-              "type": "core::integer::u32"
-            }
-          ]
-        },
-        {
-          "type": "struct",
-          "name": "dojo_examples::models::Position",
-          "members": [
-            {
-              "name": "player",
-              "type": "core::starknet::contract_address::ContractAddress"
-            },
-            {
-              "name": "vec",
-              "type": "dojo_examples::models::Vec2"
-            }
-          ]
-        },
-        {
-          "type": "interface",
-          "name": "dojo_examples::actions::IActions",
-          "items": [
-            {
-              "type": "function",
-              "name": "spawn",
-              "inputs": [],
-              "outputs": [],
-              "state_mutability": "external"
-            },
-            {
-              "type": "function",
-              "name": "move",
-              "inputs": [
-                {
-                  "name": "direction",
-                  "type": "dojo_examples::models::Direction"
-                }
-              ],
-              "outputs": [],
-              "state_mutability": "external"
-            },
-            {
-              "type": "function",
-              "name": "set_player_config",
-              "inputs": [
-                {
-                  "name": "name",
-                  "type": "core::byte_array::ByteArray"
-                }
-              ],
-              "outputs": [],
-              "state_mutability": "external"
-            },
-            {
-              "type": "function",
-              "name": "update_player_config_name",
-              "inputs": [
-                {
-                  "name": "name",
-                  "type": "core::byte_array::ByteArray"
-                }
-              ],
-              "outputs": [],
-              "state_mutability": "external"
-            },
-            {
-              "type": "function",
-              "name": "get_player_position",
-              "inputs": [],
-              "outputs": [
-                {
-                  "type": "dojo_examples::models::Position"
-                }
-              ],
-              "state_mutability": "view"
-            },
-            {
-              "type": "function",
-              "name": "reset_player_config",
-              "inputs": [],
-              "outputs": [],
-              "state_mutability": "external"
-            },
-            {
-              "type": "function",
-              "name": "set_player_server_profile",
-              "inputs": [
-                {
-                  "name": "server_id",
-                  "type": "core::integer::u32"
-                },
-                {
-                  "name": "name",
-                  "type": "core::byte_array::ByteArray"
-                }
-              ],
-              "outputs": [],
-              "state_mutability": "external"
-            },
-            {
-              "type": "function",
-              "name": "set_models",
-              "inputs": [
-                {
-                  "name": "seed",
-                  "type": "core::felt252"
-                },
-                {
-                  "name": "n_models",
-                  "type": "core::integer::u32"
-                }
-              ],
-              "outputs": [],
-              "state_mutability": "external"
-            },
-            {
-              "type": "function",
-              "name": "enter_dungeon",
-              "inputs": [
-                {
-                  "name": "dungeon_address",
-                  "type": "core::starknet::contract_address::ContractAddress"
-                }
-              ],
-              "outputs": [],
-              "state_mutability": "external"
-            },
-            {
-              "type": "function",
-              "name": "say_hello",
-              "inputs": [
-                {
-                  "name": "name",
-                  "type": "core::byte_array::ByteArray"
-                }
-              ],
-              "outputs": [
-                {
-                  "type": "core::byte_array::ByteArray"
-                }
-              ],
-              "state_mutability": "view"
-            }
-          ]
-        },
-        {
-          "type": "function",
-          "name": "dojo_init",
-          "inputs": [],
-          "outputs": [],
-          "state_mutability": "view"
-        },
-        {
-          "type": "impl",
-          "name": "WorldProviderImpl",
-          "interface_name": "dojo::contract::components::world_provider::IWorldProvider"
-        },
-        {
-          "type": "struct",
-          "name": "dojo::world::iworld::IWorldDispatcher",
-          "members": [
-            {
-              "name": "contract_address",
-              "type": "core::starknet::contract_address::ContractAddress"
-            }
-          ]
-        },
-        {
-          "type": "interface",
-          "name": "dojo::contract::components::world_provider::IWorldProvider",
-          "items": [
-            {
-              "type": "function",
-              "name": "world_dispatcher",
-              "inputs": [],
-              "outputs": [
-                {
-                  "type": "dojo::world::iworld::IWorldDispatcher"
-                }
-              ],
-              "state_mutability": "view"
-            }
-          ]
-        },
-        {
-          "type": "impl",
-          "name": "UpgradeableImpl",
-          "interface_name": "dojo::contract::components::upgradeable::IUpgradeable"
-        },
-        {
-          "type": "interface",
-          "name": "dojo::contract::components::upgradeable::IUpgradeable",
-          "items": [
-            {
-              "type": "function",
-              "name": "upgrade",
-              "inputs": [
-                {
-                  "name": "new_class_hash",
-                  "type": "core::starknet::class_hash::ClassHash"
-                }
-              ],
-              "outputs": [],
-              "state_mutability": "external"
-            }
-          ]
-        },
-        {
-          "type": "constructor",
-          "name": "constructor",
-          "inputs": []
-        },
-        {
-          "type": "event",
-          "name": "dojo::contract::components::upgradeable::upgradeable_cpt::Upgraded",
-          "kind": "struct",
-          "members": [
-            {
-              "name": "class_hash",
-              "type": "core::starknet::class_hash::ClassHash",
-              "kind": "data"
-            }
-          ]
-        },
-        {
-          "type": "event",
-          "name": "dojo::contract::components::upgradeable::upgradeable_cpt::Event",
-          "kind": "enum",
-          "variants": [
-            {
-              "name": "Upgraded",
-              "type": "dojo::contract::components::upgradeable::upgradeable_cpt::Upgraded",
-              "kind": "nested"
-            }
-          ]
-        },
-        {
-          "type": "event",
-          "name": "dojo::contract::components::world_provider::world_provider_cpt::Event",
-          "kind": "enum",
-          "variants": []
-        },
-        {
-          "type": "event",
-          "name": "dojo_examples::actions::actions::Event",
-          "kind": "enum",
-          "variants": [
-            {
-              "name": "UpgradeableEvent",
-              "type": "dojo::contract::components::upgradeable::upgradeable_cpt::Event",
-              "kind": "nested"
-            },
-            {
-              "name": "WorldProviderEvent",
-              "type": "dojo::contract::components::world_provider::world_provider_cpt::Event",
-              "kind": "nested"
-            }
-          ]
-        }
-      ],
-      "init_calldata": [],
-      "tag": "ns2-actions",
-      "selector": "0x1a920eff7b3fd2be618d5a222e63e805a2a82e71579f97ba06d716a45d1ae25",
-      "systems": [
-        "spawn",
-        "move",
-        "set_player_config",
-        "update_player_config_name",
-        "reset_player_config",
-        "set_player_server_profile",
-        "set_models",
-        "enter_dungeon",
-        "upgrade"
-      ]
     }
   ],
   "libraries": [
     {
-      "class_hash": "0x48195c8f045173e2ec687d9229f70e1fb47adae5ad1be54ba17ed3aeb3ecf72",
+      "class_hash": "0x4f9e8d8b86626a2c78b494eab81b59a9675116b449c054ab1eb75d309df0533",
       "abi": [
         {
           "type": "impl",
@@ -2798,7 +2295,7 @@
         },
         {
           "type": "impl",
-          "name": "DojoDeployedLibraryImpl",
+          "name": "simple_math__DeployedLibraryImpl",
           "interface_name": "dojo::meta::interface::IDeployedResource"
         },
         {
@@ -2923,49 +2420,49 @@
   "models": [
     {
       "members": [],
-      "class_hash": "0x70dd65edc1fc0d07c88faacee3c30c45d9538582b979edc805baa968c105659",
+      "class_hash": "0x3a5256c1d86a1961246a181cbf1310ff324912fd6fe909fca960158d004222e",
       "tag": "ns-Flatbow",
       "selector": "0x27a35f8bac96f1deebf4d3e83fc6b94a3da4e6d30a1ce34d5893d2fb602725d"
     },
     {
       "members": [],
-      "class_hash": "0xa3f3e9bc3488c5b79bd6286df03acd8667c3c0182492c284a12bf7dc8253d7",
+      "class_hash": "0x78c77a191b3f5eeb6473a0f6914ebea9008f60fbc2f527359aefe16c19e9ed9",
       "tag": "ns-Message",
       "selector": "0x7e77b60a338fa7414998176fd93ff265e4ca04b93105ac98f155bcb2e9e8438"
     },
     {
       "members": [],
-      "class_hash": "0x41ad182f5c728eaa8c0087882ab3a75313095d4c76db3b1f4398b96b7432a24",
+      "class_hash": "0x1d350d32f41cb979897048f97b924516e7290f0c572373c5bad42d54a6e319a",
       "tag": "ns-MockToken",
       "selector": "0x23ee42c8f47d1d693b966176dcd5deca0ec147b33e42186382d9d027603a6fd"
     },
     {
       "members": [],
-      "class_hash": "0x7951bdbb45f74bd67cae650e023437960679f6cc3614100becd4760db973ff9",
+      "class_hash": "0x41cbd832e8099827f90aed350f270bf86f01fd6b99afdb3a3c71985589ef5bb",
       "tag": "ns-Moves",
       "selector": "0x54104f060e63bdd9d68bb872f2dc6d40a101e168e18b999c10de348d06ea24a"
     },
     {
       "members": [],
-      "class_hash": "0x60411960cd9e6c269a99163d4f042560fa111aa19a5c93d1d3082573aa17637",
+      "class_hash": "0x1c0a03365283c19eb292b291218001ff6d93cb21ff5e6ad1c44661be1ddef6b",
       "tag": "ns-PlayerConfig",
       "selector": "0x3bea561c3e142a660a00d1471d7712b70695dc4ee3b173aeaefd5178f7a21af"
     },
     {
       "members": [],
-      "class_hash": "0x142d9d7e58b866aa383e68624e2562f1251444501816c4eefd8ac7983554112",
+      "class_hash": "0x5123ea4c923ccd712a3238e4b2a36ce952851aad33f02ed72d20cd12eb03142",
       "tag": "ns-Position",
       "selector": "0x5e12c61e9cf30881c126a6d298975c8d79f95abed1a05c2d38b7803ed19445f"
     },
     {
       "members": [],
-      "class_hash": "0x3a76deee55a158d055d95a2704be9d57958dd38fd66a8624b143a33e06cb394",
+      "class_hash": "0x348efb67b6293d25104c970316c3b7e82550cc4ab10c3b7c71135c36e96fe9f",
       "tag": "ns-RiverSkale",
       "selector": "0x47f763aa7de3b872f7fbec198275547e06751dbe26b66281b9cffaed9938f24"
     },
     {
       "members": [],
-      "class_hash": "0x6e2414b8eccd9a1f2fed7e019c58a00142d7c1df9eb92a7e557802a00f4b455",
+      "class_hash": "0x647a38cde68764353dfcdec7e3ecc5456a16b3acfd60063bde968aa435c603c",
       "tag": "ns-ServerProfile",
       "selector": "0x641dc5f178aff0c7935a8f1ae30c6038a3d3512ea164d486f98bc37b6beabf"
     }
@@ -2973,23 +2470,23 @@
   "events": [
     {
       "members": [],
-      "class_hash": "0x401ba9f07445b935f0d5c9ac02da16f4b3b58f2df93429c12c03bc3005a7e85",
+      "class_hash": "0x417a1467225cfa72d2e6b949bc7bbb1ee05805014351a8ef78a7ac718ce0653",
       "tag": "ns-Moved",
       "selector": "0x6d4c1ac3717ba997500153c52344a2acac5123bbfa0f78d3dcc04cb786826b0"
     },
     {
       "members": [],
-      "class_hash": "0x3a4c9070a6f8b57ee7d8771b20514067f31f7f5aede10f6ffee8166eb655c64",
+      "class_hash": "0x2a47cf642e1d010ba73f41aab00aaa0757b75eedb0caa6ba575c85c343b7727",
       "tag": "ns-MyInit",
       "selector": "0xe1c030210beae7e2153a7b996d7d2ae6a428faf16a61f192f02178718b6f0"
     }
   ],
   "external_contracts": [
     {
-      "class_hash": "0x6d8cb94cee378b019e576af843a3f8f37cfdf436d3eac01be928e2ed0ae9c64",
+      "class_hash": "0x42a5ab1b66c07d69a42b3958064327269ba49ca435ca390582b0ac5df564097",
       "contract_name": "ERC721Token",
-      "tag": "ns-Badge",
-      "address": "0x7264020492fba07553b02cc8121a37be8e92c4df2e3f0ebf9a7d2dcf5b6ccd1",
+      "instance_name": "Badge",
+      "address": "0x6f7a18f07a642724350bf344176eb545679df0df57eebd7476aff255f872971",
       "abi": [
         {
           "type": "struct",
@@ -3066,29 +2563,6 @@
           ],
           "outputs": [],
           "state_mutability": "external"
-        },
-        {
-          "type": "impl",
-          "name": "UpgradeableImpl",
-          "interface_name": "openzeppelin_upgrades::interface::IUpgradeable"
-        },
-        {
-          "type": "interface",
-          "name": "openzeppelin_upgrades::interface::IUpgradeable",
-          "items": [
-            {
-              "type": "function",
-              "name": "upgrade",
-              "inputs": [
-                {
-                  "name": "new_class_hash",
-                  "type": "core::starknet::class_hash::ClassHash"
-                }
-              ],
-              "outputs": [],
-              "state_mutability": "external"
-            }
-          ]
         },
         {
           "type": "impl",
@@ -3799,30 +3273,6 @@
         },
         {
           "type": "event",
-          "name": "openzeppelin_upgrades::upgradeable::UpgradeableComponent::Upgraded",
-          "kind": "struct",
-          "members": [
-            {
-              "name": "class_hash",
-              "type": "core::starknet::class_hash::ClassHash",
-              "kind": "data"
-            }
-          ]
-        },
-        {
-          "type": "event",
-          "name": "openzeppelin_upgrades::upgradeable::UpgradeableComponent::Event",
-          "kind": "enum",
-          "variants": [
-            {
-              "name": "Upgraded",
-              "type": "openzeppelin_upgrades::upgradeable::UpgradeableComponent::Upgraded",
-              "kind": "nested"
-            }
-          ]
-        },
-        {
-          "type": "event",
           "name": "dojo_examples::externals::erc721::ERC721Token::Event",
           "kind": "enum",
           "variants": [
@@ -3845,11 +3295,6 @@
               "name": "ERC4906Event",
               "type": "dojo_examples::externals::components::erc4906::ERC4906Component::Event",
               "kind": "flat"
-            },
-            {
-              "name": "UpgradeableEvent",
-              "type": "openzeppelin_upgrades::upgradeable::UpgradeableComponent::Event",
-              "kind": "flat"
             }
           ]
         }
@@ -3859,70 +3304,14 @@
         "str:Badge",
         "str:BDG",
         "str:https://badge.com/"
-      ],
-      "encoded_constructor_calldata": [
-        "0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba",
-        "0x0",
-        "0x4261646765",
-        "0x5",
-        "0x0",
-        "0x424447",
-        "0x3",
-        "0x0",
-        "0x68747470733a2f2f62616467652e636f6d2f",
-        "0x12"
-      ],
-      "entrypoints": [
-        "mint",
-        "update_token_metadata",
-        "update_batch_token_metadata",
-        "update_tokens_metadata",
-        "upgrade",
-        "safe_transfer_from",
-        "transfer_from",
-        "approve",
-        "set_approval_for_all",
-        "safeTransferFrom",
-        "transferFrom",
-        "setApprovalForAll",
-        "transfer_ownership",
-        "renounce_ownership",
-        "transferOwnership",
-        "renounceOwnership",
-        "emit_metadata_update",
-        "emit_batch_metadata_update"
-      ],
-      "block_number": null
+      ]
     },
     {
-      "class_hash": "0x6910d29e4e5fccce2bc3da8759f242318a324daf6b48d3c80287165140511de",
+      "class_hash": "0x4cbd01aa2bd0447e071ad7dc72669ce68dfda9c043eaa9972bc6363c79fb92e",
       "contract_name": "Bank",
-      "tag": "ns-Bank",
-      "address": "0x6b424efa8fed4c28d1581cd0b38bc8d17887e544e3b508d934cab8acee97a3f",
+      "instance_name": "Bank",
+      "address": "0x22b6c1775d34c6262d74e613ba196ddcc874c90a7af0450f34e97aa56714754",
       "abi": [
-        {
-          "type": "impl",
-          "name": "UpgradeableImpl",
-          "interface_name": "openzeppelin_upgrades::interface::IUpgradeable"
-        },
-        {
-          "type": "interface",
-          "name": "openzeppelin_upgrades::interface::IUpgradeable",
-          "items": [
-            {
-              "type": "function",
-              "name": "upgrade",
-              "inputs": [
-                {
-                  "name": "new_class_hash",
-                  "type": "core::starknet::class_hash::ClassHash"
-                }
-              ],
-              "outputs": [],
-              "state_mutability": "external"
-            }
-          ]
-        },
         {
           "type": "constructor",
           "name": "constructor",
@@ -3935,57 +3324,20 @@
         },
         {
           "type": "event",
-          "name": "openzeppelin_upgrades::upgradeable::UpgradeableComponent::Upgraded",
-          "kind": "struct",
-          "members": [
-            {
-              "name": "class_hash",
-              "type": "core::starknet::class_hash::ClassHash",
-              "kind": "data"
-            }
-          ]
-        },
-        {
-          "type": "event",
-          "name": "openzeppelin_upgrades::upgradeable::UpgradeableComponent::Event",
-          "kind": "enum",
-          "variants": [
-            {
-              "name": "Upgraded",
-              "type": "openzeppelin_upgrades::upgradeable::UpgradeableComponent::Upgraded",
-              "kind": "nested"
-            }
-          ]
-        },
-        {
-          "type": "event",
           "name": "dojo_examples::externals::bank::Bank::Event",
           "kind": "enum",
-          "variants": [
-            {
-              "name": "UpgradeableEvent",
-              "type": "openzeppelin_upgrades::upgradeable::UpgradeableComponent::Event",
-              "kind": "flat"
-            }
-          ]
+          "variants": []
         }
       ],
       "constructor_calldata": [
         "0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba"
-      ],
-      "encoded_constructor_calldata": [
-        "0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba"
-      ],
-      "entrypoints": [
-        "upgrade"
-      ],
-      "block_number": null
+      ]
     },
     {
-      "class_hash": "0x19f8f2dae7b9b09b3243e30beb37a29a8a01e91409bd6d2ee2d253336d47659",
+      "class_hash": "0x7186749b8ff1e51555b77d6ae343eadcad699634796227a70d99e037832f192",
       "contract_name": "ERC20Token",
-      "tag": "ns-GoldToken",
-      "address": "0x3440a44f9e112917ae055a6cdde0cb474e89378c3977a2f819f789a002c8c28",
+      "instance_name": "GoldToken",
+      "address": "0x1ddd59ba845557e712b42245be9d7d172dd3f5e40de7cf1c0256d258633cf69",
       "abi": [
         {
           "type": "struct",
@@ -4012,29 +3364,6 @@
           ],
           "outputs": [],
           "state_mutability": "external"
-        },
-        {
-          "type": "impl",
-          "name": "UpgradeableImpl",
-          "interface_name": "openzeppelin_upgrades::interface::IUpgradeable"
-        },
-        {
-          "type": "interface",
-          "name": "openzeppelin_upgrades::interface::IUpgradeable",
-          "items": [
-            {
-              "type": "function",
-              "name": "upgrade",
-              "inputs": [
-                {
-                  "name": "new_class_hash",
-                  "type": "core::starknet::class_hash::ClassHash"
-                }
-              ],
-              "outputs": [],
-              "state_mutability": "external"
-            }
-          ]
         },
         {
           "type": "impl",
@@ -4474,30 +3803,6 @@
         },
         {
           "type": "event",
-          "name": "openzeppelin_upgrades::upgradeable::UpgradeableComponent::Upgraded",
-          "kind": "struct",
-          "members": [
-            {
-              "name": "class_hash",
-              "type": "core::starknet::class_hash::ClassHash",
-              "kind": "data"
-            }
-          ]
-        },
-        {
-          "type": "event",
-          "name": "openzeppelin_upgrades::upgradeable::UpgradeableComponent::Event",
-          "kind": "enum",
-          "variants": [
-            {
-              "name": "Upgraded",
-              "type": "openzeppelin_upgrades::upgradeable::UpgradeableComponent::Upgraded",
-              "kind": "nested"
-            }
-          ]
-        },
-        {
-          "type": "event",
           "name": "dojo_examples::externals::erc20::ERC20Token::Event",
           "kind": "enum",
           "variants": [
@@ -4510,11 +3815,6 @@
               "name": "OwnableEvent",
               "type": "openzeppelin_access::ownable::ownable::OwnableComponent::Event",
               "kind": "flat"
-            },
-            {
-              "name": "UpgradeableEvent",
-              "type": "openzeppelin_upgrades::upgradeable::UpgradeableComponent::Event",
-              "kind": "flat"
             }
           ]
         }
@@ -4525,38 +3825,13 @@
         "str:GOLD",
         "u256:0x10000000000000",
         "0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba"
-      ],
-      "encoded_constructor_calldata": [
-        "0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba",
-        "0x0",
-        "0x476f6c64",
-        "0x4",
-        "0x0",
-        "0x474f4c44",
-        "0x4",
-        "0x10000000000000",
-        "0x0",
-        "0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba"
-      ],
-      "entrypoints": [
-        "mint",
-        "upgrade",
-        "transfer",
-        "transfer_from",
-        "approve",
-        "transferFrom",
-        "transfer_ownership",
-        "renounce_ownership",
-        "transferOwnership",
-        "renounceOwnership"
-      ],
-      "block_number": null
+      ]
     },
     {
-      "class_hash": "0x3fd772ef209c598eb62a292a80bcb63c3cb52a12832e42b1d0284a3a7a95d4e",
+      "class_hash": "0x10d6e882428f58611abf8e450846fccdbbecb53783d702ae4905980c076393f",
       "contract_name": "ERC1155Token",
-      "tag": "ns-Rewards",
-      "address": "0xc6b95150386ca0ed4552be515cc5ad9ba4122d322b7c399cf65225d9440087",
+      "instance_name": "Rewards",
+      "address": "0x1c69858ebadea848afde8d2c3aef3fb01c7c6efedc2f756e046c3a04d3f7133",
       "abi": [
         {
           "type": "struct",
@@ -4711,29 +3986,6 @@
           ],
           "outputs": [],
           "state_mutability": "external"
-        },
-        {
-          "type": "impl",
-          "name": "UpgradeableImpl",
-          "interface_name": "openzeppelin_upgrades::interface::IUpgradeable"
-        },
-        {
-          "type": "interface",
-          "name": "openzeppelin_upgrades::interface::IUpgradeable",
-          "items": [
-            {
-              "type": "function",
-              "name": "upgrade",
-              "inputs": [
-                {
-                  "name": "new_class_hash",
-                  "type": "core::starknet::class_hash::ClassHash"
-                }
-              ],
-              "outputs": [],
-              "state_mutability": "external"
-            }
-          ]
         },
         {
           "type": "impl",
@@ -5424,30 +4676,6 @@
         },
         {
           "type": "event",
-          "name": "openzeppelin_upgrades::upgradeable::UpgradeableComponent::Upgraded",
-          "kind": "struct",
-          "members": [
-            {
-              "name": "class_hash",
-              "type": "core::starknet::class_hash::ClassHash",
-              "kind": "data"
-            }
-          ]
-        },
-        {
-          "type": "event",
-          "name": "openzeppelin_upgrades::upgradeable::UpgradeableComponent::Event",
-          "kind": "enum",
-          "variants": [
-            {
-              "name": "Upgraded",
-              "type": "openzeppelin_upgrades::upgradeable::UpgradeableComponent::Upgraded",
-              "kind": "nested"
-            }
-          ]
-        },
-        {
-          "type": "event",
           "name": "dojo_examples::externals::erc1155::ERC1155Token::Event",
           "kind": "enum",
           "variants": [
@@ -5470,11 +4698,6 @@
               "name": "ERC4906Event",
               "type": "dojo_examples::externals::components::erc4906::ERC4906Component::Event",
               "kind": "flat"
-            },
-            {
-              "name": "UpgradeableEvent",
-              "type": "openzeppelin_upgrades::upgradeable::UpgradeableComponent::Event",
-              "kind": "flat"
             }
           ]
         }
@@ -5482,66 +4705,14 @@
       "constructor_calldata": [
         "0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba",
         "str:https://rewards.com/"
-      ],
-      "encoded_constructor_calldata": [
-        "0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba",
-        "0x0",
-        "0x68747470733a2f2f726577617264732e636f6d2f",
-        "0x14"
-      ],
-      "entrypoints": [
-        "token_uri",
-        "mint",
-        "transfer_from",
-        "batch_mint",
-        "update_token_metadata",
-        "update_batch_token_metadata",
-        "update_tokens_metadata",
-        "upgrade",
-        "safe_transfer_from",
-        "safe_batch_transfer_from",
-        "set_approval_for_all",
-        "safeTransferFrom",
-        "safeBatchTransferFrom",
-        "setApprovalForAll",
-        "transfer_ownership",
-        "renounce_ownership",
-        "transferOwnership",
-        "renounceOwnership",
-        "emit_metadata_update",
-        "emit_batch_metadata_update"
-      ],
-      "block_number": null
+      ]
     },
     {
-      "class_hash": "0x7bfd851dbbba64e84510940d3b114239a86b31b2d49789616faab3154db78f6",
+      "class_hash": "0x38d50bde18609efa98b736a8ca582729255674058c54d19ad03949c454ddfc4",
       "contract_name": "Saloon",
-      "tag": "ns-Saloon",
-      "address": "0x2365c3683fc7042111a7088d051dcb7d10f874a6d5e5416e533eb06689df350",
+      "instance_name": "Saloon",
+      "address": "0x2bd802e28bba82c7c6a8ca4604a397b6ca0d263fa56b93c818d15c8ab55991a",
       "abi": [
-        {
-          "type": "impl",
-          "name": "UpgradeableImpl",
-          "interface_name": "openzeppelin_upgrades::interface::IUpgradeable"
-        },
-        {
-          "type": "interface",
-          "name": "openzeppelin_upgrades::interface::IUpgradeable",
-          "items": [
-            {
-              "type": "function",
-              "name": "upgrade",
-              "inputs": [
-                {
-                  "name": "new_class_hash",
-                  "type": "core::starknet::class_hash::ClassHash"
-                }
-              ],
-              "outputs": [],
-              "state_mutability": "external"
-            }
-          ]
-        },
         {
           "type": "constructor",
           "name": "constructor",
@@ -5549,53 +4720,18 @@
         },
         {
           "type": "event",
-          "name": "openzeppelin_upgrades::upgradeable::UpgradeableComponent::Upgraded",
-          "kind": "struct",
-          "members": [
-            {
-              "name": "class_hash",
-              "type": "core::starknet::class_hash::ClassHash",
-              "kind": "data"
-            }
-          ]
-        },
-        {
-          "type": "event",
-          "name": "openzeppelin_upgrades::upgradeable::UpgradeableComponent::Event",
-          "kind": "enum",
-          "variants": [
-            {
-              "name": "Upgraded",
-              "type": "openzeppelin_upgrades::upgradeable::UpgradeableComponent::Upgraded",
-              "kind": "nested"
-            }
-          ]
-        },
-        {
-          "type": "event",
           "name": "dojo_examples::externals::saloon::Saloon::Event",
           "kind": "enum",
-          "variants": [
-            {
-              "name": "UpgradeableEvent",
-              "type": "openzeppelin_upgrades::upgradeable::UpgradeableComponent::Event",
-              "kind": "flat"
-            }
-          ]
+          "variants": []
         }
       ],
-      "constructor_calldata": [],
-      "encoded_constructor_calldata": [],
-      "entrypoints": [
-        "upgrade"
-      ],
-      "block_number": null
+      "constructor_calldata": []
     },
     {
-      "class_hash": "0x19f8f2dae7b9b09b3243e30beb37a29a8a01e91409bd6d2ee2d253336d47659",
+      "class_hash": "0x7186749b8ff1e51555b77d6ae343eadcad699634796227a70d99e037832f192",
       "contract_name": "ERC20Token",
-      "tag": "ns-WoodToken",
-      "address": "0x43040aa4117a271f422062cd52c5838fcc8ebc42b6e58c5f11d459c0e8e82da",
+      "instance_name": "WoodToken",
+      "address": "0x33f5acb2e6bc57febe867e4624a481d9c597011de7f55e37c8e1efd5a110d58",
       "abi": [
         {
           "type": "struct",
@@ -5622,29 +4758,6 @@
           ],
           "outputs": [],
           "state_mutability": "external"
-        },
-        {
-          "type": "impl",
-          "name": "UpgradeableImpl",
-          "interface_name": "openzeppelin_upgrades::interface::IUpgradeable"
-        },
-        {
-          "type": "interface",
-          "name": "openzeppelin_upgrades::interface::IUpgradeable",
-          "items": [
-            {
-              "type": "function",
-              "name": "upgrade",
-              "inputs": [
-                {
-                  "name": "new_class_hash",
-                  "type": "core::starknet::class_hash::ClassHash"
-                }
-              ],
-              "outputs": [],
-              "state_mutability": "external"
-            }
-          ]
         },
         {
           "type": "impl",
@@ -6084,30 +5197,6 @@
         },
         {
           "type": "event",
-          "name": "openzeppelin_upgrades::upgradeable::UpgradeableComponent::Upgraded",
-          "kind": "struct",
-          "members": [
-            {
-              "name": "class_hash",
-              "type": "core::starknet::class_hash::ClassHash",
-              "kind": "data"
-            }
-          ]
-        },
-        {
-          "type": "event",
-          "name": "openzeppelin_upgrades::upgradeable::UpgradeableComponent::Event",
-          "kind": "enum",
-          "variants": [
-            {
-              "name": "Upgraded",
-              "type": "openzeppelin_upgrades::upgradeable::UpgradeableComponent::Upgraded",
-              "kind": "nested"
-            }
-          ]
-        },
-        {
-          "type": "event",
           "name": "dojo_examples::externals::erc20::ERC20Token::Event",
           "kind": "enum",
           "variants": [
@@ -6119,11 +5208,6 @@
             {
               "name": "OwnableEvent",
               "type": "openzeppelin_access::ownable::ownable::OwnableComponent::Event",
-              "kind": "flat"
-            },
-            {
-              "name": "UpgradeableEvent",
-              "type": "openzeppelin_upgrades::upgradeable::UpgradeableComponent::Event",
               "kind": "flat"
             }
           ]
@@ -6135,690 +5219,7 @@
         "str:WOOD",
         "u256:0x10000000000000",
         "0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba"
-      ],
-      "encoded_constructor_calldata": [
-        "0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba",
-        "0x0",
-        "0x576f6f64",
-        "0x4",
-        "0x0",
-        "0x574f4f44",
-        "0x4",
-        "0x10000000000000",
-        "0x0",
-        "0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba"
-      ],
-      "entrypoints": [
-        "mint",
-        "upgrade",
-        "transfer",
-        "transfer_from",
-        "approve",
-        "transferFrom",
-        "transfer_ownership",
-        "renounce_ownership",
-        "transferOwnership",
-        "renounceOwnership"
-      ],
-      "block_number": null
-    },
-    {
-      "class_hash": "0x19f8f2dae7b9b09b3243e30beb37a29a8a01e91409bd6d2ee2d253336d47659",
-      "contract_name": "ERC20Token",
-      "tag": "ns2-GoldToken",
-      "address": "0x3304f8450ed4eec13704d3e8a3dbc6fec8abf3c08fb8793b98b43a15f0a225d",
-      "abi": [
-        {
-          "type": "struct",
-          "name": "core::integer::u256",
-          "members": [
-            {
-              "name": "low",
-              "type": "core::integer::u128"
-            },
-            {
-              "name": "high",
-              "type": "core::integer::u128"
-            }
-          ]
-        },
-        {
-          "type": "function",
-          "name": "mint",
-          "inputs": [
-            {
-              "name": "amount",
-              "type": "core::integer::u256"
-            }
-          ],
-          "outputs": [],
-          "state_mutability": "external"
-        },
-        {
-          "type": "impl",
-          "name": "UpgradeableImpl",
-          "interface_name": "openzeppelin_upgrades::interface::IUpgradeable"
-        },
-        {
-          "type": "interface",
-          "name": "openzeppelin_upgrades::interface::IUpgradeable",
-          "items": [
-            {
-              "type": "function",
-              "name": "upgrade",
-              "inputs": [
-                {
-                  "name": "new_class_hash",
-                  "type": "core::starknet::class_hash::ClassHash"
-                }
-              ],
-              "outputs": [],
-              "state_mutability": "external"
-            }
-          ]
-        },
-        {
-          "type": "impl",
-          "name": "ERC20MixinImpl",
-          "interface_name": "openzeppelin_token::erc20::interface::IERC20Mixin"
-        },
-        {
-          "type": "enum",
-          "name": "core::bool",
-          "variants": [
-            {
-              "name": "False",
-              "type": "()"
-            },
-            {
-              "name": "True",
-              "type": "()"
-            }
-          ]
-        },
-        {
-          "type": "struct",
-          "name": "core::byte_array::ByteArray",
-          "members": [
-            {
-              "name": "data",
-              "type": "core::array::Array::<core::bytes_31::bytes31>"
-            },
-            {
-              "name": "pending_word",
-              "type": "core::felt252"
-            },
-            {
-              "name": "pending_word_len",
-              "type": "core::integer::u32"
-            }
-          ]
-        },
-        {
-          "type": "interface",
-          "name": "openzeppelin_token::erc20::interface::IERC20Mixin",
-          "items": [
-            {
-              "type": "function",
-              "name": "total_supply",
-              "inputs": [],
-              "outputs": [
-                {
-                  "type": "core::integer::u256"
-                }
-              ],
-              "state_mutability": "view"
-            },
-            {
-              "type": "function",
-              "name": "balance_of",
-              "inputs": [
-                {
-                  "name": "account",
-                  "type": "core::starknet::contract_address::ContractAddress"
-                }
-              ],
-              "outputs": [
-                {
-                  "type": "core::integer::u256"
-                }
-              ],
-              "state_mutability": "view"
-            },
-            {
-              "type": "function",
-              "name": "allowance",
-              "inputs": [
-                {
-                  "name": "owner",
-                  "type": "core::starknet::contract_address::ContractAddress"
-                },
-                {
-                  "name": "spender",
-                  "type": "core::starknet::contract_address::ContractAddress"
-                }
-              ],
-              "outputs": [
-                {
-                  "type": "core::integer::u256"
-                }
-              ],
-              "state_mutability": "view"
-            },
-            {
-              "type": "function",
-              "name": "transfer",
-              "inputs": [
-                {
-                  "name": "recipient",
-                  "type": "core::starknet::contract_address::ContractAddress"
-                },
-                {
-                  "name": "amount",
-                  "type": "core::integer::u256"
-                }
-              ],
-              "outputs": [
-                {
-                  "type": "core::bool"
-                }
-              ],
-              "state_mutability": "external"
-            },
-            {
-              "type": "function",
-              "name": "transfer_from",
-              "inputs": [
-                {
-                  "name": "sender",
-                  "type": "core::starknet::contract_address::ContractAddress"
-                },
-                {
-                  "name": "recipient",
-                  "type": "core::starknet::contract_address::ContractAddress"
-                },
-                {
-                  "name": "amount",
-                  "type": "core::integer::u256"
-                }
-              ],
-              "outputs": [
-                {
-                  "type": "core::bool"
-                }
-              ],
-              "state_mutability": "external"
-            },
-            {
-              "type": "function",
-              "name": "approve",
-              "inputs": [
-                {
-                  "name": "spender",
-                  "type": "core::starknet::contract_address::ContractAddress"
-                },
-                {
-                  "name": "amount",
-                  "type": "core::integer::u256"
-                }
-              ],
-              "outputs": [
-                {
-                  "type": "core::bool"
-                }
-              ],
-              "state_mutability": "external"
-            },
-            {
-              "type": "function",
-              "name": "name",
-              "inputs": [],
-              "outputs": [
-                {
-                  "type": "core::byte_array::ByteArray"
-                }
-              ],
-              "state_mutability": "view"
-            },
-            {
-              "type": "function",
-              "name": "symbol",
-              "inputs": [],
-              "outputs": [
-                {
-                  "type": "core::byte_array::ByteArray"
-                }
-              ],
-              "state_mutability": "view"
-            },
-            {
-              "type": "function",
-              "name": "decimals",
-              "inputs": [],
-              "outputs": [
-                {
-                  "type": "core::integer::u8"
-                }
-              ],
-              "state_mutability": "view"
-            },
-            {
-              "type": "function",
-              "name": "totalSupply",
-              "inputs": [],
-              "outputs": [
-                {
-                  "type": "core::integer::u256"
-                }
-              ],
-              "state_mutability": "view"
-            },
-            {
-              "type": "function",
-              "name": "balanceOf",
-              "inputs": [
-                {
-                  "name": "account",
-                  "type": "core::starknet::contract_address::ContractAddress"
-                }
-              ],
-              "outputs": [
-                {
-                  "type": "core::integer::u256"
-                }
-              ],
-              "state_mutability": "view"
-            },
-            {
-              "type": "function",
-              "name": "transferFrom",
-              "inputs": [
-                {
-                  "name": "sender",
-                  "type": "core::starknet::contract_address::ContractAddress"
-                },
-                {
-                  "name": "recipient",
-                  "type": "core::starknet::contract_address::ContractAddress"
-                },
-                {
-                  "name": "amount",
-                  "type": "core::integer::u256"
-                }
-              ],
-              "outputs": [
-                {
-                  "type": "core::bool"
-                }
-              ],
-              "state_mutability": "external"
-            }
-          ]
-        },
-        {
-          "type": "impl",
-          "name": "OwnableMixinImpl",
-          "interface_name": "openzeppelin_access::ownable::interface::OwnableABI"
-        },
-        {
-          "type": "interface",
-          "name": "openzeppelin_access::ownable::interface::OwnableABI",
-          "items": [
-            {
-              "type": "function",
-              "name": "owner",
-              "inputs": [],
-              "outputs": [
-                {
-                  "type": "core::starknet::contract_address::ContractAddress"
-                }
-              ],
-              "state_mutability": "view"
-            },
-            {
-              "type": "function",
-              "name": "transfer_ownership",
-              "inputs": [
-                {
-                  "name": "new_owner",
-                  "type": "core::starknet::contract_address::ContractAddress"
-                }
-              ],
-              "outputs": [],
-              "state_mutability": "external"
-            },
-            {
-              "type": "function",
-              "name": "renounce_ownership",
-              "inputs": [],
-              "outputs": [],
-              "state_mutability": "external"
-            },
-            {
-              "type": "function",
-              "name": "transferOwnership",
-              "inputs": [
-                {
-                  "name": "newOwner",
-                  "type": "core::starknet::contract_address::ContractAddress"
-                }
-              ],
-              "outputs": [],
-              "state_mutability": "external"
-            },
-            {
-              "type": "function",
-              "name": "renounceOwnership",
-              "inputs": [],
-              "outputs": [],
-              "state_mutability": "external"
-            }
-          ]
-        },
-        {
-          "type": "constructor",
-          "name": "constructor",
-          "inputs": [
-            {
-              "name": "owner",
-              "type": "core::starknet::contract_address::ContractAddress"
-            },
-            {
-              "name": "name",
-              "type": "core::byte_array::ByteArray"
-            },
-            {
-              "name": "symbol",
-              "type": "core::byte_array::ByteArray"
-            },
-            {
-              "name": "initial_supply",
-              "type": "core::integer::u256"
-            },
-            {
-              "name": "recipient",
-              "type": "core::starknet::contract_address::ContractAddress"
-            }
-          ]
-        },
-        {
-          "type": "event",
-          "name": "openzeppelin_token::erc20::erc20::ERC20Component::Transfer",
-          "kind": "struct",
-          "members": [
-            {
-              "name": "from",
-              "type": "core::starknet::contract_address::ContractAddress",
-              "kind": "key"
-            },
-            {
-              "name": "to",
-              "type": "core::starknet::contract_address::ContractAddress",
-              "kind": "key"
-            },
-            {
-              "name": "value",
-              "type": "core::integer::u256",
-              "kind": "data"
-            }
-          ]
-        },
-        {
-          "type": "event",
-          "name": "openzeppelin_token::erc20::erc20::ERC20Component::Approval",
-          "kind": "struct",
-          "members": [
-            {
-              "name": "owner",
-              "type": "core::starknet::contract_address::ContractAddress",
-              "kind": "key"
-            },
-            {
-              "name": "spender",
-              "type": "core::starknet::contract_address::ContractAddress",
-              "kind": "key"
-            },
-            {
-              "name": "value",
-              "type": "core::integer::u256",
-              "kind": "data"
-            }
-          ]
-        },
-        {
-          "type": "event",
-          "name": "openzeppelin_token::erc20::erc20::ERC20Component::Event",
-          "kind": "enum",
-          "variants": [
-            {
-              "name": "Transfer",
-              "type": "openzeppelin_token::erc20::erc20::ERC20Component::Transfer",
-              "kind": "nested"
-            },
-            {
-              "name": "Approval",
-              "type": "openzeppelin_token::erc20::erc20::ERC20Component::Approval",
-              "kind": "nested"
-            }
-          ]
-        },
-        {
-          "type": "event",
-          "name": "openzeppelin_access::ownable::ownable::OwnableComponent::OwnershipTransferred",
-          "kind": "struct",
-          "members": [
-            {
-              "name": "previous_owner",
-              "type": "core::starknet::contract_address::ContractAddress",
-              "kind": "key"
-            },
-            {
-              "name": "new_owner",
-              "type": "core::starknet::contract_address::ContractAddress",
-              "kind": "key"
-            }
-          ]
-        },
-        {
-          "type": "event",
-          "name": "openzeppelin_access::ownable::ownable::OwnableComponent::OwnershipTransferStarted",
-          "kind": "struct",
-          "members": [
-            {
-              "name": "previous_owner",
-              "type": "core::starknet::contract_address::ContractAddress",
-              "kind": "key"
-            },
-            {
-              "name": "new_owner",
-              "type": "core::starknet::contract_address::ContractAddress",
-              "kind": "key"
-            }
-          ]
-        },
-        {
-          "type": "event",
-          "name": "openzeppelin_access::ownable::ownable::OwnableComponent::Event",
-          "kind": "enum",
-          "variants": [
-            {
-              "name": "OwnershipTransferred",
-              "type": "openzeppelin_access::ownable::ownable::OwnableComponent::OwnershipTransferred",
-              "kind": "nested"
-            },
-            {
-              "name": "OwnershipTransferStarted",
-              "type": "openzeppelin_access::ownable::ownable::OwnableComponent::OwnershipTransferStarted",
-              "kind": "nested"
-            }
-          ]
-        },
-        {
-          "type": "event",
-          "name": "openzeppelin_upgrades::upgradeable::UpgradeableComponent::Upgraded",
-          "kind": "struct",
-          "members": [
-            {
-              "name": "class_hash",
-              "type": "core::starknet::class_hash::ClassHash",
-              "kind": "data"
-            }
-          ]
-        },
-        {
-          "type": "event",
-          "name": "openzeppelin_upgrades::upgradeable::UpgradeableComponent::Event",
-          "kind": "enum",
-          "variants": [
-            {
-              "name": "Upgraded",
-              "type": "openzeppelin_upgrades::upgradeable::UpgradeableComponent::Upgraded",
-              "kind": "nested"
-            }
-          ]
-        },
-        {
-          "type": "event",
-          "name": "dojo_examples::externals::erc20::ERC20Token::Event",
-          "kind": "enum",
-          "variants": [
-            {
-              "name": "ERC20Event",
-              "type": "openzeppelin_token::erc20::erc20::ERC20Component::Event",
-              "kind": "flat"
-            },
-            {
-              "name": "OwnableEvent",
-              "type": "openzeppelin_access::ownable::ownable::OwnableComponent::Event",
-              "kind": "flat"
-            },
-            {
-              "name": "UpgradeableEvent",
-              "type": "openzeppelin_upgrades::upgradeable::UpgradeableComponent::Event",
-              "kind": "flat"
-            }
-          ]
-        }
-      ],
-      "constructor_calldata": [
-        "0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba",
-        "str:Gold",
-        "str:GOLD",
-        "u256:0x10000000000000",
-        "0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba"
-      ],
-      "encoded_constructor_calldata": [
-        "0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba",
-        "0x0",
-        "0x476f6c64",
-        "0x4",
-        "0x0",
-        "0x474f4c44",
-        "0x4",
-        "0x10000000000000",
-        "0x0",
-        "0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba"
-      ],
-      "entrypoints": [
-        "mint",
-        "upgrade",
-        "transfer",
-        "transfer_from",
-        "approve",
-        "transferFrom",
-        "transfer_ownership",
-        "renounce_ownership",
-        "transferOwnership",
-        "renounceOwnership"
-      ],
-      "block_number": null
-    },
-    {
-      "class_hash": "0x6910d29e4e5fccce2bc3da8759f242318a324daf6b48d3c80287165140511de",
-      "contract_name": "Bank",
-      "tag": "ns3-Bank",
-      "address": "0x539aa2fa9ca71abcb9e3dc92bd270f077d0aee29cbdf1a73321551080aaeaac",
-      "abi": [
-        {
-          "type": "impl",
-          "name": "UpgradeableImpl",
-          "interface_name": "openzeppelin_upgrades::interface::IUpgradeable"
-        },
-        {
-          "type": "interface",
-          "name": "openzeppelin_upgrades::interface::IUpgradeable",
-          "items": [
-            {
-              "type": "function",
-              "name": "upgrade",
-              "inputs": [
-                {
-                  "name": "new_class_hash",
-                  "type": "core::starknet::class_hash::ClassHash"
-                }
-              ],
-              "outputs": [],
-              "state_mutability": "external"
-            }
-          ]
-        },
-        {
-          "type": "constructor",
-          "name": "constructor",
-          "inputs": [
-            {
-              "name": "owner",
-              "type": "core::starknet::contract_address::ContractAddress"
-            }
-          ]
-        },
-        {
-          "type": "event",
-          "name": "openzeppelin_upgrades::upgradeable::UpgradeableComponent::Upgraded",
-          "kind": "struct",
-          "members": [
-            {
-              "name": "class_hash",
-              "type": "core::starknet::class_hash::ClassHash",
-              "kind": "data"
-            }
-          ]
-        },
-        {
-          "type": "event",
-          "name": "openzeppelin_upgrades::upgradeable::UpgradeableComponent::Event",
-          "kind": "enum",
-          "variants": [
-            {
-              "name": "Upgraded",
-              "type": "openzeppelin_upgrades::upgradeable::UpgradeableComponent::Upgraded",
-              "kind": "nested"
-            }
-          ]
-        },
-        {
-          "type": "event",
-          "name": "dojo_examples::externals::bank::Bank::Event",
-          "kind": "enum",
-          "variants": [
-            {
-              "name": "UpgradeableEvent",
-              "type": "openzeppelin_upgrades::upgradeable::UpgradeableComponent::Event",
-              "kind": "flat"
-            }
-          ]
-        }
-      ],
-      "constructor_calldata": [
-        "0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba"
-      ],
-      "encoded_constructor_calldata": [
-        "0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba"
-      ],
-      "entrypoints": [
-        "upgrade"
-      ],
-      "block_number": null
+      ]
     }
   ]
 }

@@ -307,7 +307,7 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
             IWorldDispatcherTrait::entity(
                 *self.dispatcher,
                 Model::<M>::selector(*self.namespace_hash),
-                ModelIndex::Id(ptr.id),
+                ModelIndex::Schema(ptr.id),
                 Introspect::<T>::layout(),
             ),
         )
@@ -321,12 +321,41 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
         for entity in IWorldDispatcherTrait::entities(
             *self.dispatcher,
             Model::<M>::selector(*self.namespace_hash),
-            ptrs.to_indexes(),
+            ptrs.to_schemas(),
             Introspect::<T>::layout(),
         ) {
             values.append(deserialize_unwrap(*entity));
         }
         values
+    }
+
+    fn write_schema<T, +Serde<T>, +Introspect<T>>(
+        ref self: WorldStorage, ptr: ModelPtr<M>, schema: @T,
+    ) {
+        IWorldDispatcherTrait::set_entity(
+            self.dispatcher,
+            Model::<M>::selector(self.namespace_hash),
+            ModelIndex::Schema(ptr.id),
+            serialize_inline(schema),
+            Introspect::<T>::layout(),
+        );
+    }
+
+    fn write_schemas<T, +Serde<T>, +Introspect<T>>(
+        ref self: WorldStorage, ptrs: Span<ModelPtr<M>>, schemas: Span<@T>,
+    ) {
+        let mut serialized_schemas = ArrayTrait::<Span<felt252>>::new();
+        for schema in schemas {
+            serialized_schemas.append(serialize_inline(*schema));
+        };
+
+        IWorldDispatcherTrait::set_entities(
+            self.dispatcher,
+            Model::<M>::selector(self.namespace_hash),
+            ptrs.to_schemas(),
+            serialized_schemas.span(),
+            Introspect::<T>::layout(),
+        );
     }
 
     fn namespace_hash(self: @WorldStorage) -> felt252 {
