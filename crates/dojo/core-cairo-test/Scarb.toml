@@ -3,7 +3,7 @@ cairo-version = "=2.10.1"
 edition = "2024_07"
 description = "Testing library for Dojo using Cairo test runner."
 name = "dojo_cairo_test"
-version = "1.6.1"
+version = "1.6.2"
 
 [[target.starknet-contract]]
 build-external-contracts = [ "dojo::world::world_contract::world" ]
