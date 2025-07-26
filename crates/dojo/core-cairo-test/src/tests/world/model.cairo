@@ -1,12 +1,10 @@
-use dojo::model::ModelStorage;
 use core::starknet::ContractAddress;
-
+use dojo::model::{Model, ModelStorage};
+use dojo::world::{IWorldDispatcherTrait, world};
 use crate::tests::helpers::{
-    Foo, m_Foo, DOJO_NSH, drop_all_events, deploy_world, deploy_world_for_model_upgrades,
-    foo_invalid_name,
+    DOJO_NSH, Foo, deploy_world, deploy_world_for_model_upgrades, drop_all_events, foo_invalid_name,
+    m_Foo,
 };
-use dojo::world::{world, IWorldDispatcherTrait};
-use dojo::model::Model;
 
 
 #[derive(Introspect, Copy, Drop, Serde)]
@@ -56,9 +54,9 @@ pub struct FooModelMemberAdded {
     pub c: u256,
 }
 
-#[derive(Introspect, Copy, Drop, Serde, PartialEq)]
+#[derive(Introspect, Copy, Drop, Serde, PartialEq, Debug)]
 enum MyEnum {
-    X: u8,
+    X: u16,
     Y: u16,
 }
 
@@ -97,6 +95,20 @@ pub struct ModelWithSignedInt {
     pub e: i128,
 }
 
+#[derive(Introspect, Copy, Drop, Serde, Debug)]
+enum MyNestedEnum {
+    A: MyEnum,
+    B: u16,
+    C: u32,
+}
+
+#[derive(Introspect, Copy, Drop, Serde, Debug)]
+#[dojo::model]
+struct ModelWithNestedEnumKey {
+    #[key]
+    pub k: MyNestedEnum,
+    pub a: u8,
+}
 
 #[test]
 fn test_register_model_for_namespace_owner() {
@@ -278,6 +290,21 @@ fn test_upgrade_model_with_member_changed() {
     let read: FooModelMemberChanged = world_storage.read_model(caller);
     assert!(read.a == (MyEnum::X(42), 189, 0));
     assert!(read.b == 456);
+}
+
+#[test]
+fn test_upgrade_model_with_nested_enum_key() {
+    // for this test, the key of `ModelWithNestedEnumKey` is an enum containing another enum.
+    // both enums are upgraded with new variants and existing variants are also upgraded following
+    // the rules.
+    let world = deploy_world_for_model_upgrades();
+    let mut world_storage = dojo::world::WorldStorageTrait::new(world, @"dojo");
+
+    world.upgrade_model("dojo", m_ModelWithNestedEnumKey::TEST_CLASS_HASH.try_into().unwrap());
+
+    // values previously set in deploy_world_for_model_upgrades
+    let read: ModelWithNestedEnumKey = world_storage.read_model(MyNestedEnum::A(MyEnum::X(8)));
+    assert!(read.a == 42);
 }
 
 #[test]
