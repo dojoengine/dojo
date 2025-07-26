@@ -259,6 +259,7 @@ impl DojoStructIntrospect {
                 &member_name,
                 &member_ty,
                 false,
+                "values",
             ));
 
             member_names.push(member_name);

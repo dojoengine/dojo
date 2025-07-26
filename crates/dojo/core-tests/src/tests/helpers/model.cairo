@@ -1,10 +1,10 @@
 use dojo::meta::introspect::Introspect;
 use dojo::model::ModelIndex;
-use dojo::utils::selector_from_names;
+use dojo::utils::{entity_id_from_serialized_keys, selector_from_names, serialize_inline};
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
 use dojo_snf_test::world::{NamespaceDef, TestResource, spawn_test_world};
 use starknet::ContractAddress;
-use super::helpers::MyEnum;
+use super::helpers::{MyEnum, MyNestedEnum};
 
 // This model is used as a base to create the "previous" version of a model to be upgraded.
 #[derive(Introspect)]
@@ -35,6 +35,17 @@ struct FooModelMemberChanged {
     pub b: u128,
 }
 
+pub fn old_model_with_nested_enum_key_layout() -> dojo::meta::layout::Layout {
+    dojo::meta::layout::Layout::Struct(
+        [
+            dojo::meta::layout::FieldLayout {
+                selector: selector!("a"), layout: dojo::meta::layout::Layout::Fixed([8].span()),
+            },
+        ]
+            .span(),
+    )
+}
+
 pub fn deploy_world_for_model_upgrades() -> IWorldDispatcher {
     let namespace_def = NamespaceDef {
         namespace: "dojo",
@@ -46,6 +57,7 @@ pub fn deploy_world_for_model_upgrades() -> IWorldDispatcher {
             TestResource::Model("OldFooModelMemberAdded"),
             TestResource::Model("OldFooModelMemberChanged"),
             TestResource::Model("OldFooModelMemberIllegalChange"),
+            TestResource::Model("OldModelWithNestedEnumKey"),
         ]
             .span(),
     };
@@ -70,6 +82,17 @@ pub fn deploy_world_for_model_upgrades() -> IWorldDispatcher {
             ModelIndex::Keys([0xb0b].span()),
             [1, 42, 189, 456].span(),
             Introspect::<FooModelMemberChanged>::layout(),
+        );
+
+    // write ModelWithNestedEnumKey { k: MyNestedEnum::A(MyEnum::X(8)), a: 42 }
+
+    let keys = serialize_inline(@MyNestedEnum::A(MyEnum::X(8)));
+    world
+        .set_entity(
+            selector_from_names(@"dojo", @"ModelWithNestedEnumKey"),
+            ModelIndex::Id(entity_id_from_serialized_keys(keys)),
+            [42].span(),
+            old_model_with_nested_enum_key_layout(),
         );
 
     world
@@ -289,6 +312,84 @@ pub mod m_OldFooModelMemberIllegalChange {
 
         fn layout(self: @ContractState) -> dojo::meta::Layout {
             dojo::meta::introspect::Introspect::<super::FooBaseModel>::layout()
+        }
+    }
+}
+
+
+#[starknet::contract]
+pub mod m_OldModelWithNestedEnumKey {
+    // In this old version of ModelWithNestedEnumKey, the type of the key member `k` is:
+    // ```
+    // enum MyNestedEnum {
+    //     A: MyEnum,
+    //     B: u16
+    // }
+    //
+    // enum MyEnum {
+    //     X: u8,
+    // }
+    // ```
+
+    #[storage]
+    struct Storage {}
+
+    #[abi(embed_v0)]
+    impl DeployedModelImpl of dojo::meta::interface::IDeployedResource<ContractState> {
+        fn dojo_name(self: @ContractState) -> ByteArray {
+            "ModelWithNestedEnumKey"
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl StoredImpl of dojo::meta::interface::IStoredResource<ContractState> {
+        fn schema(self: @ContractState) -> dojo::meta::introspect::Struct {
+            dojo::meta::introspect::Struct {
+                name: 'ModelWithNestedEnumKey',
+                attrs: [].span(),
+                children: [
+                    dojo::meta::introspect::Member {
+                        name: 'k',
+                        attrs: ['key'].span(),
+                        ty: dojo::meta::introspect::Ty::Enum(
+                            dojo::meta::introspect::Enum {
+                                name: 'MyNestedEnum',
+                                attrs: [].span(),
+                                children: [
+                                    (
+                                        'A',
+                                        dojo::meta::introspect::Ty::Enum(
+                                            dojo::meta::introspect::Enum {
+                                                name: 'MyEnum',
+                                                attrs: [].span(),
+                                                children: [
+                                                    (
+                                                        'X',
+                                                        dojo::meta::introspect::Ty::Primitive('u8'),
+                                                    )
+                                                ]
+                                                    .span(),
+                                            },
+                                        ),
+                                    ),
+                                    ('B', dojo::meta::introspect::Ty::Primitive('u16')),
+                                ]
+                                    .span(),
+                            },
+                        ),
+                    },
+                    dojo::meta::introspect::Member {
+                        name: 'a',
+                        attrs: [].span(),
+                        ty: dojo::meta::introspect::Ty::Primitive('u8'),
+                    },
+                ]
+                    .span(),
+            }
+        }
+
+        fn layout(self: @ContractState) -> dojo::meta::Layout {
+            super::old_model_with_nested_enum_key_layout()
         }
     }
 }
