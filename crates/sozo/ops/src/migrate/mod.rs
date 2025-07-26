@@ -47,6 +47,24 @@ use crate::migration_ui::MigrationUi;
 
 pub mod error;
 pub use error::MigrationError;
+pub use sozo_voyager::{
+    get_project_root, get_project_versions, ContractVerifier, VerificationResult, VoyagerConfig,
+};
+
+/// Configuration for contract verification services
+#[derive(Debug, Clone)]
+pub enum VerificationConfig {
+    /// No verification enabled
+    None,
+    /// Voyager verification service
+    Voyager(VoyagerConfig),
+}
+
+impl Default for VerificationConfig {
+    fn default() -> Self {
+        Self::None
+    }
+}
 
 #[derive(Debug)]
 pub struct Migration<A>
@@ -61,12 +79,16 @@ where
     // Ideally, we want this rpc url to be exposed from the world.account.provider().
     rpc_url: String,
     guest: bool,
+    verification_config: VerificationConfig,
+    // Target directory for loading WorldLocal artifacts
+    target_directory: Option<String>,
 }
 
 #[derive(Debug)]
 pub struct MigrationResult {
     pub has_changes: bool,
     pub manifest: Manifest,
+    pub verification_results: Option<Vec<VerificationResult>>,
 }
 
 impl<A> Migration<A>
@@ -82,7 +104,26 @@ where
         rpc_url: String,
         guest: bool,
     ) -> Self {
-        Self { diff, world, txn_config, profile_config, rpc_url, guest }
+        Self {
+            diff,
+            world,
+            txn_config,
+            profile_config,
+            rpc_url,
+            guest,
+            verification_config: VerificationConfig::None,
+            target_directory: None,
+        }
+    }
+
+    /// Builder method to add verification to an existing migration
+    pub fn with_verification(self, verification_config: VerificationConfig) -> Self {
+        Self { verification_config, ..self }
+    }
+
+    /// Builder method to set the target directory for loading artifacts
+    pub fn with_target_directory(self, target_directory: String) -> Self {
+        Self { target_directory: Some(target_directory), ..self }
     }
 
     /// Migrates the world by syncing the namespaces, resources, permissions and initializing the
@@ -105,6 +146,23 @@ where
 
         let external_contracts_have_changed = self.sync_external_contracts(ui).await?;
 
+        // Optional contract verification step
+        let verification_results = match &self.verification_config {
+            VerificationConfig::None => None,
+            _ => {
+                match self.verify_contracts(ui, &self.verification_config).await {
+                    Ok(results) => Some(results),
+                    Err(e) => {
+                        // Log verification error but don't fail the migration
+                        tracing::warn!("Contract verification failed: {}", e);
+                        ui.stop_and_persist_boxed("⚠️", format!("Verification failed: {}", e));
+                        ui.restart("Continuing migration...");
+                        None
+                    }
+                }
+            }
+        };
+
         Ok(MigrationResult {
             has_changes: world_has_changed
                 || resources_have_changed
@@ -112,6 +170,7 @@ where
                 || external_contracts_have_changed
                 || contracts_have_changed,
             manifest: Manifest::new(&self.diff),
+            verification_results,
         })
     }
 
@@ -1006,6 +1065,70 @@ where
         };
 
         Ok(true)
+    }
+
+    /// Verify contracts that were declared during migration.
+    async fn verify_contracts(
+        &self,
+        ui: &mut MigrationUi,
+        verification_config: &VerificationConfig,
+    ) -> Result<Vec<VerificationResult>, MigrationError<A::SignError>> {
+        use tracing::debug;
+
+        match verification_config {
+            VerificationConfig::None => {
+                debug!("Verification disabled, skipping contract verification");
+                Ok(vec![])
+            }
+            VerificationConfig::Voyager(voyager_config) => {
+                self.verify_contracts_with_voyager(ui, voyager_config).await
+            }
+        }
+    }
+
+    /// Verify contracts using Voyager verification service.
+    async fn verify_contracts_with_voyager(
+        &self,
+        ui: &mut MigrationUi,
+        voyager_config: &VoyagerConfig,
+    ) -> Result<Vec<VerificationResult>, MigrationError<A::SignError>> {
+        // Get project root from the world's manifest path
+        let project_root = get_project_root();
+
+        // Load WorldLocal from artifacts using the correct target directory
+        let target_dir = if let Some(target_dir) = &self.target_directory {
+            target_dir.clone()
+        } else {
+            // Fallback to dev profile if no target directory was provided
+            project_root.join("target").join("dev").to_string_lossy().to_string()
+        };
+
+        let world =
+            dojo_world::local::WorldLocal::from_directory(target_dir, self.profile_config.clone())
+                .map_err(|e| {
+                    MigrationError::ContractVerificationError(anyhow::anyhow!(
+                        "Failed to load WorldLocal: {}",
+                        e
+                    ))
+                })?;
+
+        // Create verifier with Voyager configuration
+        let verifier = ContractVerifier::new_with_voyager(project_root, voyager_config.clone())
+            .map_err(MigrationError::ContractVerificationError)?;
+
+        // Get version info from project configuration
+        let (cairo_version, scarb_version) = get_project_versions().unwrap_or_else(|_| {
+            // Fallback to default values if unable to detect versions
+            ("2.8.0".to_string(), "2.8.0".to_string())
+        });
+
+        // Verify contracts using WorldLocal (includes all contracts, models, events)
+        let results = verifier
+            .verify_deployed_contracts_from_world(ui, &cairo_version, &scarb_version, &world)
+            .await
+            .map_err(|e| MigrationError::DeclareClassError(e.to_string()))?;
+
+        Ok(results)
     }
 
     /// Returns the accounts to use for the migration.

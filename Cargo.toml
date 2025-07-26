@@ -15,10 +15,11 @@ members = [
 	"crates/macros/merge-options",
 	"crates/macros/merge-options/macro_test",
 	"crates/metrics",
+	"crates/sozo/mcp",
 	"crates/sozo/scarbext",
 	"crates/sozo/signers",
+	"crates/sozo/voyager",
 	"crates/sozo/walnut",
-	"crates/sozo/mcp",
 	"examples/spawn-and-move",
 	"scripts/verify_db_balances",
 	"xtask/generate-test-db",
@@ -76,11 +77,12 @@ torii-sqlite-types = { path = "crates/torii/sqlite/types" }
 torii-typed-data = { path = "crates/torii/typed-data" }
 
 # sozo
+sozo-mcp = { path = "crates/sozo/mcp" }
 sozo-ops = { path = "crates/sozo/ops" }
 sozo-scarbext = { path = "crates/sozo/scarbext" }
 sozo-signers = { path = "crates/sozo/signers" }
+sozo-voyager = { path = "crates/sozo/voyager" }
 sozo-walnut = { path = "crates/sozo/walnut" }
-sozo-mcp = { path = "crates/sozo/mcp" }
 
 # macros
 merge-options = { path = "crates/macros/merge-options" }

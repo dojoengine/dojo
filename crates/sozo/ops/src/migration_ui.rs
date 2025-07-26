@@ -2,6 +2,7 @@
 
 use std::fmt;
 
+use sozo_voyager::VerificationUi;
 use spinoff::spinners::SpinnerFrames;
 use spinoff::{spinner, spinners, Spinner};
 
@@ -91,5 +92,11 @@ impl MigrationUi {
         }
 
         self.spinner = Spinner::new(self.default_frames.clone(), text, None);
+    }
+}
+
+impl VerificationUi for MigrationUi {
+    fn update_text_boxed(&mut self, text: String) {
+        self.update_text_boxed(text);
     }
 }
