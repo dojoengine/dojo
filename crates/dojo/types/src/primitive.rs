@@ -317,10 +317,7 @@ impl Primitive {
                 let hex_str = value
                     .strip_prefix("0x")
                     .ok_or_else(|| PrimitiveError::InvalidSqlValue(value.to_string()))?;
-                *inner = Some(
-                    U256::from_be_hex(hex_str)
-                        .map_err(|_| PrimitiveError::InvalidSqlValue(value.to_string()))?,
-                );
+                *inner = Some(U256::from_be_hex(hex_str));
             }
             Primitive::ContractAddress(ref mut inner) => {
                 let hex_str = value
