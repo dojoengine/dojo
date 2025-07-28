@@ -464,88 +464,61 @@ impl Ty {
     /// Parse a JSON Value into a Ty
     pub fn from_json_value(&mut self, value: JsonValue) -> Result<(), PrimitiveError> {
         match (self, value) {
-            (Ty::Primitive(primitive), value) => match primitive {
-                Primitive::Bool(v) => {
-                    if let JsonValue::Bool(b) = value {
-                        *v = Some(b);
+            (Ty::Primitive(primitive), value) => {
+                match value {
+                    JsonValue::String(s) => {
+                        // Use from_sql_value for string values
+                        primitive.from_sql_value(&s)?;
                     }
-                }
-                Primitive::I8(v) => {
-                    if let JsonValue::Number(n) = value {
-                        *v = n.as_i64().map(|n| n as i8);
+                    JsonValue::Number(n) => {
+                        // Handle numbers directly for better precision
+                        match primitive {
+                            Primitive::Bool(v) => {
+                                *v = n.as_i64().map(|n| n != 0);
+                            }
+                            Primitive::I8(v) => {
+                                *v = n.as_i64().map(|n| n as i8);
+                            }
+                            Primitive::I16(v) => {
+                                *v = n.as_i64().map(|n| n as i16);
+                            }
+                            Primitive::I32(v) => {
+                                *v = n.as_i64().map(|n| n as i32);
+                            }
+                            Primitive::I64(v) => {
+                                *v = n.as_i64();
+                            }
+                            Primitive::U8(v) => {
+                                *v = n.as_u64().map(|n| n as u8);
+                            }
+                            Primitive::U16(v) => {
+                                *v = n.as_u64().map(|n| n as u16);
+                            }
+                            Primitive::U32(v) => {
+                                *v = n.as_u64().map(|n| n as u32);
+                            }
+                            Primitive::U64(v) => {
+                                *v = n.as_u64();
+                            }
+                            Primitive::U128(v) => {
+                                *v = n.as_u64().map(|n| n as u128);
+                            }
+                            _ => {
+                                // For other types, convert to string and use from_sql_value
+                                primitive.from_sql_value(&n.to_string())?;
+                            }
+                        }
                     }
-                }
-                Primitive::I16(v) => {
-                    if let JsonValue::Number(n) = value {
-                        *v = n.as_i64().map(|n| n as i16);
+                    JsonValue::Bool(b) => {
+                        if let Primitive::Bool(v) = primitive {
+                            *v = Some(b);
+                        } else {
+                            return Err(PrimitiveError::TypeMismatch);
+                        }
                     }
+                    _ => return Err(PrimitiveError::TypeMismatch),
                 }
-                Primitive::I32(v) => {
-                    if let JsonValue::Number(n) = value {
-                        *v = n.as_i64().map(|n| n as i32);
-                    }
-                }
-                Primitive::I64(v) => {
-                    if let JsonValue::String(s) = value {
-                        *v = s.parse().ok();
-                    }
-                }
-                Primitive::I128(v) => {
-                    if let JsonValue::String(s) = value {
-                        *v = s.parse().ok();
-                    }
-                }
-                Primitive::U8(v) => {
-                    if let JsonValue::Number(n) = value {
-                        *v = n.as_u64().map(|n| n as u8);
-                    }
-                }
-                Primitive::U16(v) => {
-                    if let JsonValue::Number(n) = value {
-                        *v = n.as_u64().map(|n| n as u16);
-                    }
-                }
-                Primitive::U32(v) => {
-                    if let JsonValue::Number(n) = value {
-                        *v = n.as_u64().map(|n| n as u32);
-                    }
-                }
-                Primitive::U64(v) => {
-                    if let JsonValue::String(s) = value {
-                        *v = s.parse().ok();
-                    }
-                }
-                Primitive::U128(v) => {
-                    if let JsonValue::String(s) = value {
-                        *v = s.parse().ok();
-                    }
-                }
-                Primitive::U256(v) => {
-                    if let JsonValue::String(s) = value {
-                        *v = Some(U256::from_be_hex(s.trim_start_matches("0x")));
-                    }
-                }
-                Primitive::Felt252(v) => {
-                    if let JsonValue::String(s) = value {
-                        *v = Felt::from_str(&s).ok();
-                    }
-                }
-                Primitive::ClassHash(v) => {
-                    if let JsonValue::String(s) = value {
-                        *v = Felt::from_str(&s).ok();
-                    }
-                }
-                Primitive::ContractAddress(v) => {
-                    if let JsonValue::String(s) = value {
-                        *v = Felt::from_str(&s).ok();
-                    }
-                }
-                Primitive::EthAddress(v) => {
-                    if let JsonValue::String(s) = value {
-                        *v = Felt::from_str(&s).ok();
-                    }
-                }
-            },
+            }
             (Ty::Struct(s), JsonValue::Object(obj)) => {
                 for member in &mut s.children {
                     if let Some(value) = obj.get(&member.name) {
