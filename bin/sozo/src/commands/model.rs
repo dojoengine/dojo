@@ -164,7 +164,7 @@ impl ModelArgs {
             ModelCommand::Layout { tag_or_name, starknet, world, block } => {
                 let tag = tag_or_name.ensure_namespace(&default_ns);
                 let block_id =
-                    block.map(BlockId::Number).unwrap_or(BlockId::Tag(BlockTag::Pending));
+                    block.map(BlockId::Number).unwrap_or(BlockId::Tag(BlockTag::PreConfirmed));
 
                 let (world_diff, provider, _) =
                     utils::get_world_diff_and_provider(starknet, world, scarb_metadata).await?;
@@ -181,7 +181,7 @@ impl ModelArgs {
             ModelCommand::Schema { tag_or_name, to_json, starknet, world, block } => {
                 let tag = tag_or_name.ensure_namespace(&default_ns);
                 let block_id =
-                    block.map(BlockId::Number).unwrap_or(BlockId::Tag(BlockTag::Pending));
+                    block.map(BlockId::Number).unwrap_or(BlockId::Tag(BlockTag::PreConfirmed));
 
                 let (world_diff, provider, _) =
                     utils::get_world_diff_and_provider(starknet, world, scarb_metadata).await?;
@@ -199,7 +199,7 @@ impl ModelArgs {
             ModelCommand::Get { tag_or_name, keys, block, starknet, world } => {
                 let tag = tag_or_name.ensure_namespace(&default_ns);
                 let block_id =
-                    block.map(BlockId::Number).unwrap_or(BlockId::Tag(BlockTag::Pending));
+                    block.map(BlockId::Number).unwrap_or(BlockId::Tag(BlockTag::PreConfirmed));
 
                 let (world_diff, provider, _) =
                     utils::get_world_diff_and_provider(starknet, world, scarb_metadata).await?;

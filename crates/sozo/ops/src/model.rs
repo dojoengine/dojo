@@ -17,7 +17,7 @@ where
     P: Provider + Send + Sync,
 {
     let mut world_reader = WorldContractReader::new(world_address, provider);
-    world_reader.set_block(BlockId::Tag(BlockTag::Pending));
+    world_reader.set_block(BlockId::Tag(BlockTag::PreConfirmed));
 
     let model = world_reader.model_reader_with_tag(&tag).await?;
 
@@ -35,7 +35,7 @@ where
     P: Provider + Send + Sync,
 {
     let mut world_reader = WorldContractReader::new(world_address, provider);
-    world_reader.set_block(BlockId::Tag(BlockTag::Pending));
+    world_reader.set_block(BlockId::Tag(BlockTag::PreConfirmed));
 
     let model = world_reader.model_reader_with_tag(&tag).await?;
 
