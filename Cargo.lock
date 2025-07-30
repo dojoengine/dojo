@@ -5,7 +5,7 @@ version = 4
 [[package]]
 name = "account_sdk"
 version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/controller-rs?rev=660ead4#660ead4db4cd9ce6ebcdaed3ab9edb0466911676"
+source = "git+https://github.com/kariy/controller-rs?branch=feat%2Frpc0.9#9316aa1071b46df06adbef07c5083f2f354977a0"
 dependencies = [
  "alloy-primitives",
  "alloy-signer",
@@ -23,6 +23,7 @@ dependencies = [
  "js-sys",
  "k256",
  "lazy_static",
+ "nom",
  "num-traits",
  "once_cell",
  "primitive-types",
@@ -33,7 +34,7 @@ dependencies = [
  "serde_json",
  "serde_with",
  "starknet",
- "starknet-crypto 0.7.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "starknet-crypto 0.7.4 (git+https://github.com/xJonathanLEI/starknet-rs?rev=993a708551f87bcfbf7fdf33f796b01f7521a634)",
  "starknet-types-core",
  "thiserror 1.0.69",
  "tokio",
@@ -1041,7 +1042,7 @@ checksum = "d71b6127be86fdcfddb610f7182ac57211d4b18a3e9c82eb2d17662f2227ad6a"
 [[package]]
 name = "cainome"
 version = "0.8.0"
-source = "git+https://github.com/cartridge-gg/cainome?branch=snip12#ef4344c14e2a67d480774fa827a1cc411240de80"
+source = "git+https://github.com/kariy/cainome?branch=snip12-rpc0.9#26ff63fdfd57c094ef1074d22936871440481283"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1067,7 +1068,7 @@ dependencies = [
 [[package]]
 name = "cainome-cairo-serde"
 version = "0.2.1"
-source = "git+https://github.com/cartridge-gg/cainome?branch=snip12#ef4344c14e2a67d480774fa827a1cc411240de80"
+source = "git+https://github.com/kariy/cainome?branch=snip12-rpc0.9#26ff63fdfd57c094ef1074d22936871440481283"
 dependencies = [
  "num-bigint",
  "serde",
@@ -1079,7 +1080,7 @@ dependencies = [
 [[package]]
 name = "cainome-cairo-serde-derive"
 version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/cainome?branch=snip12#ef4344c14e2a67d480774fa827a1cc411240de80"
+source = "git+https://github.com/kariy/cainome?branch=snip12-rpc0.9#26ff63fdfd57c094ef1074d22936871440481283"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1090,7 +1091,7 @@ dependencies = [
 [[package]]
 name = "cainome-parser"
 version = "0.3.0"
-source = "git+https://github.com/cartridge-gg/cainome?branch=snip12#ef4344c14e2a67d480774fa827a1cc411240de80"
+source = "git+https://github.com/kariy/cainome?branch=snip12-rpc0.9#26ff63fdfd57c094ef1074d22936871440481283"
 dependencies = [
  "convert_case 0.8.0",
  "quote",
@@ -1103,7 +1104,7 @@ dependencies = [
 [[package]]
 name = "cainome-rs"
 version = "0.3.1"
-source = "git+https://github.com/cartridge-gg/cainome?branch=snip12#ef4344c14e2a67d480774fa827a1cc411240de80"
+source = "git+https://github.com/kariy/cainome?branch=snip12-rpc0.9#26ff63fdfd57c094ef1074d22936871440481283"
 dependencies = [
  "anyhow",
  "cainome-cairo-serde",
@@ -1121,7 +1122,7 @@ dependencies = [
 [[package]]
 name = "cainome-rs-macro"
 version = "0.3.0"
-source = "git+https://github.com/cartridge-gg/cainome?branch=snip12#ef4344c14e2a67d480774fa827a1cc411240de80"
+source = "git+https://github.com/kariy/cainome?branch=snip12-rpc0.9#26ff63fdfd57c094ef1074d22936871440481283"
 dependencies = [
  "anyhow",
  "cainome-cairo-serde",
@@ -2062,6 +2063,34 @@ dependencies = [
 ]
 
 [[package]]
+name = "cookie"
+version = "0.17.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7efb37c3e1ccb1ff97164ad95ac1606e8ccd35b3fa0a7d99a304c7f4a428cc24"
+dependencies = [
+ "percent-encoding",
+ "time",
+ "version_check",
+]
+
+[[package]]
+name = "cookie_store"
+version = "0.20.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "387461abbc748185c3a6e1673d826918b450b87ff22639429c694619a83b6cf6"
+dependencies = [
+ "cookie",
+ "idna 0.3.0",
+ "log",
+ "publicsuffix",
+ "serde",
+ "serde_derive",
+ "serde_json",
+ "time",
+ "url",
+]
+
+[[package]]
 name = "core-foundation"
 version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2507,7 +2536,7 @@ dependencies = [
  "serde",
  "serde_json",
  "starknet",
- "starknet-crypto 0.7.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "starknet-crypto 0.7.4 (git+https://github.com/xJonathanLEI/starknet-rs?rev=993a708551f87bcfbf7fdf33f796b01f7521a634)",
  "strum",
  "strum_macros",
  "thiserror 1.0.69",
@@ -2551,7 +2580,7 @@ dependencies = [
  "serde_json",
  "serde_with",
  "starknet",
- "starknet-crypto 0.7.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "starknet-crypto 0.7.4 (git+https://github.com/xJonathanLEI/starknet-rs?rev=993a708551f87bcfbf7fdf33f796b01f7521a634)",
  "thiserror 1.0.69",
  "tokio",
  "toml 0.8.22",
@@ -2593,7 +2622,7 @@ dependencies = [
  "regex",
  "smol_str",
  "starknet",
- "starknet-crypto 0.7.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "starknet-crypto 0.7.4 (git+https://github.com/xJonathanLEI/starknet-rs?rev=993a708551f87bcfbf7fdf33f796b01f7521a634)",
 ]
 
 [[package]]
@@ -3804,6 +3833,16 @@ checksum = "b9e0384b61958566e926dc50660321d12159025e767c18e043daf26b70104c39"
 
 [[package]]
 name = "idna"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e14ddfc70884202db2244c223200c204c2bda1bc6e0998d11b5e024d657209e6"
+dependencies = [
+ "unicode-bidi",
+ "unicode-normalization",
+]
+
+[[package]]
+name = "idna"
 version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "686f825264d630750a544639377bae737628043f20d38bbc029e8f29ea968a7e"
@@ -4303,8 +4342,8 @@ dependencies = [
 
 [[package]]
 name = "katana-node-bindings"
-version = "1.6.0-alpha.1"
-source = "git+https://github.com/dojoengine/katana?rev=4e9be9dbf92aa9f8e9ce5b49ffb39ea98d7c6571#4e9be9dbf92aa9f8e9ce5b49ffb39ea98d7c6571"
+version = "1.6.3"
+source = "git+https://github.com/dojoengine/katana?branch=rpc%2Fv0.9#d0f470bb0e31eb07cf887059839fba0b23c7a392"
 dependencies = [
  "regex",
  "serde",
@@ -4317,8 +4356,8 @@ dependencies = [
 
 [[package]]
 name = "katana-runner"
-version = "1.6.0-alpha.1"
-source = "git+https://github.com/dojoengine/katana?rev=4e9be9dbf92aa9f8e9ce5b49ffb39ea98d7c6571#4e9be9dbf92aa9f8e9ce5b49ffb39ea98d7c6571"
+version = "1.6.3"
+source = "git+https://github.com/dojoengine/katana?branch=rpc%2Fv0.9#d0f470bb0e31eb07cf887059839fba0b23c7a392"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -4331,8 +4370,8 @@ dependencies = [
 
 [[package]]
 name = "katana-runner-macro"
-version = "1.6.0-alpha.1"
-source = "git+https://github.com/dojoengine/katana?rev=4e9be9dbf92aa9f8e9ce5b49ffb39ea98d7c6571#4e9be9dbf92aa9f8e9ce5b49ffb39ea98d7c6571"
+version = "1.6.3"
+source = "git+https://github.com/dojoengine/katana?branch=rpc%2Fv0.9#d0f470bb0e31eb07cf887059839fba0b23c7a392"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -5580,6 +5619,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "psl-types"
+version = "2.0.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "33cb294fe86a74cbcf50d4445b37da762029549ebeea341421c7c70370f86cac"
+
+[[package]]
+name = "publicsuffix"
+version = "2.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6f42ea446cab60335f76979ec15e12619a2165b5ae2c12166bef27d283a9fadf"
+dependencies = [
+ "idna 1.0.3",
+ "psl-types",
+]
+
+[[package]]
 name = "quanta"
 version = "0.12.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5873,6 +5928,8 @@ checksum = "dd67538700a17451e7cba03ac727fb961abb7607553461627b97de0b89cf4a62"
 dependencies = [
  "base64 0.21.7",
  "bytes",
+ "cookie",
+ "cookie_store",
  "encoding_rs",
  "futures-core",
  "futures-util",
@@ -6888,8 +6945,8 @@ dependencies = [
 
 [[package]]
 name = "slot"
-version = "0.47.0"
-source = "git+https://github.com/cartridge-gg/slot?rev=a2f8508ebe13a39127252ab7f6aafa0b26c1b375#a2f8508ebe13a39127252ab7f6aafa0b26c1b375"
+version = "0.48.0"
+source = "git+https://github.com/cartridge-gg/slot?branch=feat%2Frpc0.9#670690561515e30d831e682de74eb27fb939873e"
 dependencies = [
  "account_sdk",
  "anyhow",
@@ -7006,7 +7063,7 @@ dependencies = [
  "sozo-ops",
  "sozo-walnut",
  "starknet",
- "starknet-crypto 0.7.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "starknet-crypto 0.7.4 (git+https://github.com/xJonathanLEI/starknet-rs?rev=993a708551f87bcfbf7fdf33f796b01f7521a634)",
  "tabled",
  "thiserror 1.0.69",
  "tokio",
@@ -7052,7 +7109,7 @@ dependencies = [
  "sozo-ops",
  "sozo-walnut",
  "starknet",
- "starknet-crypto 0.7.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "starknet-crypto 0.7.4 (git+https://github.com/xJonathanLEI/starknet-rs?rev=993a708551f87bcfbf7fdf33f796b01f7521a634)",
  "tabled",
  "tempfile",
  "thiserror 1.0.69",
@@ -7091,7 +7148,7 @@ dependencies = [
  "sozo-walnut",
  "spinoff",
  "starknet",
- "starknet-crypto 0.7.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "starknet-crypto 0.7.4 (git+https://github.com/xJonathanLEI/starknet-rs?rev=993a708551f87bcfbf7fdf33f796b01f7521a634)",
  "thiserror 1.0.69",
  "tokio",
  "toml 0.8.22",
@@ -7385,14 +7442,14 @@ checksum = "a8f112729512f8e442d81f95a8a7ddf2b7c6b8a1a6f509a95864142b30cab2d3"
 
 [[package]]
 name = "starknet"
-version = "0.15.1"
-source = "git+https://github.com/xJonathanLEI/starknet-rs?rev=ff4222e#ff4222e7d1a6e3127d864539938680030df77c75"
+version = "0.17.0-rc.2"
+source = "git+https://github.com/xJonathanLEI/starknet-rs?rev=993a708551f87bcfbf7fdf33f796b01f7521a634#993a708551f87bcfbf7fdf33f796b01f7521a634"
 dependencies = [
  "starknet-accounts",
  "starknet-contract",
  "starknet-core",
  "starknet-core-derive",
- "starknet-crypto 0.7.4 (git+https://github.com/xJonathanLEI/starknet-rs?rev=ff4222e)",
+ "starknet-crypto 0.7.4 (git+https://github.com/xJonathanLEI/starknet-rs?rev=993a708551f87bcfbf7fdf33f796b01f7521a634)",
  "starknet-macros",
  "starknet-providers",
  "starknet-signers",
@@ -7400,13 +7457,13 @@ dependencies = [
 
 [[package]]
 name = "starknet-accounts"
-version = "0.14.0"
-source = "git+https://github.com/xJonathanLEI/starknet-rs?rev=ff4222e#ff4222e7d1a6e3127d864539938680030df77c75"
+version = "0.16.0-rc.2"
+source = "git+https://github.com/xJonathanLEI/starknet-rs?rev=993a708551f87bcfbf7fdf33f796b01f7521a634#993a708551f87bcfbf7fdf33f796b01f7521a634"
 dependencies = [
  "async-trait",
  "auto_impl",
  "starknet-core",
- "starknet-crypto 0.7.4 (git+https://github.com/xJonathanLEI/starknet-rs?rev=ff4222e)",
+ "starknet-crypto 0.7.4 (git+https://github.com/xJonathanLEI/starknet-rs?rev=993a708551f87bcfbf7fdf33f796b01f7521a634)",
  "starknet-providers",
  "starknet-signers",
  "thiserror 1.0.69",
@@ -7414,8 +7471,8 @@ dependencies = [
 
 [[package]]
 name = "starknet-contract"
-version = "0.14.0"
-source = "git+https://github.com/xJonathanLEI/starknet-rs?rev=ff4222e#ff4222e7d1a6e3127d864539938680030df77c75"
+version = "0.16.0-rc.2"
+source = "git+https://github.com/xJonathanLEI/starknet-rs?rev=993a708551f87bcfbf7fdf33f796b01f7521a634#993a708551f87bcfbf7fdf33f796b01f7521a634"
 dependencies = [
  "serde",
  "serde_json",
@@ -7428,8 +7485,8 @@ dependencies = [
 
 [[package]]
 name = "starknet-core"
-version = "0.14.0"
-source = "git+https://github.com/xJonathanLEI/starknet-rs?rev=ff4222e#ff4222e7d1a6e3127d864539938680030df77c75"
+version = "0.16.0-rc.2"
+source = "git+https://github.com/xJonathanLEI/starknet-rs?rev=993a708551f87bcfbf7fdf33f796b01f7521a634#993a708551f87bcfbf7fdf33f796b01f7521a634"
 dependencies = [
  "base64 0.21.7",
  "crypto-bigint",
@@ -7444,14 +7501,14 @@ dependencies = [
  "serde_with",
  "sha3",
  "starknet-core-derive",
- "starknet-crypto 0.7.4 (git+https://github.com/xJonathanLEI/starknet-rs?rev=ff4222e)",
+ "starknet-crypto 0.7.4 (git+https://github.com/xJonathanLEI/starknet-rs?rev=993a708551f87bcfbf7fdf33f796b01f7521a634)",
  "starknet-types-core",
 ]
 
 [[package]]
 name = "starknet-core-derive"
 version = "0.1.0"
-source = "git+https://github.com/xJonathanLEI/starknet-rs?rev=ff4222e#ff4222e7d1a6e3127d864539938680030df77c75"
+source = "git+https://github.com/xJonathanLEI/starknet-rs?rev=993a708551f87bcfbf7fdf33f796b01f7521a634#993a708551f87bcfbf7fdf33f796b01f7521a634"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -7480,7 +7537,7 @@ dependencies = [
 [[package]]
 name = "starknet-crypto"
 version = "0.7.4"
-source = "git+https://github.com/xJonathanLEI/starknet-rs?rev=ff4222e#ff4222e7d1a6e3127d864539938680030df77c75"
+source = "git+https://github.com/xJonathanLEI/starknet-rs?rev=993a708551f87bcfbf7fdf33f796b01f7521a634#993a708551f87bcfbf7fdf33f796b01f7521a634"
 dependencies = [
  "crypto-bigint",
  "hex",
@@ -7490,7 +7547,7 @@ dependencies = [
  "num-traits",
  "rfc6979",
  "sha2",
- "starknet-curve 0.5.1 (git+https://github.com/xJonathanLEI/starknet-rs?rev=ff4222e)",
+ "starknet-curve 0.5.1 (git+https://github.com/xJonathanLEI/starknet-rs?rev=993a708551f87bcfbf7fdf33f796b01f7521a634)",
  "starknet-types-core",
  "zeroize",
 ]
@@ -7507,15 +7564,15 @@ dependencies = [
 [[package]]
 name = "starknet-curve"
 version = "0.5.1"
-source = "git+https://github.com/xJonathanLEI/starknet-rs?rev=ff4222e#ff4222e7d1a6e3127d864539938680030df77c75"
+source = "git+https://github.com/xJonathanLEI/starknet-rs?rev=993a708551f87bcfbf7fdf33f796b01f7521a634#993a708551f87bcfbf7fdf33f796b01f7521a634"
 dependencies = [
  "starknet-types-core",
 ]
 
 [[package]]
 name = "starknet-macros"
-version = "0.2.3"
-source = "git+https://github.com/xJonathanLEI/starknet-rs?rev=ff4222e#ff4222e7d1a6e3127d864539938680030df77c75"
+version = "0.2.5-rc.2"
+source = "git+https://github.com/xJonathanLEI/starknet-rs?rev=993a708551f87bcfbf7fdf33f796b01f7521a634#993a708551f87bcfbf7fdf33f796b01f7521a634"
 dependencies = [
  "starknet-core",
  "syn 2.0.101",
@@ -7523,8 +7580,8 @@ dependencies = [
 
 [[package]]
 name = "starknet-providers"
-version = "0.14.1"
-source = "git+https://github.com/xJonathanLEI/starknet-rs?rev=ff4222e#ff4222e7d1a6e3127d864539938680030df77c75"
+version = "0.16.0-rc.2"
+source = "git+https://github.com/xJonathanLEI/starknet-rs?rev=993a708551f87bcfbf7fdf33f796b01f7521a634#993a708551f87bcfbf7fdf33f796b01f7521a634"
 dependencies = [
  "async-trait",
  "auto_impl",
@@ -7543,8 +7600,8 @@ dependencies = [
 
 [[package]]
 name = "starknet-signers"
-version = "0.12.0"
-source = "git+https://github.com/xJonathanLEI/starknet-rs?rev=ff4222e#ff4222e7d1a6e3127d864539938680030df77c75"
+version = "0.14.0-rc.2"
+source = "git+https://github.com/xJonathanLEI/starknet-rs?rev=993a708551f87bcfbf7fdf33f796b01f7521a634#993a708551f87bcfbf7fdf33f796b01f7521a634"
 dependencies = [
  "async-trait",
  "auto_impl",
@@ -7553,7 +7610,7 @@ dependencies = [
  "getrandom 0.2.16",
  "rand 0.8.5",
  "starknet-core",
- "starknet-crypto 0.7.4 (git+https://github.com/xJonathanLEI/starknet-rs?rev=ff4222e)",
+ "starknet-crypto 0.7.4 (git+https://github.com/xJonathanLEI/starknet-rs?rev=993a708551f87bcfbf7fdf33f796b01f7521a634)",
  "thiserror 1.0.69",
 ]
 
@@ -8427,7 +8484,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32f8b686cadd1473f4bd0117a5d28d36b1ade384ea9b5069a1c40aefed7fda60"
 dependencies = [
  "form_urlencoded",
- "idna",
+ "idna 1.0.3",
  "percent-encoding",
  "serde",
 ]
