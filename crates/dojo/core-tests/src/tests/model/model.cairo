@@ -37,7 +37,7 @@ struct Foo3 {
     v2: u32,
 }
 
-#[derive(Copy, Drop, Serde, Debug, Introspect)]
+#[derive(Copy, Drop, Serde, Debug, Introspect, DojoStore)]
 struct AStruct {
     a: u8,
     b: u8,
@@ -78,7 +78,7 @@ enum EnumWithCommentOnLastVariant {
     Y: Span<u32> // a comment without a comma
 }
 
-#[derive(Copy, Drop, Serde, Debug, Introspect, Default, PartialEq)]
+#[derive(Copy, Drop, Serde, Debug, Introspect, Default, PartialEq, DojoStore)]
 enum MyEnum {
     X: Option<u32>,
     Y: (u8, u32),
@@ -107,7 +107,7 @@ struct DojoStoreModel {
 }
 
 // to test with unit types
-#[derive(Copy, Drop, Introspect, Debug, Serde, PartialEq, Default)]
+#[derive(Copy, Drop, Introspect, Debug, Serde, PartialEq, Default, DojoStore)]
 enum EnumWithUnitType {
     #[default]
     X: u8,
@@ -115,7 +115,7 @@ enum EnumWithUnitType {
     Z: (),
 }
 
-#[derive(Copy, Drop, Introspect, Debug, Serde, PartialEq)]
+#[derive(Copy, Drop, Introspect, Debug, Serde, PartialEq, DojoStore)]
 struct StructWithUnitType {
     x: (),
 }

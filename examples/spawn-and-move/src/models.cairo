@@ -1,6 +1,6 @@
 use starknet::ContractAddress;
 
-#[derive(Serde, Copy, Drop, Introspect, PartialEq, Debug, Default)]
+#[derive(Serde, Copy, Drop, Introspect, DojoStore, PartialEq, Debug, Default)]
 pub enum Direction {
     #[default]
     None,
@@ -51,7 +51,7 @@ pub struct MockToken {
     pub amount: u128,
 }
 
-#[derive(Copy, Drop, Serde, IntrospectPacked, Debug)]
+#[derive(Copy, Drop, Serde, IntrospectPacked, DojoStore, Debug)]
 pub struct Vec2 {
     pub x: u32,
     pub y: u32,
@@ -71,7 +71,7 @@ pub struct Position {
 
 // Every field inside a model must derive `Introspect` or `IntrospectPacked`.
 // `IntrospectPacked` can also be used into models that are only using `Introspect`.
-#[derive(Copy, Drop, Serde, Introspect, PartialEq)]
+#[derive(Copy, Drop, Serde, Introspect, DojoStore, PartialEq)]
 pub struct PlayerItem {
     pub item_id: u32,
     pub quantity: u32,

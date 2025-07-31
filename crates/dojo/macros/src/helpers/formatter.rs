@@ -1,7 +1,11 @@
-use cairo_lang_syntax::node::ast::{Expr, Member as MemberAst};
+use cairo_lang_parser::utils::SimpleParserDatabase;
+use cairo_lang_syntax::node::ast::{
+    Expr, GenericParam, Member as MemberAst, OptionWrappedGenericParamList,
+};
 use cairo_lang_syntax::node::db::SyntaxGroup;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{Terminal, TypedSyntaxNode};
+use itertools::Itertools;
 
 use crate::helpers::get_serialization_path;
 
@@ -77,5 +81,55 @@ impl DojoFormatter {
                 serialized_values.push(serialized);
             }
         });
+    }
+
+    // Extract generic type information and build the
+    // type and impl information to add to the generated introspect
+    pub fn build_generic_types(
+        db: &SimpleParserDatabase,
+        generic_params: OptionWrappedGenericParamList,
+    ) -> Vec<String> {
+        let generic_types = if let OptionWrappedGenericParamList::WrappedGenericParamList(params) =
+            generic_params
+        {
+            params
+                .generic_params(db)
+                .elements(db)
+                .iter()
+                .filter_map(|el| {
+                    if let GenericParam::Type(typ) = el {
+                        Some(typ.name(db).text(db).to_string())
+                    } else {
+                        None
+                    }
+                })
+                .collect::<Vec<_>>()
+        } else {
+            vec![]
+        };
+
+        generic_types
+    }
+
+    pub fn build_generic_impls(
+        gen_types: &[String],
+        base_impls: &[String],
+        additional_impls: &[String],
+    ) -> String {
+        let mut gen_impls = gen_types
+            .iter()
+            .map(|g| {
+                format!(
+                    "{g}, {base_impls}",
+                    base_impls = base_impls.iter().map(|i| format!("{i}<{g}>")).join(", ")
+                )
+            })
+            .collect::<Vec<_>>();
+
+        if !gen_types.is_empty() {
+            gen_impls.extend(additional_impls.to_vec());
+        }
+
+        gen_impls.join(", ")
     }
 }

@@ -2,6 +2,7 @@ use cairo_lang_macro::{derive_macro, ProcMacroResult, TokenStream};
 
 use crate::helpers::debug_macro;
 
+pub mod dojo_store;
 pub mod introspect;
 
 #[derive_macro]
@@ -17,6 +18,14 @@ pub fn introspect_packed(token_stream: TokenStream) -> ProcMacroResult {
     let output = introspect::process(token_stream, true);
 
     debug_macro("IntrospectPacked", &output);
+    output
+}
+
+#[derive_macro]
+pub fn dojo_store(token_stream: TokenStream) -> ProcMacroResult {
+    let output = dojo_store::process(token_stream);
+
+    debug_macro("DojoStore", &output);
     output
 }
 
