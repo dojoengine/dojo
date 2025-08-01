@@ -1,11 +1,11 @@
-#[derive(Introspect, Serde, Drop, Default)]
+#[derive(Introspect, Serde, Drop, Default, DojoStore)]
 pub struct S1 {
     x: u16,
     y: u64,
     z: u128,
 }
 
-#[derive(Introspect, Serde, Drop, Default)]
+#[derive(Introspect, Serde, Drop, Default, DojoStore)]
 pub enum E1 {
     #[default]
     A: u16,
@@ -13,14 +13,14 @@ pub enum E1 {
     C: u128,
 }
 
-#[derive(Introspect, Serde, Drop, Default)]
+#[derive(Introspect, Serde, Drop, Default, DojoStore)]
 pub struct S2 {
     x: (S1, S1, S1),
     y: Array<S1>,
     z: Array<E1>,
 }
 
-#[derive(Introspect, Serde, Drop, Default)]
+#[derive(Introspect, Serde, Drop, Default, DojoStore)]
 pub enum E2 {
     #[default]
     A: (S2, S2, S2),
@@ -63,14 +63,14 @@ pub struct BigModel {
 }
 
 
-#[derive(IntrospectPacked, Serde, Drop, Default)]
+#[derive(IntrospectPacked, Serde, Drop, Default, DojoStore)]
 pub struct S1Packed {
     x: u16,
     y: u64,
     z: u128,
 }
 
-#[derive(IntrospectPacked, Serde, Drop, Default)]
+#[derive(IntrospectPacked, Serde, Drop, Default, DojoStore)]
 pub enum E1Packed {
     #[default]
     A: u128,
@@ -78,14 +78,14 @@ pub enum E1Packed {
     C: u128,
 }
 
-#[derive(IntrospectPacked, Serde, Drop, Default)]
+#[derive(IntrospectPacked, Serde, Drop, Default, DojoStore)]
 pub struct S2Packed {
     x: (S1Packed, S1Packed, S1Packed),
     y: (S1Packed, S1Packed, S1Packed),
     z: (E1Packed, E1Packed, E1Packed),
 }
 
-#[derive(IntrospectPacked, Serde, Drop, Default)]
+#[derive(IntrospectPacked, Serde, Drop, Default, DojoStore)]
 pub enum E2Packed {
     #[default]
     A: (S2Packed, S2Packed, S2Packed),

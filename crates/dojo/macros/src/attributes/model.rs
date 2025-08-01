@@ -6,7 +6,7 @@ use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
 
 use crate::constants::{
-    DOJO_INTROSPECT_DERIVE, DOJO_LEGACY_STORAGE_DERIVE, DOJO_PACKED_DERIVE,
+    DOJO_INTROSPECT_DERIVE, DOJO_LEGACY_STORAGE_DERIVE, DOJO_PACKED_DERIVE, DOJO_STORE_DERIVE,
     EXPECTED_DERIVE_ATTR_NAMES,
 };
 use crate::helpers::{
@@ -185,6 +185,11 @@ impl DojoModel {
             missing_derive_attr_names.push(DOJO_PACKED_DERIVE.to_string());
         } else {
             missing_derive_attr_names.push(DOJO_INTROSPECT_DERIVE.to_string());
+        }
+
+        // If DojoStore derive attribute is not set for the model, add it.
+        if !derive_attr_names.contains(&DOJO_STORE_DERIVE.to_string()) {
+            missing_derive_attr_names.push(DOJO_STORE_DERIVE.to_string());
         }
 
         // Add missing expected derive attributes for "Model" struct.
