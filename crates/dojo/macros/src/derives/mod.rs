@@ -30,8 +30,8 @@ pub fn dojo_store(token_stream: TokenStream) -> ProcMacroResult {
 }
 
 #[derive_macro]
-pub fn dojo_legacy_storage(_token_stream: TokenStream) -> ProcMacroResult {
-    // Nothing to do for DojoLegacyStorage derive attribute because
+pub fn dojo_legacy_store(_token_stream: TokenStream) -> ProcMacroResult {
+    // Nothing to do for DojoLegacyStore derive attribute because
     // it is directly handled through the dojo::model attribute.
     // But a derive_macro has to be defined to be able to use it as
     // derive attribute.

@@ -86,7 +86,7 @@ enum MyEnum {
     Z,
 }
 
-#[derive(Copy, Drop, Serde, Debug, Introspect, DojoLegacyStorage, PartialEq)]
+#[derive(Copy, Drop, Serde, Debug, Introspect, DojoLegacyStore, PartialEq)]
 #[dojo::model]
 struct LegacyModel {
     #[key]

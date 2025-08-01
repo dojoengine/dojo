@@ -1,6 +1,6 @@
 pub const DOJO_INTROSPECT_DERIVE: &str = "Introspect";
 pub const DOJO_PACKED_DERIVE: &str = "IntrospectPacked";
-pub const DOJO_LEGACY_STORAGE_DERIVE: &str = "DojoLegacyStorage";
+pub const DOJO_LEGACY_STORAGE_DERIVE: &str = "DojoLegacyStore";
 pub const DOJO_STORE_DERIVE: &str = "DojoStore";
 
 pub const EXPECTED_DERIVE_ATTR_NAMES: [&str; 2] = ["Serde", "Drop"];
