@@ -43,8 +43,8 @@ debug = true
 inherits = "release"
 
 [workspace.dependencies]
-cainome = { git = "https://github.com/kariy/cainome", branch = "snip12-rpc0.9", features = [ "abigen-rs" ] }
-cainome-cairo-serde = { git = "https://github.com/kariy/cainome", branch = "snip12-rpc0.9" }
+cainome = { git = "https://github.com/kariy/cainome", branch = "feat/rpc0.9", features = [ "abigen-rs" ] }
+cainome-cairo-serde = { git = "https://github.com/kariy/cainome", branch = "feat/rpc0.9" }
 
 dojo-utils = { path = "crates/dojo/utils" }
 
@@ -241,8 +241,8 @@ alloy-transport = { version = "0.4", default-features = false }
 # starknet = "0.15.1"
 #starknet-crypto = { version = "0.7.3" }
 
-starknet = { git = "https://github.com/xJonathanLEI/starknet-rs", rev = "993a708551f87bcfbf7fdf33f796b01f7521a634" }
-starknet-crypto = { git = "https://github.com/xJonathanLEI/starknet-rs", rev = "993a708551f87bcfbf7fdf33f796b01f7521a634" }
+starknet = "0.17.0-rc.2"
+starknet-crypto = "0.7.4"
 starknet-types-core = { version = "0.1.7", features = [ "arbitrary", "hash" ] }
 
 bitvec = "1.0.1"
