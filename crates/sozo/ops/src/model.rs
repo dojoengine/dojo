@@ -214,8 +214,8 @@ fn get_name_from_schema(schema: &Ty) -> String {
             format!("({})", t.iter().map(get_name_from_schema).collect::<Vec<_>>().join(", "))
         }
         Ty::Array(a) => format!("Array<{}>", get_name_from_schema(&a[0])),
-        Ty::FixedSizeArray(f) => {
-            let (ty, length) = &f[0];
+        Ty::FixedSizeArray((f, length)) => {
+            let ty = &f[0];
             format!("[{}; {}]", get_name_from_schema(ty), *length)
         }
         _ => "".to_string(),
@@ -348,13 +348,13 @@ fn get_printable_layout_list_from_array(
 }
 
 fn get_printable_layout_list_from_fixed_array(
-    item_layout: &(Layout, u32),
+    item_layout: (&Layout, u32),
     schema: &Ty,
     layout_list: &mut Vec<LayoutInfo>,
 ) {
-    if let Ty::FixedSizeArray(sf) = schema {
+    if let Ty::FixedSizeArray((sf, _)) = schema {
         let (item_layout, _) = item_layout;
-        let (item_ty, _) = &sf[0];
+        let item_ty = &sf[0];
         get_printable_layout_list(item_layout, item_ty, layout_list);
     }
 }
@@ -373,8 +373,13 @@ fn get_printable_layout_list(root_layout: &Layout, schema: &Ty, layout_list: &mu
         Layout::Array(la) => {
             get_printable_layout_list_from_array(&la[0], schema, layout_list);
         }
-        Layout::FixedArray(lf) => {
-            get_printable_layout_list_from_fixed_array(&lf[0], schema, layout_list);
+        Layout::FixedArray((lf, length)) => {
+            let inner_layout = &lf[0];
+            get_printable_layout_list_from_fixed_array(
+                (inner_layout, *length),
+                schema,
+                layout_list,
+            );
         }
         _ => {}
     };
@@ -601,8 +606,8 @@ fn format_record_value(
         Ty::Struct(s) => format_struct(s, use_legacy_storage, values, level, start_indent),
         Ty::Enum(e) => format_enum(e, use_legacy_storage, values, level, start_indent),
         Ty::Array(a) => format_array(&a[0], use_legacy_storage, values, level, start_indent),
-        Ty::FixedSizeArray(a) => {
-            let (item_ty, length) = &a[0];
+        Ty::FixedSizeArray((a, length)) => {
+            let item_ty = &a[0];
             format_fixed_array(item_ty, *length, use_legacy_storage, values, level, start_indent)
         }
         Ty::Tuple(t) => format_tuple(t, use_legacy_storage, values, level, start_indent),
@@ -636,8 +641,8 @@ fn get_ty_repr(ty: &Ty) -> String {
             }
         }
         Ty::Array(items) => format!("Array<{}>", get_ty_repr(&items[0])),
-        Ty::FixedSizeArray(items) => {
-            let (item_ty, length) = &items[0];
+        Ty::FixedSizeArray((items, length)) => {
+            let item_ty = &items[0];
             format!("[{}; {}]", get_ty_repr(item_ty), length)
         }
         Ty::ByteArray(_) => "ByteArray".to_string(),
@@ -691,8 +696,8 @@ fn get_printable_ty_list(root_ty: &Ty, ty_list: &mut Vec<Ty>) {
                 get_printable_ty_list(&items_ty[0], ty_list)
             }
         }
-        Ty::FixedSizeArray(items_ty) => {
-            let (item_ty, _) = &items_ty[0];
+        Ty::FixedSizeArray((items_ty, _)) => {
+            let item_ty = &items_ty[0];
             if !is_ty_already_in_list(ty_list, item_ty) {
                 get_printable_ty_list(item_ty, ty_list)
             }

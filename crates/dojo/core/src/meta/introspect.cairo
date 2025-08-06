@@ -172,18 +172,19 @@ fn primitive_to_index(primitive: felt252) -> u32 {
     )
 }
 
+/// Note that for `Array` and `FixedArray` we can't directly use `Ty` as it will cause infinite
+/// recursion, so we decided to use a Span with one item only.
+/// Note also that, now, Torii uses this `Span` for specific processing on its side, so it cannot be
+/// changed directly by a Box<Ty>.
 #[derive(Copy, Drop, Serde, Debug, PartialEq)]
 pub enum Ty {
     Primitive: felt252,
     Struct: Struct,
     Enum: Enum,
     Tuple: Span<Ty>,
-    // We can't have `Ty` here as it will cause infinite recursion.
-    // And `Box` is not serializable. So using a Span, even if it's to have
-    // one element, does the trick.
     Array: Span<Ty>,
     ByteArray,
-    FixedArray: Span<(Ty, u32)>,
+    FixedArray: (Span<Ty>, u32),
 }
 
 #[derive(Copy, Drop, Serde, Debug, PartialEq)]
@@ -235,8 +236,11 @@ impl TyCompareImpl of TyCompareTrait<Ty> {
             (
                 Ty::FixedArray(n), Ty::FixedArray(o),
             ) => {
-                let (n_ty, n_len) = n.at(0);
-                let (o_ty, o_len) = o.at(0);
+                let (n_ty, n_len) = n;
+                let n_ty = n_ty.at(0);
+
+                let (o_ty, o_len) = o;
+                let o_ty = o_ty.at(0);
 
                 n_ty.is_an_upgrade_of(o_ty) && n_len >= o_len
             },
@@ -741,10 +745,10 @@ pub impl Introspect_FixedArray<T, const N: usize, +Introspect<T>> of Introspect<
         }
     }
     fn layout() -> Layout {
-        Layout::FixedArray([(Introspect::<T>::layout(), N)].span())
+        Layout::FixedArray(([Introspect::<T>::layout()].span(), N))
     }
     fn ty() -> Ty {
-        Ty::FixedArray([(Introspect::<T>::ty(), N)].span())
+        Ty::FixedArray(([Introspect::<T>::ty()].span(), N))
     }
 }
 

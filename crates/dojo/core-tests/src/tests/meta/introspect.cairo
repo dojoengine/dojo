@@ -171,7 +171,7 @@ fn field(selector: felt252, layout: Layout) -> FieldLayout {
 }
 
 fn fixed_array(inner_layout: Layout, size: u32) -> Layout {
-    Layout::FixedArray(array![(inner_layout, size)].span())
+    Layout::FixedArray((array![inner_layout].span(), size))
 }
 
 fn fixed(values: Array<u8>) -> Layout {
@@ -452,7 +452,7 @@ fn test_introspect_upgrade() {
     let t = Ty::Tuple([Ty::Primitive('u8')].span());
     let a = Ty::Array([Ty::Primitive('u8')].span());
     let b = Ty::ByteArray;
-    let f = Ty::FixedArray([(Ty::Primitive('u8'), 3)].span());
+    let f = Ty::FixedArray(([Ty::Primitive('u8')].span(), 3));
 
     assert!(p.is_an_upgrade_of(@p));
     assert!(!p.is_an_upgrade_of(@s));
@@ -772,22 +772,22 @@ fn test_array_upgrade() {
 
 #[test]
 fn test_fixed_array_upgrade() {
-    let a = Ty::FixedArray([(Ty::Primitive('u8'), 3)].span());
+    let a = Ty::FixedArray(([Ty::Primitive('u8')].span(), 3));
 
     // fixed array item is upgradable
-    let upgraded = Ty::FixedArray([(Ty::Primitive('u16'), 3)].span());
+    let upgraded = Ty::FixedArray(([Ty::Primitive('u16')].span(), 3));
     assert!(upgraded.is_an_upgrade_of(@a));
 
     // fixed array item is not upgradable
-    let upgraded = Ty::FixedArray([(Ty::Primitive('bool'), 3)].span());
+    let upgraded = Ty::FixedArray(([Ty::Primitive('bool')].span(), 3));
     assert!(!upgraded.is_an_upgrade_of(@a));
 
     // fixed array length is smaller than before (not allowed)
-    let upgraded = Ty::FixedArray([(Ty::Primitive('u16'), 2)].span());
+    let upgraded = Ty::FixedArray(([Ty::Primitive('u16')].span(), 2));
     assert!(!upgraded.is_an_upgrade_of(@a));
 
     // fixed array length is bigger than before (allowed)
-    let upgraded = Ty::FixedArray([(Ty::Primitive('u16'), 4)].span());
+    let upgraded = Ty::FixedArray(([Ty::Primitive('u16')].span(), 4));
     assert!(upgraded.is_an_upgrade_of(@a));
 }
 

@@ -386,7 +386,7 @@ pub enum Layout {
     Array(Vec<Layout>),
     ByteArray,
     Enum(Vec<FieldLayout>),
-    FixedArray(Vec<(Layout, u32)>),
+    FixedArray((Vec<Layout>, u32)),
 }
 impl cainome::cairo_serde::CairoSerde for Layout {
     type RustType = Self;
@@ -400,7 +400,7 @@ impl cainome::cairo_serde::CairoSerde for Layout {
             Layout::Array(val) => Vec::<Layout>::cairo_serialized_size(val) + 1,
             Layout::ByteArray => 1,
             Layout::Enum(val) => Vec::<FieldLayout>::cairo_serialized_size(val) + 1,
-            Layout::FixedArray(val) => Vec::<(Layout, u32)>::cairo_serialized_size(val) + 1,
+            Layout::FixedArray(val) => <(Vec<Layout>, u32)>::cairo_serialized_size(val) + 1,
             _ => 0,
         }
     }
@@ -440,7 +440,7 @@ impl cainome::cairo_serde::CairoSerde for Layout {
             Layout::FixedArray(val) => {
                 let mut temp = vec![];
                 temp.extend(usize::cairo_serialize(&6usize));
-                temp.extend(Vec::<(Layout, u32)>::cairo_serialize(val));
+                temp.extend(<(Vec<Layout>, u32)>::cairo_serialize(val));
                 temp
             }
             _ => vec![],
@@ -463,7 +463,7 @@ impl cainome::cairo_serde::CairoSerde for Layout {
             5usize => {
                 Ok(Layout::Enum(Vec::<FieldLayout>::cairo_deserialize(__felts, __offset + 1)?))
             }
-            6usize => Ok(Layout::FixedArray(Vec::<(Layout, u32)>::cairo_deserialize(
+            6usize => Ok(Layout::FixedArray(<(Vec<Layout>, u32)>::cairo_deserialize(
                 __felts,
                 __offset + 1,
             )?)),
@@ -484,7 +484,7 @@ pub enum Ty {
     Tuple(Vec<Ty>),
     Array(Vec<Ty>),
     ByteArray,
-    FixedArray(Vec<(Ty, u32)>),
+    FixedArray((Vec<Ty>, u32)),
 }
 impl cainome::cairo_serde::CairoSerde for Ty {
     type RustType = Self;
@@ -498,7 +498,7 @@ impl cainome::cairo_serde::CairoSerde for Ty {
             Ty::Tuple(val) => Vec::<Ty>::cairo_serialized_size(val) + 1,
             Ty::Array(val) => Vec::<Ty>::cairo_serialized_size(val) + 1,
             Ty::ByteArray => 1,
-            Ty::FixedArray(val) => Vec::<(Ty, u32)>::cairo_serialized_size(val) + 1,
+            Ty::FixedArray(val) => <(Vec<Ty>, u32)>::cairo_serialized_size(val) + 1,
             _ => 0,
         }
     }
@@ -538,7 +538,7 @@ impl cainome::cairo_serde::CairoSerde for Ty {
             Ty::FixedArray(val) => {
                 let mut temp = vec![];
                 temp.extend(usize::cairo_serialize(&6usize));
-                temp.extend(Vec::<(Ty, u32)>::cairo_serialize(val));
+                temp.extend(<(Vec<Ty>, u32)>::cairo_serialize(val));
                 temp
             }
             _ => vec![],
@@ -561,7 +561,7 @@ impl cainome::cairo_serde::CairoSerde for Ty {
             4usize => Ok(Ty::Array(Vec::<Ty>::cairo_deserialize(__felts, __offset + 1)?)),
             5usize => Ok(Ty::ByteArray),
             6usize => {
-                Ok(Ty::FixedArray(Vec::<(Ty, u32)>::cairo_deserialize(__felts, __offset + 1)?))
+                Ok(Ty::FixedArray(<(Vec<Ty>, u32)>::cairo_deserialize(__felts, __offset + 1)?))
             }
             _ => {
                 return Err(cainome::cairo_serde::Error::Deserialize(format!(

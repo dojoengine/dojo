@@ -20,7 +20,7 @@ pub enum Layout {
     // the `selector` field identifies the variant
     // the `layout` defines the variant data (could be empty for variant without data).
     Enum: Span<FieldLayout>,
-    FixedArray: Span<(Layout, u32)>,
+    FixedArray: (Span<Layout>, u32),
 }
 
 #[generate_trait]

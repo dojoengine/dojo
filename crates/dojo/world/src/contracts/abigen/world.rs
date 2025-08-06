@@ -3681,7 +3681,7 @@ pub enum Layout {
     Array(Vec<Layout>),
     ByteArray,
     Enum(Vec<FieldLayout>),
-    FixedArray(Vec<(Layout, u32)>),
+    FixedArray((Vec<Layout>, u32)),
 }
 impl cainome::cairo_serde::CairoSerde for Layout {
     type RustType = Self;
@@ -3695,7 +3695,7 @@ impl cainome::cairo_serde::CairoSerde for Layout {
             Layout::Array(val) => Vec::<Layout>::cairo_serialized_size(val) + 1,
             Layout::ByteArray => 1,
             Layout::Enum(val) => Vec::<FieldLayout>::cairo_serialized_size(val) + 1,
-            Layout::FixedArray(val) => Vec::<(Layout, u32)>::cairo_serialized_size(val) + 1,
+            Layout::FixedArray(val) => <(Vec<Layout>, u32)>::cairo_serialized_size(val) + 1,
             _ => 0,
         }
     }
@@ -3735,7 +3735,7 @@ impl cainome::cairo_serde::CairoSerde for Layout {
             Layout::FixedArray(val) => {
                 let mut temp = vec![];
                 temp.extend(usize::cairo_serialize(&6usize));
-                temp.extend(Vec::<(Layout, u32)>::cairo_serialize(val));
+                temp.extend(<(Vec<Layout>, u32)>::cairo_serialize(val));
                 temp
             }
             _ => vec![],
@@ -3758,7 +3758,7 @@ impl cainome::cairo_serde::CairoSerde for Layout {
             5usize => {
                 Ok(Layout::Enum(Vec::<FieldLayout>::cairo_deserialize(__felts, __offset + 1)?))
             }
-            6usize => Ok(Layout::FixedArray(Vec::<(Layout, u32)>::cairo_deserialize(
+            6usize => Ok(Layout::FixedArray(<(Vec<Layout>, u32)>::cairo_deserialize(
                 __felts,
                 __offset + 1,
             )?)),
