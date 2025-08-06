@@ -458,7 +458,7 @@ fn test_fixed_array_layout() {
     const KEY: felt252 = 2;
 
     // fixed array: [u8; 3]
-    let layout = [(Layout::Fixed([8].span()), 3)].span();
+    let layout = ([Layout::Fixed([8].span())].span(), 3);
 
     // first, read uninitialized data
     let mut read_data = array![];

@@ -1,7 +1,7 @@
 {
   "world": {
-    "class_hash": "0x1d0991eab5221c28225755937ec958aa073617c9b1d4f5e3c82b9f27cf85ea4",
-    "address": "0x24c2f8075163bbdcc44670869f15a282019d0e9b602bbb95b365d8350fc8a41",
+    "class_hash": "0x62d32f667249af67a93ec88494c1bc59603c3bfcddea8b668d660b8496ecea4",
+    "address": "0x681722ce4fc9c1fd0e800ba92e6ad759544863d65e57eecd623442ec30a31f1",
     "seed": "dojo_examples",
     "name": "example",
     "entrypoints": [
@@ -223,16 +223,16 @@
             "type": "core::array::Span::<dojo::meta::layout::Layout>"
           },
           {
-            "name": "FixedArray",
-            "type": "core::array::Span::<(dojo::meta::layout::Layout, core::integer::u32)>"
-          },
-          {
             "name": "ByteArray",
             "type": "()"
           },
           {
             "name": "Enum",
             "type": "core::array::Span::<dojo::meta::layout::FieldLayout>"
+          },
+          {
+            "name": "FixedArray",
+            "type": "core::array::Span::<(dojo::meta::layout::Layout, core::integer::u32)>"
           }
         ]
       },
@@ -1489,8 +1489,8 @@
   },
   "contracts": [
     {
-      "address": "0x208170ef32e88fc4872316c85624dc90c21232327a17eccb5b0f55d07a5d72c",
-      "class_hash": "0x5730d8d9fffa4679ddd6262e9c975859c9f3eb44d7a73f5d67c90aaf6685c64",
+      "address": "0x4eaa9ac2115aeaf0164d12c4c45a98487f6366a417c5bd974e99abd181ab835",
+      "class_hash": "0x411043a537aa217c86a648bee1eacb1b21fb6e8bbb6fa00bce0c525f033a066",
       "abi": [
         {
           "type": "impl",
@@ -1859,7 +1859,7 @@
       ]
     },
     {
-      "address": "0x70a8affc84f3579965260068ab7fbc398d55e679ea82f1a13a05f4be114e78b",
+      "address": "0x10a73c6f7ee563e82f3af68fc9c9e65536661b660b396486290a3eb5999c84b",
       "class_hash": "0x1372814d45ad33782ac108850c646b503a7984d47fe72c0bfb7b98b4801941e",
       "abi": [
         {
@@ -2053,8 +2053,8 @@
       ]
     },
     {
-      "address": "0x3ef577d87507fab1ca1dbb63fe0f23439912dacf6112045590ca8a8ce16f162",
-      "class_hash": "0x57209c73bbd617a4fae6d7ff18875b6f3d0a763f4d1ecad753bc1edfd563902",
+      "address": "0x28c378e53f0cb4687a6c61596831e435dd0f9a39746e4df27144e0791fa1eee",
+      "class_hash": "0x2e551add7cc174973d1a8288f82d4d701748f6066eb450d778c6fe3f6e1448c",
       "abi": [
         {
           "type": "impl",
@@ -2229,7 +2229,7 @@
       ]
     },
     {
-      "address": "0x3580240e1c114feed8f52ce3a270bf1760ed4ffd1547c94c1afa9c372034812",
+      "address": "0x6b91999ea106fc2585c1f8f770967a15d415abfe444c51632304e389c94ed86",
       "class_hash": "0x454cf67b6232c82737744be5aa4727a6542848d19c2eb00692e144a52acaaf5",
       "abi": [
         {
@@ -2412,8 +2412,8 @@
       ]
     },
     {
-      "address": "0x347c49458f9dca2ae0a67cbd0b0afabb52bc726755ad2c425f94f3645d21e7c",
-      "class_hash": "0x5730d8d9fffa4679ddd6262e9c975859c9f3eb44d7a73f5d67c90aaf6685c64",
+      "address": "0x40312d636f61af61d3fb37d912bcb4656ccca32b949e568f829f3d4fa109736",
+      "class_hash": "0x411043a537aa217c86a648bee1eacb1b21fb6e8bbb6fa00bce0c525f033a066",
       "abi": [
         {
           "type": "impl",
@@ -2923,49 +2923,49 @@
   "models": [
     {
       "members": [],
-      "class_hash": "0x70dd65edc1fc0d07c88faacee3c30c45d9538582b979edc805baa968c105659",
+      "class_hash": "0x7bfe1cc9ec2949ee1b1b0af64f71feb491615a7f46a859569669eeb28c2297a",
       "tag": "ns-Flatbow",
       "selector": "0x27a35f8bac96f1deebf4d3e83fc6b94a3da4e6d30a1ce34d5893d2fb602725d"
     },
     {
       "members": [],
-      "class_hash": "0xa3f3e9bc3488c5b79bd6286df03acd8667c3c0182492c284a12bf7dc8253d7",
+      "class_hash": "0x1883ddbd59d3f9ea527c92275dd4a9444fcec5498e83bdd1300d37d99273b56",
       "tag": "ns-Message",
       "selector": "0x7e77b60a338fa7414998176fd93ff265e4ca04b93105ac98f155bcb2e9e8438"
     },
     {
       "members": [],
-      "class_hash": "0x41ad182f5c728eaa8c0087882ab3a75313095d4c76db3b1f4398b96b7432a24",
+      "class_hash": "0x1e687f063d3899fff1b797f5bfa25c2535352fc459b3135cb022fcbbc834dca",
       "tag": "ns-MockToken",
       "selector": "0x23ee42c8f47d1d693b966176dcd5deca0ec147b33e42186382d9d027603a6fd"
     },
     {
       "members": [],
-      "class_hash": "0x7951bdbb45f74bd67cae650e023437960679f6cc3614100becd4760db973ff9",
+      "class_hash": "0x24a10871507d33d2d114f2efd29bf1811265e7f1c89f6bcb6785b5db4070fd2",
       "tag": "ns-Moves",
       "selector": "0x54104f060e63bdd9d68bb872f2dc6d40a101e168e18b999c10de348d06ea24a"
     },
     {
       "members": [],
-      "class_hash": "0x60411960cd9e6c269a99163d4f042560fa111aa19a5c93d1d3082573aa17637",
+      "class_hash": "0x4ce53ce31f9543f465dd023c4be9f7593bd3a022f1be412d67b2bb37f1494c4",
       "tag": "ns-PlayerConfig",
       "selector": "0x3bea561c3e142a660a00d1471d7712b70695dc4ee3b173aeaefd5178f7a21af"
     },
     {
       "members": [],
-      "class_hash": "0x142d9d7e58b866aa383e68624e2562f1251444501816c4eefd8ac7983554112",
+      "class_hash": "0x94bf278560356216c343f20e44cbb6e463aa9f5b2ff6a6f14a8c8e79ab818d",
       "tag": "ns-Position",
       "selector": "0x5e12c61e9cf30881c126a6d298975c8d79f95abed1a05c2d38b7803ed19445f"
     },
     {
       "members": [],
-      "class_hash": "0x3a76deee55a158d055d95a2704be9d57958dd38fd66a8624b143a33e06cb394",
+      "class_hash": "0x1d4b2a8bdbf8a62ad6425d3489b75e859e3b9848c15b2a5c44c062fddd7f7e5",
       "tag": "ns-RiverSkale",
       "selector": "0x47f763aa7de3b872f7fbec198275547e06751dbe26b66281b9cffaed9938f24"
     },
     {
       "members": [],
-      "class_hash": "0x6e2414b8eccd9a1f2fed7e019c58a00142d7c1df9eb92a7e557802a00f4b455",
+      "class_hash": "0x20d6e45d359bfa67bfa26a6949b8392a69e3e73f92176a4efaf8febd7270e4b",
       "tag": "ns-ServerProfile",
       "selector": "0x641dc5f178aff0c7935a8f1ae30c6038a3d3512ea164d486f98bc37b6beabf"
     }
@@ -2973,13 +2973,13 @@
   "events": [
     {
       "members": [],
-      "class_hash": "0x401ba9f07445b935f0d5c9ac02da16f4b3b58f2df93429c12c03bc3005a7e85",
+      "class_hash": "0x63dba7c3cd32d9e0028275dd402e0f0fba0f6c340bc16a76bccf9e6a4b7d67c",
       "tag": "ns-Moved",
       "selector": "0x6d4c1ac3717ba997500153c52344a2acac5123bbfa0f78d3dcc04cb786826b0"
     },
     {
       "members": [],
-      "class_hash": "0x3a4c9070a6f8b57ee7d8771b20514067f31f7f5aede10f6ffee8166eb655c64",
+      "class_hash": "0x261c8a66d5b3f0bfa6be93754024fed23194a56682a1c5adbcb7690ef1220bf",
       "tag": "ns-MyInit",
       "selector": "0xe1c030210beae7e2153a7b996d7d2ae6a428faf16a61f192f02178718b6f0"
     }

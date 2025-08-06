@@ -15,12 +15,12 @@ pub enum Layout {
     // And `Box` is not serializable. So using a Span, even if it's to have
     // one element, does the trick.
     Array: Span<Layout>,
-    FixedArray: Span<(Layout, u32)>,
     ByteArray,
     // there is one layout per variant.
     // the `selector` field identifies the variant
     // the `layout` defines the variant data (could be empty for variant without data).
     Enum: Span<FieldLayout>,
+    FixedArray: (Span<Layout>, u32),
 }
 
 #[generate_trait]
