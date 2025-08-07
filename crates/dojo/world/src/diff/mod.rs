@@ -170,7 +170,7 @@ impl WorldDiff {
         P: Provider,
     {
         let is_deployed = match provider
-            .get_class_hash_at(BlockId::Tag(BlockTag::Pending), world_address)
+            .get_class_hash_at(BlockId::Tag(BlockTag::PreConfirmed), world_address)
             .await
         {
             Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => {

@@ -6,8 +6,9 @@ use starknet::core::types::{
     BroadcastedDeployAccountTransaction, BroadcastedInvokeTransaction, BroadcastedTransaction,
     ConfirmedBlockId, ContractClass, ContractStorageKeys, DeclareTransactionResult,
     DeployAccountTransactionResult, EventFilter, EventsPage, FeeEstimate, Felt, FunctionCall,
-    Hash256, InvokeTransactionResult, MaybePendingBlockWithReceipts, MaybePendingBlockWithTxHashes,
-    MaybePendingBlockWithTxs, MaybePendingStateUpdate, MessageWithStatus, MsgFromL1,
+    Hash256, InvokeTransactionResult, MaybePreConfirmedBlockWithReceipts,
+    MaybePreConfirmedBlockWithTxHashes, MaybePreConfirmedBlockWithTxs,
+    MaybePreConfirmedStateUpdate, MessageFeeEstimate, MessageStatus, MsgFromL1,
     SimulatedTransaction, SimulationFlag, SimulationFlagForEstimateFee, StorageProof,
     SyncStatusType, Transaction, TransactionReceiptWithBlockInfo, TransactionStatus,
     TransactionTrace, TransactionTraceWithHash,
@@ -37,7 +38,7 @@ where
     async fn get_block_with_tx_hashes<B>(
         &self,
         block_id: B,
-    ) -> Result<MaybePendingBlockWithTxHashes, ProviderError>
+    ) -> Result<MaybePreConfirmedBlockWithTxHashes, ProviderError>
     where
         B: AsRef<BlockId> + Send + Sync,
     {
@@ -50,7 +51,7 @@ where
     async fn get_block_with_txs<B>(
         &self,
         block_id: B,
-    ) -> Result<MaybePendingBlockWithTxs, ProviderError>
+    ) -> Result<MaybePreConfirmedBlockWithTxs, ProviderError>
     where
         B: AsRef<BlockId> + Send + Sync,
     {
@@ -63,7 +64,7 @@ where
     async fn get_block_with_receipts<B>(
         &self,
         block_id: B,
-    ) -> Result<MaybePendingBlockWithReceipts, ProviderError>
+    ) -> Result<MaybePreConfirmedBlockWithReceipts, ProviderError>
     where
         B: AsRef<BlockId> + Send + Sync,
     {
@@ -76,7 +77,7 @@ where
     async fn get_state_update<B>(
         &self,
         block_id: B,
-    ) -> Result<MaybePendingStateUpdate, ProviderError>
+    ) -> Result<MaybePreConfirmedStateUpdate, ProviderError>
     where
         B: AsRef<BlockId> + Send + Sync,
     {
@@ -106,7 +107,7 @@ where
     async fn get_messages_status(
         &self,
         transaction_hash: Hash256,
-    ) -> Result<Vec<MessageWithStatus>, ProviderError> {
+    ) -> Result<Vec<MessageStatus>, ProviderError> {
         match self {
             Self::Left(p) => p.get_messages_status(transaction_hash).await,
             Self::Right(q) => q.get_messages_status(transaction_hash).await,
@@ -253,7 +254,7 @@ where
         &self,
         message: M,
         block_id: B,
-    ) -> Result<FeeEstimate, ProviderError>
+    ) -> Result<MessageFeeEstimate, ProviderError>
     where
         M: AsRef<MsgFromL1> + Send + Sync,
         B: AsRef<BlockId> + Send + Sync,
@@ -428,7 +429,7 @@ where
         block_id: B,
     ) -> Result<Vec<TransactionTraceWithHash>, ProviderError>
     where
-        B: AsRef<BlockId> + Send + Sync,
+        B: AsRef<ConfirmedBlockId> + Send + Sync,
     {
         match self {
             Self::Left(p) => p.trace_block_transactions(block_id).await,

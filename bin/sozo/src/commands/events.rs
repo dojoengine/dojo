@@ -176,7 +176,7 @@ async fn match_event<P: Provider + Send + Sync>(
     let block_id = if let Some(block_number) = block_number {
         BlockId::Number(block_number)
     } else {
-        BlockId::Tag(BlockTag::Pending)
+        BlockId::Tag(BlockTag::PreConfirmed)
     };
 
     let (name, content) = match event {
