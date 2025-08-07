@@ -132,6 +132,7 @@ impl BuildArgs {
         if self.stats != StatOptions::default() {
             let world = WorldLocal::from_directory(
                 scarb_metadata.target_dir_profile(),
+                &scarb_metadata.current_profile,
                 scarb_metadata.load_dojo_profile_config().unwrap(),
             )?;
 

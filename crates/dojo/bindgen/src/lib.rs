@@ -146,7 +146,7 @@ fn gather_dojo_data(
         )));
     }
 
-    let world_local = WorldLocal::from_directory(&target_dir, profile_config)?;
+    let world_local = WorldLocal::from_directory(&target_dir, profile_name, profile_config)?;
 
     let mut models = HashMap::new();
     let mut contracts = HashMap::new();
