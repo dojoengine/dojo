@@ -52,6 +52,13 @@ impl WorldLocal {
         let mut world_casm_class = None;
         let mut world_entrypoints = vec![];
 
+        if !dir.as_ref().exists() {
+            return Err(anyhow::anyhow!(
+                "Local Dojo world state not found at {}.\nPlease build your project first.",
+                dir.as_ref().to_string_lossy()
+            ));
+        }
+
         for entry in fs::read_dir(dir)? {
             let entry = entry?;
             let path = entry.path();
