@@ -37,9 +37,14 @@ struct ExternalContractClassLocal {
 }
 
 impl WorldLocal {
-    pub fn from_directory<P: AsRef<Path>>(dir: P, profile_config: ProfileConfig) -> Result<Self> {
+    pub fn from_directory<P: AsRef<Path>>(
+        dir: P,
+        profile_name: &str,
+        profile_config: ProfileConfig,
+    ) -> Result<Self> {
         trace!(
             ?profile_config,
+            ?profile_name,
             directory = %dir.as_ref().to_string_lossy(),
             "Loading world from directory."
         );
@@ -54,8 +59,8 @@ impl WorldLocal {
 
         if !dir.as_ref().exists() {
             return Err(anyhow::anyhow!(
-                "Local Dojo world state not found at {}.\nPlease build your project first.",
-                dir.as_ref().to_string_lossy()
+                "Local Dojo world state not found for {profile_name} profile. Please build your \
+                 project first with sozo build -P {profile_name}",
             ));
         }
 
@@ -593,9 +598,12 @@ mod tests {
         let namespace_config = NamespaceConfig::new("dojo");
         let profile_config = ProfileConfig::new("test", "seed", namespace_config);
 
-        let world =
-            WorldLocal::from_directory("../../../examples/simple/target/dev/", profile_config)
-                .unwrap();
+        let world = WorldLocal::from_directory(
+            "../../../examples/simple/target/dev/",
+            "dev",
+            profile_config,
+        )
+        .unwrap();
 
         assert!(world.class_hash != Felt::ZERO);
         assert_eq!(world.resources.len(), 7);
