@@ -1,5 +1,5 @@
 //! Compiles and runs tests for a Dojo project using Scarb.
-use cairo_lang_test_runner::RunProfilerConfig;
+use cairo_lang_runner::profiling::ProfilerConfig;
 use clap::Args;
 use scarb_interop::Scarb;
 use scarb_metadata::Metadata;
@@ -14,12 +14,12 @@ pub enum ProfilerMode {
     Sierra,
 }
 
-impl From<ProfilerMode> for RunProfilerConfig {
+impl From<ProfilerMode> for ProfilerConfig {
     fn from(mode: ProfilerMode) -> Self {
         match mode {
-            ProfilerMode::None => RunProfilerConfig::None,
-            ProfilerMode::Cairo => RunProfilerConfig::Cairo,
-            ProfilerMode::Sierra => RunProfilerConfig::Sierra,
+            ProfilerMode::None => ProfilerConfig::Cairo,
+            ProfilerMode::Cairo => ProfilerConfig::Cairo,
+            ProfilerMode::Sierra => ProfilerConfig::Sierra,
         }
     }
 }

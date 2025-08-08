@@ -1,28 +1,27 @@
 [package]
-name = "dojo_macros"
 edition.workspace = true
 license.workspace = true
+name = "dojo_macros"
 repository.workspace = true
 version.workspace = true
 
 [lib]
-crate-type = ["rlib","cdylib"]
+crate-type = [ "cdylib", "rlib" ]
 
 [dependencies]
 anyhow.workspace = true
-dojo-types.workspace = true
-cairo-lang-primitive-token.workspace = true
-cairo-lang-macro.workspace = true
-cairo-lang-parser.workspace = true
-cairo-lang-utils.workspace = true
-cairo-lang-syntax.workspace = true
 cairo-lang-defs.workspace = true
 cairo-lang-diagnostics.workspace = true
+cairo-lang-macro.workspace = true
+cairo-lang-parser.workspace = true
+cairo-lang-primitive-token.workspace = true
+cairo-lang-syntax.workspace = true
+cairo-lang-utils.workspace = true
+dojo-types.workspace = true
 smol_str.workspace = true
 
 cainome.workspace = true
-cainome-cairo-serde.workspace = true
-starknet-crypto.workspace = true
-starknet.workspace = true
-regex.workspace = true
 itertools.workspace = true
+regex.workspace = true
+starknet.workspace = true
+starknet-crypto.workspace = true
