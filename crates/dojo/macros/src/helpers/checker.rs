@@ -1,8 +1,8 @@
 use cairo_lang_macro::{Diagnostic, ProcMacroResult};
 use cairo_lang_parser::utils::SimpleParserDatabase;
+use cairo_lang_syntax::node::TypedSyntaxNode;
 use cairo_lang_syntax::node::ast::{self, Attribute};
 use cairo_lang_syntax::node::helpers::OptionWrappedGenericParamListHelper;
-use cairo_lang_syntax::node::TypedSyntaxNode;
 use dojo_types::naming;
 
 use crate::constants::{DOJO_INTROSPECT_DERIVE, DOJO_PACKED_DERIVE};
@@ -18,7 +18,7 @@ impl DojoChecker {
     pub fn check_derive_conflicts(
         db: &SimpleParserDatabase,
         diagnostics: &mut Vec<Diagnostic>,
-        attrs: Vec<Attribute>,
+        attrs: impl Iterator<Item = Attribute>,
     ) {
         let attr_names = DojoParser::extract_derive_attr_names(db, diagnostics, attrs);
 
@@ -52,7 +52,7 @@ impl DojoChecker {
         if !struct_ast.generic_params(db).is_empty(db) {
             return Some(ProcMacroResult::fail(format!(
                 "The {element_name} '{}' cannot be generic",
-                struct_ast.name(db).as_syntax_node().get_text_without_trivia(db)
+                struct_ast.name(db).as_syntax_node().get_text_without_all_comment_trivia(db)
             )));
         }
 

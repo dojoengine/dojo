@@ -1,7 +1,7 @@
-use cairo_lang_macro::{quote, ProcMacroResult, TokenStream};
+use cairo_lang_macro::{ProcMacroResult, TokenStream, quote};
 use cairo_lang_parser::utils::SimpleParserDatabase;
 use cairo_lang_syntax::node::db::SyntaxGroup;
-use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
+use cairo_lang_syntax::node::{Terminal, TypedSyntaxNode, ast};
 use dojo_types::naming;
 
 use crate::helpers::{DojoParser, DojoTokenizer, ProcMacroResultExt};
@@ -36,7 +36,7 @@ fn process_ast(db: &dyn SyntaxGroup, expr: &ast::ExprParenthesized) -> ProcMacro
 
     ProcMacroResult::fail(format!(
         "selector_from_tag: invalid parameter type (arg: {})",
-        expr.as_syntax_node().get_text_without_trivia(db)
+        expr.as_syntax_node().get_text_without_all_comment_trivia(db)
     ))
 }
 

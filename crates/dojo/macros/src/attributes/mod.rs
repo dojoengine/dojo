@@ -1,4 +1,4 @@
-use cairo_lang_macro::{attribute_macro, ProcMacroResult, TokenStream};
+use cairo_lang_macro::{ProcMacroResult, TokenStream, attribute_macro};
 
 use crate::helpers::debug_macro;
 

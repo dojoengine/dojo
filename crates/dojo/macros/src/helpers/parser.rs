@@ -4,7 +4,7 @@ use cairo_lang_syntax::attribute::structured::{AttributeArgVariant, AttributeStr
 use cairo_lang_syntax::node::ast::{Attribute, Member as MemberAst};
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::kind::SyntaxKind::{ExprParenthesized, ItemModule, ItemStruct};
-use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
+use cairo_lang_syntax::node::{Terminal, TypedSyntaxNode, ast};
 
 use crate::helpers::{DiagnosticsExt, Member};
 
@@ -66,13 +66,12 @@ impl DojoParser {
     /// Parse a list of member syntax nodes into a list of `Member`.
     pub(crate) fn parse_members(
         db: &SimpleParserDatabase,
-        members: &[MemberAst],
+        members: impl Iterator<Item = MemberAst>,
         diagnostics: &mut Vec<Diagnostic>,
     ) -> Vec<Member> {
         let mut parsing_keys = true;
 
         members
-            .iter()
             .map(|member_ast| {
                 let is_key = member_ast.has_attr(db, "key");
 
@@ -82,7 +81,7 @@ impl DojoParser {
                         .type_clause(db)
                         .ty(db)
                         .as_syntax_node()
-                        .get_text_without_trivia(db),
+                        .get_text_without_all_comment_trivia(db),
                     key: is_key,
                 };
 
@@ -118,19 +117,20 @@ impl DojoParser {
     pub fn extract_derive_attr_names(
         db: &SimpleParserDatabase,
         diagnostics: &mut Vec<Diagnostic>,
-        attrs: Vec<Attribute>,
+        attrs: impl Iterator<Item = Attribute>,
     ) -> Vec<String> {
         attrs
-            .iter()
             .filter_map(|attr| {
-                let args = attr.clone().structurize(db).args;
+                let args = attr.structurize(db).args;
                 if args.is_empty() {
                     diagnostics.push_error("Expected args.".into());
                     None
                 } else {
                     Some(args.into_iter().filter_map(|a| {
                         if let AttributeArgVariant::Unnamed(ast::Expr::Path(path)) = a.variant {
-                            if let [ast::PathSegment::Simple(segment)] = &path.elements(db)[..] {
+                            if let [ast::PathSegment::Simple(segment)] =
+                                &path.segments(db).elements(db).collect::<Vec<_>>()[..]
+                            {
                                 Some(segment.ident(db).text(db).to_string())
                             } else {
                                 None

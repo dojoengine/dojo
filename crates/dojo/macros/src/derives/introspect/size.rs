@@ -1,6 +1,7 @@
+use cairo_lang_syntax::node::TypedSyntaxNode;
 use cairo_lang_syntax::node::ast::{Expr, TypeClause};
 use cairo_lang_syntax::node::db::SyntaxGroup;
-use cairo_lang_syntax::node::TypedSyntaxNode;
+use cairo_lang_syntax::node::helpers::GetIdentifier;
 
 use super::utils::{is_array, is_byte_array};
 
@@ -20,19 +21,19 @@ pub fn get_field_size_from_type_clause(
 ) -> Vec<String> {
     match type_clause.ty(db) {
         Expr::Path(path) => {
-            let path_type = path.as_syntax_node().get_text_without_trivia(db);
+            let path_type = path.identifier(db).to_string();
             compute_item_size_from_type(&path_type)
         }
         Expr::Tuple(expr) => {
-            if expr.expressions(db).elements(db).is_empty() {
+            if expr.expressions(db).elements(db).len() == 0 {
                 vec![]
             } else {
-                let tuple_type = expr.as_syntax_node().get_text_without_trivia(db);
+                let tuple_type = expr.as_syntax_node().get_text_without_all_comment_trivia(db);
                 compute_item_size_from_type(&tuple_type)
             }
         }
         Expr::FixedSizeArray(expr) => {
-            let arr_type = expr.as_syntax_node().get_text_without_trivia(db);
+            let arr_type = expr.as_syntax_node().get_text_without_all_comment_trivia(db);
             compute_item_size_from_type(&arr_type)
         }
         _ => {

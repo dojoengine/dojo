@@ -45,8 +45,12 @@ impl DojoFormatter {
     ) -> String {
         let member_name = member_ast.name(db).text(db).to_string();
         let member_ty = match member_ast.type_clause(db).ty(db) {
-            Expr::Tuple(expr) => expr.as_syntax_node().get_text_without_trivia(db),
-            _ => member_ast.type_clause(db).ty(db).as_syntax_node().get_text_without_trivia(db),
+            Expr::Tuple(expr) => expr.as_syntax_node().get_text_without_all_comment_trivia(db),
+            _ => member_ast
+                .type_clause(db)
+                .ty(db)
+                .as_syntax_node()
+                .get_text_without_all_comment_trivia(db),
         };
 
         Self::deserialize_primitive_member_ty(&member_name, &member_ty, use_serde)
@@ -63,13 +67,13 @@ impl DojoFormatter {
 
     pub fn serialize_keys_and_values(
         db: &dyn SyntaxGroup,
-        members: &[MemberAst],
+        members: impl Iterator<Item = MemberAst>,
         serialized_keys: &mut Vec<String>,
         serialized_values: &mut Vec<String>,
         use_serde: bool,
     ) {
-        members.iter().for_each(|member| {
-            let serialized = Self::serialize_member_ty(db, member, true, use_serde);
+        members.for_each(|member| {
+            let serialized = Self::serialize_member_ty(db, &member, true, use_serde);
 
             if member.has_attr(db, "key") {
                 serialized_keys.push(serialized);

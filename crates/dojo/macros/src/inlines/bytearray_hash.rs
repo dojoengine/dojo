@@ -28,7 +28,7 @@ fn process_ast(db: &dyn SyntaxGroup, expr: &ast::ExprParenthesized) -> ProcMacro
 
     ProcMacroResult::fail(format!(
         "bytearray_hash: invalid parameter type (arg: {})",
-        expr.as_syntax_node().get_text_without_trivia(db)
+        expr.as_syntax_node().get_text_without_all_comment_trivia(db)
     ))
 }
 

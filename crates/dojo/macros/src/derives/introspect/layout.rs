@@ -1,8 +1,9 @@
 use cairo_lang_macro::Diagnostic;
 use cairo_lang_parser::utils::SimpleParserDatabase;
+use cairo_lang_syntax::node::TypedSyntaxNode;
 use cairo_lang_syntax::node::ast::{Expr, TypeClause};
 use cairo_lang_syntax::node::db::SyntaxGroup;
-use cairo_lang_syntax::node::TypedSyntaxNode;
+use cairo_lang_syntax::node::helpers::GetIdentifier;
 
 use super::utils::{is_array, is_byte_array, is_option, is_tuple};
 use crate::derives::introspect::utils::{
@@ -17,9 +18,9 @@ pub(crate) fn get_layout_from_type_clause(
     type_clause: &TypeClause,
 ) -> String {
     let type_str = match type_clause.ty(db) {
-        Expr::Path(path) => path.as_syntax_node().get_text_without_trivia(db),
-        Expr::Tuple(expr) => expr.as_syntax_node().get_text_without_trivia(db),
-        Expr::FixedSizeArray(expr) => expr.as_syntax_node().get_text_without_trivia(db),
+        Expr::Path(path) => path.identifier(db).to_string(),
+        Expr::Tuple(expr) => expr.as_syntax_node().get_text_without_all_comment_trivia(db),
+        Expr::FixedSizeArray(expr) => expr.as_syntax_node().get_text_without_all_comment_trivia(db),
         _ => {
             diagnostics.push_error("Unexpected expression for variant data type.".to_string());
             return "".to_string();
@@ -72,15 +73,15 @@ pub fn get_packed_field_layout_from_type_clause(
 ) -> Vec<String> {
     match type_clause.ty(db) {
         Expr::Path(path) => {
-            let path_type = path.as_syntax_node().get_text_without_trivia(db);
+            let path_type = path.as_syntax_node().get_text_without_all_comment_trivia(db);
             get_packed_item_layout_from_type(diagnostics, path_type.trim())
         }
         Expr::Tuple(expr) => {
-            let tuple_type = expr.as_syntax_node().get_text_without_trivia(db);
+            let tuple_type = expr.as_syntax_node().get_text_without_all_comment_trivia(db);
             get_packed_tuple_layout_from_type(diagnostics, &tuple_type)
         }
         Expr::FixedSizeArray(expr) => {
-            let arr_type = expr.as_syntax_node().get_text_without_trivia(db);
+            let arr_type = expr.as_syntax_node().get_text_without_all_comment_trivia(db);
             get_packed_item_layout_from_type(diagnostics, &arr_type)
         }
         _ => {

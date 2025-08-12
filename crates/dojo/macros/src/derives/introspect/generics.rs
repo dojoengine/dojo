@@ -1,6 +1,6 @@
 use cairo_lang_parser::utils::SimpleParserDatabase;
-use cairo_lang_syntax::node::ast::{GenericParam, OptionWrappedGenericParamList};
 use cairo_lang_syntax::node::Terminal;
+use cairo_lang_syntax::node::ast::{GenericParam, OptionWrappedGenericParamList};
 use itertools::Itertools;
 
 // Extract generic type information and build the
@@ -14,7 +14,6 @@ pub fn build_generic_types(
             params
                 .generic_params(db)
                 .elements(db)
-                .iter()
                 .filter_map(|el| {
                     if let GenericParam::Type(typ) = el {
                         Some(typ.name(db).text(db).to_string())

@@ -7,7 +7,7 @@ use starknet::core::utils::get_selector_from_name;
 
 use crate::constants::CAIRO_DELIMITERS;
 use crate::helpers::{
-    debug_store_expand, DiagnosticsExt, DojoChecker, DojoFormatter, ProcMacroResultExt,
+    DiagnosticsExt, DojoChecker, DojoFormatter, ProcMacroResultExt, debug_store_expand,
 };
 
 #[derive(Debug)]
@@ -28,6 +28,7 @@ impl DojoStructIntrospect {
         let mut introspect = DojoStructIntrospect::new();
 
         let derive_attrs = struct_ast.attributes(db).query_attr(db, "derive");
+
         DojoChecker::check_derive_conflicts(db, &mut introspect.diagnostics, derive_attrs);
 
         let token = introspect.generate(db, struct_ast, is_packed);
@@ -139,8 +140,7 @@ impl DojoStructIntrospect {
         let members_ty = struct_ast
             .members(db)
             .elements(db)
-            .iter()
-            .map(|m| self.build_member_ty(db, m))
+            .map(|m| self.build_member_ty(db, &m))
             .collect::<Vec<_>>();
 
         format!(
@@ -165,10 +165,13 @@ impl DojoStructIntrospect {
     ) -> String {
         let mut members = vec![];
 
-        for member in struct_ast.members(db).elements(db).iter() {
+        for member in struct_ast.members(db).elements(db) {
             if member.has_attr(db, "key") {
-                let member_type =
-                    member.type_clause(db).ty(db).as_syntax_node().get_text_without_trivia(db);
+                let member_type = member
+                    .type_clause(db)
+                    .ty(db)
+                    .as_syntax_node()
+                    .get_text_without_all_comment_trivia(db);
 
                 // Check if the member type uses the `usize` type, either
                 // directly or as a nested type (the tuple (u8, usize, u32) for example)
@@ -207,8 +210,7 @@ impl DojoStructIntrospect {
     ) -> String {
         let mut layouts = vec![];
 
-        for member in struct_ast.members(db).elements(db).iter().filter(|m| !m.has_attr(db, "key"))
-        {
+        for member in struct_ast.members(db).elements(db).filter(|m| !m.has_attr(db, "key")) {
             let layout = super::layout::get_packed_field_layout_from_type_clause(
                 db,
                 &mut self.diagnostics,
@@ -244,11 +246,14 @@ impl DojoStructIntrospect {
         let mut deserialized_members = vec![];
         let mut member_names = vec![];
 
-        for member in struct_ast.members(db).elements(db).iter() {
+        for member in struct_ast.members(db).elements(db) {
             let member_name = member.name(db).text(db).to_string();
 
-            let member_ty =
-                member.type_clause(db).ty(db).as_syntax_node().get_text_without_trivia(db);
+            let member_ty = member
+                .type_clause(db)
+                .ty(db)
+                .as_syntax_node()
+                .get_text_without_all_comment_trivia(db);
 
             serialized_members.push(DojoFormatter::serialize_primitive_member_ty(
                 &member_name,
