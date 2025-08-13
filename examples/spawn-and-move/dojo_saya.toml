@@ -6,7 +6,7 @@ seed = "saya-1"
 
 [namespace]
 default = "dojo_examples"
-mappings = { "armory-Flatbow" = "dojo_examples_weapons", "bestiary" = "dojo_examples_foes" }
+mappings = { "dojo_examples_weapons"= [ "armory-Flatbow" ], "dojo_examples_foes" = [ "bestiary"]  }
 
 [migration]
 skip_contracts = ["dojo_examples-mock_token"]

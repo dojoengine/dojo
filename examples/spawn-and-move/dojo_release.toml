@@ -7,7 +7,7 @@ seed = "dojo_examples"
 default = "dojo_examples"
 # remapping can be done at tag level, or for the whole namespace.
 # In this example, `armory-Flatbow` model will belong to `dojo_examples_weapons` namespace, and all `bestiary` models will belong to the `dojo_examples_foes` namespace when compiled into `spawn-and-move`.
-mappings = { "armory-Flatbow" = "dojo_examples_weapons", "bestiary" = "dojo_examples_foes" }
+mappings = { "dojo_examples_weapons"= [ "armory-Flatbow" ], "dojo_examples_foes" = [ "bestiary"]  }
 
 [env]
 rpc_url = "http://localhost:5050/"
