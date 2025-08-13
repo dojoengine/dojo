@@ -108,7 +108,7 @@ impl CallArgs {
         let block_id = if let Some(block_id) = self.block_id {
             dojo_utils::parse_block_id(block_id)?
         } else {
-            BlockId::Tag(BlockTag::Pending)
+            BlockId::Tag(BlockTag::PreConfirmed)
         };
 
         let (provider, _) = self.starknet.provider(profile_config.env.as_ref())?;

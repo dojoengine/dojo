@@ -135,7 +135,7 @@ pub async fn is_declared<P>(
 where
     P: Provider,
 {
-    match provider.get_class(BlockId::Tag(BlockTag::Pending), class_hash).await {
+    match provider.get_class(BlockId::Tag(BlockTag::PreConfirmed), class_hash).await {
         Err(ProviderError::StarknetError(StarknetError::ClassHashNotFound)) => Ok(false),
         Ok(_) => {
             trace!(

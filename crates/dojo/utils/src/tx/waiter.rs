@@ -135,7 +135,7 @@ where
         must_succeed: bool,
     ) -> Option<Result<TransactionReceiptWithBlockInfo, TransactionWaitingError>> {
         match &receipt.block {
-            ReceiptBlock::Pending => {
+            ReceiptBlock::PreConfirmed => {
                 // pending receipt doesn't include finality status, so we cant check it.
                 if expected_finality_status.is_some() {
                     return None;
@@ -207,20 +207,15 @@ where
                 match fut.poll_unpin(cx) {
                     Poll::Ready(res) => match res {
                         Ok(status) => match status {
-                            TransactionStatus::AcceptedOnL2(_)
+                            TransactionStatus::PreConfirmed(_)
+                            | TransactionStatus::AcceptedOnL2(_)
                             | TransactionStatus::AcceptedOnL1(_) => {
                                 this.tx_receipt_request_fut = Some(Box::pin(
                                     this.provider.get_transaction_receipt(this.tx_hash),
                                 ));
                             }
 
-                            TransactionStatus::Rejected => {
-                                return Poll::Ready(Err(
-                                    TransactionWaitingError::TransactionRejected,
-                                ));
-                            }
-
-                            TransactionStatus::Received => {}
+                            TransactionStatus::Received | TransactionStatus::Candidate => {}
                         },
 
                         Err(ProviderError::StarknetError(
@@ -356,7 +351,7 @@ mod tests {
             execution_resources: EXECUTION_RESOURCES,
         });
 
-        TransactionReceiptWithBlockInfo { receipt, block: ReceiptBlock::Pending }
+        TransactionReceiptWithBlockInfo { receipt, block: ReceiptBlock::PreConfirmed }
     }
 
     #[tokio::test(flavor = "multi_thread")]

@@ -16,7 +16,9 @@ impl<A: starknet::accounts::ConnectedAccount + Sync> ModelContract<A> {
         Self {
             address,
             account,
-            block_id: starknet::core::types::BlockId::Tag(starknet::core::types::BlockTag::Pending),
+            block_id: starknet::core::types::BlockId::Tag(
+                starknet::core::types::BlockTag::PreConfirmed,
+            ),
         }
     }
     pub fn set_contract_address(&mut self, address: starknet::core::types::Felt) {
@@ -43,7 +45,9 @@ impl<P: starknet::providers::Provider + Sync> ModelContractReader<P> {
         Self {
             address,
             provider,
-            block_id: starknet::core::types::BlockId::Tag(starknet::core::types::BlockTag::Pending),
+            block_id: starknet::core::types::BlockId::Tag(
+                starknet::core::types::BlockTag::PreConfirmed,
+            ),
         }
     }
     pub fn set_contract_address(&mut self, address: starknet::core::types::Felt) {

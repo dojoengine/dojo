@@ -9,7 +9,7 @@ use starknet::ContractAddress;
 
 pub const DOJO_NSH: felt252 = 0x309e09669bc1fdc1dd6563a7ef862aa6227c97d099d08cc7b81bad58a7443fa;
 
-#[derive(Introspect, Drop, Serde, Debug, PartialEq, Default)]
+#[derive(Introspect, Drop, Serde, Debug, PartialEq, Default, DojoStore)]
 pub enum MyEnum {
     #[default]
     X: u8,
@@ -41,7 +41,7 @@ pub struct NotCopiable {
 }
 
 
-#[derive(Drop, Serde, Debug, PartialEq, Introspect, Default)]
+#[derive(Drop, Serde, Debug, PartialEq, Introspect, Default, DojoStore)]
 pub enum EnumOne {
     One,
     #[default]
@@ -150,7 +150,7 @@ pub mod test_contract_with_dojo_init_args {
     }
 }
 
-#[derive(IntrospectPacked, Copy, Drop, Serde, Default)]
+#[derive(IntrospectPacked, Copy, Drop, Serde, Default, DojoStore)]
 pub struct Sword {
     pub swordsmith: ContractAddress,
     pub damage: u32,
@@ -177,7 +177,7 @@ pub struct Character {
     pub gold: u32,
 }
 
-#[derive(IntrospectPacked, Copy, Drop, Serde)]
+#[derive(IntrospectPacked, Copy, Drop, Serde, DojoStore)]
 pub struct Abilities {
     pub strength: u8,
     pub dexterity: u8,
@@ -187,7 +187,7 @@ pub struct Abilities {
     pub charisma: u8,
 }
 
-#[derive(IntrospectPacked, Copy, Drop, Serde)]
+#[derive(IntrospectPacked, Copy, Drop, Serde, DojoStore)]
 pub struct Stats {
     pub kills: u128,
     pub deaths: u16,
@@ -201,7 +201,7 @@ pub struct Stats {
 }
 
 // IntrospectPacked requires same arms
-#[derive(IntrospectPacked, Copy, Drop, Serde, Default)]
+#[derive(IntrospectPacked, Copy, Drop, Serde, Default, DojoStore)]
 pub enum Weapon {
     #[default]
     DualWield: (Sword, Sword),

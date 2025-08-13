@@ -30,7 +30,7 @@ async fn get_balance_from_starknet(
                         entry_point_selector: selector!("balanceOf"),
                         calldata: vec![account_address],
                     },
-                    BlockId::Tag(starknet::core::types::BlockTag::Pending),
+                    BlockId::Tag(starknet::core::types::BlockTag::PreConfirmed),
                 )
                 .await?;
 
@@ -50,7 +50,7 @@ async fn get_balance_from_starknet(
                         // HACK: assumes token_id.high == 0
                         calldata: vec![token_id, Felt::ZERO],
                     },
-                    BlockId::Tag(starknet::core::types::BlockTag::Pending),
+                    BlockId::Tag(starknet::core::types::BlockTag::PreConfirmed),
                 )
                 .await?;
             if account_address != balance[0] {

@@ -157,7 +157,11 @@ impl MetadataDojoExt for Metadata {
     }
 
     fn load_dojo_world_local(&self) -> Result<WorldLocal> {
-        WorldLocal::from_directory(self.target_dir_profile(), self.load_dojo_profile_config()?)
+        WorldLocal::from_directory(
+            self.target_dir_profile(),
+            &self.current_profile,
+            self.load_dojo_profile_config()?,
+        )
     }
 
     fn write_dojo_manifest_profile(&self, manifest: impl Serialize) -> Result<()> {

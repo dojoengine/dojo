@@ -191,8 +191,8 @@ pub fn parse_block_id(block_str: String) -> Result<BlockId> {
         let hash = Felt::from_hex(&block_str)
             .map_err(|_| anyhow!("Unable to parse block hash: {}", block_str))?;
         Ok(BlockId::Hash(hash))
-    } else if block_str.eq("pending") {
-        Ok(BlockId::Tag(BlockTag::Pending))
+    } else if block_str.eq("preconfirmed") {
+        Ok(BlockId::Tag(BlockTag::PreConfirmed))
     } else if block_str.eq("latest") {
         Ok(BlockId::Tag(BlockTag::Latest))
     } else {
@@ -257,7 +257,7 @@ pub async fn get_predeployed_accounts<A: ConnectedAccount>(
                 ExecutionEncoding::New,
             );
 
-            account.set_block_id(BlockId::Tag(BlockTag::Pending));
+            account.set_block_id(BlockId::Tag(BlockTag::PreConfirmed));
 
             declarers.push(account);
         }
