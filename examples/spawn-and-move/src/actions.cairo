@@ -43,6 +43,7 @@ pub mod actions {
     use starknet::{ContractAddress, get_caller_address};
     use super::{IActions, IHelloDispatcherTrait};
 
+
     #[derive(Copy, Drop, Serde)]
     #[dojo::event]
     pub struct Moved {
@@ -265,7 +266,7 @@ mod tests {
     use dojo_examples::models::{Direction, Moves, Position, PositionValue};
     use dojo_snf_test::{
         ContractDef, ContractDefTrait, NamespaceDef, TestResource, WorldStorageTestTrait,
-        spawn_test_world,
+        set_caller_address, spawn_test_world,
     };
     use starknet::ContractAddress;
     use super::{IActionsDispatcher, IActionsDispatcherTrait};
@@ -345,7 +346,7 @@ mod tests {
         let (actions_system_addr, _) = world.dns(@"actions").unwrap();
         let actions_system = IActionsDispatcher { contract_address: actions_system_addr };
 
-        starknet::testing::set_contract_address(caller);
+        set_caller_address(caller);
 
         actions_system.spawn();
         let initial_moves: Moves = world.read_model(caller);

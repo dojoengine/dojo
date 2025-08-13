@@ -1,6 +1,6 @@
 use dojo::storage::dojo_store::DojoStore;
 
-#[derive(Drop, Serde, Introspect, Default, Debug, PartialEq)]
+#[derive(Drop, Serde, Introspect, Default, Debug, PartialEq, DojoStore)]
 enum E {
     #[default]
     A: u8,
@@ -8,20 +8,20 @@ enum E {
     C: (u8, (u16, u32), u64),
 }
 
-#[derive(Drop, Serde, Introspect, Debug, PartialEq, Default)]
+#[derive(Drop, Serde, Introspect, Debug, PartialEq, Default, DojoStore)]
 struct S {
     x: u8,
     y: u32,
 }
 
 
-#[derive(Drop, Serde, Introspect, Default, Debug, PartialEq)]
+#[derive(Drop, Serde, Introspect, Default, Debug, PartialEq, DojoStore)]
 struct SComplex {
     x: (u8, (u32, Array<u64>)),
     y: (S, S, Option<S>, u64),
 }
 
-#[derive(Drop, Serde, Introspect, Default, Debug, PartialEq)]
+#[derive(Drop, Serde, Introspect, Default, Debug, PartialEq, DojoStore)]
 enum EComplex {
     A: (SComplex, Option<SComplex>),
     #[default]
@@ -29,24 +29,24 @@ enum EComplex {
 }
 
 
-#[derive(Drop, Introspect, Serde, Debug, PartialEq)]
+#[derive(Drop, Introspect, Serde, Debug, PartialEq, DojoStore)]
 struct GenericStruct<T> {
     value: T,
 }
 
-#[derive(Drop, Introspect, Serde, Default, Debug, PartialEq)]
+#[derive(Drop, Introspect, Serde, Default, Debug, PartialEq, DojoStore)]
 enum GenericEnum<T> {
     #[default]
     A: T,
 }
 
-#[derive(Drop, Introspect, Serde, Debug, PartialEq)]
+#[derive(Drop, Introspect, Serde, Debug, PartialEq, DojoStore)]
 struct UseGenericStruct {
     x: GenericStruct<u16>,
     y: u8,
 }
 
-#[derive(Drop, Introspect, Serde, Debug, PartialEq)]
+#[derive(Drop, Introspect, Serde, Debug, PartialEq, DojoStore)]
 struct UseGenericEnum {
     x: GenericEnum<u16>,
     y: u8,
