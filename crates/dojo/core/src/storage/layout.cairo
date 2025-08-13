@@ -93,14 +93,15 @@ pub fn write_fixed_array_layout(
     key: felt252,
     values: Span<felt252>,
     ref offset: u32,
-    mut item_layout: Span<(Layout, u32)>,
+    mut item_layout: (Span<Layout>, u32),
 ) {
-    let (item_layout, array_len): (Layout, u32) = *item_layout.pop_front().unwrap();
+    let (inner_layout, array_len): (Span<Layout>, u32) = item_layout;
+    let inner_layout = *inner_layout.at(0);
 
     // Note: no need to write the array length as it is fixed at compile-time
     // and stored in the layout.
     for i in 0..array_len {
-        write_layout(model, combine_key(key, i.into()), values, ref offset, item_layout);
+        write_layout(model, combine_key(key, i.into()), values, ref offset, inner_layout);
     };
 }
 
@@ -221,10 +222,11 @@ pub fn delete_array_layout(model: felt252, key: felt252) {
 ///   * `model` - the model selector.
 ///   * `key` - the model record key.
 ///   * `layout` - the model layout.
-pub fn delete_fixed_array_layout(model: felt252, key: felt252, mut layout: Span<(Layout, u32)>) {
-    let (item_layout, array_len): (Layout, u32) = *layout.pop_front().unwrap();
+pub fn delete_fixed_array_layout(model: felt252, key: felt252, mut layout: (Span<Layout>, u32)) {
+    let (inner_layout, array_len): (Span<Layout>, u32) = layout;
+    let inner_layout = *inner_layout.at(0);
     for i in 0..array_len {
-        delete_layout(model, combine_key(key, i.into()), item_layout);
+        delete_layout(model, combine_key(key, i.into()), inner_layout);
     }
 }
 
@@ -385,11 +387,12 @@ pub fn read_array_layout(
 ///   * `read_data` - the read data.
 ///   * `layout` - the array item layout
 pub fn read_fixed_array_layout(
-    model: felt252, key: felt252, ref read_data: Array<felt252>, mut layout: Span<(Layout, u32)>,
+    model: felt252, key: felt252, ref read_data: Array<felt252>, mut layout: (Span<Layout>, u32),
 ) {
-    let (item_layout, array_len): (Layout, u32) = *layout.pop_front().unwrap();
+    let (inner_layout, array_len): (Span<Layout>, u32) = layout;
+    let inner_layout = *inner_layout.at(0);
     for i in 0..array_len {
-        read_layout(model, combine_key(key, i.into()), ref read_data, item_layout);
+        read_layout(model, combine_key(key, i.into()), ref read_data, inner_layout);
     };
 }
 
