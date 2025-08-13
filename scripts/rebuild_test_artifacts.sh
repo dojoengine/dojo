@@ -32,7 +32,7 @@ if [ ! -f /tmp/katana ]; then
 fi
 
 # Generates the database for testing by migrating the spawn and move example.
-KATANA_RUNNER_BIN=/Users/glihm/cgg/katana/target/release/katana cargo generate-test-db
+cargo generate-test-db
 
 # Extracts the database for testing.
 bash ./scripts/extract_test_db.sh
