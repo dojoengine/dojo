@@ -161,6 +161,10 @@ impl Ty {
                         .unwrap_or(Err(PrimitiveError::MissingFieldElement))?;
                     felts.extend(option);
 
+                    // TODO: we should increment `option` is the model does not use the legacy
+                    // storage system. But is this `serialize` function still
+                    // used ?
+
                     for EnumOption { ty, .. } in &e.options {
                         serialize_inner(ty, felts)?;
                     }
@@ -199,7 +203,11 @@ impl Ty {
         Ok(felts)
     }
 
-    pub fn deserialize(&mut self, felts: &mut Vec<Felt>) -> Result<(), PrimitiveError> {
+    pub fn deserialize(
+        &mut self,
+        felts: &mut Vec<Felt>,
+        has_legacy_storage: bool,
+    ) -> Result<(), PrimitiveError> {
         if felts.is_empty() {
             // return early if there are no felts to deserialize
             return Ok(());
@@ -211,7 +219,7 @@ impl Ty {
             }
             Ty::Struct(s) => {
                 for child in &mut s.children {
-                    child.ty.deserialize(felts)?;
+                    child.ty.deserialize(felts, has_legacy_storage)?;
                 }
             }
             Ty::Enum(e) => {
@@ -221,17 +229,31 @@ impl Ty {
                     value,
                 })?);
 
+                let selected_option = e.option.unwrap();
+
+                // With the new storage system using `DojoStore` trait, variant indices
+                // start from 1.
+                if !has_legacy_storage && selected_option > 0 {
+                    e.option = Some(selected_option - 1);
+                }
+
+                // TODO: what do we do if we try to deserialize a uninitialized enum (variant
+                // index = 0) ? in sozo, we just display "default" because
+                // the default value of an enum is not exposed in its Ty.
+
                 match &e.options[e.option.unwrap() as usize].ty {
                     // Skip deserializing the enum option if it has no type - unit type
                     Ty::Tuple(tuple) if tuple.is_empty() => {}
                     _ => {
-                        e.options[e.option.unwrap() as usize].ty.deserialize(felts)?;
+                        e.options[e.option.unwrap() as usize]
+                            .ty
+                            .deserialize(felts, has_legacy_storage)?;
                     }
                 }
             }
             Ty::Tuple(tys) => {
                 for ty in tys {
-                    ty.deserialize(felts)?;
+                    ty.deserialize(felts, has_legacy_storage)?;
                 }
             }
             Ty::Array(items_ty) => {
@@ -243,7 +265,7 @@ impl Ty {
                 let item_ty = items_ty.pop().unwrap();
                 for _ in 0..arr_len {
                     let mut cur_item_ty = item_ty.clone();
-                    cur_item_ty.deserialize(felts)?;
+                    cur_item_ty.deserialize(felts, has_legacy_storage)?;
                     items_ty.push(cur_item_ty);
                 }
             }
@@ -251,7 +273,7 @@ impl Ty {
                 let item_ty = &items_ty[0];
                 for _ in 0..*size {
                     let mut cur_item_ty = item_ty.clone();
-                    cur_item_ty.deserialize(felts)?;
+                    cur_item_ty.deserialize(felts, has_legacy_storage)?;
                 }
             }
             Ty::ByteArray(bytes) => {

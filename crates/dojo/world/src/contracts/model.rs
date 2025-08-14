@@ -146,12 +146,13 @@ where
     }
 
     pub async fn entity(&self, keys: &[Felt]) -> Result<Ty, ModelError> {
+        let has_legacy_storage = self.use_legacy_storage().await?;
         let mut schema = self.schema().await?;
         let values = self.entity_storage(keys).await?;
 
         let mut keys_and_unpacked = [keys, &values].concat();
 
-        schema.deserialize(&mut keys_and_unpacked)?;
+        schema.deserialize(&mut keys_and_unpacked, has_legacy_storage)?;
 
         Ok(schema)
     }
