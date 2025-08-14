@@ -7,7 +7,7 @@ use super::utils::{get_array_item_type, is_array, is_byte_array};
 pub fn build_ty_from_type_clause(db: &dyn SyntaxGroup, type_clause: &TypeClause) -> String {
     match type_clause.ty(db) {
         Expr::Path(path) => {
-            println!("build_ty_from_type_clause: it's giving path");
+            println!("build_ty_from_type_clause: it's giving path: {path:#?}");
             let path_type = path.as_syntax_node().get_text_without_trivia(db);
             build_item_ty_from_type(&path_type)
         }
