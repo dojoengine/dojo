@@ -99,6 +99,7 @@ impl DojoStructIntrospect {
 
     pub fn build_member_ty(&self, db: &SimpleParserDatabase, member: &Member) -> String {
         let name = member.name(db).text(db).to_string();
+        println!("building struct member: {name}");
         let attrs = if member.has_attr(db, "key") { vec!["'key'"] } else { vec![] };
 
         format!(
@@ -118,6 +119,8 @@ impl DojoStructIntrospect {
         name: &String,
         struct_ast: &ItemStruct,
     ) -> String {
+        println!("building struct: {name}");
+
         let members_ty = struct_ast
             .members(db)
             .elements(db)
