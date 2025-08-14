@@ -1,6 +1,6 @@
+use cairo_lang_syntax::node::TypedSyntaxNode;
 use cairo_lang_syntax::node::ast::{Expr, TypeClause};
 use cairo_lang_syntax::node::db::SyntaxGroup;
-use cairo_lang_syntax::node::TypedSyntaxNode;
 
 use super::utils::{get_array_item_type, is_array, is_byte_array};
 
@@ -37,6 +37,7 @@ pub fn build_item_ty_from_type(item_type: &String) -> String {
             build_item_ty_from_type(&array_item_type)
         )
     } else if is_byte_array(item_type) {
+        println!("it's giving byte array");
         "dojo::meta::introspect::Ty::ByteArray".to_string()
     } else {
         format!("dojo::meta::introspect::Introspect::<{}>::ty()", item_type)

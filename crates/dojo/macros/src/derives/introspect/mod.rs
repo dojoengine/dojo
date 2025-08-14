@@ -1,7 +1,7 @@
-use cairo_lang_macro::{quote, ProcMacroResult, TokenStream};
+use cairo_lang_macro::{ProcMacroResult, TokenStream, quote};
 use cairo_lang_parser::utils::SimpleParserDatabase;
 use cairo_lang_syntax::node::kind::SyntaxKind::{ItemEnum, ItemStruct};
-use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
+use cairo_lang_syntax::node::{TypedSyntaxNode, ast};
 
 use crate::helpers::{DojoTokenizer, ProcMacroResultExt};
 

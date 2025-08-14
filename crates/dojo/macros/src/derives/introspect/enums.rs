@@ -1,8 +1,8 @@
 use cairo_lang_macro::{Diagnostic, ProcMacroResult, TokenStream};
 use cairo_lang_parser::utils::SimpleParserDatabase;
+use cairo_lang_syntax::node::Terminal;
 use cairo_lang_syntax::node::ast::{ItemEnum, OptionTypeClause, Variant};
 use cairo_lang_syntax::node::helpers::QueryAttrs;
-use cairo_lang_syntax::node::Terminal;
 
 use crate::helpers::{DiagnosticsExt, DojoChecker, DojoFormatter, ProcMacroResultExt};
 
@@ -217,6 +217,8 @@ impl DojoEnumIntrospect {
         name: &String,
         enum_ast: &ItemEnum,
     ) -> String {
+        println!("building enum: {}", name);
+
         let variants = enum_ast.variants(db).elements(db);
 
         let variants_ty = if variants.is_empty() {
@@ -240,12 +242,17 @@ impl DojoEnumIntrospect {
 
     pub fn build_variant_ty(&self, db: &SimpleParserDatabase, variant: &Variant) -> String {
         let name = variant.name(db).text(db).to_string();
+
+        println!("building enum variant: {}", name);
+
         match variant.type_clause(db) {
             OptionTypeClause::Empty(_) => {
+                println!("it's giving empty");
                 // use an empty tuple if the variant has no data
                 format!("('{name}', dojo::meta::introspect::Ty::Tuple(array![].span()))")
             }
             OptionTypeClause::TypeClause(type_clause) => {
+                println!("it's giving type clause");
                 format!("('{name}', {})", super::ty::build_ty_from_type_clause(db, &type_clause))
             }
         }
