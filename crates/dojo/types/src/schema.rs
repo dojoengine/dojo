@@ -7,7 +7,7 @@ use indexmap::IndexMap;
 use itertools::Itertools;
 use num_traits::ToPrimitive;
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value as JsonValue};
+use serde_json::{Value as JsonValue, json};
 use starknet::core::types::Felt;
 use strum_macros::AsRefStr;
 
@@ -1064,7 +1064,7 @@ mod tests {
 
         for i in 0..4 {
             let mut felts = vec![Felt::from_i32(i).unwrap()];
-            let _ = ty.deserialize(&mut felts, true).expect("failed to deserialize");
+            ty.deserialize(&mut felts, true).expect("failed to deserialize");
             assert!(felts.is_empty());
             assert_matches!(&ty, Ty::Enum(Enum {  option, .. }) => assert_eq!(option, &Some(i as u8)));
         }
@@ -1097,7 +1097,7 @@ mod tests {
 
         for i in 0..4 {
             let mut felts = vec![Felt::from_i32(i + 1).unwrap()]; // non legacy store enum indices starts from 1
-            let _ = ty.deserialize(&mut felts, false).expect("failed to deserialize");
+            ty.deserialize(&mut felts, false).expect("failed to deserialize");
             assert!(felts.is_empty());
             assert_matches!(&ty, Ty::Enum(Enum {  option, .. }) => assert_eq!(option, &Some(i as u8)));
         }
@@ -1109,7 +1109,7 @@ mod tests {
 
         // deserializes from an uninitialized storage
         let mut felts = vec![felt!("0x0")];
-        let _ = ty.deserialize(&mut felts, false).expect("failed to deserialize");
+        ty.deserialize(&mut felts, false).expect("failed to deserialize");
         assert!(felts.is_empty());
         assert_matches!(&ty, Ty::Enum(Enum { option: None, .. }));
     }
