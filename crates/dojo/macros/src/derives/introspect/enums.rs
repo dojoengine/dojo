@@ -227,6 +227,7 @@ impl DojoEnumIntrospect {
             variants.iter().map(|v| self.build_variant_ty(db, v)).collect::<Vec<_>>().join(",\n")
         };
 
+        println!("finish building enum: {name}");
         format!(
             "dojo::meta::introspect::Ty::Enum(
             dojo::meta::introspect::Enum {{
