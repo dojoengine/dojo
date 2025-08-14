@@ -7,7 +7,7 @@ use indexmap::IndexMap;
 use itertools::Itertools;
 use num_traits::ToPrimitive;
 use serde::{Deserialize, Serialize};
-use serde_json::{Value as JsonValue, json};
+use serde_json::{json, Value as JsonValue};
 use starknet::core::types::Felt;
 use strum_macros::AsRefStr;
 
@@ -224,9 +224,11 @@ impl Ty {
             }
             Ty::Enum(e) => {
                 let value = felts.remove(0);
-                let mut selector = value.to_u8().ok_or_else(|| {
+                let actual_selector = value.to_u8().ok_or_else(|| {
                     PrimitiveError::ValueOutOfRange { r#type: type_name::<u8>(), value }
                 })?;
+
+                let mut selector = actual_selector;
 
                 // Th new `DojoStore`` trait, enum variants indices start from 1. The 0 value is
                 // reserved for uninitialized enum.
@@ -246,16 +248,10 @@ impl Ty {
 
                 e.option = Some(selector);
 
-                let total_opts = e.options.len() as u8;
-                let selected_opt = e.options.get_mut(selector as usize).ok_or_else(|| {
-                    let range_start = if legacy_storage { 0 } else { 1 };
-                    let range_end = if legacy_storage { total_opts - 1 } else { total_opts };
-
-                    PrimitiveError::InvalidEnumSelector {
-                        selector,
-                        valid_range: range_start..=range_end,
-                    }
-                })?;
+                let selected_opt = e
+                    .options
+                    .get_mut(selector as usize)
+                    .ok_or_else(|| PrimitiveError::InvalidEnumSelector { actual_selector })?;
 
                 // No further deserialization needed if the enum variant is a unit type
                 if let Ty::Tuple(tuple) = &selected_opt.ty {
@@ -1076,8 +1072,7 @@ mod tests {
         let mut felts = vec![felt!("0x4")];
         let result = ty.deserialize(&mut felts, true);
         assert!(felts.is_empty());
-        assert_matches!(&result, Err(PrimitiveError::InvalidEnumSelector { .. }));
-        assert!(result.unwrap_err().to_string().contains("valid range is 0..=3"))
+        assert_matches!(&result, Err(PrimitiveError::InvalidEnumSelector { actual_selector: 4 }));
     }
 
     #[test]
@@ -1110,8 +1105,7 @@ mod tests {
         let mut felts = vec![felt!("0x5")];
         let result = ty.deserialize(&mut felts, false);
         assert!(felts.is_empty());
-        assert_matches!(&result, Err(PrimitiveError::InvalidEnumSelector { .. }));
-        assert!(result.unwrap_err().to_string().contains("valid range is 1..=4"));
+        assert_matches!(&result, Err(PrimitiveError::InvalidEnumSelector { actual_selector: 5 }));
 
         // deserializes from an uninitialized storage
         let mut felts = vec![felt!("0x0")];

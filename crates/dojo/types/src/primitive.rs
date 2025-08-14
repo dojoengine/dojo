@@ -1,5 +1,4 @@
 use std::any::type_name;
-use std::ops::RangeInclusive;
 
 use crypto_bigint::{Encoding, U256};
 use num_traits::ToPrimitive;
@@ -53,14 +52,10 @@ pub enum Primitive {
 
 #[derive(Debug, thiserror::Error)]
 pub enum PrimitiveError {
-    #[error("Invalid enum selector `{selector}`; valid range is {}..={}", valid_range.start(), valid_range.end())]
+    #[error("Invalid enum selector `{actual_selector}`")]
     InvalidEnumSelector {
-        /// The selector value that was invalid.
-        selector: u8,
-        /// The valid range of enum selector values.
-        ///
-        /// This corresponds to the number of enum variants.
-        valid_range: RangeInclusive<u8>,
+        /// The actual selector value that was invalid.
+        actual_selector: u8,
     },
 
     #[error("Value must have at least one FieldElement")]
