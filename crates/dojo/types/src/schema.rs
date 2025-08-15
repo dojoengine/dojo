@@ -161,6 +161,10 @@ impl Ty {
                         .unwrap_or(Err(PrimitiveError::MissingFieldElement))?;
                     felts.extend(option);
 
+                    // TODO: we should increment `option` is the model does not use the legacy
+                    // storage system. But is this `serialize` function still
+                    // used ?
+
                     for EnumOption { ty, .. } in &e.options {
                         serialize_inner(ty, felts)?;
                     }
@@ -199,7 +203,11 @@ impl Ty {
         Ok(felts)
     }
 
-    pub fn deserialize(&mut self, felts: &mut Vec<Felt>) -> Result<(), PrimitiveError> {
+    pub fn deserialize(
+        &mut self,
+        felts: &mut Vec<Felt>,
+        legacy_storage: bool,
+    ) -> Result<(), PrimitiveError> {
         if felts.is_empty() {
             // return early if there are no felts to deserialize
             return Ok(());
@@ -211,27 +219,52 @@ impl Ty {
             }
             Ty::Struct(s) => {
                 for child in &mut s.children {
-                    child.ty.deserialize(felts)?;
+                    child.ty.deserialize(felts, legacy_storage)?;
                 }
             }
             Ty::Enum(e) => {
                 let value = felts.remove(0);
-                e.option = Some(value.to_u8().ok_or_else(|| PrimitiveError::ValueOutOfRange {
-                    r#type: type_name::<u8>(),
-                    value,
-                })?);
+                let actual_selector = value.to_u8().ok_or_else(|| {
+                    PrimitiveError::ValueOutOfRange { r#type: type_name::<u8>(), value }
+                })?;
 
-                match &e.options[e.option.unwrap() as usize].ty {
-                    // Skip deserializing the enum option if it has no type - unit type
-                    Ty::Tuple(tuple) if tuple.is_empty() => {}
-                    _ => {
-                        e.options[e.option.unwrap() as usize].ty.deserialize(felts)?;
+                let mut selector = actual_selector;
+
+                // Th new `DojoStore`` trait, enum variants indices start from 1. The 0 value is
+                // reserved for uninitialized enum.
+                if !legacy_storage {
+                    if selector == 0 {
+                        // We set to None here in case this is not the first time we deserialize
+                        // `self`. In which case, previous deserialization might have set the option
+                        // to Some.
+                        e.option = None;
+                        return Ok(());
+                    } else {
+                        // With the new storage system using `DojoStore` trait, variant indices
+                        // start from 1.
+                        selector -= 1;
                     }
                 }
+
+                e.option = Some(selector);
+
+                let selected_opt = e
+                    .options
+                    .get_mut(selector as usize)
+                    .ok_or_else(|| PrimitiveError::InvalidEnumSelector { actual_selector })?;
+
+                // No further deserialization needed if the enum variant is a unit type
+                if let Ty::Tuple(tuple) = &selected_opt.ty {
+                    if tuple.is_empty() {
+                        return Ok(());
+                    }
+                }
+
+                selected_opt.ty.deserialize(felts, legacy_storage)?;
             }
             Ty::Tuple(tys) => {
                 for ty in tys {
-                    ty.deserialize(felts)?;
+                    ty.deserialize(felts, legacy_storage)?;
                 }
             }
             Ty::Array(items_ty) => {
@@ -243,7 +276,7 @@ impl Ty {
                 let item_ty = items_ty.pop().unwrap();
                 for _ in 0..arr_len {
                     let mut cur_item_ty = item_ty.clone();
-                    cur_item_ty.deserialize(felts)?;
+                    cur_item_ty.deserialize(felts, legacy_storage)?;
                     items_ty.push(cur_item_ty);
                 }
             }
@@ -251,7 +284,7 @@ impl Ty {
                 let item_ty = &items_ty[0];
                 for _ in 0..*size {
                     let mut cur_item_ty = item_ty.clone();
-                    cur_item_ty.deserialize(felts)?;
+                    cur_item_ty.deserialize(felts, legacy_storage)?;
                 }
             }
             Ty::ByteArray(bytes) => {
@@ -793,8 +826,11 @@ fn format_member(m: &Member) -> String {
 
 #[cfg(test)]
 mod tests {
+    use assert_matches::assert_matches;
     use crypto_bigint::U256;
+    use num_traits::FromPrimitive;
     use starknet::core::types::Felt;
+    use starknet::macros::felt;
 
     use super::*;
     use crate::primitive::Primitive;
@@ -1004,5 +1040,77 @@ mod tests {
         // Test no differences
         let same_struct = struct2.diff(&struct2);
         assert!(same_struct.is_none());
+    }
+
+    #[test]
+    fn ty_deserialize_legacy_enum() {
+        // enum Direction {
+        //     Up,
+        //     Bottom,
+        //     Left,
+        //     Right,
+        // }
+
+        let mut ty = Ty::Enum(Enum {
+            name: "Direction".to_string(),
+            option: None,
+            options: vec![
+                EnumOption { name: "Up".to_string(), ty: Ty::Tuple(Vec::new()) },
+                EnumOption { name: "Bottom".to_string(), ty: Ty::Tuple(Vec::new()) },
+                EnumOption { name: "Left".to_string(), ty: Ty::Tuple(Vec::new()) },
+                EnumOption { name: "Right".to_string(), ty: Ty::Tuple(Vec::new()) },
+            ],
+        });
+
+        for i in 0..4 {
+            let mut felts = vec![Felt::from_i32(i).unwrap()];
+            ty.deserialize(&mut felts, true).expect("failed to deserialize");
+            assert!(felts.is_empty());
+            assert_matches!(&ty, Ty::Enum(Enum {  option, .. }) => assert_eq!(option, &Some(i as u8)));
+        }
+
+        let mut felts = vec![felt!("0x4")];
+        let result = ty.deserialize(&mut felts, true);
+        assert!(felts.is_empty());
+        assert_matches!(&result, Err(PrimitiveError::InvalidEnumSelector { actual_selector: 4 }));
+    }
+
+    #[test]
+    fn ty_deserialize_enum() {
+        // enum Direction {
+        //     Up,
+        //     Bottom,
+        //     Left,
+        //     Right,
+        // }
+
+        let mut ty = Ty::Enum(Enum {
+            name: "Direction".to_string(),
+            option: None,
+            options: vec![
+                EnumOption { name: "Up".to_string(), ty: Ty::Tuple(Vec::new()) },
+                EnumOption { name: "Bottom".to_string(), ty: Ty::Tuple(Vec::new()) },
+                EnumOption { name: "Left".to_string(), ty: Ty::Tuple(Vec::new()) },
+                EnumOption { name: "Right".to_string(), ty: Ty::Tuple(Vec::new()) },
+            ],
+        });
+
+        for i in 0..4 {
+            let mut felts = vec![Felt::from_i32(i + 1).unwrap()]; // non legacy store enum indices starts from 1
+            ty.deserialize(&mut felts, false).expect("failed to deserialize");
+            assert!(felts.is_empty());
+            assert_matches!(&ty, Ty::Enum(Enum {  option, .. }) => assert_eq!(option, &Some(i as u8)));
+        }
+
+        let mut felts = vec![felt!("0x5")];
+        let result = ty.deserialize(&mut felts, false);
+        assert!(felts.is_empty());
+        assert_matches!(&result, Err(PrimitiveError::InvalidEnumSelector { actual_selector: 5 }));
+
+        // deserializes from an uninitialized storage
+        let mut felts = vec![felt!("0x0")];
+        ty.deserialize(&mut felts, false).expect("failed to deserialize");
+        assert!(felts.is_empty());
+        assert_matches!(&ty, Ty::Enum(Enum { option: None, .. }));
     }
 }

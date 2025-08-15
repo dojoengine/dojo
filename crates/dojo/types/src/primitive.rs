@@ -52,6 +52,12 @@ pub enum Primitive {
 
 #[derive(Debug, thiserror::Error)]
 pub enum PrimitiveError {
+    #[error("Invalid enum selector `{actual_selector}`")]
+    InvalidEnumSelector {
+        /// The actual selector value that was invalid.
+        actual_selector: u8,
+    },
+
     #[error("Value must have at least one FieldElement")]
     MissingFieldElement,
     #[error("Not enough FieldElements for U256")]
