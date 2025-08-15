@@ -74,7 +74,7 @@ jobs:
       # This puts Katana in the path for integration tests.
       - name: Download Katana for integration tests
         run: |
-          curl -L https://github.com/dojoengine/katana/releases/download/v1.7.0-alpha.0/katana_v1.7.0-alpha.0_linux_amd64.tar.gz -o katana.tar.gz;
+          curl -L https://github.com/dojoengine/katana/releases/download/v1.7.0-alpha.2/katana_v1.7.0-alpha.2_linux_amd64.tar.gz -o katana.tar.gz;
           tar -C /usr/local/bin -xzf katana.tar.gz
 
       - run: |
