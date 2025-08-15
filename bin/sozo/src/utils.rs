@@ -29,7 +29,7 @@ use crate::commands::options::world::WorldOptions;
 /// providers.
 pub const MAX_BLOCK_RANGE: u64 = 200_000;
 
-pub const RPC_SPEC_VERSION: &str = "0.8.1";
+pub const RPC_SPEC_VERSION: &str = "0.9.0-rc.2";
 
 pub const CALLDATA_DOC: &str = "
 Space separated values e.g., 0x12345 128 u256:9999999999 str:'hello world'.
