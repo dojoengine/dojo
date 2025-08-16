@@ -55,6 +55,7 @@ fn process_struct(db: &SimpleParserDatabase, struct_ast: &ast::ItemStruct) -> Pr
             &member_name,
             &member_ty,
             false,
+            "values",
         ));
 
         member_names.push(member_name);

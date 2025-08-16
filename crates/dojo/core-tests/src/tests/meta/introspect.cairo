@@ -977,22 +977,22 @@ fn test_tuple_key_upgrade() {
 
 #[test]
 fn test_fixed_array_key_upgrade() {
-    let a = Ty::FixedArray([(Ty::Primitive('u8'), 3)].span());
+    let a = Ty::FixedArray(([Ty::Primitive('u8')].span(), 3));
 
     // fixed array item is upgradable
-    let upgraded = Ty::FixedArray([(Ty::Primitive('u16'), 3)].span());
+    let upgraded = Ty::FixedArray(([Ty::Primitive('u16')].span(), 3));
     assert!(upgraded.is_a_key_upgrade_of(@a));
 
     // fixed array item is not upgradable
-    let upgraded = Ty::FixedArray([(Ty::Primitive('bool'), 3)].span());
+    let upgraded = Ty::FixedArray(([Ty::Primitive('bool')].span(), 3));
     assert!(!upgraded.is_a_key_upgrade_of(@a));
 
     // fixed array length is smaller than before (not allowed)
-    let upgraded = Ty::FixedArray([(Ty::Primitive('u16'), 2)].span());
+    let upgraded = Ty::FixedArray(([Ty::Primitive('u16')].span(), 2));
     assert!(!upgraded.is_a_key_upgrade_of(@a));
 
     // fixed array length is bigger than before (not allowed)
-    let upgraded = Ty::FixedArray([(Ty::Primitive('u16'), 4)].span());
+    let upgraded = Ty::FixedArray(([Ty::Primitive('u16')].span(), 4));
     assert!(!upgraded.is_a_key_upgrade_of(@a));
 }
 

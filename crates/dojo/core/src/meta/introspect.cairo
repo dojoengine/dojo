@@ -242,8 +242,11 @@ impl TyCompareImpl of TyCompareTrait<Ty> {
             (
                 Ty::FixedArray(n), Ty::FixedArray(o),
             ) => {
-                let (n_ty, n_len) = n.at(0);
-                let (o_ty, o_len) = o.at(0);
+                let (n_ty, n_len) = n;
+                let n_ty = n_ty.at(0);
+
+                let (o_ty, o_len) = o;
+                let o_ty = o_ty.at(0);
 
                 n_ty.is_a_key_upgrade_of(o_ty) && n_len == o_len
             },
