@@ -9,6 +9,7 @@ use dojo_world::config::ProfileConfig;
 use dojo_world::contracts::ContractInfo;
 use dojo_world::diff::WorldDiff;
 use dojo_world::local::WorldLocal;
+use scarb_interop::Scarb;
 use scarb_metadata::Metadata;
 use scarb_metadata_ext::MetadataDojoExt;
 use semver::{Version, VersionReq};
@@ -206,6 +207,18 @@ fn is_compatible_version(provided_version: &str, expected_version: &str) -> Resu
     })?;
 
     Ok(expected_ver_req.matches(&provided_ver))
+}
+
+pub fn generate_version() -> String {
+    const DOJO_VERSION: &str = env!("CARGO_PKG_VERSION");
+
+    let scarb_version = if let Some(scarb) = Scarb::version() {
+        scarb
+    } else {
+        "not found in your PATH\n".to_string()
+    };
+
+    format!("{}\nscarb: {}", DOJO_VERSION, scarb_version)
 }
 
 // Returns the contracts from the manifest or from the diff.
