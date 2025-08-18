@@ -281,10 +281,9 @@ impl Ty {
                 }
             }
             Ty::FixedSizeArray((items_ty, size)) => {
-                let item_ty = &items_ty[0];
-                for _ in 0..*size {
-                    let mut cur_item_ty = item_ty.clone();
-                    cur_item_ty.deserialize(felts, legacy_storage)?;
+                debug_assert_eq!(items_ty.len(), *size as usize);
+                for elem in items_ty {
+                    elem.deserialize(felts, legacy_storage)?;
                 }
             }
             Ty::ByteArray(bytes) => {
@@ -595,7 +594,7 @@ impl Ty {
             }
             // Fallback for backward compatibility with simple array format
             (Ty::FixedSizeArray((items, size)), JsonValue::Array(values)) => {
-                if values.len() != *size {
+                if values.len() != *size as usize {
                     return Err(PrimitiveError::TypeMismatch);
                 }
                 let template = items[0].clone();
@@ -1145,5 +1144,41 @@ mod tests {
         ty.deserialize(&mut felts, false).expect("failed to deserialize");
         assert!(felts.is_empty());
         assert_matches!(&ty, Ty::Enum(Enum { option: None, .. }));
+    }
+
+    #[test]
+    fn ty_serde_fixed_size_array() {
+        // serialization ------------------------
+
+        let elems = vec![Ty::Primitive(Primitive::Felt252(Some(felt!("0x1")))); 3]; // [felt252; 3]
+        let ty = Ty::FixedSizeArray((elems.clone(), 3));
+
+        let expected_json = json!({
+            "size": 3,
+            "elements": elems.iter().map(|e| e.to_json_value().unwrap()).collect::<Vec<_>>(),
+        });
+
+        let actual_json = ty.to_json_value().expect("failed to serialize");
+        assert_eq!(actual_json, expected_json);
+
+        // deserialization ------------------------
+
+        let elems = vec![Ty::Primitive(Primitive::Felt252(None)); 3]; // [felt252; 3]
+        let mut ty = Ty::FixedSizeArray((elems, 3));
+
+        let mut felts = vec![felt!("0x1"), felt!("0x2"), felt!("0x3")];
+        ty.deserialize(&mut felts, false).expect("failed to deserialize");
+        assert!(felts.is_empty());
+
+        let expected_elems = vec![
+            Ty::Primitive(Primitive::Felt252(Some(felt!("0x1")))),
+            Ty::Primitive(Primitive::Felt252(Some(felt!("0x2")))),
+            Ty::Primitive(Primitive::Felt252(Some(felt!("0x3")))),
+        ];
+
+        assert_matches!(&ty, Ty::FixedSizeArray((elements, size)) => {
+            assert_eq!(elements, &expected_elems);
+            assert_eq!(size, &3);
+        });
     }
 }
