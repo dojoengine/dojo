@@ -9,10 +9,10 @@ use tracing_log::{AsTrace, LogTracer};
 use tracing_subscriber::FmtSubscriber;
 
 use crate::commands::Commands;
+use crate::utils::generate_version;
 
 #[derive(Parser, Debug)]
-#[command(author, about, long_about = None)]
-#[command(disable_version_flag = true)]
+#[command(author, version=generate_version(), about, long_about = None)]
 pub struct SozoArgs {
     #[arg(long)]
     #[arg(global = true)]
@@ -33,9 +33,6 @@ pub struct SozoArgs {
     #[arg(global = true)]
     #[arg(help = "Run without accessing the network.")]
     pub offline: bool,
-
-    #[arg(short = 'V', long, help = "Print version")]
-    pub version: bool,
 
     #[command(subcommand)]
     pub command: Commands,

@@ -15,6 +15,16 @@ pub enum Features {
 pub struct Scarb {}
 
 impl Scarb {
+    pub fn version() -> Option<String> {
+        Command::new("scarb").args(["--version"]).output().ok().and_then(|output| {
+            if output.status.success() {
+                String::from_utf8(output.stdout).ok()
+            } else {
+                String::from_utf8(output.stderr).ok()
+            }
+        })
+    }
+
     /// Executes a Scarb command for the given manifest path.
     fn execute(manifest_path: &Utf8Path, args: Vec<&str>) -> Result<()> {
         // To not change the current dir at this level, we rely
