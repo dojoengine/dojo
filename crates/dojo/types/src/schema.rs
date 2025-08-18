@@ -7,7 +7,7 @@ use indexmap::IndexMap;
 use itertools::Itertools;
 use num_traits::ToPrimitive;
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value as JsonValue};
+use serde_json::{Value as JsonValue, json};
 use starknet::core::types::Felt;
 use strum_macros::AsRefStr;
 
@@ -443,9 +443,16 @@ impl Ty {
                 let values: Result<Vec<_>, _> = items.iter().map(|ty| ty.to_json_value()).collect();
                 Ok(json!(values?))
             }
-            Ty::FixedSizeArray((items, _)) => {
+            Ty::FixedSizeArray((items, size)) => {
                 let values: Result<Vec<_>, _> = items.iter().map(|ty| ty.to_json_value()).collect();
-                Ok(json!(values?))
+
+                let value = json!(
+                    {
+                        "elements": values?,
+                        "size": size
+                    }
+                );
+                Ok(value)
             }
             Ty::Tuple(items) => {
                 let values: Result<Vec<_>, _> = items.iter().map(|ty| ty.to_json_value()).collect();
