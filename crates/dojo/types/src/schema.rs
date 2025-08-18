@@ -571,7 +571,33 @@ impl Ty {
                     items.push(item);
                 }
             }
-            (Ty::FixedSizeArray((items, _)), JsonValue::Array(values)) => {
+            (Ty::FixedSizeArray((items, size)), JsonValue::Object(obj)) => {
+                if let (Some(JsonValue::Array(values)), Some(JsonValue::Number(expected_size))) =
+                    (obj.get("elements"), obj.get("size"))
+                {
+                    if let Some(expected_size) = expected_size.as_u64() {
+                        if expected_size != *size as u64 {
+                            return Err(PrimitiveError::TypeMismatch);
+                        }
+                        let template = items[0].clone();
+                        items.clear();
+                        for value in values {
+                            let mut item = template.clone();
+                            item.from_json_value(value.clone())?;
+                            items.push(item);
+                        }
+                    } else {
+                        return Err(PrimitiveError::TypeMismatch);
+                    }
+                } else {
+                    return Err(PrimitiveError::TypeMismatch);
+                }
+            }
+            // Fallback for backward compatibility with simple array format
+            (Ty::FixedSizeArray((items, size)), JsonValue::Array(values)) => {
+                if values.len() != *size {
+                    return Err(PrimitiveError::TypeMismatch);
+                }
                 let template = items[0].clone();
                 items.clear();
                 for value in values {
