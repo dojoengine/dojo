@@ -7,7 +7,7 @@ use indexmap::IndexMap;
 use itertools::Itertools;
 use num_traits::ToPrimitive;
 use serde::{Deserialize, Serialize};
-use serde_json::{Value as JsonValue, json};
+use serde_json::{json, Value as JsonValue};
 use starknet::core::types::Felt;
 use strum_macros::AsRefStr;
 
