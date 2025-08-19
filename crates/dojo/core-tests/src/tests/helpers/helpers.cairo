@@ -9,11 +9,19 @@ use starknet::ContractAddress;
 
 pub const DOJO_NSH: felt252 = 0x309e09669bc1fdc1dd6563a7ef862aa6227c97d099d08cc7b81bad58a7443fa;
 
-#[derive(Introspect, Drop, Serde, Debug, PartialEq, Default, DojoStore)]
+#[derive(Introspect, Copy, Drop, Serde, Debug, PartialEq, Default, DojoStore)]
 pub enum MyEnum {
     #[default]
     X: u8,
     Y: u16,
+}
+
+#[derive(Introspect, Copy, Drop, Serde, Debug, PartialEq, Default, DojoStore)]
+pub enum MyNestedEnum {
+    #[default]
+    A: MyEnum,
+    B: u16,
+    C: u32,
 }
 
 #[dojo::event]
