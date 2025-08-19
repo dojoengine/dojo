@@ -88,12 +88,26 @@ trap "rm -f $CACHE_FILE" EXIT
 
 missing=()
 
+# Check if a Git tag exists in a GitHub repository.
+# Uses caching to avoid redundant API/network calls for the same repo/tag combination.
+#
+# Arguments:
+#   $1 - GitHub repository in format "owner/repo" (e.g., "dojoengine/katana")
+#   $2 - Git tag name to check (e.g., "v1.5.0" or "1.5.0")
+#
+# Returns:
+#   0 - if tag exists (success)
+#   1 - if tag does not exist (failure)
+#
+# Side effects:
+#   - Writes to cache file to store results
+#   - Makes GitHub API calls (if gh CLI available) or git ls-remote calls
 check_tag_exists() {
 	local repo="$1"
 	local tag="$2"
 	local key="${repo}|${tag}"
 
-	# Check cache
+	# Check cache to avoid redundant lookups
 	if grep -q "^${key}=" "$CACHE_FILE" 2>/dev/null; then
 		local result=$(grep "^${key}=" "$CACHE_FILE" | cut -d= -f2)
 		return "$result"
@@ -101,24 +115,27 @@ check_tag_exists() {
 
 	# Prefer gh API (release tag then git ref). Fall back to git ls-remote.
 	if [[ $have_gh -eq 1 ]]; then
+		# First check if it's a release tag
 		if gh api -q . "repos/$repo/releases/tags/$tag" >/dev/null 2>&1; then
-		    echo "${key}=0" >> "$CACHE_FILE"
-		    return 0
+			echo "${key}=0" >> "$CACHE_FILE"
+			return 0
 		fi
 
+		# Then check if it's a regular git tag
 		if gh api -q . "repos/$repo/git/ref/tags/$tag" >/dev/null 2>&1; then
-		    echo "${key}=0" >> "$CACHE_FILE"
-		    return 0
+			echo "${key}=0" >> "$CACHE_FILE"
+			return 0
 		fi
 	fi
 
 	# Fallback using git ls-remote (no auth needed)
 	if git ls-remote --tags "https://github.com/$repo" "refs/tags/$tag" \
-		    | grep -qE 'refs/tags/' ; then
+		| grep -qE 'refs/tags/' ; then
 		echo "${key}=0" >> "$CACHE_FILE"
 		return 0
 	fi
 
+	# Tag not found, cache the negative result
 	echo "${key}=1" >> "$CACHE_FILE"
 	return 1
 }
