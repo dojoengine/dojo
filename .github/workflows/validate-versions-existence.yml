@@ -2,6 +2,8 @@ name: Validate component versions exist
 
 on:
   push:
+    branches:
+      - main
     paths: ["versions.json", "scripts/validate_version.sh"]
   pull_request:
     paths: ["versions.json", "scripts/validate_version.sh"]
