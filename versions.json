@@ -166,11 +166,11 @@
     ]
   },
   "1.7.0-alpha.0": {
-    "katana": ["1.7.0-alpha.0", "1.7.0-alpha.1"],
+    "katana": ["1.7.0-alpha.0", "1.7.0-alpha.1", "1.7.0-alpha.2"],
     "torii": ["1.7.0-alpha.0"]
   },
   "1.7.0-alpha.1": {
-    "katana": ["1.7.0-alpha.0", "1.7.0-alpha.1"],
+    "katana": ["1.7.0-alpha.0", "1.7.0-alpha.1", "1.7.0-alpha.2"],
     "torii": ["1.7.0-alpha.0"]
   }
 }
