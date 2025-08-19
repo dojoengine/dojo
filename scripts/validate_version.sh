@@ -125,7 +125,28 @@ check_tag_exists() {
 
 echo "Validating versions listed in $VERSION_REGISTRY_FILE ..."
 
+# We need to track the current version being validated
+current_version=""
+
 while IFS=$'\t' read -r comp ver; do
+	# Parse the version from the component-version pair
+	# The pairs are generated from jq with the parent version context
+	# We'll need to extract it from the JSON structure
+	version_key=$(jq -r --arg comp "$comp" --arg ver "$ver" '
+		to_entries[]
+		| select(.value[$comp] // [] | contains([$ver]))
+		| .key
+		| select(. != null)
+		| . + ""
+	' "$VERSION_REGISTRY_FILE" | head -1)
+
+	# Print version header when it changes
+	if [[ -n "$version_key" ]] && [[ "$version_key" != "$current_version" ]]; then
+		current_version="$version_key"
+		echo ""
+		echo "Validating version: $current_version"
+	fi
+
 	repo=$(get_repo "$comp")
 
 	if [[ -z "$repo" ]]; then
@@ -134,18 +155,18 @@ while IFS=$'\t' read -r comp ver; do
 		continue
 	fi
 
-	echo "• $comp $ver  (repo: $repo)"
+	echo "  • $comp $ver  (repo: $repo)"
 	found=0
 
 	for tag in "v${ver}" "${ver}"; do
 		if check_tag_exists "$repo" "$tag"; then
-		    echo "  ✓ found tag '$tag'"
-		    found=1; break
+			echo "    ✓ found tag '$tag'"
+			found=1; break
 		fi
 	done
 
 	if [[ $found -eq 0 ]]; then
-		echo "  ✗ not found as 'v$ver' or '$ver' in $repo"
+		echo "    ✗ not found as 'v$ver' or '$ver' in $repo"
 		missing+=("$comp $ver")
 	fi
 done <<< "$pairs"
