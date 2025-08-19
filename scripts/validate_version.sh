@@ -12,16 +12,9 @@ set -Eeuo pipefail
 
 VERSION_REGISTRY_FILE="${1:-versions.json}"
 
-# Defaults (override with COMPONENT_REPOS env var)
-COMPONENT_REPOS_DEFAULT=$(cat <<'EOF'
-katana=dojoengine/katana
-torii=dojoengine/torii
-EOF
-)
-
-if [[ -z "${COMPONENT_REPOS:-}" ]]; then
-  COMPONENT_REPOS="$COMPONENT_REPOS_DEFAULT"
-fi
+# Component repository constants
+KATANA_REPO="dojoengine/katana"
+TORII_REPO="dojoengine/torii"
 
 # Get the GitHub repository for a given component.
 #
@@ -33,13 +26,18 @@ fi
 get_repo() {
 	local component="$1"
 
-	echo "$COMPONENT_REPOS" | while IFS='=' read -r k v; do
-		[[ -z "${k:-}" ]] && continue
-		if [[ "$k" == "$component" ]]; then
-			echo "$v"
-			return
-		fi
-	done
+	case "$component" in
+		katana)
+			echo "$KATANA_REPO"
+			;;
+		torii)
+			echo "$TORII_REPO"
+			;;
+		*)
+			# Return empty for unknown components
+			echo ""
+			;;
+	esac
 }
 
 have_gh=0
