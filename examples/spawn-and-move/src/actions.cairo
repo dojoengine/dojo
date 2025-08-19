@@ -177,7 +177,7 @@ pub mod actions {
             assert(position.vec.y == 0, 'bad y');
 
             assert(config.items.len() == 0, 'bad items');
-            assert(config.favorite_item == Option::Some(0), 'bad favorite item');
+            assert(config.favorite_item == Option::None, 'bad favorite item');
             let empty_string: ByteArray = "";
             assert(config.name == empty_string, 'bad name');
         }
