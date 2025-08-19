@@ -62,26 +62,6 @@ if [[ ! -f "$VERSION_REGISTRY_FILE" ]]; then
   exit 2
 fi
 
-# Parse versions.json which has the format:
-#   { "<version>": { "katana": [...], "torii": [...] }, ... }
-# Each key is a version, and the value contains arrays of compatible component versions
-pairs=$(
-  jq -r '
-    # Iterate through each version entry
-    to_entries[]
-    | .key as $version
-    | .value
-    | ["katana","torii"][] as $component
-    | (.[$component] // empty)[]
-    | [$component, .] | @tsv
-  ' "$VERSION_REGISTRY_FILE"
-)
-
-if [[ -z "$pairs" ]]; then
-  echo "error: no katana/torii versions found in $VERSION_REGISTRY_FILE" >&2
-  exit 1
-fi
-
 # Simple de-dup cache to avoid re-querying same repo/tag
 # Using a file-based approach instead of associative array
 CACHE_FILE=$(mktemp)
