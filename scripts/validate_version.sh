@@ -23,16 +23,22 @@ if [[ -z "${COMPONENT_REPOS:-}" ]]; then
   COMPONENT_REPOS="$COMPONENT_REPOS_DEFAULT"
 fi
 
-# Parse repo mappings without using associative arrays
+# Get the GitHub repository for a given component.
+#
+# Arguments:
+#   $1 - component name (e.g., "katana" or "torii")
+#
+# Returns:
+#   GitHub repo in format "owner/repo" (e.g., "dojoengine/katana")
 get_repo() {
-  local component="$1"
-  echo "$COMPONENT_REPOS" | while IFS='=' read -r k v; do
-    [[ -z "${k:-}" ]] && continue
-    if [[ "$k" == "$component" ]]; then
-      echo "$v"
-      return
-    fi
-  done
+	local component="$1"
+	echo "$COMPONENT_REPOS" | while IFS='=' read -r k v; do
+		[[ -z "${k:-}" ]] && continue
+		if [[ "$k" == "$component" ]]; then
+			echo "$v"
+			return
+		fi
+	done
 }
 
 have_gh=0
