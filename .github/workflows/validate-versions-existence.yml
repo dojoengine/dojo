@@ -18,6 +18,10 @@ jobs:
       image: ghcr.io/dojoengine/dojo-dev:v1.6.0
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install jq
+        run: apt-get update && apt-get install -y jq
+
       - name: Validate `versions.json`
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
