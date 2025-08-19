@@ -16,13 +16,16 @@ VERSION_REGISTRY_FILE="${1:-versions.json}"
 KATANA_REPO="dojoengine/katana"
 TORII_REPO="dojoengine/torii"
 
-# Get the GitHub repository for a given component.
+# Get the GitHub repository name for a given component.
 #
 # Arguments:
 #   $1 - component name (e.g., "katana" or "torii")
 #
 # Returns:
 #   GitHub repo in format "owner/repo" (e.g., "dojoengine/katana")
+#
+# Error:
+#   Will fail if the provided component is unknown.
 get_repo() {
 	local component="$1"
 
@@ -34,8 +37,8 @@ get_repo() {
 			echo "$TORII_REPO"
 			;;
 		*)
-			# Return empty for unknown components
-			echo ""
+			echo "error: unknown component '$component'" >&2
+			exit 1
 			;;
 	esac
 }
@@ -143,48 +146,41 @@ echo "Validating versions listed in $VERSION_REGISTRY_FILE ..."
 # We need to track the current version being validated
 current_version=""
 
-while IFS=$'\t' read -r comp ver; do
-	# Parse the version from the component-version pair
-	# The pairs are generated from jq with the parent version context
-	# We'll need to extract it from the JSON structure
-	version_key=$(jq -r --arg comp "$comp" --arg ver "$ver" '
-		to_entries[]
-		| select(.value[$comp] // [] | contains([$ver]))
-		| .key
-		| select(. != null)
-		| . + ""
-	' "$VERSION_REGISTRY_FILE" | head -1)
+# get all the dojo versions in the registry
+all_versions=$(jq -r 'keys_unsorted[]' $VERSION_REGISTRY_FILE)
 
-	# Print version header when it changes
-	if [[ -n "$version_key" ]] && [[ "$version_key" != "$current_version" ]]; then
-		current_version="$version_key"
-		echo ""
-		echo "Validating version: $current_version"
-	fi
+# iterate over all the dojo versions
+for version in $all_versions; do
+	echo
+	echo -e "Validating version: \033[1m$version\033[0m"
 
-	repo=$(get_repo "$comp")
+	# get the components for the current version
+	comps=$(jq -r ".[\"${version}\"] | keys_unsorted[]" $VERSION_REGISTRY_FILE)
 
-	if [[ -z "$repo" ]]; then
-		echo "error: no repo mapping for component '$comp'." >&2
-		missing+=("$comp $ver (no repo mapping)")
-		continue
-	fi
+	# iterate over all the components for each version
+	for comp in $comps; do
+		repo=$(get_repo "$comp")
+		echo "  • $comp (repo: $repo)"
 
-	echo "  • $comp $ver  (repo: $repo)"
-	found=0
+		# iterate over the current component's versions
+		comp_versions=$(jq -r ".\"${version}\".${comp}[]" $VERSION_REGISTRY_FILE)
+		for comp_version in $comp_versions; do
+			# check both with and without the v-prefix
+			found=0
+			for tag in "v${comp_version}" "${comp_version}"; do
+				if check_tag_exists "$repo" "$tag"; then
+					echo -e "    \033[32m✓\033[0m $comp_version"
+					found=1; break
+				fi
+			done
 
-	for tag in "v${ver}" "${ver}"; do
-		if check_tag_exists "$repo" "$tag"; then
-			echo "    ✓ found tag '$tag'"
-			found=1; break
-		fi
+			if [[ $found -eq 0 ]]; then
+				echo -e "    \033[31m✗\033[0m $comp_version"
+				missing+=("$comp $comp_version")
+			fi
+		done
 	done
-
-	if [[ $found -eq 0 ]]; then
-		echo "    ✗ not found as 'v$ver' or '$ver' in $repo"
-		missing+=("$comp $ver")
-	fi
-done <<< "$pairs"
+done
 
 echo
 if (( ${#missing[@]} > 0 )); then
