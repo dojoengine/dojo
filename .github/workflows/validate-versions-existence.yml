@@ -1,0 +1,26 @@
+name: Validate component versions exist
+
+on:
+  push:
+    paths: ["versions.json", "scripts/validate-version-existence.sh"]
+  pull_request:
+    paths: ["versions.json", "scripts/validate-version-existence.sh"]
+
+permissions:
+  contents: read
+
+jobs:
+  validate-tags:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/dojoengine/dojo-dev:v1.6.0
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate `versions.json`
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COMPONENT_REPOS: |
+            katana=dojoengine/katana
+            torii=dojoengine/torii
+        run: |
+          bash scripts/validate-version-existence.sh versions.json
