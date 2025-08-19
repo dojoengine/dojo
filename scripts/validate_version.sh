@@ -32,6 +32,7 @@ fi
 #   GitHub repo in format "owner/repo" (e.g., "dojoengine/katana")
 get_repo() {
 	local component="$1"
+
 	echo "$COMPONENT_REPOS" | while IFS='=' read -r k v; do
 		[[ -z "${k:-}" ]] && continue
 		if [[ "$k" == "$component" ]]; then
@@ -88,68 +89,72 @@ trap "rm -f $CACHE_FILE" EXIT
 missing=()
 
 check_tag_exists() {
-  local repo="$1"
-  local tag="$2"
-  local key="${repo}|${tag}"
+	local repo="$1"
+	local tag="$2"
+	local key="${repo}|${tag}"
 
-  # Check cache
-  if grep -q "^${key}=" "$CACHE_FILE" 2>/dev/null; then
-    local result=$(grep "^${key}=" "$CACHE_FILE" | cut -d= -f2)
-    return "$result"
-  fi
+	# Check cache
+	if grep -q "^${key}=" "$CACHE_FILE" 2>/dev/null; then
+		local result=$(grep "^${key}=" "$CACHE_FILE" | cut -d= -f2)
+		return "$result"
+	fi
 
-  # Prefer gh API (release tag then git ref). Fall back to git ls-remote.
-  if [[ $have_gh -eq 1 ]]; then
-    if gh api -q . "repos/$repo/releases/tags/$tag" >/dev/null 2>&1; then
-      echo "${key}=0" >> "$CACHE_FILE"
-      return 0
-    fi
-    if gh api -q . "repos/$repo/git/ref/tags/$tag" >/dev/null 2>&1; then
-      echo "${key}=0" >> "$CACHE_FILE"
-      return 0
-    fi
-  fi
+	# Prefer gh API (release tag then git ref). Fall back to git ls-remote.
+	if [[ $have_gh -eq 1 ]]; then
+		if gh api -q . "repos/$repo/releases/tags/$tag" >/dev/null 2>&1; then
+		    echo "${key}=0" >> "$CACHE_FILE"
+		    return 0
+		fi
 
-  # Fallback using git ls-remote (no auth needed)
-  if git ls-remote --tags "https://github.com/$repo" "refs/tags/$tag" \
-      | grep -qE 'refs/tags/' ; then
-    echo "${key}=0" >> "$CACHE_FILE"
-    return 0
-  fi
+		if gh api -q . "repos/$repo/git/ref/tags/$tag" >/dev/null 2>&1; then
+		    echo "${key}=0" >> "$CACHE_FILE"
+		    return 0
+		fi
+	fi
 
-  echo "${key}=1" >> "$CACHE_FILE"
-  return 1
+	# Fallback using git ls-remote (no auth needed)
+	if git ls-remote --tags "https://github.com/$repo" "refs/tags/$tag" \
+		    | grep -qE 'refs/tags/' ; then
+		echo "${key}=0" >> "$CACHE_FILE"
+		return 0
+	fi
+
+	echo "${key}=1" >> "$CACHE_FILE"
+	return 1
 }
 
 echo "Validating versions listed in $VERSION_REGISTRY_FILE ..."
+
 while IFS=$'\t' read -r comp ver; do
-  repo=$(get_repo "$comp")
-  if [[ -z "$repo" ]]; then
-    echo "::error title=Unknown component::No repo mapping for component '$comp'." >&2
-    missing+=("$comp $ver (no repo mapping)")
-    continue
-  fi
+	repo=$(get_repo "$comp")
 
-  echo "• $comp $ver  (repo: $repo)"
-  found=0
-  for tag in "v${ver}" "${ver}"; do
-    if check_tag_exists "$repo" "$tag"; then
-      echo "  ✓ found tag '$tag'"
-      found=1; break
-    fi
-  done
+	if [[ -z "$repo" ]]; then
+		echo "error: no repo mapping for component '$comp'." >&2
+		missing+=("$comp $ver (no repo mapping)")
+		continue
+	fi
 
-  if [[ $found -eq 0 ]]; then
-    echo "  ✗ not found as 'v$ver' or '$ver' in $repo"
-    missing+=("$comp $ver")
-  fi
+	echo "• $comp $ver  (repo: $repo)"
+	found=0
+
+	for tag in "v${ver}" "${ver}"; do
+		if check_tag_exists "$repo" "$tag"; then
+		    echo "  ✓ found tag '$tag'"
+		    found=1; break
+		fi
+	done
+
+	if [[ $found -eq 0 ]]; then
+		echo "  ✗ not found as 'v$ver' or '$ver' in $repo"
+		missing+=("$comp $ver")
+	fi
 done <<< "$pairs"
 
 echo
 if (( ${#missing[@]} > 0 )); then
-  echo "Missing versions:"
-  printf ' - %s\n' "${missing[@]}"
-  exit 1
+	echo "Missing versions:"
+	printf ' - %s\n' "${missing[@]}"
+	exit 1
 fi
 
 echo "All listed component versions exist ✅"
