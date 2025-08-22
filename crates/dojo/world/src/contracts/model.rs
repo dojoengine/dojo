@@ -214,9 +214,9 @@ where
 
         // backward compatibility with old legacy models where the `use_legacy_storage` function
         // does not exist.
-        if let Err(ModelError::ProviderError(ProviderError::StarknetError(
+        if let Err(ModelError::Cainome(CainomeError::Provider(ProviderError::StarknetError(
             StarknetError::EntrypointNotFound,
-        ))) = res
+        )))) = res
         {
             debug!(namespace = %self.namespace, name = %self.name, "Entrypoint not found, using legacy store.");
             return Ok(true);
