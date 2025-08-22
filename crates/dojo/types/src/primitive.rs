@@ -289,16 +289,19 @@ impl Primitive {
                 *inner = Some(int_val != 0);
             }
 
-            // Hex strings - need to parse hex (stored as TEXT in SQLite)
+            // I128 stored as hex string - need to handle two's complement properly
             Primitive::I128(ref mut inner) => {
                 let hex_str = value
                     .strip_prefix("0x")
                     .ok_or_else(|| PrimitiveError::InvalidSqlValue(value.to_string()))?;
-                *inner = Some(
-                    i128::from_str_radix(hex_str, 16)
-                        .map_err(|_| PrimitiveError::InvalidSqlValue(value.to_string()))?,
-                );
+                
+                // Parse as u128 first, then convert to i128 via two's complement
+                let as_u128 = u128::from_str_radix(hex_str, 16)
+                    .map_err(|_| PrimitiveError::InvalidSqlValue(value.to_string()))?;
+                *inner = Some(as_u128 as i128);
             }
+
+            // Hex strings - need to parse hex (stored as TEXT in SQLite)
             Primitive::U64(ref mut inner) => {
                 let hex_str = value
                     .strip_prefix("0x")
