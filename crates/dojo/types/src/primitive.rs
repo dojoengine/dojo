@@ -858,7 +858,7 @@ mod tests {
         assert_eq!(primitive.as_u256(), Some(U256::from(1u128)));
         let mut primitive = Primitive::Bool(None);
         primitive.set_bool(Some(true)).unwrap();
-        assert_eq!(primitive.as_bool(), Some(true));
+        assert!(primitive.as_bool().unwrap());
         let mut primitive = Primitive::Felt252(None);
         primitive.set_felt252(Some(Felt::from(1u128))).unwrap();
         assert_eq!(primitive.as_felt252(), Some(Felt::from(1u128)));
@@ -1043,7 +1043,7 @@ mod tests {
         let bool_val = Primitive::Bool(Some(true));
         let json_val = bool_val.to_json_value().unwrap();
         assert!(json_val.is_boolean());
-        assert_eq!(json_val.as_bool().unwrap(), true);
+        assert!(json_val.as_bool().unwrap());
 
         // Test contract address representation
         let addr = Primitive::ContractAddress(Some(Felt::from(0x123456789abcdefu64)));
@@ -1058,10 +1058,10 @@ mod tests {
         // Test parsing boolean from number
         let mut bool_prim = Primitive::Bool(None);
         bool_prim.from_json_value(json!(1)).unwrap();
-        assert_eq!(bool_prim.as_bool(), Some(true));
+        assert!(bool_prim.as_bool().unwrap());
 
         bool_prim.from_json_value(json!(0)).unwrap();
-        assert_eq!(bool_prim.as_bool(), Some(false));
+        assert!(!bool_prim.as_bool().unwrap());
 
         // Test parsing decimal strings for large integers
         let mut u128_prim = Primitive::U128(None);
