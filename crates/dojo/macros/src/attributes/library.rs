@@ -1,4 +1,4 @@
-use cairo_lang_macro::{quote, Diagnostic, ProcMacroResult, TokenStream};
+use cairo_lang_macro::{Diagnostic, ProcMacroResult, TokenStream, quote};
 use cairo_lang_parser::utils::SimpleParserDatabase;
 use cairo_lang_syntax::node::ast::{self, MaybeModuleBody};
 use cairo_lang_syntax::node::with_db::SyntaxNodeWithDb;
@@ -50,7 +50,6 @@ impl DojoLibrary {
             let mut body_nodes: Vec<_> = body
                 .items(db)
                 .elements(db)
-                .iter()
                 .map(|el| {
                     match el {
                         ast::ModuleItem::Enum(ref enum_ast) => {

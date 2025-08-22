@@ -4,7 +4,7 @@ use cairo_lang_syntax::node::ast::{ItemEnum, OptionTypeClause, Variant};
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{Terminal, TypedSyntaxNode};
 
-use crate::helpers::{debug_store_expand, DiagnosticsExt, DojoChecker, ProcMacroResultExt};
+use crate::helpers::{DiagnosticsExt, DojoChecker, ProcMacroResultExt, debug_store_expand};
 
 #[derive(Debug)]
 pub struct DojoEnumIntrospect {
@@ -110,7 +110,6 @@ impl DojoEnumIntrospect {
         let variant_sizes = enum_ast
             .variants(db)
             .elements(db)
-            .iter()
             .map(|v| match v.type_clause(db) {
                 OptionTypeClause::Empty(_) => vec![],
                 OptionTypeClause::TypeClause(type_clause) => {
@@ -159,11 +158,11 @@ impl DojoEnumIntrospect {
         // to be packable, all variants data must have the same size.
         // as this point has already been checked before calling `build_packed_enum_layout`,
         // just use the first variant to generate the fixed layout.
-        let elements = enum_ast.variants(db).elements(db);
-        let mut variant_layout = if elements.is_empty() {
+        let mut elements = enum_ast.variants(db).elements(db);
+        let mut variant_layout = if elements.len() == 0 {
             vec![]
         } else {
-            match elements.first().unwrap().type_clause(db) {
+            match elements.nth(0).unwrap().type_clause(db) {
                 OptionTypeClause::Empty(_) => vec![],
                 OptionTypeClause::TypeClause(type_clause) => {
                     super::layout::get_packed_field_layout_from_type_clause(
@@ -201,7 +200,7 @@ impl DojoEnumIntrospect {
     ) -> String {
         let mut layouts = vec![];
 
-        for (i, v) in enum_ast.variants(db).elements(db).iter().enumerate() {
+        for (i, v) in enum_ast.variants(db).elements(db).enumerate() {
             // with the new `DojoStore`` trait, variants start from 1, to be able to use
             // 0 as uninitialized variant.
             let selector = i + 1;
@@ -238,10 +237,10 @@ impl DojoEnumIntrospect {
     ) -> String {
         let variants = enum_ast.variants(db).elements(db);
 
-        let variants_ty = if variants.is_empty() {
+        let variants_ty = if variants.len() == 0 {
             "".to_string()
         } else {
-            variants.iter().map(|v| self.build_variant_ty(db, v)).collect::<Vec<_>>().join(",\n")
+            variants.map(|v| self.build_variant_ty(db, &v)).collect::<Vec<_>>().join(",\n")
         };
 
         format!(
@@ -280,7 +279,7 @@ impl DojoEnumIntrospect {
         let mut serialized_variants = vec![];
         let mut deserialized_variants = vec![];
 
-        for (index, variant) in enum_ast.variants(db).elements(db).iter().enumerate() {
+        for (index, variant) in enum_ast.variants(db).elements(db).enumerate() {
             let variant_name = variant.name(db).text(db).to_string();
             let full_variant_name = format!("{name}::{variant_name}");
             let variant_index = index + 1;
