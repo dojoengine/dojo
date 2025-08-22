@@ -3,6 +3,7 @@ use std::any::type_name;
 use crypto_bigint::{Encoding, U256};
 use num_traits::ToPrimitive;
 use serde::{Deserialize, Serialize};
+use serde_json::{json, Number, Value as JsonValue};
 use starknet::core::types::Felt;
 use strum::IntoEnumIterator;
 use strum_macros::{AsRefStr, Display, EnumIter, EnumString};
@@ -72,6 +73,10 @@ pub enum PrimitiveError {
     ValueOutOfRange { value: Felt, r#type: &'static str },
     #[error("Invalid SQL value format: {0}")]
     InvalidSqlValue(String),
+    #[error("Invalid JSON value format for type {r#type}: {value}")]
+    InvalidJsonValue { r#type: &'static str, value: String },
+    #[error("JSON number out of range for {r#type}: {value}")]
+    JsonNumberOutOfRange { r#type: &'static str, value: String },
     #[error(transparent)]
     CairoSerde(#[from] cainome::cairo_serde::Error),
     #[error(transparent)]
@@ -203,32 +208,31 @@ impl Primitive {
 
     pub fn to_sql_value(&self) -> String {
         match self {
-            // Integers
-            Primitive::I8(i8) => format!("{}", i8.unwrap_or_default()),
-            Primitive::I16(i16) => format!("{}", i16.unwrap_or_default()),
-            Primitive::I32(i32) => format!("{}", i32.unwrap_or_default()),
-            Primitive::I64(i64) => format!("{}", i64.unwrap_or_default()),
+            // SQLite integers (signed 64-bit)
+            Primitive::I8(v) => v.unwrap_or_default().to_string(),
+            Primitive::I16(v) => v.unwrap_or_default().to_string(),
+            Primitive::I32(v) => v.unwrap_or_default().to_string(),
+            Primitive::I64(v) => v.unwrap_or_default().to_string(),
+            Primitive::U8(v) => v.unwrap_or_default().to_string(),
+            Primitive::U16(v) => v.unwrap_or_default().to_string(),
+            Primitive::U32(v) => v.unwrap_or_default().to_string(),
+            Primitive::Bool(v) => (v.unwrap_or_default() as i32).to_string(),
 
-            Primitive::U8(u8) => format!("{}", u8.unwrap_or_default()),
-            Primitive::U16(u16) => format!("{}", u16.unwrap_or_default()),
-            Primitive::U32(u32) => format!("{}", u32.unwrap_or_default()),
-            Primitive::Bool(bool) => format!("{}", bool.unwrap_or_default() as i32),
-
-            // Hex string
-            Primitive::I128(i128) => format!("0x{:064x}", i128.unwrap_or_default()),
-            Primitive::ContractAddress(felt) => format!("0x{:064x}", felt.unwrap_or_default()),
-            Primitive::ClassHash(felt) => format!("0x{:064x}", felt.unwrap_or_default()),
-            Primitive::Felt252(felt) => format!("0x{:064x}", felt.unwrap_or_default()),
-            Primitive::U128(u128) => format!("0x{:064x}", u128.unwrap_or_default()),
-            Primitive::U64(u64) => format!("0x{:064x}", u64.unwrap_or_default()),
-            Primitive::EthAddress(felt) => format!("0x{:064x}", felt.unwrap_or_default()),
-            Primitive::U256(u256) => format!("0x{:064x}", u256.unwrap_or_default()),
+            // Large integers and addresses as hex strings (for SQLite TEXT)
+            Primitive::I128(v) => format!("0x{:032x}", v.unwrap_or_default()),
+            Primitive::U64(v) => format!("0x{:016x}", v.unwrap_or_default()),
+            Primitive::U128(v) => format!("0x{:032x}", v.unwrap_or_default()),
+            Primitive::U256(v) => format!("0x{:064x}", v.unwrap_or_default()),
+            Primitive::ContractAddress(v) => format!("0x{:064x}", v.unwrap_or_default()),
+            Primitive::ClassHash(v) => format!("0x{:064x}", v.unwrap_or_default()),
+            Primitive::Felt252(v) => format!("0x{:064x}", v.unwrap_or_default()),
+            Primitive::EthAddress(v) => format!("0x{:040x}", v.unwrap_or_default()),
         }
     }
 
     pub fn from_sql_value(&mut self, value: &str) -> Result<(), PrimitiveError> {
         match self {
-            // Integers - parse directly
+            // SQLite integers - parse directly
             Primitive::I8(ref mut inner) => {
                 *inner = Some(
                     value
@@ -285,7 +289,7 @@ impl Primitive {
                 *inner = Some(int_val != 0);
             }
 
-            // Hex strings - need to parse hex
+            // Hex strings - need to parse hex (stored as TEXT in SQLite)
             Primitive::I128(ref mut inner) => {
                 let hex_str = value
                     .strip_prefix("0x")
@@ -317,7 +321,10 @@ impl Primitive {
                 let hex_str = value
                     .strip_prefix("0x")
                     .ok_or_else(|| PrimitiveError::InvalidSqlValue(value.to_string()))?;
-                *inner = Some(U256::from_be_hex(hex_str));
+                *inner = Some(
+                    U256::from_be_hex(hex_str)
+                        .map_err(|_| PrimitiveError::InvalidSqlValue(value.to_string()))?,
+                );
             }
             Primitive::ContractAddress(ref mut inner) => {
                 let hex_str = value
@@ -354,6 +361,252 @@ impl Primitive {
                     Felt::from_hex(hex_str)
                         .map_err(|_| PrimitiveError::InvalidSqlValue(value.to_string()))?,
                 );
+            }
+        }
+        Ok(())
+    }
+
+    /// Convert to JSON Value with proper type representation
+    pub fn to_json_value(&self) -> Result<JsonValue, PrimitiveError> {
+        match self {
+            // Small integers that fit in JSON Number safely (up to 2^53 - 1)
+            Primitive::I8(Some(v)) => Ok(json!(*v)),
+            Primitive::I16(Some(v)) => Ok(json!(*v)),
+            Primitive::I32(Some(v)) => Ok(json!(*v)),
+            Primitive::U8(Some(v)) => Ok(json!(*v)),
+            Primitive::U16(Some(v)) => Ok(json!(*v)),
+            Primitive::U32(Some(v)) => Ok(json!(*v)),
+            Primitive::Bool(Some(v)) => Ok(json!(*v)),
+
+            // Large integers as decimal strings for JSON
+            Primitive::I64(Some(v)) => Ok(json!(v.to_string())),
+            Primitive::I128(Some(v)) => Ok(json!(v.to_string())),
+            Primitive::U64(Some(v)) => Ok(json!(v.to_string())),
+            Primitive::U128(Some(v)) => Ok(json!(v.to_string())),
+            Primitive::U256(Some(v)) => Ok(json!(v.to_string())),
+
+            // Blockchain-specific types as hex strings
+            Primitive::ContractAddress(Some(v)) => Ok(json!(format!("0x{:064x}", v))),
+            Primitive::ClassHash(Some(v)) => Ok(json!(format!("0x{:064x}", v))),
+            Primitive::Felt252(Some(v)) => Ok(json!(format!("0x{:064x}", v))),
+            Primitive::EthAddress(Some(v)) => Ok(json!(format!("0x{:040x}", v))),
+
+            // None values
+            _ => Err(PrimitiveError::MissingFieldElement),
+        }
+    }
+
+    /// Parse from JSON Value with proper type validation
+    pub fn from_json_value(&mut self, value: JsonValue) -> Result<(), PrimitiveError> {
+        match (self, value) {
+            // Boolean handling
+            (Primitive::Bool(ref mut inner), JsonValue::Bool(b)) => {
+                *inner = Some(b);
+            }
+            (Primitive::Bool(ref mut inner), JsonValue::Number(n)) => {
+                if let Some(i) = n.as_i64() {
+                    *inner = Some(i != 0);
+                } else {
+                    return Err(PrimitiveError::InvalidJsonValue {
+                        r#type: "Bool",
+                        value: n.to_string(),
+                    });
+                }
+            }
+
+            // Small signed integers from JSON numbers
+            (Primitive::I8(ref mut inner), JsonValue::Number(n)) => {
+                if let Some(i) = n.as_i64() {
+                    if i >= i8::MIN as i64 && i <= i8::MAX as i64 {
+                        *inner = Some(i as i8);
+                    } else {
+                        return Err(PrimitiveError::JsonNumberOutOfRange {
+                            r#type: "I8",
+                            value: i.to_string(),
+                        });
+                    }
+                } else {
+                    return Err(PrimitiveError::InvalidJsonValue {
+                        r#type: "I8",
+                        value: n.to_string(),
+                    });
+                }
+            }
+            (Primitive::I16(ref mut inner), JsonValue::Number(n)) => {
+                if let Some(i) = n.as_i64() {
+                    if i >= i16::MIN as i64 && i <= i16::MAX as i64 {
+                        *inner = Some(i as i16);
+                    } else {
+                        return Err(PrimitiveError::JsonNumberOutOfRange {
+                            r#type: "I16",
+                            value: i.to_string(),
+                        });
+                    }
+                } else {
+                    return Err(PrimitiveError::InvalidJsonValue {
+                        r#type: "I16",
+                        value: n.to_string(),
+                    });
+                }
+            }
+            (Primitive::I32(ref mut inner), JsonValue::Number(n)) => {
+                if let Some(i) = n.as_i64() {
+                    if i >= i32::MIN as i64 && i <= i32::MAX as i64 {
+                        *inner = Some(i as i32);
+                    } else {
+                        return Err(PrimitiveError::JsonNumberOutOfRange {
+                            r#type: "I32",
+                            value: i.to_string(),
+                        });
+                    }
+                } else {
+                    return Err(PrimitiveError::InvalidJsonValue {
+                        r#type: "I32",
+                        value: n.to_string(),
+                    });
+                }
+            }
+
+            // Small unsigned integers from JSON numbers
+            (Primitive::U8(ref mut inner), JsonValue::Number(n)) => {
+                if let Some(u) = n.as_u64() {
+                    if u <= u8::MAX as u64 {
+                        *inner = Some(u as u8);
+                    } else {
+                        return Err(PrimitiveError::JsonNumberOutOfRange {
+                            r#type: "U8",
+                            value: u.to_string(),
+                        });
+                    }
+                } else {
+                    return Err(PrimitiveError::InvalidJsonValue {
+                        r#type: "U8",
+                        value: n.to_string(),
+                    });
+                }
+            }
+            (Primitive::U16(ref mut inner), JsonValue::Number(n)) => {
+                if let Some(u) = n.as_u64() {
+                    if u <= u16::MAX as u64 {
+                        *inner = Some(u as u16);
+                    } else {
+                        return Err(PrimitiveError::JsonNumberOutOfRange {
+                            r#type: "U16",
+                            value: u.to_string(),
+                        });
+                    }
+                } else {
+                    return Err(PrimitiveError::InvalidJsonValue {
+                        r#type: "U16",
+                        value: n.to_string(),
+                    });
+                }
+            }
+            (Primitive::U32(ref mut inner), JsonValue::Number(n)) => {
+                if let Some(u) = n.as_u64() {
+                    if u <= u32::MAX as u64 {
+                        *inner = Some(u as u32);
+                    } else {
+                        return Err(PrimitiveError::JsonNumberOutOfRange {
+                            r#type: "U32",
+                            value: u.to_string(),
+                        });
+                    }
+                } else {
+                    return Err(PrimitiveError::InvalidJsonValue {
+                        r#type: "U32",
+                        value: n.to_string(),
+                    });
+                }
+            }
+
+            // Large integers from strings (decimal) or numbers
+            (Primitive::I64(ref mut inner), JsonValue::String(s)) => {
+                *inner =
+                    Some(s.parse().map_err(|_| PrimitiveError::InvalidJsonValue {
+                        r#type: "I64",
+                        value: s,
+                    })?);
+            }
+            (Primitive::I64(ref mut inner), JsonValue::Number(n)) => {
+                if let Some(i) = n.as_i64() {
+                    *inner = Some(i);
+                } else {
+                    return Err(PrimitiveError::InvalidJsonValue {
+                        r#type: "I64",
+                        value: n.to_string(),
+                    });
+                }
+            }
+
+            // String parsing for large integers and addresses
+            (primitive, JsonValue::String(s)) => {
+                match primitive {
+                    Primitive::I128(ref mut inner) => {
+                        *inner = Some(s.parse().map_err(|_| PrimitiveError::InvalidJsonValue {
+                            r#type: "I128",
+                            value: s,
+                        })?);
+                    }
+                    Primitive::U64(ref mut inner) => {
+                        *inner = Some(s.parse().map_err(|_| PrimitiveError::InvalidJsonValue {
+                            r#type: "U64",
+                            value: s,
+                        })?);
+                    }
+                    Primitive::U128(ref mut inner) => {
+                        *inner = Some(s.parse().map_err(|_| PrimitiveError::InvalidJsonValue {
+                            r#type: "U128",
+                            value: s,
+                        })?);
+                    }
+                    Primitive::U256(ref mut inner) => {
+                        // Try parsing as decimal first, then hex if it starts with 0x
+                        if let Some(hex_str) = s.strip_prefix("0x") {
+                            *inner = Some(U256::from_be_hex(hex_str).map_err(|_| {
+                                PrimitiveError::InvalidJsonValue { r#type: "U256", value: s }
+                            })?);
+                        } else {
+                            *inner = Some(U256::from_str(&s).map_err(|_| {
+                                PrimitiveError::InvalidJsonValue { r#type: "U256", value: s }
+                            })?);
+                        }
+                    }
+                    Primitive::ContractAddress(ref mut inner) => {
+                        let hex_str = s.strip_prefix("0x").unwrap_or(&s);
+                        *inner = Some(Felt::from_hex(hex_str).map_err(|_| {
+                            PrimitiveError::InvalidJsonValue { r#type: "ContractAddress", value: s }
+                        })?);
+                    }
+                    Primitive::ClassHash(ref mut inner) => {
+                        let hex_str = s.strip_prefix("0x").unwrap_or(&s);
+                        *inner = Some(Felt::from_hex(hex_str).map_err(|_| {
+                            PrimitiveError::InvalidJsonValue { r#type: "ClassHash", value: s }
+                        })?);
+                    }
+                    Primitive::Felt252(ref mut inner) => {
+                        let hex_str = s.strip_prefix("0x").unwrap_or(&s);
+                        *inner = Some(Felt::from_hex(hex_str).map_err(|_| {
+                            PrimitiveError::InvalidJsonValue { r#type: "Felt252", value: s }
+                        })?);
+                    }
+                    Primitive::EthAddress(ref mut inner) => {
+                        let hex_str = s.strip_prefix("0x").unwrap_or(&s);
+                        *inner = Some(Felt::from_hex(hex_str).map_err(|_| {
+                            PrimitiveError::InvalidJsonValue { r#type: "EthAddress", value: s }
+                        })?);
+                    }
+                    _ => {
+                        return Err(PrimitiveError::InvalidJsonValue {
+                            r#type: "Unknown",
+                            value: s,
+                        });
+                    }
+                }
+            }
+
+            _ => {
+                return Err(PrimitiveError::TypeMismatch);
             }
         }
         Ok(())
@@ -714,5 +967,143 @@ mod tests {
             // Should match original
             assert_eq!(parsed, original, "Round trip failed for primitive: {:?}", original);
         }
+    }
+
+    #[test]
+    fn test_json_value_round_trip() {
+        let test_cases = vec![
+            Primitive::I8(Some(-42)),
+            Primitive::I16(Some(-1000)),
+            Primitive::I32(Some(-100000)),
+            Primitive::I64(Some(-1000000000)),
+            Primitive::I128(Some(-1000000000000000000)),
+            Primitive::U8(Some(42)),
+            Primitive::U16(Some(1000)),
+            Primitive::U32(Some(100000)),
+            Primitive::U64(Some(1000000000)),
+            Primitive::U128(Some(1000000000000000000)),
+            Primitive::U256(Some(U256::from_be_hex(
+                "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+            ))),
+            Primitive::Bool(Some(true)),
+            Primitive::Bool(Some(false)),
+            Primitive::Felt252(Some(Felt::from(123456789))),
+            Primitive::ClassHash(Some(Felt::from(987654321))),
+            Primitive::ContractAddress(Some(Felt::from(123456789))),
+            Primitive::EthAddress(Some(Felt::from(123456789))),
+        ];
+
+        for original in test_cases {
+            // Convert to JSON value
+            let json_value = original.to_json_value().unwrap();
+
+            // Create empty primitive of same type
+            let mut parsed = match original {
+                Primitive::I8(_) => Primitive::I8(None),
+                Primitive::I16(_) => Primitive::I16(None),
+                Primitive::I32(_) => Primitive::I32(None),
+                Primitive::I64(_) => Primitive::I64(None),
+                Primitive::I128(_) => Primitive::I128(None),
+                Primitive::U8(_) => Primitive::U8(None),
+                Primitive::U16(_) => Primitive::U16(None),
+                Primitive::U32(_) => Primitive::U32(None),
+                Primitive::U64(_) => Primitive::U64(None),
+                Primitive::U128(_) => Primitive::U128(None),
+                Primitive::U256(_) => Primitive::U256(None),
+                Primitive::Bool(_) => Primitive::Bool(None),
+                Primitive::Felt252(_) => Primitive::Felt252(None),
+                Primitive::ClassHash(_) => Primitive::ClassHash(None),
+                Primitive::ContractAddress(_) => Primitive::ContractAddress(None),
+                Primitive::EthAddress(_) => Primitive::EthAddress(None),
+            };
+
+            // Parse back from JSON value
+            parsed.from_json_value(json_value).unwrap();
+
+            // Should match original
+            assert_eq!(parsed, original, "JSON round trip failed for primitive: {:?}", original);
+        }
+    }
+
+    #[test]
+    fn test_json_value_types() {
+        // Test that small integers are represented as JSON numbers
+        let small_int = Primitive::I32(Some(42));
+        let json_val = small_int.to_json_value().unwrap();
+        assert!(json_val.is_number());
+        assert_eq!(json_val.as_i64().unwrap(), 42);
+
+        // Test that large integers are represented as decimal strings
+        let large_int = Primitive::U128(Some(u128::MAX));
+        let json_val = large_int.to_json_value().unwrap();
+        assert!(json_val.is_string());
+        assert_eq!(json_val.as_str().unwrap(), u128::MAX.to_string());
+
+        // Test boolean representation
+        let bool_val = Primitive::Bool(Some(true));
+        let json_val = bool_val.to_json_value().unwrap();
+        assert!(json_val.is_boolean());
+        assert_eq!(json_val.as_bool().unwrap(), true);
+
+        // Test contract address representation
+        let addr = Primitive::ContractAddress(Some(Felt::from(0x123456789abcdefu64)));
+        let json_val = addr.to_json_value().unwrap();
+        assert!(json_val.is_string());
+        let expected = format!("0x{:064x}", Felt::from(0x123456789abcdefu64));
+        assert_eq!(json_val.as_str().unwrap(), expected);
+    }
+
+    #[test]
+    fn test_json_parsing_edge_cases() {
+        // Test parsing boolean from number
+        let mut bool_prim = Primitive::Bool(None);
+        bool_prim.from_json_value(json!(1)).unwrap();
+        assert_eq!(bool_prim.as_bool(), Some(true));
+
+        bool_prim.from_json_value(json!(0)).unwrap();
+        assert_eq!(bool_prim.as_bool(), Some(false));
+
+        // Test parsing decimal strings for large integers
+        let mut u128_prim = Primitive::U128(None);
+        u128_prim.from_json_value(json!("255")).unwrap();
+        assert_eq!(u128_prim.as_u128(), Some(255));
+
+        // Test parsing large decimal numbers
+        let mut i128_prim = Primitive::I128(None);
+        i128_prim.from_json_value(json!("-170141183460469231731687303715884105728")).unwrap();
+        assert_eq!(i128_prim.as_i128(), Some(i128::MIN));
+
+        // Test U256 parsing from both decimal and hex
+        let mut u256_prim = Primitive::U256(None);
+        u256_prim.from_json_value(json!("12345678901234567890")).unwrap();
+        assert_eq!(u256_prim.as_u256(), Some(U256::from_str("12345678901234567890").unwrap()));
+
+        u256_prim.from_json_value(json!("0x1234567890abcdef")).unwrap();
+        assert_eq!(u256_prim.as_u256(), Some(U256::from_be_hex("1234567890abcdef").unwrap()));
+
+        // Test range validation for small integers
+        let mut i8_prim = Primitive::I8(None);
+        assert!(i8_prim.from_json_value(json!(127)).is_ok()); // Valid i8
+        assert!(i8_prim.from_json_value(json!(200)).is_err()); // Out of range for i8
+
+        let mut u8_prim = Primitive::U8(None);
+        assert!(u8_prim.from_json_value(json!(255)).is_ok()); // Valid u8
+        assert!(u8_prim.from_json_value(json!(256)).is_err()); // Out of range for u8
+    }
+
+    #[test]
+    fn test_json_error_handling() {
+        // Test type mismatch errors
+        let mut i32_prim = Primitive::I32(None);
+        assert!(i32_prim.from_json_value(json!("not_a_number")).is_err());
+        assert!(i32_prim.from_json_value(json!(true)).is_err());
+
+        // Test missing field element error
+        let none_prim = Primitive::I32(None);
+        assert!(none_prim.to_json_value().is_err());
+
+        // Test invalid hex string
+        let mut felt_prim = Primitive::Felt252(None);
+        assert!(felt_prim.from_json_value(json!("0xgg")).is_err());
     }
 }
