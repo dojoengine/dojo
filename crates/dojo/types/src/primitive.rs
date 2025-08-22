@@ -324,7 +324,9 @@ impl Primitive {
                 let hex_str = value
                     .strip_prefix("0x")
                     .ok_or_else(|| PrimitiveError::InvalidSqlValue(value.to_string()))?;
-                *inner = Some(U256::from_be_hex(hex_str));
+                // Pad hex string to 64 characters if needed
+                let padded_hex = format!("{:0>64}", hex_str);
+                *inner = Some(U256::from_be_hex(&padded_hex));
             }
             Primitive::ContractAddress(ref mut inner) => {
                 let hex_str = value
@@ -565,7 +567,9 @@ impl Primitive {
                     Primitive::U256(ref mut inner) => {
                         // U256 should always be hex strings
                         let hex_str = s.strip_prefix("0x").unwrap_or(&s);
-                        *inner = Some(U256::from_be_hex(hex_str));
+                        // Pad hex string to 64 characters if needed
+                        let padded_hex = format!("{:0>64}", hex_str);
+                        *inner = Some(U256::from_be_hex(&padded_hex));
                     }
                     Primitive::ContractAddress(ref mut inner) => {
                         let hex_str = s.strip_prefix("0x").unwrap_or(&s);
@@ -1079,10 +1083,20 @@ mod tests {
         // Test U256 parsing from hex strings (with and without 0x prefix)
         let mut u256_prim = Primitive::U256(None);
         u256_prim.from_json_value(json!("0x1234567890abcdef")).unwrap();
-        assert_eq!(u256_prim.as_u256(), Some(U256::from_be_hex("1234567890abcdef")));
+        assert_eq!(
+            u256_prim.as_u256(),
+            Some(U256::from_be_hex(
+                "0000000000000000000000000000000000000000000000001234567890abcdef"
+            ))
+        );
 
         u256_prim.from_json_value(json!("1234567890abcdef")).unwrap();
-        assert_eq!(u256_prim.as_u256(), Some(U256::from_be_hex("1234567890abcdef")));
+        assert_eq!(
+            u256_prim.as_u256(),
+            Some(U256::from_be_hex(
+                "0000000000000000000000000000000000000000000000001234567890abcdef"
+            ))
+        );
 
         // Test range validation for small integers
         let mut i8_prim = Primitive::I8(None);
