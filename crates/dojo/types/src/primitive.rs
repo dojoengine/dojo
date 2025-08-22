@@ -794,6 +794,7 @@ mod tests {
     use std::str::FromStr;
 
     use crypto_bigint::U256;
+    use serde_json::json;
     use starknet::core::types::Felt;
 
     use super::Primitive;
