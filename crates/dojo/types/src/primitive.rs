@@ -3,7 +3,7 @@ use std::any::type_name;
 use crypto_bigint::{Encoding, U256};
 use num_traits::ToPrimitive;
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Number, Value as JsonValue};
+use serde_json::{json, Value as JsonValue};
 use starknet::core::types::Felt;
 use strum::IntoEnumIterator;
 use strum_macros::{AsRefStr, Display, EnumIter, EnumString};
@@ -321,10 +321,7 @@ impl Primitive {
                 let hex_str = value
                     .strip_prefix("0x")
                     .ok_or_else(|| PrimitiveError::InvalidSqlValue(value.to_string()))?;
-                *inner = Some(
-                    U256::from_be_hex(hex_str)
-                        .map_err(|_| PrimitiveError::InvalidSqlValue(value.to_string()))?,
-                );
+                *inner = Some(U256::from_be_hex(hex_str));
             }
             Primitive::ContractAddress(ref mut inner) => {
                 let hex_str = value
@@ -383,7 +380,9 @@ impl Primitive {
             Primitive::I128(Some(v)) => Ok(json!(v.to_string())),
             Primitive::U64(Some(v)) => Ok(json!(v.to_string())),
             Primitive::U128(Some(v)) => Ok(json!(v.to_string())),
-            Primitive::U256(Some(v)) => Ok(json!(v.to_string())),
+
+            // U256 as hex string due to its extremely large range
+            Primitive::U256(Some(v)) => Ok(json!(format!("0x{:064x}", v))),
 
             // Blockchain-specific types as hex strings
             Primitive::ContractAddress(Some(v)) => Ok(json!(format!("0x{:064x}", v))),
@@ -561,16 +560,9 @@ impl Primitive {
                         })?);
                     }
                     Primitive::U256(ref mut inner) => {
-                        // Try parsing as decimal first, then hex if it starts with 0x
-                        if let Some(hex_str) = s.strip_prefix("0x") {
-                            *inner = Some(U256::from_be_hex(hex_str).map_err(|_| {
-                                PrimitiveError::InvalidJsonValue { r#type: "U256", value: s }
-                            })?);
-                        } else {
-                            *inner = Some(U256::from_str(&s).map_err(|_| {
-                                PrimitiveError::InvalidJsonValue { r#type: "U256", value: s }
-                            })?);
-                        }
+                        // U256 should always be hex strings
+                        let hex_str = s.strip_prefix("0x").unwrap_or(&s);
+                        *inner = Some(U256::from_be_hex(hex_str));
                     }
                     Primitive::ContractAddress(ref mut inner) => {
                         let hex_str = s.strip_prefix("0x").unwrap_or(&s);
@@ -1039,6 +1031,13 @@ mod tests {
         assert!(json_val.is_string());
         assert_eq!(json_val.as_str().unwrap(), u128::MAX.to_string());
 
+        // Test that U256 is always represented as hex string
+        let u256_val = Primitive::U256(Some(U256::from(12345u128)));
+        let json_val = u256_val.to_json_value().unwrap();
+        assert!(json_val.is_string());
+        let expected = format!("0x{:064x}", U256::from(12345u128));
+        assert_eq!(json_val.as_str().unwrap(), expected);
+
         // Test boolean representation
         let bool_val = Primitive::Bool(Some(true));
         let json_val = bool_val.to_json_value().unwrap();
@@ -1073,13 +1072,13 @@ mod tests {
         i128_prim.from_json_value(json!("-170141183460469231731687303715884105728")).unwrap();
         assert_eq!(i128_prim.as_i128(), Some(i128::MIN));
 
-        // Test U256 parsing from both decimal and hex
+        // Test U256 parsing from hex strings (with and without 0x prefix)
         let mut u256_prim = Primitive::U256(None);
-        u256_prim.from_json_value(json!("12345678901234567890")).unwrap();
-        assert_eq!(u256_prim.as_u256(), Some(U256::from_str("12345678901234567890").unwrap()));
-
         u256_prim.from_json_value(json!("0x1234567890abcdef")).unwrap();
-        assert_eq!(u256_prim.as_u256(), Some(U256::from_be_hex("1234567890abcdef").unwrap()));
+        assert_eq!(u256_prim.as_u256(), Some(U256::from_be_hex("1234567890abcdef")));
+
+        u256_prim.from_json_value(json!("1234567890abcdef")).unwrap();
+        assert_eq!(u256_prim.as_u256(), Some(U256::from_be_hex("1234567890abcdef")));
 
         // Test range validation for small integers
         let mut i8_prim = Primitive::I8(None);
