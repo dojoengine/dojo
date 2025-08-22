@@ -294,7 +294,7 @@ impl Primitive {
                 let hex_str = value
                     .strip_prefix("0x")
                     .ok_or_else(|| PrimitiveError::InvalidSqlValue(value.to_string()))?;
-                
+
                 // Parse as u128 first, then convert to i128 via two's complement
                 let as_u128 = u128::from_str_radix(hex_str, 16)
                     .map_err(|_| PrimitiveError::InvalidSqlValue(value.to_string()))?;
