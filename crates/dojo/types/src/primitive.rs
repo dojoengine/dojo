@@ -301,24 +301,38 @@ impl Primitive {
                 *inner = Some(as_u128 as i128);
             }
 
-            // Hex strings - need to parse hex (stored as TEXT in SQLite)
+            // Large integers stored as hex strings in SQLite TEXT
             Primitive::U64(ref mut inner) => {
-                let hex_str = value
-                    .strip_prefix("0x")
-                    .ok_or_else(|| PrimitiveError::InvalidSqlValue(value.to_string()))?;
-                *inner = Some(
-                    u64::from_str_radix(hex_str, 16)
-                        .map_err(|_| PrimitiveError::InvalidSqlValue(value.to_string()))?,
-                );
+                // Handle both hex (expected from SQL) and decimal (fallback)
+                if let Some(hex_str) = value.strip_prefix("0x") {
+                    *inner = Some(
+                        u64::from_str_radix(hex_str, 16)
+                            .map_err(|_| PrimitiveError::InvalidSqlValue(value.to_string()))?,
+                    );
+                } else {
+                    // Fallback to decimal parsing
+                    *inner = Some(
+                        value
+                            .parse()
+                            .map_err(|_| PrimitiveError::InvalidSqlValue(value.to_string()))?,
+                    );
+                }
             }
             Primitive::U128(ref mut inner) => {
-                let hex_str = value
-                    .strip_prefix("0x")
-                    .ok_or_else(|| PrimitiveError::InvalidSqlValue(value.to_string()))?;
-                *inner = Some(
-                    u128::from_str_radix(hex_str, 16)
-                        .map_err(|_| PrimitiveError::InvalidSqlValue(value.to_string()))?,
-                );
+                // Handle both hex (expected from SQL) and decimal (fallback)
+                if let Some(hex_str) = value.strip_prefix("0x") {
+                    *inner = Some(
+                        u128::from_str_radix(hex_str, 16)
+                            .map_err(|_| PrimitiveError::InvalidSqlValue(value.to_string()))?,
+                    );
+                } else {
+                    // Fallback to decimal parsing
+                    *inner = Some(
+                        value
+                            .parse()
+                            .map_err(|_| PrimitiveError::InvalidSqlValue(value.to_string()))?,
+                    );
+                }
             }
             Primitive::U256(ref mut inner) => {
                 let hex_str = value
@@ -547,22 +561,43 @@ impl Primitive {
             (primitive, JsonValue::String(s)) => {
                 match primitive {
                     Primitive::I128(ref mut inner) => {
-                        *inner = Some(s.parse().map_err(|_| PrimitiveError::InvalidJsonValue {
-                            r#type: "I128",
-                            value: s,
-                        })?);
+                        // Handle both decimal and hex strings
+                        if let Some(hex_str) = s.strip_prefix("0x") {
+                            // Parse as u128 first, then convert to i128 via two's complement (same
+                            // as SQL parsing)
+                            let as_u128 = u128::from_str_radix(hex_str, 16).map_err(|_| {
+                                PrimitiveError::InvalidJsonValue { r#type: "I128", value: s }
+                            })?;
+                            *inner = Some(as_u128 as i128);
+                        } else {
+                            *inner = Some(s.parse().map_err(|_| {
+                                PrimitiveError::InvalidJsonValue { r#type: "I128", value: s }
+                            })?);
+                        }
                     }
                     Primitive::U64(ref mut inner) => {
-                        *inner = Some(s.parse().map_err(|_| PrimitiveError::InvalidJsonValue {
-                            r#type: "U64",
-                            value: s,
-                        })?);
+                        // Handle both decimal and hex strings
+                        if let Some(hex_str) = s.strip_prefix("0x") {
+                            *inner = Some(u64::from_str_radix(hex_str, 16).map_err(|_| {
+                                PrimitiveError::InvalidJsonValue { r#type: "U64", value: s }
+                            })?);
+                        } else {
+                            *inner = Some(s.parse().map_err(|_| {
+                                PrimitiveError::InvalidJsonValue { r#type: "U64", value: s }
+                            })?);
+                        }
                     }
                     Primitive::U128(ref mut inner) => {
-                        *inner = Some(s.parse().map_err(|_| PrimitiveError::InvalidJsonValue {
-                            r#type: "U128",
-                            value: s,
-                        })?);
+                        // Handle both decimal and hex strings
+                        if let Some(hex_str) = s.strip_prefix("0x") {
+                            *inner = Some(u128::from_str_radix(hex_str, 16).map_err(|_| {
+                                PrimitiveError::InvalidJsonValue { r#type: "U128", value: s }
+                            })?);
+                        } else {
+                            *inner = Some(s.parse().map_err(|_| {
+                                PrimitiveError::InvalidJsonValue { r#type: "U128", value: s }
+                            })?);
+                        }
                     }
                     Primitive::U256(ref mut inner) => {
                         // U256 should always be hex strings
@@ -1075,9 +1110,24 @@ mod tests {
         u128_prim.from_json_value(json!("255")).unwrap();
         assert_eq!(u128_prim.as_u128(), Some(255));
 
+        // Test parsing hex strings for large integers
+        u128_prim.from_json_value(json!("0xff")).unwrap();
+        assert_eq!(u128_prim.as_u128(), Some(255));
+
+        let mut u64_prim = Primitive::U64(None);
+        u64_prim.from_json_value(json!("0x1234567890abcdef")).unwrap();
+        assert_eq!(u64_prim.as_u64(), Some(0x1234567890abcdef));
+
+        u64_prim.from_json_value(json!("1311768467463790320")).unwrap(); // Same value in decimal
+        assert_eq!(u64_prim.as_u64(), Some(0x1234567890abcdef));
+
         // Test parsing large decimal numbers
         let mut i128_prim = Primitive::I128(None);
         i128_prim.from_json_value(json!("-170141183460469231731687303715884105728")).unwrap();
+        assert_eq!(i128_prim.as_i128(), Some(i128::MIN));
+
+        // Test parsing hex for I128 (should handle two's complement)
+        i128_prim.from_json_value(json!("0x80000000000000000000000000000000")).unwrap();
         assert_eq!(i128_prim.as_i128(), Some(i128::MIN));
 
         // Test U256 parsing from hex strings (with and without 0x prefix)
