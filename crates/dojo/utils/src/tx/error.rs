@@ -15,7 +15,7 @@ where
     SigningError(S),
     #[error(transparent)]
     Provider(ProviderError),
-    #[error("Transaction execution error")]
+    #[error("Transaction execution error: {0:?}")]
     TransactionExecution(TransactionExecutionErrorData),
     #[error("{0}")]
     TransactionValidation(String),
