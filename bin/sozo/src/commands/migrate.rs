@@ -81,8 +81,13 @@ impl MigrateArgs {
             is_guest,
         );
 
-        let MigrationResult { manifest, has_changes } =
-            migration.migrate(&mut spinner).await.context("Migration failed.")?;
+        let MigrationResult { manifest, has_changes } = match migration.migrate(&mut spinner).await
+        {
+            Ok(migration_result) => migration_result,
+            Err(e) => {
+                anyhow::bail!("{:?}", e)
+            }
+        };
 
         let ipfs_config =
             ipfs.config().or(profile_config.env.map(|env| env.ipfs_config).unwrap_or(None));

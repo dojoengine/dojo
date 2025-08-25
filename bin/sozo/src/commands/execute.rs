@@ -166,10 +166,17 @@ impl ExecuteArgs {
             });
         }
 
-        let txs_results = invoker.multicall().await?;
-        for r in &txs_results {
-            println!("{}", r);
-        }
+        let txs_results = match invoker.multicall().await {
+            Ok(txs_results) => {
+                for r in &txs_results {
+                    println!("{}", r);
+                }
+                txs_results
+            }
+            Err(e) => {
+                anyhow::bail!("{:?}", e)
+            }
+        };
 
         #[cfg(feature = "walnut")]
         if let Some(walnut_debugger) = walnut_debugger {
