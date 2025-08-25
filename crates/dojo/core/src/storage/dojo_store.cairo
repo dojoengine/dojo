@@ -4,19 +4,19 @@ use crate::storage::tuple::*;
 
 /// Handle data (de)serialization to be stored into the world storage.
 pub trait DojoStore<T> {
-    fn serialize(self: @T, ref serialized: Array<felt252>);
-    fn deserialize(ref values: Span<felt252>) -> Option<T>;
+    fn dojo_serialize(self: @T, ref serialized: Array<felt252>);
+    fn dojo_deserialize(ref values: Span<felt252>) -> Option<T>;
 }
 
 /// The default implementation of DojoStore uses Serde.
 mod default_impl {
     pub impl SerdeBasedDojoStore<T, +Serde<T>> of super::DojoStore<T> {
         #[inline(always)]
-        fn serialize(self: @T, ref serialized: Array<felt252>) {
+        fn dojo_serialize(self: @T, ref serialized: Array<felt252>) {
             Serde::serialize(self, ref serialized);
         }
         #[inline(always)]
-        fn deserialize(ref values: Span<felt252>) -> Option<T> {
+        fn dojo_deserialize(ref values: Span<felt252>) -> Option<T> {
             Serde::<T>::deserialize(ref values)
         }
     }
@@ -42,21 +42,21 @@ pub impl DojoStore_ByteArray = default_impl::SerdeBasedDojoStore<ByteArray>;
 
 /// Specific implementation of DojoStore for Option<T>.
 impl DojoStore_option<T, +DojoStore<T>> of DojoStore<Option<T>> {
-    fn serialize(self: @Option<T>, ref serialized: Array<felt252>) {
+    fn dojo_serialize(self: @Option<T>, ref serialized: Array<felt252>) {
         match self {
             Option::Some(x) => {
                 serialized.append(1);
-                DojoStore::serialize(x, ref serialized);
+                DojoStore::dojo_serialize(x, ref serialized);
             },
             Option::None => { serialized.append(2); },
         }
     }
 
-    fn deserialize(ref values: Span<felt252>) -> Option<Option<T>> {
+    fn dojo_deserialize(ref values: Span<felt252>) -> Option<Option<T>> {
         if let Option::Some(x) = values.pop_front() {
             return match *x {
                 0 => Option::Some(Default::default()),
-                1 => Option::Some(DojoStore::<T>::deserialize(ref values)),
+                1 => Option::Some(DojoStore::<T>::dojo_deserialize(ref values)),
                 2 => Option::Some(Option::None),
                 _ => Option::None,
             };
@@ -70,7 +70,7 @@ fn serialize_array_helper<T, +DojoStore<T>, +Drop<T>>(
     mut input: Span<T>, ref output: Array<felt252>,
 ) {
     if let Some(value) = input.pop_front() {
-        DojoStore::serialize(value, ref output);
+        DojoStore::dojo_serialize(value, ref output);
         serialize_array_helper(input, ref output);
     }
 }
@@ -81,19 +81,19 @@ fn deserialize_array_helper<T, +DojoStore<T>, +Drop<T>>(
     if remaining == 0 {
         return Option::Some(curr_output);
     }
-    curr_output.append(DojoStore::deserialize(ref serialized)?);
+    curr_output.append(DojoStore::dojo_deserialize(ref serialized)?);
     deserialize_array_helper(ref serialized, curr_output, remaining - 1)
 }
 
 /// Specific implementation of DojoStore for Array<T>,
 /// to call DojoStore for array items instead of Serde directly.
 impl DojoStore_array<T, +Drop<T>, +DojoStore<T>> of DojoStore<Array<T>> {
-    fn serialize(self: @Array<T>, ref serialized: Array<felt252>) {
-        DojoStore::serialize(@self.len(), ref serialized);
+    fn dojo_serialize(self: @Array<T>, ref serialized: Array<felt252>) {
+        DojoStore::dojo_serialize(@self.len(), ref serialized);
         serialize_array_helper(self.span(), ref serialized);
     }
 
-    fn deserialize(ref values: Span<felt252>) -> Option<Array<T>> {
+    fn dojo_deserialize(ref values: Span<felt252>) -> Option<Array<T>> {
         let length = *values.pop_front()?;
         let mut arr = array![];
         deserialize_array_helper(ref values, arr, length)
@@ -101,12 +101,12 @@ impl DojoStore_array<T, +Drop<T>, +DojoStore<T>> of DojoStore<Array<T>> {
 }
 
 impl DojoStore_span<T, +Drop<T>, +DojoStore<T>> of DojoStore<Span<T>> {
-    fn serialize(self: @Span<T>, ref serialized: Array<felt252>) {
-        DojoStore::serialize(@(*self).len(), ref serialized);
+    fn dojo_serialize(self: @Span<T>, ref serialized: Array<felt252>) {
+        DojoStore::dojo_serialize(@(*self).len(), ref serialized);
         serialize_array_helper(*self, ref serialized);
     }
 
-    fn deserialize(ref values: Span<felt252>) -> Option<Span<T>> {
+    fn dojo_deserialize(ref values: Span<felt252>) -> Option<Span<T>> {
         let length = *values.pop_front()?;
         let mut arr = array![];
         Option::Some(deserialize_array_helper(ref values, arr, length)?.span())
@@ -120,10 +120,10 @@ pub impl DojoStoreTuple<
     impl Serialize: DojoSerializeTuple<TSF::SnapForward>,
     impl Deserialize: DojoDeserializeTuple<T>,
 > of DojoStore<T> {
-    fn serialize(self: @T, ref serialized: Array<felt252>) {
+    fn dojo_serialize(self: @T, ref serialized: Array<felt252>) {
         Serialize::serialize(TSF::snap_forward(self), ref serialized);
     }
-    fn deserialize(ref values: Span<felt252>) -> Option<T> {
+    fn dojo_deserialize(ref values: Span<felt252>) -> Option<T> {
         Deserialize::deserialize(ref values)
     }
 }
@@ -136,7 +136,7 @@ trait DojoSerializeTuple<T> {
 // Implementation of `SerializeTuple` for snapshots of types with `DojoStore` implementation.
 pub impl DojoStoreBasedSerializeTuple<T, +DojoStore<T>> of DojoSerializeTuple<@T> {
     fn serialize(value: @T, ref output: Array<felt252>) {
-        DojoStore::<T>::serialize(value, ref output);
+        DojoStore::<T>::dojo_serialize(value, ref output);
     }
 }
 
@@ -193,7 +193,7 @@ pub impl DeserializeTupleNext<
     +Drop<TS::Head>,
 > of DojoDeserializeTuple<T> {
     fn deserialize(ref serialized: Span<felt252>) -> Option<T> {
-        let head = DojoStore::<TS::Head>::deserialize(ref serialized)?;
+        let head = DojoStore::<TS::Head>::dojo_deserialize(ref serialized)?;
         let rest = DojoDeserializeTuple::<TS::Rest>::deserialize(ref serialized)?;
         Some(TS::reconstruct(head, rest))
     }
