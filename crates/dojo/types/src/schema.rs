@@ -1,8 +1,6 @@
 use std::any::type_name;
-use std::str::FromStr;
 
 use cainome::cairo_serde::{ByteArray, CairoSerde};
-use crypto_bigint::U256;
 use indexmap::IndexMap;
 use itertools::Itertools;
 use num_traits::ToPrimitive;
@@ -406,25 +404,7 @@ impl Ty {
     /// Convert a Ty to a JSON Value
     pub fn to_json_value(&self) -> Result<JsonValue, PrimitiveError> {
         match self {
-            Ty::Primitive(primitive) => match primitive {
-                Primitive::Bool(Some(v)) => Ok(json!(*v)),
-                Primitive::I8(Some(v)) => Ok(json!(*v)),
-                Primitive::I16(Some(v)) => Ok(json!(*v)),
-                Primitive::I32(Some(v)) => Ok(json!(*v)),
-                Primitive::I64(Some(_)) => Ok(json!(primitive.to_sql_value())),
-                Primitive::I128(Some(_)) => Ok(json!(primitive.to_sql_value())),
-                Primitive::U8(Some(v)) => Ok(json!(*v)),
-                Primitive::U16(Some(v)) => Ok(json!(*v)),
-                Primitive::U32(Some(v)) => Ok(json!(*v)),
-                Primitive::U64(Some(_)) => Ok(json!(primitive.to_sql_value())),
-                Primitive::U128(Some(_)) => Ok(json!(primitive.to_sql_value())),
-                Primitive::U256(Some(_)) => Ok(json!(primitive.to_sql_value())),
-                Primitive::Felt252(Some(_)) => Ok(json!(primitive.to_sql_value())),
-                Primitive::ClassHash(Some(_)) => Ok(json!(primitive.to_sql_value())),
-                Primitive::ContractAddress(Some(_)) => Ok(json!(primitive.to_sql_value())),
-                Primitive::EthAddress(Some(_)) => Ok(json!(primitive.to_sql_value())),
-                _ => Err(PrimitiveError::MissingFieldElement),
-            },
+            Ty::Primitive(primitive) => primitive.to_json_value(),
             Ty::Struct(s) => {
                 let mut obj = IndexMap::new();
                 for member in &s.children {
@@ -464,88 +444,9 @@ impl Ty {
     /// Parse a JSON Value into a Ty
     pub fn from_json_value(&mut self, value: JsonValue) -> Result<(), PrimitiveError> {
         match (self, value) {
-            (Ty::Primitive(primitive), value) => match primitive {
-                Primitive::Bool(v) => {
-                    if let JsonValue::Bool(b) = value {
-                        *v = Some(b);
-                    }
-                }
-                Primitive::I8(v) => {
-                    if let JsonValue::Number(n) = value {
-                        *v = n.as_i64().map(|n| n as i8);
-                    }
-                }
-                Primitive::I16(v) => {
-                    if let JsonValue::Number(n) = value {
-                        *v = n.as_i64().map(|n| n as i16);
-                    }
-                }
-                Primitive::I32(v) => {
-                    if let JsonValue::Number(n) = value {
-                        *v = n.as_i64().map(|n| n as i32);
-                    }
-                }
-                Primitive::I64(v) => {
-                    if let JsonValue::String(s) = value {
-                        *v = s.parse().ok();
-                    }
-                }
-                Primitive::I128(v) => {
-                    if let JsonValue::String(s) = value {
-                        *v = s.parse().ok();
-                    }
-                }
-                Primitive::U8(v) => {
-                    if let JsonValue::Number(n) = value {
-                        *v = n.as_u64().map(|n| n as u8);
-                    }
-                }
-                Primitive::U16(v) => {
-                    if let JsonValue::Number(n) = value {
-                        *v = n.as_u64().map(|n| n as u16);
-                    }
-                }
-                Primitive::U32(v) => {
-                    if let JsonValue::Number(n) = value {
-                        *v = n.as_u64().map(|n| n as u32);
-                    }
-                }
-                Primitive::U64(v) => {
-                    if let JsonValue::String(s) = value {
-                        *v = s.parse().ok();
-                    }
-                }
-                Primitive::U128(v) => {
-                    if let JsonValue::String(s) = value {
-                        *v = s.parse().ok();
-                    }
-                }
-                Primitive::U256(v) => {
-                    if let JsonValue::String(s) = value {
-                        *v = Some(U256::from_be_hex(s.trim_start_matches("0x")));
-                    }
-                }
-                Primitive::Felt252(v) => {
-                    if let JsonValue::String(s) = value {
-                        *v = Felt::from_str(&s).ok();
-                    }
-                }
-                Primitive::ClassHash(v) => {
-                    if let JsonValue::String(s) = value {
-                        *v = Felt::from_str(&s).ok();
-                    }
-                }
-                Primitive::ContractAddress(v) => {
-                    if let JsonValue::String(s) = value {
-                        *v = Felt::from_str(&s).ok();
-                    }
-                }
-                Primitive::EthAddress(v) => {
-                    if let JsonValue::String(s) = value {
-                        *v = Felt::from_str(&s).ok();
-                    }
-                }
-            },
+            (Ty::Primitive(primitive), value) => {
+                primitive.from_json_value(value)?;
+            }
             (Ty::Struct(s), JsonValue::Object(obj)) => {
                 for member in &mut s.children {
                     if let Some(value) = obj.get(&member.name) {
