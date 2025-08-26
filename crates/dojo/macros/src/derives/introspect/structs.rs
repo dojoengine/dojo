@@ -121,8 +121,7 @@ impl DojoStructIntrospect {
         let members_ty = struct_ast
             .members(db)
             .elements(db)
-            .iter()
-            .map(|m| self.build_member_ty(db, m))
+            .map(|m| self.build_member_ty(db, &m))
             .collect::<Vec<_>>();
 
         format!(
@@ -147,7 +146,7 @@ impl DojoStructIntrospect {
     ) -> String {
         let mut members = vec![];
 
-        for member in struct_ast.members(db).elements(db).iter() {
+        for member in struct_ast.members(db).elements(db) {
             if member.has_attr(db, "key") {
                 let member_type =
                     member.type_clause(db).ty(db).as_syntax_node().get_text_without_trivia(db);
@@ -189,8 +188,7 @@ impl DojoStructIntrospect {
     ) -> String {
         let mut layouts = vec![];
 
-        for member in struct_ast.members(db).elements(db).iter().filter(|m| !m.has_attr(db, "key"))
-        {
+        for member in struct_ast.members(db).elements(db).filter(|m| !m.has_attr(db, "key")) {
             let layout = super::layout::get_packed_field_layout_from_type_clause(
                 db,
                 &mut self.diagnostics,

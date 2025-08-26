@@ -1,3 +1,3 @@
-scarb nightly-2025-05-08
+scarb dev-2025-08-21
 starknet-foundry 0.43.1
 cairo-profiler 0.9.0

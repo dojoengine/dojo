@@ -19,7 +19,7 @@ pub fn compute_unique_hash(
     db: &SimpleParserDatabase,
     element_name: &str,
     is_packed: bool,
-    members: &[Member],
+    members: impl Iterator<Item = Member>,
 ) -> Felt {
     let mut hashes = vec![
         if is_packed { Felt::ONE } else { Felt::ZERO },
@@ -27,7 +27,6 @@ pub fn compute_unique_hash(
     ];
     hashes.extend(
         members
-            .iter()
             .map(|m| {
                 poseidon_hash_many(&[
                     naming::compute_bytearray_hash(&m.name(db).text(db)),

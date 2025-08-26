@@ -1,5 +1,5 @@
 [package]
-cairo-version = "=2.11.4"
+cairo-version = "=2.12.0"
 name = "dojo_benchmark"
 version = "0.1.0"
 edition = "2024_07"
@@ -12,10 +12,10 @@ build-external-contracts = ["dojo::world::world_contract::world"]
 [dependencies]
 dojo = { path = "../../crates/dojo/core" }
 dojo_macros = { path = "../../crates/dojo/macros" }
-starknet = "2.11.4"
+starknet = "2.12.0"
 
 [dev-dependencies]
-cairo_test = "2.11.4"
+cairo_test = "2.12.0"
 dojo_cairo_test = { path = "../../crates/dojo/dojo-cairo-test" }
 
 [features]

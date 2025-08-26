@@ -66,13 +66,12 @@ impl DojoParser {
     /// Parse a list of member syntax nodes into a list of `Member`.
     pub(crate) fn parse_members(
         db: &SimpleParserDatabase,
-        members: &[MemberAst],
+        members: impl Iterator<Item = MemberAst>,
         diagnostics: &mut Vec<Diagnostic>,
     ) -> Vec<Member> {
         let mut parsing_keys = true;
 
         members
-            .iter()
             .map(|member_ast| {
                 let is_key = member_ast.has_attr(db, "key");
 
@@ -118,10 +117,9 @@ impl DojoParser {
     pub fn extract_derive_attr_names(
         db: &SimpleParserDatabase,
         diagnostics: &mut Vec<Diagnostic>,
-        attrs: Vec<Attribute>,
+        attrs: impl Iterator<Item = Attribute>,
     ) -> Vec<String> {
         attrs
-            .iter()
             .filter_map(|attr| {
                 let args = attr.clone().structurize(db).args;
                 if args.is_empty() {
@@ -130,7 +128,9 @@ impl DojoParser {
                 } else {
                     Some(args.into_iter().filter_map(|a| {
                         if let AttributeArgVariant::Unnamed(ast::Expr::Path(path)) = a.variant {
-                            if let [ast::PathSegment::Simple(segment)] = &path.elements(db)[..] {
+                            if let [ast::PathSegment::Simple(segment)] =
+                                &path.segments(db).elements(db).collect::<Vec<_>>()[..]
+                            {
                                 Some(segment.ident(db).text(db).to_string())
                             } else {
                                 None

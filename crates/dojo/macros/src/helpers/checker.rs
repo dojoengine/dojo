@@ -18,7 +18,7 @@ impl DojoChecker {
     pub fn check_derive_conflicts(
         db: &SimpleParserDatabase,
         diagnostics: &mut Vec<Diagnostic>,
-        attrs: Vec<Attribute>,
+        attrs: impl Iterator<Item = Attribute>,
     ) {
         let attr_names = DojoParser::extract_derive_attr_names(db, diagnostics, attrs);
 
