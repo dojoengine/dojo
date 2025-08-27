@@ -1,0 +1,187 @@
+name: doc-sync
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      commit_sha:
+        description: "Commit SHA to analyze for documentation updates"
+        required: true
+        type: string
+
+jobs:
+  docs-sync:
+    if:
+      github.event.pull_request.merged == true || github.event_name ==
+      'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+      id-token: write
+
+    steps:
+      - name: Checkout dojo repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get changed files
+        id: changed-files
+        run: |
+          set -e
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            # Get changed files for the specified commit
+            git fetch origin
+            CHANGED_FILES=$(git diff --name-only ${{ github.event.inputs.commit_sha }}~1 ${{ github.event.inputs.commit_sha }})
+          else
+            # Get list of changed files in the merged PR
+            git fetch origin main
+            CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.merge_commit_sha }})
+          fi
+          echo "changed_files<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGED_FILES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Check if docs update needed
+        id: check-docs
+        run: |
+          # Check if changes require documentation updates
+          NEEDS_DOCS_UPDATE=false
+
+          # Define patterns that typically require docs updates
+          DOCS_PATTERNS=(
+            "^crates/.*\.rs$"
+            "^crates/.*\.toml$"
+            "^bin/.*\.rs$"
+            "^bin/.*\.toml$"
+            "^README\.md$"
+            "^CHANGELOG\.md$"
+            "package\.json$"
+          )
+
+          while IFS= read -r file; do
+            for pattern in "${DOCS_PATTERNS[@]}"; do
+              if [[ $file =~ $pattern ]]; then
+                NEEDS_DOCS_UPDATE=true
+                break 2
+              fi
+            done
+          done <<< "${{ steps.changed-files.outputs.changed_files }}"
+
+          echo "needs_update=$NEEDS_DOCS_UPDATE" >> $GITHUB_OUTPUT
+          echo "Files that may need docs updates: $(echo '${{ steps.changed-files.outputs.changed_files }}' | tr '\n' ' ')"
+
+      - name: Checkout docs repository
+        if: steps.check-docs.outputs.needs_update == 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: dojoengine/book
+          token: ${{ secrets.CREATE_PR_TOKEN }}
+          path: docs-repo
+
+      - name: Analyze changes and update docs
+        if: steps.check-docs.outputs.needs_update == 'true'
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          direct_prompt: |
+            I need you to analyze the changes in this dojo repository PR and update the documentation in the dojoengine/book repository accordingly.
+
+            **Change Information:**
+            - Title: ${{ github.event.pull_request.title || format('Manual trigger for commit {0}', github.event.inputs.commit_sha) }}
+            - Description: ${{ github.event.pull_request.body || 'Manually triggered documentation sync' }}
+            - Files changed: ${{ steps.changed-files.outputs.changed_files }}
+            - Commit SHA: ${{ github.event.pull_request.merge_commit_sha || github.event.inputs.commit_sha }}
+
+            **Your tasks:**
+            1. Review the changed files and PR description to understand what functionality was added, modified, or removed
+            2. Check the docs-repo directory to see what documentation currently exists
+            3. Determine if any existing documentation needs updates or if new documentation should be created
+            4. If updates are needed:
+               - Create or update the appropriate documentation files in the docs-repo directory
+               - Ensure the documentation accurately reflects the current state of the dojo
+               - Follow the existing documentation style and structure
+               - Focus on user-facing changes, API changes, new features, or breaking changes
+
+            **Important guidelines:**
+            - Only create documentation updates if they are actually needed
+            - Don't document internal implementation details unless they affect usage
+            - If no documentation updates are needed, simply state that and exit
+            - DO NOT create git branches, commits, or PRs - just update the files
+
+            The docs repository is checked out in the `docs-repo` directory. Please analyze the dojo changes and update the documentation files accordingly.
+
+          allowed_tools: "Read,Write,Edit,MultiEdit,Glob,Grep"
+
+      - name: Create branch and commit changes
+        if: steps.check-docs.outputs.needs_update == 'true'
+        working-directory: docs-repo
+        run: |
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Check if there are any changes
+          if [ -n "$(git status --porcelain)" ]; then
+            # Create new branch
+            BRANCH_NAME="docs-update-$(date +%s)"
+            git checkout -b "$BRANCH_NAME"
+
+            # Add and commit changes
+            git add .
+            if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+              git commit -m "docs: Update documentation for dojo commit ${{ github.event.inputs.commit_sha }}
+
+              Updates documentation to reflect changes made in commit:
+              ${{ github.event.inputs.commit_sha }}
+
+              Manually triggered documentation sync"
+            else
+              git commit -m "docs: Update documentation for dojo PR #${{ github.event.pull_request.number }}
+
+              Updates documentation to reflect changes made in:
+              ${{ github.event.pull_request.title }}
+
+              Related dojo PR: dojoengine/dojo#${{ github.event.pull_request.number }}"
+            fi
+
+            # Push branch
+            git push origin "$BRANCH_NAME"
+
+            # Create PR
+            if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+              gh pr create \
+                --title "docs: Update documentation for dojo commit ${{ github.event.inputs.commit_sha }}" \
+                --body "This PR updates the documentation to reflect changes made in dojoengine/dojo commit ${{ github.event.inputs.commit_sha }}
+
+              **Commit Details:**
+              - Commit SHA: ${{ github.event.inputs.commit_sha }}
+              - Files changed: ${{ steps.changed-files.outputs.changed_files }}
+              - Trigger: Manual documentation sync
+
+              Please review the documentation changes to ensure they accurately reflect the dojo updates."
+            else
+              gh pr create \
+                --title "docs: Update documentation for dojo PR #${{ github.event.pull_request.number }}" \
+                --body "This PR updates the documentation to reflect changes made in dojoengine/dojo#${{ github.event.pull_request.number }}
+
+              **Original PR Details:**
+              - Title: ${{ github.event.pull_request.title }}
+              - Files changed: ${{ steps.changed-files.outputs.changed_files }}
+
+              Please review the documentation changes to ensure they accurately reflect the dojo updates."
+            fi
+          else
+            echo "No documentation changes were made by Claude"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.CREATE_PR_TOKEN }}
+
+      - name: Cleanup
+        if: always()
+        run: |
+          # Clean up any temporary files or directories
+          rm -rf docs-repo || true
