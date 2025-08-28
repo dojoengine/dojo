@@ -1118,7 +1118,7 @@ mod tests {
         u64_prim.from_json_value(json!("0x1234567890abcdef")).unwrap();
         assert_eq!(u64_prim.as_u64(), Some(0x1234567890abcdef));
 
-        u64_prim.from_json_value(json!("1311768467463790320")).unwrap(); // Same value in decimal
+        u64_prim.from_json_value(json!(0x1234567890abcdef.to_string())).unwrap(); // Same value in decimal
         assert_eq!(u64_prim.as_u64(), Some(0x1234567890abcdef));
 
         // Test parsing large decimal numbers
