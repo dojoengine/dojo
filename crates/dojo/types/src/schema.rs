@@ -418,22 +418,7 @@ impl Ty {
                     option.name.clone(): option.ty.to_json_value()?
                 }))
             }
-            Ty::Array(items) => {
-                let values: Result<Vec<_>, _> = items.iter().map(|ty| ty.to_json_value()).collect();
-                Ok(json!(values?))
-            }
-            Ty::FixedSizeArray((items, size)) => {
-                let values: Result<Vec<_>, _> = items.iter().map(|ty| ty.to_json_value()).collect();
-
-                let value = json!(
-                    {
-                        "elements": values?,
-                        "size": size
-                    }
-                );
-                Ok(value)
-            }
-            Ty::Tuple(items) => {
+            Ty::Array(items) | Ty::Tuple(items) | Ty::FixedSizeArray((items, _)) => {
                 let values: Result<Vec<_>, _> = items.iter().map(|ty| ty.to_json_value()).collect();
                 Ok(json!(values?))
             }
@@ -462,56 +447,16 @@ impl Ty {
                     }
                 }
             }
-            (Ty::Array(items), JsonValue::Array(values)) => {
+            (
+                Ty::Array(items) | Ty::Tuple(items) | Ty::FixedSizeArray((items, _)),
+                JsonValue::Array(values),
+            ) => {
                 let template = items[0].clone();
                 items.clear();
                 for value in values {
                     let mut item = template.clone();
                     item.from_json_value(value)?;
                     items.push(item);
-                }
-            }
-            (Ty::FixedSizeArray((items, size)), JsonValue::Object(obj)) => {
-                if let (Some(JsonValue::Array(values)), Some(JsonValue::Number(expected_size))) =
-                    (obj.get("elements"), obj.get("size"))
-                {
-                    if let Some(expected_size) = expected_size.as_u64() {
-                        if expected_size != *size as u64 {
-                            return Err(PrimitiveError::TypeMismatch);
-                        }
-                        let template = items[0].clone();
-                        items.clear();
-                        for value in values {
-                            let mut item = template.clone();
-                            item.from_json_value(value.clone())?;
-                            items.push(item);
-                        }
-                    } else {
-                        return Err(PrimitiveError::TypeMismatch);
-                    }
-                } else {
-                    return Err(PrimitiveError::TypeMismatch);
-                }
-            }
-            // Fallback for backward compatibility with simple array format
-            (Ty::FixedSizeArray((items, size)), JsonValue::Array(values)) => {
-                if values.len() != *size as usize {
-                    return Err(PrimitiveError::TypeMismatch);
-                }
-                let template = items[0].clone();
-                items.clear();
-                for value in values {
-                    let mut item = template.clone();
-                    item.from_json_value(value)?;
-                    items.push(item);
-                }
-            }
-            (Ty::Tuple(items), JsonValue::Array(values)) => {
-                if items.len() != values.len() {
-                    return Err(PrimitiveError::TypeMismatch);
-                }
-                for (item, value) in items.iter_mut().zip(values) {
-                    item.from_json_value(value)?;
                 }
             }
             (Ty::ByteArray(bytes), JsonValue::String(s)) => {
