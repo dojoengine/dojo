@@ -993,142 +993,7 @@ mod tests {
     }
 
     #[test]
-    fn test_to_json_value_comprehensive() {
-        // Test Array
-        let array_items = vec![
-            Ty::Primitive(Primitive::U32(Some(1))),
-            Ty::Primitive(Primitive::U32(Some(2))),
-            Ty::Primitive(Primitive::U32(Some(3))),
-        ];
-        let array_ty = Ty::Array(array_items.clone());
-        let array_json = array_ty.to_json_value().expect("failed to serialize array");
-        let expected_array = json!([1, 2, 3]);
-        assert_eq!(array_json, expected_array);
-
-        // Test Tuple
-        let tuple_items = vec![
-            Ty::Primitive(Primitive::U32(Some(42))),
-            Ty::Primitive(Primitive::Bool(Some(true))),
-            Ty::ByteArray("hello".to_string()),
-        ];
-        let tuple_ty = Ty::Tuple(tuple_items);
-        let tuple_json = tuple_ty.to_json_value().expect("failed to serialize tuple");
-        let expected_tuple = json!([42, true, "hello"]);
-        assert_eq!(tuple_json, expected_tuple);
-
-        // Test FixedSizeArray - should be consistent with current implementation (simple array)
-        let fixed_array_items = vec![
-            Ty::Primitive(Primitive::Felt252(Some(felt!("0x1")))),
-            Ty::Primitive(Primitive::Felt252(Some(felt!("0x2")))),
-            Ty::Primitive(Primitive::Felt252(Some(felt!("0x3")))),
-        ];
-        let fixed_array_ty = Ty::FixedSizeArray((fixed_array_items.clone(), 3));
-        let fixed_array_json =
-            fixed_array_ty.to_json_value().expect("failed to serialize fixed array");
-
-        // Current implementation treats FixedSizeArray same as Array
-        let expected_fixed_array = json!([
-            "0x0000000000000000000000000000000000000000000000000000000000000001",
-            "0x0000000000000000000000000000000000000000000000000000000000000002",
-            "0x0000000000000000000000000000000000000000000000000000000000000003"
-        ]);
-        assert_eq!(fixed_array_json, expected_fixed_array);
-
-        // Test nested structures
-        let nested_tuple = Ty::Tuple(vec![
-            Ty::Array(vec![
-                Ty::Primitive(Primitive::U8(Some(10))),
-                Ty::Primitive(Primitive::U8(Some(20))),
-            ]),
-            Ty::Tuple(vec![
-                Ty::Primitive(Primitive::Bool(Some(false))),
-                Ty::Primitive(Primitive::U16(Some(300))),
-            ]),
-        ]);
-        let nested_json =
-            nested_tuple.to_json_value().expect("failed to serialize nested structure");
-        let expected_nested = json!([[10, 20], [false, 300]]);
-        assert_eq!(nested_json, expected_nested);
-
-        // Test empty collections
-        let empty_array = Ty::Array(vec![]);
-        let empty_array_json =
-            empty_array.to_json_value().expect("failed to serialize empty array");
-        assert_eq!(empty_array_json, json!([]));
-
-        let empty_tuple = Ty::Tuple(vec![]);
-        let empty_tuple_json =
-            empty_tuple.to_json_value().expect("failed to serialize empty tuple");
-        assert_eq!(empty_tuple_json, json!([]));
-
-        let empty_fixed_array = Ty::FixedSizeArray((vec![], 0));
-        let empty_fixed_array_json =
-            empty_fixed_array.to_json_value().expect("failed to serialize empty fixed array");
-        assert_eq!(empty_fixed_array_json, json!([]));
-    }
-
-    #[test]
-    fn test_to_json_value_struct_and_enum() {
-        // Test Struct
-        let struct_ty = Ty::Struct(Struct {
-            name: "TestStruct".to_string(),
-            children: vec![
-                Member {
-                    name: "field1".to_string(),
-                    ty: Ty::Primitive(Primitive::U32(Some(42))),
-                    key: false,
-                },
-                Member {
-                    name: "field2".to_string(),
-                    ty: Ty::Primitive(Primitive::Bool(Some(true))),
-                    key: false,
-                },
-                Member {
-                    name: "nested_array".to_string(),
-                    ty: Ty::Array(vec![
-                        Ty::Primitive(Primitive::U8(Some(1))),
-                        Ty::Primitive(Primitive::U8(Some(2))),
-                    ]),
-                    key: false,
-                },
-            ],
-        });
-
-        let struct_json = struct_ty.to_json_value().expect("failed to serialize struct");
-        let expected_struct = json!({
-            "field1": 42,
-            "field2": true,
-            "nested_array": [1, 2]
-        });
-        assert_eq!(struct_json, expected_struct);
-
-        // Test Enum
-        let mut enum_ty = Ty::Enum(Enum {
-            name: "TestEnum".to_string(),
-            option: Some(1),
-            options: vec![
-                EnumOption { name: "VariantA".to_string(), ty: Ty::Tuple(vec![]) },
-                EnumOption {
-                    name: "VariantB".to_string(),
-                    ty: Ty::Primitive(Primitive::U32(Some(123))),
-                },
-            ],
-        });
-
-        let enum_json = enum_ty.to_json_value().expect("failed to serialize enum");
-        let expected_enum = json!({
-            "VariantB": 123
-        });
-        assert_eq!(enum_json, expected_enum);
-
-        // Test ByteArray
-        let byte_array = Ty::ByteArray("Hello, World!".to_string());
-        let byte_array_json = byte_array.to_json_value().expect("failed to serialize byte array");
-        assert_eq!(byte_array_json, json!("Hello, World!"));
-    }
-
-    #[test]
-    fn test_json_value_round_trip() {
+    fn test_to_json_value_comprehensive_with_round_trip() {
         let test_cases = vec![
             // Test Array
             Ty::Array(vec![
@@ -1140,17 +1005,28 @@ mod tests {
             Ty::Tuple(vec![
                 Ty::Primitive(Primitive::U32(Some(42))),
                 Ty::Primitive(Primitive::Bool(Some(true))),
-                Ty::ByteArray("test".to_string()),
+                Ty::ByteArray("hello".to_string()),
             ]),
             // Test FixedSizeArray
             Ty::FixedSizeArray((
                 vec![
-                    Ty::Primitive(Primitive::U8(Some(10))),
-                    Ty::Primitive(Primitive::U8(Some(20))),
-                    Ty::Primitive(Primitive::U8(Some(30))),
+                    Ty::Primitive(Primitive::Felt252(Some(felt!("0x1")))),
+                    Ty::Primitive(Primitive::Felt252(Some(felt!("0x2")))),
+                    Ty::Primitive(Primitive::Felt252(Some(felt!("0x3")))),
                 ],
                 3,
             )),
+            // Test nested structures
+            Ty::Tuple(vec![
+                Ty::Array(vec![
+                    Ty::Primitive(Primitive::U8(Some(10))),
+                    Ty::Primitive(Primitive::U8(Some(20))),
+                ]),
+                Ty::Tuple(vec![
+                    Ty::Primitive(Primitive::Bool(Some(false))),
+                    Ty::Primitive(Primitive::U16(Some(300))),
+                ]),
+            ]),
             // Test nested Array
             Ty::Array(vec![
                 Ty::Tuple(vec![
@@ -1167,17 +1043,17 @@ mod tests {
                 name: "TestStruct".to_string(),
                 children: vec![
                     Member {
-                        name: "id".to_string(),
-                        ty: Ty::Primitive(Primitive::U32(Some(123))),
-                        key: true,
+                        name: "field1".to_string(),
+                        ty: Ty::Primitive(Primitive::U32(Some(42))),
+                        key: false,
                     },
                     Member {
-                        name: "active".to_string(),
+                        name: "field2".to_string(),
                         ty: Ty::Primitive(Primitive::Bool(Some(true))),
                         key: false,
                     },
                     Member {
-                        name: "values".to_string(),
+                        name: "nested_array".to_string(),
                         ty: Ty::Array(vec![
                             Ty::Primitive(Primitive::U8(Some(1))),
                             Ty::Primitive(Primitive::U8(Some(2))),
@@ -1187,6 +1063,18 @@ mod tests {
                 ],
             }),
             // Test Enum
+            Ty::Enum(Enum {
+                name: "TestEnum".to_string(),
+                option: Some(1),
+                options: vec![
+                    EnumOption { name: "VariantA".to_string(), ty: Ty::Tuple(vec![]) },
+                    EnumOption {
+                        name: "VariantB".to_string(),
+                        ty: Ty::Primitive(Primitive::U32(Some(123))),
+                    },
+                ],
+            }),
+            // Test another Enum
             Ty::Enum(Enum {
                 name: "Status".to_string(),
                 option: Some(0),
@@ -1206,6 +1094,62 @@ mod tests {
             Ty::FixedSizeArray((vec![], 0)),
         ];
 
+        // Test specific expected JSON values for key types
+        let array_json = test_cases[0].to_json_value().expect("failed to serialize array");
+        let expected_array = json!([1, 2, 3]);
+        assert_eq!(array_json, expected_array);
+
+        let tuple_json = test_cases[1].to_json_value().expect("failed to serialize tuple");
+        let expected_tuple = json!([42, true, "hello"]);
+        assert_eq!(tuple_json, expected_tuple);
+
+        let fixed_array_json =
+            test_cases[2].to_json_value().expect("failed to serialize fixed array");
+        // Current implementation treats FixedSizeArray same as Array
+        let expected_fixed_array = json!([
+            "0x0000000000000000000000000000000000000000000000000000000000000001",
+            "0x0000000000000000000000000000000000000000000000000000000000000002",
+            "0x0000000000000000000000000000000000000000000000000000000000000003"
+        ]);
+        assert_eq!(fixed_array_json, expected_fixed_array);
+
+        let nested_json =
+            test_cases[3].to_json_value().expect("failed to serialize nested structure");
+        let expected_nested = json!([[10, 20], [false, 300]]);
+        assert_eq!(nested_json, expected_nested);
+
+        let struct_json = test_cases[5].to_json_value().expect("failed to serialize struct");
+        let expected_struct = json!({
+            "field1": 42,
+            "field2": true,
+            "nested_array": [1, 2]
+        });
+        assert_eq!(struct_json, expected_struct);
+
+        let enum_json = test_cases[6].to_json_value().expect("failed to serialize enum");
+        let expected_enum = json!({
+            "VariantB": 123
+        });
+        assert_eq!(enum_json, expected_enum);
+
+        let byte_array_json =
+            test_cases[8].to_json_value().expect("failed to serialize byte array");
+        assert_eq!(byte_array_json, json!("Hello, World!"));
+
+        // Test empty collections
+        let empty_array_json =
+            test_cases[9].to_json_value().expect("failed to serialize empty array");
+        assert_eq!(empty_array_json, json!([]));
+
+        let empty_tuple_json =
+            test_cases[10].to_json_value().expect("failed to serialize empty tuple");
+        assert_eq!(empty_tuple_json, json!([]));
+
+        let empty_fixed_array_json =
+            test_cases[11].to_json_value().expect("failed to serialize empty fixed array");
+        assert_eq!(empty_fixed_array_json, json!([]));
+
+        // Round trip test for all cases
         for original in test_cases {
             // Convert to JSON value
             let json_value = original.to_json_value().expect("failed to serialize to JSON");
@@ -1214,11 +1158,13 @@ mod tests {
             let mut parsed = create_empty_ty_like(&original);
 
             // Parse back from JSON value
-            parsed.from_json_value(json_value.clone()).expect(&format!(
-                "failed to deserialize from JSON for type: {:?}, json: {}",
-                original.name(),
-                json_value
-            ));
+            parsed.from_json_value(json_value.clone()).unwrap_or_else(|_| {
+                panic!(
+                    "failed to deserialize from JSON for type: {:?}, json: {}",
+                    original.name(),
+                    json_value
+                )
+            });
 
             // Should match original
             assert_eq!(parsed, original, "JSON round trip failed for type: {:?}", original.name());
