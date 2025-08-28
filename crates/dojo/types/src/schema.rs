@@ -447,16 +447,45 @@ impl Ty {
                     }
                 }
             }
-            (
-                Ty::Array(items) | Ty::Tuple(items) | Ty::FixedSizeArray((items, _)),
-                JsonValue::Array(values),
-            ) => {
-                let template = items[0].clone();
-                items.clear();
-                for value in values {
-                    let mut item = template.clone();
+            (Ty::Array(items), JsonValue::Array(values)) => {
+                if values.is_empty() {
+                    items.clear();
+                } else if items.is_empty() {
+                    return Err(PrimitiveError::TypeMismatch);
+                } else {
+                    let template = items[0].clone();
+                    items.clear();
+                    for value in values {
+                        let mut item = template.clone();
+                        item.from_json_value(value)?;
+                        items.push(item);
+                    }
+                }
+            }
+            (Ty::FixedSizeArray((items, size)), JsonValue::Array(values)) => {
+                if values.len() != *size as usize {
+                    return Err(PrimitiveError::TypeMismatch);
+                }
+                if values.is_empty() {
+                    items.clear();
+                } else if items.is_empty() {
+                    return Err(PrimitiveError::TypeMismatch);
+                } else {
+                    let template = items[0].clone();
+                    items.clear();
+                    for value in values {
+                        let mut item = template.clone();
+                        item.from_json_value(value)?;
+                        items.push(item);
+                    }
+                }
+            }
+            (Ty::Tuple(items), JsonValue::Array(values)) => {
+                if items.len() != values.len() {
+                    return Err(PrimitiveError::TypeMismatch);
+                }
+                for (item, value) in items.iter_mut().zip(values) {
                     item.from_json_value(value)?;
-                    items.push(item);
                 }
             }
             (Ty::ByteArray(bytes), JsonValue::String(s)) => {
