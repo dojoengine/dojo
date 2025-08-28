@@ -5,12 +5,13 @@ use cainome::cairo_serde::{CairoSerde as _, ContractAddress, Error as CainomeErr
 use dojo_types::packing::{PackingError, ParseError};
 use dojo_types::primitive::{Primitive, PrimitiveError};
 use dojo_types::schema::{Enum, EnumOption, Member, Struct, Ty};
-use starknet::core::types::{BlockId, Felt};
+use starknet::core::types::{BlockId, Felt, StarknetError};
 use starknet::core::utils::{
     cairo_short_string_to_felt, parse_cairo_short_string, CairoShortStringToFeltError,
     NonAsciiNameError, ParseCairoShortStringError,
 };
 use starknet::providers::{Provider, ProviderError};
+use tracing::debug;
 
 pub use super::abigen::model::ModelContractReader;
 use super::abigen::world::{Layout, ModelIndex};
@@ -208,7 +209,20 @@ where
     }
 
     async fn use_legacy_storage(&self) -> Result<bool, ModelError> {
-        Ok(self.model_reader.use_legacy_storage().call().await?)
+        let res: Result<bool, ModelError> =
+            self.model_reader.use_legacy_storage().call().await.map_err(|e| e.into());
+
+        // backward compatibility with old legacy models where the `use_legacy_storage` function
+        // does not exist.
+        if let Err(ModelError::Cainome(CainomeError::Provider(ProviderError::StarknetError(
+            StarknetError::EntrypointNotFound,
+        )))) = res
+        {
+            debug!(namespace = %self.namespace, name = %self.name, "Entrypoint not found, using legacy store.");
+            return Ok(true);
+        }
+
+        res
     }
 }
 
