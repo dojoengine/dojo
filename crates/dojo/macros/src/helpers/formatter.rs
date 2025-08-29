@@ -67,13 +67,13 @@ impl DojoFormatter {
 
     pub fn serialize_keys_and_values(
         db: &dyn SyntaxGroup,
-        members: &[MemberAst],
+        members: impl Iterator<Item = MemberAst>,
         serialized_keys: &mut Vec<String>,
         serialized_values: &mut Vec<String>,
         use_serde: bool,
     ) {
-        members.iter().for_each(|member| {
-            let serialized = Self::serialize_member_ty(db, member, true, use_serde);
+        members.for_each(|member| {
+            let serialized = Self::serialize_member_ty(db, &member, true, use_serde);
 
             if member.has_attr(db, "key") {
                 serialized_keys.push(serialized);
@@ -95,7 +95,6 @@ impl DojoFormatter {
             params
                 .generic_params(db)
                 .elements(db)
-                .iter()
                 .filter_map(|el| {
                     if let GenericParam::Type(typ) = el {
                         Some(typ.name(db).text(db).to_string())

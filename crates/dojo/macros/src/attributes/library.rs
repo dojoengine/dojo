@@ -50,7 +50,6 @@ impl DojoLibrary {
             let mut body_nodes: Vec<_> = body
                 .items(db)
                 .elements(db)
-                .iter()
                 .map(|el| {
                     match el {
                         ast::ModuleItem::Enum(ref enum_ast) => {

@@ -20,11 +20,11 @@ pub trait DiagnosticExt {
 
 impl DiagnosticExt for Diagnostic {
     fn to_pretty_string(&self) -> String {
-        let severity = match self.severity {
+        let severity = match self.severity() {
             Severity::Error => "error",
             Severity::Warning => "warning",
         };
 
-        format!("[{severity}] {}", self.message)
+        format!("[{severity}] {}", self.message())
     }
 }

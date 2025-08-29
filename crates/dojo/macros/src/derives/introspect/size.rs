@@ -24,7 +24,7 @@ pub fn get_field_size_from_type_clause(
             compute_item_size_from_type(&path_type)
         }
         Expr::Tuple(expr) => {
-            if expr.expressions(db).elements(db).is_empty() {
+            if expr.expressions(db).elements(db).len() == 0 {
                 vec![]
             } else {
                 let tuple_type = expr.as_syntax_node().get_text_without_trivia(db);

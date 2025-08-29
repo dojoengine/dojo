@@ -58,13 +58,13 @@ impl DojoEvent {
 
         let members = DojoParser::parse_members(
             db,
-            &struct_ast.members(db).elements(db),
+            struct_ast.members(db).elements(db),
             &mut event.diagnostics,
         );
 
         DojoFormatter::serialize_keys_and_values(
             db,
-            &struct_ast.members(db).elements(db),
+            struct_ast.members(db).elements(db),
             &mut event.serialized_keys,
             &mut event.serialized_values,
             true,
@@ -127,7 +127,7 @@ impl DojoEvent {
             db,
             &event.event_name,
             false,
-            &struct_ast.members(db).elements(db),
+            struct_ast.members(db).elements(db),
         )
         .to_string();
 

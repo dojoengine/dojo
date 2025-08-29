@@ -96,23 +96,23 @@ impl DojoModel {
 
         let members = DojoParser::parse_members(
             db,
-            &struct_ast.members(db).elements(db),
+            struct_ast.members(db).elements(db),
             &mut model.diagnostics,
         );
 
         DojoFormatter::serialize_keys_and_values(
             db,
-            &struct_ast.members(db).elements(db),
+            struct_ast.members(db).elements(db),
             &mut model.serialized_keys,
             &mut model.serialized_values,
             model.use_legacy_storage,
         );
 
-        struct_ast.members(db).elements(db).iter().filter(|m| !m.has_attr(db, "key")).for_each(
+        struct_ast.members(db).elements(db).filter(|m| !m.has_attr(db, "key")).for_each(
             |member_ast| {
                 model.deserialized_values.push(DojoFormatter::deserialize_member_ty(
                     db,
-                    member_ast,
+                    &member_ast,
                     model.use_legacy_storage,
                 ));
             },
@@ -208,7 +208,7 @@ impl DojoModel {
             db,
             &model.model_type,
             is_packed,
-            &struct_ast.members(db).elements(db),
+            struct_ast.members(db).elements(db),
         )
         .to_string();
 

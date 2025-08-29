@@ -50,7 +50,7 @@ fn test_grant_owner_not_registered_resource() {
 
 #[test]
 #[should_panic(
-    expected: "Contract `0xad1a512070e0702c92fd81395c28e9eea5f01e1852c2759785df1d5b1a0f91` does NOT have OWNER role on model (or its namespace) `Foo`",
+    expected: "Contract `0x1c31979af9015c7943497c5e384cacc5b4c7e7fac60d4fb5e2c708daff22bf6` does NOT have OWNER role on model (or its namespace) `Foo`",
 )]
 fn test_grant_owner_through_malicious_contract() {
     let (world, foo_selector) = deploy_world_and_foo();
@@ -87,7 +87,7 @@ fn test_grant_owner_fails_for_non_owner() {
 
 #[test]
 #[should_panic(
-    expected: "Contract `0xad1a512070e0702c92fd81395c28e9eea5f01e1852c2759785df1d5b1a0f91` does NOT have OWNER role on model (or its namespace) `Foo`",
+    expected: "Contract `0x1c31979af9015c7943497c5e384cacc5b4c7e7fac60d4fb5e2c708daff22bf6` does NOT have OWNER role on model (or its namespace) `Foo`",
 )]
 fn test_revoke_owner_through_malicious_contract() {
     let (world, foo_selector) = deploy_world_and_foo();
@@ -150,7 +150,7 @@ fn test_writer_not_registered_resource() {
 
 #[test]
 #[should_panic(
-    expected: "Contract `0xad1a512070e0702c92fd81395c28e9eea5f01e1852c2759785df1d5b1a0f91` does NOT have OWNER role on model (or its namespace) `Foo`",
+    expected: "Contract `0x1c31979af9015c7943497c5e384cacc5b4c7e7fac60d4fb5e2c708daff22bf6` does NOT have OWNER role on model (or its namespace) `Foo`",
 )]
 fn test_grant_writer_through_malicious_contract() {
     let (world, foo_selector) = deploy_world_and_foo();
@@ -187,7 +187,7 @@ fn test_grant_writer_fails_for_non_owner() {
 
 #[test]
 #[should_panic(
-    expected: "Contract `0xad1a512070e0702c92fd81395c28e9eea5f01e1852c2759785df1d5b1a0f91` does NOT have OWNER role on model (or its namespace) `Foo`",
+    expected: "Contract `0x1c31979af9015c7943497c5e384cacc5b4c7e7fac60d4fb5e2c708daff22bf6` does NOT have OWNER role on model (or its namespace) `Foo`",
 )]
 fn test_revoke_writer_through_malicious_contract() {
     let (world, foo_selector) = deploy_world_and_foo();

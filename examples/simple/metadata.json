@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "app_exe": "/Users/remybaranx/.asdf/installs/scarb/nightly-2025-05-08/bin/scarb",
+  "app_exe": "/Users/remybaranx/.asdf/installs/scarb/dev-2025-08-21/bin/scarb",
   "app_version_info": {
-    "version": "2.11.4+nightly-2025-05-08",
+    "version": "2.11.4+dev-2025-08-21",
     "commit_info": {
       "short_commit_hash": "ec41d23ba",
       "commit_hash": "ec41d23bab300e968be843c160426859df6aa27c",
@@ -334,9 +334,7 @@
           "name": "dojo_simple",
           "source_path": "/Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/simple/src/lib.cairo",
           "params": {
-            "build-external-contracts": [
-              "dojo::world::world_contract::world"
-            ],
+            "build-external-contracts": ["dojo::world::world_contract::world"],
             "casm": true,
             "sierra": true
           }
@@ -346,9 +344,7 @@
           "name": "dojo_simple_unittest",
           "source_path": "/Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/simple/src/lib.cairo",
           "params": {
-            "build-external-contracts": [
-              "dojo::world::world_contract::world"
-            ],
+            "build-external-contracts": ["dojo::world::world_contract::world"],
             "test-type": "unit"
           }
         }
@@ -439,9 +435,7 @@
         "name": "dojo_simple",
         "source_path": "/Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/simple/src/lib.cairo",
         "params": {
-          "build-external-contracts": [
-            "dojo::world::world_contract::world"
-          ],
+          "build-external-contracts": ["dojo::world::world_contract::world"],
           "casm": true,
           "sierra": true
         }
@@ -495,12 +489,7 @@
           "package": "dojo_simple 0.1.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/simple/Scarb.toml)",
           "name": "dojo_simple",
           "source_path": "/Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/simple/src/lib.cairo",
-          "cfg": [
-            [
-              "target",
-              "starknet-contract"
-            ]
-          ],
+          "cfg": [["target", "starknet-contract"]],
           "id": "dojo_simple 0.1.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/simple/Scarb.toml)",
           "discriminator": "dojo_simple 0.1.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/simple/Scarb.toml)",
           "dependencies": [
@@ -534,12 +523,7 @@
           "prebuilt_allowed": false
         }
       ],
-      "cfg": [
-        [
-          "target",
-          "starknet-contract"
-        ]
-      ],
+      "cfg": [["target", "starknet-contract"]],
       "components": [
         "core 2.11.4 (std)",
         "dojo 1.5.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/core/Scarb.toml)",
@@ -554,9 +538,7 @@
         "name": "dojo_simple_unittest",
         "source_path": "/Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/simple/src/lib.cairo",
         "params": {
-          "build-external-contracts": [
-            "dojo::world::world_contract::world"
-          ],
+          "build-external-contracts": ["dojo::world::world_contract::world"],
           "test-type": "unit"
         }
       },
@@ -574,12 +556,7 @@
           "package": "core 2.11.4 (std)",
           "name": "core",
           "source_path": "/Users/remybaranx/Library/Caches/com.swmansion.scarb/registry/std/e9b93d81f/core/src/lib.cairo",
-          "cfg": [
-            [
-              "target",
-              "test"
-            ]
-          ],
+          "cfg": [["target", "test"]],
           "id": "core 2.11.4 (std)",
           "discriminator": null,
           "dependencies": [
@@ -592,12 +569,7 @@
           "package": "dojo 1.5.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/core/Scarb.toml)",
           "name": "dojo",
           "source_path": "/Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/core/src/lib.cairo",
-          "cfg": [
-            [
-              "target",
-              "test"
-            ]
-          ],
+          "cfg": [["target", "test"]],
           "id": "dojo 1.5.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/core/Scarb.toml)",
           "discriminator": "dojo 1.5.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/core/Scarb.toml)",
           "dependencies": [
@@ -619,12 +591,7 @@
           "package": "dojo_cairo_test 1.6.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/dojo-cairo-test/Scarb.toml)",
           "name": "dojo_cairo_test",
           "source_path": "/Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/dojo-cairo-test/src/lib.cairo",
-          "cfg": [
-            [
-              "target",
-              "test"
-            ]
-          ],
+          "cfg": [["target", "test"]],
           "id": "dojo_cairo_test 1.6.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/dojo-cairo-test/Scarb.toml)",
           "discriminator": "dojo_cairo_test 1.6.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/dojo-cairo-test/Scarb.toml)",
           "dependencies": [
@@ -649,13 +616,7 @@
           "package": "dojo_simple 0.1.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/simple/Scarb.toml)",
           "name": "dojo_simple",
           "source_path": "/Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/simple/src/lib.cairo",
-          "cfg": [
-            [
-              "target",
-              "test"
-            ],
-            "test"
-          ],
+          "cfg": [["target", "test"], "test"],
           "id": "dojo_simple 0.1.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/simple/Scarb.toml)",
           "discriminator": "dojo_simple 0.1.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/examples/simple/Scarb.toml)",
           "dependencies": [
@@ -700,13 +661,7 @@
           "prebuilt_allowed": false
         }
       ],
-      "cfg": [
-        [
-          "target",
-          "test"
-        ],
-        "test"
-      ],
+      "cfg": [["target", "test"], "test"],
       "components": [
         "core 2.11.4 (std)",
         "dojo 1.5.0 (path+file:///Users/remybaranx/pro/projets/contribs/dojo/dojo/crates/dojo/core/Scarb.toml)",
@@ -716,9 +671,5 @@
     }
   ],
   "current_profile": "dev",
-  "profiles": [
-    "dev",
-    "release",
-    "sepolia"
-  ]
+  "profiles": ["dev", "release", "sepolia"]
 }
