@@ -78,10 +78,10 @@ fn process_struct(db: &SimpleParserDatabase, struct_ast: &ast::ItemStruct) -> Pr
 
     let dojo_store = format!(
         "{impl_decl} {{
-        fn serialize(self: @{struct_name}{generic_params}, ref serialized: Array<felt252>) {{
+        fn dojo_serialize(self: @{struct_name}{generic_params}, ref serialized: Array<felt252>) {{
             {serialized_members}
         }}
-        fn deserialize(ref values: Span<felt252>) -> Option<{struct_name}{generic_params}> {{
+        fn dojo_deserialize(ref values: Span<felt252>) -> Option<{struct_name}{generic_params}> {{
             {deserialized_members}
             Option::Some({struct_name}{} {{
                 {member_names}
@@ -127,14 +127,14 @@ fn process_enum(db: &SimpleParserDatabase, enum_ast: &ast::ItemEnum) -> ProcMacr
                 let serialized = format!(
                     "{full_variant_name}(d) => {{
                             serialized.append({variant_index});
-                            dojo::storage::DojoStore::serialize(d, ref serialized);
+                            dojo::storage::DojoStore::dojo_serialize(d, ref serialized);
                         }},"
                 );
 
                 let deserialized = format!(
                     "{variant_index} => {{
-                            let variant_data = dojo::storage::DojoStore::<{ty}>::deserialize(ref \
-                     values)?;
+                            let variant_data = \
+                     dojo::storage::DojoStore::<{ty}>::dojo_deserialize(ref values)?;
                             Option::Some({full_variant_name}(variant_data))
                         }},",
                 );
@@ -172,12 +172,12 @@ fn process_enum(db: &SimpleParserDatabase, enum_ast: &ast::ItemEnum) -> ProcMacr
 
     let dojo_store = format!(
         "{impl_decl} {{
-        fn serialize(self: @{enum_name}{generic_params}, ref serialized: Array<felt252>) {{
+        fn dojo_serialize(self: @{enum_name}{generic_params}, ref serialized: Array<felt252>) {{
             match self {{
                 {serialized_variants}
             }};
         }}
-        fn deserialize(ref values: Span<felt252>) -> Option<{enum_name}{generic_params}> {{
+        fn dojo_deserialize(ref values: Span<felt252>) -> Option<{enum_name}{generic_params}> {{
             let variant = *values.pop_front()?;
             match variant {{
                 0 => Option::Some(Default::<{enum_name}{generic_params}>::default()),
