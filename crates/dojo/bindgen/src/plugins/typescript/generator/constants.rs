@@ -23,7 +23,7 @@ pub const JS_BOOLEAN: &str = "boolean";
 pub const JS_STRING: &str = "string";
 pub const JS_BIGNUMBERISH: &str = "BigNumberish";
 
-pub(crate) const BIGNUMNERISH_IMPORT: &str = "import { BigNumberish } from 'starknet';\n";
+pub(crate) const BIGNUMBERISH_IMPORT: &str = "import { BigNumberish } from 'starknet';\n";
 pub(crate) const CAIRO_OPTION_IMPORT: &str = "import { CairoOption } from 'starknet';\n";
 pub(crate) const CAIRO_ENUM_IMPORT: &str = "import { CairoCustomEnum } from 'starknet';\n";
 pub(crate) const CAIRO_OPTION_TYPE_PATH: &str = "core::option::Option";
