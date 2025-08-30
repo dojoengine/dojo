@@ -271,7 +271,7 @@ impl ContractStats for ResourceLocal {
     }
 
     fn sierra_file_size(&self) -> Result<usize> {
-        // Easiest way to get the file size if by reserializing into the original json
+        // Easiest way to get the file size is by reserializing into the original json
         // the class file.
         Ok(serde_json::to_string(&self.common().class)?.len())
     }
@@ -296,7 +296,7 @@ impl ContractStats for WorldLocal {
     }
 
     fn sierra_file_size(&self) -> Result<usize> {
-        // Easiest way to get the file size if by reserializing into the original json
+        // Easiest way to get the file size is by reserializing into the original json
         // the class file.
         Ok(serde_json::to_string(&self.class)?.len())
     }

@@ -1,0 +1,28 @@
+name: Validate component versions exist
+
+on:
+  push:
+    branches:
+      - main
+    paths: ["versions.json", "scripts/validate_version.sh"]
+  pull_request:
+    paths: ["versions.json", "scripts/validate_version.sh"]
+
+permissions:
+  contents: read
+
+jobs:
+  validate-tags:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/dojoengine/dojo-dev:v1.6.0
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install jq
+        run: apt-get update && apt-get install -y jq
+
+      - name: Validate `versions.json`
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bash scripts/validate_version.sh versions.json
