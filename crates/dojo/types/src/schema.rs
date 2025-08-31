@@ -48,8 +48,8 @@ pub enum Ty {
     Enum(Enum),
     Tuple(Vec<Ty>),
     Array(Vec<Ty>),
-    FixedSizeArray((Vec<Ty>, u32)),
     ByteArray(String),
+    FixedSizeArray((Vec<Ty>, u32)),
 }
 
 impl Ty {
