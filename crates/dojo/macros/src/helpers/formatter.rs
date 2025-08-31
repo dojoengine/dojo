@@ -7,7 +7,7 @@ use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{Terminal, TypedSyntaxNode};
 use itertools::Itertools;
 
-use crate::helpers::get_serialization_path;
+use crate::helpers::get_serialization_path_and_prefix;
 
 pub struct DojoFormatter {}
 
@@ -34,10 +34,10 @@ impl DojoFormatter {
         with_self: bool,
         use_serde: bool,
     ) -> String {
-        let path = get_serialization_path(use_serde);
+        let (path, prefix) = get_serialization_path_and_prefix(use_serde);
 
         format!(
-            "{path}::serialize({}{member_name}, ref serialized);\n",
+            "{path}::{prefix}serialize({}{member_name}, ref serialized);\n",
             if with_self { "self." } else { "" },
         )
     }
@@ -63,8 +63,10 @@ impl DojoFormatter {
         use_serde: bool,
         input_name: &str,
     ) -> String {
-        let path = get_serialization_path(use_serde);
-        format!("let {member_name} = {path}::<{member_ty}>::deserialize(ref {input_name})?;\n")
+        let (path, prefix) = get_serialization_path_and_prefix(use_serde);
+        format!(
+            "let {member_name} = {path}::<{member_ty}>::{prefix}deserialize(ref {input_name})?;\n"
+        )
     }
 
     pub fn serialize_keys_and_values(

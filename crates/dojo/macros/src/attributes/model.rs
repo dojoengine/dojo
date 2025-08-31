@@ -10,8 +10,8 @@ use crate::constants::{
     EXPECTED_DERIVE_ATTR_NAMES,
 };
 use crate::helpers::{
-    self, get_serialization_path, DiagnosticsExt, DojoChecker, DojoFormatter, DojoParser,
-    DojoTokenizer, Member, ProcMacroResultExt,
+    self, get_serialization_path_and_prefix, DiagnosticsExt, DojoChecker, DojoFormatter,
+    DojoParser, DojoTokenizer, Member, ProcMacroResultExt,
 };
 
 #[derive(Debug)]
@@ -28,6 +28,7 @@ pub struct DojoModel {
     model_layout: String,
     use_legacy_storage: bool,
     model_deserialize_path: String,
+    model_deserialize_prefix: String,
     deserialized_keys: Vec<String>,
     deserialized_values: Vec<String>,
     deserialized_modelvalue: String,
@@ -49,6 +50,7 @@ impl DojoModel {
             model_layout: String::default(),
             use_legacy_storage: false,
             model_deserialize_path: String::default(),
+            model_deserialize_prefix: String::default(),
             deserialized_keys: vec![],
             deserialized_values: vec![],
             deserialized_modelvalue: String::default(),
@@ -230,7 +232,8 @@ impl DojoModel {
             model.model_type
         );
 
-        model.model_deserialize_path = get_serialization_path(model.use_legacy_storage);
+        (model.model_deserialize_path, model.model_deserialize_prefix) =
+            get_serialization_path_and_prefix(model.use_legacy_storage);
 
         model.model_layout = if model.use_legacy_storage {
             format!(
@@ -250,9 +253,9 @@ impl DojoModel {
                 serialized.append_span(values);
                 let mut data = serialized.span();
 
-                core::serde::Serde::<{}>::deserialize(ref data)
+                core::serde::Serde::<{model_type}>::deserialize(ref data)
                 ",
-                model.model_type
+                model_type = model.model_type,
             )
         } else {
             format!(
@@ -309,6 +312,7 @@ impl DojoModel {
             model_layout,
             use_legacy_storage,
             model_deserialize_path,
+            model_deserialize_prefix,
             deserialized_values,
             deserialized_modelvalue,
             deserialize_body,
@@ -324,6 +328,7 @@ impl DojoModel {
             &self.model_layout,
             self.use_legacy_storage,
             &self.model_deserialize_path,
+            &self.model_deserialize_prefix,
             &self.deserialized_values.join(""),
             &self.deserialized_modelvalue,
             &self.deserialize_body,
@@ -410,7 +415,8 @@ pub impl {model_type}ModelParser of dojo::model::model::ModelParser<{model_type}
 pub impl {model_type}ModelValueParser of \
              dojo::model::model_value::ModelValueParser<{model_type}Value> {{
     fn deserialize(ref values: Span<felt252>) -> Option<{model_type}Value> {{
-        {model_deserialize_path}::<{model_type}Value>::deserialize(ref values)
+    {model_deserialize_path}::<{model_type}Value>::{model_deserialize_prefix}deserialize(ref \
+             values)
     }}
     fn serialize_values(self: @{model_type}Value) -> Span<felt252> {{
         let mut serialized = core::array::ArrayTrait::new();
@@ -419,14 +425,14 @@ pub impl {model_type}ModelValueParser of \
     }}
 }}
 
-// Note that {model_type}DojoStore is implemented through the Introspect derive attribute
+// Note that {model_type}DojoStore is implemented through the DojoStore derive attribute
 // as any structs.
 
 pub impl {model_type}ValueDojoStore of dojo::storage::DojoStore<{model_type}Value> {{
-    fn serialize(self: @{model_type}Value, ref serialized: Array<felt252>) {{
+    fn dojo_serialize(self: @{model_type}Value, ref serialized: Array<felt252>) {{
         {serialized_values}
     }}
-    fn deserialize(ref values: Span<felt252>) -> Option<{model_type}Value> {{
+    fn dojo_deserialize(ref values: Span<felt252>) -> Option<{model_type}Value> {{
         {deserialized_values}
         {deserialized_modelvalue}
     }}
