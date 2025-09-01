@@ -4441,8 +4441,8 @@ dependencies = [
 
 [[package]]
 name = "katana-node-bindings"
-version = "1.6.3"
-source = "git+https://github.com/dojoengine/katana?branch=rpc%2Fv0.9#d81afa39a522cdfdc3999c1be5cdb8bd8460893c"
+version = "1.7.0-alpha.3"
+source = "git+https://github.com/dojoengine/katana?rev=eba352a#eba352aa5f12c474732c7db04d9d8369d6f4d4ac"
 dependencies = [
  "regex",
  "serde",
@@ -4455,8 +4455,8 @@ dependencies = [
 
 [[package]]
 name = "katana-runner"
-version = "1.6.3"
-source = "git+https://github.com/dojoengine/katana?branch=rpc%2Fv0.9#d81afa39a522cdfdc3999c1be5cdb8bd8460893c"
+version = "1.7.0-alpha.3"
+source = "git+https://github.com/dojoengine/katana?rev=eba352a#eba352aa5f12c474732c7db04d9d8369d6f4d4ac"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -4469,8 +4469,8 @@ dependencies = [
 
 [[package]]
 name = "katana-runner-macro"
-version = "1.6.3"
-source = "git+https://github.com/dojoengine/katana?branch=rpc%2Fv0.9#d81afa39a522cdfdc3999c1be5cdb8bd8460893c"
+version = "1.7.0-alpha.3"
+source = "git+https://github.com/dojoengine/katana?rev=eba352a#eba352aa5f12c474732c7db04d9d8369d6f4d4ac"
 dependencies = [
  "proc-macro2",
  "quote",
