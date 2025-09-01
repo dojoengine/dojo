@@ -5,11 +5,11 @@ use dojo_types::naming;
 use starknet_crypto::{poseidon_hash_many, Felt};
 
 #[inline(always)]
-pub fn get_serialization_path(use_serde: bool) -> String {
+pub fn get_serialization_path_and_prefix(use_serde: bool) -> (String, String) {
     if use_serde {
-        "core::serde::Serde".to_string()
+        ("core::serde::Serde".to_string(), "".to_string())
     } else {
-        "dojo::storage::DojoStore".to_string()
+        ("dojo::storage::DojoStore".to_string(), "dojo_".to_string())
     }
 }
 

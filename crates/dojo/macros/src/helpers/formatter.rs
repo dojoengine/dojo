@@ -7,7 +7,7 @@ use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{Terminal, TypedSyntaxNode};
 use itertools::Itertools;
 
-use crate::helpers::get_serialization_path;
+use crate::helpers::get_serialization_path_and_prefix;
 
 pub struct DojoFormatter {}
 
@@ -34,10 +34,10 @@ impl DojoFormatter {
         with_self: bool,
         use_serde: bool,
     ) -> String {
-        let path = get_serialization_path(use_serde);
+        let (path, prefix) = get_serialization_path_and_prefix(use_serde);
 
         format!(
-            "{path}::serialize({}{member_name}, ref serialized);\n",
+            "{path}::{prefix}serialize({}{member_name}, ref serialized);\n",
             if with_self { "self." } else { "" },
         )
     }
@@ -46,6 +46,7 @@ impl DojoFormatter {
         db: &dyn SyntaxGroup,
         member_ast: &MemberAst,
         use_serde: bool,
+        input_name: &str,
     ) -> String {
         let member_name = member_ast.name(db).text(db).to_string();
         let member_ty = match member_ast.type_clause(db).ty(db) {
@@ -53,16 +54,19 @@ impl DojoFormatter {
             _ => member_ast.type_clause(db).ty(db).as_syntax_node().get_text_without_trivia(db),
         };
 
-        Self::deserialize_primitive_member_ty(&member_name, &member_ty, use_serde)
+        Self::deserialize_primitive_member_ty(&member_name, &member_ty, use_serde, input_name)
     }
 
     pub fn deserialize_primitive_member_ty(
         member_name: &String,
         member_ty: &String,
         use_serde: bool,
+        input_name: &str,
     ) -> String {
-        let path = get_serialization_path(use_serde);
-        format!("let {member_name} = {path}::<{member_ty}>::deserialize(ref values)?;\n")
+        let (path, prefix) = get_serialization_path_and_prefix(use_serde);
+        format!(
+            "let {member_name} = {path}::<{member_ty}>::{prefix}deserialize(ref {input_name})?;\n"
+        )
     }
 
     pub fn serialize_keys_and_values(

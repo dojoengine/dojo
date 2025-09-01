@@ -209,10 +209,15 @@ pub struct Member {
 }
 
 pub trait TyCompareTrait<T> {
+    fn is_a_key_upgrade_of(self: @T, old: @T) -> bool;
     fn is_an_upgrade_of(self: @T, old: @T) -> bool;
 }
 
 impl PrimitiveCompareImpl of TyCompareTrait<felt252> {
+    fn is_a_key_upgrade_of(self: @felt252, old: @felt252) -> bool {
+        Self::is_an_upgrade_of(self, old)
+    }
+
     fn is_an_upgrade_of(self: @felt252, old: @felt252) -> bool {
         if self == old {
             return true;
@@ -228,6 +233,46 @@ impl PrimitiveCompareImpl of TyCompareTrait<felt252> {
 }
 
 impl TyCompareImpl of TyCompareTrait<Ty> {
+    fn is_a_key_upgrade_of(self: @Ty, old: @Ty) -> bool {
+        match (self, old) {
+            (Ty::Primitive(n), Ty::Primitive(o)) => n.is_a_key_upgrade_of(o),
+            (Ty::Struct(n), Ty::Struct(o)) => n.is_a_key_upgrade_of(o),
+            (Ty::Enum(n), Ty::Enum(o)) => n.is_a_key_upgrade_of(o),
+            (Ty::Array(n), Ty::Array(o)) => { (*n).at(0).is_a_key_upgrade_of((*o).at(0)) },
+            (
+                Ty::FixedArray(n), Ty::FixedArray(o),
+            ) => {
+                let (n_ty, n_len) = n;
+                let n_ty = n_ty.at(0);
+
+                let (o_ty, o_len) = o;
+                let o_ty = o_ty.at(0);
+
+                n_ty.is_a_key_upgrade_of(o_ty) && n_len == o_len
+            },
+            (
+                Ty::Tuple(n), Ty::Tuple(o),
+            ) => {
+                let n = *n;
+                let o = *o;
+
+                if n.len() != o.len() {
+                    return false;
+                }
+
+                for i in 0..n.len() {
+                    if !n.at(i).is_a_key_upgrade_of(o.at(i)) {
+                        return false;
+                    }
+                }
+
+                true
+            },
+            (Ty::ByteArray, Ty::ByteArray) => true,
+            _ => false,
+        }
+    }
+
     fn is_an_upgrade_of(self: @Ty, old: @Ty) -> bool {
         match (self, old) {
             (Ty::Primitive(n), Ty::Primitive(o)) => n.is_an_upgrade_of(o),
@@ -254,16 +299,13 @@ impl TyCompareImpl of TyCompareTrait<Ty> {
                     return false;
                 }
 
-                let mut i = 0;
-                loop {
-                    if i >= o.len() {
-                        break true;
-                    }
+                for i in 0..o.len() {
                     if !n.at(i).is_an_upgrade_of(o.at(i)) {
-                        break false;
+                        return false;
                     }
-                    i += 1;
                 }
+
+                true
             },
             (Ty::ByteArray, Ty::ByteArray) => true,
             (Ty::Enum(n), Ty::Enum(o)) => n.is_an_upgrade_of(o),
@@ -273,6 +315,31 @@ impl TyCompareImpl of TyCompareTrait<Ty> {
 }
 
 impl EnumCompareImpl of TyCompareTrait<Enum> {
+    fn is_a_key_upgrade_of(self: @Enum, old: @Enum) -> bool {
+        if self == old {
+            return true;
+        }
+
+        let n = *self;
+        let o = *old;
+
+        if n.name != o.name || n.attrs != o.attrs || n.children.len() < o.children.len() {
+            return false;
+        }
+
+        // new variants are allowed and existing variants must follow key upgrade rules.
+        for i in 0..o.children.len() {
+            let (new_name, new_ty) = n.children[i];
+            let (old_name, old_ty) = o.children[i];
+
+            if new_name != old_name || !new_ty.is_a_key_upgrade_of(old_ty) {
+                return false;
+            }
+        }
+
+        true
+    }
+
     fn is_an_upgrade_of(self: @Enum, old: @Enum) -> bool {
         if self.name != old.name
             || self.attrs != old.attrs
@@ -280,32 +347,42 @@ impl EnumCompareImpl of TyCompareTrait<Enum> {
             return false;
         }
 
-        let mut i = 0;
-
-        loop {
-            if i >= (*old.children).len() {
-                break true;
-            }
-
+        for i in 0..(*old.children).len() {
             let (old_name, old_ty) = *old.children[i];
             let (new_name, new_ty) = *self.children[i];
 
             // renaming is not allowed as checking if variants have not been reordered
             // could be quite challenging
             if new_name != old_name {
-                break false;
+                return false;
             }
 
             if !new_ty.is_an_upgrade_of(@old_ty) {
-                break false;
+                return false;
             }
-
-            i += 1;
         }
+
+        true
     }
 }
 
 impl StructCompareImpl of TyCompareTrait<Struct> {
+    fn is_a_key_upgrade_of(self: @Struct, old: @Struct) -> bool {
+        if self.name != old.name
+            || self.attrs != old.attrs
+            || (*self.children).len() != (*old.children).len() {
+            return false;
+        }
+
+        for i in 0..(*old.children).len() {
+            if !self.children[i].is_a_key_upgrade_of(old.children[i]) {
+                return false;
+            }
+        }
+
+        true
+    }
+
     fn is_an_upgrade_of(self: @Struct, old: @Struct) -> bool {
         if self.name != old.name
             || self.attrs != old.attrs
@@ -313,84 +390,41 @@ impl StructCompareImpl of TyCompareTrait<Struct> {
             return false;
         }
 
-        let mut i = 0;
-
-        loop {
-            if i >= (*old.children).len() {
-                break true;
-            }
-
+        for i in 0..(*old.children).len() {
             if !self.children[i].is_an_upgrade_of(old.children[i]) {
-                break false;
+                return false;
             }
-
-            i += 1;
         }
+
+        true
     }
 }
 
 impl MemberCompareImpl of TyCompareTrait<Member> {
+    fn is_a_key_upgrade_of(self: @Member, old: @Member) -> bool {
+        if self.name != old.name || self.attrs != old.attrs {
+            return false;
+        }
+
+        self.ty.is_a_key_upgrade_of(old.ty)
+    }
+
     fn is_an_upgrade_of(self: @Member, old: @Member) -> bool {
         if self.name != old.name || self.attrs != old.attrs {
             return false;
         }
 
-        let mut i = 0;
-        let is_key = loop {
-            if i >= (*self).attrs.len() {
-                break false;
-            }
+        let mut is_key = false;
 
-            if *self.attrs[i] == 'key' {
-                break true;
+        for attr in self.attrs {
+            if *attr == 'key' {
+                is_key = true;
+                break;
             }
-
-            i += 1;
-        };
+        }
 
         if is_key {
-            match (self.ty, old.ty) {
-                (Ty::Primitive(n), Ty::Primitive(o)) => n.is_an_upgrade_of(o),
-                (
-                    Ty::Enum(n), Ty::Enum(o),
-                ) => {
-                    if n == o {
-                        return true;
-                    }
-
-                    let n = *n;
-                    let o = *o;
-
-                    if n.name != o.name
-                        || n.attrs != o.attrs
-                        || n.children.len() < o.children.len() {
-                        return false;
-                    }
-
-                    // only new variants are allowed so existing variants must remain
-                    // the same.
-                    let mut i = 0;
-                    loop {
-                        if i >= o.children.len() {
-                            break true;
-                        }
-
-                        let (new_name, new_ty) = n.children[i];
-                        let (old_name, old_ty) = o.children[i];
-
-                        if new_name != old_name || new_ty != old_ty {
-                            break false;
-                        }
-
-                        i += 1;
-                    }
-                },
-                (Ty::Struct(n), Ty::Struct(o)) => n == o,
-                (Ty::Array(n), Ty::Array(o)) => n == o,
-                (Ty::Tuple(n), Ty::Tuple(o)) => n == o,
-                (Ty::ByteArray, Ty::ByteArray) => true,
-                _ => false,
-            }
+            self.ty.is_a_key_upgrade_of(old.ty)
         } else {
             self.ty.is_an_upgrade_of(old.ty)
         }

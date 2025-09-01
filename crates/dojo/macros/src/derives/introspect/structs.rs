@@ -7,7 +7,6 @@ use starknet::core::utils::get_selector_from_name;
 
 use crate::constants::CAIRO_DELIMITERS;
 use crate::helpers::{DiagnosticsExt, DojoChecker, DojoFormatter, ProcMacroResultExt};
-
 #[derive(Debug)]
 pub struct DojoStructIntrospect {
     pub diagnostics: Vec<Diagnostic>,

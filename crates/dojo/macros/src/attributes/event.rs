@@ -189,9 +189,13 @@ pub impl {type_name}Definition of dojo::event::EventDefinition<{type_name}> {{
 }}
 
 pub impl {type_name}ModelParser of dojo::model::model::ModelParser<{type_name}> {{
-    fn deserialize(ref values: Span<felt252>) -> Option<{type_name}> {{
+    fn deserialize(ref keys: Span<felt252>, ref values: Span<felt252>) -> Option<{type_name}> {{
+        let mut serialized: Array<felt252> = keys.into();
+        serialized.append_span(values);
+        let mut data = serialized.span();
+
         // always use Serde as event data are never stored in the world storage.
-        core::serde::Serde::<{type_name}>::deserialize(ref values)
+        core::serde::Serde::<{type_name}>::deserialize(ref data)
     }}
     fn serialize_keys(self: @{type_name}) -> Span<felt252> {{
         let mut serialized = core::array::ArrayTrait::new();
