@@ -65,12 +65,7 @@ where
         ),
     };
     let schema = model.schema().await?;
-
-    // in old models, this `use_legacy_storage` function does not exist,
-    // so returns true.
-    // If the error is due to unknown model or whatever, it will be catched by
-    // a previous model reader call.
-    let use_legacy_storage = model.use_legacy_storage().await.unwrap_or(true);
+    let use_legacy_storage = model.use_legacy_storage().await?;
 
     deep_print_layout(&tag, &layout, &schema, use_legacy_storage);
 
@@ -122,12 +117,7 @@ where
     let model = world_reader.model_reader_with_tag(&tag).await?;
     let schema = model.schema().await?;
     let values = model.entity_storage(&keys).await?;
-
-    // in old models, this `use_legacy_storage` function does not exist,
-    // so returns true.
-    // If the error is due to unknown model or whatever, it will be catched by
-    // a previous model reader call.
-    let use_legacy_storage = model.use_legacy_storage().await.unwrap_or(true);
+    let use_legacy_storage = model.use_legacy_storage().await?;
 
     Ok((format_deep_record(&schema, &keys, &values, use_legacy_storage), schema, values))
 }
