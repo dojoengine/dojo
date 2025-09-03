@@ -135,7 +135,7 @@ where
         must_succeed: bool,
     ) -> Option<Result<TransactionReceiptWithBlockInfo, TransactionWaitingError>> {
         match &receipt.block {
-            ReceiptBlock::PreConfirmed => {
+            ReceiptBlock::PreConfirmed { .. } => {
                 // pending receipt doesn't include finality status, so we cant check it.
                 if expected_finality_status.is_some() {
                     return None;
@@ -308,8 +308,8 @@ mod tests {
         ReceiptBlock, TransactionReceipt, TransactionReceiptWithBlockInfo,
     };
     use starknet::macros::felt;
-    use starknet::providers::jsonrpc::HttpTransport;
     use starknet::providers::JsonRpcClient;
+    use starknet::providers::jsonrpc::HttpTransport;
 
     use super::{Duration, TransactionWaiter};
     use crate::TransactionWaitingError;
@@ -351,7 +351,10 @@ mod tests {
             execution_resources: EXECUTION_RESOURCES,
         });
 
-        TransactionReceiptWithBlockInfo { receipt, block: ReceiptBlock::PreConfirmed }
+        TransactionReceiptWithBlockInfo {
+            receipt,
+            block: ReceiptBlock::PreConfirmed { block_number: 0 },
+        }
     }
 
     #[tokio::test(flavor = "multi_thread")]

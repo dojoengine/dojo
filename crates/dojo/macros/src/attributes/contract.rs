@@ -1,4 +1,4 @@
-use cairo_lang_macro::{quote, Diagnostic, ProcMacroResult, TokenStream};
+use cairo_lang_macro::{Diagnostic, ProcMacroResult, TokenStream, quote};
 use cairo_lang_parser::utils::SimpleParserDatabase;
 use cairo_lang_syntax::node::ast::{self, MaybeModuleBody, OptionReturnTypeClause};
 use cairo_lang_syntax::node::with_db::SyntaxNodeWithDb;
@@ -50,7 +50,6 @@ impl DojoContract {
             let mut body_nodes = body
                 .items(db)
                 .elements(db)
-                .iter()
                 .map(|el| {
                     match el {
                         ast::ModuleItem::Enum(ref enum_ast) => {
@@ -333,9 +332,9 @@ impl DojoContract {
 /// We only allow one parameter for the constructor, which is the contract state,
 /// since `dojo_init` is called by the world after every resource has been deployed.
 fn is_valid_constructor_params(db: &SimpleParserDatabase, fn_ast: &ast::FunctionWithBody) -> bool {
-    let params = fn_ast.declaration(db).signature(db).parameters(db).elements(db);
+    let mut params = fn_ast.declaration(db).signature(db).parameters(db).elements(db);
     params.len() == 1
-        && params.first().unwrap().as_syntax_node().get_text(db).contains("ref self: ContractState")
+        && params.next().unwrap().as_syntax_node().get_text(db).contains("ref self: ContractState")
 }
 
 // TODO RBA/

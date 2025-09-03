@@ -1,7 +1,7 @@
-use cairo_lang_macro::{quote, ProcMacroResult, TokenStream};
+use cairo_lang_macro::{ProcMacroResult, TokenStream, quote};
 use cairo_lang_parser::utils::SimpleParserDatabase;
 use cairo_lang_syntax::node::db::SyntaxGroup;
-use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
+use cairo_lang_syntax::node::{Terminal, TypedSyntaxNode, ast};
 use dojo_types::naming;
 
 use crate::helpers::{DojoParser, DojoTokenizer, ProcMacroResultExt};
@@ -54,9 +54,9 @@ mod tests {
 
         assert_eq!(res.diagnostics.len(), 1);
 
-        assert_eq!(res.diagnostics[0].severity, Severity::Error);
+        assert_eq!(res.diagnostics[0].severity(), Severity::Error);
         assert_eq!(
-            res.diagnostics[0].message,
+            res.diagnostics[0].message(),
             "selector_from_tag: invalid parameter (arg: hello)".to_string()
         );
 
@@ -66,9 +66,9 @@ mod tests {
 
         assert_eq!(res.diagnostics.len(), 1);
 
-        assert_eq!(res.diagnostics[0].severity, Severity::Error);
+        assert_eq!(res.diagnostics[0].severity(), Severity::Error);
         assert_eq!(
-            res.diagnostics[0].message,
+            res.diagnostics[0].message(),
             "selector_from_tag: invalid parameter type (arg: (1234))".to_string()
         );
     }
@@ -81,9 +81,9 @@ mod tests {
 
         assert_eq!(res.diagnostics.len(), 1);
 
-        assert_eq!(res.diagnostics[0].severity, Severity::Error);
+        assert_eq!(res.diagnostics[0].severity(), Severity::Error);
         assert_eq!(
-            res.diagnostics[0].message,
+            res.diagnostics[0].message(),
             "selector_from_tag: Invalid tag. Tag must be in the format of `namespace-name`."
                 .to_string()
         );

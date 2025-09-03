@@ -27,18 +27,18 @@ use dojo_utils::{
     Declarer, Deployer, Invoker, LabeledClass, TransactionResult, TransactionWaiter, TxnConfig,
 };
 use dojo_world::config::calldata_decoder::decode_calldata;
-use dojo_world::config::{metadata_config, ProfileConfig, ResourceConfig, WorldMetadata};
+use dojo_world::config::{ProfileConfig, ResourceConfig, WorldMetadata, metadata_config};
 use dojo_world::constants::WORLD;
-use dojo_world::contracts::abigen::world::ResourceMetadata;
 use dojo_world::contracts::WorldContract;
+use dojo_world::contracts::abigen::world::ResourceMetadata;
 use dojo_world::diff::{Manifest, ResourceDiff, WorldDiff, WorldStatus};
 use dojo_world::local::{ExternalContractLocal, ResourceLocal, UPGRADE_CONTRACT_FN_NAME};
 use dojo_world::metadata::MetadataStorage;
 use dojo_world::remote::ResourceRemote;
 use dojo_world::services::UploadService;
-use dojo_world::{utils, ResourceType};
+use dojo_world::{ResourceType, utils};
 use starknet::accounts::{ConnectedAccount, SingleOwnerAccount};
-use starknet::core::types::Call;
+use starknet::core::types::{Call, ReceiptBlock};
 use starknet::core::utils as snutils;
 use starknet::providers::{AnyProvider, Provider};
 use starknet::signers::LocalWallet;
@@ -582,8 +582,7 @@ where
                 if let TransactionResult::Hash(tx_hash) = txs_results[0] {
                     let receipt =
                         TransactionWaiter::new(tx_hash, &self.world.account.provider()).await?;
-                    let block_number =
-                        receipt.block.block_number().expect("Block number should be available...");
+                    let block_number = receipt.block.block_number();
 
                     deploy_block_numbers =
                         deploy_calls.keys().map(|name| (name.clone(), block_number)).collect();
@@ -600,8 +599,7 @@ where
                 if let TransactionResult::Hash(tx_hash) = tx {
                     let receipt =
                         TransactionWaiter::new(tx_hash, &self.world.account.provider()).await?;
-                    let block_number =
-                        receipt.block.block_number().expect("Block number should be available...");
+                    let block_number = receipt.block.block_number();
                     deploy_block_numbers.insert(name, block_number);
                 }
             }
@@ -1138,17 +1136,11 @@ where
 
                 match res {
                     TransactionResult::HashReceipt(hash, receipt) => {
-                        let block_msg = if let Some(n) = receipt.block.block_number() {
-                            n.to_string()
-                        } else {
-                            // If we are in the pending block, we must get the latest block of the
-                            // chain to display it to the user.
-                            let provider = &self.world.account.provider();
-
-                            format!(
-                                "pending ({})",
-                                provider.block_number().await.map_err(MigrationError::Provider)?
-                            )
+                        let block_msg = match receipt.block {
+                            ReceiptBlock::Block { block_number, .. } => block_number.to_string(),
+                            ReceiptBlock::PreConfirmed { block_number } => {
+                                format!("pending ({block_number})")
+                            }
                         };
 
                         ui.stop_and_persist_boxed(

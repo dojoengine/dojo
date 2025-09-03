@@ -1,17 +1,17 @@
 use std::collections::HashSet;
 
-use cairo_lang_macro::{quote, Diagnostic, ProcMacroResult, TokenStream};
+use cairo_lang_macro::{Diagnostic, ProcMacroResult, TokenStream, quote};
 use cairo_lang_parser::utils::SimpleParserDatabase;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
-use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
+use cairo_lang_syntax::node::{TypedSyntaxNode, ast};
 
 use crate::constants::{
     DOJO_INTROSPECT_DERIVE, DOJO_LEGACY_STORAGE_DERIVE, DOJO_PACKED_DERIVE, DOJO_STORE_DERIVE,
     EXPECTED_DERIVE_ATTR_NAMES,
 };
 use crate::helpers::{
-    self, get_serialization_path_and_prefix, DiagnosticsExt, DojoChecker, DojoFormatter,
-    DojoParser, DojoTokenizer, Member, ProcMacroResultExt,
+    self, DiagnosticsExt, DojoChecker, DojoFormatter, DojoParser, DojoTokenizer, Member,
+    ProcMacroResultExt, get_serialization_path_and_prefix,
 };
 
 #[derive(Debug)]
@@ -102,27 +102,30 @@ impl DojoModel {
 
         let members = DojoParser::parse_members(
             db,
-            &struct_ast.members(db).elements(db),
+            struct_ast.members(db).elements(db),
             &mut model.diagnostics,
         );
 
         DojoFormatter::serialize_keys_and_values(
             db,
-            &struct_ast.members(db).elements(db),
+            struct_ast.members(db).elements(db),
             &mut model.serialized_keys,
             &mut model.serialized_values,
             model.use_legacy_storage,
         );
 
-        struct_ast.members(db).elements(db).iter().for_each(|member_ast| {
+        struct_ast.members(db).elements(db).for_each(|member_ast| {
             if member_ast.has_attr(db, "key") {
-                model
-                    .deserialized_keys
-                    .push(DojoFormatter::deserialize_member_ty(db, member_ast, true, "keys"));
+                model.deserialized_keys.push(DojoFormatter::deserialize_member_ty(
+                    db,
+                    &member_ast,
+                    true,
+                    "keys",
+                ));
             } else {
                 model.deserialized_values.push(DojoFormatter::deserialize_member_ty(
                     db,
-                    member_ast,
+                    &member_ast,
                     model.use_legacy_storage,
                     "values",
                 ));
@@ -219,7 +222,7 @@ impl DojoModel {
             db,
             &model.model_type,
             is_packed,
-            &struct_ast.members(db).elements(db),
+            struct_ast.members(db).elements(db),
         )
         .to_string();
 

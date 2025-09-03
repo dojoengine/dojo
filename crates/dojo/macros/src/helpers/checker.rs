@@ -1,8 +1,8 @@
 use cairo_lang_macro::{Diagnostic, ProcMacroResult};
 use cairo_lang_parser::utils::SimpleParserDatabase;
+use cairo_lang_syntax::node::TypedSyntaxNode;
 use cairo_lang_syntax::node::ast::{self, Attribute};
 use cairo_lang_syntax::node::helpers::OptionWrappedGenericParamListHelper;
-use cairo_lang_syntax::node::TypedSyntaxNode;
 use dojo_types::naming;
 
 use crate::constants::{DOJO_INTROSPECT_DERIVE, DOJO_PACKED_DERIVE};
@@ -15,10 +15,10 @@ pub struct DojoChecker {}
 impl DojoChecker {
     /// Be sure there is no conflict among `derive` attributes
     /// set on a Cairo element.
-    pub fn check_derive_conflicts(
+    pub fn check_derive_conflicts<'a>(
         db: &SimpleParserDatabase,
         diagnostics: &mut Vec<Diagnostic>,
-        attrs: Vec<Attribute>,
+        attrs: impl Iterator<Item = Attribute<'a>>,
     ) {
         let attr_names = DojoParser::extract_derive_attr_names(db, diagnostics, attrs);
 

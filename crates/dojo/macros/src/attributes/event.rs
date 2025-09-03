@@ -1,7 +1,7 @@
-use cairo_lang_macro::{quote, Diagnostic, ProcMacroResult, TokenStream};
+use cairo_lang_macro::{Diagnostic, ProcMacroResult, TokenStream, quote};
 use cairo_lang_parser::utils::SimpleParserDatabase;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
-use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
+use cairo_lang_syntax::node::{TypedSyntaxNode, ast};
 
 use crate::constants::{DOJO_INTROSPECT_DERIVE, DOJO_PACKED_DERIVE, EXPECTED_DERIVE_ATTR_NAMES};
 use crate::helpers::{
@@ -58,13 +58,13 @@ impl DojoEvent {
 
         let members = DojoParser::parse_members(
             db,
-            &struct_ast.members(db).elements(db),
+            struct_ast.members(db).elements(db),
             &mut event.diagnostics,
         );
 
         DojoFormatter::serialize_keys_and_values(
             db,
-            &struct_ast.members(db).elements(db),
+            struct_ast.members(db).elements(db),
             &mut event.serialized_keys,
             &mut event.serialized_values,
             true,
@@ -127,7 +127,7 @@ impl DojoEvent {
             db,
             &event.event_name,
             false,
-            &struct_ast.members(db).elements(db),
+            struct_ast.members(db).elements(db),
         )
         .to_string();
 

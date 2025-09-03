@@ -2,13 +2,13 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use clap::Args;
 use dojo_utils::env::DOJO_ACCOUNT_ADDRESS_ENV_VAR;
 use dojo_world::config::Environment;
 use dojo_world::contracts::ContractInfo;
 #[cfg(feature = "controller")]
-use slot::account_sdk::provider::CartridgeJsonRpcProvider;
+use slot_session::account_sdk::provider::CartridgeJsonRpcProvider;
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::types::{BlockId, BlockTag, Felt};
 use starknet::providers::Provider;

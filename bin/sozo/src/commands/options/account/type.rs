@@ -2,14 +2,14 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 #[cfg(feature = "controller")]
-use slot::account_sdk::provider::CartridgeJsonRpcProvider;
+use slot_session::account_sdk::provider::CartridgeJsonRpcProvider;
 use starknet::accounts::{
-    single_owner, Account, ConnectedAccount, ExecutionEncoder, RawDeclarationV3, RawExecutionV3,
-    SingleOwnerAccount,
+    Account, ConnectedAccount, ExecutionEncoder, RawDeclarationV3, RawExecutionV3,
+    SingleOwnerAccount, single_owner,
 };
 use starknet::core::types::{BlockId, Call, Felt};
 use starknet::providers::Provider;
-use starknet::signers::{local_wallet, LocalWallet, SignerInteractivityContext};
+use starknet::signers::{LocalWallet, SignerInteractivityContext, local_wallet};
 
 #[cfg(feature = "controller")]
 use super::controller::ControllerAccount;
@@ -28,7 +28,7 @@ pub enum SozoAccountSignError {
 
     #[cfg(feature = "controller")]
     #[error(transparent)]
-    Controller(#[from] slot::account_sdk::signers::SignError),
+    Controller(#[from] slot_session::account_sdk::signers::SignError),
 }
 
 /// To unify the account types, we define a wrapper type that implements the
