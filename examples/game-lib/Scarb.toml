@@ -5,13 +5,13 @@ members = [
 ]
 
 [workspace.package]
-version = "1.6.0-alpha.1"
+version = "1.7.0-alpha.2"
 description = "Example game library for Dojo"
 edition = "2024_07"
-cairo-version = "=2.11.4"
+cairo-version = "2.12"
 license = "MIT"
 
 [workspace.dependencies]
-starknet = "=2.11.4"
+starknet = "2.12"
 dojo = { path = "../../crates/dojo/core/" }
 dojo_macros = { path = "../../crates/dojo/macros" }

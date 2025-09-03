@@ -1,7 +1,7 @@
 {
   "world": {
-    "class_hash": "0x1d0991eab5221c28225755937ec958aa073617c9b1d4f5e3c82b9f27cf85ea4",
-    "address": "0x21a0e84f871395c7e960a71da17522b84c258adbaedda630f33f518c45d256d",
+    "class_hash": "0x1061b9a1632c994a7597cf1ee44cda68429091da490f95630f6dab0c47955c6",
+    "address": "0x11a2328e1fc954bbf4e7349f993ee4f44306c9fbe9e303abf4e810d20fff88c",
     "seed": "simple-a",
     "name": "simple",
     "entrypoints": [
@@ -193,16 +193,6 @@
         ]
       },
       {
-        "type": "struct",
-        "name": "core::array::Span::<(dojo::meta::layout::Layout, core::integer::u32)>",
-        "members": [
-          {
-            "name": "snapshot",
-            "type": "@core::array::Array::<(dojo::meta::layout::Layout, core::integer::u32)>"
-          }
-        ]
-      },
-      {
         "type": "enum",
         "name": "dojo::meta::layout::Layout",
         "variants": [
@@ -223,16 +213,16 @@
             "type": "core::array::Span::<dojo::meta::layout::Layout>"
           },
           {
-            "name": "FixedArray",
-            "type": "core::array::Span::<(dojo::meta::layout::Layout, core::integer::u32)>"
-          },
-          {
             "name": "ByteArray",
             "type": "()"
           },
           {
             "name": "Enum",
             "type": "core::array::Span::<dojo::meta::layout::FieldLayout>"
+          },
+          {
+            "name": "FixedArray",
+            "type": "(core::array::Span::<dojo::meta::layout::Layout>, core::integer::u32)"
           }
         ]
       },
@@ -1489,8 +1479,8 @@
   },
   "contracts": [
     {
-      "address": "0x6a2afae6e22605b009e2bfd5e2379edb511626a15a9867c799a972057e9d32d",
-      "class_hash": "0x4362b8f7dc8151be93879ce44e942c615b0ffdee0bd7f3475f4262c8ab0f006",
+      "address": "0x6873b901179bd28c65b47a2dd38285d5cfdbd7ff73ebec16857ba39198aeccc",
+      "class_hash": "0x3d024b4e01c8b9bc8adcc632b0cf1afa5c9cb730fff59f9cda4560eab6d2434",
       "abi": [
         {
           "type": "impl",
@@ -1747,8 +1737,8 @@
       ]
     },
     {
-      "address": "0x4a6683ba670ab00dfcc0d608924b2c80abdd4d55edb7e6303e5046203403060",
-      "class_hash": "0x1e4810ddf40157ffd4262ce2f37d7f3d031d4f66672c3fce3434561b924302d",
+      "address": "0x2d8fcb45f2bfc8cfc6dfe9f1992935aef6b7483174b8b4867e166b762f17b01",
+      "class_hash": "0x281afa07b29ec35231c784780b2ea3a1c96a3cc3697c689b811c4febd75a9fb",
       "abi": [
         {
           "type": "impl",
@@ -1923,8 +1913,8 @@
       ]
     },
     {
-      "address": "0x2fd1dd54aa3da52d80e0530e576fc8353cc378aed37a2d88ce570d352a30b80",
-      "class_hash": "0x4362b8f7dc8151be93879ce44e942c615b0ffdee0bd7f3475f4262c8ab0f006",
+      "address": "0xd9e51c4d4f1b8c1614a978654cdc892a3746d247dce363d0c32422190d0f76",
+      "class_hash": "0x3d024b4e01c8b9bc8adcc632b0cf1afa5c9cb730fff59f9cda4560eab6d2434",
       "abi": [
         {
           "type": "impl",
@@ -2185,13 +2175,13 @@
   "models": [
     {
       "members": [],
-      "class_hash": "0x6be5c0e961020576926f490d06501ff0f198f7308e642cb8e33d3fbf28148a0",
+      "class_hash": "0x715cd0b739213f80c9bb9496abff5411bce57ae57a456a7ed4fb697338666c",
       "tag": "ns-M",
       "selector": "0x50aac05281bbfaa5393cacacc12e86f59ab7d5f3ee619427dd33a0756526f24"
     },
     {
       "members": [],
-      "class_hash": "0x6be5c0e961020576926f490d06501ff0f198f7308e642cb8e33d3fbf28148a0",
+      "class_hash": "0x715cd0b739213f80c9bb9496abff5411bce57ae57a456a7ed4fb697338666c",
       "tag": "ns2-M",
       "selector": "0x3b26427a55dd1d51738b0e3e989fe6f25649e1311295f30f0a4fa2db439aa2c"
     }
@@ -2199,13 +2189,13 @@
   "events": [
     {
       "members": [],
-      "class_hash": "0x6c09c05dadb44db95245634aceb6313128533f1419b52f35fddbb485fb36eb1",
+      "class_hash": "0x4ade22b0643407c50302b91d358012b5f7b1b271d9a70b8a913bea44deb7a3c",
       "tag": "ns-E",
       "selector": "0x260e0511a6fa454a7d4ed8bea5fa52fc80fc588e33ba4cb58c65bbeeadf7565"
     },
     {
       "members": [],
-      "class_hash": "0x452239653d199795c1609625707b5f2e8558b777dfd97503f4d4a884b6582cb",
+      "class_hash": "0x7c921a9037068a7ec5ee200defebe4ce7b7a4869528b3127b21be08e0da90ff",
       "tag": "ns-EH",
       "selector": "0x4c6c7772b19b700cf97d078d02a419670d11d2b689a7a3647eac311b2817ced"
     }

@@ -1,9 +1,9 @@
 [package]
 name = "dojo_examples"
 description = "Dojo example to showcase Dojo features."
-version = "1.6.0-alpha.1"
+version = "1.7.0-alpha.2"
 edition = "2024_07"
-cairo-version = "=2.11.4"
+cairo-version = "=2.12.0"
 license = "MIT"
 
 [cairo]
@@ -11,7 +11,7 @@ sierra-replace-ids = true
 
 [dependencies]
 openzeppelin = "0.20.0"
-starknet = "2.11.4"
+starknet = "2.12.0"
 
 armory = { path = "../game-lib/armory" }
 bestiary = { path = "../game-lib/bestiary" }
@@ -19,8 +19,8 @@ dojo = { path = "../../crates/dojo/core" }
 dojo_macros = { path = "../../crates/dojo/macros" }
 
 [dev-dependencies]
-snforge_std = "0.43.1"
-assert_macros = "2.11.4"
+snforge_std = "0.48.0"
+assert_macros = "2.12.0"
 
 dojo_snf_test = { path = "../../crates/dojo/dojo-snf-test" }
 
