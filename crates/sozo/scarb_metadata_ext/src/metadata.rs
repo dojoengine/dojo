@@ -8,7 +8,7 @@ use dojo_world::config::ProfileConfig;
 use dojo_world::diff::Manifest;
 use dojo_world::local::WorldLocal;
 use scarb_interop::fsx;
-use scarb_metadata::{DepKind, Metadata, MetadataCommand, MetadataCommandError};
+use scarb_metadata::{DepKind, Metadata, MetadataCommand, MetadataCommandError, PackageMetadata};
 use serde::Serialize;
 
 #[derive(Debug, PartialEq)]
@@ -20,6 +20,7 @@ pub enum TestRunner {
 
 const CAIRO_TEST_RUNNER_NAME: &str = "cairo_test";
 const SNF_TEST_RUNNER_NAME: &str = "snforge_std";
+const DOJO_MACROS_NAME: &str = "dojo_macros";
 
 impl From<&String> for TestRunner {
     fn from(value: &String) -> Self {
@@ -63,24 +64,26 @@ pub trait MetadataDojoExt {
 }
 
 impl MetadataDojoExt for Metadata {
+    /// Returns the package name of the package that contains contracts to be deployed with a world.
+    ///
+    /// In some sozo operations, the package name is required (namely binding generation and migrations).
+    ///
+    /// This function will return the package name of the package that contains contracts to be deployed with a world, if exactly one package matches the criteria.
+    ///
+    /// Otherwise, it will return an error. Multiple packages with contracts to be deployed with a world are not supported at the workspace level.
     fn workspace_package_name(&self) -> Result<String> {
-        // Read the toml file at the workspace root and check if the [package] table in toml
-        // contains a `name` field. If we don't have [package] but [workspace.package] we know it's
-        // a virtual workspace.
-        let toml_path = &self.workspace.manifest_path;
-        let toml_content = fsx::read_to_string(toml_path)?;
-        let toml: toml::Value = toml::from_str(&toml_content)?;
-
-        let package_name = toml.get("package").and_then(|v| v.get("name")).and_then(|v| v.as_str());
-
-        match package_name {
-            Some(name) => Ok(name.to_string()),
-            None => anyhow::bail!(
-                "No package name found in {}. Sozo currently supports only non-virtual workspaces.",
-                toml_path
+        match default_dojo_package_name(&self.packages) {
+            WorldPackageResult::Ok(name) => Ok(name),
+            WorldPackageResult::MultiplePackages(names) => anyhow::bail!(
+                "Multiple packages found with contracts to be deployed with a world: {:?}. Sozo currently supports only one package with contracts to be deployed with a world when managed at the workspace level.",
+                names
             ),
+            WorldPackageResult::NoPackage => {
+                anyhow::bail!("No package found with contracts to be deployed with a world.")
+            }
         }
     }
+
     fn target_dir_root(&self) -> Utf8PathBuf {
         if let Some(target_dir) = &self.target_dir {
             target_dir.clone()
@@ -270,5 +273,47 @@ impl MetadataErrorExt for MetadataCommandError {
             }
             _ => format!("Error while executing scarb metadata command:\n{}", self),
         }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+enum WorldPackageResult {
+    Ok(String),
+    MultiplePackages(Vec<String>),
+    NoPackage,
+}
+
+/// Explores the content of the packages to find a package that contains contracts to be deployed
+/// with a world.
+///
+/// In a virutal workspace, it is handy to have all the dependencies setup, but no `src` at the root
+/// of the workspace.
+/// However in the context of Dojo, Sozo needs to know the package name of the package when performing
+/// some tasks like binding generation and migrations.
+///
+/// To solve the issue where a virtual workspace has no package name, this function looks for a
+/// package that is *not* a `lib` target and uses `dojo_macros` as a dependency.
+/// If it finds exactly one package that matches the criteria, it returns the package name.
+///
+/// Otherwise, it returns a `MultiplePackages` variant, which will be handled by the caller, which generally should indicate
+/// to the user that using multiple packages with contracts to be deployed with a world is not supported at the workspace level.
+/// Therefore, the user will want to build and migrate the package with contracts themselves by going into the package directory and running the commands.
+fn default_dojo_package_name(packages: &[PackageMetadata]) -> WorldPackageResult {
+    let mut candidates = Vec::new();
+
+    for p in packages {
+        if p.targets.iter().all(|t| t.kind != "lib") {
+            for d in &p.dependencies {
+                if d.name == DOJO_MACROS_NAME {
+                    candidates.push(p.name.clone());
+                }
+            }
+        }
+    }
+
+    match candidates.len() {
+        0 => WorldPackageResult::NoPackage,
+        1 => WorldPackageResult::Ok(candidates[0].clone()),
+        _ => WorldPackageResult::MultiplePackages(candidates),
     }
 }

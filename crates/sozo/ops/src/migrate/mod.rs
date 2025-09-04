@@ -40,7 +40,7 @@ use dojo_world::{ResourceType, utils};
 use starknet::accounts::{ConnectedAccount, SingleOwnerAccount};
 use starknet::core::types::{Call, ReceiptBlock};
 use starknet::core::utils as snutils;
-use starknet::providers::{AnyProvider, Provider};
+use starknet::providers::AnyProvider;
 use starknet::signers::LocalWallet;
 use starknet_crypto::Felt;
 use tracing::trace;
