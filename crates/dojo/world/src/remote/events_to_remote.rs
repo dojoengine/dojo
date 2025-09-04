@@ -34,7 +34,7 @@ impl WorldRemote {
         world_address: Felt,
         provider: &P,
         from_block: Option<u64>,
-        max_block_range: u64,
+        _max_block_range: u64,
         whitelisted_namespaces: Option<Vec<String>>,
     ) -> Result<Self> {
         let mut world = Self::default();
@@ -87,8 +87,9 @@ impl WorldRemote {
 
         while current_from <= to_block {
             // Limitation of the node with too big block ranges seems to be fixed in `0.14`.
-            // Will keep for a moment this line commented to ensure we can quickly change our mind if needed.
-            // let current_to = std::cmp::min(current_from + max_block_range - 1, to_block);
+            // Will keep for a moment this line commented to ensure we can quickly change our mind
+            // if needed. let current_to = std::cmp::min(current_from + max_block_range
+            // - 1, to_block);
             let current_to = to_block;
 
             let filter = EventFilter {

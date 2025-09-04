@@ -4,12 +4,12 @@ use async_trait::async_trait;
 #[cfg(feature = "controller")]
 use slot_session::account_sdk::provider::CartridgeJsonRpcProvider;
 use starknet::accounts::{
-    Account, ConnectedAccount, ExecutionEncoder, RawDeclarationV3, RawExecutionV3,
-    SingleOwnerAccount, single_owner,
+    single_owner, Account, ConnectedAccount, ExecutionEncoder, RawDeclarationV3, RawExecutionV3,
+    SingleOwnerAccount,
 };
 use starknet::core::types::{BlockId, Call, Felt};
 use starknet::providers::Provider;
-use starknet::signers::{LocalWallet, SignerInteractivityContext, local_wallet};
+use starknet::signers::{local_wallet, LocalWallet, SignerInteractivityContext};
 
 #[cfg(feature = "controller")]
 use super::controller::ControllerAccount;

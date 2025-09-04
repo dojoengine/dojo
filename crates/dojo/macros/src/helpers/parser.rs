@@ -4,7 +4,7 @@ use cairo_lang_syntax::attribute::structured::{AttributeArgVariant, AttributeStr
 use cairo_lang_syntax::node::ast::{Attribute, Member as MemberAst};
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::kind::SyntaxKind::{ExprParenthesized, ItemModule, ItemStruct};
-use cairo_lang_syntax::node::{Terminal, TypedSyntaxNode, ast};
+use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
 
 use crate::helpers::{DiagnosticsExt, Member};
 

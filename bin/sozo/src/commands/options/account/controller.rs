@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use dojo_world::contracts::contract_info::ContractInfo;
 use slot_session::account_sdk::account::session::account::SessionAccount;
 use slot_session::account_sdk::account::session::merkle::MerkleTree;
@@ -173,7 +173,7 @@ mod tests {
     use scarb_metadata_ext::MetadataDojoExt;
     use starknet::macros::felt;
 
-    use super::{PolicyMethod, collect_policies};
+    use super::{collect_policies, PolicyMethod};
 
     #[test]
     fn collect_policies_from_project() {

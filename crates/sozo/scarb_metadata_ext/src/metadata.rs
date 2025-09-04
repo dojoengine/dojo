@@ -66,16 +66,21 @@ pub trait MetadataDojoExt {
 impl MetadataDojoExt for Metadata {
     /// Returns the package name of the package that contains contracts to be deployed with a world.
     ///
-    /// In some sozo operations, the package name is required (namely binding generation and migrations).
+    /// In some sozo operations, the package name is required (namely binding generation and
+    /// migrations).
     ///
-    /// This function will return the package name of the package that contains contracts to be deployed with a world, if exactly one package matches the criteria.
+    /// This function will return the package name of the package that contains contracts to be
+    /// deployed with a world, if exactly one package matches the criteria.
     ///
-    /// Otherwise, it will return an error. Multiple packages with contracts to be deployed with a world are not supported at the workspace level.
+    /// Otherwise, it will return an error. Multiple packages with contracts to be deployed with a
+    /// world are not supported at the workspace level.
     fn workspace_package_name(&self) -> Result<String> {
         match default_dojo_package_name(&self.packages) {
             WorldPackageResult::Ok(name) => Ok(name),
             WorldPackageResult::MultiplePackages(names) => anyhow::bail!(
-                "Multiple packages found with contracts to be deployed with a world: {:?}. Sozo currently supports only one package with contracts to be deployed with a world when managed at the workspace level.",
+                "Multiple packages found with contracts to be deployed with a world: {:?}. Sozo \
+                 currently supports only one package with contracts to be deployed with a world \
+                 when managed at the workspace level.",
                 names
             ),
             WorldPackageResult::NoPackage => {
@@ -288,16 +293,18 @@ enum WorldPackageResult {
 ///
 /// In a virutal workspace, it is handy to have all the dependencies setup, but no `src` at the root
 /// of the workspace.
-/// However in the context of Dojo, Sozo needs to know the package name of the package when performing
-/// some tasks like binding generation and migrations.
+/// However in the context of Dojo, Sozo needs to know the package name of the package when
+/// performing some tasks like binding generation and migrations.
 ///
 /// To solve the issue where a virtual workspace has no package name, this function looks for a
 /// package that is *not* a `lib` target and uses `dojo_macros` as a dependency.
 /// If it finds exactly one package that matches the criteria, it returns the package name.
 ///
-/// Otherwise, it returns a `MultiplePackages` variant, which will be handled by the caller, which generally should indicate
-/// to the user that using multiple packages with contracts to be deployed with a world is not supported at the workspace level.
-/// Therefore, the user will want to build and migrate the package with contracts themselves by going into the package directory and running the commands.
+/// Otherwise, it returns a `MultiplePackages` variant, which will be handled by the caller, which
+/// generally should indicate to the user that using multiple packages with contracts to be deployed
+/// with a world is not supported at the workspace level. Therefore, the user will want to build and
+/// migrate the package with contracts themselves by going into the package directory and running
+/// the commands.
 fn default_dojo_package_name(packages: &[PackageMetadata]) -> WorldPackageResult {
     let mut candidates = Vec::new();
 

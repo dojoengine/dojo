@@ -1,10 +1,10 @@
-use cairo_lang_macro::{ProcMacroResult, TokenStream, quote};
+use cairo_lang_macro::{quote, ProcMacroResult, TokenStream};
 use cairo_lang_parser::utils::SimpleParserDatabase;
 use cairo_lang_syntax::node::ast::OptionTypeClause;
 use cairo_lang_syntax::node::kind::SyntaxKind::{ItemEnum, ItemStruct};
-use cairo_lang_syntax::node::{Terminal, TypedSyntaxNode, ast};
+use cairo_lang_syntax::node::{ast, Terminal, TypedSyntaxNode};
 
-use crate::helpers::{DojoFormatter, DojoTokenizer, ProcMacroResultExt, debug_store_expand};
+use crate::helpers::{debug_store_expand, DojoFormatter, DojoTokenizer, ProcMacroResultExt};
 
 pub(crate) fn process(token_stream: TokenStream) -> ProcMacroResult {
     let db = SimpleParserDatabase::default();

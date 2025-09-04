@@ -1,8 +1,8 @@
 use cairo_lang_macro::{Diagnostic, ProcMacroResult};
 use cairo_lang_parser::utils::SimpleParserDatabase;
-use cairo_lang_syntax::node::TypedSyntaxNode;
 use cairo_lang_syntax::node::ast::{self, Attribute};
 use cairo_lang_syntax::node::helpers::OptionWrappedGenericParamListHelper;
+use cairo_lang_syntax::node::TypedSyntaxNode;
 use dojo_types::naming;
 
 use crate::constants::{DOJO_INTROSPECT_DERIVE, DOJO_PACKED_DERIVE};
