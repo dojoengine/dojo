@@ -44,6 +44,11 @@ pub struct TestArgs {
     /// Should we print the resource usage.
     #[arg(long, default_value_t = false)]
     print_resource_usage: bool,
+    /// Disable Scarb warnings.
+    #[arg(long)]
+    #[arg(help = "Scarb warnings are not shown in the output.")]
+    pub no_scarb_warnings: bool,
+
     /// Specify the features to activate.
     #[command(flatten)]
     pub features: FeaturesSpec,
@@ -56,7 +61,8 @@ pub struct TestArgs {
 
 impl TestArgs {
     pub fn run(self, scarb_metadata: &Metadata) -> anyhow::Result<()> {
-        let mut extra_args = vec![];
+        let mut extra_args =
+            if self.no_scarb_warnings { vec!["--verbosity", "no-warnings"] } else { vec![] };
 
         match scarb_metadata.test_runner()? {
             TestRunner::SnfTestRunner => {
