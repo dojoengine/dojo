@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+
+# Run installer with:
+# curl -L https://raw.githubusercontent.com/dojoengine/dojo/main/dojoup/asdf-install | bash
+
+set -e
+
+# Check if asdf is installed
+if ! command -v asdf &> /dev/null; then
+    echo "Error: asdf is not installed or not in PATH"
+    echo "Please install asdf first by following the instructions at:"
+    echo "https://asdf-vm.com/guide/getting-started.html"
+    exit 1
+fi
+
+echo "Installing Dojo toolchain with asdf..."
+
+# Install the asdf plugins
+PLUGINS=(sozo katana torii)
+for plugin in "${PLUGINS[@]}"; do
+    if ! asdf plugin list | grep -q "^$plugin$"; then
+        asdf plugin add $plugin https://github.com/dojoengine/asdf-$plugin.git
+    fi
+
+    latest=$(asdf latest $plugin)
+    if ! asdf list $plugin 2>/dev/null | grep -q "$latest"; then
+        asdf install $plugin $latest
+        asdf set --home $plugin $latest
+    fi
+done
+
+echo "Dojo toolchain installation complete!"
