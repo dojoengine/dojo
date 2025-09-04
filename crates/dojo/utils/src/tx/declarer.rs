@@ -8,10 +8,12 @@
 
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::time::Duration;
 
 use starknet::accounts::ConnectedAccount;
 use starknet::core::types::{
     BlockId, BlockTag, DeclareTransactionResult, Felt, FlattenedSierraClass, StarknetError,
+    TransactionFinalityStatus,
 };
 use starknet::providers::{Provider, ProviderError};
 use tracing::trace;
@@ -106,6 +108,33 @@ where
             .send_with_cfg(txn_config)
             .await?;
 
+        if txn_config.wait {
+            // Since `0.14`, we can't send DECLARE transactions with a nonce that is not matching
+            // the current state (latest block).
+            // <https://community.starknet.io/t/sn-0-14-0-pre-release-notes/115618#p-2359352-nonces-24>
+            let receipt = TransactionWaiter::new(transaction_hash, &account.provider())
+                .with_tx_status(TransactionFinalityStatus::AcceptedOnL2)
+                .with_timeout(Duration::from_secs(60))
+                .await?;
+
+            // Since `0.14`, it event when the transaction is accepted on L2, it might take a while
+            // to propagate the transaction to the nodes.
+            tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+
+            if txn_config.receipt {
+                trace!(
+                    label = labeled_class.label,
+                    transaction_hash = format!("{:#066x}", transaction_hash),
+                    class_hash = format!("{:#066x}", class_hash),
+                    casm_class_hash = format!("{:#066x}", labeled_class.casm_class_hash),
+                    receipt = serde_json::to_string_pretty(&receipt).unwrap(),
+                    "Declared class."
+                );
+
+                return Ok(TransactionResult::HashReceipt(transaction_hash, Box::new(receipt)));
+            }
+        }
+
         trace!(
             label = labeled_class.label,
             transaction_hash = format!("{:#066x}", transaction_hash),
@@ -113,14 +142,6 @@ where
             casm_class_hash = format!("{:#066x}", labeled_class.casm_class_hash),
             "Declared class."
         );
-
-        if txn_config.wait {
-            let receipt = TransactionWaiter::new(transaction_hash, &account.provider()).await?;
-
-            if txn_config.receipt {
-                return Ok(TransactionResult::HashReceipt(transaction_hash, Box::new(receipt)));
-            }
-        }
 
         Ok(TransactionResult::Hash(transaction_hash))
     }

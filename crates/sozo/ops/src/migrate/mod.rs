@@ -27,16 +27,16 @@ use dojo_utils::{
     Declarer, Deployer, Invoker, LabeledClass, TransactionResult, TransactionWaiter, TxnConfig,
 };
 use dojo_world::config::calldata_decoder::decode_calldata;
-use dojo_world::config::{ProfileConfig, ResourceConfig, WorldMetadata, metadata_config};
+use dojo_world::config::{metadata_config, ProfileConfig, ResourceConfig, WorldMetadata};
 use dojo_world::constants::WORLD;
-use dojo_world::contracts::WorldContract;
 use dojo_world::contracts::abigen::world::ResourceMetadata;
+use dojo_world::contracts::WorldContract;
 use dojo_world::diff::{Manifest, ResourceDiff, WorldDiff, WorldStatus};
 use dojo_world::local::{ExternalContractLocal, ResourceLocal, UPGRADE_CONTRACT_FN_NAME};
 use dojo_world::metadata::MetadataStorage;
 use dojo_world::remote::ResourceRemote;
 use dojo_world::services::UploadService;
-use dojo_world::{ResourceType, utils};
+use dojo_world::{utils, ResourceType};
 use starknet::accounts::{ConnectedAccount, SingleOwnerAccount};
 use starknet::core::types::{Call, ReceiptBlock};
 use starknet::core::utils as snutils;
@@ -1115,15 +1115,15 @@ where
                     class: self.diff.world_info.class.clone().flatten()?,
                 };
 
-                Declarer::declare(labeled_class, &self.world.account, &self.txn_config).await?;
+                // The following operations require the transactions to be well executed
+                // and the receipt to be available.
+                let mut tx_config = self.txn_config;
+                tx_config.wait = true;
+                tx_config.receipt = true;
 
-                // We want to wait for the receipt to be able to print the
-                // world block number.
-                let mut txn_config = self.txn_config;
-                txn_config.wait = true;
-                txn_config.receipt = true;
+                Declarer::declare(labeled_class, &self.world.account, &tx_config).await?;
 
-                let deployer = Deployer::new(&self.world.account, txn_config);
+                let deployer = Deployer::new(&self.world.account, tx_config);
 
                 let res = deployer
                     .deploy_via_udc(
@@ -1139,7 +1139,7 @@ where
                         let block_msg = match receipt.block {
                             ReceiptBlock::Block { block_number, .. } => block_number.to_string(),
                             ReceiptBlock::PreConfirmed { block_number } => {
-                                format!("pending ({block_number})")
+                                format!("PRE CONFIRMED ({block_number})")
                             }
                         };
 

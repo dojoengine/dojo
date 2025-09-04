@@ -86,7 +86,10 @@ impl WorldRemote {
         let mut events = Vec::new();
 
         while current_from <= to_block {
-            let current_to = std::cmp::min(current_from + max_block_range - 1, to_block);
+            // Limitation of the node with too big block ranges seems to be fixed in `0.14`.
+            // Will keep for a moment this line commented to ensure we can quickly change our mind if needed.
+            // let current_to = std::cmp::min(current_from + max_block_range - 1, to_block);
+            let current_to = to_block;
 
             let filter = EventFilter {
                 from_block: Some(BlockId::Number(current_from)),
