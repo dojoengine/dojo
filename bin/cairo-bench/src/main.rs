@@ -437,7 +437,7 @@ fn compare_costs(new_cost: &u128, old_cost: &u128, threshold: f64) -> Ordering {
     let (ratio, _) = get_ratio(*old_cost, *new_cost);
     if ratio > threshold {
         Ordering::Greater
-    } else if ratio < -1.0 * threshold {
+    } else if ratio < -threshold {
         Ordering::Less
     } else {
         Ordering::Equal

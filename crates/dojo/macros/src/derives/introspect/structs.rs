@@ -82,7 +82,6 @@ impl DojoStructIntrospect {
         let mut sizes = struct_ast
             .members(db)
             .elements(db)
-            .into_iter()
             .filter_map(|m| {
                 if m.has_attr(db, "key") {
                     return None;
@@ -162,7 +161,7 @@ impl DojoStructIntrospect {
                 }
             } else {
                 let field_name = member.name(db).text(db);
-                let field_selector = get_selector_from_name(field_name.as_ref()).unwrap();
+                let field_selector = get_selector_from_name(field_name).unwrap();
                 let field_layout = super::layout::get_layout_from_type_clause(
                     db,
                     &mut self.diagnostics,

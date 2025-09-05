@@ -74,7 +74,7 @@ pub enum TransactionResult {
 impl fmt::Display for TransactionResult {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            TransactionResult::Hash(hash) => write!(f, "Transaction hash: {:#066x}", hash),
+            TransactionResult::Hash(hash) => write!(f, "Transaction hash: {hash:#066x}"),
             TransactionResult::HashReceipt(hash, receipt) => write!(
                 f,
                 "Transaction hash: {:#066x}\nReceipt: {}",

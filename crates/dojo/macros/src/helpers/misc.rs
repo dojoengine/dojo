@@ -29,9 +29,9 @@ pub fn compute_unique_hash<'a>(
         members
             .map(|m| {
                 poseidon_hash_many(&[
-                    naming::compute_bytearray_hash(&m.name(db).text(db)),
+                    naming::compute_bytearray_hash(m.name(db).text(db)),
                     naming::compute_bytearray_hash(
-                        &m.type_clause(db).ty(db).as_syntax_node().get_text_without_trivia(db),
+                        m.type_clause(db).ty(db).as_syntax_node().get_text_without_trivia(db),
                     ),
                 ])
             })

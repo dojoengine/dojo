@@ -5,7 +5,7 @@ version = 4
 [[package]]
 name = "account_sdk"
 version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/controller-rs?tag=v0.3.2#d63e6a034efd97b779ac4c8cf751a05d66a847fd"
+source = "git+https://github.com/cartridge-gg/controller-rs?rev=e77caaa0e9af473364beaeaff4e8ff467feb7ca8#e77caaa0e9af473364beaeaff4e8ff467feb7ca8"
 dependencies = [
  "alloy-primitives",
  "alloy-signer",
@@ -36,7 +36,7 @@ dependencies = [
  "sha2",
  "starknet",
  "starknet-crypto",
- "starknet-types-core 0.2.0",
+ "starknet-types-core",
  "thiserror 1.0.69",
  "tokio",
  "toml 0.8.22",
@@ -1058,8 +1058,9 @@ checksum = "d71b6127be86fdcfddb610f7182ac57211d4b18a3e9c82eb2d17662f2227ad6a"
 
 [[package]]
 name = "cainome"
-version = "0.9.1"
-source = "git+https://github.com/cartridge-gg/cainome?rev=7d60de1#7d60de1780374b3644677f55cee053596e99f461"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0634cab52751732346438836fbdb264d9ab47cfaaff51bffd9667178ce7e5ab5"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1075,7 +1076,7 @@ dependencies = [
  "serde",
  "serde_json",
  "starknet",
- "starknet-types-core 0.1.8",
+ "starknet-types-core",
  "thiserror 2.0.12",
  "tracing",
  "tracing-subscriber",
@@ -1084,8 +1085,9 @@ dependencies = [
 
 [[package]]
 name = "cainome-cairo-serde"
-version = "0.3.0"
-source = "git+https://github.com/cartridge-gg/cainome?rev=7d60de1#7d60de1780374b3644677f55cee053596e99f461"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "362d42b94a2402c8820debc2d05b0308e4aff6df0dc5c86569167437440764af"
 dependencies = [
  "num-bigint",
  "serde",
@@ -1097,7 +1099,8 @@ dependencies = [
 [[package]]
 name = "cainome-cairo-serde-derive"
 version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/cainome?rev=7d60de1#7d60de1780374b3644677f55cee053596e99f461"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d272424141f0ced49ca5f40bc4b756235ee6e7c9cf6ab01f7ef5ac010f5f8864"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1107,8 +1110,9 @@ dependencies = [
 
 [[package]]
 name = "cainome-parser"
-version = "0.5.1"
-source = "git+https://github.com/cartridge-gg/cainome?rev=7d60de1#7d60de1780374b3644677f55cee053596e99f461"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4ffdbc6abfba9c7e91beb87fe7561f097d9f7bbda45c6ff74be3a9ff3f1a0124"
 dependencies = [
  "convert_case 0.8.0",
  "quote",
@@ -1120,8 +1124,9 @@ dependencies = [
 
 [[package]]
 name = "cainome-rs"
-version = "0.4.0"
-source = "git+https://github.com/cartridge-gg/cainome?rev=7d60de1#7d60de1780374b3644677f55cee053596e99f461"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6a2f63aeefc4d30221469fffcfbdbb13e7311444ab91614729c5137c3a70cbb3"
 dependencies = [
  "anyhow",
  "cainome-cairo-serde",
@@ -1138,8 +1143,9 @@ dependencies = [
 
 [[package]]
 name = "cainome-rs-macro"
-version = "0.4.0"
-source = "git+https://github.com/cartridge-gg/cainome?rev=7d60de1#7d60de1780374b3644677f55cee053596e99f461"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "39a53ebb721a24c3f2351b9214a6c2d2aaafaeecf5da15ee0c244dea95a7490c"
 dependencies = [
  "anyhow",
  "cainome-cairo-serde",
@@ -1468,7 +1474,7 @@ dependencies = [
  "rand 0.9.2",
  "serde",
  "sha2",
- "starknet-types-core 0.2.0",
+ "starknet-types-core",
  "thiserror 2.0.12",
 ]
 
@@ -1518,7 +1524,7 @@ dependencies = [
  "serde_json",
  "sha3",
  "smol_str",
- "starknet-types-core 0.2.0",
+ "starknet-types-core",
  "thiserror 2.0.12",
  "vector-map",
 ]
@@ -1592,7 +1598,7 @@ dependencies = [
  "itertools 0.14.0",
  "num-bigint",
  "num-traits",
- "starknet-types-core 0.2.0",
+ "starknet-types-core",
  "thiserror 2.0.12",
 ]
 
@@ -1631,7 +1637,7 @@ dependencies = [
  "salsa",
  "serde",
  "serde_json",
- "starknet-types-core 0.2.0",
+ "starknet-types-core",
  "thiserror 2.0.12",
  "typetag",
 ]
@@ -1655,7 +1661,7 @@ dependencies = [
  "serde_json",
  "sha3",
  "smol_str",
- "starknet-types-core 0.2.0",
+ "starknet-types-core",
  "thiserror 2.0.12",
 ]
 
@@ -1709,7 +1715,7 @@ dependencies = [
  "num-traits",
  "salsa",
  "serde",
- "starknet-types-core 0.2.0",
+ "starknet-types-core",
 ]
 
 [[package]]
@@ -1732,7 +1738,7 @@ dependencies = [
  "itertools 0.14.0",
  "num-traits",
  "rayon",
- "starknet-types-core 0.2.0",
+ "starknet-types-core",
 ]
 
 [[package]]
@@ -1794,7 +1800,7 @@ dependencies = [
  "sha2",
  "sha3",
  "starknet-crypto",
- "starknet-types-core 0.2.0",
+ "starknet-types-core",
  "thiserror 2.0.12",
  "zip",
 ]
@@ -7031,12 +7037,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "56199f7ddabf13fe5074ce809e7d3f42b42ae711800501b5b16ea82ad029c39d"
 
 [[package]]
-name = "size-of"
-version = "0.1.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c4e36eca171fddeda53901b0a436573b3f2391eaa9189d439b2bd8ea8cebd7e3"
-
-[[package]]
 name = "sketches-ddsketch"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7054,7 +7054,7 @@ dependencies = [
 [[package]]
 name = "slot-core"
 version = "0.49.1"
-source = "git+https://github.com/cartridge-gg/slot?branch=compartmentalization#4e0c3e090a1d7983146eca81e542f7c4f8931c22"
+source = "git+https://github.com/cartridge-gg/slot?branch=compartmentalization#29baeb6055d8ee6d31adcdb2e53f823cc3b57efb"
 dependencies = [
  "anyhow",
  "colored 2.2.0",
@@ -7065,7 +7065,7 @@ dependencies = [
  "serde",
  "serde_json",
  "slot-utils",
- "starknet-types-core 0.2.0",
+ "starknet-types-core",
  "thiserror 1.0.69",
  "update-informer",
  "which 5.0.0",
@@ -7074,7 +7074,7 @@ dependencies = [
 [[package]]
 name = "slot-session"
 version = "0.49.1"
-source = "git+https://github.com/cartridge-gg/slot?branch=compartmentalization#4e0c3e090a1d7983146eca81e542f7c4f8931c22"
+source = "git+https://github.com/cartridge-gg/slot?branch=compartmentalization#29baeb6055d8ee6d31adcdb2e53f823cc3b57efb"
 dependencies = [
  "account_sdk",
  "anyhow",
@@ -7088,7 +7088,7 @@ dependencies = [
  "slot-core",
  "slot-utils",
  "starknet-signers",
- "starknet-types-core 0.2.0",
+ "starknet-types-core",
  "thiserror 1.0.69",
  "tokio",
  "tower-http",
@@ -7100,7 +7100,7 @@ dependencies = [
 [[package]]
 name = "slot-utils"
 version = "0.49.1"
-source = "git+https://github.com/cartridge-gg/slot?branch=compartmentalization#4e0c3e090a1d7983146eca81e542f7c4f8931c22"
+source = "git+https://github.com/cartridge-gg/slot?branch=compartmentalization#29baeb6055d8ee6d31adcdb2e53f823cc3b57efb"
 dependencies = [
  "anyhow",
  "axum",
@@ -7109,7 +7109,7 @@ dependencies = [
  "regex",
  "reqwest 0.12.15",
  "sha3",
- "starknet-types-core 0.2.0",
+ "starknet-types-core",
  "tempfile",
  "thiserror 1.0.69",
  "tokio",
@@ -7649,7 +7649,7 @@ dependencies = [
  "sha3",
  "starknet-core-derive",
  "starknet-crypto",
- "starknet-types-core 0.2.0",
+ "starknet-types-core",
 ]
 
 [[package]]
@@ -7678,7 +7678,7 @@ dependencies = [
  "rfc6979",
  "sha2",
  "starknet-curve",
- "starknet-types-core 0.2.0",
+ "starknet-types-core",
  "zeroize",
 ]
 
@@ -7688,7 +7688,7 @@ version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "22c898ae81b6409532374cf237f1bd752d068b96c6ad500af9ebbd0d9bb712f6"
 dependencies = [
- "starknet-types-core 0.2.0",
+ "starknet-types-core",
 ]
 
 [[package]]
@@ -7737,22 +7737,6 @@ dependencies = [
  "starknet-core",
  "starknet-crypto",
  "thiserror 1.0.69",
-]
-
-[[package]]
-name = "starknet-types-core"
-version = "0.1.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4037bcb26ce7c508448d221e570d075196fd4f6912ae6380981098937af9522a"
-dependencies = [
- "lambdaworks-crypto",
- "lambdaworks-math",
- "num-bigint",
- "num-integer",
- "num-traits",
- "serde",
- "size-of",
- "zeroize",
 ]
 
 [[package]]
