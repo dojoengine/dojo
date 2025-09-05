@@ -127,6 +127,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - uses: foundry-rs/setup-snfoundry@v3
       - uses: software-mansion/setup-scarb@v1
         with:
           scarb-version: "dev-2025-09-05"
@@ -143,6 +144,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - uses: foundry-rs/setup-snfoundry@v3
       - uses: software-mansion/setup-scarb@v1
         with:
           scarb-version: "dev-2025-09-05"
