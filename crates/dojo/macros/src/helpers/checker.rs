@@ -15,10 +15,10 @@ pub struct DojoChecker {}
 impl DojoChecker {
     /// Be sure there is no conflict among `derive` attributes
     /// set on a Cairo element.
-    pub fn check_derive_conflicts(
+    pub fn check_derive_conflicts<'a>(
         db: &SimpleParserDatabase,
         diagnostics: &mut Vec<Diagnostic>,
-        attrs: Vec<Attribute>,
+        attrs: impl Iterator<Item = Attribute<'a>>,
     ) {
         let attr_names = DojoParser::extract_derive_attr_names(db, diagnostics, attrs);
 
@@ -34,6 +34,16 @@ impl DojoChecker {
 
     /// Check if the name of a Dojo element is valid.
     pub fn is_name_valid(element: &str, name: &str) -> Option<ProcMacroResult> {
+        // Models and events must have a name shorter or equal to 26 characters, since we add
+        // `Value` to the name we can overflow the felt252 value.
+        if (element == "model" || element == "event") && name.len() > 26 {
+            let name_len = name.len();
+            return Some(ProcMacroResult::fail(format!(
+                "The {element} name '{name}' must be shorter or equal to 26 characters (current \
+                 length: {name_len})."
+            )));
+        }
+
         if !naming::is_name_valid(name) {
             return Some(ProcMacroResult::fail(format!(
                 "The {element} name '{name}' can only contain characters (a-z/A-Z), digits (0-9) \

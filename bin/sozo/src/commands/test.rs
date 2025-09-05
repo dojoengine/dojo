@@ -1,5 +1,5 @@
 //! Compiles and runs tests for a Dojo project using Scarb.
-use cairo_lang_test_runner::RunProfilerConfig;
+use cairo_lang_runner::profiling::ProfilerConfig;
 use clap::Args;
 use scarb_interop::Scarb;
 use scarb_metadata::Metadata;
@@ -14,12 +14,11 @@ pub enum ProfilerMode {
     Sierra,
 }
 
-impl From<ProfilerMode> for RunProfilerConfig {
+impl From<ProfilerMode> for ProfilerConfig {
     fn from(mode: ProfilerMode) -> Self {
         match mode {
-            ProfilerMode::None => RunProfilerConfig::None,
-            ProfilerMode::Cairo => RunProfilerConfig::Cairo,
-            ProfilerMode::Sierra => RunProfilerConfig::Sierra,
+            ProfilerMode::None | ProfilerMode::Cairo => ProfilerConfig::Cairo,
+            ProfilerMode::Sierra => ProfilerConfig::Sierra,
         }
     }
 }
@@ -45,6 +44,11 @@ pub struct TestArgs {
     /// Should we print the resource usage.
     #[arg(long, default_value_t = false)]
     print_resource_usage: bool,
+    /// Disable Scarb warnings.
+    #[arg(long)]
+    #[arg(help = "Scarb warnings are not shown in the output.")]
+    pub no_scarb_warnings: bool,
+
     /// Specify the features to activate.
     #[command(flatten)]
     pub features: FeaturesSpec,
@@ -57,7 +61,8 @@ pub struct TestArgs {
 
 impl TestArgs {
     pub fn run(self, scarb_metadata: &Metadata) -> anyhow::Result<()> {
-        let mut extra_args = vec![];
+        let mut extra_args =
+            if self.no_scarb_warnings { vec!["--verbosity", "no-warnings"] } else { vec![] };
 
         match scarb_metadata.test_runner()? {
             TestRunner::SnfTestRunner => {

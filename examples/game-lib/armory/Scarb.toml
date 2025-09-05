@@ -1,6 +1,6 @@
 [package]
 name = "armory"
-version = "1.6.0-alpha.1"
+version = "1.7.0-alpha.2"
 description = "An armory of epic weapons."
 edition.workspace = true
 cairo-version.workspace = true
@@ -11,7 +11,7 @@ dojo.workspace = true
 dojo_macros.workspace = true
 
 [dev-dependencies]
-cairo_test = "2.11.4"
+cairo_test = "2.12"
 dojo_cairo_test = { path = "../../../crates/dojo/dojo-cairo-test" }
 
 [lib]

@@ -23,7 +23,7 @@ pub struct FooEventMemberRemoved {
 }
 
 #[dojo::event]
-pub struct FooEventMemberAddedButRemoved {
+pub struct FooEventMemberAddedButRmd {
     #[key]
     pub caller: ContractAddress,
     pub b: u128,
@@ -32,7 +32,7 @@ pub struct FooEventMemberAddedButRemoved {
 }
 
 #[dojo::event]
-pub struct FooEventMemberAddedButMoved {
+pub struct FooEventMemberAddedButMvd {
     #[key]
     pub caller: ContractAddress,
     pub b: u128,
@@ -58,7 +58,7 @@ struct FooEventMemberChanged {
 }
 
 #[dojo::event]
-struct FooEventMemberIllegalChange {
+struct FooEventMemberBadChange {
     #[key]
     pub caller: ContractAddress,
     pub a: MyEnum,
@@ -219,38 +219,29 @@ fn test_upgrade_event_with_member_removed() {
 
 #[test]
 #[should_panic(
-    expected: "Invalid new schema to upgrade the resource `dojo-FooEventMemberAddedButRemoved`",
+    expected: "Invalid new schema to upgrade the resource `dojo-FooEventMemberAddedButRmd`",
 )]
 fn test_upgrade_event_with_member_added_but_removed() {
     let world = deploy_world_for_event_upgrades();
-    world
-        .upgrade_event(
-            "dojo", dojo_snf_test::declare_event_contract("FooEventMemberAddedButRemoved"),
-        );
+    world.upgrade_event("dojo", dojo_snf_test::declare_event_contract("FooEventMemberAddedButRmd"));
 }
 
 #[test]
 #[should_panic(
-    expected: "Invalid new schema to upgrade the resource `dojo-FooEventMemberAddedButMoved`",
+    expected: "Invalid new schema to upgrade the resource `dojo-FooEventMemberAddedButMvd`",
 )]
 fn test_upgrade_event_with_member_moved() {
     let world = deploy_world_for_event_upgrades();
-    world
-        .upgrade_event(
-            "dojo", dojo_snf_test::declare_event_contract("FooEventMemberAddedButMoved"),
-        );
+    world.upgrade_event("dojo", dojo_snf_test::declare_event_contract("FooEventMemberAddedButMvd"));
 }
 
 #[test]
 #[should_panic(
-    expected: "Invalid new schema to upgrade the resource `dojo-FooEventMemberIllegalChange`",
+    expected: "Invalid new schema to upgrade the resource `dojo-FooEventMemberBadChange`",
 )]
 fn test_upgrade_event_with_member_illegal_change() {
     let world = deploy_world_for_event_upgrades();
-    world
-        .upgrade_event(
-            "dojo", dojo_snf_test::declare_event_contract("FooEventMemberIllegalChange"),
-        );
+    world.upgrade_event("dojo", dojo_snf_test::declare_event_contract("FooEventMemberBadChange"));
 }
 
 #[test]
@@ -306,7 +297,7 @@ fn test_register_event_with_unregistered_namespace() {
 // and it's not the account that is calling the register_event function.
 #[test]
 #[should_panic(
-    expected: "Contract `0x1a5ee9565583195ae8bf4038b95cef58db4f6e78089dd80ce5da3a2518ba7a1` does NOT have OWNER role on namespace `dojo`",
+    expected: "Contract `0x12628844c00f37b6e7ac0d9dba2941553f09f9b7b1de979103f64f072db26f6` does NOT have OWNER role on namespace `dojo`",
 )]
 fn test_register_event_through_malicious_contract() {
     let bob: ContractAddress = 0xb0b.try_into().unwrap();

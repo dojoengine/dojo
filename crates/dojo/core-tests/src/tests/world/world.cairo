@@ -247,7 +247,7 @@ fn test_can_call_init_only_world() {
 #[test]
 #[available_gas(6000000)]
 #[should_panic(
-    expected: "Contract `0x3b29f77f3d643e50e2d15b094f8fc807d4427520d4d13751901e883555f5a68` does NOT have OWNER role on contract (or its namespace) `test_contract`",
+    expected: "Contract `0x6e1592b8353d0fc098469cce233353af2b92a5b88ef81e8355e93c009a9617a` does NOT have OWNER role on contract (or its namespace) `test_contract`",
 )]
 fn test_can_call_init_only_owner() {
     let world = deploy_world();

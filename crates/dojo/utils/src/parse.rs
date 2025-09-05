@@ -70,7 +70,7 @@ pub fn parse_url(value: &str) -> anyhow::Result<Url, URLParsingError> {
             Ok(socket_addr) => {
                 // If socket address parsing succeeds, return a URL with the "http" scheme and the
                 // socket address as the host
-                let url_str = format!("http://{}", socket_addr);
+                let url_str = format!("http://{socket_addr}");
                 return Url::parse(&url_str).map_err(|_| URLParsingError::Parse(url_str));
             }
             Err(_) => return Err(URLParsingError::Parse(value.to_string())),
@@ -91,7 +91,7 @@ pub fn parse_url(value: &str) -> anyhow::Result<Url, URLParsingError> {
                 Ok(socket_addr) => {
                     // If socket address parsing succeeds, return a URL with the "http" scheme and
                     // the socket address as the host
-                    let url_str = format!("http://{}", socket_addr);
+                    let url_str = format!("http://{socket_addr}");
                     Url::parse(&url_str).map_err(|_| URLParsingError::Parse(url_str))
                 }
                 Err(_) => Err(URLParsingError::Parse(value.to_string())),

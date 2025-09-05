@@ -13,10 +13,10 @@ pub struct DojoParser {}
 /// DojoParser provides some functions to parse TokenStream/SyntaxNode.
 impl DojoParser {
     /// Parse an input token stream and return a ItemStruct syntax node if found.
-    pub(crate) fn parse_and_find_struct(
-        db: &SimpleParserDatabase,
-        token_stream: &TokenStream,
-    ) -> Option<ast::ItemStruct> {
+    pub(crate) fn parse_and_find_struct<'a>(
+        db: &'a SimpleParserDatabase,
+        token_stream: &'a TokenStream,
+    ) -> Option<ast::ItemStruct<'a>> {
         let (root_node, _diagnostics) = db.parse_token_stream(token_stream);
 
         for n in root_node.descendants(db) {
@@ -30,10 +30,10 @@ impl DojoParser {
     }
 
     /// Parse an input token stream and return a ItemModule syntax node if found.
-    pub(crate) fn parse_and_find_module(
-        db: &SimpleParserDatabase,
-        token_stream: &TokenStream,
-    ) -> Option<ast::ItemModule> {
+    pub(crate) fn parse_and_find_module<'a>(
+        db: &'a SimpleParserDatabase,
+        token_stream: &'a TokenStream,
+    ) -> Option<ast::ItemModule<'a>> {
         let (root_node, _diagnostics) = db.parse_token_stream(token_stream);
 
         for n in root_node.descendants(db) {
@@ -48,10 +48,10 @@ impl DojoParser {
 
     /// Parse the input token stream of an inline proc macro as a
     /// parenthesized expression.
-    pub(crate) fn parse_inline_args(
-        db: &SimpleParserDatabase,
-        token_stream: &TokenStream,
-    ) -> Option<ast::ExprParenthesized> {
+    pub(crate) fn parse_inline_args<'a>(
+        db: &'a SimpleParserDatabase,
+        token_stream: &'a TokenStream,
+    ) -> Option<ast::ExprParenthesized<'a>> {
         let (root_node, _diagnostics) = db.parse_token_stream_expr(token_stream);
 
         for n in root_node.descendants(db) {
@@ -64,15 +64,15 @@ impl DojoParser {
     }
 
     /// Parse a list of member syntax nodes into a list of `Member`.
-    pub(crate) fn parse_members(
+    pub(crate) fn parse_members<'a>(
         db: &SimpleParserDatabase,
-        members: &[MemberAst],
+        // members: &[MemberAst],
+        members: impl Iterator<Item = MemberAst<'a>>,
         diagnostics: &mut Vec<Diagnostic>,
     ) -> Vec<Member> {
         let mut parsing_keys = true;
 
         members
-            .iter()
             .map(|member_ast| {
                 let is_key = member_ast.has_attr(db, "key");
 
@@ -82,7 +82,8 @@ impl DojoParser {
                         .type_clause(db)
                         .ty(db)
                         .as_syntax_node()
-                        .get_text_without_trivia(db),
+                        .get_text_without_trivia(db)
+                        .to_string(),
                     key: is_key,
                 };
 
@@ -115,13 +116,12 @@ impl DojoParser {
     /// ```
     ///
     /// And this function will return `["Introspect"]`.
-    pub fn extract_derive_attr_names(
+    pub fn extract_derive_attr_names<'a>(
         db: &SimpleParserDatabase,
         diagnostics: &mut Vec<Diagnostic>,
-        attrs: Vec<Attribute>,
+        attrs: impl Iterator<Item = Attribute<'a>>,
     ) -> Vec<String> {
         attrs
-            .iter()
             .filter_map(|attr| {
                 let args = attr.clone().structurize(db).args;
                 if args.is_empty() {
@@ -130,7 +130,9 @@ impl DojoParser {
                 } else {
                     Some(args.into_iter().filter_map(|a| {
                         if let AttributeArgVariant::Unnamed(ast::Expr::Path(path)) = a.variant {
-                            if let [ast::PathSegment::Simple(segment)] = &path.elements(db)[..] {
+                            if let Some(ast::PathSegment::Simple(segment)) =
+                                &path.segments(db).elements(db).next()
+                            {
                                 Some(segment.ident(db).text(db).to_string())
                             } else {
                                 None

@@ -58,13 +58,13 @@ impl DojoEvent {
 
         let members = DojoParser::parse_members(
             db,
-            &struct_ast.members(db).elements(db),
+            struct_ast.members(db).elements(db),
             &mut event.diagnostics,
         );
 
         DojoFormatter::serialize_keys_and_values(
             db,
-            &struct_ast.members(db).elements(db),
+            struct_ast.members(db).elements(db),
             &mut event.serialized_keys,
             &mut event.serialized_values,
             true,
@@ -91,19 +91,11 @@ impl DojoEvent {
             })
             .collect::<Vec<_>>();
 
-        let derive_attr_names = DojoParser::extract_derive_attr_names(
+        let mut derive_attr_names = DojoParser::extract_derive_attr_names(
             db,
             &mut event.diagnostics,
             struct_ast.attributes(db).query_attr(db, "derive"),
         );
-
-        event.event_value_derive_attr_names = derive_attr_names
-            .iter()
-            .map(|d| d.to_string())
-            .filter(|d| d != DOJO_INTROSPECT_DERIVE && d != DOJO_PACKED_DERIVE)
-            .collect::<Vec<String>>();
-
-        let mut missing_derive_attrs = vec![];
 
         // Ensures events always derive Introspect if not already derived,
         // and do not derive IntrospectPacked.
@@ -111,15 +103,14 @@ impl DojoEvent {
             event
                 .diagnostics
                 .push_error(format!("Deriving {DOJO_PACKED_DERIVE} on event is not allowed."));
+        } else if !derive_attr_names.contains(&DOJO_INTROSPECT_DERIVE.to_string()) {
+            derive_attr_names.push(DOJO_INTROSPECT_DERIVE.to_string());
         }
-
-        missing_derive_attrs.push(DOJO_INTROSPECT_DERIVE.to_string());
 
         // Ensures events always derive required traits.
         EXPECTED_DERIVE_ATTR_NAMES.iter().for_each(|expected_attr| {
             if !derive_attr_names.contains(&expected_attr.to_string()) {
-                missing_derive_attrs.push(expected_attr.to_string());
-                event.event_value_derive_attr_names.push(expected_attr.to_string());
+                derive_attr_names.push(expected_attr.to_string());
             }
         });
 
@@ -127,24 +118,28 @@ impl DojoEvent {
             db,
             &event.event_name,
             false,
-            &struct_ast.members(db).elements(db),
+            struct_ast.members(db).elements(db),
         )
         .to_string();
 
         let original_struct = DojoTokenizer::rebuild_original_struct(db, struct_ast);
 
+        event.event_value_derive_attr_names = derive_attr_names;
         let event_code = event.generate_event_code();
 
-        let missing_derive_attr = if missing_derive_attrs.is_empty() {
+        let derive_attr = if event.event_value_derive_attr_names.is_empty() {
             DojoTokenizer::tokenize("")
         } else {
-            DojoTokenizer::tokenize(&format!("#[derive({})]", missing_derive_attrs.join(", ")))
+            DojoTokenizer::tokenize(&format!(
+                "#[derive({})]",
+                event.event_value_derive_attr_names.join(", ")
+            ))
         };
 
         ProcMacroResult::finalize(
             quote! {
                 // original struct with missing derive attributes
-                #missing_derive_attr
+                #derive_attr
                 #original_struct
 
                 // model

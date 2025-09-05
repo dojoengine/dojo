@@ -1,3 +1,4 @@
-scarb nightly-2025-05-08
-starknet-foundry 0.43.1
+scarb dev-2025-09-05
+starknet-foundry 0.48.1
 cairo-profiler 0.9.0
+katana 1.7.0-alpha.3

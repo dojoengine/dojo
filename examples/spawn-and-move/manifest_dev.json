@@ -1,7 +1,7 @@
 {
   "world": {
-    "class_hash": "0x4d44ca76c3f82df35436d1c20847ba5c345b8dda4731e200ba3232cd8f94fe9",
-    "address": "0x653644e1085578a22addf74edbd3a211cd41e7323f9ac249e3ffbf04bcbb86b",
+    "class_hash": "0x7bc7b264612d3ac261df0a6d72a6b73c84b9386ef0095dd340d42afc01bb53c",
+    "address": "0x72b2128fc2db8362beb744243d56c41022b93dfa8ca8d44c8be85764ecbdea1",
     "seed": "dojo_examples",
     "name": "example",
     "entrypoints": [
@@ -1479,8 +1479,8 @@
   },
   "contracts": [
     {
-      "address": "0x6898ae11701ff8355a88a14e798534a13d96a96d022a6595353b36a7c83e0f1",
-      "class_hash": "0x3ec34af7756a999e7afb4bd23bee819272b8ea053671b1ac39f1b1fcbea0eae",
+      "address": "0x230d10e0655d72ce9ab5d6db5a2bb0afd29e3a403ff616db030ad48de19641a",
+      "class_hash": "0x62d6ee16dfaf14f3a35c2dc9d4e39473574ccaf4873516a18f5905a289deb30",
       "abi": [
         {
           "type": "impl",
@@ -1849,8 +1849,8 @@
       ]
     },
     {
-      "address": "0x5357fd61e0213c5c2ef10aaffd67212b70ade7841fa01618110a90aa3295fb2",
-      "class_hash": "0x1372814d45ad33782ac108850c646b503a7984d47fe72c0bfb7b98b4801941e",
+      "address": "0x5379fdcd86b2148e665877006fa47dc31edce2253fdee9ce2ec981c0670b1fe",
+      "class_hash": "0x289a9b68aed391f3192343088f2b2f78f961a1fef788e209a3c99b15f2142cd",
       "abi": [
         {
           "type": "impl",
@@ -2043,8 +2043,8 @@
       ]
     },
     {
-      "address": "0x5df34baa68c5f498c4a9776abf66c8d30efbdfdcaa8321135487df3e4bd3ef",
-      "class_hash": "0x44a2e198f0df6084ee05c4618e91abbec439a6171805c970edc88095b236c17",
+      "address": "0x4ca02e0da71179ec7d0c250c717eb90d70f599282600e545dc1a07de9e4f6f9",
+      "class_hash": "0x333d5507c839b6fd07300dae264b2872df2a827cf6426a3834c2310b14c81a0",
       "abi": [
         {
           "type": "impl",
@@ -2219,8 +2219,8 @@
       ]
     },
     {
-      "address": "0x6bb6ba1766520c48e3359ab80a05cdcf591fe66368833c84435c2cceecf3e5e",
-      "class_hash": "0x454cf67b6232c82737744be5aa4727a6542848d19c2eb00692e144a52acaaf5",
+      "address": "0x681652e79d591d79ecf445691fb323f4f9947772fb66891beb5506d52687b69",
+      "class_hash": "0x7ac4e9f2d7df78cf8cf5f9adf79a5bdef741dbcf030b9584507f64a3d265283",
       "abi": [
         {
           "type": "impl",
@@ -2402,8 +2402,8 @@
       ]
     },
     {
-      "address": "0x66406ffbeb01a660e86ba37637e98d3201421a5956c9ca151b216ba5eb258b0",
-      "class_hash": "0x3ec34af7756a999e7afb4bd23bee819272b8ea053671b1ac39f1b1fcbea0eae",
+      "address": "0x6bb20ceb3999e8579302d3e6069f2c1fc10a99b4dfd5a28a907b66e242a631b",
+      "class_hash": "0x62d6ee16dfaf14f3a35c2dc9d4e39473574ccaf4873516a18f5905a289deb30",
       "abi": [
         {
           "type": "impl",
@@ -2774,7 +2774,7 @@
   ],
   "libraries": [
     {
-      "class_hash": "0x48195c8f045173e2ec687d9229f70e1fb47adae5ad1be54ba17ed3aeb3ecf72",
+      "class_hash": "0x3d7bd94be3001ba89eda8504a9a93ea81757185e4a927da2f38aa66b6d32ddb",
       "abi": [
         {
           "type": "impl",
@@ -2913,49 +2913,49 @@
   "models": [
     {
       "members": [],
-      "class_hash": "0x6def7c814e90409249b6b892fcc3bf4cdb3d555740b2558fae8a3d8c2961ec1",
+      "class_hash": "0x66130fe8b43d48be5338d100eec3e7d7f337a29fd7e05db8a3fee766390c30f",
       "tag": "ns-Flatbow",
       "selector": "0x27a35f8bac96f1deebf4d3e83fc6b94a3da4e6d30a1ce34d5893d2fb602725d"
     },
     {
       "members": [],
-      "class_hash": "0x2fe26e9aba06797b4eebb0c0961a61f12cb882299ecdc25c710c9f814f6cdc4",
+      "class_hash": "0x36a27dca35deaa3b742ce657693875c61f13ecc434b951d8bf9d7dbf0c0b50f",
       "tag": "ns-Message",
       "selector": "0x7e77b60a338fa7414998176fd93ff265e4ca04b93105ac98f155bcb2e9e8438"
     },
     {
       "members": [],
-      "class_hash": "0x84f0216062a7f2467911441611b7bd405e52b6679698d05d793fbbe3d2150",
+      "class_hash": "0x10fcae75e310ec9124b3970637ddc5401b0d22dd92dee8f2071d5f7655ecbc2",
       "tag": "ns-MockToken",
       "selector": "0x23ee42c8f47d1d693b966176dcd5deca0ec147b33e42186382d9d027603a6fd"
     },
     {
       "members": [],
-      "class_hash": "0x17c4621d889e7403e4b8151aee3d84f7b595b0d8e5fc59a7671507dc8ce47fe",
+      "class_hash": "0x1c04c0c5d7ce99ad0976f9be9afd5f9486ca8e4b264f9aedf6f3dd5a9ec189d",
       "tag": "ns-Moves",
       "selector": "0x54104f060e63bdd9d68bb872f2dc6d40a101e168e18b999c10de348d06ea24a"
     },
     {
       "members": [],
-      "class_hash": "0x482a4d2d0c3ea78fc1dd36c3abec937ce74cdf12596875e72793ee06d9f5f4a",
+      "class_hash": "0x9c385bdd7964f30eb46acda5a36518deeb72024e4c3c7e02e6b26ff2a04",
       "tag": "ns-PlayerConfig",
       "selector": "0x3bea561c3e142a660a00d1471d7712b70695dc4ee3b173aeaefd5178f7a21af"
     },
     {
       "members": [],
-      "class_hash": "0x29a888b85da88deca0a8e7a351f26a37ca1ebe97084be10af51ea028bfd9a11",
+      "class_hash": "0x585075bed33c3b1756b5f4022ab46934bc72cbb3e9f8bf2898bf6e23c4ff2ed",
       "tag": "ns-Position",
       "selector": "0x5e12c61e9cf30881c126a6d298975c8d79f95abed1a05c2d38b7803ed19445f"
     },
     {
       "members": [],
-      "class_hash": "0x78e80163456e1a11d4ef82ace24e1293eec24376b13c887925c8916305e45fa",
+      "class_hash": "0x3c8b2fc67ef54b661cb7ab46009efd66125be08cc3abdbee4cc5b7b44d1ac68",
       "tag": "ns-RiverSkale",
       "selector": "0x47f763aa7de3b872f7fbec198275547e06751dbe26b66281b9cffaed9938f24"
     },
     {
       "members": [],
-      "class_hash": "0x6245b59e2f68b2b3e75f1c77648028b34cf7c165de095936846f26666eb3d7c",
+      "class_hash": "0x59705105bea9c7eb7ff2d91f670e6dd399cb7b5ab59a0f65a0583cf1aaa3a52",
       "tag": "ns-ServerProfile",
       "selector": "0x641dc5f178aff0c7935a8f1ae30c6038a3d3512ea164d486f98bc37b6beabf"
     }
@@ -2963,23 +2963,23 @@
   "events": [
     {
       "members": [],
-      "class_hash": "0x5b451ae9d85f68b7a087541e30d7cd1ac3a011a8c12fe3494216f34d8cc1428",
+      "class_hash": "0x6f535adf4c68ab233f998e52c6880c51ddb1a73efafb0c03ab2d1f8b14868e8",
       "tag": "ns-Moved",
       "selector": "0x6d4c1ac3717ba997500153c52344a2acac5123bbfa0f78d3dcc04cb786826b0"
     },
     {
       "members": [],
-      "class_hash": "0x32d53f1cb8473f3c1b93e79a47856f377f36129e65db9a8086e973cc036e3bf",
+      "class_hash": "0x74f2457a602e718ac2ffce21d4f38ca3c0e795ce87354398ddaec115b7b5501",
       "tag": "ns-MyInit",
       "selector": "0xe1c030210beae7e2153a7b996d7d2ae6a428faf16a61f192f02178718b6f0"
     }
   ],
   "external_contracts": [
     {
-      "class_hash": "0x6d8cb94cee378b019e576af843a3f8f37cfdf436d3eac01be928e2ed0ae9c64",
+      "class_hash": "0x75856664448512bd384becb0846c737e4d0601d57ca1b6e351c0e3b00fd5d06",
       "contract_name": "ERC721Token",
       "tag": "ns-Badge",
-      "address": "0x7264020492fba07553b02cc8121a37be8e92c4df2e3f0ebf9a7d2dcf5b6ccd1",
+      "address": "0x1f7698beeff869634da30956e9d7124dcefa91a89546c614088b7e37d719463",
       "abi": [
         {
           "type": "struct",
@@ -3885,10 +3885,10 @@
       "block_number": null
     },
     {
-      "class_hash": "0x6910d29e4e5fccce2bc3da8759f242318a324daf6b48d3c80287165140511de",
+      "class_hash": "0x8913967758cec48b97cf1b710d58af2c3170b39f3a7bbcae09b0a3847f70d5",
       "contract_name": "Bank",
       "tag": "ns-Bank",
-      "address": "0x6b424efa8fed4c28d1581cd0b38bc8d17887e544e3b508d934cab8acee97a3f",
+      "address": "0x575449127790e265a27adcba41161469d16b23ff0ec7f232860b521bf533505",
       "abi": [
         {
           "type": "impl",
@@ -3972,10 +3972,10 @@
       "block_number": null
     },
     {
-      "class_hash": "0x19f8f2dae7b9b09b3243e30beb37a29a8a01e91409bd6d2ee2d253336d47659",
+      "class_hash": "0x56bb7d1eda07098472c2481eff2a2f0422dc0d953839502ade3d1c1f1781ffb",
       "contract_name": "ERC20Token",
       "tag": "ns-GoldToken",
-      "address": "0x3440a44f9e112917ae055a6cdde0cb474e89378c3977a2f819f789a002c8c28",
+      "address": "0x63dbb736f56b0ecc01fc6b93990ed91400b31210ba334dc52b323a8bcb1795",
       "abi": [
         {
           "type": "struct",
@@ -4543,10 +4543,10 @@
       "block_number": null
     },
     {
-      "class_hash": "0x3fd772ef209c598eb62a292a80bcb63c3cb52a12832e42b1d0284a3a7a95d4e",
+      "class_hash": "0x4eabc3a18945b3549e44302e04486b6a7ecc4ef6c70f22ab4fde256a8664d87",
       "contract_name": "ERC1155Token",
       "tag": "ns-Rewards",
-      "address": "0xc6b95150386ca0ed4552be515cc5ad9ba4122d322b7c399cf65225d9440087",
+      "address": "0x13460d983c7ed06b7295d1737c569afb1c2e616d15a9ffdcd12a8e7d7cf948b",
       "abi": [
         {
           "type": "struct",
@@ -5504,10 +5504,10 @@
       "block_number": null
     },
     {
-      "class_hash": "0x7bfd851dbbba64e84510940d3b114239a86b31b2d49789616faab3154db78f6",
+      "class_hash": "0x708addac09814e3964acf4ca8a12fae48eae18d7447870dcfd6b6c288db24d5",
       "contract_name": "Saloon",
       "tag": "ns-Saloon",
-      "address": "0x2365c3683fc7042111a7088d051dcb7d10f874a6d5e5416e533eb06689df350",
+      "address": "0x201e1e34f283750a0a9edf7ae2b4f25d2e595bd0cd318472524a092e234f4aa",
       "abi": [
         {
           "type": "impl",
@@ -5582,10 +5582,10 @@
       "block_number": null
     },
     {
-      "class_hash": "0x19f8f2dae7b9b09b3243e30beb37a29a8a01e91409bd6d2ee2d253336d47659",
+      "class_hash": "0x56bb7d1eda07098472c2481eff2a2f0422dc0d953839502ade3d1c1f1781ffb",
       "contract_name": "ERC20Token",
       "tag": "ns-WoodToken",
-      "address": "0x43040aa4117a271f422062cd52c5838fcc8ebc42b6e58c5f11d459c0e8e82da",
+      "address": "0x511898bdbb1cd3d8bdb1c1d625b5edcd30195f4eb89946f840fd1576149dfd6",
       "abi": [
         {
           "type": "struct",
@@ -6153,10 +6153,10 @@
       "block_number": null
     },
     {
-      "class_hash": "0x19f8f2dae7b9b09b3243e30beb37a29a8a01e91409bd6d2ee2d253336d47659",
+      "class_hash": "0x56bb7d1eda07098472c2481eff2a2f0422dc0d953839502ade3d1c1f1781ffb",
       "contract_name": "ERC20Token",
       "tag": "ns2-GoldToken",
-      "address": "0x3304f8450ed4eec13704d3e8a3dbc6fec8abf3c08fb8793b98b43a15f0a225d",
+      "address": "0x57859261595dd204f3baff2c742814b0f3577cdadd53906f07fd274066cb94a",
       "abi": [
         {
           "type": "struct",
@@ -6724,10 +6724,10 @@
       "block_number": null
     },
     {
-      "class_hash": "0x6910d29e4e5fccce2bc3da8759f242318a324daf6b48d3c80287165140511de",
+      "class_hash": "0x8913967758cec48b97cf1b710d58af2c3170b39f3a7bbcae09b0a3847f70d5",
       "contract_name": "Bank",
       "tag": "ns3-Bank",
-      "address": "0x539aa2fa9ca71abcb9e3dc92bd270f077d0aee29cbdf1a73321551080aaeaac",
+      "address": "0x20775f8981e83653815c5213b8f0087ed0449efc6919e0b9b02ad36ae03b9d2",
       "abi": [
         {
           "type": "impl",

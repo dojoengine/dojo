@@ -23,7 +23,7 @@ pub struct FooModelMemberRemoved {
 }
 
 #[dojo::model]
-pub struct FooModelMemberAddedButRemoved {
+pub struct FooModelMemberAddedButRmd {
     #[key]
     pub caller: ContractAddress,
     pub b: u128,
@@ -32,7 +32,7 @@ pub struct FooModelMemberAddedButRemoved {
 }
 
 #[dojo::model]
-pub struct FooModelMemberAddedButMoved {
+pub struct FooModelMemberAddedButMvd {
     #[key]
     pub caller: ContractAddress,
     pub b: u128,
@@ -58,7 +58,7 @@ struct FooModelMemberChanged {
 }
 
 #[dojo::model]
-struct FooModelMemberIllegalChange {
+struct FooModelMemberBadChange {
     #[key]
     pub caller: ContractAddress,
     pub a: MyEnum,
@@ -278,38 +278,29 @@ fn test_upgrade_model_with_member_removed() {
 
 #[test]
 #[should_panic(
-    expected: "Invalid new schema to upgrade the resource `dojo-FooModelMemberAddedButRemoved`",
+    expected: "Invalid new schema to upgrade the resource `dojo-FooModelMemberAddedButRmd`",
 )]
 fn test_upgrade_model_with_member_added_but_removed() {
     let world = deploy_world_for_model_upgrades();
-    world
-        .upgrade_model(
-            "dojo", dojo_snf_test::declare_model_contract("FooModelMemberAddedButRemoved"),
-        );
+    world.upgrade_model("dojo", dojo_snf_test::declare_model_contract("FooModelMemberAddedButRmd"));
 }
 
 #[test]
 #[should_panic(
-    expected: "Invalid new schema to upgrade the resource `dojo-FooModelMemberAddedButMoved`",
+    expected: "Invalid new schema to upgrade the resource `dojo-FooModelMemberAddedButMvd`",
 )]
 fn test_upgrade_model_with_member_moved() {
     let world = deploy_world_for_model_upgrades();
-    world
-        .upgrade_model(
-            "dojo", dojo_snf_test::declare_model_contract("FooModelMemberAddedButMoved"),
-        );
+    world.upgrade_model("dojo", dojo_snf_test::declare_model_contract("FooModelMemberAddedButMvd"));
 }
 
 #[test]
 #[should_panic(
-    expected: "Invalid new schema to upgrade the resource `dojo-FooModelMemberIllegalChange`",
+    expected: "Invalid new schema to upgrade the resource `dojo-FooModelMemberBadChange`",
 )]
 fn test_upgrade_model_with_member_illegal_change() {
     let world = deploy_world_for_model_upgrades();
-    world
-        .upgrade_model(
-            "dojo", dojo_snf_test::declare_model_contract("FooModelMemberIllegalChange"),
-        );
+    world.upgrade_model("dojo", dojo_snf_test::declare_model_contract("FooModelMemberBadChange"));
 }
 
 #[test]
@@ -363,7 +354,7 @@ fn test_register_model_with_unregistered_namespace() {
 // and it's not the account that is calling the register_model function.
 #[test]
 #[should_panic(
-    expected: "Contract `0x1a5ee9565583195ae8bf4038b95cef58db4f6e78089dd80ce5da3a2518ba7a1` does NOT have OWNER role on namespace `dojo`",
+    expected: "Contract `0x12628844c00f37b6e7ac0d9dba2941553f09f9b7b1de979103f64f072db26f6` does NOT have OWNER role on namespace `dojo`",
 )]
 fn test_register_model_through_malicious_contract() {
     let bob: ContractAddress = 0xb0b.try_into().unwrap();

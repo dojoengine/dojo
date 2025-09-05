@@ -25,7 +25,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  RUST_VERSION: 1.86.0
+  RUST_VERSION: 1.88.0
 
 jobs:
   build:
@@ -62,7 +62,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: software-mansion/setup-scarb@v1
         with:
-          scarb-version: "nightly-2025-05-08"
+          scarb-version: "dev-2025-09-05"
       - uses: Swatinem/rust-cache@v2
       - uses: actions/download-artifact@v4
         with:
@@ -74,7 +74,7 @@ jobs:
       # This puts Katana in the path for integration tests.
       - name: Download Katana for integration tests
         run: |
-          curl -L https://github.com/dojoengine/katana/releases/download/v1.7.0-alpha.2/katana_v1.7.0-alpha.2_linux_amd64.tar.gz -o katana.tar.gz;
+          curl -L https://github.com/dojoengine/katana/releases/download/v1.7.0-alpha.3/katana_v1.7.0-alpha.3_linux_amd64.tar.gz -o katana.tar.gz;
           tar -C /usr/local/bin -xzf katana.tar.gz
 
       - run: |
@@ -120,16 +120,17 @@ jobs:
       - uses: actions/checkout@v3
       - uses: software-mansion/setup-scarb@v1
         with:
-          scarb-version: "nightly-2025-05-08"
+          scarb-version: "dev-2025-09-05"
       - run: bash scripts/cairo_fmt.sh
 
   dojo-core-test:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - uses: foundry-rs/setup-snfoundry@v3
       - uses: software-mansion/setup-scarb@v1
         with:
-          scarb-version: "nightly-2025-05-08"
+          scarb-version: "dev-2025-09-05"
       - uses: actions/download-artifact@v4
         with:
           name: dojo-bins
@@ -143,9 +144,10 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - uses: foundry-rs/setup-snfoundry@v3
       - uses: software-mansion/setup-scarb@v1
         with:
-          scarb-version: "nightly-2025-05-08"
+          scarb-version: "dev-2025-09-05"
       - uses: actions/download-artifact@v4
         with:
           name: dojo-bins

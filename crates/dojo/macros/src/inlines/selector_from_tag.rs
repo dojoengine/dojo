@@ -54,9 +54,9 @@ mod tests {
 
         assert_eq!(res.diagnostics.len(), 1);
 
-        assert_eq!(res.diagnostics[0].severity, Severity::Error);
+        assert_eq!(res.diagnostics[0].severity(), Severity::Error);
         assert_eq!(
-            res.diagnostics[0].message,
+            res.diagnostics[0].message(),
             "selector_from_tag: invalid parameter (arg: hello)".to_string()
         );
 
@@ -66,9 +66,9 @@ mod tests {
 
         assert_eq!(res.diagnostics.len(), 1);
 
-        assert_eq!(res.diagnostics[0].severity, Severity::Error);
+        assert_eq!(res.diagnostics[0].severity(), Severity::Error);
         assert_eq!(
-            res.diagnostics[0].message,
+            res.diagnostics[0].message(),
             "selector_from_tag: invalid parameter type (arg: (1234))".to_string()
         );
     }
@@ -81,9 +81,9 @@ mod tests {
 
         assert_eq!(res.diagnostics.len(), 1);
 
-        assert_eq!(res.diagnostics[0].severity, Severity::Error);
+        assert_eq!(res.diagnostics[0].severity(), Severity::Error);
         assert_eq!(
-            res.diagnostics[0].message,
+            res.diagnostics[0].message(),
             "selector_from_tag: Invalid tag. Tag must be in the format of `namespace-name`."
                 .to_string()
         );

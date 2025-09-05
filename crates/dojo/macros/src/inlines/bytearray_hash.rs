@@ -46,9 +46,9 @@ mod tests {
 
         assert_eq!(res.diagnostics.len(), 1);
 
-        assert_eq!(res.diagnostics[0].severity, Severity::Error);
+        assert_eq!(res.diagnostics[0].severity(), Severity::Error);
         assert_eq!(
-            res.diagnostics[0].message,
+            res.diagnostics[0].message(),
             "bytearray_hash: invalid parameter (arg: hello)".to_string()
         );
 
@@ -58,9 +58,9 @@ mod tests {
 
         assert_eq!(res.diagnostics.len(), 1);
 
-        assert_eq!(res.diagnostics[0].severity, Severity::Error);
+        assert_eq!(res.diagnostics[0].severity(), Severity::Error);
         assert_eq!(
-            res.diagnostics[0].message,
+            res.diagnostics[0].message(),
             "bytearray_hash: invalid parameter type (arg: (1234))".to_string()
         );
     }

@@ -40,6 +40,11 @@ pub struct BuildArgs {
     #[arg(help = "Output directory.", default_value = "bindings")]
     pub bindings_output: String,
 
+    /// Disable Scarb warnings.
+    #[arg(long)]
+    #[arg(help = "Scarb warnings are not shown in the output.")]
+    pub no_scarb_warnings: bool,
+
     /// Specify packages to build.
     /// Packages to run this command on, can be a concrete package name (`foobar`) or
     /// a prefix glob (`foo*`).
@@ -85,12 +90,15 @@ impl BuildArgs {
     pub async fn run(self, scarb_metadata: &Metadata) -> Result<()> {
         scarb_metadata.clean_dir_profile();
 
+        let other_args =
+            if self.no_scarb_warnings { vec!["--verbosity", "no-warnings"] } else { vec![] };
+
         Scarb::build(
             &scarb_metadata.workspace.manifest_path,
             scarb_metadata.current_profile.as_str(),
             &self.packages.join(","),
             self.features.into(),
-            vec![],
+            other_args,
         )?;
 
         let mut builtin_plugins = vec![];
@@ -200,6 +208,7 @@ impl Default for BuildArgs {
             unrealengine: false,
             bindings_output: "bindings".to_string(),
             stats: StatOptions::default(),
+            no_scarb_warnings: false,
         }
     }
 }

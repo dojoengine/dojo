@@ -38,9 +38,9 @@ use dojo_world::remote::ResourceRemote;
 use dojo_world::services::UploadService;
 use dojo_world::{utils, ResourceType};
 use starknet::accounts::{ConnectedAccount, SingleOwnerAccount};
-use starknet::core::types::Call;
+use starknet::core::types::{Call, ReceiptBlock};
 use starknet::core::utils as snutils;
-use starknet::providers::{AnyProvider, Provider};
+use starknet::providers::AnyProvider;
 use starknet::signers::LocalWallet;
 use starknet_crypto::Felt;
 use tracing::trace;
@@ -582,8 +582,7 @@ where
                 if let TransactionResult::Hash(tx_hash) = txs_results[0] {
                     let receipt =
                         TransactionWaiter::new(tx_hash, &self.world.account.provider()).await?;
-                    let block_number =
-                        receipt.block.block_number().expect("Block number should be available...");
+                    let block_number = receipt.block.block_number();
 
                     deploy_block_numbers =
                         deploy_calls.keys().map(|name| (name.clone(), block_number)).collect();
@@ -600,8 +599,7 @@ where
                 if let TransactionResult::Hash(tx_hash) = tx {
                     let receipt =
                         TransactionWaiter::new(tx_hash, &self.world.account.provider()).await?;
-                    let block_number =
-                        receipt.block.block_number().expect("Block number should be available...");
+                    let block_number = receipt.block.block_number();
                     deploy_block_numbers.insert(name, block_number);
                 }
             }
@@ -1117,15 +1115,15 @@ where
                     class: self.diff.world_info.class.clone().flatten()?,
                 };
 
-                Declarer::declare(labeled_class, &self.world.account, &self.txn_config).await?;
+                // The following operations require the transactions to be well executed
+                // and the receipt to be available.
+                let mut tx_config = self.txn_config;
+                tx_config.wait = true;
+                tx_config.receipt = true;
 
-                // We want to wait for the receipt to be able to print the
-                // world block number.
-                let mut txn_config = self.txn_config;
-                txn_config.wait = true;
-                txn_config.receipt = true;
+                Declarer::declare(labeled_class, &self.world.account, &tx_config).await?;
 
-                let deployer = Deployer::new(&self.world.account, txn_config);
+                let deployer = Deployer::new(&self.world.account, tx_config);
 
                 let res = deployer
                     .deploy_via_udc(
@@ -1138,17 +1136,11 @@ where
 
                 match res {
                     TransactionResult::HashReceipt(hash, receipt) => {
-                        let block_msg = if let Some(n) = receipt.block.block_number() {
-                            n.to_string()
-                        } else {
-                            // If we are in the pending block, we must get the latest block of the
-                            // chain to display it to the user.
-                            let provider = &self.world.account.provider();
-
-                            format!(
-                                "pending ({})",
-                                provider.block_number().await.map_err(MigrationError::Provider)?
-                            )
+                        let block_msg = match receipt.block {
+                            ReceiptBlock::Block { block_number, .. } => block_number.to_string(),
+                            ReceiptBlock::PreConfirmed { block_number } => {
+                                format!("PRE CONFIRMED ({block_number})")
+                            }
                         };
 
                         ui.stop_and_persist_boxed(

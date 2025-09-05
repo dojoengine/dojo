@@ -1,4 +1,4 @@
-use std::io::{BufRead, BufReader, ErrorKind};
+use std::io::ErrorKind;
 use std::process::{Command, Stdio};
 
 use anyhow::{anyhow, bail, Result};
@@ -33,21 +33,21 @@ impl Scarb {
 
         args_with_manifest.extend(args);
 
-        let stdout = match Command::new("scarb")
+        let mut child = match Command::new("scarb")
             .args(&args_with_manifest)
-            .stdout(Stdio::piped())
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
             .spawn()
         {
-            Ok(child) => {
-                child.stdout.ok_or_else(|| anyhow!("Could not capture standard output."))?
-            }
+            Ok(child) => child,
             Err(err) => {
                 let err = match err.kind() {
                     ErrorKind::NotFound =>
                     // TODO: have a better way to handle missing Scarb.
+                    //       a suggestion could be installing scarb automatically.
                     {
                         anyhow!(
-                            "Scarb not found. Find install instruction here: https://docs.swmansion.com/scarb"
+                            "Scarb not found. Find install instruction here: https://docs.swmansion.com/scarb."
                         )
                     }
                     _ => anyhow!(err),
@@ -56,8 +56,10 @@ impl Scarb {
             }
         };
 
-        let reader = BufReader::new(stdout);
-        reader.lines().map_while(|line| line.ok()).for_each(|line| println!("{}", line));
+        let status = child.wait()?;
+        if !status.success() {
+            bail!("Scarb command failed with exit code: {}", status);
+        }
 
         Ok(())
     }

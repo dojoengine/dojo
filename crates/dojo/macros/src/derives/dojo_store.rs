@@ -41,7 +41,7 @@ fn process_struct(db: &SimpleParserDatabase, struct_ast: &ast::ItemStruct) -> Pr
     let mut deserialized_members = vec![];
     let mut member_names = vec![];
 
-    for member in struct_ast.members(db).elements(db).iter() {
+    for member in struct_ast.members(db).elements(db) {
         let member_name = member.name(db).text(db).to_string();
 
         let member_ty = member.type_clause(db).ty(db).as_syntax_node().get_text_without_trivia(db);
@@ -53,7 +53,7 @@ fn process_struct(db: &SimpleParserDatabase, struct_ast: &ast::ItemStruct) -> Pr
         ));
         deserialized_members.push(DojoFormatter::deserialize_primitive_member_ty(
             &member_name,
-            &member_ty,
+            member_ty,
             false,
             "values",
         ));
@@ -116,7 +116,7 @@ fn process_enum(db: &SimpleParserDatabase, enum_ast: &ast::ItemEnum) -> ProcMacr
     let mut serialized_variants = vec![];
     let mut deserialized_variants = vec![];
 
-    for (index, variant) in enum_ast.variants(db).elements(db).iter().enumerate() {
+    for (index, variant) in enum_ast.variants(db).elements(db).enumerate() {
         let variant_name = variant.name(db).text(db).to_string();
         let full_variant_name = format!("{enum_name}::{variant_name}");
         let variant_index = index + 1;

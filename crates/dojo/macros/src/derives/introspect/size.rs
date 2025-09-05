@@ -21,19 +21,19 @@ pub fn get_field_size_from_type_clause(
     match type_clause.ty(db) {
         Expr::Path(path) => {
             let path_type = path.as_syntax_node().get_text_without_trivia(db);
-            compute_item_size_from_type(&path_type)
+            compute_item_size_from_type(path_type)
         }
         Expr::Tuple(expr) => {
-            if expr.expressions(db).elements(db).is_empty() {
+            if expr.expressions(db).elements(db).len() == 0 {
                 vec![]
             } else {
                 let tuple_type = expr.as_syntax_node().get_text_without_trivia(db);
-                compute_item_size_from_type(&tuple_type)
+                compute_item_size_from_type(tuple_type)
             }
         }
         Expr::FixedSizeArray(expr) => {
             let arr_type = expr.as_syntax_node().get_text_without_trivia(db);
-            compute_item_size_from_type(&arr_type)
+            compute_item_size_from_type(arr_type)
         }
         _ => {
             // field type already checked while building the layout
@@ -42,7 +42,7 @@ pub fn get_field_size_from_type_clause(
     }
 }
 
-pub fn compute_item_size_from_type(item_type: &String) -> Vec<String> {
+pub fn compute_item_size_from_type(item_type: &str) -> Vec<String> {
     if is_array(item_type) || is_byte_array(item_type) {
         vec!["Option::None".to_string()]
     } else {

@@ -77,11 +77,11 @@ pub fn get_packed_field_layout_from_type_clause(
         }
         Expr::Tuple(expr) => {
             let tuple_type = expr.as_syntax_node().get_text_without_trivia(db);
-            get_packed_tuple_layout_from_type(diagnostics, &tuple_type)
+            get_packed_tuple_layout_from_type(diagnostics, tuple_type)
         }
         Expr::FixedSizeArray(expr) => {
             let arr_type = expr.as_syntax_node().get_text_without_trivia(db);
-            get_packed_item_layout_from_type(diagnostics, &arr_type)
+            get_packed_item_layout_from_type(diagnostics, arr_type)
         }
         _ => {
             diagnostics.push_error("Unexpected expression for variant data type.".to_string());
