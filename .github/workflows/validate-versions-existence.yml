@@ -15,7 +15,7 @@ jobs:
   validate-tags:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:v1.6.0
+      image: ghcr.io/dojoengine/dojo-dev:v1.7.0-alpha.2
     steps:
       - uses: actions/checkout@v4
 
