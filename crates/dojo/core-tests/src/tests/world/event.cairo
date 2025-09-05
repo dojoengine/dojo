@@ -223,10 +223,7 @@ fn test_upgrade_event_with_member_removed() {
 )]
 fn test_upgrade_event_with_member_added_but_removed() {
     let world = deploy_world_for_event_upgrades();
-    world
-        .upgrade_event(
-            "dojo", dojo_snf_test::declare_event_contract("FooEventMemberAddedButRmd"),
-        );
+    world.upgrade_event("dojo", dojo_snf_test::declare_event_contract("FooEventMemberAddedButRmd"));
 }
 
 #[test]
@@ -235,10 +232,7 @@ fn test_upgrade_event_with_member_added_but_removed() {
 )]
 fn test_upgrade_event_with_member_moved() {
     let world = deploy_world_for_event_upgrades();
-    world
-        .upgrade_event(
-            "dojo", dojo_snf_test::declare_event_contract("FooEventMemberAddedButMvd"),
-        );
+    world.upgrade_event("dojo", dojo_snf_test::declare_event_contract("FooEventMemberAddedButMvd"));
 }
 
 #[test]
@@ -247,10 +241,7 @@ fn test_upgrade_event_with_member_moved() {
 )]
 fn test_upgrade_event_with_member_illegal_change() {
     let world = deploy_world_for_event_upgrades();
-    world
-        .upgrade_event(
-            "dojo", dojo_snf_test::declare_event_contract("FooEventMemberBadChange"),
-        );
+    world.upgrade_event("dojo", dojo_snf_test::declare_event_contract("FooEventMemberBadChange"));
 }
 
 #[test]

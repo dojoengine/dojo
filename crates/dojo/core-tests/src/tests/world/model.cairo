@@ -282,10 +282,7 @@ fn test_upgrade_model_with_member_removed() {
 )]
 fn test_upgrade_model_with_member_added_but_removed() {
     let world = deploy_world_for_model_upgrades();
-    world
-        .upgrade_model(
-            "dojo", dojo_snf_test::declare_model_contract("FooModelMemberAddedButRmd"),
-        );
+    world.upgrade_model("dojo", dojo_snf_test::declare_model_contract("FooModelMemberAddedButRmd"));
 }
 
 #[test]
@@ -294,10 +291,7 @@ fn test_upgrade_model_with_member_added_but_removed() {
 )]
 fn test_upgrade_model_with_member_moved() {
     let world = deploy_world_for_model_upgrades();
-    world
-        .upgrade_model(
-            "dojo", dojo_snf_test::declare_model_contract("FooModelMemberAddedButMvd"),
-        );
+    world.upgrade_model("dojo", dojo_snf_test::declare_model_contract("FooModelMemberAddedButMvd"));
 }
 
 #[test]
@@ -306,10 +300,7 @@ fn test_upgrade_model_with_member_moved() {
 )]
 fn test_upgrade_model_with_member_illegal_change() {
     let world = deploy_world_for_model_upgrades();
-    world
-        .upgrade_model(
-            "dojo", dojo_snf_test::declare_model_contract("FooModelMemberBadChange"),
-        );
+    world.upgrade_model("dojo", dojo_snf_test::declare_model_contract("FooModelMemberBadChange"));
 }
 
 #[test]
