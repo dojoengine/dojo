@@ -125,6 +125,8 @@ fn check_resources(
     }
 }
 
+#[ignore = "Flaky: this test passes when run alone and sometimes when all tests are run, an other \
+            test may be cleaning the dev build."]
 #[tokio::test(flavor = "multi_thread")]
 #[katana_runner::test(accounts = 10, db_dir = copy_spawn_and_move_db().as_str())]
 async fn upload_metadata(sequencer: &RunnerCtx) {
