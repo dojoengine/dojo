@@ -19,7 +19,7 @@ jobs:
   bench-sozo:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:v1.7.0-alpha.1
+      image: ghcr.io/dojoengine/dojo-dev:v1.7.0-alpha.2
     steps:
       - uses: actions/checkout@v3
       - uses: software-mansion/setup-scarb@v1
