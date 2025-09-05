@@ -81,7 +81,7 @@ impl DojoModel {
             return failure;
         }
 
-        let derive_attr_names = DojoParser::extract_derive_attr_names(
+        let mut derive_attr_names = DojoParser::extract_derive_attr_names(
             db,
             &mut model.diagnostics,
             struct_ast.attributes(db).query_attr(db, "derive"),
@@ -184,26 +184,18 @@ impl DojoModel {
             (key_attrs.first().unwrap().to_string(), key_types.first().unwrap().to_string())
         };
 
-        // Build the list of derive attributes to set on "ModelValue" struct.
-        model.model_value_derive_attr_names = derive_attr_names
-            .iter()
-            .map(|d| d.to_string())
-            .filter(|d| d != DOJO_INTROSPECT_DERIVE && d != DOJO_PACKED_DERIVE)
-            .collect::<Vec<String>>();
-
-        let mut missing_derive_attr_names = vec![];
-
         // If Introspect or IntrospectPacked derive attribute is not set for the model,
         // use Introspect by default.
-        if derive_attr_names.contains(&DOJO_PACKED_DERIVE.to_string()) {
-            missing_derive_attr_names.push(DOJO_PACKED_DERIVE.to_string());
-        } else {
-            missing_derive_attr_names.push(DOJO_INTROSPECT_DERIVE.to_string());
+        if !derive_attr_names.contains(&DOJO_PACKED_DERIVE.to_string())
+            && !derive_attr_names.contains(&DOJO_INTROSPECT_DERIVE.to_string())
+        {
+            derive_attr_names.push(DOJO_INTROSPECT_DERIVE.to_string());
         }
 
-        // If DojoStore derive attribute is not set for the model, add it.
+        // If DojoStore derive attribute is not set for the model, add it since it is required
+        // for the model to be stored in the world's storage.
         if !derive_attr_names.contains(&DOJO_STORE_DERIVE.to_string()) {
-            missing_derive_attr_names.push(DOJO_STORE_DERIVE.to_string());
+            derive_attr_names.push(DOJO_STORE_DERIVE.to_string());
         }
 
         // Add missing expected derive attributes for "Model" struct.
@@ -211,8 +203,7 @@ impl DojoModel {
             let attr = expected_attr.to_string();
 
             if !derive_attr_names.contains(&attr) {
-                missing_derive_attr_names.push(attr.clone());
-                model.model_value_derive_attr_names.push(attr);
+                derive_attr_names.push(attr.clone());
             }
         });
 
@@ -279,20 +270,24 @@ impl DojoModel {
             )
         };
 
+        model.model_value_derive_attr_names = derive_attr_names;
         let model_code = model.generate_model_code();
 
         let original_struct = DojoTokenizer::rebuild_original_struct(db, struct_ast);
 
-        let missing_derive_attr = if missing_derive_attr_names.is_empty() {
+        let derive_attr = if model.model_value_derive_attr_names.is_empty() {
             DojoTokenizer::tokenize("")
         } else {
-            DojoTokenizer::tokenize(&format!("#[derive({})]", missing_derive_attr_names.join(", ")))
+            DojoTokenizer::tokenize(&format!(
+                "#[derive({})]",
+                model.model_value_derive_attr_names.join(", ")
+            ))
         };
 
         ProcMacroResult::finalize(
             quote! {
                 // original struct with missing derive attributes
-                #missing_derive_attr
+                #derive_attr
                 #original_struct
 
                 // model
@@ -316,8 +311,6 @@ impl DojoModel {
             use_legacy_storage,
             model_deserialize_path,
             model_deserialize_prefix,
-            deserialized_values,
-            deserialized_modelvalue,
             deserialize_body,
         ) = (
             &self.model_type,
@@ -332,8 +325,6 @@ impl DojoModel {
             self.use_legacy_storage,
             &self.model_deserialize_path,
             &self.model_deserialize_prefix,
-            &self.deserialized_values.join(""),
-            &self.deserialized_modelvalue,
             &self.deserialize_body,
         );
 
@@ -430,16 +421,6 @@ pub impl {model_type}ModelValueParser of \
 
 // Note that {model_type}DojoStore is implemented through the DojoStore derive attribute
 // as any structs.
-
-pub impl {model_type}ValueDojoStore of dojo::storage::DojoStore<{model_type}Value> {{
-    fn dojo_serialize(self: @{model_type}Value, ref serialized: Array<felt252>) {{
-        {serialized_values}
-    }}
-    fn dojo_deserialize(ref values: Span<felt252>) -> Option<{model_type}Value> {{
-        {deserialized_values}
-        {deserialized_modelvalue}
-    }}
-}}
 
 pub impl {model_type}ModelImpl = dojo::model::model::ModelImpl<{model_type}>;
 pub impl {model_type}ModelValueImpl = dojo::model::model_value::ModelValueImpl<{model_type}Value>;

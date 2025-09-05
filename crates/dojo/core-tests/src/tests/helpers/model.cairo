@@ -52,11 +52,11 @@ pub fn deploy_world_for_model_upgrades() -> IWorldDispatcher {
         resources: [
             TestResource::Model("OldFooModelBadLayoutType"),
             TestResource::Model("OldFooModelMemberRemoved"),
-            TestResource::Model("OldFooModelMemberAddedButRemoved"),
-            TestResource::Model("OldFooModelMemberAddedButMoved"),
+            TestResource::Model("OldFooModelMemberAddedButRmd"),
+            TestResource::Model("OldFooModelMemberAddedButMvd"),
             TestResource::Model("OldFooModelMemberAdded"),
             TestResource::Model("OldFooModelMemberChanged"),
-            TestResource::Model("OldFooModelMemberIllegalChange"),
+            TestResource::Model("OldFooModelMemberBadChange"),
             TestResource::Model("OldModelWithNestedEnumKey"),
         ]
             .span(),
@@ -165,14 +165,14 @@ pub mod m_OldFooModelMemberRemoved {
 }
 
 #[starknet::contract]
-pub mod m_OldFooModelMemberAddedButRemoved {
+pub mod m_OldFooModelMemberAddedButRmd {
     #[storage]
     struct Storage {}
 
     #[abi(embed_v0)]
     impl DeployedModelImpl of dojo::meta::interface::IDeployedResource<ContractState> {
         fn dojo_name(self: @ContractState) -> ByteArray {
-            "FooModelMemberAddedButRemoved"
+            "FooModelMemberAddedButRmd"
         }
     }
 
@@ -181,7 +181,7 @@ pub mod m_OldFooModelMemberAddedButRemoved {
         fn schema(self: @ContractState) -> dojo::meta::introspect::Struct {
             if let dojo::meta::introspect::Ty::Struct(mut s) =
                 dojo::meta::introspect::Introspect::<super::FooBaseModel>::ty() {
-                s.name = 'FooModelMemberAddedButRemoved';
+                s.name = 'FooModelMemberAddedButRmd';
                 s
             } else {
                 panic!("Unexpected schema.")
@@ -195,14 +195,14 @@ pub mod m_OldFooModelMemberAddedButRemoved {
 }
 
 #[starknet::contract]
-pub mod m_OldFooModelMemberAddedButMoved {
+pub mod m_OldFooModelMemberAddedButMvd {
     #[storage]
     struct Storage {}
 
     #[abi(embed_v0)]
     impl DeployedModelImpl of dojo::meta::interface::IDeployedResource<ContractState> {
         fn dojo_name(self: @ContractState) -> ByteArray {
-            "FooModelMemberAddedButMoved"
+            "FooModelMemberAddedButMvd"
         }
     }
 
@@ -211,7 +211,7 @@ pub mod m_OldFooModelMemberAddedButMoved {
         fn schema(self: @ContractState) -> dojo::meta::introspect::Struct {
             if let dojo::meta::introspect::Ty::Struct(mut s) =
                 dojo::meta::introspect::Introspect::<super::FooBaseModel>::ty() {
-                s.name = 'FooModelMemberAddedButMoved';
+                s.name = 'FooModelMemberAddedButMvd';
                 s
             } else {
                 panic!("Unexpected schema.")
@@ -287,14 +287,14 @@ pub mod m_OldFooModelMemberChanged {
 
 
 #[starknet::contract]
-pub mod m_OldFooModelMemberIllegalChange {
+pub mod m_OldFooModelMemberBadChange {
     #[storage]
     struct Storage {}
 
     #[abi(embed_v0)]
     impl DeployedModelImpl of dojo::meta::interface::IDeployedResource<ContractState> {
         fn dojo_name(self: @ContractState) -> ByteArray {
-            "FooModelMemberIllegalChange"
+            "FooModelMemberBadChange"
         }
     }
 
@@ -303,7 +303,7 @@ pub mod m_OldFooModelMemberIllegalChange {
         fn schema(self: @ContractState) -> dojo::meta::introspect::Struct {
             if let dojo::meta::introspect::Ty::Struct(mut s) =
                 dojo::meta::introspect::Introspect::<super::FooBaseModel>::ty() {
-                s.name = 'FooModelMemberIllegalChange';
+                s.name = 'FooModelMemberBadChange';
                 s
             } else {
                 panic!("Unexpected schema.")

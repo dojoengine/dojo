@@ -22,7 +22,6 @@ impl DirectionIntoFelt252 of Into<Direction, felt252> {
     }
 }
 
-#[derive(Drop, Serde)]
 #[dojo::model]
 pub struct Message {
     #[key]
@@ -43,7 +42,7 @@ pub struct Moves {
     pub last_direction: Direction,
 }
 
-#[derive(Copy, Drop, Serde, Debug)]
+#[derive(Copy, Debug)]
 #[dojo::model]
 pub struct MockToken {
     #[key]
@@ -61,7 +60,7 @@ pub struct Vec2 {
 // and a runtime error would be thrown.
 // Any field that is a custom type into a `IntrospectPacked` type
 // must be packed.
-#[derive(Copy, Drop, Serde, IntrospectPacked, Debug)]
+#[derive(Copy, IntrospectPacked, Debug)]
 #[dojo::model]
 pub struct Position {
     #[key]
@@ -78,7 +77,6 @@ pub struct PlayerItem {
     pub score: i32,
 }
 
-#[derive(Drop, Serde)]
 #[dojo::model]
 pub struct PlayerConfig {
     #[key]
@@ -88,7 +86,6 @@ pub struct PlayerConfig {
     pub favorite_item: Option<u32>,
 }
 
-#[derive(Drop, Serde)]
 #[dojo::model]
 pub struct ServerProfile {
     #[key]

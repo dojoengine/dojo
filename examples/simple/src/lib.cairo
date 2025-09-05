@@ -4,7 +4,7 @@ pub mod sn_c1 {
     struct Storage {}
 }
 
-#[derive(Drop, Serde, Debug)]
+#[derive(Introspect, Serde, Drop, DojoStore)]
 #[dojo::model]
 pub struct M {
     #[key]
@@ -12,7 +12,6 @@ pub struct M {
     pub v: felt252,
 }
 
-#[derive(Introspect, Drop, Serde)]
 #[dojo::event]
 pub struct E {
     #[key]
@@ -20,7 +19,7 @@ pub struct E {
     pub v: u32,
 }
 
-#[derive(Introspect, Drop, Serde)]
+#[derive(Introspect, Serde, Drop)]
 #[dojo::event]
 pub struct EH {
     #[key]

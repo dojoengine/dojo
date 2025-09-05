@@ -8,7 +8,8 @@ rpc_url = "https://api.cartridge.gg/x/starknet/sepolia"
 # Default account for katana with seed = 0
 account_address = "0x4ba5ae775eb7da75f092b3b30b03bce15c3476337ef5f9e3cdf18db7a7534bd"
 keystore_path = "~/.snaccounts/dev-sepolia.key"
-#world_address = "0x077c0dc7c1aba7f8842aff393ce6aa71fa675b4ced1bc927f7fc971b6acd92fc"
+#world_address = "0x015c2830806702b5eeecc5f2fc0a854ceb2e40a0d36964e411d0d8e54ea91b0b"
+world_block = 1894680
 
 [namespace]
 default = "ns"

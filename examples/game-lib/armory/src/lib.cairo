@@ -1,4 +1,3 @@
-#[derive(Drop, Serde)]
 #[dojo::model]
 pub struct Flatbow {
     #[key]
