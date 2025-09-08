@@ -4,6 +4,20 @@ pub mod sn_c1 {
     struct Storage {}
 }
 
+#[derive(Drop, Serde, Clone)]
+pub struct GameContextDetails {
+    pub name: ByteArray,
+    pub description: ByteArray,
+    pub id: Option<u32>,
+    pub context: Span<GameContext>,
+}
+
+#[derive(Drop, Serde, Clone)]
+pub struct GameContext {
+    pub name: ByteArray,
+    pub value: ByteArray,
+}
+
 #[derive(Introspect, Serde, Drop, DojoStore)]
 #[dojo::model]
 pub struct M {
@@ -33,13 +47,20 @@ pub trait MyInterface<T> {
     fn system_2(ref self: T, k: felt252) -> felt252;
     fn system_3(ref self: T, k: felt252, v: u32);
     fn system_4(ref self: T, k: felt252);
+    fn system_dbg(
+        ref self: T,
+        objective_ids: Option<Span<u32>>,
+        game_context: Option<GameContextDetails>,
+    );
 }
 
 #[dojo::contract]
 pub mod c1 {
     use dojo::event::EventStorage;
     use dojo::model::{Model, ModelStorage, ModelValueStorage};
-    use super::{E, EH, M, MValue, MyInterface};
+    use super::{
+        E, EH, GameContextDetails, M, MValue, MyInterface, MyInterfaceDispatcherTrait,
+    };
 
     fn dojo_init(self: @ContractState, v: felt252) {
         let m = M { k: 0, v };
@@ -91,6 +112,24 @@ pub mod c1 {
             world.write_value_from_id(entity_id, @mv);
 
             world.erase_model_ptr(Model::<M>::ptr_from_id(entity_id));
+        }
+
+        fn system_dbg(
+            ref self: ContractState,
+            objective_ids: Option<Span<u32>>,
+            game_context: Option<GameContextDetails>,
+        ) {
+            let d = super::MyInterfaceDispatcher {
+                contract_address: starknet::get_contract_address(),
+            };
+
+            let empty_objective_ids: Span<u32> = array![].span();
+
+            d
+                .system_dbg(
+                    Option::Some(empty_objective_ids),
+                    None,
+                );
         }
     }
 
