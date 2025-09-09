@@ -21,10 +21,6 @@ pub struct BuildArgs {
     pub typescript: bool,
 
     #[arg(long)]
-    #[arg(help = "Generate Typescript bindings.")]
-    pub typescript_v2: bool,
-
-    #[arg(long)]
     #[arg(help = "Generate Recs bindings.")]
     pub recs: bool,
 
@@ -105,10 +101,6 @@ impl BuildArgs {
 
         if self.typescript {
             builtin_plugins.push(BuiltinPlugins::Typescript);
-        }
-
-        if self.typescript_v2 {
-            builtin_plugins.push(BuiltinPlugins::TypeScriptV2);
         }
 
         if self.recs {
@@ -202,7 +194,6 @@ impl Default for BuildArgs {
             features,
             packages: vec![],
             typescript: false,
-            typescript_v2: false,
             recs: false,
             unity: false,
             unrealengine: false,

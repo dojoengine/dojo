@@ -11,7 +11,6 @@ use crate::{DojoContract, DojoData};
 
 pub mod recs;
 pub mod typescript;
-pub mod typescript_v2;
 pub mod unity;
 pub mod unrealengine;
 
@@ -20,7 +19,6 @@ pub enum BuiltinPlugins {
     Typescript,
     Unity,
     UnrealEngine,
-    TypeScriptV2,
     Recs,
 }
 
@@ -30,7 +28,6 @@ impl fmt::Display for BuiltinPlugins {
             BuiltinPlugins::Typescript => write!(f, "typescript"),
             BuiltinPlugins::Unity => write!(f, "unity"),
             BuiltinPlugins::UnrealEngine => write!(f, "unrealengine"),
-            BuiltinPlugins::TypeScriptV2 => write!(f, "typescript_v2"),
             BuiltinPlugins::Recs => write!(f, "recs"),
         }
     }
