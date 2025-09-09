@@ -2,8 +2,8 @@ name: doc-sync
 
 on:
   pull_request:
-    types: [closed]
-    branches: [main]
+    #types: [closed]
+    branches: [disabled-at-the-moment]
   workflow_dispatch:
     inputs:
       commit_sha:
