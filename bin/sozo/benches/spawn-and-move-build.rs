@@ -12,6 +12,11 @@ fn build_spawn_and_move() {
 }
 
 fn main() {
+    // Build a first time to compile the dojo macros.
+    build_spawn_and_move();
+
+    // Start the counter now that we are re-building without the dojo macros, only cairo code.
+    // Now that we are relying directly on Scarb, this bench makes less sense.
     let start = Instant::now();
     build_spawn_and_move();
     let duration = start.elapsed();

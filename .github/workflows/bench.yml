@@ -35,8 +35,6 @@ jobs:
           benchmark-data-dir-path: "."
           # Access token to deploy GitHub Pages branch
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          # Push and deploy GitHub pages branch automatically
-          auto-push: true
           alert-threshold: "130%"
           comment-on-alert: true
           alert-comment-cc-users: "@kariy,@glihm,@tarrencev"

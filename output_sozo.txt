@@ -1,1 +1,1 @@
-test build/Sozo.Cold ... bench:     13994807750 ns/iter (+/- 0)
+test build/Sozo.Cold ... bench:     8733137250 ns/iter (+/- 0)
