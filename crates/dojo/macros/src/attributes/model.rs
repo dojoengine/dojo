@@ -106,16 +106,16 @@ impl DojoModel {
             &mut model.diagnostics,
         );
 
-        DojoFormatter::serialize_keys_and_values(
-            db,
-            struct_ast.members(db).elements(db),
-            &mut model.serialized_keys,
-            &mut model.serialized_values,
-            model.use_legacy_storage,
-        );
-
         struct_ast.members(db).elements(db).for_each(|member_ast| {
             if member_ast.has_attr(db, "key") {
+                // always use serde (legacy storage) to (de)serialize keys
+                model.serialized_keys.push(DojoFormatter::serialize_member_ty(
+                    db,
+                    &member_ast,
+                    true,
+                    true,
+                ));
+
                 model.deserialized_keys.push(DojoFormatter::deserialize_member_ty(
                     db,
                     &member_ast,
@@ -123,6 +123,13 @@ impl DojoModel {
                     "keys",
                 ));
             } else {
+                model.serialized_values.push(DojoFormatter::serialize_member_ty(
+                    db,
+                    &member_ast,
+                    true,
+                    model.use_legacy_storage,
+                ));
+
                 model.deserialized_values.push(DojoFormatter::deserialize_member_ty(
                     db,
                     &member_ast,
