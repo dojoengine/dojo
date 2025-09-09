@@ -16,3 +16,4 @@ dunce.workspace = true
 scarb-metadata.workspace = true
 smol_str.workspace = true
 scarb-interop.workspace = true
+tracing.workspace = true

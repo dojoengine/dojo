@@ -6593,6 +6593,7 @@ dependencies = [
  "serde_json",
  "smol_str",
  "toml 0.8.22",
+ "tracing",
 ]
 
 [[package]]

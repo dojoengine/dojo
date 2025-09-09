@@ -10,6 +10,7 @@ use dojo_world::local::WorldLocal;
 use scarb_interop::fsx;
 use scarb_metadata::{DepKind, Metadata, MetadataCommand, MetadataCommandError, PackageMetadata};
 use serde::Serialize;
+use tracing::debug;
 
 #[derive(Debug, PartialEq)]
 pub enum TestRunner {
@@ -20,7 +21,7 @@ pub enum TestRunner {
 
 const CAIRO_TEST_RUNNER_NAME: &str = "cairo_test";
 const SNF_TEST_RUNNER_NAME: &str = "snforge_std";
-const DOJO_MACROS_NAME: &str = "dojo_macros";
+const DOJO_WORLD_NAME: &str = "dojo::world::world_contract::world";
 
 impl From<&String> for TestRunner {
     fn from(value: &String) -> Self {
@@ -297,8 +298,11 @@ enum WorldPackageResult {
 /// performing some tasks like binding generation and migrations.
 ///
 /// To solve the issue where a virtual workspace has no package name, this function looks for a
-/// package that is *not* a `lib` target and uses `dojo_macros` as a dependency.
-/// If it finds exactly one package that matches the criteria, it returns the package name.
+/// package that has a starknet-contract target that has a build-external-contracts parameter that
+/// contains the dojo world. We can't rely on the package being a library, since some libraries
+/// might be used in the contracts to be deployed with a world. For this reason, we first look for a
+/// package that is not a library and then a package that is a library. If it finds exactly one
+/// package that matches the criteria, it returns the package name.
 ///
 /// Otherwise, it returns a `MultiplePackages` variant, which will be handled by the caller, which
 /// generally should indicate to the user that using multiple packages with contracts to be deployed
@@ -306,21 +310,49 @@ enum WorldPackageResult {
 /// migrate the package with contracts themselves by going into the package directory and running
 /// the commands.
 fn default_dojo_package_name(packages: &[PackageMetadata]) -> WorldPackageResult {
-    let mut candidates = Vec::new();
+    let mut not_lib_candidates = Vec::new();
+    let mut lib_candidates = Vec::new();
 
     for p in packages {
-        if p.targets.iter().all(|t| t.kind != "lib") {
-            for d in &p.dependencies {
-                if d.name == DOJO_MACROS_NAME {
-                    candidates.push(p.name.clone());
+        let is_lib = p.targets.iter().any(|t| t.kind == "lib");
+
+        debug!(%p.name, is_lib, "Verifying package type.");
+
+        for t in &p.targets {
+            if t.kind == "starknet-contract" {
+                if let Some(build_external_contracts) =
+                    t.params.as_object().and_then(|obj| obj.get("build-external-contracts"))
+                {
+                    if let Some(build_external_contracts) = build_external_contracts.as_array() {
+                        if build_external_contracts
+                            .contains(&serde_json::Value::String(DOJO_WORLD_NAME.to_string()))
+                        {
+                            if is_lib {
+                                lib_candidates.push(p.name.clone());
+                            } else {
+                                not_lib_candidates.push(p.name.clone());
+                            }
+                        }
+                    }
                 }
             }
         }
     }
 
-    match candidates.len() {
-        0 => WorldPackageResult::NoPackage,
-        1 => WorldPackageResult::Ok(candidates[0].clone()),
-        _ => WorldPackageResult::MultiplePackages(candidates),
-    }
+    debug!(?not_lib_candidates, ?lib_candidates, "Collect candidates for Sozo build.");
+
+    // Prioritize not lib candidates, then lib candidates.
+    let r = match not_lib_candidates.len() {
+        0 => match lib_candidates.len() {
+            0 => WorldPackageResult::NoPackage,
+            1 => WorldPackageResult::Ok(lib_candidates[0].clone()),
+            _ => WorldPackageResult::MultiplePackages(lib_candidates),
+        },
+        1 => WorldPackageResult::Ok(not_lib_candidates[0].clone()),
+        _ => WorldPackageResult::MultiplePackages(not_lib_candidates),
+    };
+
+    debug!(?r, "Extract default dojo package name from workspace.");
+
+    r
 }
