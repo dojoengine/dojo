@@ -8,8 +8,6 @@ use scarb_metadata_ext::MetadataDojoExt;
 pub enum BindingTarget {
     #[value(name = "typescript")]
     Typescript,
-    #[value(name = "typescript-v2")]
-    TypescriptV2,
     #[value(name = "recs")]
     Recs,
     #[value(name = "unity")]
@@ -38,7 +36,6 @@ impl BindgenArgs {
 
         let builtin_plugins = match self.binding_target {
             BindingTarget::Typescript => vec![BuiltinPlugins::Typescript],
-            BindingTarget::TypescriptV2 => vec![BuiltinPlugins::TypeScriptV2],
             BindingTarget::Recs => vec![BuiltinPlugins::Recs],
             BindingTarget::Unity => vec![BuiltinPlugins::Unity],
             BindingTarget::UnrealEngine => vec![BuiltinPlugins::UnrealEngine],
