@@ -106,6 +106,38 @@ struct DojoStoreModel {
     d: MyEnum,
 }
 
+#[derive(Copy, Drop, Serde, Introspect, DojoStore, Default, Debug, PartialEq)]
+enum EnumKey {
+    #[default]
+    KEY_1,
+    KEY_2,
+    KEY_3,
+}
+
+#[derive(Copy, Drop, Serde, Debug, Introspect, DojoLegacyStore, PartialEq)]
+#[dojo::model]
+struct LegacyModelWithEnumKey {
+    #[key]
+    k1: u8,
+    #[key]
+    k2: EnumKey,
+    v1: u32,
+    v2: Option<u32>,
+    v3: MyEnum,
+}
+
+#[derive(Copy, Drop, Serde, Debug, Introspect, PartialEq)]
+#[dojo::model]
+struct DojoStoreModelWithEnumKey {
+    #[key]
+    k1: u8,
+    #[key]
+    k2: EnumKey,
+    v1: u32,
+    v2: Option<u32>,
+    v3: MyEnum,
+}
+
 // to test with unit types
 #[derive(Copy, Drop, Introspect, Debug, Serde, PartialEq, Default, DojoStore)]
 enum EnumWithUnitType {
@@ -187,6 +219,8 @@ fn namespace_def() -> NamespaceDef {
             TestResource::Model("Foo"), TestResource::Model("Foo2"), TestResource::Model("Foo3"),
             TestResource::Model("Foo4"), TestResource::Model("ModelWithUnitType"),
             TestResource::Model("LegacyModel"), TestResource::Model("DojoStoreModel"),
+            TestResource::Model("LegacyModelWithEnumKey"),
+            TestResource::Model("DojoStoreModelWithEnumKey"),
             TestResource::Model("StructWithOptionWithTuple"),
             TestResource::Model("ModelWithFixedArray"),
         ]
@@ -685,4 +719,122 @@ fn test_dojo_store_model() {
         Option::Some(m),
         "DojoStoreModel: deserialize failed",
     );
+}
+
+#[test]
+fn test_legacy_model_with_enum_key() {
+    let mut world = spawn_foo_world();
+
+    let m = LegacyModelWithEnumKey {
+        k1: 42,
+        k2: EnumKey::KEY_3,
+        v1: 1234,
+        v2: Option::Some(5432),
+        v3: MyEnum::X(Option::Some(6543)),
+    };
+
+    // (de)serialization
+    // For a legacy model, keys and values must be serialized with Serde.
+
+    let serialized_keys = dojo::model::model::ModelParser::<
+        LegacyModelWithEnumKey,
+    >::serialize_keys(@m);
+    let serialized_values = dojo::model::model::ModelParser::<
+        LegacyModelWithEnumKey,
+    >::serialize_values(@m);
+
+    assert_eq!(serialized_keys, [42, 2].span(), "LegacyModelWithEnumKey: serialize_keys failed");
+    assert_eq!(
+        serialized_values,
+        [1234, 0, 5432, 0, 0, 6543].span(),
+        "LegacyModelWithEnumKey: serialize_values failed",
+    );
+
+    let mut keys = [42, 2].span();
+    let mut values = [1234, 0, 5432, 0, 0, 6543].span();
+
+    assert_eq!(
+        dojo::model::model::ModelParser::<
+            LegacyModelWithEnumKey,
+        >::deserialize(ref keys, ref values),
+        Option::Some(m),
+        "LegacyModelWithEnumKey: deserialize failed",
+    );
+
+    // read unitialized model, write and read back
+    let def_m: LegacyModelWithEnumKey = world.read_model((42, 2));
+
+    // For a legacy model, the default value is Some with variant data set to 0 for an option,
+    // and the first variant with variant data set to 0 for an enum.
+    assert!(
+        def_m == LegacyModelWithEnumKey {
+            k1: 42, k2: EnumKey::KEY_3, v1: 0, v2: Option::Some(0), v3: MyEnum::X(Option::Some(0)),
+        },
+        "LegacyModelWithEnumKey: read unitialized model failed",
+    );
+
+    world.write_model(@m);
+
+    let read_m: LegacyModelWithEnumKey = world.read_model(m.keys());
+    assert!(m == read_m, "LegacyModelWithEnumKey: read model failed");
+}
+
+
+#[test]
+fn test_dojo_store_model_with_enum_key() {
+    let mut world = spawn_foo_world();
+
+    let m = DojoStoreModelWithEnumKey {
+        k1: 42,
+        k2: EnumKey::KEY_3,
+        v1: 1234,
+        v2: Option::Some(5432),
+        v3: MyEnum::X(Option::Some(6543)),
+    };
+
+    // (de)serialization
+    // For a DojoStore model, keys must be serialized with Serde while values must be serialized
+    // with DojoStore.
+
+    let serialized_keys = dojo::model::model::ModelParser::<
+        DojoStoreModelWithEnumKey,
+    >::serialize_keys(@m);
+    let serialized_values = dojo::model::model::ModelParser::<
+        DojoStoreModelWithEnumKey,
+    >::serialize_values(@m);
+
+    assert_eq!(serialized_keys, [42, 2].span(), "DojoStoreModelWithEnumKey: serialize_keys failed");
+    assert_eq!(
+        serialized_values,
+        [1234, 1, 5432, 1, 1, 6543].span(),
+        "DojoStoreModelWithEnumKey: serialize_values failed",
+    );
+
+    let mut keys = [42, 2].span();
+    let mut values = [1234, 1, 5432, 1, 1, 6543].span();
+
+    assert_eq!(
+        dojo::model::model::ModelParser::<
+            DojoStoreModelWithEnumKey,
+        >::deserialize(ref keys, ref values),
+        Option::Some(m),
+        "DojoStoreModelWithEnumKey: deserialize failed",
+    );
+
+    // read unitialized model, write and read back
+    let def_m: DojoStoreModelWithEnumKey = world.read_model((42, 2));
+
+    // for a DojoStore model, the default value is None for options and the configured default value
+    // for enums.
+    assert!(
+        def_m == DojoStoreModelWithEnumKey {
+            k1: 42, k2: EnumKey::KEY_3, v1: 0, v2: Option::None, v3: MyEnum::Z,
+        },
+        "DojoStoreModelWithEnumKey: read unitialized model failed",
+    );
+
+    world.write_model(@m);
+
+    let read_m: DojoStoreModelWithEnumKey = world.read_model(m.keys());
+    assert!(m == read_m, "DojoStoreModelWithEnumKey: read model failed");
 }

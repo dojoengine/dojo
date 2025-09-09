@@ -27,8 +27,7 @@ pub fn find_model_field_layout(model_layout: Layout, member_selector: felt252) -
         Layout::Struct(field_layouts) => { find_field_layout(member_selector, field_layouts) },
         _ => {
             // should never happen as model layouts are always struct layouts.
-            core::panic_with_felt252('Unexpected model layout');
-            Option::None
+            core::panic_with_felt252('Unexpected model layout')
         },
     }
 }

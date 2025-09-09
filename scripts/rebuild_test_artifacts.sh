@@ -6,15 +6,15 @@
 
 cargo build -r --bin sozo
 
-# Some formatting.
-bash ./scripts/rust_fmt.sh --fix
-bash ./scripts/cairo_fmt.sh fmt
-
 # Manual forced cleanup.
 rm -rf examples/spawn-and-move/target
 
 # Ensure the world bindings are up to date.
 cargo run --bin dojo-world-abigen -r
+
+# Some formatting.
+bash ./scripts/rust_fmt.sh --fix
+bash ./scripts/cairo_fmt.sh fmt
 
 # Re-run the minimal tests, this will re-build the projects + generate the build artifacts.
 ./target/release/sozo build --manifest-path examples/simple/Scarb.toml
