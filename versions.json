@@ -191,5 +191,15 @@
       "1.7.0-alpha.3"
     ],
     "torii": ["1.7.0-alpha.0", "1.7.0-alpha.1", "1.7.0-alpha.2", "1.7.0-alpha.3", "1.7.0-alpha.4", "1.7.0-alpha.5"]
+  },
+  "1.7.0-alpha.3": {
+    "katana": [
+      "1.7.0-alpha.0",
+      "1.7.0-alpha.1",
+      "1.7.0-alpha.2",
+      "1.7.0-alpha.3",
+      "1.7.0-alpha.4"
+    ],
+    "torii": ["1.7.0-alpha.0", "1.7.0-alpha.1", "1.7.0-alpha.2", "1.7.0-alpha.3", "1.7.0-alpha.4", "1.7.0-alpha.5", "1.7.0-alpha.6"]
   }
 }
