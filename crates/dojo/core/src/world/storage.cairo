@@ -6,6 +6,7 @@ use dojo::meta::{FieldLayout, Introspect, Layout};
 use dojo::model::{
     Model, ModelIndex, ModelPtr, ModelPtrsTrait, ModelStorage, ModelValue, ModelValueKey,
 };
+use dojo::storage::dojo_store::DojoStore;
 use dojo::utils::{
     deserialize_unwrap, entity_id_from_keys, entity_id_from_serialized_keys,
     find_model_field_layout, serialize_inline,
@@ -232,10 +233,14 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
         );
     }
 
-    fn read_member<T, +Serde<T>>(
+    fn read_member<T, +Serde<T>, +DojoStore<T>>(
         self: @WorldStorage, ptr: ModelPtr<M>, field_selector: felt252,
     ) -> T {
-        deserialize_unwrap(
+        Model::<
+            M,
+            >::from_serialized_subset::<
+            T,
+        >(
             IWorldDispatcherTrait::entity(
                 *self.dispatcher,
                 Model::<M>::selector(*self.namespace_hash),
@@ -243,9 +248,10 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
                 field_layout_unwrap::<M>(field_selector),
             ),
         )
+            .expect('Could not deserialize')
     }
 
-    fn read_member_of_models<T, +Serde<T>, +Drop<T>>(
+    fn read_member_of_models<T, +Serde<T>, +DojoStore<T>, +Drop<T>>(
         self: @WorldStorage, ptrs: Span<ModelPtr<M>>, field_selector: felt252,
     ) -> Array<T> {
         let mut values: Array<T> = array![];
@@ -255,29 +261,33 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
             ptrs.to_member_indexes(field_selector),
             field_layout_unwrap::<M>(field_selector),
         ) {
-            values.append(deserialize_unwrap(*entity));
+            values
+                .append(
+                    Model::<M>::from_serialized_subset::<T>(*entity)
+                        .expect('Could not deserialize'),
+                );
         }
         values
     }
 
-    fn write_member<T, +Serde<T>, +Drop<T>>(
+    fn write_member<T, +Serde<T>, +DojoStore<T>, +Drop<T>>(
         ref self: WorldStorage, ptr: ModelPtr<M>, field_selector: felt252, value: T,
     ) {
         IWorldDispatcherTrait::set_entity(
             self.dispatcher,
             Model::<M>::selector(self.namespace_hash),
             ModelIndex::MemberId((ptr.id, field_selector)),
-            serialize_inline(@value),
+            Model::<M>::serialized_subset::<T>(@value),
             field_layout_unwrap::<M>(field_selector),
         );
     }
 
-    fn write_member_of_models<T, +Serde<T>, +Drop<T>>(
+    fn write_member_of_models<T, +Serde<T>, +DojoStore<T>, +Drop<T>>(
         ref self: WorldStorage, ptrs: Span<ModelPtr<M>>, field_selector: felt252, values: Span<T>,
     ) {
         let mut serialized_values = ArrayTrait::<Span<felt252>>::new();
         for value in values {
-            serialized_values.append(serialize_inline(value));
+            serialized_values.append(Model::<M>::serialized_subset::<T>(value));
         }
         IWorldDispatcherTrait::set_entities(
             self.dispatcher,
@@ -302,8 +312,14 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
         );
     }
 
-    fn read_schema<T, +Serde<T>, +Introspect<T>>(self: @WorldStorage, ptr: ModelPtr<M>) -> T {
-        deserialize_unwrap(
+    fn read_schema<T, +Serde<T>, +DojoStore<T>, +Introspect<T>>(
+        self: @WorldStorage, ptr: ModelPtr<M>,
+    ) -> T {
+        Model::<
+            M,
+            >::from_serialized_subset::<
+            T,
+        >(
             IWorldDispatcherTrait::entity(
                 *self.dispatcher,
                 Model::<M>::selector(*self.namespace_hash),
@@ -311,9 +327,10 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
                 Introspect::<T>::layout(),
             ),
         )
+            .expect('Could not deserialize')
     }
 
-    fn read_schemas<T, +Drop<T>, +Serde<T>, +Introspect<T>>(
+    fn read_schemas<T, +Drop<T>, +Serde<T>, +DojoStore<T>, +Introspect<T>>(
         self: @WorldStorage, ptrs: Span<ModelPtr<M>>,
     ) -> Array<T> {
         let mut values = ArrayTrait::<T>::new();
@@ -324,13 +341,103 @@ pub impl ModelStorageWorldStorageImpl<M, +Model<M>, +Drop<M>> of ModelStorage<Wo
             ptrs.to_indexes(),
             Introspect::<T>::layout(),
         ) {
-            values.append(deserialize_unwrap(*entity));
+            values
+                .append(
+                    Model::<M>::from_serialized_subset::<T>(*entity)
+                        .expect('Could not deserialize'),
+                );
         }
         values
     }
 
     fn namespace_hash(self: @WorldStorage) -> felt252 {
         *self.namespace_hash
+    }
+
+
+    fn read_member_legacy<T, +Serde<T>>(
+        self: @WorldStorage, ptr: ModelPtr<M>, field_selector: felt252,
+    ) -> T {
+        deserialize_unwrap(
+            IWorldDispatcherTrait::entity(
+                *self.dispatcher,
+                Model::<M>::selector(*self.namespace_hash),
+                ModelIndex::MemberId((ptr.id, field_selector)),
+                field_layout_unwrap::<M>(field_selector),
+            ),
+        )
+    }
+
+    fn read_member_of_models_legacy<T, +Serde<T>, +Drop<T>>(
+        self: @WorldStorage, ptrs: Span<ModelPtr<M>>, field_selector: felt252,
+    ) -> Array<T> {
+        let mut values: Array<T> = array![];
+        for entity in IWorldDispatcherTrait::entities(
+            *self.dispatcher,
+            Model::<M>::selector(*self.namespace_hash),
+            ptrs.to_member_indexes(field_selector),
+            field_layout_unwrap::<M>(field_selector),
+        ) {
+            values.append(deserialize_unwrap(*entity));
+        }
+        values
+    }
+
+    fn write_member_legacy<T, +Serde<T>, +Drop<T>>(
+        ref self: WorldStorage, ptr: ModelPtr<M>, field_selector: felt252, value: T,
+    ) {
+        IWorldDispatcherTrait::set_entity(
+            self.dispatcher,
+            Model::<M>::selector(self.namespace_hash),
+            ModelIndex::MemberId((ptr.id, field_selector)),
+            serialize_inline(@value),
+            field_layout_unwrap::<M>(field_selector),
+        );
+    }
+
+    fn write_member_of_models_legacy<T, +Serde<T>, +Drop<T>>(
+        ref self: WorldStorage, ptrs: Span<ModelPtr<M>>, field_selector: felt252, values: Span<T>,
+    ) {
+        let mut serialized_values = ArrayTrait::<Span<felt252>>::new();
+        for value in values {
+            serialized_values.append(serialize_inline(value));
+        }
+        IWorldDispatcherTrait::set_entities(
+            self.dispatcher,
+            Model::<M>::selector(self.namespace_hash),
+            ptrs.to_member_indexes(field_selector),
+            serialized_values.span(),
+            field_layout_unwrap::<M>(field_selector),
+        );
+    }
+
+    fn read_schema_legacy<T, +Serde<T>, +Introspect<T>>(
+        self: @WorldStorage, ptr: ModelPtr<M>,
+    ) -> T {
+        deserialize_unwrap(
+            IWorldDispatcherTrait::entity(
+                *self.dispatcher,
+                Model::<M>::selector(*self.namespace_hash),
+                ModelIndex::Id(ptr.id),
+                dojo::meta::layout::build_legacy_layout(Introspect::<T>::layout()),
+            ),
+        )
+    }
+
+    fn read_schemas_legacy<T, +Drop<T>, +Serde<T>, +Introspect<T>>(
+        self: @WorldStorage, ptrs: Span<ModelPtr<M>>,
+    ) -> Array<T> {
+        let mut values = ArrayTrait::<T>::new();
+
+        for entity in IWorldDispatcherTrait::entities(
+            *self.dispatcher,
+            Model::<M>::selector(*self.namespace_hash),
+            ptrs.to_indexes(),
+            dojo::meta::layout::build_legacy_layout(Introspect::<T>::layout()),
+        ) {
+            values.append(deserialize_unwrap(*entity));
+        }
+        values
     }
 }
 
@@ -597,39 +704,3 @@ pub impl ModelValueStorageTestWorldStorageImpl<
     }
 }
 
-/// Updates a serialized member of a model.
-fn update_serialized_member(
-    world: IWorldDispatcher,
-    model_id: felt252,
-    layout: Layout,
-    entity_id: felt252,
-    member_id: felt252,
-    values: Span<felt252>,
-) {
-    match find_model_field_layout(layout, member_id) {
-        Option::Some(field_layout) => {
-            IWorldDispatcherTrait::set_entity(
-                world, model_id, ModelIndex::MemberId((entity_id, member_id)), values, field_layout,
-            )
-        },
-        Option::None => panic_with_felt252('bad member id'),
-    }
-}
-
-/// Retrieves a serialized member of a model.
-fn get_serialized_member(
-    world: IWorldDispatcher,
-    model_id: felt252,
-    layout: Layout,
-    entity_id: felt252,
-    member_id: felt252,
-) -> Span<felt252> {
-    match find_model_field_layout(layout, member_id) {
-        Option::Some(field_layout) => {
-            IWorldDispatcherTrait::entity(
-                world, model_id, ModelIndex::MemberId((entity_id, member_id)), field_layout,
-            )
-        },
-        Option::None => panic_with_felt252('bad member id'),
-    }
-}
