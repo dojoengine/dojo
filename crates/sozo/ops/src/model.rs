@@ -524,7 +524,7 @@ fn format_struct(
     let fields = schema
         .children
         .iter()
-        .map(|m| format_field_value(m, use_legacy_storage, values, level + 1))
+        .map(|m| format_field_value(m, m.key || use_legacy_storage, values, level + 1))
         .collect::<Vec<_>>();
 
     format!(
