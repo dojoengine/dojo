@@ -220,12 +220,18 @@ jobs:
 
       - name: Install Slot CLI
         run: |
-          ls ~/
+          echo $XDG_CONFIG_HOME
+          echo $HOME
+          BASE_DIR=${XDG_CONFIG_HOME:-$HOME}
           curl -L https://slot.cartridge.sh | bash
-          ~/.config/.slot/bin/slotup
-          echo "~/.config/.slot/bin" >> $GITHUB_PATH
-          export PATH="~/.config/.slot/bin:$PATH"
+          $BASE_DIR/.slot/bin/slotup
+          echo $BASE_DIR/.slot/bin
+          ls $BASE_DIR/.slot/bin
+          echo "$BASE_DIR/.slot/bin" >> $GITHUB_PATH
+          export PATH="$BASE_DIR/.slot/bin:$PATH"
           slot --version
+          echo $PATH
+          ls $PATH
 
       - name: Setting slot Katana for migration
         run: |
