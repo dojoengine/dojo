@@ -35,7 +35,7 @@ jobs:
     container:
       image: ghcr.io/dojoengine/dojo-dev:v1.7.0-alpha.3
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
           fetch-depth: 0
@@ -60,7 +60,7 @@ jobs:
     container:
       image: ghcr.io/dojoengine/dojo-dev:v1.7.0-alpha.3
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: software-mansion/setup-scarb@v1
         with:
           scarb-version: "dev-2025-09-05"
@@ -89,7 +89,7 @@ jobs:
     needs: build
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: ${{ env.rust_version }}
@@ -118,7 +118,7 @@ jobs:
   cairofmt:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: software-mansion/setup-scarb@v1
         with:
           scarb-version: "dev-2025-09-05"
@@ -136,7 +136,7 @@ jobs:
         with:
           name: dojo-bins
           path: /tmp/bins
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - run: |
           chmod +x /tmp/bins/sozo
           /tmp/bins/sozo --manifest-path crates/dojo/core-tests/Scarb.toml test
@@ -153,7 +153,7 @@ jobs:
         with:
           name: dojo-bins
           path: /tmp/bins
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - run: |
           chmod +x /tmp/bins/sozo
           /tmp/bins/sozo --manifest-path examples/spawn-and-move/Scarb.toml build
@@ -168,7 +168,7 @@ jobs:
     container:
       image: ghcr.io/dojoengine/dojo-dev:v1.7.0-alpha.3
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: Swatinem/rust-cache@v2
       # Workaround for https://github.com/actions/runner-images/issues/6775
       - run: git config --global --add safe.directory "*"
@@ -182,7 +182,7 @@ jobs:
     container:
       image: ghcr.io/dojoengine/dojo-dev:v1.7.0-alpha.3
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: Swatinem/rust-cache@v2
       - run: scripts/rust_fmt.sh --check
 
@@ -192,7 +192,7 @@ jobs:
     container:
       image: ghcr.io/dojoengine/dojo-dev:v1.7.0-alpha.3
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: Swatinem/rust-cache@v2
       # Workaround for https://github.com/actions/runner-images/issues/6775
       - run: git config --global --add safe.directory "*"
@@ -207,7 +207,7 @@ jobs:
     container:
       image: ghcr.io/dojoengine/dojo-dev:v1.7.0-alpha.3
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: software-mansion/setup-scarb@v1
         with:
           scarb-version: "dev-2025-09-05"
@@ -232,7 +232,6 @@ jobs:
           export PATH="$BASE_DIR/.slot/bin:$PATH"
           slot --version
           echo $PATH
-          ls $PATH
 
       - name: Setting slot Katana for migration
         run: |
