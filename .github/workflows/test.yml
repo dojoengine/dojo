@@ -201,7 +201,7 @@ jobs:
       - run: scripts/docs.sh
 
   deploy-slot:
-    runs-on: ubuntu-latest-4-cores
+    runs-on: ubuntu-latest
     needs: build
     container:
       image: ghcr.io/dojoengine/dojo-dev:v1.7.0-alpha.3
@@ -231,5 +231,5 @@ jobs:
           sozo migrate --manifest-path examples/spawn-and-move/Scarb.toml -P slot
       
       - name: Cleaning up slot Katana
-        run: |
+      - run: |
           slot d delete dojoci katana -f
