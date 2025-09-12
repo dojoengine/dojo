@@ -221,9 +221,9 @@ jobs:
       - name: Install Slot CLI
         run: |        
           curl -L https://slot.cartridge.sh | bash
-          /home/runner/.config/.slot/bin/slotup
-          echo "/home/runner/.config/.slot/bin" >> $GITHUB_PATH
-          export PATH="/home/runner/.config/.slot/bin:$PATH"
+          ls ~
+          ls /root
+          source /github/home/.bashrc
           slot --version
 
       - name: Setting slot Katana for migration
