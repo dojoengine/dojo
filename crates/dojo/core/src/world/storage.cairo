@@ -8,8 +8,7 @@ use dojo::model::{
 };
 use dojo::storage::dojo_store::DojoStore;
 use dojo::utils::{
-    deserialize_unwrap, entity_id_from_keys, entity_id_from_serialized_keys,
-    find_model_field_layout, serialize_inline,
+    deserialize_unwrap, entity_id_from_keys, entity_id_from_serialized_keys, serialize_inline,
 };
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait, Resource};
 use starknet::{ClassHash, ContractAddress};
