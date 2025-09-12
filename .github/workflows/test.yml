@@ -219,11 +219,12 @@ jobs:
       - run: git config --global --add safe.directory "*"
 
       - name: Install Slot CLI
-        run: |        
+        run: |
+          ls ~/
           curl -L https://slot.cartridge.sh | bash
-          ls ~
-          ls /root
-          /github/home/.bashrc
+          ~/.config/.slot/bin/slotup
+          echo "~/.config/.slot/bin" >> $GITHUB_PATH
+          export PATH="~/.config/.slot/bin:$PATH"
           slot --version
 
       - name: Setting slot Katana for migration
@@ -237,7 +238,7 @@ jobs:
           chmod +x /tmp/bins/sozo
           sozo build --manifest-path examples/spawn-and-move/Scarb.toml -P slot
           sozo migrate --manifest-path examples/spawn-and-move/Scarb.toml -P slot
-      
+
       - name: Cleaning up slot Katana
         if: always()
         run: |
