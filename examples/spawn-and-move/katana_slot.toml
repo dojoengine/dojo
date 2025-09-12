@@ -1,0 +1,13 @@
+[dev]
+dev = true
+no_fee = true
+
+[server]
+http_cors_origins = "*"
+
+[cartridge]
+controllers = true
+paymaster = true
+
+[starknet]
+env.invoke_max_steps = 25000000

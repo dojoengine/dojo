@@ -1,0 +1,78 @@
+[world]
+description = "example world"
+name = "example"
+seed = "dojo_examples"
+
+[[models]]
+tag = "ns-Message"
+description = "Message sent by a player"
+
+[[models]]
+tag = "ns-Position"
+description = "position of a player in the world"
+
+[[models]]
+tag = "ns-Moves"
+description = "move of a player in the world"
+
+[[events]]
+tag = "ns-Moved"
+description = "when a player has moved"
+
+[[contracts]]
+tag = "ns-actions"
+description = "set of actions for a player"
+
+[[external_contracts]]
+contract_name = "ERC20Token"
+instance_name = "GoldToken"
+salt = "1"
+constructor_data = ["0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba", "str:Gold", "str:GOLD", "u256:0x10000000000000", "0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba"]
+
+[[external_contracts]]
+contract_name = "ERC20Token"
+instance_name = "WoodToken"
+salt = "1"
+constructor_data = ["0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba", "str:Wood", "str:WOOD", "u256:0x10000000000000", "0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba"]
+
+[[external_contracts]]
+contract_name = "ERC721Token"
+instance_name = "Badge"
+salt = "1"
+constructor_data = ["0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba", "str:Badge", "str:BDG", "str:https://badge.com/" ]
+
+[[external_contracts]]
+contract_name = "ERC1155Token"
+instance_name = "Rewards"
+salt = "1"
+constructor_data = ["0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba", "str:https://rewards.com/" ]
+
+[[external_contracts]]
+contract_name = "Bank"
+salt = "1"
+constructor_data = ["0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba"]
+
+[[external_contracts]]
+contract_name = "Saloon"
+constructor_data = []
+salt = "1"
+
+[lib_versions]
+"ns-simple_math" = "0_1_0"
+
+[namespace]
+default = "ns"
+mappings = { "ns" = ["actions", "GoldToken", "Bank"], "ns2" = ["actions", "GoldToken"], "ns3" = ["Bank"] }
+
+[env]
+rpc_url = "https://api.cartridge.gg/x/dojoci/katana"
+# Default account for katana with seed = 0
+account_address = "0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba"
+private_key = "0x1800000000300000180000000000030000000000003006001800006600"
+#world_address = "0x72b2128fc2db8362beb744243d56c41022b93dfa8ca8d44c8be85764ecbdea1"
+
+[init_call_args]
+"ns-others" = ["0xff"]
+
+[writers]
+"ns" = [ "ns-mock_token", "ns-actions", "ns-others" ]
