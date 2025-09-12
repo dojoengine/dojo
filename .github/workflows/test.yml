@@ -199,3 +199,36 @@ jobs:
         with:
           bun-version: latest
       - run: scripts/docs.sh
+
+  deploy-slot:
+    runs-on: ubuntu-latest-4-cores
+    needs: build
+    container:
+      image: ghcr.io/dojoengine/dojo-dev:v1.7.0-alpha.3
+    steps:
+      - uses: actions/checkout@v3
+      - uses: software-mansion/setup-scarb@v1
+        with:
+          scarb-version: "dev-2025-09-05"
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/download-artifact@v4
+        with:
+          name: dojo-bins
+          path: /tmp/bins
+      # Workaround for https://github.com/actions/runner-images/issues/6775
+      - run: git config --global --add safe.directory "*"
+
+      - name: Setting slot Katana for migration
+      - run: |
+          slot d create dojoci katana --config examples/spawn-and-move/katana_slot.toml
+
+      - name: Migrating on Katana Slot
+      - run: |
+          export PATH=/tmp/bins:$PATH
+          chmod +x /tmp/bins/sozo
+          sozo build --manifest-path examples/spawn-and-move/Scarb.toml -P slot
+          sozo migrate --manifest-path examples/spawn-and-move/Scarb.toml -P slot
+      
+      - name: Cleaning up slot Katana
+        run: |
+          slot d delete dojoci katana
