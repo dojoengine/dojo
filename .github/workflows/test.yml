@@ -1,5 +1,8 @@
 name: test
 
+env:
+  SLOT_AUTH: ${{ secrets.SLOT_AUTH }}
+
 on:
   push:
     branches:
