@@ -220,6 +220,7 @@ jobs:
 
       - name: Setting slot Katana for migration
       - run: |
+          slot d delete dojoci katana -f || echo "No slot Katana found"
           slot d create dojoci katana --config examples/spawn-and-move/katana_slot.toml
 
       - name: Migrating on Katana Slot
@@ -231,4 +232,4 @@ jobs:
       
       - name: Cleaning up slot Katana
         run: |
-          slot d delete dojoci katana
+          slot d delete dojoci katana -f
