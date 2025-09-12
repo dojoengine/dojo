@@ -223,7 +223,7 @@ jobs:
           curl -L https://slot.cartridge.sh | bash
           ls ~
           ls /root
-          source /github/home/.bashrc
+          /github/home/.bashrc
           slot --version
 
       - name: Setting slot Katana for migration
@@ -239,5 +239,6 @@ jobs:
           sozo migrate --manifest-path examples/spawn-and-move/Scarb.toml -P slot
       
       - name: Cleaning up slot Katana
+        if: always()
         run: |
           slot d delete dojoci katana -f
