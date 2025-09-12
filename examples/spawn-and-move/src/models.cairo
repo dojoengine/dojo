@@ -1,5 +1,48 @@
 use starknet::ContractAddress;
 
+
+// as EnemyType is used as model key only, it does not need DojoStore and Default traits
+#[derive(Serde, Copy, Drop, Debug, PartialEq, Introspect)]
+pub enum EnemyType {
+    Goblin,
+    Orc,
+    Troll,
+    Dragon,
+    Giant,
+}
+
+// as EnemySpeed is used as model value, it needs DojoStore and Default traits
+#[derive(Serde, Copy, Drop, Introspect, DojoStore, Default)]
+pub enum EnemySpeed {
+    #[default]
+    Slow,
+    Medium,
+    High,
+}
+
+#[derive(Serde, Copy, Drop, Introspect, DojoStore)]
+pub enum EnemyProperty {
+    HealthBooster: u8,
+    SpecialAttack: u8,
+    Shield: Option<u8>,
+    SpeedBooster: EnemySpeed,
+}
+
+// manually implement Default trait for EnemyProperty to configure
+// the default health value.
+impl EnemyPropertyDefault of Default<EnemyProperty> {
+    fn default() -> EnemyProperty {
+        EnemyProperty::HealthBooster(100)
+    }
+}
+
+#[dojo::model]
+pub struct Enemy {
+    #[key]
+    pub enemy_type: EnemyType,
+    pub properties: Array<EnemyProperty>,
+}
+
 #[derive(Serde, Copy, Drop, Introspect, DojoStore, PartialEq, Debug, Default)]
 pub enum Direction {
     #[default]
