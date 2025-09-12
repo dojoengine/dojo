@@ -1,8 +1,5 @@
 name: test
 
-env:
-  SLOT_AUTH: ${{ secrets.SLOT_AUTH }}
-
 on:
   push:
     branches:
@@ -29,6 +26,7 @@ on:
 env:
   CARGO_TERM_COLOR: always
   RUST_VERSION: 1.88.0
+  SLOT_AUTH: ${{ secrets.SLOT_AUTH }}
 
 jobs:
   build:
