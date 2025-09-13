@@ -1479,8 +1479,8 @@
   },
   "contracts": [
     {
-      "address": "0x5313a9615e20bf286f7b96fe7c8c1d6aa932c81e3e7dda46c20525ffb6e1429",
-      "class_hash": "0x51b6ec68ebc895d9d9122f1393ede675861d58838e218c9fc7fc8fd441b270e",
+      "address": "0x61d2d2e32b64f9c462f581e64e61bd6744dc73d6b2e7d403bf9769eaaa24cb4",
+      "class_hash": "0x1346af7fc454146c81726fd621b870c7f1cd5025f0d992c7cb2a49eb0b6e516",
       "abi": [
         {
           "type": "impl",
@@ -1617,6 +1617,13 @@
             {
               "type": "function",
               "name": "set_enemies",
+              "inputs": [],
+              "outputs": [],
+              "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "update_goblin",
               "inputs": [],
               "outputs": [],
               "state_mutability": "external"
@@ -1847,6 +1854,7 @@
         "spawn",
         "move",
         "set_enemies",
+        "update_goblin",
         "set_player_config",
         "update_player_config_name",
         "reset_player_config",
@@ -2410,8 +2418,8 @@
       ]
     },
     {
-      "address": "0x3b2e3980c252e91e613316d7f544e06b94237a3cd0c21da5c92bf584ab802af",
-      "class_hash": "0x51b6ec68ebc895d9d9122f1393ede675861d58838e218c9fc7fc8fd441b270e",
+      "address": "0x5db7bce1dc84cb769006788b839f9a00ec23e7f8a7eebdc0018d0ddb9633da0",
+      "class_hash": "0x1346af7fc454146c81726fd621b870c7f1cd5025f0d992c7cb2a49eb0b6e516",
       "abi": [
         {
           "type": "impl",
@@ -2548,6 +2556,13 @@
             {
               "type": "function",
               "name": "set_enemies",
+              "inputs": [],
+              "outputs": [],
+              "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "update_goblin",
               "inputs": [],
               "outputs": [],
               "state_mutability": "external"
@@ -2778,6 +2793,7 @@
         "spawn",
         "move",
         "set_enemies",
+        "update_goblin",
         "set_player_config",
         "update_player_config_name",
         "reset_player_config",
@@ -2980,6 +2996,12 @@
       "class_hash": "0x59705105bea9c7eb7ff2d91f670e6dd399cb7b5ab59a0f65a0583cf1aaa3a52",
       "tag": "ns-ServerProfile",
       "selector": "0x641dc5f178aff0c7935a8f1ae30c6038a3d3512ea164d486f98bc37b6beabf"
+    },
+    {
+      "members": [],
+      "class_hash": "0x41b001fade50e24a644864d7c647f727460be9f9a9ef3bdf3c90a2215100df4",
+      "tag": "ns-VintageEnemy",
+      "selector": "0x189cce252214bd8ef882db814a8322c38f469817df10b4b19d0c869a120f43c"
     }
   ],
   "events": [

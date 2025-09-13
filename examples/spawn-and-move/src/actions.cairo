@@ -11,6 +11,7 @@ pub trait IActions<T> {
     fn spawn(ref self: T);
     fn move(ref self: T, direction: Direction);
     fn set_enemies(ref self: T);
+    fn update_goblin(ref self: T);
     fn set_player_config(ref self: T, name: ByteArray);
     fn update_player_config_name(ref self: T, name: ByteArray);
     fn get_player_position(self: @T) -> Position;
@@ -41,6 +42,7 @@ pub mod actions {
     use starknet::{ContractAddress, get_caller_address};
     #[cfg(feature: 'dungeon')]
     use crate::models::Enemy;
+    use crate::models::EnemySpeed;
     use super::{IActions, IHelloDispatcherTrait};
 
 
@@ -157,6 +159,57 @@ pub mod actions {
                     ]
                         .span(),
                 );
+
+            world
+                .write_models(
+                    [
+                        @VintageEnemy {
+                            enemy_type: EnemyType::Goblin,
+                            characteristics: VintageEnemyCharacteristics {
+                                attack: 10, defense: 10, shield: Option::None,
+                            },
+                            speed: EnemySpeed::Slow,
+                            is_set: true,
+                        },
+                        @VintageEnemy {
+                            enemy_type: EnemyType::Troll,
+                            characteristics: VintageEnemyCharacteristics {
+                                attack: 20, defense: 5, shield: Option::Some(12),
+                            },
+                            speed: EnemySpeed::Medium,
+                            is_set: true,
+                        },
+                    ]
+                        .span(),
+                );
+        }
+
+
+        fn update_goblin(ref self: ContractState) {
+            let mut world = self.world_default();
+
+            let mut goblin: VintageEnemy = world.read_model(EnemyType::Goblin);
+
+            // with legacy models, when we read an uninitialized model, enums and options
+            // will be set to the first variant with variant data set to 0.
+            // For options, the first variant is `Some`.
+            // As these default values may lead to unexpected behavior, it is better to use a
+            // boolean flag to know if the model has been initialized.
+            if goblin.is_set {
+                goblin.characteristics.shield = Option::Some(15);
+            } else {
+                goblin =
+                    VintageEnemy {
+                        enemy_type: EnemyType::Goblin,
+                        characteristics: VintageEnemyCharacteristics {
+                            attack: 10, defense: 10, shield: Option::None,
+                        },
+                        speed: EnemySpeed::Slow,
+                        is_set: true,
+                    };
+            }
+
+            world.write_model(@goblin);
         }
 
         fn set_player_config(ref self: ContractState, name: ByteArray) {
