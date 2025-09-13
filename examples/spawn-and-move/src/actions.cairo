@@ -129,6 +129,7 @@ pub mod actions {
             world.emit_event(@Moved { player, direction });
         }
 
+        // create some enemies
         fn set_enemies(ref self: ContractState) {
             let mut world = self.world_default();
 
