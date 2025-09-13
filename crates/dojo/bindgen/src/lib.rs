@@ -270,7 +270,7 @@ mod tests {
             gather_dojo_data(setup.manifest_path("spawn-and-move"), "ns", "dev", skip_migrations)
                 .expect("Failed to gather dojo data");
 
-        assert_eq!(data.models.len(), 8);
+        assert_eq!(data.models.len(), 10);
 
         assert_eq!(data.world.name, "ns");
 

@@ -1,45 +1,5 @@
 [
   {
-    "target": "0x230d10e0655d72ce9ab5d6db5a2bb0afd29e3a403ff616db030ad48de19641a",
-    "method": "spawn"
-  },
-  {
-    "target": "0x230d10e0655d72ce9ab5d6db5a2bb0afd29e3a403ff616db030ad48de19641a",
-    "method": "move"
-  },
-  {
-    "target": "0x230d10e0655d72ce9ab5d6db5a2bb0afd29e3a403ff616db030ad48de19641a",
-    "method": "set_player_config"
-  },
-  {
-    "target": "0x230d10e0655d72ce9ab5d6db5a2bb0afd29e3a403ff616db030ad48de19641a",
-    "method": "update_player_config_name"
-  },
-  {
-    "target": "0x230d10e0655d72ce9ab5d6db5a2bb0afd29e3a403ff616db030ad48de19641a",
-    "method": "reset_player_config"
-  },
-  {
-    "target": "0x230d10e0655d72ce9ab5d6db5a2bb0afd29e3a403ff616db030ad48de19641a",
-    "method": "set_player_server_profile"
-  },
-  {
-    "target": "0x230d10e0655d72ce9ab5d6db5a2bb0afd29e3a403ff616db030ad48de19641a",
-    "method": "set_models"
-  },
-  {
-    "target": "0x230d10e0655d72ce9ab5d6db5a2bb0afd29e3a403ff616db030ad48de19641a",
-    "method": "enter_dungeon"
-  },
-  {
-    "target": "0x230d10e0655d72ce9ab5d6db5a2bb0afd29e3a403ff616db030ad48de19641a",
-    "method": "upgrade"
-  },
-  {
-    "target": "0x681652e79d591d79ecf445691fb323f4f9947772fb66891beb5506d52687b69",
-    "method": "upgrade"
-  },
-  {
     "target": "0x72b2128fc2db8362beb744243d56c41022b93dfa8ca8d44c8be85764ecbdea1",
     "method": "uuid"
   },
@@ -136,47 +96,103 @@
     "method": "upgrade"
   },
   {
-    "target": "0x6bb20ceb3999e8579302d3e6069f2c1fc10a99b4dfd5a28a907b66e242a631b",
-    "method": "spawn"
-  },
-  {
-    "target": "0x6bb20ceb3999e8579302d3e6069f2c1fc10a99b4dfd5a28a907b66e242a631b",
-    "method": "move"
-  },
-  {
-    "target": "0x6bb20ceb3999e8579302d3e6069f2c1fc10a99b4dfd5a28a907b66e242a631b",
-    "method": "set_player_config"
-  },
-  {
-    "target": "0x6bb20ceb3999e8579302d3e6069f2c1fc10a99b4dfd5a28a907b66e242a631b",
-    "method": "update_player_config_name"
-  },
-  {
-    "target": "0x6bb20ceb3999e8579302d3e6069f2c1fc10a99b4dfd5a28a907b66e242a631b",
-    "method": "reset_player_config"
-  },
-  {
-    "target": "0x6bb20ceb3999e8579302d3e6069f2c1fc10a99b4dfd5a28a907b66e242a631b",
-    "method": "set_player_server_profile"
-  },
-  {
-    "target": "0x6bb20ceb3999e8579302d3e6069f2c1fc10a99b4dfd5a28a907b66e242a631b",
-    "method": "set_models"
-  },
-  {
-    "target": "0x6bb20ceb3999e8579302d3e6069f2c1fc10a99b4dfd5a28a907b66e242a631b",
-    "method": "enter_dungeon"
-  },
-  {
-    "target": "0x6bb20ceb3999e8579302d3e6069f2c1fc10a99b4dfd5a28a907b66e242a631b",
-    "method": "upgrade"
-  },
-  {
-    "target": "0x4ca02e0da71179ec7d0c250c717eb90d70f599282600e545dc1a07de9e4f6f9",
+    "target": "0x681652e79d591d79ecf445691fb323f4f9947772fb66891beb5506d52687b69",
     "method": "upgrade"
   },
   {
     "target": "0x5379fdcd86b2148e665877006fa47dc31edce2253fdee9ce2ec981c0670b1fe",
+    "method": "upgrade"
+  },
+  {
+    "target": "0x5db7bce1dc84cb769006788b839f9a00ec23e7f8a7eebdc0018d0ddb9633da0",
+    "method": "spawn"
+  },
+  {
+    "target": "0x5db7bce1dc84cb769006788b839f9a00ec23e7f8a7eebdc0018d0ddb9633da0",
+    "method": "move"
+  },
+  {
+    "target": "0x5db7bce1dc84cb769006788b839f9a00ec23e7f8a7eebdc0018d0ddb9633da0",
+    "method": "set_enemies"
+  },
+  {
+    "target": "0x5db7bce1dc84cb769006788b839f9a00ec23e7f8a7eebdc0018d0ddb9633da0",
+    "method": "update_goblin"
+  },
+  {
+    "target": "0x5db7bce1dc84cb769006788b839f9a00ec23e7f8a7eebdc0018d0ddb9633da0",
+    "method": "set_player_config"
+  },
+  {
+    "target": "0x5db7bce1dc84cb769006788b839f9a00ec23e7f8a7eebdc0018d0ddb9633da0",
+    "method": "update_player_config_name"
+  },
+  {
+    "target": "0x5db7bce1dc84cb769006788b839f9a00ec23e7f8a7eebdc0018d0ddb9633da0",
+    "method": "reset_player_config"
+  },
+  {
+    "target": "0x5db7bce1dc84cb769006788b839f9a00ec23e7f8a7eebdc0018d0ddb9633da0",
+    "method": "set_player_server_profile"
+  },
+  {
+    "target": "0x5db7bce1dc84cb769006788b839f9a00ec23e7f8a7eebdc0018d0ddb9633da0",
+    "method": "set_models"
+  },
+  {
+    "target": "0x5db7bce1dc84cb769006788b839f9a00ec23e7f8a7eebdc0018d0ddb9633da0",
+    "method": "enter_dungeon"
+  },
+  {
+    "target": "0x5db7bce1dc84cb769006788b839f9a00ec23e7f8a7eebdc0018d0ddb9633da0",
+    "method": "upgrade"
+  },
+  {
+    "target": "0x61d2d2e32b64f9c462f581e64e61bd6744dc73d6b2e7d403bf9769eaaa24cb4",
+    "method": "spawn"
+  },
+  {
+    "target": "0x61d2d2e32b64f9c462f581e64e61bd6744dc73d6b2e7d403bf9769eaaa24cb4",
+    "method": "move"
+  },
+  {
+    "target": "0x61d2d2e32b64f9c462f581e64e61bd6744dc73d6b2e7d403bf9769eaaa24cb4",
+    "method": "set_enemies"
+  },
+  {
+    "target": "0x61d2d2e32b64f9c462f581e64e61bd6744dc73d6b2e7d403bf9769eaaa24cb4",
+    "method": "update_goblin"
+  },
+  {
+    "target": "0x61d2d2e32b64f9c462f581e64e61bd6744dc73d6b2e7d403bf9769eaaa24cb4",
+    "method": "set_player_config"
+  },
+  {
+    "target": "0x61d2d2e32b64f9c462f581e64e61bd6744dc73d6b2e7d403bf9769eaaa24cb4",
+    "method": "update_player_config_name"
+  },
+  {
+    "target": "0x61d2d2e32b64f9c462f581e64e61bd6744dc73d6b2e7d403bf9769eaaa24cb4",
+    "method": "reset_player_config"
+  },
+  {
+    "target": "0x61d2d2e32b64f9c462f581e64e61bd6744dc73d6b2e7d403bf9769eaaa24cb4",
+    "method": "set_player_server_profile"
+  },
+  {
+    "target": "0x61d2d2e32b64f9c462f581e64e61bd6744dc73d6b2e7d403bf9769eaaa24cb4",
+    "method": "set_models"
+  },
+  {
+    "target": "0x61d2d2e32b64f9c462f581e64e61bd6744dc73d6b2e7d403bf9769eaaa24cb4",
+    "method": "enter_dungeon"
+  },
+  {
+    "target": "0x61d2d2e32b64f9c462f581e64e61bd6744dc73d6b2e7d403bf9769eaaa24cb4",
+    "method": "upgrade"
+  },
+  {
+    "target": "0x4ca02e0da71179ec7d0c250c717eb90d70f599282600e545dc1a07de9e4f6f9",
     "method": "upgrade"
   },
   {

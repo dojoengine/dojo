@@ -1,6 +1,7 @@
 use dojo::meta::Layout;
 use dojo::meta::introspect::Struct;
 use dojo::meta::layout::compute_packed_size;
+use dojo::storage::dojo_store::DojoStore;
 use dojo::utils::{entity_id_from_keys, entity_id_from_serialized_keys, find_model_field_layout};
 use super::{ModelDef, ModelDefinition, ModelIndex};
 /// Trait `KeyParser` defines a trait for parsing keys from a given model.
@@ -71,6 +72,10 @@ pub trait Model<M> {
     fn serialized_values(self: @M) -> Span<felt252>;
     /// Constructs a model from the given keys and values.
     fn from_serialized(keys: Span<felt252>, values: Span<felt252>) -> Option<M>;
+    /// Contrutcs a model subset (member or schema) from its serialized value.
+    fn from_serialized_subset<T, +Serde<T>, +DojoStore<T>>(value: Span<felt252>) -> Option<T>;
+    /// Returns the serialized value of a model subset (member or schema).
+    fn serialized_subset<T, +Serde<T>, +DojoStore<T>>(value: @T) -> Span<felt252>;
     /// Returns the name of the model. (TODO: internalizing the name_hash could reduce poseidon
     /// costs).
     fn name() -> ByteArray;
@@ -128,6 +133,26 @@ pub impl ModelImpl<M, +ModelParser<M>, +ModelDefinition<M>, +Serde<M>, +Drop<M>>
 
     fn from_serialized(mut keys: Span<felt252>, mut values: Span<felt252>) -> Option<M> {
         ModelParser::<M>::deserialize(ref keys, ref values)
+    }
+
+    fn from_serialized_subset<T, +Serde<T>, +DojoStore<T>>(mut value: Span<felt252>) -> Option<T> {
+        if Self::use_legacy_storage() {
+            Serde::<T>::deserialize(ref value)
+        } else {
+            DojoStore::<T>::dojo_deserialize(ref value)
+        }
+    }
+
+    fn serialized_subset<T, +Serde<T>, +DojoStore<T>>(value: @T) -> Span<felt252> {
+        let mut serialized = ArrayTrait::<felt252>::new();
+
+        if Self::use_legacy_storage() {
+            Serde::<T>::serialize(value, ref serialized)
+        } else {
+            DojoStore::<T>::dojo_serialize(value, ref serialized)
+        }
+
+        serialized.span()
     }
 
     fn name() -> ByteArray {

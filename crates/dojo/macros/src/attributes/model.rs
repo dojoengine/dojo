@@ -18,7 +18,8 @@ use crate::helpers::{
 pub struct DojoModel {
     diagnostics: Vec<Diagnostic>,
     model_type: String,
-    model_value_derive_attr_names: Vec<String>,
+    model_derives: Vec<String>,
+    model_value_derives: Vec<String>,
     members_values: Vec<String>,
     key_type: String,
     keys_to_tuple: String,
@@ -40,7 +41,8 @@ impl DojoModel {
         Self {
             diagnostics: vec![],
             model_type: String::default(),
-            model_value_derive_attr_names: vec![],
+            model_derives: vec![],
+            model_value_derives: vec![],
             members_values: vec![],
             key_type: String::default(),
             keys_to_tuple: String::default(),
@@ -81,14 +83,14 @@ impl DojoModel {
             return failure;
         }
 
-        let mut derive_attr_names = DojoParser::extract_derive_attr_names(
+        model.model_derives = DojoParser::extract_derive_attr_names(
             db,
             &mut model.diagnostics,
             struct_ast.attributes(db).query_attr(db, "derive"),
         );
 
         model.use_legacy_storage =
-            derive_attr_names.contains(&DOJO_LEGACY_STORAGE_DERIVE.to_string());
+            model.model_derives.contains(&DOJO_LEGACY_STORAGE_DERIVE.to_string());
 
         let mut values: Vec<Member> = vec![];
         let mut keys: Vec<Member> = vec![];
@@ -193,28 +195,22 @@ impl DojoModel {
 
         // If Introspect or IntrospectPacked derive attribute is not set for the model,
         // use Introspect by default.
-        if !derive_attr_names.contains(&DOJO_PACKED_DERIVE.to_string())
-            && !derive_attr_names.contains(&DOJO_INTROSPECT_DERIVE.to_string())
+        if !model.model_derives.contains(&DOJO_PACKED_DERIVE.to_string())
+            && !model.model_derives.contains(&DOJO_INTROSPECT_DERIVE.to_string())
         {
-            derive_attr_names.push(DOJO_INTROSPECT_DERIVE.to_string());
-        }
-
-        // If DojoStore derive attribute is not set for the model, add it since it is required
-        // for the model to be stored in the world's storage.
-        if !derive_attr_names.contains(&DOJO_STORE_DERIVE.to_string()) {
-            derive_attr_names.push(DOJO_STORE_DERIVE.to_string());
+            model.model_derives.push(DOJO_INTROSPECT_DERIVE.to_string());
         }
 
         // Add missing expected derive attributes for "Model" struct.
         EXPECTED_DERIVE_ATTR_NAMES.iter().for_each(|expected_attr| {
             let attr = expected_attr.to_string();
 
-            if !derive_attr_names.contains(&attr) {
-                derive_attr_names.push(attr.clone());
+            if !model.model_derives.contains(&attr) {
+                model.model_derives.push(attr.clone());
             }
         });
 
-        let is_packed = derive_attr_names.contains(&DOJO_PACKED_DERIVE.to_string());
+        let is_packed = model.model_derives.contains(&DOJO_PACKED_DERIVE.to_string());
 
         model.unique_hash = helpers::compute_unique_hash(
             db,
@@ -277,18 +273,24 @@ impl DojoModel {
             )
         };
 
-        model.model_value_derive_attr_names = derive_attr_names;
+        model.model_value_derives = model.model_derives.clone();
+
+        // If DojoStore derive attribute is not set for the non-legacy ModelValue, add it since it
+        // is required for the ModelValue to be stored in the world's storage.
+        if !model.use_legacy_storage
+            && !model.model_value_derives.contains(&DOJO_STORE_DERIVE.to_string())
+        {
+            model.model_value_derives.push(DOJO_STORE_DERIVE.to_string());
+        }
+
         let model_code = model.generate_model_code();
 
         let original_struct = DojoTokenizer::rebuild_original_struct(db, struct_ast);
 
-        let derive_attr = if model.model_value_derive_attr_names.is_empty() {
+        let derive_attr = if model.model_derives.is_empty() {
             DojoTokenizer::tokenize("")
         } else {
-            DojoTokenizer::tokenize(&format!(
-                "#[derive({})]",
-                model.model_value_derive_attr_names.join(", ")
-            ))
+            DojoTokenizer::tokenize(&format!("#[derive({})]", model.model_derives.join(", ")))
         };
 
         ProcMacroResult::finalize(
@@ -307,7 +309,7 @@ impl DojoModel {
     fn generate_model_code(&self) -> TokenStream {
         let (
             model_type,
-            model_value_derive_attr_names,
+            model_value_derives,
             members_values,
             key_type,
             keys_to_tuple,
@@ -321,7 +323,7 @@ impl DojoModel {
             deserialize_body,
         ) = (
             &self.model_type,
-            format!("#[derive({})]", self.model_value_derive_attr_names.join(", ")),
+            format!("#[derive({})]", self.model_value_derives.join(", ")),
             self.members_values.join(""),
             &self.key_type,
             &self.keys_to_tuple,
@@ -336,7 +338,7 @@ impl DojoModel {
         );
 
         let content = format!(
-            "{model_value_derive_attr_names}
+            "{model_value_derives}
 pub struct {model_type}Value {{
     {members_values}
 }}

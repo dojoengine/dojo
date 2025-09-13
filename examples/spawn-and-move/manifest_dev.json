@@ -1479,8 +1479,8 @@
   },
   "contracts": [
     {
-      "address": "0x230d10e0655d72ce9ab5d6db5a2bb0afd29e3a403ff616db030ad48de19641a",
-      "class_hash": "0x62d6ee16dfaf14f3a35c2dc9d4e39473574ccaf4873516a18f5905a289deb30",
+      "address": "0x61d2d2e32b64f9c462f581e64e61bd6744dc73d6b2e7d403bf9769eaaa24cb4",
+      "class_hash": "0x1346af7fc454146c81726fd621b870c7f1cd5025f0d992c7cb2a49eb0b6e516",
       "abi": [
         {
           "type": "impl",
@@ -1611,6 +1611,20 @@
                   "type": "dojo_examples::models::Direction"
                 }
               ],
+              "outputs": [],
+              "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "set_enemies",
+              "inputs": [],
+              "outputs": [],
+              "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "update_goblin",
+              "inputs": [],
               "outputs": [],
               "state_mutability": "external"
             },
@@ -1839,6 +1853,8 @@
       "systems": [
         "spawn",
         "move",
+        "set_enemies",
+        "update_goblin",
         "set_player_config",
         "update_player_config_name",
         "reset_player_config",
@@ -2402,8 +2418,8 @@
       ]
     },
     {
-      "address": "0x6bb20ceb3999e8579302d3e6069f2c1fc10a99b4dfd5a28a907b66e242a631b",
-      "class_hash": "0x62d6ee16dfaf14f3a35c2dc9d4e39473574ccaf4873516a18f5905a289deb30",
+      "address": "0x5db7bce1dc84cb769006788b839f9a00ec23e7f8a7eebdc0018d0ddb9633da0",
+      "class_hash": "0x1346af7fc454146c81726fd621b870c7f1cd5025f0d992c7cb2a49eb0b6e516",
       "abi": [
         {
           "type": "impl",
@@ -2534,6 +2550,20 @@
                   "type": "dojo_examples::models::Direction"
                 }
               ],
+              "outputs": [],
+              "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "set_enemies",
+              "inputs": [],
+              "outputs": [],
+              "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "update_goblin",
+              "inputs": [],
               "outputs": [],
               "state_mutability": "external"
             },
@@ -2762,6 +2792,8 @@
       "systems": [
         "spawn",
         "move",
+        "set_enemies",
+        "update_goblin",
         "set_player_config",
         "update_player_config_name",
         "reset_player_config",
@@ -2913,6 +2945,12 @@
   "models": [
     {
       "members": [],
+      "class_hash": "0x4f40fd496549e445bcdc485d09503614a3f9c76b6b369f3af8c3877bc116186",
+      "tag": "ns-Enemy",
+      "selector": "0x1a658aafaf58552ddd7f6d147664760c732c2e4aa85225becb84f136a0b1121"
+    },
+    {
+      "members": [],
       "class_hash": "0x66130fe8b43d48be5338d100eec3e7d7f337a29fd7e05db8a3fee766390c30f",
       "tag": "ns-Flatbow",
       "selector": "0x27a35f8bac96f1deebf4d3e83fc6b94a3da4e6d30a1ce34d5893d2fb602725d"
@@ -2958,6 +2996,12 @@
       "class_hash": "0x59705105bea9c7eb7ff2d91f670e6dd399cb7b5ab59a0f65a0583cf1aaa3a52",
       "tag": "ns-ServerProfile",
       "selector": "0x641dc5f178aff0c7935a8f1ae30c6038a3d3512ea164d486f98bc37b6beabf"
+    },
+    {
+      "members": [],
+      "class_hash": "0x41b001fade50e24a644864d7c647f727460be9f9a9ef3bdf3c90a2215100df4",
+      "tag": "ns-VintageEnemy",
+      "selector": "0x189cce252214bd8ef882db814a8322c38f469817df10b4b19d0c869a120f43c"
     }
   ],
   "events": [
