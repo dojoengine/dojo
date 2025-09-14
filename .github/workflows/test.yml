@@ -26,7 +26,6 @@ on:
 env:
   CARGO_TERM_COLOR: always
   RUST_VERSION: 1.88.0
-  SLOT_AUTH: ${{ secrets.SLOT_AUTH }}
 
 jobs:
   build:
@@ -204,6 +203,8 @@ jobs:
   deploy-slot:
     runs-on: ubuntu-latest
     needs: build
+    env:
+      SLOT_AUTH: ${{ secrets.SLOT_AUTH }}
     container:
       image: ghcr.io/dojoengine/dojo-dev:v1.7.0-alpha.3
     steps:
