@@ -32,17 +32,30 @@ jobs:
       - uses: actions/checkout@v3
       - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       # When we update the versions of Scarb, we may need to rebuild to ensure that all the Scarb.lock files are updated.
-      - run: |
-          VERSION=${{ inputs.version }}
-          VERSION=${VERSION#v}
-          bash scripts/scarb_version_sync.sh --version $VERSION
-          cargo release version $VERSION --execute --no-confirm && cargo release replace --execute --no-confirm
+      - name: Normalize version and update files
+        id: version
+        run: |
+          INPUT_VERSION="${{ inputs.version }}"
+
+          if [[ -z "$INPUT_VERSION" ]]; then
+            echo "Error: Version input is empty"
+            exit 1
+          fi
+
+          CLEAN_VERSION=${INPUT_VERSION#v}
+          DISPLAY_VERSION="v${CLEAN_VERSION}"
+
+          bash scripts/scarb_version_sync.sh --version ${CLEAN_VERSION}
+
+          cargo release version ${CLEAN_VERSION} --execute --no-confirm && cargo release replace --execute --no-confirm
+
+          echo "display_version=${DISPLAY_VERSION}" >> $GITHUB_OUTPUT
       - uses: peter-evans/create-pull-request@v5
         with:
           # We have to use a PAT in order to trigger ci
           token: ${{ secrets.CREATE_PR_TOKEN }}
-          title: "release(prepare): v${{ inputs.version }}"
-          commit-message: "Prepare release: v${{ inputs.version }}"
+          title: "release(prepare): ${{ steps.version.outputs.display_version }}"
+          commit-message: "Prepare release: ${{ steps.version.outputs.display_version }}"
           branch: prepare-release
           base: main
           delete-branch: true
