@@ -2,7 +2,7 @@
 name = "dojo_cairo_test"
 description = "Testing library for Dojo using cairo test runner."
 
-version = "1.7.0-alpha.3"
+version = "1.7.0-alpha.4"
 edition = "2024_07"
 cairo-version = "2.12"
 
