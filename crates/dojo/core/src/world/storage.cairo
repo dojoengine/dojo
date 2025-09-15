@@ -13,7 +13,7 @@ use dojo::utils::{
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait, Resource};
 use starknet::{ClassHash, ContractAddress};
 
-#[derive(Drop, Copy)]
+#[derive(Drop, Copy, Serde)]
 pub struct WorldStorage {
     pub dispatcher: IWorldDispatcher,
     pub namespace_hash: felt252,
