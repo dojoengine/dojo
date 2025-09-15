@@ -241,7 +241,7 @@ fn test_deploy_contract_with_unregistered_namespace() {
 // and it's not the account that is calling the deploy_contract function.
 #[test]
 #[should_panic(
-    expected: "Contract `0x252567a4ea339b58d479b6fd744d818af064abe29cc04fc746178e0d269c0b6` does NOT have OWNER role on namespace `dojo`",
+    expected: "Contract `0x384b52e0b89bb6221ef3158cab06c8da5e0be5a37ca0450794550c28e2896b2` does NOT have OWNER role on namespace `dojo`",
 )]
 fn test_deploy_contract_through_malicious_contract() {
     let world = deploy_world();
@@ -349,7 +349,7 @@ fn test_upgrade_contract_from_random_account() {
 
 #[test]
 #[should_panic(
-    expected: "Contract `0x252567a4ea339b58d479b6fd744d818af064abe29cc04fc746178e0d269c0b6` does NOT have OWNER role on contract (or its namespace) `test_contract`",
+    expected: "Contract `0x384b52e0b89bb6221ef3158cab06c8da5e0be5a37ca0450794550c28e2896b2` does NOT have OWNER role on contract (or its namespace) `test_contract`",
 )]
 fn test_upgrade_contract_through_malicious_contract() {
     let world = deploy_world();
