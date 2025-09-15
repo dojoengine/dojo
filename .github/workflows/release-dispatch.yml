@@ -30,6 +30,7 @@ jobs:
     steps:
       # Workaround described here: https://github.com/actions/checkout/issues/760
       - uses: actions/checkout@v4
+      - uses: foundry-rs/setup-snfoundry@v3
       - uses: software-mansion/setup-scarb@v1
         with:
           scarb-version: "2.12.2"
