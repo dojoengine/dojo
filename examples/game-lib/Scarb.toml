@@ -5,7 +5,7 @@ members = [
 ]
 
 [workspace.package]
-version = "1.7.0-alpha.3"
+version = "1.7.0-alpha.4"
 description = "Example game library for Dojo"
 edition = "2024_07"
 cairo-version = "2.12"

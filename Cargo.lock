@@ -1156,7 +1156,7 @@ dependencies = [
 
 [[package]]
 name = "cairo-bench"
-version = "1.7.0-alpha.3"
+version = "1.7.0-alpha.4"
 dependencies = [
  "anyhow",
  "camino",
@@ -2513,7 +2513,7 @@ checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
 
 [[package]]
 name = "dojo-bindgen"
-version = "1.7.0-alpha.3"
+version = "1.7.0-alpha.4"
 dependencies = [
  "anyhow",
  "assert_matches",
@@ -2537,15 +2537,15 @@ dependencies = [
 
 [[package]]
 name = "dojo-contracts"
-version = "1.7.0-alpha.3"
+version = "1.7.0-alpha.4"
 
 [[package]]
 name = "dojo-examples-spawn-and-move"
-version = "1.7.0-alpha.3"
+version = "1.7.0-alpha.4"
 
 [[package]]
 name = "dojo-metrics"
-version = "1.7.0-alpha.3"
+version = "1.7.0-alpha.4"
 dependencies = [
  "bytes",
  "http-body-util",
@@ -2565,7 +2565,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-test-utils"
-version = "1.7.0-alpha.3"
+version = "1.7.0-alpha.4"
 dependencies = [
  "assert_fs",
  "camino",
@@ -2577,7 +2577,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-types"
-version = "1.7.0-alpha.3"
+version = "1.7.0-alpha.4"
 dependencies = [
  "anyhow",
  "assert_matches",
@@ -2599,7 +2599,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-utils"
-version = "1.7.0-alpha.3"
+version = "1.7.0-alpha.4"
 dependencies = [
  "anyhow",
  "assert_matches",
@@ -2618,7 +2618,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-world"
-version = "1.7.0-alpha.3"
+version = "1.7.0-alpha.4"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2645,7 +2645,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-world-abigen"
-version = "1.7.0-alpha.3"
+version = "1.7.0-alpha.4"
 dependencies = [
  "anyhow",
  "cainome",
@@ -2660,7 +2660,7 @@ dependencies = [
 
 [[package]]
 name = "dojo_macros"
-version = "1.7.0-alpha.3"
+version = "1.7.0-alpha.4"
 dependencies = [
  "anyhow",
  "cainome",
@@ -4744,7 +4744,7 @@ checksum = "78ca9ab1a0babb1e7d5695e3530886289c18cf2f87ec19a575a0abdce112e3a3"
 
 [[package]]
 name = "merge-options"
-version = "1.7.0-alpha.3"
+version = "1.7.0-alpha.4"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4753,7 +4753,7 @@ dependencies = [
 
 [[package]]
 name = "merge-options-macro-test"
-version = "1.7.0-alpha.3"
+version = "1.7.0-alpha.4"
 dependencies = [
  "merge-options",
 ]
@@ -6510,7 +6510,7 @@ dependencies = [
 
 [[package]]
 name = "scarb-interop"
-version = "1.7.0-alpha.3"
+version = "1.7.0-alpha.4"
 dependencies = [
  "anyhow",
  "camino",
@@ -6537,7 +6537,7 @@ dependencies = [
 
 [[package]]
 name = "scarb-metadata-ext"
-version = "1.7.0-alpha.3"
+version = "1.7.0-alpha.4"
 dependencies = [
  "anyhow",
  "camino",
@@ -7087,7 +7087,7 @@ dependencies = [
 
 [[package]]
 name = "sozo"
-version = "1.7.0-alpha.3"
+version = "1.7.0-alpha.4"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -7132,7 +7132,7 @@ dependencies = [
 
 [[package]]
 name = "sozo-mcp"
-version = "1.7.0-alpha.3"
+version = "1.7.0-alpha.4"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -7180,7 +7180,7 @@ dependencies = [
 
 [[package]]
 name = "sozo-ops"
-version = "1.7.0-alpha.3"
+version = "1.7.0-alpha.4"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -7213,7 +7213,7 @@ dependencies = [
 
 [[package]]
 name = "sozo-signers"
-version = "1.7.0-alpha.3"
+version = "1.7.0-alpha.4"
 dependencies = [
  "anyhow",
  "starknet",
@@ -7221,7 +7221,7 @@ dependencies = [
 
 [[package]]
 name = "sozo-walnut"
-version = "1.7.0-alpha.3"
+version = "1.7.0-alpha.4"
 dependencies = [
  "anyhow",
  "clap",
@@ -8562,7 +8562,7 @@ checksum = "accd4ea62f7bb7a82fe23066fb0957d48ef677f6eeb8215f372f52e48bb32426"
 
 [[package]]
 name = "verify_db_balances"
-version = "1.7.0-alpha.3"
+version = "1.7.0-alpha.4"
 dependencies = [
  "clap",
  "num-traits",
@@ -9348,7 +9348,7 @@ checksum = "32ac00cd3f8ec9c1d33fb3e7958a82df6989c42d747bd326c822b1d625283547"
 
 [[package]]
 name = "xtask-generate-test-db"
-version = "1.7.0-alpha.3"
+version = "1.7.0-alpha.4"
 dependencies = [
  "anyhow",
  "dojo-test-utils",
