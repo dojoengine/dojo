@@ -16,7 +16,7 @@ impl DojoParser {
     pub(crate) fn parse_and_find_struct<'a>(
         db: &'a SimpleParserDatabase,
         token_stream: &'a TokenStream,
-    ) -> Option<ast::ItemStruct<'a>> {
+    ) -> Option<ast::ItemStruct> {
         let (root_node, _diagnostics) = db.parse_token_stream(token_stream);
 
         for n in root_node.descendants(db) {
@@ -33,7 +33,7 @@ impl DojoParser {
     pub(crate) fn parse_and_find_module<'a>(
         db: &'a SimpleParserDatabase,
         token_stream: &'a TokenStream,
-    ) -> Option<ast::ItemModule<'a>> {
+    ) -> Option<ast::ItemModule> {
         let (root_node, _diagnostics) = db.parse_token_stream(token_stream);
 
         for n in root_node.descendants(db) {
@@ -51,7 +51,7 @@ impl DojoParser {
     pub(crate) fn parse_inline_args<'a>(
         db: &'a SimpleParserDatabase,
         token_stream: &'a TokenStream,
-    ) -> Option<ast::ExprParenthesized<'a>> {
+    ) -> Option<ast::ExprParenthesized> {
         let (root_node, _diagnostics) = db.parse_token_stream_expr(token_stream);
 
         for n in root_node.descendants(db) {
@@ -67,7 +67,7 @@ impl DojoParser {
     pub(crate) fn parse_members<'a>(
         db: &SimpleParserDatabase,
         // members: &[MemberAst],
-        members: impl Iterator<Item = MemberAst<'a>>,
+        members: impl Iterator<Item = MemberAst>,
         diagnostics: &mut Vec<Diagnostic>,
     ) -> Vec<Member> {
         let mut parsing_keys = true;
@@ -119,7 +119,7 @@ impl DojoParser {
     pub fn extract_derive_attr_names<'a>(
         db: &SimpleParserDatabase,
         diagnostics: &mut Vec<Diagnostic>,
-        attrs: impl Iterator<Item = Attribute<'a>>,
+        attrs: impl Iterator<Item = Attribute>,
     ) -> Vec<String> {
         attrs
             .filter_map(|attr| {

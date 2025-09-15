@@ -54,7 +54,7 @@ impl DojoFormatter {
             _ => member_ast.type_clause(db).ty(db).as_syntax_node().get_text_without_trivia(db),
         };
 
-        Self::deserialize_primitive_member_ty(&member_name, member_ty, use_serde, input_name)
+        Self::deserialize_primitive_member_ty(&member_name, &member_ty, use_serde, input_name)
     }
 
     pub fn deserialize_primitive_member_ty(
@@ -71,7 +71,7 @@ impl DojoFormatter {
 
     pub fn serialize_keys_and_values<'a>(
         db: &dyn SyntaxGroup,
-        members: impl Iterator<Item = MemberAst<'a>>,
+        members: impl Iterator<Item = MemberAst>,
         serialized_keys: &mut Vec<String>,
         serialized_values: &mut Vec<String>,
         use_serde: bool,
