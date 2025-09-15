@@ -34,6 +34,7 @@ jobs:
       - run: |
           VERSION=${{ inputs.version }}
           VERSION=${VERSION#v}
+          bash scripts/scarb_version_sync.sh --version $VERSION
           cargo release version $VERSION --execute --no-confirm && cargo release replace --execute --no-confirm
       - uses: peter-evans/create-pull-request@v5
         with:
