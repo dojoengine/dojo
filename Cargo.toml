@@ -97,11 +97,7 @@ auto_impl = "1.2.0"
 base64 = "0.21.2"
 bigdecimal = "0.4.1"
 bytes = "1.6"
-
-# refer to Scarb git while `cairo-lang-macro` 0.2.0 (new api) is deployed on crates.io
-# cairo-lang-macro = { version = "0.2.0", git = "https://github.com/software-mansion/scarb.git" }
 cairo-lang-macro = "0.2.0"
-
 cairo-lang-compiler = "2.12.2"
 cairo-lang-debug = "2.12.2"
 cairo-lang-defs = "2.12.2"
