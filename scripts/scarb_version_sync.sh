@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Sync or verify [package].version in all Scarb.toml files.
+# Sync or verify [package].version and [workspace.package].version in all Scarb.toml files.
 #
 # Usage:
 #   scripts/scarb_version_sync.sh --version 1.7.0-alpha.3            # update files in-place
@@ -8,7 +8,7 @@
 #   scripts/scarb_version_sync.sh -v 1.7.0-alpha.3 --root path/to/dir
 #
 # Notes:
-# - Only updates the `version = "..."` line inside the `[package]` section.
+# - Updates the `version = "..."` line inside both `[package]` and `[workspace.package]` sections.
 # - Ignores `target/` and `.git/`.
 # - Works on macOS (BSD awk) and Linux (GNU awk/mawk).
 
@@ -47,16 +47,17 @@ find_scarb() {
        -type f -name Scarb.toml -print0
 }
 
-# Verify a single file's [package].version matches $VERSION
+# Verify a single file's [package].version and [workspace.package].version matches $VERSION
 check_file() {
   local file="$1"
   # awk logic:
   # - toggle in_pkg when entering/leaving sections
-  # - if inside [package] and see a version= line, compare its quoted value
+  # - if inside [package] or [workspace.package] and see a version= line, compare its quoted value
   awk -v ver="$VERSION" -v file="$file" '
     BEGIN { in_pkg=0; ok=1 }
     /^[[:space:]]*\[package\][[:space:]]*$/ { in_pkg=1; next }
-    /^[[:space:]]*\[[^]]+\][[:space:]]*$/ && $0 !~ /^\[package\]/ { in_pkg=0 }
+    /^[[:space:]]*\[workspace\.package\][[:space:]]*$/ { in_pkg=1; next }
+    /^[[:space:]]*\[[^]]+\][[:space:]]*$/ && $0 !~ /^\[(package|workspace\.package)\]/ { in_pkg=0 }
     in_pkg && /^[[:space:]]*version[[:space:]]*=/ {
       if (match($0, /"[^\"]+"/)) {
         v = substr($0, RSTART+1, RLENGTH-2)
@@ -73,18 +74,19 @@ check_file() {
   ' "$file"
 }
 
-# Update a single file in-place (only the version line inside [package])
+# Update a single file in-place (version lines inside [package] and [workspace.package])
 update_file() {
   local file="$1"
   local tmp
   tmp="$(mktemp)"
 
-  # Replace the quoted version string on the version= line (inside [package]).
+  # Replace the quoted version string on the version= line (inside [package] and [workspace.package]).
   # This keeps things simple and portable. Trailing comments on that line are removed.
   awk -v ver="$VERSION" '
     BEGIN { in_pkg=0 }
     /^[[:space:]]*\[package\][[:space:]]*$/ { in_pkg=1; print; next }
-    /^[[:space:]]*\[[^]]+\][[:space:]]*$/ && $0 !~ /^\[package\]/ { in_pkg=0; print; next }
+    /^[[:space:]]*\[workspace\.package\][[:space:]]*$/ { in_pkg=1; print; next }
+    /^[[:space:]]*\[[^]]+\][[:space:]]*$/ && $0 !~ /^\[(package|workspace\.package)\]/ { in_pkg=0; print; next }
     {
       if (in_pkg && $0 ~ /^[[:space:]]*version[[:space:]]*=/) {
         sub(/^[[:space:]]*version[[:space:]]*=[[:space:]]*".*"/, "version = \"" ver "\"")
@@ -137,7 +139,7 @@ if [[ "$CHECK" -eq 1 ]]; then
     echo "Scarb version check failed." >&2
     exit 1
   fi
-  echo "All Scarb.toml [package].version match $VERSION"
+  echo "All Scarb.toml [package].version and [workspace.package].version match $VERSION"
 fi
 
 exit 0
