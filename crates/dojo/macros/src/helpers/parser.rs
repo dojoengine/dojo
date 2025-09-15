@@ -64,7 +64,7 @@ impl DojoParser {
     }
 
     /// Parse a list of member syntax nodes into a list of `Member`.
-    pub(crate) fn parse_members<'a>(
+    pub(crate) fn parse_members(
         db: &SimpleParserDatabase,
         // members: &[MemberAst],
         members: impl Iterator<Item = MemberAst>,
@@ -116,7 +116,7 @@ impl DojoParser {
     /// ```
     ///
     /// And this function will return `["Introspect"]`.
-    pub fn extract_derive_attr_names<'a>(
+    pub fn extract_derive_attr_names(
         db: &SimpleParserDatabase,
         diagnostics: &mut Vec<Diagnostic>,
         attrs: impl Iterator<Item = Attribute>,

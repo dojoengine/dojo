@@ -69,7 +69,7 @@ impl DojoFormatter {
         )
     }
 
-    pub fn serialize_keys_and_values<'a>(
+    pub fn serialize_keys_and_values(
         db: &dyn SyntaxGroup,
         members: impl Iterator<Item = MemberAst>,
         serialized_keys: &mut Vec<String>,

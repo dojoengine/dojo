@@ -15,7 +15,7 @@ pub fn get_serialization_path_and_prefix(use_serde: bool) -> (String, String) {
 
 /// Compute a unique hash based on the element name and types and names of members.
 /// This hash is used in element contracts to ensure uniqueness.
-pub fn compute_unique_hash<'a>(
+pub fn compute_unique_hash(
     db: &SimpleParserDatabase,
     element_name: &str,
     is_packed: bool,

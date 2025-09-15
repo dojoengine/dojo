@@ -15,7 +15,7 @@ pub struct DojoChecker {}
 impl DojoChecker {
     /// Be sure there is no conflict among `derive` attributes
     /// set on a Cairo element.
-    pub fn check_derive_conflicts<'a>(
+    pub fn check_derive_conflicts(
         db: &SimpleParserDatabase,
         diagnostics: &mut Vec<Diagnostic>,
         attrs: impl Iterator<Item = Attribute>,
