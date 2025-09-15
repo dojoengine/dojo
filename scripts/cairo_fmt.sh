@@ -14,4 +14,3 @@ scarb --manifest-path crates/dojo/dojo-snf-test/Scarb.toml fmt $option
 
 scarb --manifest-path examples/simple/Scarb.toml fmt $option
 scarb --manifest-path examples/spawn-and-move/Scarb.toml fmt $option
-scarb --manifest-path examples/benchmark/Scarb.toml fmt $option

@@ -297,7 +297,7 @@ fn test_register_event_with_unregistered_namespace() {
 // and it's not the account that is calling the register_event function.
 #[test]
 #[should_panic(
-    expected: "Contract `0x12628844c00f37b6e7ac0d9dba2941553f09f9b7b1de979103f64f072db26f6` does NOT have OWNER role on namespace `dojo`",
+    expected: "Contract `0x605326ff8cf0578c1632f0ad82b5de8c40c46d8d0166a0d94faf39a492b0819` does NOT have OWNER role on namespace `dojo`",
 )]
 fn test_register_event_through_malicious_contract() {
     let bob: ContractAddress = 0xb0b.try_into().unwrap();

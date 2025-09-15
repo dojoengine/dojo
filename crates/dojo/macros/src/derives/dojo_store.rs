@@ -53,7 +53,7 @@ fn process_struct(db: &SimpleParserDatabase, struct_ast: &ast::ItemStruct) -> Pr
         ));
         deserialized_members.push(DojoFormatter::deserialize_primitive_member_ty(
             &member_name,
-            member_ty,
+            &member_ty,
             false,
             "values",
         ));

@@ -152,7 +152,7 @@ impl DojoStructIntrospect {
 
                 // Check if the member type uses the `usize` type, either
                 // directly or as a nested type (the tuple (u8, usize, u32) for example)
-                if type_contains_usize(member_type) {
+                if type_contains_usize(&member_type) {
                     self.diagnostics.push_error(
                         "Use u32 rather than usize for model keys, as usize size is architecture \
                          dependent."
@@ -161,7 +161,7 @@ impl DojoStructIntrospect {
                 }
             } else {
                 let field_name = member.name(db).text(db);
-                let field_selector = get_selector_from_name(field_name).unwrap();
+                let field_selector = get_selector_from_name(&field_name).unwrap();
                 let field_layout = super::layout::get_layout_from_type_clause(
                     db,
                     &mut self.diagnostics,

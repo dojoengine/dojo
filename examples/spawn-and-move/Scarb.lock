@@ -3,7 +3,7 @@ version = 1
 
 [[package]]
 name = "armory"
-version = "1.7.0-alpha.2"
+version = "1.7.0-alpha.3"
 dependencies = [
  "dojo",
  "dojo_macros",
@@ -11,7 +11,7 @@ dependencies = [
 
 [[package]]
 name = "bestiary"
-version = "1.7.0-alpha.2"
+version = "1.7.0-alpha.3"
 dependencies = [
  "dojo",
  "dojo_macros",
@@ -19,14 +19,14 @@ dependencies = [
 
 [[package]]
 name = "dojo"
-version = "1.7.0-alpha.2"
+version = "1.7.0-alpha.3"
 dependencies = [
  "dojo_macros",
 ]
 
 [[package]]
 name = "dojo_examples"
-version = "1.7.0-alpha.2"
+version = "1.7.0-alpha.3"
 dependencies = [
  "armory",
  "bestiary",
@@ -43,7 +43,7 @@ version = "1.7.0-alpha.3"
 
 [[package]]
 name = "dojo_snf_test"
-version = "1.7.0-alpha.2"
+version = "1.7.0-alpha.3"
 dependencies = [
  "dojo",
  "snforge_std",

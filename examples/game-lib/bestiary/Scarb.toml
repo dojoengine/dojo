@@ -1,6 +1,6 @@
 [package]
 name = "bestiary"
-version = "1.7.0-alpha.2"
+version = "1.7.0-alpha.3"
 description = "Some scary foes to fight."
 edition.workspace = true
 cairo-version.workspace = true
