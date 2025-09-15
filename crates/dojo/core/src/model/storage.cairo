@@ -1,6 +1,7 @@
 use dojo::meta::Introspect;
 use dojo::model::ModelPtr;
 use dojo::model::model_value::ModelValueKey;
+use dojo::storage::dojo_store::DojoStore;
 
 // TODO: define the right interface for member accesses.
 
@@ -37,29 +38,62 @@ pub trait ModelStorage<S, M> {
     /// The ptr is mostly used for type inferrence.
     fn erase_models_ptrs(ref self: S, ptrs: Span<ModelPtr<M>>);
 
-    /// Retrieves a model of type `M` using the provided entity id.
-    fn read_member<T, +Serde<T>>(self: @S, ptr: ModelPtr<M>, field_selector: felt252) -> T;
+    /// Retrieves a single member from a model.
+    fn read_member<T, +Serde<T>, +DojoStore<T>>(
+        self: @S, ptr: ModelPtr<M>, field_selector: felt252,
+    ) -> T;
 
     /// Retrieves a single member from multiple models.
-    fn read_member_of_models<T, +Serde<T>, +Drop<T>>(
+    fn read_member_of_models<T, +Serde<T>, +DojoStore<T>, +Drop<T>>(
         self: @S, ptrs: Span<ModelPtr<M>>, field_selector: felt252,
     ) -> Array<T>;
 
     /// Updates a member of a model.
-    fn write_member<T, +Serde<T>, +Drop<T>>(
+    fn write_member<T, +Serde<T>, +DojoStore<T>, +Drop<T>>(
         ref self: S, ptr: ModelPtr<M>, field_selector: felt252, value: T,
     );
 
     /// Updates a member of multiple models.
-    fn write_member_of_models<T, +Serde<T>, +Drop<T>>(
+    fn write_member_of_models<T, +Serde<T>, +DojoStore<T>, +Drop<T>>(
         ref self: S, ptrs: Span<ModelPtr<M>>, field_selector: felt252, values: Span<T>,
     );
 
     /// Retrieves a subset of members in a model, matching a defined schema <T>.
-    fn read_schema<T, +Serde<T>, +Introspect<T>>(self: @S, ptr: ModelPtr<M>) -> T;
+    fn read_schema<T, +Serde<T>, +DojoStore<T>, +Introspect<T>>(self: @S, ptr: ModelPtr<M>) -> T;
 
     /// Retrieves part of multiple models, matching a schema.
-    fn read_schemas<T, +Drop<T>, +Serde<T>, +Introspect<T>>(
+    fn read_schemas<T, +Drop<T>, +Serde<T>, +DojoStore<T>, +Introspect<T>>(
+        self: @S, ptrs: Span<ModelPtr<M>>,
+    ) -> Array<T>;
+
+    /// --- legacy functions ---
+    /// due to the fact that the generic type T of original functions have
+    /// to be constrained to Serde and DojoStore and legacy model inner structs do not implement
+    /// DojoStore.
+
+    /// Retrieves a single member from a model.
+    fn read_member_legacy<T, +Serde<T>>(self: @S, ptr: ModelPtr<M>, field_selector: felt252) -> T;
+
+    /// Retrieves a single member from multiple models.
+    fn read_member_of_models_legacy<T, +Serde<T>, +Drop<T>>(
+        self: @S, ptrs: Span<ModelPtr<M>>, field_selector: felt252,
+    ) -> Array<T>;
+
+    /// Updates a member of a model.
+    fn write_member_legacy<T, +Serde<T>, +Drop<T>>(
+        ref self: S, ptr: ModelPtr<M>, field_selector: felt252, value: T,
+    );
+
+    /// Updates a member of multiple models.
+    fn write_member_of_models_legacy<T, +Serde<T>, +Drop<T>>(
+        ref self: S, ptrs: Span<ModelPtr<M>>, field_selector: felt252, values: Span<T>,
+    );
+
+    /// Retrieves a subset of members in a model, matching a defined schema <T>.
+    fn read_schema_legacy<T, +Serde<T>, +Introspect<T>>(self: @S, ptr: ModelPtr<M>) -> T;
+
+    /// Retrieves part of multiple models, matching a schema.
+    fn read_schemas_legacy<T, +Drop<T>, +Serde<T>, +Introspect<T>>(
         self: @S, ptrs: Span<ModelPtr<M>>,
     ) -> Array<T>;
 

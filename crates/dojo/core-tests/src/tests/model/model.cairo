@@ -1,5 +1,8 @@
 use dojo::meta::{FieldLayout, Introspect, Layout};
-use dojo::model::{Model, ModelPtr, ModelStorage, ModelValue, ModelValueStorage};
+use dojo::model::{
+    Model, ModelPtr, ModelStorage, ModelStorageTest, ModelValue, ModelValueStorage,
+    ModelValueStorageTest,
+};
 use dojo::world::WorldStorage;
 use dojo_snf_test::world::{NamespaceDef, TestResource, spawn_test_world};
 
@@ -56,7 +59,7 @@ struct Foo4 {
     v3: AStruct,
 }
 
-#[derive(Copy, Drop, Serde, Debug, Introspect)]
+#[derive(Copy, Drop, Serde, Debug, Introspect, DojoStore)]
 struct FooSchema {
     v0: u256,
     v3: AStruct,
@@ -78,22 +81,31 @@ enum EnumWithCommentOnLastVariant {
     Y: Span<u32> // a comment without a comma
 }
 
-#[derive(Copy, Drop, Serde, Debug, Introspect, Default, PartialEq, DojoStore)]
-enum MyEnum {
+#[derive(Copy, Drop, Serde, Debug, Introspect, Default, PartialEq)]
+enum MyEnumLegacy {
     X: Option<u32>,
     Y: (u8, u32),
     #[default]
     Z,
 }
 
-#[derive(Copy, Drop, Serde, Debug, Introspect, DojoLegacyStore, PartialEq)]
+#[derive(Copy, Drop, Serde, Debug, DojoLegacyStore, PartialEq)]
 #[dojo::model]
 struct LegacyModel {
     #[key]
     a: u8,
     b: (u8, u32),
     c: Option<u32>,
-    d: MyEnum,
+    d: MyEnumLegacy,
+}
+
+
+#[derive(Copy, Drop, Serde, Debug, Introspect, Default, PartialEq, DojoStore)]
+enum MyEnum {
+    X: Option<u32>,
+    Y: (u8, u32),
+    #[default]
+    Z,
 }
 
 #[derive(Copy, Drop, Serde, Debug, Introspect, PartialEq)]
@@ -106,7 +118,7 @@ struct DojoStoreModel {
     d: MyEnum,
 }
 
-#[derive(Copy, Drop, Serde, Introspect, DojoStore, Default, Debug, PartialEq)]
+#[derive(Copy, Drop, Serde, Introspect, Default, Debug, PartialEq)]
 enum EnumKey {
     #[default]
     KEY_1,
@@ -114,9 +126,27 @@ enum EnumKey {
     KEY_3,
 }
 
-#[derive(Copy, Drop, Serde, Debug, Introspect, DojoLegacyStore, PartialEq)]
+#[derive(Copy, Drop, Debug, DojoLegacyStore, PartialEq)]
 #[dojo::model]
 struct LegacyModelWithEnumKey {
+    #[key]
+    k1: u8,
+    #[key]
+    k2: EnumKey,
+    v1: u32,
+    v2: Option<u32>,
+    v3: MyEnumLegacy,
+}
+
+#[derive(Copy, Drop, Serde, Introspect, Debug, PartialEq)]
+struct LegacyModelSubset {
+    v2: Option<u32>,
+    v3: MyEnumLegacy,
+}
+
+#[derive(Copy, Drop, Debug, PartialEq)]
+#[dojo::model]
+struct DojoStoreModelWithEnumKey {
     #[key]
     k1: u8,
     #[key]
@@ -126,14 +156,8 @@ struct LegacyModelWithEnumKey {
     v3: MyEnum,
 }
 
-#[derive(Copy, Drop, Serde, Debug, Introspect, PartialEq)]
-#[dojo::model]
-struct DojoStoreModelWithEnumKey {
-    #[key]
-    k1: u8,
-    #[key]
-    k2: EnumKey,
-    v1: u32,
+#[derive(Copy, Drop, Serde, Introspect, DojoStore, Debug, PartialEq)]
+struct DojoStoreModelSubset {
     v2: Option<u32>,
     v3: MyEnum,
 }
@@ -615,7 +639,7 @@ fn test_legacy_model() {
 
     // (de)serialization
     let m = LegacyModel {
-        a: 42, b: (83, 1234), c: Option::Some(987), d: MyEnum::X(Option::Some(5432)),
+        a: 42, b: (83, 1234), c: Option::Some(987), d: MyEnumLegacy::X(Option::Some(5432)),
     };
     let serialized_keys = dojo::model::model::ModelParser::<LegacyModel>::serialize_keys(@m);
     let serialized_values = dojo::model::model::ModelParser::<LegacyModel>::serialize_values(@m);
@@ -722,18 +746,15 @@ fn test_dojo_store_model() {
 }
 
 #[test]
-fn test_legacy_model_with_enum_key() {
-    let mut world = spawn_foo_world();
-
+fn test_legacy_model_with_enum_key_serialization() {
     let m = LegacyModelWithEnumKey {
         k1: 42,
         k2: EnumKey::KEY_3,
         v1: 1234,
         v2: Option::Some(5432),
-        v3: MyEnum::X(Option::Some(6543)),
+        v3: MyEnumLegacy::X(Option::Some(6543)),
     };
 
-    // (de)serialization
     // For a legacy model, keys and values must be serialized with Serde.
 
     let serialized_keys = dojo::model::model::ModelParser::<
@@ -760,17 +781,34 @@ fn test_legacy_model_with_enum_key() {
         Option::Some(m),
         "LegacyModelWithEnumKey: deserialize failed",
     );
+}
 
-    // read unitialized model, write and read back
-    let def_m: LegacyModelWithEnumKey = world.read_model((42, 2));
+#[test]
+fn test_legacy_model_with_enum_key_single_model() {
+    let mut world = spawn_foo_world();
+
+    let m = LegacyModelWithEnumKey {
+        k1: 42,
+        k2: EnumKey::KEY_3,
+        v1: 1234,
+        v2: Option::Some(5432),
+        v3: MyEnumLegacy::X(Option::Some(6543)),
+    };
+
+    // read uninitialized model, write and read back
+    let def_m: LegacyModelWithEnumKey = world.read_model(m.keys());
 
     // For a legacy model, the default value is Some with variant data set to 0 for an option,
     // and the first variant with variant data set to 0 for an enum.
     assert!(
         def_m == LegacyModelWithEnumKey {
-            k1: 42, k2: EnumKey::KEY_3, v1: 0, v2: Option::Some(0), v3: MyEnum::X(Option::Some(0)),
+            k1: 42,
+            k2: EnumKey::KEY_3,
+            v1: 0,
+            v2: Option::Some(0),
+            v3: MyEnumLegacy::X(Option::Some(0)),
         },
-        "LegacyModelWithEnumKey: read unitialized model failed",
+        "LegacyModelWithEnumKey: read uninitialized model failed",
     );
 
     world.write_model(@m);
@@ -779,11 +817,483 @@ fn test_legacy_model_with_enum_key() {
     assert!(m == read_m, "LegacyModelWithEnumKey: read model failed");
 }
 
-
 #[test]
-fn test_dojo_store_model_with_enum_key() {
+fn test_legacy_model_with_enum_key_multiple_models() {
     let mut world = spawn_foo_world();
 
+    let m1 = LegacyModelWithEnumKey {
+        k1: 11, k2: EnumKey::KEY_1, v1: 1234, v2: Some(5432), v3: MyEnumLegacy::X(Some(6543)),
+    };
+    let m2 = LegacyModelWithEnumKey {
+        k1: 12, k2: EnumKey::KEY_2, v1: 4567, v2: None, v3: MyEnumLegacy::Y((3, 4)),
+    };
+    let m3 = LegacyModelWithEnumKey {
+        k1: 13, k2: EnumKey::KEY_3, v1: 1234, v2: Option::Some(9999), v3: MyEnumLegacy::Z,
+    };
+
+    // read uninitialized models
+    let keys = [(11, EnumKey::KEY_1), (12, EnumKey::KEY_2), (13, EnumKey::KEY_3)].span();
+    let models: Array<LegacyModelWithEnumKey> = world.read_models(keys);
+
+    assert!(models.len() == 3, "LegacyModelWithEnumKey: read uninitialized models bad length");
+
+    for (model, key) in models.into_iter().zip(keys) {
+        let (k1, k2) = *key;
+        assert!(
+            model == LegacyModelWithEnumKey {
+                k1, k2, v1: 0, v2: Option::Some(0), v3: MyEnumLegacy::X(Option::Some(0)),
+            },
+        );
+    }
+
+    // write and read back them
+    world.write_models([@m1, @m2, @m3].span());
+
+    let read_models: Array<LegacyModelWithEnumKey> = world.read_models(keys);
+
+    assert!(read_models.len() == 3, "LegacyModelWithEnumKey: read back models bad length");
+
+    for (model, read_model) in [m1, m2, m3].span().into_iter().zip(read_models) {
+        assert!(*model == read_model, "LegacyModelWithEnumKey: read back models bad content");
+    }
+}
+
+
+#[test]
+fn test_legacy_model_with_enum_key_member() {
+    let mut world = spawn_foo_world();
+
+    let m = LegacyModelWithEnumKey {
+        k1: 42,
+        k2: EnumKey::KEY_3,
+        v1: 1234,
+        v2: Option::Some(5432),
+        v3: MyEnumLegacy::X(Option::Some(6543)),
+    };
+
+    // read uninitialized member
+    let v2 = world.read_member_legacy(m.ptr(), selector!("v2"));
+    let v3 = world.read_member_legacy(m.ptr(), selector!("v3"));
+    assert!(v2 == Option::Some(0), "LegacyModelWithEnumKey: read uninitialized member v2 failed");
+    assert!(
+        v3 == MyEnumLegacy::X(Option::Some(0)),
+        "LegacyModelWithEnumKey: read uninitialized member v3 failed",
+    );
+
+    // write and read back them
+    world.write_member_legacy(m.ptr(), selector!("v2"), m.v2);
+    world.write_member_legacy(m.ptr(), selector!("v3"), m.v3);
+
+    let read_v2 = world.read_member_legacy(m.ptr(), selector!("v2"));
+    let read_v3 = world.read_member_legacy(m.ptr(), selector!("v3"));
+
+    assert!(read_v2 == m.v2, "LegacyModelWithEnumKey: read back member v2 failed");
+    assert!(read_v3 == m.v3, "LegacyModelWithEnumKey: read back member v3 failed");
+}
+
+
+#[test]
+fn test_legacy_model_with_enum_key_member_for_multiple_models() {
+    let mut world = spawn_foo_world();
+
+    let m1 = LegacyModelWithEnumKey {
+        k1: 11, k2: EnumKey::KEY_1, v1: 1234, v2: Some(5432), v3: MyEnumLegacy::X(Some(6543)),
+    };
+    let m2 = LegacyModelWithEnumKey {
+        k1: 12, k2: EnumKey::KEY_2, v1: 4567, v2: None, v3: MyEnumLegacy::Y((3, 4)),
+    };
+    let m3 = LegacyModelWithEnumKey {
+        k1: 13, k2: EnumKey::KEY_3, v1: 1234, v2: Option::Some(9999), v3: MyEnumLegacy::Z,
+    };
+
+    let model_ptrs = [m1.ptr(), m2.ptr(), m3.ptr()].span();
+
+    // read uninitialized member
+    let v2s = world.read_member_of_models_legacy(model_ptrs, selector!("v2"));
+    let v3s = world.read_member_of_models_legacy(model_ptrs, selector!("v3"));
+
+    assert!(
+        v2s.len() == 3, "LegacyModelWithEnumKey: read uninitialized member v2 of models bad length",
+    );
+    assert!(
+        v3s.len() == 3, "LegacyModelWithEnumKey: read uninitialized member v3 of models bad length",
+    );
+
+    assert!(
+        v2s == array![Option::Some(0), Option::Some(0), Option::Some(0)],
+        "LegacyModelWithEnumKey: read uninitialized member v2 failed",
+    );
+    assert!(
+        v3s == array![
+            MyEnumLegacy::X(Option::Some(0)), MyEnumLegacy::X(Option::Some(0)),
+            MyEnumLegacy::X(Option::Some(0)),
+        ],
+        "LegacyModelWithEnumKey: read uninitialized member v3 failed",
+    );
+
+    // write and read back them
+    world
+        .write_member_of_models_legacy(
+            model_ptrs, selector!("v2"), array![m1.v2, m2.v2, m3.v2].span(),
+        );
+    world
+        .write_member_of_models_legacy(
+            model_ptrs, selector!("v3"), array![m1.v3, m2.v3, m3.v3].span(),
+        );
+
+    let read_v2s = world.read_member_of_models_legacy(model_ptrs, selector!("v2"));
+    let read_v3s = world.read_member_of_models_legacy(model_ptrs, selector!("v3"));
+
+    assert!(
+        read_v2s.len() == 3, "LegacyModelWithEnumKey: read back member v2 of models bad length",
+    );
+    assert!(
+        read_v3s.len() == 3, "LegacyModelWithEnumKey: read back member v3 of models bad length",
+    );
+
+    assert!(
+        read_v2s == array![m1.v2, m2.v2, m3.v2],
+        "LegacyModelWithEnumKey: read back member v2 of models failed",
+    );
+    assert!(
+        read_v3s == array![m1.v3, m2.v3, m3.v3],
+        "LegacyModelWithEnumKey: read back member v3 of models failed",
+    );
+}
+
+#[test]
+fn test_legacy_model_with_enum_key_schema() {
+    let mut world = spawn_foo_world();
+
+    let m = LegacyModelWithEnumKey {
+        k1: 42,
+        k2: EnumKey::KEY_3,
+        v1: 1234,
+        v2: Option::Some(5432),
+        v3: MyEnumLegacy::X(Option::Some(6543)),
+    };
+
+    // read uninitialized schema
+    let schema: LegacyModelSubset = world.read_schema_legacy(m.ptr());
+
+    assert!(
+        schema == LegacyModelSubset { v2: Option::Some(0), v3: MyEnumLegacy::X(Option::Some(0)) },
+        "LegacyModelWithEnumKey: read uninitialized schema failed",
+    );
+
+    // write and read back them
+    world.write_model(@m);
+
+    let read_schema: LegacyModelSubset = world.read_schema_legacy(m.ptr());
+
+    assert!(
+        read_schema == LegacyModelSubset { v2: m.v2, v3: m.v3 },
+        "LegacyModelWithEnumKey: read back schema failed",
+    );
+}
+
+
+#[test]
+fn test_legacy_model_with_enum_key_schemas() {
+    let mut world = spawn_foo_world();
+
+    let m1 = LegacyModelWithEnumKey {
+        k1: 11, k2: EnumKey::KEY_1, v1: 1234, v2: Some(5432), v3: MyEnumLegacy::X(Some(6543)),
+    };
+    let m2 = LegacyModelWithEnumKey {
+        k1: 12, k2: EnumKey::KEY_2, v1: 4567, v2: None, v3: MyEnumLegacy::Y((3, 4)),
+    };
+    let m3 = LegacyModelWithEnumKey {
+        k1: 13, k2: EnumKey::KEY_3, v1: 1234, v2: Option::Some(9999), v3: MyEnumLegacy::Z,
+    };
+
+    let model_ptrs = [m1.ptr(), m2.ptr(), m3.ptr()].span();
+
+    // read uninitialized schema
+    let schemas: Array<LegacyModelSubset> = world.read_schemas_legacy(model_ptrs);
+
+    assert!(schemas.len() == 3, "LegacyModelWithEnumKey: read uninitialized schemas bad length");
+    assert!(
+        schemas == array![
+            LegacyModelSubset { v2: Option::Some(0), v3: MyEnumLegacy::X(Option::Some(0)) },
+            LegacyModelSubset { v2: Option::Some(0), v3: MyEnumLegacy::X(Option::Some(0)) },
+            LegacyModelSubset { v2: Option::Some(0), v3: MyEnumLegacy::X(Option::Some(0)) },
+        ],
+        "LegacyModelWithEnumKey: read uninitialized schemas failed",
+    );
+
+    // write and read back them
+    world.write_models([@m1, @m2, @m3].span());
+
+    let read_schemas: Array<LegacyModelSubset> = world.read_schemas_legacy(model_ptrs);
+
+    assert!(
+        read_schemas == array![
+            LegacyModelSubset { v2: m1.v2, v3: m1.v3 }, LegacyModelSubset { v2: m2.v2, v3: m2.v3 },
+            LegacyModelSubset { v2: m3.v2, v3: m3.v3 },
+        ],
+        "LegacyModelWithEnumKey: read back schemas failed",
+    );
+}
+
+#[test]
+fn test_legacy_model_with_enum_key_value() {
+    let mut world = spawn_foo_world();
+
+    let m = LegacyModelWithEnumKey {
+        k1: 42,
+        k2: EnumKey::KEY_3,
+        v1: 1234,
+        v2: Option::Some(5432),
+        v3: MyEnumLegacy::X(Option::Some(6543)),
+    };
+
+    let mvalue = LegacyModelWithEnumKeyValue { v1: m.v1, v2: m.v2, v3: m.v3 };
+
+    // read uninitialized model value, write and read back
+    let def_mv: LegacyModelWithEnumKeyValue = world.read_value(m.keys());
+
+    assert!(
+        def_mv == LegacyModelWithEnumKeyValue {
+            v1: 0, v2: Option::Some(0), v3: MyEnumLegacy::X(Option::Some(0)),
+        },
+        "LegacyModelWithEnumKey: read uninitialized model value failed",
+    );
+
+    world.write_value(m.keys(), @mvalue);
+
+    let read_mv: LegacyModelWithEnumKeyValue = world.read_value(m.keys());
+    assert!(mvalue == read_mv, "LegacyModelWithEnumKey: read model value failed");
+}
+
+#[test]
+fn test_legacy_model_with_enum_key_value_from_id() {
+    let mut world = spawn_foo_world();
+
+    let m = LegacyModelWithEnumKey {
+        k1: 42,
+        k2: EnumKey::KEY_3,
+        v1: 1234,
+        v2: Option::Some(5432),
+        v3: MyEnumLegacy::X(Option::Some(6543)),
+    };
+
+    let mvalue = LegacyModelWithEnumKeyValue { v1: m.v1, v2: m.v2, v3: m.v3 };
+
+    // read uninitialized model value, write and read back
+    let def_mv: LegacyModelWithEnumKeyValue = world
+        .read_value_from_id(dojo::utils::entity_id_from_keys(@m.keys()));
+
+    assert!(
+        def_mv == LegacyModelWithEnumKeyValue {
+            v1: 0, v2: Option::Some(0), v3: MyEnumLegacy::X(Option::Some(0)),
+        },
+        "LegacyModelWithEnumKey: read uninitialized model value from id failed",
+    );
+
+    world.write_value_from_id(dojo::utils::entity_id_from_keys(@m.keys()), @mvalue);
+
+    let read_mv: LegacyModelWithEnumKeyValue = world
+        .read_value_from_id(dojo::utils::entity_id_from_keys(@m.keys()));
+    assert!(mvalue == read_mv, "LegacyModelWithEnumKey: read model value from id failed");
+}
+
+#[test]
+fn test_legacy_model_with_enum_key_values() {
+    let mut world = spawn_foo_world();
+
+    let m1 = LegacyModelWithEnumKey {
+        k1: 11, k2: EnumKey::KEY_1, v1: 1234, v2: Some(5432), v3: MyEnumLegacy::X(Some(6543)),
+    };
+    let m2 = LegacyModelWithEnumKey {
+        k1: 12, k2: EnumKey::KEY_2, v1: 4567, v2: None, v3: MyEnumLegacy::Y((3, 4)),
+    };
+    let m3 = LegacyModelWithEnumKey {
+        k1: 13, k2: EnumKey::KEY_3, v1: 1234, v2: Option::Some(9999), v3: MyEnumLegacy::Z,
+    };
+
+    let m1value = LegacyModelWithEnumKeyValue { v1: m1.v1, v2: m1.v2, v3: m1.v3 };
+    let m2value = LegacyModelWithEnumKeyValue { v1: m2.v1, v2: m2.v2, v3: m2.v3 };
+    let m3value = LegacyModelWithEnumKeyValue { v1: m3.v1, v2: m3.v2, v3: m3.v3 };
+
+    let keys = [m1.keys(), m2.keys(), m3.keys()].span();
+
+    // read uninitialized model value, write and read back
+    let def_mvs: Array<LegacyModelWithEnumKeyValue> = world.read_values(keys);
+
+    assert!(
+        def_mvs == array![
+            LegacyModelWithEnumKeyValue {
+                v1: 0, v2: Option::Some(0), v3: MyEnumLegacy::X(Option::Some(0)),
+            },
+            LegacyModelWithEnumKeyValue {
+                v1: 0, v2: Option::Some(0), v3: MyEnumLegacy::X(Option::Some(0)),
+            },
+            LegacyModelWithEnumKeyValue {
+                v1: 0, v2: Option::Some(0), v3: MyEnumLegacy::X(Option::Some(0)),
+            },
+        ],
+        "LegacyModelWithEnumKey: read uninitialized model values failed",
+    );
+
+    world.write_values(keys, [@m1value, @m2value, @m3value].span());
+
+    let read_mvs: Array<LegacyModelWithEnumKeyValue> = world.read_values(keys);
+    assert!(
+        read_mvs == array![m1value, m2value, m3value],
+        "LegacyModelWithEnumKey: read model values failed",
+    );
+}
+
+#[test]
+fn test_legacy_model_with_enum_key_values_from_ids() {
+    let mut world = spawn_foo_world();
+
+    let m1 = LegacyModelWithEnumKey {
+        k1: 11, k2: EnumKey::KEY_1, v1: 1234, v2: Some(5432), v3: MyEnumLegacy::X(Some(6543)),
+    };
+    let m2 = LegacyModelWithEnumKey {
+        k1: 12, k2: EnumKey::KEY_2, v1: 4567, v2: None, v3: MyEnumLegacy::Y((3, 4)),
+    };
+    let m3 = LegacyModelWithEnumKey {
+        k1: 13, k2: EnumKey::KEY_3, v1: 1234, v2: Option::Some(9999), v3: MyEnumLegacy::Z,
+    };
+
+    let m1value = LegacyModelWithEnumKeyValue { v1: m1.v1, v2: m1.v2, v3: m1.v3 };
+    let m2value = LegacyModelWithEnumKeyValue { v1: m2.v1, v2: m2.v2, v3: m2.v3 };
+    let m3value = LegacyModelWithEnumKeyValue { v1: m3.v1, v2: m3.v2, v3: m3.v3 };
+
+    let ids = [
+        dojo::utils::entity_id_from_keys(@m1.keys()), dojo::utils::entity_id_from_keys(@m2.keys()),
+        dojo::utils::entity_id_from_keys(@m3.keys()),
+    ]
+        .span();
+
+    // read uninitialized model value, write and read back
+    let def_mvs: Array<LegacyModelWithEnumKeyValue> = world.read_values_from_ids(ids);
+
+    assert!(
+        def_mvs == array![
+            LegacyModelWithEnumKeyValue {
+                v1: 0, v2: Option::Some(0), v3: MyEnumLegacy::X(Option::Some(0)),
+            },
+            LegacyModelWithEnumKeyValue {
+                v1: 0, v2: Option::Some(0), v3: MyEnumLegacy::X(Option::Some(0)),
+            },
+            LegacyModelWithEnumKeyValue {
+                v1: 0, v2: Option::Some(0), v3: MyEnumLegacy::X(Option::Some(0)),
+            },
+        ],
+        "LegacyModelWithEnumKey: read uninitialized model values from ids failed",
+    );
+
+    world.write_values_from_ids(ids, [@m1value, @m2value, @m3value].span());
+
+    let read_mvs: Array<LegacyModelWithEnumKeyValue> = world.read_values_from_ids(ids);
+    assert!(
+        read_mvs == array![m1value, m2value, m3value],
+        "LegacyModelWithEnumKey: read model values from ids failed",
+    );
+}
+
+#[test]
+fn test_legacy_model_with_enum_key_test_helpers() {
+    let mut world = spawn_foo_world();
+
+    let mut m1 = LegacyModelWithEnumKey {
+        k1: 11, k2: EnumKey::KEY_1, v1: 1234, v2: Some(5432), v3: MyEnumLegacy::X(Some(6543)),
+    };
+    let mut m2 = LegacyModelWithEnumKey {
+        k1: 12, k2: EnumKey::KEY_2, v1: 4567, v2: None, v3: MyEnumLegacy::Y((3, 4)),
+    };
+    let mut m3 = LegacyModelWithEnumKey {
+        k1: 13, k2: EnumKey::KEY_3, v1: 1234, v2: Option::Some(9999), v3: MyEnumLegacy::Z,
+    };
+
+    let m1value = LegacyModelWithEnumKeyValue { v1: m1.v1, v2: m1.v2, v3: m1.v3 };
+    let m2value = LegacyModelWithEnumKeyValue { v1: m2.v1, v2: m2.v2, v3: m2.v3 };
+    let m3value = LegacyModelWithEnumKeyValue { v1: m3.v1, v2: m3.v2, v3: m3.v3 };
+
+    /// --- write_model_test() ---
+
+    world.write_model_test(@m1);
+
+    let read_m1: LegacyModelWithEnumKey = world.read_model(m1.keys());
+    assert!(m1 == read_m1, "LegacyModelWithEnumKey: write model test failed");
+
+    /// --- write_models_test() ---
+
+    m1.k1 = 21;
+
+    world.write_models_test([@m1, @m2, @m3].span());
+
+    let read_m: Array<LegacyModelWithEnumKey> = world
+        .read_models([m1.keys(), m2.keys(), m3.keys()].span());
+    assert!(read_m == array![m1, m2, m3], "LegacyModelWithEnumKey: write models test failed");
+
+    /// --- write_value_test() ---
+
+    m1.k1 = 31;
+
+    world.write_value_test(m1.keys(), @m1value);
+
+    let read_m1value: LegacyModelWithEnumKeyValue = world.read_value(m1.keys());
+    assert!(m1value == read_m1value, "LegacyModelWithEnumKey: write value test failed");
+
+    //  --- write_values_test() ---
+
+    m1.k1 = 41;
+    m2.k1 = 42;
+    m3.k1 = 43;
+
+    world
+        .write_values_test(
+            [m1.keys(), m2.keys(), m3.keys()].span(), [@m1value, @m2value, @m3value].span(),
+        );
+
+    let read_mvs: Array<LegacyModelWithEnumKeyValue> = world
+        .read_values([m1.keys(), m2.keys(), m3.keys()].span());
+    assert!(
+        read_mvs == array![m1value, m2value, m3value],
+        "LegacyModelWithEnumKey: write values test failed",
+    );
+
+    // --- write_value_from_id_test() ---
+
+    m1.k1 = 51;
+
+    world.write_value_from_id_test(dojo::utils::entity_id_from_keys(@m1.keys()), @m1value);
+
+    let read_m1value: LegacyModelWithEnumKeyValue = world.read_value(m1.keys());
+    assert!(m1value == read_m1value, "LegacyModelWithEnumKey: write value from id test failed");
+
+    // --- write_values_from_ids_test() ---
+
+    m1.k1 = 61;
+    m2.k1 = 62;
+    m3.k1 = 63;
+
+    world
+        .write_values_from_ids_test(
+            [
+                dojo::utils::entity_id_from_keys(@m1.keys()),
+                dojo::utils::entity_id_from_keys(@m2.keys()),
+                dojo::utils::entity_id_from_keys(@m3.keys()),
+            ]
+                .span(),
+            [@m1value, @m2value, @m3value].span(),
+        );
+
+    let read_mvs: Array<LegacyModelWithEnumKeyValue> = world
+        .read_values([m1.keys(), m2.keys(), m3.keys()].span());
+    assert!(
+        read_mvs == array![m1value, m2value, m3value],
+        "LegacyModelWithEnumKey: write values from ids test failed",
+    );
+}
+
+#[test]
+fn test_dojo_store_model_with_enum_key_serialization() {
     let m = DojoStoreModelWithEnumKey {
         k1: 42,
         k2: EnumKey::KEY_3,
@@ -792,7 +1302,6 @@ fn test_dojo_store_model_with_enum_key() {
         v3: MyEnum::X(Option::Some(6543)),
     };
 
-    // (de)serialization
     // For a DojoStore model, keys must be serialized with Serde while values must be serialized
     // with DojoStore.
 
@@ -820,9 +1329,22 @@ fn test_dojo_store_model_with_enum_key() {
         Option::Some(m),
         "DojoStoreModelWithEnumKey: deserialize failed",
     );
+}
 
-    // read unitialized model, write and read back
-    let def_m: DojoStoreModelWithEnumKey = world.read_model((42, 2));
+#[test]
+fn test_dojo_store_model_with_enum_key_single_model() {
+    let mut world = spawn_foo_world();
+
+    let m = DojoStoreModelWithEnumKey {
+        k1: 42,
+        k2: EnumKey::KEY_3,
+        v1: 1234,
+        v2: Option::Some(5432),
+        v3: MyEnum::X(Option::Some(6543)),
+    };
+
+    // read uninitialized model, write and read back
+    let def_m: DojoStoreModelWithEnumKey = world.read_model(m.keys());
 
     // for a DojoStore model, the default value is None for options and the configured default value
     // for enums.
@@ -830,11 +1352,461 @@ fn test_dojo_store_model_with_enum_key() {
         def_m == DojoStoreModelWithEnumKey {
             k1: 42, k2: EnumKey::KEY_3, v1: 0, v2: Option::None, v3: MyEnum::Z,
         },
-        "DojoStoreModelWithEnumKey: read unitialized model failed",
+        "DojoStoreModelWithEnumKey: read uninitialized model failed",
     );
 
     world.write_model(@m);
 
     let read_m: DojoStoreModelWithEnumKey = world.read_model(m.keys());
     assert!(m == read_m, "DojoStoreModelWithEnumKey: read model failed");
+}
+
+
+#[test]
+fn test_dojo_store_model_with_enum_key_multiple_models() {
+    let mut world = spawn_foo_world();
+
+    let m1 = DojoStoreModelWithEnumKey {
+        k1: 11, k2: EnumKey::KEY_1, v1: 1234, v2: Some(5432), v3: MyEnum::X(Some(6543)),
+    };
+    let m2 = DojoStoreModelWithEnumKey {
+        k1: 12, k2: EnumKey::KEY_2, v1: 4567, v2: None, v3: MyEnum::Y((3, 4)),
+    };
+    let m3 = DojoStoreModelWithEnumKey {
+        k1: 13, k2: EnumKey::KEY_3, v1: 1234, v2: Option::Some(9999), v3: MyEnum::Z,
+    };
+
+    // read uninitialized models
+    let keys = [(11, EnumKey::KEY_1), (12, EnumKey::KEY_2), (13, EnumKey::KEY_3)].span();
+    let models: Array<DojoStoreModelWithEnumKey> = world.read_models(keys);
+
+    assert!(models.len() == 3, "DojoStoreModelWithEnumKey: read uninitialized models bad length");
+
+    for (model, key) in models.into_iter().zip(keys) {
+        let (k1, k2) = *key;
+        assert!(model == DojoStoreModelWithEnumKey { k1, k2, v1: 0, v2: None, v3: MyEnum::Z });
+    }
+
+    // write and read back them
+    world.write_models([@m1, @m2, @m3].span());
+
+    let read_models: Array<DojoStoreModelWithEnumKey> = world.read_models(keys);
+
+    assert!(read_models.len() == 3, "DojoStoreModelWithEnumKey: read back models bad length");
+
+    for (model, read_model) in [m1, m2, m3].span().into_iter().zip(read_models) {
+        assert!(*model == read_model, "DojoStoreModelWithEnumKey: read back models bad content");
+    }
+}
+
+
+#[test]
+fn test_dojo_store_model_with_enum_key_schema() {
+    let mut world = spawn_foo_world();
+
+    let m = DojoStoreModelWithEnumKey {
+        k1: 42,
+        k2: EnumKey::KEY_3,
+        v1: 1234,
+        v2: Option::Some(5432),
+        v3: MyEnum::X(Option::Some(6543)),
+    };
+
+    // read uninitialized schema
+    let schema: DojoStoreModelSubset = world.read_schema(m.ptr());
+
+    assert!(
+        schema == DojoStoreModelSubset { v2: Option::None, v3: MyEnum::Z },
+        "DojoStoreModelWithEnumKey: read uninitialized schema failed",
+    );
+
+    // write and read back them
+    world.write_model(@m);
+
+    let read_schema: DojoStoreModelSubset = world.read_schema(m.ptr());
+
+    assert!(
+        read_schema == DojoStoreModelSubset { v2: m.v2, v3: m.v3 },
+        "DojoStoreModelWithEnumKey: read back schema failed",
+    );
+}
+
+#[test]
+fn test_dojo_store_model_with_enum_key_schemas() {
+    let mut world = spawn_foo_world();
+
+    let m1 = DojoStoreModelWithEnumKey {
+        k1: 11, k2: EnumKey::KEY_1, v1: 1234, v2: Some(5432), v3: MyEnum::X(Some(6543)),
+    };
+    let m2 = DojoStoreModelWithEnumKey {
+        k1: 12, k2: EnumKey::KEY_2, v1: 4567, v2: None, v3: MyEnum::Y((3, 4)),
+    };
+    let m3 = DojoStoreModelWithEnumKey {
+        k1: 13, k2: EnumKey::KEY_3, v1: 1234, v2: Option::Some(9999), v3: MyEnum::Z,
+    };
+
+    let model_ptrs = [m1.ptr(), m2.ptr(), m3.ptr()].span();
+
+    // read uninitialized schema
+    let schemas: Array<DojoStoreModelSubset> = world.read_schemas(model_ptrs);
+
+    assert!(schemas.len() == 3, "DojoStoreModelWithEnumKey: read uninitialized schemas bad length");
+    assert!(
+        schemas == array![
+            DojoStoreModelSubset { v2: Option::None, v3: MyEnum::Z },
+            DojoStoreModelSubset { v2: Option::None, v3: MyEnum::Z },
+            DojoStoreModelSubset { v2: Option::None, v3: MyEnum::Z },
+        ],
+        "DojoStoreModelWithEnumKey: read uninitialized schemas failed",
+    );
+
+    // write and read back them
+    world.write_models([@m1, @m2, @m3].span());
+
+    let read_schemas: Array<DojoStoreModelSubset> = world.read_schemas(model_ptrs);
+
+    assert!(
+        read_schemas == array![
+            DojoStoreModelSubset { v2: m1.v2, v3: m1.v3 },
+            DojoStoreModelSubset { v2: m2.v2, v3: m2.v3 },
+            DojoStoreModelSubset { v2: m3.v2, v3: m3.v3 },
+        ],
+        "DojoStoreModelWithEnumKey: read back schemas failed",
+    );
+}
+
+#[test]
+fn test_dojo_store_model_with_enum_key_member() {
+    let mut world = spawn_foo_world();
+
+    let m = DojoStoreModelWithEnumKey {
+        k1: 42,
+        k2: EnumKey::KEY_3,
+        v1: 1234,
+        v2: Option::Some(5432),
+        v3: MyEnum::X(Option::Some(6543)),
+    };
+
+    // read uninitialized member
+    let v2: Option<u32> = world.read_member(m.ptr(), selector!("v2"));
+    let v3: MyEnum = world.read_member(m.ptr(), selector!("v3"));
+    assert!(v2 == None, "DojoStoreModelWithEnumKey: read uninitialized member v2 failed");
+    assert!(v3 == MyEnum::Z, "DojoStoreModelWithEnumKey: read uninitialized member v3 failed");
+
+    // write and read back them
+    world.write_member(m.ptr(), selector!("v2"), m.v2);
+    world.write_member(m.ptr(), selector!("v3"), m.v3);
+
+    let read_v2: Option<u32> = world.read_member(m.ptr(), selector!("v2"));
+    let read_v3: MyEnum = world.read_member(m.ptr(), selector!("v3"));
+
+    assert!(read_v2 == m.v2, "DojoStoreModelWithEnumKey: read back member v2 failed");
+    assert!(read_v3 == m.v3, "DojoStoreModelWithEnumKey: read back member v3 failed");
+}
+
+#[test]
+fn test_dojo_store_model_with_enum_key_member_for_multiple_models() {
+    let mut world = spawn_foo_world();
+
+    let m1 = DojoStoreModelWithEnumKey {
+        k1: 11, k2: EnumKey::KEY_1, v1: 1234, v2: Some(5432), v3: MyEnum::X(Some(6543)),
+    };
+    let m2 = DojoStoreModelWithEnumKey {
+        k1: 12, k2: EnumKey::KEY_2, v1: 4567, v2: None, v3: MyEnum::Y((3, 4)),
+    };
+    let m3 = DojoStoreModelWithEnumKey {
+        k1: 13, k2: EnumKey::KEY_3, v1: 1234, v2: Option::Some(9999), v3: MyEnum::Z,
+    };
+
+    let model_ptrs = [m1.ptr(), m2.ptr(), m3.ptr()].span();
+
+    // read uninitialized member
+    let v2s: Array<Option<u32>> = world.read_member_of_models(model_ptrs, selector!("v2"));
+    let v3s: Array<MyEnum> = world.read_member_of_models(model_ptrs, selector!("v3"));
+
+    assert!(
+        v2s.len() == 3,
+        "DojoStoreModelWithEnumKey: read uninitialized member v2 of models bad length",
+    );
+    assert!(
+        v3s.len() == 3,
+        "DojoStoreModelWithEnumKey: read uninitialized member v3 of models bad length",
+    );
+
+    assert!(
+        v2s == array![Option::None, Option::None, Option::None],
+        "DojoStoreModelWithEnumKey: read uninitialized member v2 failed",
+    );
+    assert!(
+        v3s == array![MyEnum::Z, MyEnum::Z, MyEnum::Z],
+        "DojoStoreModelWithEnumKey: read uninitialized member v3 failed",
+    );
+
+    // write and read back them
+    world.write_member_of_models(model_ptrs, selector!("v2"), array![m1.v2, m2.v2, m3.v2].span());
+    world.write_member_of_models(model_ptrs, selector!("v3"), array![m1.v3, m2.v3, m3.v3].span());
+
+    let read_v2s = world.read_member_of_models(model_ptrs, selector!("v2"));
+    let read_v3s = world.read_member_of_models(model_ptrs, selector!("v3"));
+
+    assert!(
+        read_v2s.len() == 3, "DojoStoreModelWithEnumKey: read back member v2 of models bad length",
+    );
+    assert!(
+        read_v3s.len() == 3, "DojoStoreModelWithEnumKey: read back member v3 of models bad length",
+    );
+
+    assert!(
+        read_v2s == array![m1.v2, m2.v2, m3.v2],
+        "DojoStoreModelWithEnumKey: read back member v2 of models failed",
+    );
+    assert!(
+        read_v3s == array![m1.v3, m2.v3, m3.v3],
+        "DojoStoreModelWithEnumKey: read back member v3 of models failed",
+    );
+}
+
+
+#[test]
+fn test_dojo_store_model_with_enum_key_value() {
+    let mut world = spawn_foo_world();
+
+    let m = DojoStoreModelWithEnumKey {
+        k1: 42,
+        k2: EnumKey::KEY_3,
+        v1: 1234,
+        v2: Option::Some(5432),
+        v3: MyEnum::X(Option::Some(6543)),
+    };
+
+    let mvalue = DojoStoreModelWithEnumKeyValue { v1: m.v1, v2: m.v2, v3: m.v3 };
+
+    // read uninitialized model value, write and read back
+    let def_mv: DojoStoreModelWithEnumKeyValue = world.read_value(m.keys());
+
+    assert!(
+        def_mv == DojoStoreModelWithEnumKeyValue { v1: 0, v2: Option::None, v3: MyEnum::Z },
+        "DojoStoreModelWithEnumKey: read uninitialized model value failed",
+    );
+
+    world.write_value(m.keys(), @mvalue);
+
+    let read_mv: DojoStoreModelWithEnumKeyValue = world.read_value(m.keys());
+    assert!(mvalue == read_mv, "DojoStoreModelWithEnumKey: read model value failed");
+}
+
+
+#[test]
+fn test_dojo_store_model_with_enum_key_value_from_id() {
+    let mut world = spawn_foo_world();
+
+    let m = DojoStoreModelWithEnumKey {
+        k1: 42,
+        k2: EnumKey::KEY_3,
+        v1: 1234,
+        v2: Option::Some(5432),
+        v3: MyEnum::X(Option::Some(6543)),
+    };
+
+    let mvalue = DojoStoreModelWithEnumKeyValue { v1: m.v1, v2: m.v2, v3: m.v3 };
+
+    // read uninitialized model value, write and read back
+    let def_mv: DojoStoreModelWithEnumKeyValue = world
+        .read_value_from_id(dojo::utils::entity_id_from_keys(@m.keys()));
+
+    assert!(
+        def_mv == DojoStoreModelWithEnumKeyValue { v1: 0, v2: Option::None, v3: MyEnum::Z },
+        "DojoStoreModelWithEnumKey: read uninitialized model value from id failed",
+    );
+
+    world.write_value_from_id(dojo::utils::entity_id_from_keys(@m.keys()), @mvalue);
+
+    let read_mv: DojoStoreModelWithEnumKeyValue = world
+        .read_value_from_id(dojo::utils::entity_id_from_keys(@m.keys()));
+    assert!(mvalue == read_mv, "DojoStoreModelWithEnumKey: read model value from id failed");
+}
+
+
+#[test]
+fn test_dojo_store_model_with_enum_key_values() {
+    let mut world = spawn_foo_world();
+
+    let m1 = DojoStoreModelWithEnumKey {
+        k1: 11, k2: EnumKey::KEY_1, v1: 1234, v2: Some(5432), v3: MyEnum::X(Some(6543)),
+    };
+    let m2 = DojoStoreModelWithEnumKey {
+        k1: 12, k2: EnumKey::KEY_2, v1: 4567, v2: None, v3: MyEnum::Y((3, 4)),
+    };
+    let m3 = DojoStoreModelWithEnumKey {
+        k1: 13, k2: EnumKey::KEY_3, v1: 1234, v2: Option::Some(9999), v3: MyEnum::Z,
+    };
+
+    let m1value = DojoStoreModelWithEnumKeyValue { v1: m1.v1, v2: m1.v2, v3: m1.v3 };
+    let m2value = DojoStoreModelWithEnumKeyValue { v1: m2.v1, v2: m2.v2, v3: m2.v3 };
+    let m3value = DojoStoreModelWithEnumKeyValue { v1: m3.v1, v2: m3.v2, v3: m3.v3 };
+
+    let keys = [m1.keys(), m2.keys(), m3.keys()].span();
+
+    // read uninitialized model value, write and read back
+    let def_mvs: Array<DojoStoreModelWithEnumKeyValue> = world.read_values(keys);
+
+    assert!(
+        def_mvs == array![
+            DojoStoreModelWithEnumKeyValue { v1: 0, v2: Option::None, v3: MyEnum::Z },
+            DojoStoreModelWithEnumKeyValue { v1: 0, v2: Option::None, v3: MyEnum::Z },
+            DojoStoreModelWithEnumKeyValue { v1: 0, v2: Option::None, v3: MyEnum::Z },
+        ],
+        "DojoStoreModelWithEnumKey: read uninitialized model values failed",
+    );
+
+    world.write_values(keys, [@m1value, @m2value, @m3value].span());
+
+    let read_mvs: Array<DojoStoreModelWithEnumKeyValue> = world.read_values(keys);
+    assert!(
+        read_mvs == array![m1value, m2value, m3value],
+        "DojoStoreModelWithEnumKey: read model values failed",
+    );
+}
+
+
+#[test]
+fn test_dojo_store_model_with_enum_key_values_from_ids() {
+    let mut world = spawn_foo_world();
+
+    let m1 = DojoStoreModelWithEnumKey {
+        k1: 11, k2: EnumKey::KEY_1, v1: 1234, v2: Some(5432), v3: MyEnum::X(Some(6543)),
+    };
+    let m2 = DojoStoreModelWithEnumKey {
+        k1: 12, k2: EnumKey::KEY_2, v1: 4567, v2: None, v3: MyEnum::Y((3, 4)),
+    };
+    let m3 = DojoStoreModelWithEnumKey {
+        k1: 13, k2: EnumKey::KEY_3, v1: 1234, v2: Option::Some(9999), v3: MyEnum::Z,
+    };
+
+    let m1value = DojoStoreModelWithEnumKeyValue { v1: m1.v1, v2: m1.v2, v3: m1.v3 };
+    let m2value = DojoStoreModelWithEnumKeyValue { v1: m2.v1, v2: m2.v2, v3: m2.v3 };
+    let m3value = DojoStoreModelWithEnumKeyValue { v1: m3.v1, v2: m3.v2, v3: m3.v3 };
+
+    let ids = [
+        dojo::utils::entity_id_from_keys(@m1.keys()), dojo::utils::entity_id_from_keys(@m2.keys()),
+        dojo::utils::entity_id_from_keys(@m3.keys()),
+    ]
+        .span();
+
+    // read uninitialized model value, write and read back
+    let def_mvs: Array<DojoStoreModelWithEnumKeyValue> = world.read_values_from_ids(ids);
+
+    assert!(
+        def_mvs == array![
+            DojoStoreModelWithEnumKeyValue { v1: 0, v2: Option::None, v3: MyEnum::Z },
+            DojoStoreModelWithEnumKeyValue { v1: 0, v2: Option::None, v3: MyEnum::Z },
+            DojoStoreModelWithEnumKeyValue { v1: 0, v2: Option::None, v3: MyEnum::Z },
+        ],
+        "DojoStoreModelWithEnumKey: read uninitialized model values from ids failed",
+    );
+
+    world.write_values_from_ids(ids, [@m1value, @m2value, @m3value].span());
+
+    let read_mvs: Array<DojoStoreModelWithEnumKeyValue> = world.read_values_from_ids(ids);
+    assert!(
+        read_mvs == array![m1value, m2value, m3value],
+        "DojoStoreModelWithEnumKey: read model values from ids failed",
+    );
+}
+
+
+#[test]
+fn test_dojo_store_model_with_enum_key_test_helpers() {
+    let mut world = spawn_foo_world();
+
+    let mut m1 = DojoStoreModelWithEnumKey {
+        k1: 11, k2: EnumKey::KEY_1, v1: 1234, v2: Some(5432), v3: MyEnum::X(Some(6543)),
+    };
+    let mut m2 = DojoStoreModelWithEnumKey {
+        k1: 12, k2: EnumKey::KEY_2, v1: 4567, v2: None, v3: MyEnum::Y((3, 4)),
+    };
+    let mut m3 = DojoStoreModelWithEnumKey {
+        k1: 13, k2: EnumKey::KEY_3, v1: 1234, v2: Option::Some(9999), v3: MyEnum::Z,
+    };
+
+    let m1value = DojoStoreModelWithEnumKeyValue { v1: m1.v1, v2: m1.v2, v3: m1.v3 };
+    let m2value = DojoStoreModelWithEnumKeyValue { v1: m2.v1, v2: m2.v2, v3: m2.v3 };
+    let m3value = DojoStoreModelWithEnumKeyValue { v1: m3.v1, v2: m3.v2, v3: m3.v3 };
+
+    /// --- write_model_test() ---
+
+    world.write_model_test(@m1);
+
+    let read_m1: DojoStoreModelWithEnumKey = world.read_model(m1.keys());
+    assert!(m1 == read_m1, "DojoStoreModelWithEnumKey: write model test failed");
+
+    /// --- write_models_test() ---
+
+    m1.k1 = 21;
+
+    world.write_models_test([@m1, @m2, @m3].span());
+
+    let read_m: Array<DojoStoreModelWithEnumKey> = world
+        .read_models([m1.keys(), m2.keys(), m3.keys()].span());
+    assert!(read_m == array![m1, m2, m3], "DojoStoreModelWithEnumKey: write models test failed");
+
+    /// --- write_value_test() ---
+
+    m1.k1 = 31;
+
+    world.write_value_test(m1.keys(), @m1value);
+
+    let read_m1value: DojoStoreModelWithEnumKeyValue = world.read_value(m1.keys());
+    assert!(m1value == read_m1value, "DojoStoreModelWithEnumKey: write value test failed");
+
+    //  --- write_values_test() ---
+
+    m1.k1 = 41;
+    m2.k1 = 42;
+    m3.k1 = 43;
+
+    world
+        .write_values_test(
+            [m1.keys(), m2.keys(), m3.keys()].span(), [@m1value, @m2value, @m3value].span(),
+        );
+
+    let read_mvs: Array<DojoStoreModelWithEnumKeyValue> = world
+        .read_values([m1.keys(), m2.keys(), m3.keys()].span());
+    assert!(
+        read_mvs == array![m1value, m2value, m3value],
+        "DojoStoreModelWithEnumKey: write values test failed",
+    );
+
+    // --- write_value_from_id_test() ---
+
+    m1.k1 = 51;
+
+    world.write_value_from_id_test(dojo::utils::entity_id_from_keys(@m1.keys()), @m1value);
+
+    let read_m1value: DojoStoreModelWithEnumKeyValue = world.read_value(m1.keys());
+    assert!(m1value == read_m1value, "DojoStoreModelWithEnumKey: write value from id test failed");
+
+    // --- write_values_from_ids_test() ---
+
+    m1.k1 = 61;
+    m2.k1 = 62;
+    m3.k1 = 63;
+
+    world
+        .write_values_from_ids_test(
+            [
+                dojo::utils::entity_id_from_keys(@m1.keys()),
+                dojo::utils::entity_id_from_keys(@m2.keys()),
+                dojo::utils::entity_id_from_keys(@m3.keys()),
+            ]
+                .span(),
+            [@m1value, @m2value, @m3value].span(),
+        );
+
+    let read_mvs: Array<DojoStoreModelWithEnumKeyValue> = world
+        .read_values([m1.keys(), m2.keys(), m3.keys()].span());
+    assert!(
+        read_mvs == array![m1value, m2value, m3value],
+        "DojoStoreModelWithEnumKey: write values from ids test failed",
+    );
 }

@@ -1,5 +1,69 @@
 use starknet::ContractAddress;
 
+// as EnemyType is used as model key only, it does not need DojoStore and Default traits
+// whatever if it's for a new or a legacy model.
+#[derive(Serde, Copy, Drop, Debug, PartialEq, Introspect)]
+pub enum EnemyType {
+    Goblin,
+    Orc,
+    Troll,
+    Dragon,
+    Giant,
+}
+
+// as EnemySpeed is used as model value for new and legacy models,
+// it needs DojoStore and Default traits.
+#[derive(Serde, Copy, Drop, Introspect, DojoStore, Default)]
+pub enum EnemySpeed {
+    #[default]
+    Slow,
+    Medium,
+    High,
+}
+
+#[derive(Serde, Copy, Drop, Introspect, DojoStore)]
+pub enum EnemyProperty {
+    HealthBooster: u8,
+    SpecialAttack: u8,
+    Shield: Option<u8>,
+    SpeedBooster: EnemySpeed,
+}
+
+// manually implement Default trait for EnemyProperty to configure
+// the default health value.
+impl EnemyPropertyDefault of Default<EnemyProperty> {
+    fn default() -> EnemyProperty {
+        EnemyProperty::HealthBooster(100)
+    }
+}
+
+#[dojo::model]
+pub struct Enemy {
+    #[key]
+    pub enemy_type: EnemyType,
+    pub properties: Array<EnemyProperty>,
+}
+
+// as VintageEnemyCharacteristics is used as model value for legacy models only,
+// it does not need DojoStore trait.
+#[derive(Serde, Copy, Drop, Debug, PartialEq, Introspect)]
+pub struct VintageEnemyCharacteristics {
+    pub attack: u8,
+    pub defense: u8,
+    pub shield: Option<u8>,
+}
+
+// A legacy model to showcase how to safely use enums and options with legacy models.
+#[derive(DojoLegacyStore)]
+#[dojo::model]
+pub struct VintageEnemy {
+    #[key]
+    pub enemy_type: EnemyType,
+    pub characteristics: VintageEnemyCharacteristics,
+    pub speed: EnemySpeed,
+    pub is_set: bool,
+}
+
 #[derive(Serde, Copy, Drop, Introspect, DojoStore, PartialEq, Debug, Default)]
 pub enum Direction {
     #[default]
