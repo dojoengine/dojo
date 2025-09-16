@@ -25,7 +25,7 @@ TORII_REPO="dojoengine/torii"
 VERSIONS_JSON_URL="https://raw.githubusercontent.com/dojoengine/dojo/refs/heads/main/versions.json"
 
 # All components
-COMPONENT_BINARY=("sozo" "torii" "katana" "dojo-language-server")
+COMPONENT_BINARY=("sozo" "torii" "katana")
 
 # The last dojo version that is still using the 'legacy' format ie all binaries are included in the monorepo
 MIN_NEW_DOJO_VERSION=1.5.0
@@ -37,7 +37,6 @@ get_repo_for_component() {
   COMPONENT_REPO_MAPPING=(
     "sozo:$DOJO_REPO"
     "torii:$TORII_REPO"
-    "dojo-language-server:$DOJO_REPO"
     "katana:$KATANA_REPO"
   )
 
@@ -833,7 +832,7 @@ USAGE:
     dojoup component add <COMPONENT> <VERSION>
 
 ARGS:
-    COMPONENT   The component to install (sozo, torii, katana, dojo-language-server)
+    COMPONENT   The component to install (sozo, torii, katana)
     VERSION     The version to install
 
 OPTIONS:
