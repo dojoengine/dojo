@@ -64,9 +64,9 @@ pub fn get_world_address(
                 "{}",
                 format!(
                     "The world address computed from the seed is different from the address \
-                     provided in config:\n\ndeterministic address: {:#x}\nconfig address: \
-                     {:#x}\n\nThe address in the config file is preferred, consider commenting it \
-                     out from the config file if you attempt to migrate the world with a new \
+                     provided in config:\n\ndeterministic address: {:#066x}\nconfig address: \
+                     {:#066x}\n\nThe address in the config file is preferred, consider commenting \
+                     it out from the config file if you attempt to migrate the world with a new \
                      seed.\n\nIf you are upgrading the world, you can ignore this message.",
                     deterministic_world_address, wa
                 )
@@ -170,7 +170,7 @@ pub async fn get_world_diff_and_account(
     }
 
     if !dojo_utils::is_deployed(account.address(), &account.provider()).await? {
-        return Err(anyhow!("Account with address {:#x} doesn't exist.", account.address()));
+        return Err(anyhow!("Account with address {:#066x} doesn't exist.", account.address()));
     }
 
     Ok((world_diff, account, rpc_url))

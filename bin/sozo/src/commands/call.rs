@@ -128,7 +128,7 @@ impl CallArgs {
             Ok(output) => {
                 println!(
                     "[ {} ]",
-                    output.iter().map(|o| format!("0x{:x}", o)).collect::<Vec<_>>().join(" ")
+                    output.iter().map(|o| format!("0x{:#066x}", o)).collect::<Vec<_>>().join(" ")
                 );
             }
             Err(e) => {
@@ -154,8 +154,8 @@ fn format_execution_error(error: &starknet::core::types::ContractExecutionError)
     match error {
         starknet::core::types::ContractExecutionError::Message(msg) => msg.clone(),
         starknet::core::types::ContractExecutionError::Nested(inner) => {
-            let address = format!("0x{:x}", inner.contract_address);
-            let selector = format!("0x{:x}", inner.selector);
+            let address = format!("{:#066x}", inner.contract_address);
+            let selector = format!("0x{:#066x}", inner.selector);
             let inner_error = format_execution_error(&inner.error);
             format!("Error in contract at {address} when calling {selector}:\n  {inner_error}",)
         }
