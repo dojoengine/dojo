@@ -217,7 +217,7 @@ impl Ty {
             }
             Ty::Struct(s) => {
                 for child in &mut s.children {
-                    child.ty.deserialize(felts, legacy_storage)?;
+                    child.ty.deserialize(felts, child.key || legacy_storage)?;
                 }
             }
             Ty::Enum(e) => {
