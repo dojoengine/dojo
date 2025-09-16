@@ -13,7 +13,7 @@ use scarb_interop::Scarb;
 use scarb_metadata::Metadata;
 use scarb_metadata_ext::MetadataDojoExt;
 use semver::{Version, VersionReq};
-use sozo_ops::migration_ui::MigrationUi;
+use sozo_ops::sozo_ui::SozoUi;
 use starknet::accounts::{Account, ConnectedAccount};
 use starknet::core::types::Felt;
 use starknet::core::utils as snutils;
@@ -148,7 +148,7 @@ pub async fn get_world_diff_and_account(
     starknet: StarknetOptions,
     world: WorldOptions,
     scarb_metadata: &Metadata,
-    ui: &mut Option<&mut MigrationUi>,
+    ui: &SozoUi,
 ) -> Result<(WorldDiff, SozoAccount<JsonRpcClient<HttpTransport>>, String)> {
     let profile_config = scarb_metadata.load_dojo_profile_config()?;
     let env = profile_config.env.as_ref();
@@ -156,18 +156,11 @@ pub async fn get_world_diff_and_account(
     let (world_diff, provider, rpc_url) =
         get_world_diff_and_provider(starknet.clone(), world, scarb_metadata).await?;
 
-    // Ensures we don't interfere with the spinner if a password must be prompted.
-    if let Some(ui) = ui {
-        ui.stop();
-    }
-
     let contracts = (&world_diff).into();
 
     let account = { account.account(provider, env, &starknet, &contracts).await? };
 
-    if let Some(ui) = ui {
-        ui.restart("Verifying account...");
-    }
+    ui.print("Verifying account...".to_string());
 
     if !dojo_utils::is_deployed(account.address(), &account.provider()).await? {
         return Err(anyhow!("Account with address {:#066x} doesn't exist.", account.address()));
@@ -230,11 +223,13 @@ pub async fn contracts_from_manifest_or_diff(
     scarb_metadata: &Metadata,
     force_diff: bool,
 ) -> Result<HashMap<String, ContractInfo>> {
+    let sozo_ui = SozoUi::new();
+
     let local_manifest = scarb_metadata.read_dojo_manifest_profile()?;
 
     let contracts: HashMap<String, ContractInfo> = if force_diff || local_manifest.is_none() {
         let (world_diff, _, _) =
-            get_world_diff_and_account(account, starknet, world, scarb_metadata, &mut None).await?;
+            get_world_diff_and_account(account, starknet, world, scarb_metadata, &sozo_ui).await?;
         (&world_diff).into()
     } else {
         let local_manifest = local_manifest.unwrap();

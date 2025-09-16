@@ -12,7 +12,7 @@ use dojo_world::contracts::{ContractInfo, WorldContract};
 use dojo_world::diff::{DiffPermissions, WorldDiff};
 use scarb_metadata::Metadata;
 use scarb_metadata_ext::MetadataDojoExt;
-use sozo_ops::migration_ui::MigrationUi;
+use sozo_ops::sozo_ui::SozoUi;
 use starknet::core::types::Felt;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
@@ -217,17 +217,15 @@ async fn clone_permissions(
     from_tag_or_address: String,
     to_tag_or_address: String,
 ) -> Result<()> {
-    let mut migration_ui = MigrationUi::new_with_frames(
-        "Gathering permissions from the world...",
-        vec!["🌍", "🔍", "📜"],
-    );
+    let sozo_ui = SozoUi::new();
+    sozo_ui.print_title("Gathering permissions from the world...".to_string());
 
     let (world_diff, account, _) = utils::get_world_diff_and_account(
         options.account,
         options.starknet,
         options.world,
         scarb_metadata,
-        &mut Some(&mut migration_ui),
+        &sozo_ui,
     )
     .await?;
 
@@ -280,13 +278,9 @@ async fn clone_permissions(
         && external_writer_of.is_empty()
         && external_owner_of.is_empty()
     {
-        migration_ui.stop();
-
-        println!("No permissions to clone.");
+        sozo_ui.print("No permissions to clone.".to_string());
         return Ok(());
     }
-
-    migration_ui.stop();
 
     let mut writers_resource_selectors = writer_of
         .iter()
@@ -332,14 +326,15 @@ async fn clone_permissions(
         format!("\n    owners: {}", owners_of_tags)
     };
 
-    println!(
+    sozo_ui.print(format!(
         "Confirm the following permissions to be cloned from {} to {}\n{}{}",
         from_tag_or_address.bright_blue(),
         to_tag_or_address.bright_blue(),
         writers_txt.bright_green(),
         owners_txt.bright_yellow(),
-    );
+    ));
 
+    // TODO RBA: move to SozoUi
     let confirm = utils::prompt_confirm("\nContinue?")?;
     if !confirm {
         return Ok(());
@@ -357,10 +352,10 @@ async fn clone_permissions(
     }
 
     if revoke_from {
-        println!(
+        sozo_ui.print(format!(
             "{}",
             format!("\n!Permissions from {} will be revoked!", from_tag_or_address).bright_red()
-        );
+        ));
         if !utils::prompt_confirm("\nContinue?")? {
             return Ok(());
         }
@@ -376,7 +371,7 @@ async fn clone_permissions(
 
     let txs_results = invoker.multicall().await?;
     for r in &txs_results {
-        println!("{}", r);
+        sozo_ui.print(format!("{}", r));
     }
 
     Ok(())
@@ -402,10 +397,8 @@ async fn list_permissions(
     world: WorldOptions,
     scarb_metadata: &Metadata,
 ) -> Result<()> {
-    let mut migration_ui = MigrationUi::new_with_frames(
-        "Gathering permissions from the world...",
-        vec!["🌍", "🔍", "📜"],
-    );
+    let sozo_ui = SozoUi::new();
+    sozo_ui.print_title("Gathering permissions from the world...".to_string());
 
     let (world_diff, _, _) =
         utils::get_world_diff_and_provider(starknet, world, scarb_metadata).await?;
@@ -413,8 +406,6 @@ async fn list_permissions(
     // Sort resources by tag for deterministic output.
     let mut resources = world_diff.resources.values().collect::<Vec<_>>();
     resources.sort_by_key(|r| r.tag().clone());
-
-    migration_ui.stop();
 
     let mut world_writers = world_diff
         .external_writers
@@ -432,22 +423,22 @@ async fn list_permissions(
     world_writers.sort();
     world_owners.sort();
 
-    println!("{}", "World".bright_red());
+    sozo_ui.print(format!("{}", "World".bright_red()));
     if !world_writers.is_empty() {
-        println!(
+        sozo_ui.print(format!(
             "writers: {}",
             world_writers.iter().map(|w| format!("{:#066x}", w)).collect::<Vec<_>>().join(", ")
-        );
+        ));
     }
 
     if !world_owners.is_empty() {
-        println!(
+        sozo_ui.print(format!(
             "owners: {}",
             world_owners.iter().map(|o| format!("{:#066x}", o)).collect::<Vec<_>>().join(", ")
-        );
+        ));
     }
 
-    println!();
+    sozo_ui.new_line();
 
     if let Some(resource) = resource {
         let selector = dojo_types::naming::compute_selector_from_tag_or_name(&resource);
@@ -459,7 +450,7 @@ async fn list_permissions(
     }
 
     if resources.is_empty() {
-        println!("No resource found.");
+        sozo_ui.print("No resource found.".to_string());
         return Ok(());
     }
 
@@ -476,23 +467,23 @@ async fn list_permissions(
 
         has_printed_at_least_one = true;
 
-        println!("{}", resource.tag().bright_blue());
+        sozo_ui.print(format!("{}", resource.tag().bright_blue()));
 
         if !writers.is_empty() {
-            println!("writers: ");
+            sozo_ui.print("writers: ".to_string());
             print_diff_permissions(&writers, show_address);
         }
 
         if !owners.is_empty() {
-            println!("owners: ");
+            sozo_ui.print("owners: ".to_string());
             print_diff_permissions(&owners, show_address);
         }
 
-        println!();
+        sozo_ui.new_line();
     }
 
     if resources.len() == 1 && !has_printed_at_least_one {
-        println!("No permission found.");
+        sozo_ui.print("No permission found.".to_string());
     }
 
     Ok(())
@@ -500,8 +491,10 @@ async fn list_permissions(
 
 /// Pretty prints the permissions of a resource.
 fn print_diff_permissions(diff: &DiffPermissions, show_address: bool) {
+    let sozo_ui = SozoUi::new();
+
     if !diff.only_local().is_empty() {
-        println!(
+        sozo_ui.print(format!(
             "    local: {}",
             diff.only_local()
                 .iter()
@@ -516,11 +509,11 @@ fn print_diff_permissions(diff: &DiffPermissions, show_address: bool) {
                 ))
                 .collect::<Vec<_>>()
                 .join(", ")
-        );
+        ));
     }
 
     if !diff.only_remote().is_empty() {
-        println!(
+        sozo_ui.print(format!(
             "    remote: {}",
             diff.only_remote()
                 .iter()
@@ -535,11 +528,11 @@ fn print_diff_permissions(diff: &DiffPermissions, show_address: bool) {
                 ))
                 .collect::<Vec<_>>()
                 .join(", ")
-        );
+        ));
     }
 
     if !diff.synced().is_empty() {
-        println!(
+        sozo_ui.print(format!(
             "    synced: {}",
             diff.synced()
                 .iter()
@@ -554,7 +547,7 @@ fn print_diff_permissions(diff: &DiffPermissions, show_address: bool) {
                 ))
                 .collect::<Vec<_>>()
                 .join(", ")
-        );
+        ));
     }
 }
 
@@ -566,6 +559,8 @@ async fn update_owners(
     pairs: Vec<PermissionPair>,
     do_grant: bool,
 ) -> Result<()> {
+    let sozo_ui = SozoUi::new();
+
     let selectors_addresses = pairs
         .iter()
         .map(|p| p.to_selector_and_address(contracts))
@@ -596,7 +591,7 @@ async fn update_owners(
 
     let txs_results = invoker.multicall().await?;
     for r in &txs_results {
-        println!("{}", r);
+        sozo_ui.print(format!("{}", r));
     }
 
     Ok(())
@@ -610,6 +605,8 @@ async fn update_writers(
     pairs: Vec<PermissionPair>,
     do_grant: bool,
 ) -> Result<()> {
+    let sozo_ui = SozoUi::new();
+
     let selectors_addresses = pairs
         .iter()
         .map(|p| p.to_selector_and_address(contracts))
@@ -640,7 +637,7 @@ async fn update_writers(
 
     let txs_results = invoker.multicall().await?;
     for r in &txs_results {
-        println!("{}", r);
+        sozo_ui.print(format!("{}", r));
     }
 
     Ok(())

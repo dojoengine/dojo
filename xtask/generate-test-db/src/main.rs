@@ -12,7 +12,7 @@ use katana_runner::{KatanaRunner, KatanaRunnerConfig};
 use scarb_interop::Profile;
 use scarb_metadata_ext::MetadataDojoExt;
 use sozo_ops::migrate::Migration;
-use sozo_ops::migration_ui::MigrationUi;
+use sozo_ops::sozo_ui::SozoUi;
 use starknet::core::types::Felt;
 
 async fn migrate_spawn_and_move(db_path: &Path) -> Result<Manifest> {
@@ -82,7 +82,7 @@ async fn migrate_spawn_and_move(db_path: &Path) -> Result<Manifest> {
         runner.url().to_string(),
         is_guest,
     )
-    .migrate(&mut MigrationUi::new(None).with_silent())
+    .migrate(&SozoUi::new())
     .await?;
 
     Ok(result.manifest)

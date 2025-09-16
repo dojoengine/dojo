@@ -22,7 +22,6 @@ use std::collections::HashMap;
 
 use anyhow::anyhow;
 use cainome::cairo_serde::{ByteArray, ClassHash, ContractAddress};
-use colored::*;
 use dojo_utils::{
     Declarer, Deployer, Invoker, LabeledClass, TransactionResult, TransactionWaiter, TxnConfig,
 };
@@ -45,7 +44,7 @@ use starknet::signers::LocalWallet;
 use starknet_crypto::Felt;
 use tracing::trace;
 
-use crate::migration_ui::MigrationUi;
+use crate::sozo_ui::SozoUi;
 
 pub mod error;
 pub use error::MigrationError;
@@ -94,16 +93,20 @@ where
     /// spinner.
     pub async fn migrate(
         &self,
-        ui: &mut MigrationUi,
+        ui: &SozoUi,
     ) -> Result<MigrationResult, MigrationError<A::SignError>> {
-        let world_has_changed = if !self.guest { self.ensure_world(ui).await? } else { false };
+        ui.print_title("Migrating...".to_string());
+
+        let ui = ui.subsection();
+
+        let world_has_changed = if !self.guest { self.ensure_world(&ui).await? } else { false };
 
         let resources_have_changed =
-            if !self.diff.is_synced() { self.sync_resources(ui).await? } else { false };
+            if !self.diff.is_synced() { self.sync_resources(&ui).await? } else { false };
 
-        let permissions_have_changed = self.sync_permissions(ui).await?;
+        let permissions_have_changed = self.sync_permissions(&ui).await?;
 
-        let contracts_have_changed = self.initialize_contracts(ui).await?;
+        let contracts_have_changed = self.initialize_contracts(&ui).await?;
 
         Ok(MigrationResult {
             has_changes: world_has_changed
@@ -121,10 +124,11 @@ where
     /// # Returns
     pub async fn upload_metadata(
         &self,
-        ui: &mut MigrationUi,
+        ui: &SozoUi,
         service: &mut impl UploadService,
     ) -> anyhow::Result<()> {
-        ui.update_text("Uploading metadata...");
+        ui.print_title("Uploading metadata...".to_string());
+        let ui = ui.subsection();
 
         let mut invoker = Invoker::new(&self.world.account, self.txn_config);
 
@@ -169,13 +173,10 @@ where
         }
 
         if self.do_multicall() {
-            ui.update_text_boxed(format!("Uploading {} metadata...", invoker.calls.len()));
+            ui.print(format!("Uploading {} metadata...", invoker.calls.len()));
             invoker.multicall().await.map_err(|e| anyhow!(e.to_string()))?;
         } else {
-            ui.update_text_boxed(format!(
-                "Uploading {} metadata (sequentially)...",
-                invoker.calls.len()
-            ));
+            ui.print(format!("Uploading {} metadata (sequentially)...", invoker.calls.len()));
             invoker.invoke_all_sequentially().await.map_err(|e| anyhow!(e.to_string()))?;
         }
 
@@ -229,9 +230,10 @@ where
     /// Returns true if at least one contract has been initialized, false otherwise.
     async fn initialize_contracts(
         &self,
-        ui: &mut MigrationUi,
+        ui: &SozoUi,
     ) -> Result<bool, MigrationError<A::SignError>> {
-        ui.update_text("Initializing contracts...");
+        ui.print_title("Initializing contracts...".to_string());
+        let ui = ui.subsection();
 
         let mut invoker = Invoker::new(&self.world.account, self.txn_config);
 
@@ -313,14 +315,14 @@ where
 
         if !invoker.calls.is_empty() {
             if self.do_multicall() {
-                let ui_text = format!("Initializing {} contracts...", invoker.calls.len());
-                ui.update_text_boxed(ui_text);
+                ui.print(format!("Initializing {} contracts...", invoker.calls.len()));
 
                 invoker.multicall().await?;
             } else {
-                let ui_text =
-                    format!("Initializing {} contracts (sequentially)...", invoker.calls.len());
-                ui.update_text_boxed(ui_text);
+                ui.print(format!(
+                    "Initializing {} contracts (sequentially)...",
+                    invoker.calls.len()
+                ));
 
                 invoker.invoke_all_sequentially().await?;
             }
@@ -342,11 +344,9 @@ where
     /// overlay resource, which can contain also writers.
     ///
     /// Returns true if at least one permission has changed, false otherwise.
-    async fn sync_permissions(
-        &self,
-        ui: &mut MigrationUi,
-    ) -> Result<bool, MigrationError<A::SignError>> {
-        ui.update_text("Syncing permissions...");
+    async fn sync_permissions(&self, ui: &SozoUi) -> Result<bool, MigrationError<A::SignError>> {
+        ui.print_title("Syncing permissions...".to_string());
+        let ui = ui.subsection();
 
         let mut invoker = Invoker::new(&self.world.account, self.txn_config);
 
@@ -388,12 +388,12 @@ where
 
         if self.do_multicall() {
             let ui_text = format!("Syncing {} permissions...", invoker.calls.len());
-            ui.update_text_boxed(ui_text);
+            ui.print(ui_text);
 
             invoker.multicall().await?;
         } else {
             let ui_text = format!("Syncing {} permissions (sequentially)...", invoker.calls.len());
-            ui.update_text_boxed(ui_text);
+            ui.print(ui_text);
 
             invoker.invoke_all_sequentially().await?;
         }
@@ -404,7 +404,7 @@ where
     /// Declare classes.
     async fn declare_classes(
         &self,
-        ui: &mut MigrationUi,
+        ui: &SozoUi,
         classes: HashMap<Felt, LabeledClass>,
     ) -> Result<(), MigrationError<A::SignError>> {
         // Declaration can be slow, and can be speed up by using multiple accounts.
@@ -419,7 +419,7 @@ where
             declarer.extend_classes(classes.into_values().collect());
 
             let ui_text = format!("Declaring {} classes...", n_classes);
-            ui.update_text_boxed(ui_text);
+            ui.print(ui_text);
 
             declarer.declare_all().await?;
         } else {
@@ -436,7 +436,7 @@ where
 
             let ui_text =
                 format!("Declaring {} classes with {} accounts...", n_classes, declarers.len());
-            ui.update_text_boxed(ui_text);
+            ui.print(ui_text);
 
             let declarers_futures =
                 futures::future::join_all(declarers.into_iter().map(|d| d.declare_all())).await;
@@ -463,11 +463,9 @@ where
     /// Syncs the resources by declaring the classes and registering/upgrading the resources.
     ///
     /// Returns true if at least one resource has changed, false otherwise.
-    async fn sync_resources(
-        &self,
-        ui: &mut MigrationUi,
-    ) -> Result<bool, MigrationError<A::SignError>> {
-        ui.update_text("Syncing resources...");
+    async fn sync_resources(&self, ui: &SozoUi) -> Result<bool, MigrationError<A::SignError>> {
+        ui.print_title("Syncing resources...".to_string());
+        let ui = ui.subsection();
 
         let mut invoker = Invoker::new(&self.world.account, self.txn_config);
 
@@ -561,11 +559,10 @@ where
         let has_calls = !invoker.calls.is_empty();
         let mut has_changed = has_classes || has_calls;
 
-        self.declare_classes(ui, classes).await?;
+        self.declare_classes(&ui, classes).await?;
 
         if self.do_multicall() {
-            let ui_text = format!("Registering {} resources...", n_resources);
-            ui.update_text_boxed(ui_text);
+            ui.print(format!("Registering {} resources...", n_resources));
 
             invoker.extend_calls(deploy_calls.values().cloned().collect());
 
@@ -589,8 +586,7 @@ where
                 }
             }
         } else {
-            let ui_text = format!("Registering {} resources (sequentially)...", n_resources);
-            ui.update_text_boxed(ui_text);
+            ui.print(format!("Registering {} resources (sequentially)...", n_resources));
 
             invoker.invoke_all_sequentially().await?;
 
@@ -624,27 +620,22 @@ where
         has_changed = has_changed || !invoker.calls.is_empty();
 
         if self.do_multicall() {
-            let ui_text = format!("Registering {} external contracts...", n_external_contracts);
-            ui.update_text_boxed(ui_text);
+            ui.print(format!("Registering {} external contracts...", n_external_contracts));
             invoker.multicall().await?;
         } else {
-            let ui_text = format!(
+            ui.print(format!(
                 "Registering {} external contracts (sequentially)...",
                 n_external_contracts
-            );
-            ui.update_text_boxed(ui_text);
+            ));
             invoker.invoke_all_sequentially().await?;
         }
 
         if !not_upgradeable_contract_names.is_empty() {
-            let msg = format!(
+            ui.print_warning_block(format!(
                 "The following external contracts are NOT upgradeable as they don't export an \
                  `upgrade(ClassHash)` function:\n{}",
                 not_upgradeable_contract_names.join("\n")
-            );
-            println!();
-            println!("{}", msg.as_str().bright_yellow());
-            println!();
+            ));
         }
 
         Ok(has_changed)
@@ -1099,14 +1090,11 @@ where
     /// Ensures the world is declared and deployed if necessary.
     ///
     /// Returns true if the world has to be deployed/updated, false otherwise.
-    async fn ensure_world(
-        &self,
-        ui: &mut MigrationUi,
-    ) -> Result<bool, MigrationError<A::SignError>> {
+    async fn ensure_world(&self, ui: &SozoUi) -> Result<bool, MigrationError<A::SignError>> {
         match &self.diff.world_info.status {
             WorldStatus::Synced => return Ok(false),
             WorldStatus::NotDeployed => {
-                ui.update_text("Deploying the world...");
+                ui.print("Deploying the world...".to_string());
                 trace!("Deploying the first world.");
 
                 let labeled_class = LabeledClass {
@@ -1143,22 +1131,17 @@ where
                             }
                         };
 
-                        ui.stop_and_persist_boxed(
-                            "🌍",
-                            format!(
-                                "World deployed at block {} with txn hash: {:#066x}",
-                                block_msg, hash
-                            ),
-                        );
-
-                        ui.restart("World deployed, continuing...");
+                        ui.print_result(format!(
+                            "World deployed at block {} with txn hash: {:#066x}",
+                            block_msg, hash
+                        ));
                     }
                     _ => unreachable!(),
                 }
             }
             WorldStatus::NewVersion => {
                 trace!("Upgrading the world.");
-                ui.update_text("Upgrading the world...");
+                ui.print("Upgrading the world...".to_string());
 
                 let labeled_class = LabeledClass {
                     label: "world".to_string(),
