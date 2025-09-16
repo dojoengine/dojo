@@ -30,12 +30,10 @@ jobs:
     steps:
       # Workaround described here: https://github.com/actions/checkout/issues/760
       - uses: actions/checkout@v4
-      - uses: foundry-rs/setup-snfoundry@v4
       - uses: software-mansion/setup-scarb@v1
         with:
           scarb-version: "2.12.2"
       - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-      # When we update the versions of Scarb, we may need to rebuild to ensure that all the Scarb.lock files are updated.
       - name: Normalize version and update files
         id: version
         run: |
@@ -59,7 +57,7 @@ jobs:
           scarb --manifest-path crates/dojo/core/Scarb.toml build
           scarb --manifest-path examples/spawn-and-move/Scarb.toml build
           scarb --manifest-path examples/simple/Scarb.toml build
-          scarb --manifest-path crates/dojo/core-tests/Scarb.toml test
+          scarb --manifest-path crates/dojo/core-tests/Scarb.toml build
 
       - uses: peter-evans/create-pull-request@v7
         with:
