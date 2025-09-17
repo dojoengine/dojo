@@ -75,14 +75,16 @@ pub fn get_world_address(
 
     if let Some(wa) = world.address(env)? {
         if wa != deterministic_world_address && !world.guest {
+            ui.new_line();
             ui.warn_block(format!(
-                "The world address computed from the seed is different from the address \
-                     provided in config:\n\ndeterministic address: {:#066x}\nconfig address: \
+                "warning: The world address computed from the seed is different from the address \
+                     provided in config:\n  - deterministic address: {:#066x}\n  - config address       : \
                      {:#066x}\n\nThe address in the config file is preferred, consider commenting \
                      it out from the config file if you attempt to migrate the world with a new \
-                     seed.\n\nIf you are upgrading the world, you can ignore this message.",
+                     seed.\nIf you are upgrading the world, you can ignore this message.",
                 deterministic_world_address, wa
             ));
+            ui.new_line();
         }
 
         Ok(wa)
