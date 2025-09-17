@@ -12,12 +12,12 @@ use dojo_world::local::{ResourceLocal, WorldLocal};
 use error::BindgenResult;
 
 mod plugins;
-use plugins::BuiltinPlugin;
-pub use plugins::BuiltinPlugins;
 use plugins::recs::TypescriptRecsPlugin;
 use plugins::typescript::TypescriptPlugin;
 use plugins::unity::UnityPlugin;
 use plugins::unrealengine::UnrealEnginePlugin;
+use plugins::BuiltinPlugin;
+pub use plugins::BuiltinPlugins;
 
 use crate::error::Error;
 
@@ -173,7 +173,9 @@ fn gather_dojo_data(
                 for (interface, funcs) in &tokens.interfaces {
                     if !interface_blacklist.contains(&interface.as_str()) {
                         for func in funcs {
-                            if !function_blacklist.contains(&func.to_function().unwrap().name.as_str()) {
+                            if !function_blacklist
+                                .contains(&func.to_function().unwrap().name.as_str())
+                            {
                                 systems.push(func.clone());
                             }
                         }
