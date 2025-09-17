@@ -18,7 +18,7 @@ use super::local::{ResourceLocal, WorldLocal};
 use super::remote::{ResourceRemote, WorldRemote};
 use crate::config::ProfileConfig;
 use crate::local::ExternalContractLocal;
-use crate::{ContractAddress, DojoSelector, ResourceType, utils};
+use crate::{utils, ContractAddress, DojoSelector, ResourceType};
 
 mod compare;
 mod manifest;

@@ -2,13 +2,13 @@ use std::collections::HashMap;
 use std::io::{self, Write};
 use std::sync::Arc;
 
-use anyhow::{Context, Result, anyhow};
+use anyhow::{anyhow, Context, Result};
 use dojo_utils::provider as provider_utils;
-use dojo_world::ResourceType;
 use dojo_world::config::ProfileConfig;
 use dojo_world::contracts::ContractInfo;
 use dojo_world::diff::WorldDiff;
 use dojo_world::local::WorldLocal;
+use dojo_world::ResourceType;
 use scarb_interop::Scarb;
 use scarb_metadata::Metadata;
 use scarb_metadata_ext::MetadataDojoExt;
@@ -76,11 +76,12 @@ pub fn get_world_address(
     if let Some(wa) = world.address(env)? {
         if wa != deterministic_world_address && !world.guest {
             ui.warn_block(format!(
-                "warning: The world address computed from the seed is different from the address \
-                     provided in config:\n  - deterministic address: {:#066x}\n  - config address       : \
-                     {:#066x}\n\nThe address in the config file is preferred, consider commenting \
-                     it out from the config file if you attempt to migrate the world with a new \
-                     seed.\nIf you are upgrading the world, you can ignore this message.",
+                "warning: The world address computed from the seed is different from the \
+                     address provided in config:\n  - deterministic address: {:#066x}\n  - config \
+                     address       : {:#066x}\n\nThe address in the config file is preferred, \
+                     consider commenting it out from the config file if you attempt to migrate \
+                     the world with a new seed.\nIf you are upgrading the world, you can ignore \
+                     this message.",
                 deterministic_world_address, wa
             ));
         }
@@ -202,7 +203,7 @@ fn show_profile_details(profile_config: &ProfileConfig, ui: &SozoUi) {
     local_ui.verbose(format!("default namespace: {}", profile_config.namespace.default));
 
     if let Some(mappings) = profile_config.namespace.mappings.as_ref() {
-        local_ui.debug(format!("namespace mappings:"));
+        local_ui.debug("namespace mappings:");
         for (namespace, names) in mappings {
             local_ui.debug(format!("   {}: {}", namespace, names.join(", ")));
         }
@@ -252,7 +253,7 @@ fn show_profile_details(profile_config: &ProfileConfig, ui: &SozoUi) {
     }
 
     if let Some(migration) = profile_config.migration.as_ref() {
-        local_ui.debug(format!("migration config:"));
+        local_ui.debug("migration config:");
         local_ui.debug(format!(
             "   skip_contracts: {}",
             migration.skip_contracts.as_ref().unwrap_or(&Vec::new()).join(", ")

@@ -2,7 +2,7 @@
 
 use std::process::exit;
 
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use args::SozoArgs;
 use camino::Utf8PathBuf;
 use clap::Parser;

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use anyhow::{Result, anyhow, bail};
+use anyhow::{anyhow, bail, Result};
 use clap::Args;
 use dojo_world::config::calldata_decoder;
 use dojo_world::contracts::ContractInfo;

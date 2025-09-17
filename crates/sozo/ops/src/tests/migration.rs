@@ -12,12 +12,12 @@ use dojo_world::services::MockUploadService;
 use katana_runner::RunnerCtx;
 use scarb_interop::Profile;
 use scarb_metadata_ext::MetadataDojoExt;
-use starknet::providers::JsonRpcClient;
+use sozo_ui::SozoUi;
 use starknet::providers::jsonrpc::HttpTransport;
+use starknet::providers::JsonRpcClient;
 use starknet_crypto::Felt;
 
 use crate::migrate::{Migration, MigrationResult};
-use sozo_ui::SozoUi;
 
 /// Sets up the world diff from the environment and returns the world diff used to create a
 /// migration.

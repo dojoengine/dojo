@@ -2,7 +2,7 @@ use std::ffi::OsStr;
 use std::io;
 use std::path::Path;
 
-use console::{Alignment, Style, StyledObject, pad_str};
+use console::{pad_str, Alignment, Style, StyledObject};
 use reqwest::StatusCode;
 use scarb_metadata::Metadata;
 use scarb_metadata_ext::MetadataDojoExt;
@@ -11,8 +11,8 @@ use serde_json::Value;
 use sozo_ui::SozoUi;
 use walkdir::WalkDir;
 
-use crate::Error;
 use crate::utils::walnut_get_api_url;
+use crate::Error;
 
 #[derive(Debug, Serialize)]
 struct VerificationPayload {

@@ -3,10 +3,9 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::{fs, io};
 
-use sozo_ui::SozoUi;
-
-use anyhow::{Context, Result, ensure};
+use anyhow::{ensure, Context, Result};
 use clap::Args;
+use sozo_ui::SozoUi;
 use tracing::trace;
 
 #[derive(Debug, Args)]

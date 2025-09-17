@@ -3,9 +3,9 @@ use scarb_metadata::Metadata;
 use sozo_ui::SozoUi;
 use url::Url;
 
-use crate::Error;
 use crate::transaction::walnut_debug_transaction;
 use crate::verification::walnut_verify;
+use crate::Error;
 
 /// A debugger for Starknet transactions embedding the walnut configuration.
 #[derive(Debug)]

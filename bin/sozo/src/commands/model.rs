@@ -125,9 +125,7 @@ hashes, called 'hash' in the following documentation.
         starknet: StarknetOptions,
 
         #[arg(short, long)]
-        #[arg(
-            help = "Block number at which to retrieve the model data (pending block by default)"
-        )]
+        #[arg(help = "Block number at which to retrieve the model data (pending block by default)")]
         block: Option<u64>,
     },
 }

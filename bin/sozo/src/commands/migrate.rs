@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
-use anyhow::{Context, Result, anyhow};
+use anyhow::{anyhow, Context, Result};
 use clap::Args;
 use colored::*;
-use dojo_utils::{self, TxnConfig, provider as provider_utils};
+use dojo_utils::{self, provider as provider_utils, TxnConfig};
 use dojo_world::contracts::WorldContract;
 use dojo_world::services::IpfsService;
 use scarb_metadata::Metadata;
