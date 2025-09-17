@@ -152,12 +152,16 @@ impl SozoUi {
 
     /// Prints a block of text surrounded by newlines with a specific warning color.
     pub fn warn_block<T: Message>(&self, block: T) {
+        self.new_line();
         self.do_block(block, SozoVerbosity::Normal, WARNING_COLOR);
+        self.new_line();
     }
 
     /// Prints a block of text surrounded by newlines with a specific erorr color.
     pub fn error_block<T: Message>(&self, block: T) {
+        self.new_line();
         self.do_block(block, SozoVerbosity::Normal, ERROR_COLOR);
+        self.new_line();
     }
 
     pub fn verbose_block<T: Message>(&self, block: T) {

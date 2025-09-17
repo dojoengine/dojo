@@ -14,14 +14,13 @@ use starknet::core::utils::parse_cairo_short_string;
 use starknet::providers::Provider;
 use tabled::settings::Style;
 use tabled::{Table, Tabled};
-use tracing::{error, trace};
+use tracing::trace;
 
 use super::options::account::AccountOptions;
 use super::options::ipfs::IpfsOptions;
 use super::options::starknet::StarknetOptions;
 use super::options::transaction::TransactionOptions;
 use super::options::world::WorldOptions;
-use crate::commands::LOG_TARGET;
 use crate::utils;
 
 #[derive(Debug, Clone, Args)]
@@ -143,7 +142,7 @@ async fn print_banner(
 
     let provider = Arc::new(provider);
     if let Err(e) = provider_utils::health_check_provider(provider.clone()).await {
-        error!(target: LOG_TARGET,"Provider health check failed during sozo migrate.");
+        ui.debug(format!("Provider: {:?}", provider));
         return Err(e);
     }
     let provider = Arc::try_unwrap(provider).map_err(|_| anyhow!("Failed to unwrap Arc"))?;

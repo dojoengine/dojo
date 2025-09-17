@@ -25,7 +25,7 @@ async fn main() {
     let ui = SozoUi::new(args.ui_verbosity());
 
     if let Err(err) = cli_main(args, &ui).await {
-        ui.error(err.to_string());
+        ui.error(format!("{err:?}").trim());
         exit(1);
     }
 }

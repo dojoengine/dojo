@@ -41,8 +41,6 @@ use sozo_walnut::walnut::WalnutArgs;
 use test::TestArgs;
 use version::VersionArgs;
 
-pub(crate) const LOG_TARGET: &str = "sozo::cli";
-
 #[derive(Debug, Subcommand)]
 pub enum Commands {
     #[command(about = "Grant or revoke a contract permission to write to a resource")]
