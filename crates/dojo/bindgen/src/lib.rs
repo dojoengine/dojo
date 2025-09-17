@@ -206,13 +206,6 @@ fn gather_dojo_data(
 
     let world = DojoWorld { name: root_package_name.to_string() };
 
-    for (_, c) in &contracts {
-        dbg!(&c.tag);
-        for s in &c.systems {
-            dbg!(&s.to_function().unwrap().name);
-        }
-    }
-
     Ok(DojoData { world, models, contracts, events })
 }
 
