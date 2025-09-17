@@ -18,56 +18,58 @@ impl TsFileWriter {
     }
 }
 
+/// Helper function to filter out "Value" types only when base type exists.
+/// Since Dojo auto generates a `ModelValue`, it is not required for the client to have both
+/// the model and the model value.
+/// However, we need to keep any type that might end with "Value" but not being used as a model.
+fn filter_value_duplicates(composites: Vec<&Composite>) -> Vec<&Composite> {
+    let type_names: std::collections::HashSet<String> =
+        composites.iter().map(|c| c.type_name().to_string()).collect();
+
+    composites
+        .into_iter()
+        .filter(|c| {
+            let name = c.type_name();
+            !(name.ends_with("Value") && type_names.contains(&name[..name.len() - 5]))
+        })
+        .collect()
+}
+
 impl BindgenWriter for TsFileWriter {
     fn write(&self, path: &str, data: &DojoData) -> BindgenResult<(PathBuf, Vec<u8>)> {
         let models_path = Path::new(path).to_owned();
         let models = data.models.values().collect::<Vec<_>>();
         let events = data.events.values().collect::<Vec<_>>();
+
         let mut e_composites = events
             .iter()
             .flat_map(|e| {
-                let mut composites = Vec::new();
-                let mut enum_composites =
-                    e.tokens.enums.iter().map(|e| e.to_composite().unwrap()).collect::<Vec<_>>();
-                let mut struct_composites =
-                    e.tokens.structs.iter().map(|s| s.to_composite().unwrap()).collect::<Vec<_>>();
-                let mut func_composites = e
-                    .tokens
-                    .functions
+                e.tokens
+                    .enums
                     .iter()
-                    .map(|f| f.to_composite().unwrap())
-                    .collect::<Vec<_>>();
-                composites.append(&mut enum_composites);
-                composites.append(&mut struct_composites);
-                composites.append(&mut func_composites);
-                composites
+                    .map(|t| t.to_composite().unwrap())
+                    .chain(e.tokens.structs.iter().map(|t| t.to_composite().unwrap()))
+                    .chain(e.tokens.functions.iter().map(|t| t.to_composite().unwrap()))
             })
             .filter(|c| !(c.type_path.starts_with("dojo::") || c.type_path.starts_with("core::")))
-            .filter(|c| !c.type_name().ends_with("Value"))
             .collect::<Vec<_>>();
 
         let mut m_composites = models
             .iter()
             .flat_map(|m| {
-                let mut composites: Vec<&Composite> = Vec::new();
-                let mut enum_composites =
-                    m.tokens.enums.iter().map(|e| e.to_composite().unwrap()).collect::<Vec<_>>();
-                let mut struct_composites =
-                    m.tokens.structs.iter().map(|s| s.to_composite().unwrap()).collect::<Vec<_>>();
-                let mut func_composites = m
-                    .tokens
-                    .functions
+                m.tokens
+                    .enums
                     .iter()
-                    .map(|f| f.to_composite().unwrap())
-                    .collect::<Vec<_>>();
-                composites.append(&mut enum_composites);
-                composites.append(&mut struct_composites);
-                composites.append(&mut func_composites);
-                composites
+                    .map(|t| t.to_composite().unwrap())
+                    .chain(m.tokens.structs.iter().map(|t| t.to_composite().unwrap()))
+                    .chain(m.tokens.functions.iter().map(|t| t.to_composite().unwrap()))
             })
             .filter(|c| !(c.type_path.starts_with("dojo::") || c.type_path.starts_with("core::")))
-            .filter(|c| !c.type_name().ends_with("Value"))
             .collect::<Vec<_>>();
+
+        // Apply smart "Value" filtering
+        e_composites = filter_value_duplicates(e_composites);
+        m_composites = filter_value_duplicates(m_composites);
 
         // Sort models based on their tag to ensure deterministic output.
         // models.sort_by(|a, b| a.tag.cmp(&b.tag));

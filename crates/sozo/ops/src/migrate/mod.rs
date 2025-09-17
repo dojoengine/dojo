@@ -1134,6 +1134,8 @@ where
                     )
                     .await?;
 
+                dbg!(&res);
+
                 match res {
                     TransactionResult::HashReceipt(hash, receipt) => {
                         let block_msg = match receipt.block {
