@@ -2,17 +2,17 @@ use std::ffi::OsStr;
 use std::io;
 use std::path::Path;
 
-use console::{pad_str, Alignment, Style, StyledObject};
+use console::{Alignment, Style, StyledObject, pad_str};
 use reqwest::StatusCode;
 use scarb_metadata::Metadata;
 use scarb_metadata_ext::MetadataDojoExt;
-use scarb_ui::Ui;
 use serde::Serialize;
 use serde_json::Value;
+use sozo_ui::SozoUi;
 use walkdir::WalkDir;
 
-use crate::utils::walnut_get_api_url;
 use crate::Error;
+use crate::utils::walnut_get_api_url;
 
 #[derive(Debug, Serialize)]
 struct VerificationPayload {
@@ -28,7 +28,7 @@ struct VerificationPayload {
 /// This function verifies all contracts and models in the workspace. It sends a single request to
 /// the Walnut backend with the source code. Walnut will then build the project and store
 /// the source code associated with the class hashes.
-pub async fn walnut_verify(scarb_metadata: &Metadata, ui: &Ui) -> anyhow::Result<()> {
+pub async fn walnut_verify(scarb_metadata: &Metadata, ui: &SozoUi) -> anyhow::Result<()> {
     // Notify start of verification
     ui.print(" ");
     ui.print("🌰 Verifying classes with Walnut...");

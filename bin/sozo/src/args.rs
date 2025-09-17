@@ -1,10 +1,11 @@
 use anyhow::Result;
 use camino::Utf8PathBuf;
 use clap::Parser;
+use clap_verbosity_flag::LevelFilter as ClapLevelFilter;
 use scarb_interop::Profile;
-use scarb_ui::Verbosity;
 use smol_str::SmolStr;
-use tracing::level_filters::LevelFilter;
+use sozo_ui::SozoVerbosity;
+use tracing::level_filters::LevelFilter as TracingLevelFilter;
 use tracing_log::{AsTrace, LogTracer};
 use tracing_subscriber::FmtSubscriber;
 
@@ -39,14 +40,17 @@ pub struct SozoArgs {
 }
 
 impl SozoArgs {
-    pub fn ui_verbosity(&self) -> Verbosity {
-        let filter = self.verbose.log_level_filter().as_trace();
-        if filter >= LevelFilter::WARN {
-            Verbosity::Verbose
-        } else if filter > LevelFilter::OFF {
-            Verbosity::Normal
-        } else {
-            Verbosity::Quiet
+    pub fn ui_verbosity(&self) -> SozoVerbosity {
+        // we want that:
+        // -v means verbose,
+        // -vv means debug,
+        // -vvv means trace.
+        match self.verbose.log_level_filter() {
+            ClapLevelFilter::Off => SozoVerbosity::Quiet,
+            ClapLevelFilter::Error => SozoVerbosity::Normal,
+            ClapLevelFilter::Warn => SozoVerbosity::Verbose,
+            ClapLevelFilter::Info => SozoVerbosity::Debug,
+            ClapLevelFilter::Debug | ClapLevelFilter::Trace => SozoVerbosity::Trace,
         }
     }
 
@@ -54,7 +58,7 @@ impl SozoArgs {
         &self,
         clap_verbosity: &clap_verbosity_flag::Verbosity,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let verbose = clap_verbosity.log_level_filter().as_trace() >= LevelFilter::DEBUG;
+        let verbose = clap_verbosity.log_level_filter().as_trace() >= TracingLevelFilter::DEBUG;
 
         let default_log_filter: &str = if verbose {
             "none,hyper=off,scarb=off,salsa=off,sozo=trace,dojo_world=trace,dojo_utils=trace,\

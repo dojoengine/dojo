@@ -1,15 +1,15 @@
 use std::sync::Arc;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use clap::Args;
 use colored::*;
-use dojo_utils::{self, provider as provider_utils, TxnConfig};
+use dojo_utils::{self, TxnConfig, provider as provider_utils};
 use dojo_world::contracts::WorldContract;
 use dojo_world::services::IpfsService;
 use scarb_metadata::Metadata;
 use scarb_metadata_ext::MetadataDojoExt;
 use sozo_ops::migrate::{Migration, MigrationResult};
-use sozo_ops::sozo_ui::SozoUi;
+use sozo_ui::SozoUi;
 use starknet::core::utils::parse_cairo_short_string;
 use starknet::providers::Provider;
 use tabled::settings::Style;
@@ -44,18 +44,16 @@ pub struct MigrateArgs {
 
 impl MigrateArgs {
     /// Runs the migration.
-    pub async fn run(self, scarb_metadata: &Metadata) -> Result<()> {
+    pub async fn run(self, scarb_metadata: &Metadata, ui: &SozoUi) -> Result<()> {
         trace!(args = ?self);
-
-        let sozo_ui = SozoUi::new();
 
         scarb_metadata.ensure_profile_artifacts()?;
 
         let MigrateArgs { world, starknet, account, ipfs, .. } = self;
 
-        print_banner(&sozo_ui, scarb_metadata, &starknet).await?;
+        print_banner(&ui, scarb_metadata, &starknet).await?;
 
-        sozo_ui.print_title("Evaluating world diff...".to_string());
+        ui.print_title("Evaluate world diff");
 
         let is_guest = world.guest;
 
@@ -64,7 +62,7 @@ impl MigrateArgs {
             starknet,
             world,
             scarb_metadata,
-            &sozo_ui.subsection(),
+            &ui.subsection(),
         )
         .await?;
 
@@ -84,7 +82,7 @@ impl MigrateArgs {
         );
 
         let MigrationResult { manifest, has_changes } =
-            migration.migrate(&sozo_ui).await.context("Migration failed.")?;
+            migration.migrate(&ui).await.context("Migration failed.")?;
 
         let ipfs_config =
             ipfs.config().or(profile_config.env.map(|env| env.ipfs_config).unwrap_or(None));
@@ -93,14 +91,18 @@ impl MigrateArgs {
             let mut metadata_service = IpfsService::new(config)?;
 
             migration
-                .upload_metadata(&sozo_ui, &mut metadata_service)
+                .upload_metadata(&ui, &mut metadata_service)
                 .await
                 .context("Metadata upload failed.")?;
         } else {
-            sozo_ui.print_warning_block("IPFS credentials not found. Metadata upload skipped. To upload metadata, configure IPFS credentials in your profile config or environment variables: https://book.dojoengine.org/framework/world/metadata.".to_string());
+            ui.print_warning_block(
+                "IPFS credentials not found. Metadata upload skipped. \
+                To upload metadata, configure IPFS credentials in your profile config \
+                or environment variables: https://book.dojoengine.org/framework/world/metadata.",
+            );
         };
 
-        sozo_ui.print_title("Writing manifest...".to_string());
+        ui.print_title("Write manifest");
         scarb_metadata
             .write_dojo_manifest_profile(manifest)
             .context("🪦 Failed to write manifest.")?;
@@ -113,7 +115,7 @@ impl MigrateArgs {
             format!("No changes for world at address {:#066x}", world_address)
         };
 
-        sozo_ui.print_block(end_text);
+        ui.print_block(end_text);
 
         Ok(())
     }
@@ -128,7 +130,7 @@ pub struct Banner {
 
 /// Prints the migration banner.
 async fn print_banner(
-    sozo_ui: &SozoUi,
+    ui: &SozoUi,
     scarb_metadata: &Metadata,
     starknet: &StarknetOptions,
 ) -> Result<()> {
@@ -147,7 +149,7 @@ async fn print_banner(
 
     let banner = Banner { profile: scarb_metadata.current_profile.clone(), chain_id, rpc_url };
 
-    sozo_ui.print_block(format!("{}", Table::new(&[banner]).with(Style::psql())));
+    ui.print_block(format!("{}", Table::new(&[banner]).with(Style::psql())));
 
     Ok(())
 }

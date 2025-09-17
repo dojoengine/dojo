@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::io::{self, Write};
 use std::sync::Arc;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use colored::*;
 use dojo_utils::provider as provider_utils;
 use dojo_world::config::ProfileConfig;
@@ -13,7 +13,7 @@ use scarb_interop::Scarb;
 use scarb_metadata::Metadata;
 use scarb_metadata_ext::MetadataDojoExt;
 use semver::{Version, VersionReq};
-use sozo_ops::sozo_ui::SozoUi;
+use sozo_ui::SozoUi;
 use starknet::accounts::{Account, ConnectedAccount};
 use starknet::core::types::Felt;
 use starknet::core::utils as snutils;
@@ -160,7 +160,7 @@ pub async fn get_world_diff_and_account(
 
     let account = { account.account(provider, env, &starknet, &contracts).await? };
 
-    ui.print("Verifying account...".to_string());
+    ui.print("Verify account");
 
     if !dojo_utils::is_deployed(account.address(), &account.provider()).await? {
         return Err(anyhow!("Account with address {:#066x} doesn't exist.", account.address()));
@@ -222,14 +222,13 @@ pub async fn contracts_from_manifest_or_diff(
     world: WorldOptions,
     scarb_metadata: &Metadata,
     force_diff: bool,
+    ui: &SozoUi,
 ) -> Result<HashMap<String, ContractInfo>> {
-    let sozo_ui = SozoUi::new();
-
     let local_manifest = scarb_metadata.read_dojo_manifest_profile()?;
 
     let contracts: HashMap<String, ContractInfo> = if force_diff || local_manifest.is_none() {
         let (world_diff, _, _) =
-            get_world_diff_and_account(account, starknet, world, scarb_metadata, &sozo_ui).await?;
+            get_world_diff_and_account(account, starknet, world, scarb_metadata, &ui).await?;
         (&world_diff).into()
     } else {
         let local_manifest = local_manifest.unwrap();

@@ -1,11 +1,11 @@
 use dojo_utils::TransactionResult;
 use scarb_metadata::Metadata;
-use scarb_ui::Ui;
+use sozo_ui::SozoUi;
 use url::Url;
 
+use crate::Error;
 use crate::transaction::walnut_debug_transaction;
 use crate::verification::walnut_verify;
-use crate::Error;
 
 /// A debugger for Starknet transactions embedding the walnut configuration.
 #[derive(Debug)]
@@ -27,7 +27,7 @@ impl WalnutDebugger {
     /// Debugs a transaction with Walnut by printing a link to the Walnut debugger page.
     pub fn debug_transaction(
         &self,
-        ui: &Ui,
+        ui: &SozoUi,
         transaction_result: &TransactionResult,
     ) -> Result<(), Error> {
         let transaction_hash = match transaction_result {
@@ -44,7 +44,7 @@ impl WalnutDebugger {
 
     /// Verifies a migration strategy with Walnut by uploading the source code of the contracts and
     /// models in the strategy.
-    pub async fn verify(scarb_metadata: &Metadata, ui: &Ui) -> anyhow::Result<()> {
+    pub async fn verify(scarb_metadata: &Metadata, ui: &SozoUi) -> anyhow::Result<()> {
         walnut_verify(scarb_metadata, ui).await
     }
 }

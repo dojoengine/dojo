@@ -3,9 +3,10 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::{fs, io};
 
-use anyhow::{ensure, Context, Result};
+use sozo_ui::SozoUi;
+
+use anyhow::{Context, Result, ensure};
 use clap::Args;
-use scarb_ui::Ui;
 use tracing::trace;
 
 #[derive(Debug, Args)]
@@ -25,7 +26,7 @@ pub struct InitArgs {
 }
 
 impl InitArgs {
-    pub fn run(self, ui: &Ui) -> Result<()> {
+    pub fn run(self, ui: &SozoUi) -> Result<()> {
         trace!(args = ?self);
         let target_dir = match self.path {
             Some(path) => {
@@ -118,7 +119,7 @@ fn check_tag_exists(url: &str, version: &str) -> Result<bool> {
     Ok(tag_exists)
 }
 
-fn clone_repo(url: &str, path: &Path, version: &str, ui: &Ui) -> Result<()> {
+fn clone_repo(url: &str, path: &Path, version: &str, ui: &SozoUi) -> Result<()> {
     // Check if the version tag exists in the repository
     let tag_exists = check_tag_exists(url, version)?;
 

@@ -14,29 +14,61 @@ const SOZO_TITLE_PREFIX: [&str; 2] = ["> ", "- "];
 /// The color for warnings.
 const WARNING_COLOR: Color = Color::BrightYellow;
 
+/// The color for errors.
+const ERROR_COLOR: Color = Color::BrightRed;
+
 /// The color for results.
 const RESULT_COLOR: Color = Color::BrightGreen;
+
+#[derive(Debug, Clone, Default)]
+pub enum SozoVerbosity {
+    Quiet,
+    #[default]
+    Normal,
+    Verbose,
+    Debug,
+    Trace,
+}
+
+// trait to handle message output.
+// Allow us to accept both &str and String.
+pub trait Message {
+    fn text(self) -> String;
+}
+
+impl Message for String {
+    fn text(self) -> String {
+        self
+    }
+}
+
+impl Message for &str {
+    fn text(self) -> String {
+        self.to_string()
+    }
+}
 
 #[derive(Debug)]
 pub struct SozoUi {
     section_level: usize,
+    verbosity: SozoVerbosity,
 }
 
 impl Default for SozoUi {
     fn default() -> Self {
-        Self::new()
+        Self::new(SozoVerbosity::default())
     }
 }
 
 impl SozoUi {
     /// Returns a new instance of SozoUi.
-    pub fn new() -> Self {
-        SozoUi { section_level: 0 }
+    pub fn new(verbosity: SozoVerbosity) -> Self {
+        SozoUi { section_level: 0, verbosity }
     }
 
     /// Returns a new SozoUi instance to handle a subsection of the current one.
     pub fn subsection(&self) -> Self {
-        SozoUi { section_level: self.section_level + 1 }
+        SozoUi { section_level: self.section_level + 1, verbosity: self.verbosity.clone() }
     }
 
     /// Prints a new line.
@@ -45,8 +77,8 @@ impl SozoUi {
     }
 
     /// Prints a block of text surrounded by newlines.
-    pub fn print_block(&self, block: String) {
-        self.print_colored_block(block.into());
+    pub fn print_block<T: Message>(&self, block: T) {
+        self.print_colored_block(block.text().into());
     }
 
     /// Prints a block of text surrounded by newlines. Could provide a specific color for the text.
@@ -57,24 +89,34 @@ impl SozoUi {
     }
 
     /// Prints a block of text surrounded by newlines with a specific warning color.
-    pub fn print_warning_block(&self, block: String) {
-        self.print_colored_block(block.color(WARNING_COLOR));
+    pub fn print_warning_block<T: Message>(&self, block: T) {
+        self.print_colored_block(block.text().color(WARNING_COLOR));
     }
 
     /// Prints a title for the current section. Use the color set for the section.
-    pub fn print_title(&self, title: String) {
+    pub fn print_title<T: Message>(&self, title: T) {
         println!();
-        self.print_with_section_color(format!("{}{}", self.get_title_prefix(), title));
+        self.print_with_section_color(format!("{}{}", self.get_title_prefix(), title.text()));
     }
 
     /// Prints a text with the indentation for the current section.
-    pub fn print(&self, text: String) {
-        self.print_with_indentation(text.into());
+    pub fn print<T: Message>(&self, text: T) {
+        self.print_with_indentation(text.text().into());
+    }
+
+    /// Prints a warning without taking the indentation into account.
+    pub fn warn<T: Message>(&self, text: T) {
+        println!("{}", text.text().color(WARNING_COLOR));
+    }
+
+    /// Prints an error without taking the indentation into account.
+    pub fn error<T: Message>(&self, text: T) {
+        println!("error: {}", text.text().trim().color(ERROR_COLOR));
     }
 
     /// Prints a text without any indentation or color.
-    pub fn print_raw(&self, text: String) {
-        println!("{}", text);
+    pub fn print_raw<T: Message>(&self, text: T) {
+        println!("{}", text.text());
     }
 
     /// Prints a text with the indentation for the current section.
@@ -83,8 +125,8 @@ impl SozoUi {
     }
 
     /// Prints a result for the current section.
-    pub fn print_result(&self, result: String) {
-        self.print_with_indentation(result.color(RESULT_COLOR));
+    pub fn print_result<T: Message>(&self, result: T) {
+        self.print_with_indentation(result.text().color(RESULT_COLOR));
     }
 
     /// Returns the prefix for the title of the current section.

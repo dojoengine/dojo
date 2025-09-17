@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use cainome::cairo_serde::ContractAddress;
 use clap::{Args, Subcommand};
 use colored::Colorize;
@@ -12,10 +12,10 @@ use dojo_world::contracts::{ContractInfo, WorldContract};
 use dojo_world::diff::{DiffPermissions, WorldDiff};
 use scarb_metadata::Metadata;
 use scarb_metadata_ext::MetadataDojoExt;
-use sozo_ops::sozo_ui::SozoUi;
+use sozo_ui::SozoUi;
 use starknet::core::types::Felt;
-use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
+use starknet::providers::jsonrpc::HttpTransport;
 use tracing::trace;
 
 use super::options::account::{AccountOptions, SozoAccount};
@@ -138,7 +138,7 @@ Some examples:
 }
 
 impl AuthArgs {
-    pub async fn run(self, scarb_metadata: &Metadata) -> Result<()> {
+    pub async fn run(self, scarb_metadata: &Metadata, ui: &SozoUi) -> Result<()> {
         trace!(args = ?self);
 
         let profile_config = scarb_metadata.load_dojo_profile_config()?;
@@ -151,6 +151,7 @@ impl AuthArgs {
                     common.world.clone(),
                     scarb_metadata,
                     false,
+                    ui,
                 )
                 .await?;
 
@@ -158,11 +159,11 @@ impl AuthArgs {
 
                 match kind {
                     AuthKind::Writer { pairs } => {
-                        update_writers(&contracts, &common, &profile_config, pairs, do_grant)
+                        update_writers(&contracts, &common, &profile_config, pairs, do_grant, ui)
                             .await?;
                     }
                     AuthKind::Owner { pairs } => {
-                        update_owners(&contracts, &common, &profile_config, pairs, do_grant)
+                        update_owners(&contracts, &common, &profile_config, pairs, do_grant, ui)
                             .await?;
                     }
                 }
@@ -174,6 +175,7 @@ impl AuthArgs {
                     common.world.clone(),
                     scarb_metadata,
                     false,
+                    ui,
                 )
                 .await?;
 
@@ -181,17 +183,18 @@ impl AuthArgs {
 
                 match kind {
                     AuthKind::Writer { pairs } => {
-                        update_writers(&contracts, &common, &profile_config, pairs, do_grant)
+                        update_writers(&contracts, &common, &profile_config, pairs, do_grant, ui)
                             .await?;
                     }
                     AuthKind::Owner { pairs } => {
-                        update_owners(&contracts, &common, &profile_config, pairs, do_grant)
+                        update_owners(&contracts, &common, &profile_config, pairs, do_grant, ui)
                             .await?;
                     }
                 }
             }
             AuthCommand::List { resource, show_address, starknet, world } => {
-                list_permissions(resource, show_address, starknet, world, scarb_metadata).await?;
+                list_permissions(resource, show_address, starknet, world, scarb_metadata, &ui)
+                    .await?;
             }
             AuthCommand::Clone { revoke_from, common, from, to } => {
                 if from == to {
@@ -201,7 +204,7 @@ impl AuthArgs {
                     );
                 }
 
-                clone_permissions(common, scarb_metadata, revoke_from, from, to).await?;
+                clone_permissions(common, scarb_metadata, revoke_from, from, to, &ui).await?;
             }
         };
 
@@ -216,16 +219,16 @@ async fn clone_permissions(
     revoke_from: bool,
     from_tag_or_address: String,
     to_tag_or_address: String,
+    ui: &SozoUi,
 ) -> Result<()> {
-    let sozo_ui = SozoUi::new();
-    sozo_ui.print_title("Gathering permissions from the world...".to_string());
+    ui.print_title("Gather permissions from the world");
 
     let (world_diff, account, _) = utils::get_world_diff_and_account(
         options.account,
         options.starknet,
         options.world,
         scarb_metadata,
-        &sozo_ui,
+        &ui,
     )
     .await?;
 
@@ -278,7 +281,7 @@ async fn clone_permissions(
         && external_writer_of.is_empty()
         && external_owner_of.is_empty()
     {
-        sozo_ui.print("No permissions to clone.".to_string());
+        ui.print("No permissions to clone.");
         return Ok(());
     }
 
@@ -326,7 +329,7 @@ async fn clone_permissions(
         format!("\n    owners: {}", owners_of_tags)
     };
 
-    sozo_ui.print(format!(
+    ui.print(format!(
         "Confirm the following permissions to be cloned from {} to {}\n{}{}",
         from_tag_or_address.bright_blue(),
         to_tag_or_address.bright_blue(),
@@ -352,7 +355,7 @@ async fn clone_permissions(
     }
 
     if revoke_from {
-        sozo_ui.print(format!(
+        ui.print(format!(
             "{}",
             format!("\n!Permissions from {} will be revoked!", from_tag_or_address).bright_red()
         ));
@@ -371,7 +374,7 @@ async fn clone_permissions(
 
     let txs_results = invoker.multicall().await?;
     for r in &txs_results {
-        sozo_ui.print(format!("{}", r));
+        ui.print(format!("{}", r));
     }
 
     Ok(())
@@ -396,9 +399,9 @@ async fn list_permissions(
     starknet: StarknetOptions,
     world: WorldOptions,
     scarb_metadata: &Metadata,
+    ui: &SozoUi,
 ) -> Result<()> {
-    let sozo_ui = SozoUi::new();
-    sozo_ui.print_title("Gathering permissions from the world...".to_string());
+    ui.print_title("Gather permissions from the world");
 
     let (world_diff, _, _) =
         utils::get_world_diff_and_provider(starknet, world, scarb_metadata).await?;
@@ -423,22 +426,22 @@ async fn list_permissions(
     world_writers.sort();
     world_owners.sort();
 
-    sozo_ui.print(format!("{}", "World".bright_red()));
+    ui.print(format!("{}", "World".bright_red()));
     if !world_writers.is_empty() {
-        sozo_ui.print(format!(
+        ui.print(format!(
             "writers: {}",
             world_writers.iter().map(|w| format!("{:#066x}", w)).collect::<Vec<_>>().join(", ")
         ));
     }
 
     if !world_owners.is_empty() {
-        sozo_ui.print(format!(
+        ui.print(format!(
             "owners: {}",
             world_owners.iter().map(|o| format!("{:#066x}", o)).collect::<Vec<_>>().join(", ")
         ));
     }
 
-    sozo_ui.new_line();
+    ui.new_line();
 
     if let Some(resource) = resource {
         let selector = dojo_types::naming::compute_selector_from_tag_or_name(&resource);
@@ -450,7 +453,7 @@ async fn list_permissions(
     }
 
     if resources.is_empty() {
-        sozo_ui.print("No resource found.".to_string());
+        ui.print("No resource found.");
         return Ok(());
     }
 
@@ -467,34 +470,32 @@ async fn list_permissions(
 
         has_printed_at_least_one = true;
 
-        sozo_ui.print(format!("{}", resource.tag().bright_blue()));
+        ui.print(format!("{}", resource.tag().bright_blue()));
 
         if !writers.is_empty() {
-            sozo_ui.print("writers: ".to_string());
-            print_diff_permissions(&writers, show_address);
+            ui.print("writers: ".to_string());
+            print_diff_permissions(&writers, show_address, ui);
         }
 
         if !owners.is_empty() {
-            sozo_ui.print("owners: ".to_string());
-            print_diff_permissions(&owners, show_address);
+            ui.print("owners: ".to_string());
+            print_diff_permissions(&owners, show_address, ui);
         }
 
-        sozo_ui.new_line();
+        ui.new_line();
     }
 
     if resources.len() == 1 && !has_printed_at_least_one {
-        sozo_ui.print("No permission found.".to_string());
+        ui.print("No permission found.");
     }
 
     Ok(())
 }
 
 /// Pretty prints the permissions of a resource.
-fn print_diff_permissions(diff: &DiffPermissions, show_address: bool) {
-    let sozo_ui = SozoUi::new();
-
+fn print_diff_permissions(diff: &DiffPermissions, show_address: bool, ui: &SozoUi) {
     if !diff.only_local().is_empty() {
-        sozo_ui.print(format!(
+        ui.print(format!(
             "    local: {}",
             diff.only_local()
                 .iter()
@@ -513,7 +514,7 @@ fn print_diff_permissions(diff: &DiffPermissions, show_address: bool) {
     }
 
     if !diff.only_remote().is_empty() {
-        sozo_ui.print(format!(
+        ui.print(format!(
             "    remote: {}",
             diff.only_remote()
                 .iter()
@@ -532,7 +533,7 @@ fn print_diff_permissions(diff: &DiffPermissions, show_address: bool) {
     }
 
     if !diff.synced().is_empty() {
-        sozo_ui.print(format!(
+        ui.print(format!(
             "    synced: {}",
             diff.synced()
                 .iter()
@@ -558,9 +559,8 @@ async fn update_owners(
     profile_config: &ProfileConfig,
     pairs: Vec<PermissionPair>,
     do_grant: bool,
+    ui: &SozoUi,
 ) -> Result<()> {
-    let sozo_ui = SozoUi::new();
-
     let selectors_addresses = pairs
         .iter()
         .map(|p| p.to_selector_and_address(contracts))
@@ -591,7 +591,7 @@ async fn update_owners(
 
     let txs_results = invoker.multicall().await?;
     for r in &txs_results {
-        sozo_ui.print(format!("{}", r));
+        ui.print(format!("{}", r));
     }
 
     Ok(())
@@ -604,9 +604,8 @@ async fn update_writers(
     profile_config: &ProfileConfig,
     pairs: Vec<PermissionPair>,
     do_grant: bool,
+    ui: &SozoUi,
 ) -> Result<()> {
-    let sozo_ui = SozoUi::new();
-
     let selectors_addresses = pairs
         .iter()
         .map(|p| p.to_selector_and_address(contracts))
@@ -637,7 +636,7 @@ async fn update_writers(
 
     let txs_results = invoker.multicall().await?;
     for r in &txs_results {
-        sozo_ui.print(format!("{}", r));
+        ui.print(format!("{}", r));
     }
 
     Ok(())

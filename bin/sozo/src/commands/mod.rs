@@ -3,7 +3,7 @@ use core::fmt;
 use anyhow::Result;
 use clap::Subcommand;
 use scarb_metadata::Metadata;
-use scarb_ui::Ui;
+use sozo_ui::SozoUi;
 use tracing::info_span;
 
 pub(crate) mod auth;
@@ -105,13 +105,13 @@ impl fmt::Display for Commands {
     }
 }
 
-pub async fn run(command: Commands, scarb_metadata: &Metadata, ui: &Ui) -> Result<()> {
+pub async fn run(command: Commands, scarb_metadata: &Metadata, ui: &SozoUi) -> Result<()> {
     let name = command.to_string();
     let span = info_span!("Subcommand", name);
     let _span = span.enter();
 
     match command {
-        Commands::Auth(args) => args.run(scarb_metadata).await,
+        Commands::Auth(args) => args.run(scarb_metadata, ui).await,
         Commands::Bindgen(args) => args.run(scarb_metadata).await,
         Commands::Build(args) => args.run(scarb_metadata).await,
         Commands::Call(args) => args.run(scarb_metadata).await,
@@ -121,7 +121,7 @@ pub async fn run(command: Commands, scarb_metadata: &Metadata, ui: &Ui) -> Resul
         Commands::Hash(args) => args.run(scarb_metadata),
         Commands::Inspect(args) => args.run(scarb_metadata).await,
         Commands::Mcp(args) => args.run(scarb_metadata).await,
-        Commands::Migrate(args) => args.run(scarb_metadata).await,
+        Commands::Migrate(args) => args.run(scarb_metadata, ui).await,
         Commands::Model(args) => args.run(scarb_metadata).await,
         Commands::Test(args) => args.run(scarb_metadata),
         Commands::Version(args) => args.run(scarb_metadata),

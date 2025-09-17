@@ -2,14 +2,14 @@
 
 use std::process::exit;
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use args::SozoArgs;
 use camino::Utf8PathBuf;
 use clap::Parser;
 use commands::Commands;
 use scarb_metadata::Metadata;
 use scarb_metadata_ext::MetadataDojoExt;
-use scarb_ui::{OutputFormat, Ui};
+use sozo_ui::SozoUi;
 use tracing::trace;
 mod args;
 mod commands;
@@ -19,16 +19,18 @@ mod utils;
 #[tokio::main]
 async fn main() {
     let args = SozoArgs::parse();
+
     let _ = args.init_logging(&args.verbose);
-    let ui = Ui::new(args.ui_verbosity(), OutputFormat::Text);
+
+    let ui = SozoUi::new(args.ui_verbosity());
 
     if let Err(err) = cli_main(args, &ui).await {
-        ui.anyhow(&err);
+        ui.error(err.to_string());
         exit(1);
     }
 }
 
-async fn cli_main(args: SozoArgs, ui: &Ui) -> Result<()> {
+async fn cli_main(args: SozoArgs, ui: &SozoUi) -> Result<()> {
     if let Commands::Init(args) = args.command {
         args.run(ui)
     } else {

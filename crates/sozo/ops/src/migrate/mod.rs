@@ -26,16 +26,16 @@ use dojo_utils::{
     Declarer, Deployer, Invoker, LabeledClass, TransactionResult, TransactionWaiter, TxnConfig,
 };
 use dojo_world::config::calldata_decoder::decode_calldata;
-use dojo_world::config::{metadata_config, ProfileConfig, ResourceConfig, WorldMetadata};
+use dojo_world::config::{ProfileConfig, ResourceConfig, WorldMetadata, metadata_config};
 use dojo_world::constants::WORLD;
-use dojo_world::contracts::abigen::world::ResourceMetadata;
 use dojo_world::contracts::WorldContract;
+use dojo_world::contracts::abigen::world::ResourceMetadata;
 use dojo_world::diff::{Manifest, ResourceDiff, WorldDiff, WorldStatus};
 use dojo_world::local::{ExternalContractLocal, ResourceLocal, UPGRADE_CONTRACT_FN_NAME};
 use dojo_world::metadata::MetadataStorage;
 use dojo_world::remote::ResourceRemote;
 use dojo_world::services::UploadService;
-use dojo_world::{utils, ResourceType};
+use dojo_world::{ResourceType, utils};
 use starknet::accounts::{ConnectedAccount, SingleOwnerAccount};
 use starknet::core::types::{Call, ReceiptBlock};
 use starknet::core::utils as snutils;
@@ -44,7 +44,7 @@ use starknet::signers::LocalWallet;
 use starknet_crypto::Felt;
 use tracing::trace;
 
-use crate::sozo_ui::SozoUi;
+use sozo_ui::SozoUi;
 
 pub mod error;
 pub use error::MigrationError;
@@ -95,7 +95,7 @@ where
         &self,
         ui: &SozoUi,
     ) -> Result<MigrationResult, MigrationError<A::SignError>> {
-        ui.print_title("Migrating...".to_string());
+        ui.print_title("Migrate");
 
         let ui = ui.subsection();
 
@@ -127,7 +127,7 @@ where
         ui: &SozoUi,
         service: &mut impl UploadService,
     ) -> anyhow::Result<()> {
-        ui.print_title("Uploading metadata...".to_string());
+        ui.print_title("Upload metadata");
         let ui = ui.subsection();
 
         let mut invoker = Invoker::new(&self.world.account, self.txn_config);
@@ -173,10 +173,10 @@ where
         }
 
         if self.do_multicall() {
-            ui.print(format!("Uploading {} metadata...", invoker.calls.len()));
+            ui.print(format!("Upload {} metadata", invoker.calls.len()));
             invoker.multicall().await.map_err(|e| anyhow!(e.to_string()))?;
         } else {
-            ui.print(format!("Uploading {} metadata (sequentially)...", invoker.calls.len()));
+            ui.print(format!("Upload {} metadata (sequentially)", invoker.calls.len()));
             invoker.invoke_all_sequentially().await.map_err(|e| anyhow!(e.to_string()))?;
         }
 
@@ -232,7 +232,7 @@ where
         &self,
         ui: &SozoUi,
     ) -> Result<bool, MigrationError<A::SignError>> {
-        ui.print_title("Initializing contracts...".to_string());
+        ui.print_title("Initialize contracts");
         let ui = ui.subsection();
 
         let mut invoker = Invoker::new(&self.world.account, self.txn_config);
@@ -315,14 +315,11 @@ where
 
         if !invoker.calls.is_empty() {
             if self.do_multicall() {
-                ui.print(format!("Initializing {} contracts...", invoker.calls.len()));
+                ui.print(format!("Initialize {} contracts", invoker.calls.len()));
 
                 invoker.multicall().await?;
             } else {
-                ui.print(format!(
-                    "Initializing {} contracts (sequentially)...",
-                    invoker.calls.len()
-                ));
+                ui.print(format!("Initialize {} contracts (sequentially)", invoker.calls.len()));
 
                 invoker.invoke_all_sequentially().await?;
             }
@@ -345,7 +342,7 @@ where
     ///
     /// Returns true if at least one permission has changed, false otherwise.
     async fn sync_permissions(&self, ui: &SozoUi) -> Result<bool, MigrationError<A::SignError>> {
-        ui.print_title("Syncing permissions...".to_string());
+        ui.print_title("Sync permissions");
         let ui = ui.subsection();
 
         let mut invoker = Invoker::new(&self.world.account, self.txn_config);
@@ -387,12 +384,12 @@ where
         let has_changed = !invoker.calls.is_empty();
 
         if self.do_multicall() {
-            let ui_text = format!("Syncing {} permissions...", invoker.calls.len());
+            let ui_text = format!("Sync {} permissions", invoker.calls.len());
             ui.print(ui_text);
 
             invoker.multicall().await?;
         } else {
-            let ui_text = format!("Syncing {} permissions (sequentially)...", invoker.calls.len());
+            let ui_text = format!("Sync {} permissions (sequentially)", invoker.calls.len());
             ui.print(ui_text);
 
             invoker.invoke_all_sequentially().await?;
@@ -418,7 +415,7 @@ where
             let mut declarer = Declarer::new(&self.world.account, self.txn_config);
             declarer.extend_classes(classes.into_values().collect());
 
-            let ui_text = format!("Declaring {} classes...", n_classes);
+            let ui_text = format!("Declare {} classes", n_classes);
             ui.print(ui_text);
 
             declarer.declare_all().await?;
@@ -435,7 +432,7 @@ where
             }
 
             let ui_text =
-                format!("Declaring {} classes with {} accounts...", n_classes, declarers.len());
+                format!("Declare {} classes with {} accounts", n_classes, declarers.len());
             ui.print(ui_text);
 
             let declarers_futures =
@@ -464,7 +461,7 @@ where
     ///
     /// Returns true if at least one resource has changed, false otherwise.
     async fn sync_resources(&self, ui: &SozoUi) -> Result<bool, MigrationError<A::SignError>> {
-        ui.print_title("Syncing resources...".to_string());
+        ui.print_title("Sync resources");
         let ui = ui.subsection();
 
         let mut invoker = Invoker::new(&self.world.account, self.txn_config);
@@ -562,7 +559,7 @@ where
         self.declare_classes(&ui, classes).await?;
 
         if self.do_multicall() {
-            ui.print(format!("Registering {} resources...", n_resources));
+            ui.print(format!("Register {} resources", n_resources));
 
             invoker.extend_calls(deploy_calls.values().cloned().collect());
 
@@ -586,7 +583,7 @@ where
                 }
             }
         } else {
-            ui.print(format!("Registering {} resources (sequentially)...", n_resources));
+            ui.print(format!("Register {} resources (sequentially)", n_resources));
 
             invoker.invoke_all_sequentially().await?;
 
@@ -620,11 +617,11 @@ where
         has_changed = has_changed || !invoker.calls.is_empty();
 
         if self.do_multicall() {
-            ui.print(format!("Registering {} external contracts...", n_external_contracts));
+            ui.print(format!("Register {} external contracts", n_external_contracts));
             invoker.multicall().await?;
         } else {
             ui.print(format!(
-                "Registering {} external contracts (sequentially)...",
+                "Register {} external contracts (sequentially)",
                 n_external_contracts
             ));
             invoker.invoke_all_sequentially().await?;
@@ -1092,9 +1089,12 @@ where
     /// Returns true if the world has to be deployed/updated, false otherwise.
     async fn ensure_world(&self, ui: &SozoUi) -> Result<bool, MigrationError<A::SignError>> {
         match &self.diff.world_info.status {
-            WorldStatus::Synced => return Ok(false),
+            WorldStatus::Synced => {
+                ui.print_result("World synced.");
+                return Ok(false);
+            }
             WorldStatus::NotDeployed => {
-                ui.print("Deploying the world...".to_string());
+                ui.print("Deploy the world");
                 trace!("Deploying the first world.");
 
                 let labeled_class = LabeledClass {
@@ -1113,7 +1113,7 @@ where
 
                 let deployer = Deployer::new(&self.world.account, tx_config);
 
-                let res = deployer
+                let (world_address, res) = deployer
                     .deploy_via_udc(
                         self.diff.world_info.class_hash,
                         utils::world_salt(&self.profile_config.world.seed)?,
@@ -1123,7 +1123,7 @@ where
                     .await?;
 
                 match res {
-                    TransactionResult::HashReceipt(hash, receipt) => {
+                    TransactionResult::HashReceipt(_, receipt) => {
                         let block_msg = match receipt.block {
                             ReceiptBlock::Block { block_number, .. } => block_number.to_string(),
                             ReceiptBlock::PreConfirmed { block_number } => {
@@ -1132,16 +1132,16 @@ where
                         };
 
                         ui.print_result(format!(
-                            "World deployed at block {} with txn hash: {:#066x}",
-                            block_msg, hash
+                            "World deployed at block {} and at address: {:#066x}",
+                            block_msg, world_address
                         ));
                     }
-                    _ => unreachable!(),
+                    _ => unreachable!(), // TODO: fix for https://github.com/dojoengine/dojo/issues/3340
                 }
             }
             WorldStatus::NewVersion => {
                 trace!("Upgrading the world.");
-                ui.print("Upgrading the world...".to_string());
+                ui.print("Upgrade the world");
 
                 let labeled_class = LabeledClass {
                     label: "world".to_string(),

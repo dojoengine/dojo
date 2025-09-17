@@ -7108,7 +7108,6 @@ dependencies = [
  "scarb-interop",
  "scarb-metadata",
  "scarb-metadata-ext",
- "scarb-ui",
  "semver 1.0.26",
  "serde",
  "serde_json",
@@ -7117,6 +7116,7 @@ dependencies = [
  "smol_str",
  "sozo-mcp",
  "sozo-ops",
+ "sozo-ui",
  "sozo-walnut",
  "starknet",
  "starknet-crypto",
@@ -7201,6 +7201,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_with",
+ "sozo-ui",
  "sozo-walnut",
  "spinoff",
  "starknet",
@@ -7220,6 +7221,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "sozo-ui"
+version = "1.7.0-alpha.3"
+dependencies = [
+ "colored 2.2.0",
+]
+
+[[package]]
 name = "sozo-walnut"
 version = "1.7.0-alpha.4"
 dependencies = [
@@ -7230,9 +7238,9 @@ dependencies = [
  "reqwest 0.12.15",
  "scarb-metadata",
  "scarb-metadata-ext",
- "scarb-ui",
  "serde",
  "serde_json",
+ "sozo-ui",
  "starknet",
  "thiserror 1.0.69",
  "toml 0.8.22",
