@@ -4,6 +4,7 @@ use std::sync::Arc;
 
 use anyhow::{Context, Result, anyhow};
 use dojo_utils::provider as provider_utils;
+use dojo_world::ResourceType;
 use dojo_world::config::ProfileConfig;
 use dojo_world::contracts::ContractInfo;
 use dojo_world::diff::WorldDiff;
@@ -18,6 +19,8 @@ use starknet::core::types::Felt;
 use starknet::core::utils as snutils;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
+use tabled::settings::Style;
+use tabled::{Table, Tabled};
 use tracing::trace;
 
 use crate::commands::options::account::{AccountOptions, SozoAccount};
@@ -46,6 +49,18 @@ Sozo supports some prefixes that you can use to automatically parse some types. 
     - farr: A fixed-size array where each item fits on a single felt252.
     - u256farr: A fixed-size array of u256.
     - no prefix: A cairo felt or any type that fit into one felt.";
+
+#[derive(Tabled)]
+struct ResourceDetails {
+    #[tabled(rename = "Resource Type")]
+    resource_type: ResourceType,
+    #[tabled(rename = "Tag")]
+    tag: String,
+    #[tabled(rename = "Selector")]
+    selector: String,
+    #[tabled(rename = "Status")]
+    status: String,
+}
 
 // Computes the world address based on the provided options.
 pub fn get_world_address(
@@ -329,10 +344,59 @@ fn show_profile_details(profile_config: &ProfileConfig, ui: &SozoUi) {
     }
 }
 
-fn show_world_details(profile_config: &ProfileConfig, _world_diff: &WorldDiff, ui: &SozoUi) {
-    show_profile_details(profile_config, ui);
+fn show_world_diff_details(world_diff: &WorldDiff, ui: &SozoUi) {
+    ui.verbose("world diff");
+    let local_ui = ui.subsection();
 
-    //world diff detail
+    local_ui.verbose(format!("world status: {}", world_diff.world_info.status));
+    local_ui.verbose(format!("world address: {:#066x}", world_diff.world_info.address));
+    local_ui.debug(format!("world class hash: {:#066x}", world_diff.world_info.class_hash));
+    local_ui
+        .debug(format!("world casm class hash: {:#066x}", world_diff.world_info.casm_class_hash));
+
+    local_ui.debug("world entrypoints:");
+    for entrypoint in &world_diff.world_info.entrypoints {
+        local_ui.debug(format!("   {}", entrypoint));
+    }
+
+    local_ui.verbose(format!("namespaces: {}", world_diff.namespaces.len()));
+    for namespace in &world_diff.namespaces {
+        local_ui.debug(format!("   {:#066x}", namespace));
+    }
+
+    local_ui.verbose(format!("resources: {}", world_diff.resources.len()));
+    let resources = world_diff
+        .resources
+        .iter()
+        .map(|(selector, resource)| ResourceDetails {
+            resource_type: resource.resource_type(),
+            tag: resource.tag(),
+            status: resource.status(),
+            selector: selector.to_string(),
+        })
+        .collect::<Vec<_>>();
+    local_ui.debug_block(format!("{}", Table::new(resources).with(Style::psql())));
+
+    local_ui.verbose(format!("external writers: {}", world_diff.external_writers.len()));
+    for (selector, writers) in &world_diff.external_writers {
+        local_ui.debug(format!("   {:#066x}:", selector));
+        for writer in writers {
+            local_ui.debug(format!("      {:#066x}", writer));
+        }
+    }
+
+    local_ui.verbose(format!("external owners: {}", world_diff.external_owners.len()));
+    for (selector, owners) in &world_diff.external_owners {
+        local_ui.debug(format!("   {:#066x}:", selector));
+        for owner in owners {
+            local_ui.debug(format!("      {:#066x}", owner));
+        }
+    }
+}
+
+fn show_world_details(profile_config: &ProfileConfig, world_diff: &WorldDiff, ui: &SozoUi) {
+    show_profile_details(profile_config, ui);
+    show_world_diff_details(world_diff, ui);
 }
 
 /// Checks if the provided version string is compatible with the expected version string using

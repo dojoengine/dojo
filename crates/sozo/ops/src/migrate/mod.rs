@@ -173,12 +173,14 @@ where
         }
 
         if self.do_multicall() {
-            ui.print(format!("Upload {} metadata", invoker.calls.len()));
+            ui.step(format!("Upload {} metadata", invoker.calls.len()));
             invoker.multicall().await.map_err(|e| anyhow!(e.to_string()))?;
         } else {
-            ui.print(format!("Upload {} metadata (sequentially)", invoker.calls.len()));
+            ui.step(format!("Upload {} metadata (sequentially)", invoker.calls.len()));
             invoker.invoke_all_sequentially().await.map_err(|e| anyhow!(e.to_string()))?;
         }
+
+        ui.result("Metadata uploaded.");
 
         Ok(())
     }
@@ -315,14 +317,16 @@ where
 
         if !invoker.calls.is_empty() {
             if self.do_multicall() {
-                ui.print(format!("Initialize {} contracts", invoker.calls.len()));
+                ui.step(format!("Initialize {} contracts", invoker.calls.len()));
 
                 invoker.multicall().await?;
             } else {
-                ui.print(format!("Initialize {} contracts (sequentially)", invoker.calls.len()));
+                ui.step(format!("Initialize {} contracts (sequentially)", invoker.calls.len()));
 
                 invoker.invoke_all_sequentially().await?;
             }
+
+            ui.result("Contracts initialized.");
         }
 
         Ok(has_changed)
@@ -384,17 +388,16 @@ where
         let has_changed = !invoker.calls.is_empty();
 
         if self.do_multicall() {
-            let ui_text = format!("Sync {} permissions", invoker.calls.len());
-            ui.print(ui_text);
+            ui.step(format!("Sync {} permissions", invoker.calls.len()));
 
             invoker.multicall().await?;
         } else {
-            let ui_text = format!("Sync {} permissions (sequentially)", invoker.calls.len());
-            ui.print(ui_text);
+            ui.print(format!("Sync {} permissions (sequentially)", invoker.calls.len()));
 
             invoker.invoke_all_sequentially().await?;
         }
 
+        ui.result("Permissions synced.");
         Ok(has_changed)
     }
 
@@ -416,7 +419,7 @@ where
             declarer.extend_classes(classes.into_values().collect());
 
             let ui_text = format!("Declare {} classes", n_classes);
-            ui.print(ui_text);
+            ui.step(ui_text);
 
             declarer.declare_all().await?;
         } else {
@@ -433,7 +436,7 @@ where
 
             let ui_text =
                 format!("Declare {} classes with {} accounts", n_classes, declarers.len());
-            ui.print(ui_text);
+            ui.step(ui_text);
 
             let declarers_futures =
                 futures::future::join_all(declarers.into_iter().map(|d| d.declare_all())).await;
@@ -453,6 +456,8 @@ where
                 }
             }
         }
+
+        ui.result("Classes declared.");
 
         Ok(())
     }
@@ -559,7 +564,7 @@ where
         self.declare_classes(&ui, classes).await?;
 
         if self.do_multicall() {
-            ui.print(format!("Register {} resources", n_resources));
+            ui.step(format!("Register {} resources", n_resources));
 
             invoker.extend_calls(deploy_calls.values().cloned().collect());
 
@@ -583,7 +588,7 @@ where
                 }
             }
         } else {
-            ui.print(format!("Register {} resources (sequentially)", n_resources));
+            ui.step(format!("Register {} resources (sequentially)", n_resources));
 
             invoker.invoke_all_sequentially().await?;
 
@@ -597,6 +602,8 @@ where
                 }
             }
         }
+
+        ui.result("Resources registered.");
 
         // Handle external contract registering in a second step as we need block numbers of
         // deploying transactions for that.
@@ -617,13 +624,10 @@ where
         has_changed = has_changed || !invoker.calls.is_empty();
 
         if self.do_multicall() {
-            ui.print(format!("Register {} external contracts", n_external_contracts));
+            ui.step(format!("Register {} external contracts", n_external_contracts));
             invoker.multicall().await?;
         } else {
-            ui.print(format!(
-                "Register {} external contracts (sequentially)",
-                n_external_contracts
-            ));
+            ui.step(format!("Register {} external contracts (sequentially)", n_external_contracts));
             invoker.invoke_all_sequentially().await?;
         }
 
@@ -634,6 +638,8 @@ where
                 not_upgradeable_contract_names.join("\n")
             ));
         }
+
+        ui.result("External contracts registered.");
 
         Ok(has_changed)
     }
@@ -1094,7 +1100,7 @@ where
                 return Ok(false);
             }
             WorldStatus::NotDeployed => {
-                ui.print("Deploy the world");
+                ui.step("Deploy the world");
                 trace!("Deploying the first world.");
 
                 let labeled_class = LabeledClass {
@@ -1141,7 +1147,7 @@ where
             }
             WorldStatus::NewVersion => {
                 trace!("Upgrading the world.");
-                ui.print("Upgrade the world");
+                ui.step("Upgrade the world");
 
                 let labeled_class = LabeledClass {
                     label: "world".to_string(),
@@ -1158,6 +1164,8 @@ where
                 );
 
                 invoker.multicall().await?;
+
+                ui.result("World upgraded.");
             }
         };
 

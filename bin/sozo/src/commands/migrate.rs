@@ -107,6 +107,8 @@ impl MigrateArgs {
             .write_dojo_manifest_profile(manifest)
             .context("🪦 Failed to write manifest.")?;
 
+        ui.result("Manifest written.");
+
         let colored_address = format!("{:#066x}", world_address).green();
 
         let end_text = if has_changes {
@@ -115,7 +117,9 @@ impl MigrateArgs {
             format!("No changes for world at address {:#066x}", world_address)
         };
 
+        ui.new_line();
         ui.block(end_text);
+        ui.new_line();
 
         Ok(())
     }
@@ -149,7 +153,9 @@ async fn print_banner(
 
     let banner = Banner { profile: scarb_metadata.current_profile.clone(), chain_id, rpc_url };
 
+    ui.new_line();
     ui.block(format!("{}", Table::new(&[banner]).with(Style::psql())));
+    ui.new_line();
 
     Ok(())
 }

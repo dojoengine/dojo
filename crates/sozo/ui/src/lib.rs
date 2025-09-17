@@ -11,6 +11,9 @@ const SOZO_SECTION_COLORS: [Color; 2] = [Color::Blue, Color::BrightBlue];
 /// The color for steps.
 const STEP_COLOR: Color = Color::BrightMagenta;
 
+/// The default color for text.
+const DEFAULT_COLOR: Color = Color::White;
+
 /// The prefixes for titles according to the section level.
 const SOZO_TITLE_PREFIX: [&str; 2] = ["> ", "- "];
 
@@ -105,9 +108,7 @@ impl SozoUi {
 
     /// Prints a text with the indentation for the current section.
     pub fn print<T: Message>(&self, text: T) {
-        if self.verbosity > SozoVerbosity::Quiet {
-            self.print_with_indentation(text.text().into());
-        }
+        self.do_print(text, SozoVerbosity::Normal, DEFAULT_COLOR);
     }
 
     /// Prints a text without any indentation or color.
@@ -117,61 +118,73 @@ impl SozoUi {
         }
     }
 
+    /// Prints a result for the current section.
+    pub fn result<T: Message>(&self, result: T) {
+        self.do_print(result, SozoVerbosity::Normal, RESULT_COLOR);
+    }
+
     /// Prints a warning without taking the indentation into account.
     pub fn warn<T: Message>(&self, text: T) {
-        println!("{}", text.text().color(WARNING_COLOR));
+        self.do_print(text, SozoVerbosity::Quiet, WARNING_COLOR);
     }
 
     /// Prints an error without taking the indentation into account.
     pub fn error<T: Message>(&self, text: T) {
-        println!("error: {}", text.text().trim().color(ERROR_COLOR));
+        self.do_print(format!("error: {}", text.text().trim()), SozoVerbosity::Quiet, ERROR_COLOR);
     }
 
     pub fn verbose<T: Message>(&self, text: T) {
-        if self.verbosity >= SozoVerbosity::Verbose {
-            self.print_with_indentation(text.text().into());
-        }
+        self.do_print(text, SozoVerbosity::Verbose, DEFAULT_COLOR);
     }
 
     pub fn debug<T: Message>(&self, text: T) {
-        if self.verbosity >= SozoVerbosity::Debug {
-            self.print_with_indentation(text.text().color(DEBUG_COLOR));
-        }
+        self.do_print(text, SozoVerbosity::Debug, DEBUG_COLOR);
     }
 
     pub fn trace<T: Message>(&self, text: T) {
-        if self.verbosity >= SozoVerbosity::Trace {
-            self.print_with_indentation(text.text().color(TRACE_COLOR));
-        }
+        self.do_print(text, SozoVerbosity::Trace, TRACE_COLOR);
     }
 
     /// Prints a block of text surrounded by newlines.
     pub fn block<T: Message>(&self, block: T) {
-        if self.verbosity > SozoVerbosity::Quiet {
-            println!();
-            println!("{}", block.text());
-            println!();
-        }
+        self.do_block(block, SozoVerbosity::Normal, DEFAULT_COLOR);
     }
 
     /// Prints a block of text surrounded by newlines with a specific warning color.
     pub fn warn_block<T: Message>(&self, block: T) {
-        println!();
-        println!("{}", block.text().color(WARNING_COLOR));
-        println!();
+        self.do_block(block, SozoVerbosity::Normal, WARNING_COLOR);
     }
 
     /// Prints a block of text surrounded by newlines with a specific erorr color.
     pub fn error_block<T: Message>(&self, block: T) {
-        println!();
-        println!("{}", block.text().color(ERROR_COLOR));
-        println!();
+        self.do_block(block, SozoVerbosity::Normal, ERROR_COLOR);
     }
 
-    /// Prints a result for the current section.
-    pub fn result<T: Message>(&self, result: T) {
-        if self.verbosity > SozoVerbosity::Quiet {
-            self.print_with_indentation(result.text().color(RESULT_COLOR));
+    pub fn verbose_block<T: Message>(&self, block: T) {
+        self.do_block(block, SozoVerbosity::Verbose, DEFAULT_COLOR);
+    }
+
+    /// Prints a block of text surrounded by newlines with a specific debug color.
+    pub fn debug_block<T: Message>(&self, block: T) {
+        self.do_block(block, SozoVerbosity::Debug, DEBUG_COLOR);
+    }
+
+    /// Prints a block of text surrounded by newlines with a specific trace color.
+    pub fn trace_block<T: Message>(&self, block: T) {
+        self.do_block(block, SozoVerbosity::Trace, TRACE_COLOR);
+    }
+
+    fn do_print<T: Message>(&self, text: T, verbosity: SozoVerbosity, color: Color) {
+        if self.verbosity >= verbosity {
+            self.print_with_indentation(text.text().color(color));
+        }
+    }
+
+    fn do_block<T: Message>(&self, multiline_text: T, verbosity: SozoVerbosity, color: Color) {
+        if self.verbosity >= verbosity {
+            for line in multiline_text.text().lines() {
+                self.print_with_indentation(line.color(color));
+            }
         }
     }
 
