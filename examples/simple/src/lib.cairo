@@ -4,21 +4,6 @@ pub mod sn_c1 {
     struct Storage {}
 }
 
-#[derive(Introspect, Serde, Drop, DojoStore, Default)]
-pub enum MyEnumValue {
-    #[default]
-    A: u8,
-    B: u16,
-    C: u32,
-}
-
-#[dojo::model]
-pub struct Model4 {
-    #[key]
-    pub k: u32,
-    pub value: MyEnumValue, 
-}
-
 #[derive(Introspect, Serde, Drop, DojoStore)]
 #[dojo::model]
 pub struct M {
