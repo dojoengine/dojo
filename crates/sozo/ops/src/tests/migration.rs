@@ -12,12 +12,12 @@ use dojo_world::services::MockUploadService;
 use katana_runner::RunnerCtx;
 use scarb_interop::Profile;
 use scarb_metadata_ext::MetadataDojoExt;
-use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
+use starknet::providers::jsonrpc::HttpTransport;
 use starknet_crypto::Felt;
 
 use crate::migrate::{Migration, MigrationResult};
-use crate::sozo_ui::SozoUi;
+use sozo_ui::SozoUi;
 
 /// Sets up the world diff from the environment and returns the world diff used to create a
 /// migration.
@@ -70,7 +70,7 @@ async fn migrate_spawn_and_move(sequencer: &RunnerCtx, with_metadata: bool) -> M
         is_guest,
     );
 
-    let sozo_ui = SozoUi::new();
+    let sozo_ui = SozoUi::default();
 
     let res = migration.migrate(&sozo_ui).await.expect("Migration spawn-and-move failed.");
 

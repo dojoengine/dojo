@@ -8,6 +8,9 @@ const SECTION_INDENT_LENGTH: usize = 3;
 // The colors of the section levels.
 const SOZO_SECTION_COLORS: [Color; 2] = [Color::Blue, Color::BrightBlue];
 
+/// The color for steps.
+const STEP_COLOR: Color = Color::BrightMagenta;
+
 /// The prefixes for titles according to the section level.
 const SOZO_TITLE_PREFIX: [&str; 2] = ["> ", "- "];
 
@@ -17,10 +20,16 @@ const WARNING_COLOR: Color = Color::BrightYellow;
 /// The color for errors.
 const ERROR_COLOR: Color = Color::BrightRed;
 
+/// The color for debug messages.
+const DEBUG_COLOR: Color = Color::BrightBlack;
+
+/// The color for trace messages.
+const TRACE_COLOR: Color = Color::BrightBlack;
+
 /// The color for results.
 const RESULT_COLOR: Color = Color::BrightGreen;
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq, PartialOrd)]
 pub enum SozoVerbosity {
     Quiet,
     #[default]
@@ -73,35 +82,39 @@ impl SozoUi {
 
     /// Prints a new line.
     pub fn new_line(&self) {
-        println!();
-    }
-
-    /// Prints a block of text surrounded by newlines.
-    pub fn print_block<T: Message>(&self, block: T) {
-        self.print_colored_block(block.text().into());
-    }
-
-    /// Prints a block of text surrounded by newlines. Could provide a specific color for the text.
-    pub fn print_colored_block(&self, block: ColoredString) {
-        println!();
-        self.print_with_indentation(block);
-        println!();
-    }
-
-    /// Prints a block of text surrounded by newlines with a specific warning color.
-    pub fn print_warning_block<T: Message>(&self, block: T) {
-        self.print_colored_block(block.text().color(WARNING_COLOR));
+        if self.verbosity > SozoVerbosity::Quiet {
+            println!();
+        }
     }
 
     /// Prints a title for the current section. Use the color set for the section.
-    pub fn print_title<T: Message>(&self, title: T) {
-        println!();
-        self.print_with_section_color(format!("{}{}", self.get_title_prefix(), title.text()));
+    pub fn title<T: Message>(&self, title: T) {
+        if self.verbosity > SozoVerbosity::Quiet {
+            self.new_line();
+            self.print_with_section_color(format!("{}{}", self.get_title_prefix(), title.text()));
+        }
+    }
+
+    /// Prints a step withthe current section.
+    pub fn step<T: Message>(&self, step: T) {
+        if self.verbosity > SozoVerbosity::Quiet {
+            self.new_line();
+            self.print_with_indentation(format!("◦ {}", step.text()).color(STEP_COLOR));
+        }
     }
 
     /// Prints a text with the indentation for the current section.
     pub fn print<T: Message>(&self, text: T) {
-        self.print_with_indentation(text.text().into());
+        if self.verbosity > SozoVerbosity::Quiet {
+            self.print_with_indentation(text.text().into());
+        }
+    }
+
+    /// Prints a text without any indentation or color.
+    pub fn print_raw<T: Message>(&self, text: T) {
+        if self.verbosity > SozoVerbosity::Quiet {
+            println!("{}", text.text());
+        }
     }
 
     /// Prints a warning without taking the indentation into account.
@@ -114,19 +127,52 @@ impl SozoUi {
         println!("error: {}", text.text().trim().color(ERROR_COLOR));
     }
 
-    /// Prints a text without any indentation or color.
-    pub fn print_raw<T: Message>(&self, text: T) {
-        println!("{}", text.text());
+    pub fn verbose<T: Message>(&self, text: T) {
+        if self.verbosity >= SozoVerbosity::Verbose {
+            self.print_with_indentation(text.text().into());
+        }
     }
 
-    /// Prints a text with the indentation for the current section.
-    pub fn print_colored(&self, text: ColoredString) {
-        self.print_with_indentation(text);
+    pub fn debug<T: Message>(&self, text: T) {
+        if self.verbosity >= SozoVerbosity::Debug {
+            self.print_with_indentation(text.text().color(DEBUG_COLOR));
+        }
+    }
+
+    pub fn trace<T: Message>(&self, text: T) {
+        if self.verbosity >= SozoVerbosity::Trace {
+            self.print_with_indentation(text.text().color(TRACE_COLOR));
+        }
+    }
+
+    /// Prints a block of text surrounded by newlines.
+    pub fn block<T: Message>(&self, block: T) {
+        if self.verbosity > SozoVerbosity::Quiet {
+            println!();
+            println!("{}", block.text());
+            println!();
+        }
+    }
+
+    /// Prints a block of text surrounded by newlines with a specific warning color.
+    pub fn warn_block<T: Message>(&self, block: T) {
+        println!();
+        println!("{}", block.text().color(WARNING_COLOR));
+        println!();
+    }
+
+    /// Prints a block of text surrounded by newlines with a specific erorr color.
+    pub fn error_block<T: Message>(&self, block: T) {
+        println!();
+        println!("{}", block.text().color(ERROR_COLOR));
+        println!();
     }
 
     /// Prints a result for the current section.
-    pub fn print_result<T: Message>(&self, result: T) {
-        self.print_with_indentation(result.text().color(RESULT_COLOR));
+    pub fn result<T: Message>(&self, result: T) {
+        if self.verbosity > SozoVerbosity::Quiet {
+            self.print_with_indentation(result.text().color(RESULT_COLOR));
+        }
     }
 
     /// Returns the prefix for the title of the current section.

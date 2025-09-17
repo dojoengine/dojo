@@ -95,7 +95,7 @@ where
         &self,
         ui: &SozoUi,
     ) -> Result<MigrationResult, MigrationError<A::SignError>> {
-        ui.print_title("Migrate");
+        ui.title("Migrate");
 
         let ui = ui.subsection();
 
@@ -127,7 +127,7 @@ where
         ui: &SozoUi,
         service: &mut impl UploadService,
     ) -> anyhow::Result<()> {
-        ui.print_title("Upload metadata");
+        ui.title("Upload metadata");
         let ui = ui.subsection();
 
         let mut invoker = Invoker::new(&self.world.account, self.txn_config);
@@ -232,7 +232,7 @@ where
         &self,
         ui: &SozoUi,
     ) -> Result<bool, MigrationError<A::SignError>> {
-        ui.print_title("Initialize contracts");
+        ui.title("Initialize contracts");
         let ui = ui.subsection();
 
         let mut invoker = Invoker::new(&self.world.account, self.txn_config);
@@ -342,7 +342,7 @@ where
     ///
     /// Returns true if at least one permission has changed, false otherwise.
     async fn sync_permissions(&self, ui: &SozoUi) -> Result<bool, MigrationError<A::SignError>> {
-        ui.print_title("Sync permissions");
+        ui.title("Sync permissions");
         let ui = ui.subsection();
 
         let mut invoker = Invoker::new(&self.world.account, self.txn_config);
@@ -461,7 +461,7 @@ where
     ///
     /// Returns true if at least one resource has changed, false otherwise.
     async fn sync_resources(&self, ui: &SozoUi) -> Result<bool, MigrationError<A::SignError>> {
-        ui.print_title("Sync resources");
+        ui.title("Sync resources");
         let ui = ui.subsection();
 
         let mut invoker = Invoker::new(&self.world.account, self.txn_config);
@@ -628,7 +628,7 @@ where
         }
 
         if !not_upgradeable_contract_names.is_empty() {
-            ui.print_warning_block(format!(
+            ui.warn_block(format!(
                 "The following external contracts are NOT upgradeable as they don't export an \
                  `upgrade(ClassHash)` function:\n{}",
                 not_upgradeable_contract_names.join("\n")
@@ -1090,7 +1090,7 @@ where
     async fn ensure_world(&self, ui: &SozoUi) -> Result<bool, MigrationError<A::SignError>> {
         match &self.diff.world_info.status {
             WorldStatus::Synced => {
-                ui.print_result("World synced.");
+                ui.result("World synced.");
                 return Ok(false);
             }
             WorldStatus::NotDeployed => {
@@ -1131,7 +1131,7 @@ where
                             }
                         };
 
-                        ui.print_result(format!(
+                        ui.result(format!(
                             "World deployed at block {} and at address: {:#066x}",
                             block_msg, world_address
                         ));

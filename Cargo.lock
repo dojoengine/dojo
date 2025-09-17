@@ -9368,6 +9368,7 @@ dependencies = [
  "scarb-metadata",
  "scarb-metadata-ext",
  "sozo-ops",
+ "sozo-ui",
  "starknet",
  "tokio",
 ]

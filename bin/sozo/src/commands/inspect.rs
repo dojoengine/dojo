@@ -2,11 +2,12 @@ use anyhow::Result;
 use clap::Args;
 use colored::*;
 use dojo_types::naming;
+use dojo_world::ResourceType;
 use dojo_world::diff::{ResourceDiff, WorldDiff, WorldStatus};
 use dojo_world::local::ExternalContractLocal;
-use dojo_world::ResourceType;
 use scarb_metadata::Metadata;
 use serde::Serialize;
+use sozo_ui::SozoUi;
 use tabled::settings::object::Cell;
 use tabled::settings::{Color, Style};
 use tabled::{Table, Tabled};
@@ -33,13 +34,13 @@ pub struct InspectArgs {
 }
 
 impl InspectArgs {
-    pub async fn run(self, scarb_metadata: &Metadata) -> Result<()> {
+    pub async fn run(self, scarb_metadata: &Metadata, ui: &SozoUi) -> Result<()> {
         trace!(args = ?self);
 
         let InspectArgs { world, starknet, element, json } = self;
 
         let (world_diff, _, _) =
-            utils::get_world_diff_and_provider(starknet.clone(), world, scarb_metadata).await?;
+            utils::get_world_diff_and_provider(starknet.clone(), world, scarb_metadata, ui).await?;
 
         if let Some(element) = element {
             inspect_element(&element, &world_diff, json)?;

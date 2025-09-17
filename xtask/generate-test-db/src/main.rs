@@ -82,7 +82,7 @@ async fn migrate_spawn_and_move(db_path: &Path) -> Result<Manifest> {
         runner.url().to_string(),
         is_guest,
     )
-    .migrate(&SozoUi::new())
+    .migrate(&SozoUi::default())
     .await?;
 
     Ok(result.manifest)

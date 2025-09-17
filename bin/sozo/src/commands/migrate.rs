@@ -51,9 +51,9 @@ impl MigrateArgs {
 
         let MigrateArgs { world, starknet, account, ipfs, .. } = self;
 
-        print_banner(&ui, scarb_metadata, &starknet).await?;
+        print_banner(ui, scarb_metadata, &starknet).await?;
 
-        ui.print_title("Evaluate world diff");
+        ui.title("Evaluate project's state");
 
         let is_guest = world.guest;
 
@@ -82,7 +82,7 @@ impl MigrateArgs {
         );
 
         let MigrationResult { manifest, has_changes } =
-            migration.migrate(&ui).await.context("Migration failed.")?;
+            migration.migrate(ui).await.context("Migration failed.")?;
 
         let ipfs_config =
             ipfs.config().or(profile_config.env.map(|env| env.ipfs_config).unwrap_or(None));
@@ -91,18 +91,18 @@ impl MigrateArgs {
             let mut metadata_service = IpfsService::new(config)?;
 
             migration
-                .upload_metadata(&ui, &mut metadata_service)
+                .upload_metadata(ui, &mut metadata_service)
                 .await
                 .context("Metadata upload failed.")?;
         } else {
-            ui.print_warning_block(
+            ui.warn_block(
                 "IPFS credentials not found. Metadata upload skipped. \
                 To upload metadata, configure IPFS credentials in your profile config \
                 or environment variables: https://book.dojoengine.org/framework/world/metadata.",
             );
         };
 
-        ui.print_title("Write manifest");
+        ui.title("Write manifest");
         scarb_metadata
             .write_dojo_manifest_profile(manifest)
             .context("🪦 Failed to write manifest.")?;
@@ -115,7 +115,7 @@ impl MigrateArgs {
             format!("No changes for world at address {:#066x}", world_address)
         };
 
-        ui.print_block(end_text);
+        ui.block(end_text);
 
         Ok(())
     }
@@ -149,7 +149,7 @@ async fn print_banner(
 
     let banner = Banner { profile: scarb_metadata.current_profile.clone(), chain_id, rpc_url };
 
-    ui.print_block(format!("{}", Table::new(&[banner]).with(Style::psql())));
+    ui.block(format!("{}", Table::new(&[banner]).with(Style::psql())));
 
     Ok(())
 }

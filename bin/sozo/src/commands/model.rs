@@ -5,6 +5,7 @@ use scarb_metadata::Metadata;
 use scarb_metadata_ext::MetadataDojoExt;
 use sozo_ops::model;
 use sozo_ops::resource_descriptor::ResourceDescriptor;
+use sozo_ui::SozoUi;
 use starknet::core::types::{BlockId, BlockTag, Felt};
 use tracing::trace;
 
@@ -124,13 +125,15 @@ hashes, called 'hash' in the following documentation.
         starknet: StarknetOptions,
 
         #[arg(short, long)]
-        #[arg(help = "Block number at which to retrieve the model data (pending block by default)")]
+        #[arg(
+            help = "Block number at which to retrieve the model data (pending block by default)"
+        )]
         block: Option<u64>,
     },
 }
 
 impl ModelArgs {
-    pub async fn run(self, scarb_metadata: &Metadata) -> Result<()> {
+    pub async fn run(self, scarb_metadata: &Metadata, ui: &SozoUi) -> Result<()> {
         trace!(args = ?self);
 
         let profile_config = scarb_metadata.load_dojo_profile_config()?;
@@ -141,7 +144,7 @@ impl ModelArgs {
                 let tag = tag_or_name.ensure_namespace(&default_ns);
 
                 let (world_diff, provider, _) =
-                    utils::get_world_diff_and_provider(starknet, world, scarb_metadata).await?;
+                    utils::get_world_diff_and_provider(starknet, world, scarb_metadata, ui).await?;
 
                 model::model_class_hash(tag.to_string(), world_diff.world_info.address, &provider)
                     .await?;
@@ -151,7 +154,7 @@ impl ModelArgs {
                 let tag = tag_or_name.ensure_namespace(&default_ns);
 
                 let (world_diff, provider, _) =
-                    utils::get_world_diff_and_provider(starknet, world, scarb_metadata).await?;
+                    utils::get_world_diff_and_provider(starknet, world, scarb_metadata, ui).await?;
 
                 model::model_contract_address(
                     tag.to_string(),
@@ -167,7 +170,7 @@ impl ModelArgs {
                     block.map(BlockId::Number).unwrap_or(BlockId::Tag(BlockTag::PreConfirmed));
 
                 let (world_diff, provider, _) =
-                    utils::get_world_diff_and_provider(starknet, world, scarb_metadata).await?;
+                    utils::get_world_diff_and_provider(starknet, world, scarb_metadata, ui).await?;
 
                 model::model_layout(
                     tag.to_string(),
@@ -184,7 +187,7 @@ impl ModelArgs {
                     block.map(BlockId::Number).unwrap_or(BlockId::Tag(BlockTag::PreConfirmed));
 
                 let (world_diff, provider, _) =
-                    utils::get_world_diff_and_provider(starknet, world, scarb_metadata).await?;
+                    utils::get_world_diff_and_provider(starknet, world, scarb_metadata, ui).await?;
 
                 model::model_schema(
                     tag.to_string(),
@@ -202,7 +205,7 @@ impl ModelArgs {
                     block.map(BlockId::Number).unwrap_or(BlockId::Tag(BlockTag::PreConfirmed));
 
                 let (world_diff, provider, _) =
-                    utils::get_world_diff_and_provider(starknet, world, scarb_metadata).await?;
+                    utils::get_world_diff_and_provider(starknet, world, scarb_metadata, ui).await?;
 
                 let (record, _, _) = model::model_get(
                     tag.to_string(),

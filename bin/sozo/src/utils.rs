@@ -3,7 +3,6 @@ use std::io::{self, Write};
 use std::sync::Arc;
 
 use anyhow::{Context, Result, anyhow};
-use colored::*;
 use dojo_utils::provider as provider_utils;
 use dojo_world::config::ProfileConfig;
 use dojo_world::contracts::ContractInfo;
@@ -53,6 +52,7 @@ pub fn get_world_address(
     profile_config: &ProfileConfig,
     world: &WorldOptions,
     world_local: &WorldLocal,
+    ui: &SozoUi,
 ) -> Result<Felt> {
     let env = profile_config.env.as_ref();
 
@@ -60,18 +60,14 @@ pub fn get_world_address(
 
     if let Some(wa) = world.address(env)? {
         if wa != deterministic_world_address && !world.guest {
-            println!(
-                "{}",
-                format!(
-                    "The world address computed from the seed is different from the address \
+            ui.warn_block(format!(
+                "The world address computed from the seed is different from the address \
                      provided in config:\n\ndeterministic address: {:#066x}\nconfig address: \
                      {:#066x}\n\nThe address in the config file is preferred, consider commenting \
                      it out from the config file if you attempt to migrate the world with a new \
                      seed.\n\nIf you are upgrading the world, you can ignore this message.",
-                    deterministic_world_address, wa
-                )
-                .yellow()
-            );
+                deterministic_world_address, wa
+            ));
         }
 
         Ok(wa)
@@ -87,13 +83,14 @@ pub async fn get_world_diff_and_provider(
     starknet: StarknetOptions,
     world: WorldOptions,
     scarb_metadata: &Metadata,
+    ui: &SozoUi,
 ) -> Result<(WorldDiff, JsonRpcClient<HttpTransport>, String)> {
     let world_local = scarb_metadata.load_dojo_world_local()?;
     let profile_config = scarb_metadata.load_dojo_profile_config()?;
 
     let env = profile_config.env.as_ref();
 
-    let world_address = get_world_address(&profile_config, &world, &world_local)?;
+    let world_address = get_world_address(&profile_config, &world, &world_local, ui)?;
 
     let (provider, rpc_url) = starknet.provider(env)?;
     let provider = Arc::new(provider);
@@ -150,23 +147,192 @@ pub async fn get_world_diff_and_account(
     scarb_metadata: &Metadata,
     ui: &SozoUi,
 ) -> Result<(WorldDiff, SozoAccount<JsonRpcClient<HttpTransport>>, String)> {
+    ui.step("Compute world diff");
+    let step_ui = ui.subsection();
+
     let profile_config = scarb_metadata.load_dojo_profile_config()?;
     let env = profile_config.env.as_ref();
 
     let (world_diff, provider, rpc_url) =
-        get_world_diff_and_provider(starknet.clone(), world, scarb_metadata).await?;
+        get_world_diff_and_provider(starknet.clone(), world, scarb_metadata, &step_ui).await?;
+
+    show_world_details(&profile_config, &world_diff, &step_ui);
+
+    ui.result("World diff computed.");
 
     let contracts = (&world_diff).into();
 
     let account = { account.account(provider, env, &starknet, &contracts).await? };
 
-    ui.print("Verify account");
+    ui.step("Verify account");
 
     if !dojo_utils::is_deployed(account.address(), &account.provider()).await? {
         return Err(anyhow!("Account with address {:#066x} doesn't exist.", account.address()));
     }
 
+    ui.result("Account verified.");
+
     Ok((world_diff, account, rpc_url))
+}
+
+fn show_profile_details(profile_config: &ProfileConfig, ui: &SozoUi) {
+    ui.verbose("local profile");
+    let local_ui = ui.subsection();
+
+    local_ui.verbose(format!(
+        "world: (seed: {}, name: {})",
+        profile_config.world.seed, profile_config.world.name
+    ));
+
+    local_ui.verbose(format!("default namespace: {}", profile_config.namespace.default));
+
+    if let Some(mappings) = profile_config.namespace.mappings.as_ref() {
+        local_ui.debug(format!("namespace mappings:"));
+        for (namespace, names) in mappings {
+            local_ui.debug(format!("   {}: {}", namespace, names.join(", ")));
+        }
+    }
+
+    if let Some(models) = profile_config.models.as_ref() {
+        local_ui.verbose(format!("models: {}", models.len()));
+        for model in models {
+            local_ui.debug(format!("   {}", model.tag));
+        }
+    }
+
+    if let Some(contracts) = profile_config.contracts.as_ref() {
+        local_ui.verbose(format!("contracts: {}", contracts.len()));
+        for contract in contracts {
+            local_ui.debug(format!("   {}", contract.tag));
+        }
+    }
+
+    if let Some(events) = profile_config.events.as_ref() {
+        local_ui.verbose(format!("events: {}", events.len()));
+        for event in events {
+            local_ui.debug(format!("   {}", event.tag));
+        }
+    }
+
+    if let Some(libraries) = profile_config.libraries.as_ref() {
+        local_ui.verbose(format!("libraries: {}", libraries.len()));
+        for library in libraries {
+            local_ui.debug(format!("   {}", library.tag));
+        }
+    }
+
+    if let Some(external_contracts) = profile_config.external_contracts.as_ref() {
+        local_ui.verbose(format!("external contracts: {}", external_contracts.len()));
+        for external_contract in external_contracts {
+            let instance_name = external_contract
+                .instance_name
+                .as_ref()
+                .map(|x| format!(" (instance name: {})", x))
+                .unwrap_or(String::new());
+            local_ui.debug(format!(
+                "   contract_name: {}{}",
+                external_contract.contract_name, instance_name
+            ));
+        }
+    }
+
+    if let Some(migration) = profile_config.migration.as_ref() {
+        local_ui.debug(format!("migration config:"));
+        local_ui.debug(format!(
+            "   skip_contracts: {}",
+            migration.skip_contracts.as_ref().unwrap_or(&Vec::new()).join(", ")
+        ));
+        local_ui.debug(format!(
+            "   disable_multicall: {}",
+            migration.disable_multicall.unwrap_or(false)
+        ));
+        local_ui.debug(format!(
+            "   order_inits: {}",
+            migration.order_inits.as_ref().unwrap_or(&Vec::new()).join(", ")
+        ));
+    }
+
+    if let Some(writers) = profile_config.writers.as_ref() {
+        local_ui.debug("writers:");
+        for (name, tags) in writers {
+            local_ui.debug(format!(
+                "   {}: {}",
+                name,
+                tags.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(", ")
+            ));
+        }
+    }
+
+    if let Some(owners) = profile_config.owners.as_ref() {
+        local_ui.debug("owners:");
+        for (name, tags) in owners {
+            local_ui.debug(format!(
+                "   {}: {}",
+                name,
+                tags.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(", ")
+            ));
+        }
+    }
+
+    if let Some(init_call_args) = profile_config.init_call_args.as_ref() {
+        local_ui.debug("init call args:");
+        for (name, tags) in init_call_args {
+            local_ui.debug(format!(
+                "   {}: {}",
+                name,
+                tags.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(", ")
+            ));
+        }
+    }
+
+    if let Some(lib_versions) = profile_config.lib_versions.as_ref() {
+        local_ui.debug("lib versions:");
+        for (name, version) in lib_versions {
+            local_ui.debug(format!("   {}: {}", name, version));
+        }
+    }
+
+    if let Some(env) = profile_config.env.as_ref() {
+        local_ui.debug("environment:");
+        local_ui.debug(format!(
+            "   account_address: {}",
+            env.account_address.as_ref().unwrap_or(&"Not set".to_string())
+        ));
+        local_ui.debug(format!(
+            "   world_address: {}",
+            env.world_address.as_ref().unwrap_or(&"Not set".to_string())
+        ));
+        local_ui.debug(format!(
+            "   world_block: {}",
+            env.world_block.as_ref().map(|x| x.to_string()).unwrap_or("None".to_string())
+        ));
+        local_ui.debug(format!(
+            "   max_block_range: {}",
+            env.max_block_range.as_ref().map(|x| x.to_string()).unwrap_or("None".to_string())
+        ));
+        if let Some(http_headers) = env.http_headers.as_ref() {
+            local_ui.debug("   http_headers:");
+            for header in http_headers {
+                local_ui.debug(format!("      name: {}, value: {}", header.name, header.value));
+            }
+        } else {
+            local_ui.debug("   http_headers: None");
+        }
+
+        if let Some(ipfs_config) = env.ipfs_config.as_ref() {
+            local_ui.debug("   ipfs_config:");
+            local_ui.debug(format!("      username: {}", ipfs_config.username));
+            local_ui.debug(format!("      url: {}", ipfs_config.url));
+        } else {
+            local_ui.debug("   ipfs_config: None");
+        }
+    }
+}
+
+fn show_world_details(profile_config: &ProfileConfig, _world_diff: &WorldDiff, ui: &SozoUi) {
+    show_profile_details(profile_config, ui);
+
+    //world diff detail
 }
 
 /// Checks if the provided version string is compatible with the expected version string using
@@ -228,7 +394,7 @@ pub async fn contracts_from_manifest_or_diff(
 
     let contracts: HashMap<String, ContractInfo> = if force_diff || local_manifest.is_none() {
         let (world_diff, _, _) =
-            get_world_diff_and_account(account, starknet, world, scarb_metadata, &ui).await?;
+            get_world_diff_and_account(account, starknet, world, scarb_metadata, ui).await?;
         (&world_diff).into()
     } else {
         let local_manifest = local_manifest.unwrap();

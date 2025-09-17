@@ -193,7 +193,7 @@ impl AuthArgs {
                 }
             }
             AuthCommand::List { resource, show_address, starknet, world } => {
-                list_permissions(resource, show_address, starknet, world, scarb_metadata, &ui)
+                list_permissions(resource, show_address, starknet, world, scarb_metadata, ui)
                     .await?;
             }
             AuthCommand::Clone { revoke_from, common, from, to } => {
@@ -204,7 +204,7 @@ impl AuthArgs {
                     );
                 }
 
-                clone_permissions(common, scarb_metadata, revoke_from, from, to, &ui).await?;
+                clone_permissions(common, scarb_metadata, revoke_from, from, to, ui).await?;
             }
         };
 
@@ -221,14 +221,14 @@ async fn clone_permissions(
     to_tag_or_address: String,
     ui: &SozoUi,
 ) -> Result<()> {
-    ui.print_title("Gather permissions from the world");
+    ui.title("Gather permissions from the world");
 
     let (world_diff, account, _) = utils::get_world_diff_and_account(
         options.account,
         options.starknet,
         options.world,
         scarb_metadata,
-        &ui,
+        ui,
     )
     .await?;
 
@@ -401,10 +401,10 @@ async fn list_permissions(
     scarb_metadata: &Metadata,
     ui: &SozoUi,
 ) -> Result<()> {
-    ui.print_title("Gather permissions from the world");
+    ui.title("Gather permissions from the world");
 
     let (world_diff, _, _) =
-        utils::get_world_diff_and_provider(starknet, world, scarb_metadata).await?;
+        utils::get_world_diff_and_provider(starknet, world, scarb_metadata, ui).await?;
 
     // Sort resources by tag for deterministic output.
     let mut resources = world_diff.resources.values().collect::<Vec<_>>();

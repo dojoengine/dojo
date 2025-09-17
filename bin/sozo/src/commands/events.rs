@@ -9,6 +9,7 @@ use dojo_world::diff::WorldDiff;
 use scarb_metadata::Metadata;
 use scarb_metadata_ext::MetadataDojoExt;
 use sozo_ops::model;
+use sozo_ui::SozoUi;
 use starknet::core::types::{BlockId, BlockTag, EventFilter, Felt};
 use starknet::core::utils::starknet_keccak;
 use starknet::macros::felt;
@@ -56,11 +57,12 @@ pub struct EventsArgs {
 }
 
 impl EventsArgs {
-    pub async fn run(self, scarb_metadata: &Metadata) -> Result<()> {
+    pub async fn run(self, scarb_metadata: &Metadata, ui: &SozoUi) -> Result<()> {
         let profile_config = scarb_metadata.load_dojo_profile_config()?;
 
         let (world_diff, provider, _) =
-            utils::get_world_diff_and_provider(self.starknet, self.world, scarb_metadata).await?;
+            utils::get_world_diff_and_provider(self.starknet, self.world, scarb_metadata, ui)
+                .await?;
         let provider = Arc::new(provider);
 
         let latest_block = provider.block_number().await?;

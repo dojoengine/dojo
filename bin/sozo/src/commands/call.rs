@@ -1,12 +1,13 @@
 use std::collections::HashMap;
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::{Result, anyhow, bail};
 use clap::Args;
 use dojo_world::config::calldata_decoder;
 use dojo_world::contracts::ContractInfo;
 use scarb_metadata::Metadata;
 use scarb_metadata_ext::MetadataDojoExt;
 use sozo_ops::resource_descriptor::ResourceDescriptor;
+use sozo_ui::SozoUi;
 use starknet::core::types::{BlockId, BlockTag, FunctionCall, StarknetError};
 use starknet::core::utils as snutils;
 use starknet::providers::{Provider, ProviderError};
@@ -49,7 +50,7 @@ pub struct CallArgs {
 }
 
 impl CallArgs {
-    pub async fn run(self, scarb_metadata: &Metadata) -> Result<()> {
+    pub async fn run(self, scarb_metadata: &Metadata, ui: &SozoUi) -> Result<()> {
         trace!(args = ?self);
 
         let profile_config = scarb_metadata.load_dojo_profile_config()?;
@@ -66,6 +67,7 @@ impl CallArgs {
                 self.starknet.clone(),
                 self.world,
                 scarb_metadata,
+                ui,
             )
             .await?;
 
@@ -126,10 +128,10 @@ impl CallArgs {
 
         match res {
             Ok(output) => {
-                println!(
+                ui.print(format!(
                     "[ {} ]",
-                    output.iter().map(|o| format!("0x{:#066x}", o)).collect::<Vec<_>>().join(" ")
-                );
+                    output.iter().map(|o| format!("0x{:#066x}", o)).collect::<Vec<_>>().join(" "),
+                ));
             }
             Err(e) => {
                 anyhow::bail!(format!(
