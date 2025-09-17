@@ -167,9 +167,24 @@ fn gather_dojo_data(
                 let interface_blacklist =
                     ["dojo::world::IWorldProvider", "dojo::contract::upgradeable::IUpgradeable"];
 
+                // Blacklist all the functions that are added by Dojo macros.
+                let function_blacklist = ["dojo_init", "upgrade", "world_dispatcher", "dojo_name"];
+
                 for (interface, funcs) in &tokens.interfaces {
                     if !interface_blacklist.contains(&interface.as_str()) {
-                        systems.extend(funcs.clone());
+                        for func in funcs {
+                            if !function_blacklist
+                                .contains(&func.to_function().unwrap().name.as_str())
+                            {
+                                systems.push(func.clone());
+                            }
+                        }
+                    }
+                }
+
+                for func in &tokens.functions {
+                    if !function_blacklist.contains(&func.to_function().unwrap().name.as_str()) {
+                        systems.push(func.clone());
                     }
                 }
 
