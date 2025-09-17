@@ -12,12 +12,12 @@ use dojo_world::local::{ResourceLocal, WorldLocal};
 use error::BindgenResult;
 
 mod plugins;
+use plugins::BuiltinPlugin;
+pub use plugins::BuiltinPlugins;
 use plugins::recs::TypescriptRecsPlugin;
 use plugins::typescript::TypescriptPlugin;
 use plugins::unity::UnityPlugin;
 use plugins::unrealengine::UnrealEnginePlugin;
-use plugins::BuiltinPlugin;
-pub use plugins::BuiltinPlugins;
 
 use crate::error::Error;
 
@@ -167,9 +167,22 @@ fn gather_dojo_data(
                 let interface_blacklist =
                     ["dojo::world::IWorldProvider", "dojo::contract::upgradeable::IUpgradeable"];
 
+                // Blacklist all the functions that are added by Dojo macros.
+                let function_blacklist = ["dojo_init", "upgrade", "world_dispatcher", "dojo_name"];
+
                 for (interface, funcs) in &tokens.interfaces {
                     if !interface_blacklist.contains(&interface.as_str()) {
-                        systems.extend(funcs.clone());
+                        for func in funcs {
+                            if !function_blacklist.contains(&func.to_function().unwrap().name.as_str()) {
+                                systems.push(func.clone());
+                            }
+                        }
+                    }
+                }
+
+                for func in &tokens.functions {
+                    if !function_blacklist.contains(&func.to_function().unwrap().name.as_str()) {
+                        systems.push(func.clone());
                     }
                 }
 
@@ -192,6 +205,13 @@ fn gather_dojo_data(
     }
 
     let world = DojoWorld { name: root_package_name.to_string() };
+
+    for (_, c) in &contracts {
+        dbg!(&c.tag);
+        for s in &c.systems {
+            dbg!(&s.to_function().unwrap().name);
+        }
+    }
 
     Ok(DojoData { world, models, contracts, events })
 }
