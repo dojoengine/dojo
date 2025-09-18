@@ -649,7 +649,18 @@ mod tests {
         .unwrap();
 
         let systems = systems_from_abi(&abi.abi);
-        assert_eq!(systems, vec!["system_1", "system_2", "system_3", "system_4", "system_5", "upgrade", "system_free"]);
+        assert_eq!(
+            systems,
+            vec![
+                "system_1",
+                "system_2",
+                "system_3",
+                "system_4",
+                "system_5",
+                "upgrade",
+                "system_free"
+            ]
+        );
     }
 
     #[test]
