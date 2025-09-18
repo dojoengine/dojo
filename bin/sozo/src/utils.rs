@@ -2,13 +2,13 @@ use std::collections::HashMap;
 use std::io::{self, Write};
 use std::sync::Arc;
 
-use anyhow::{Context, Result, anyhow};
+use anyhow::{anyhow, Context, Result};
 use dojo_utils::provider as provider_utils;
-use dojo_world::ResourceType;
 use dojo_world::config::ProfileConfig;
 use dojo_world::contracts::ContractInfo;
 use dojo_world::diff::WorldDiff;
 use dojo_world::local::WorldLocal;
+use dojo_world::ResourceType;
 use scarb_interop::Scarb;
 use scarb_metadata::Metadata;
 use scarb_metadata_ext::MetadataDojoExt;
@@ -80,8 +80,8 @@ pub fn get_world_address(
                      address provided in config:\n  - deterministic address: {:#066x}\n  - config \
                      address       : {:#066x}\n\nThe address in the config file is preferred, \
                      consider commenting it out from the config file if you attempt to migrate \
-                     the world with a new seed.\nIf you are upgrading the world, you can ignore \
-                     this message.",
+                     the world with a new seed.\nIf you are upgrading the world, please set your \
+                     current world address your config file.",
                 deterministic_world_address, wa
             ));
         }

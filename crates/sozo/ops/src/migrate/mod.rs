@@ -1141,7 +1141,16 @@ where
                             block_msg, world_address
                         ));
                     }
-                    _ => unreachable!(), /* TODO: fix for https://github.com/dojoengine/dojo/issues/3340 */
+                    _ => {
+                        return Err(MigrationError::DeployWorldError(anyhow!(
+                            "The world address provided in your configuration file does not refer \
+                             to a deployed world while the world address computed from the seed \
+                             refers to a deployed world. \n- If you want to upgrade your world, \
+                             please set your world address in the configuration file.\n- If you \
+                             want to deploy a new world, please change your world seed.
+                            "
+                        )));
+                    }
                 }
             }
             WorldStatus::NewVersion => {
