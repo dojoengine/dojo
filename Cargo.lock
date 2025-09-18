@@ -7223,7 +7223,7 @@ dependencies = [
 
 [[package]]
 name = "sozo-ui"
-version = "1.7.0-alpha.3"
+version = "1.7.0-alpha.4"
 dependencies = [
  "colored 2.2.0",
 ]
