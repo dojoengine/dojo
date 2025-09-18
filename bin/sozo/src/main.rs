@@ -23,9 +23,13 @@ async fn main() {
 
     let _ = args.init_logging(&args.verbose);
 
-    let ui_theme = match theme_mode(QueryOptions::default()).unwrap() {
-        ThemeMode::Light => SozoUiTheme::light(),
-        ThemeMode::Dark => SozoUiTheme::dark(),
+    let ui_theme = if let Ok(theme) = theme_mode(QueryOptions::default()) {
+        match theme {
+            ThemeMode::Light => SozoUiTheme::light(),
+            ThemeMode::Dark => SozoUiTheme::dark(),
+        }
+    } else {
+        SozoUiTheme::dark()
     };
 
     let ui = SozoUi::new(ui_theme, args.ui_verbosity());

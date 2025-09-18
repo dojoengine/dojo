@@ -81,7 +81,7 @@ pub fn get_world_address(
                      address       : {:#066x}\n\nThe address in the config file is preferred, \
                      consider commenting it out from the config file if you attempt to migrate \
                      the world with a new seed.\nIf you are upgrading the world, please set your \
-                     current world address your config file.",
+                     current world address in your config file.",
                 deterministic_world_address, wa
             ));
         }
