@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
 
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use cainome::cairo_serde::ContractAddress;
 use clap::{Args, Subcommand};
 use colored::Colorize;
@@ -14,8 +14,8 @@ use scarb_metadata::Metadata;
 use scarb_metadata_ext::MetadataDojoExt;
 use sozo_ui::SozoUi;
 use starknet::core::types::Felt;
-use starknet::providers::JsonRpcClient;
 use starknet::providers::jsonrpc::HttpTransport;
+use starknet::providers::JsonRpcClient;
 use tracing::trace;
 
 use super::options::account::{AccountOptions, SozoAccount};
@@ -402,6 +402,7 @@ async fn list_permissions(
     ui: &SozoUi,
 ) -> Result<()> {
     ui.title("Gather permissions from the world");
+    let permissions_ui = ui.subsection();
 
     let (world_diff, _, _) =
         utils::get_world_diff_and_provider(starknet, world, scarb_metadata, ui).await?;
@@ -426,19 +427,20 @@ async fn list_permissions(
     world_writers.sort();
     world_owners.sort();
 
-    ui.print(format!("{}", "World".bright_red()));
+    ui.new_line();
+    ui.print(format!("{}", "World".bright_blue()));
     if !world_writers.is_empty() {
-        ui.print(format!(
-            "writers: {}",
-            world_writers.iter().map(|w| format!("{:#066x}", w)).collect::<Vec<_>>().join(", ")
-        ));
+        permissions_ui.print("writers: ");
+        for writer in world_writers.iter() {
+            permissions_ui.print(permissions_ui.indent(1, format!("{:#066x}", writer)));
+        }
     }
 
     if !world_owners.is_empty() {
-        ui.print(format!(
-            "owners: {}",
-            world_owners.iter().map(|o| format!("{:#066x}", o)).collect::<Vec<_>>().join(", ")
-        ));
+        permissions_ui.print("owners: ");
+        for owner in world_owners.iter() {
+            permissions_ui.print(permissions_ui.indent(1, format!("{:#066x}", owner)));
+        }
     }
 
     ui.new_line();
@@ -473,13 +475,13 @@ async fn list_permissions(
         ui.print(format!("{}", resource.tag().bright_blue()));
 
         if !writers.is_empty() {
-            ui.print("writers: ".to_string());
-            print_diff_permissions(&writers, show_address, ui);
+            permissions_ui.print("writers: ");
+            print_diff_permissions(&writers, show_address, &permissions_ui);
         }
 
         if !owners.is_empty() {
-            ui.print("owners: ".to_string());
-            print_diff_permissions(&owners, show_address, ui);
+            permissions_ui.print("owners: ");
+            print_diff_permissions(&owners, show_address, &permissions_ui);
         }
 
         ui.new_line();

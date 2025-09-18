@@ -2,7 +2,7 @@
 
 use std::process::exit;
 
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use args::SozoArgs;
 use camino::Utf8PathBuf;
 use clap::Parser;
@@ -15,7 +15,7 @@ mod args;
 mod commands;
 mod features;
 mod utils;
-use terminal_colorsaurus::{QueryOptions, ThemeMode, theme_mode};
+use terminal_colorsaurus::{theme_mode, QueryOptions, ThemeMode};
 
 #[tokio::main]
 async fn main() {
@@ -31,7 +31,7 @@ async fn main() {
     let ui = SozoUi::new(ui_theme, args.ui_verbosity());
 
     if let Err(err) = cli_main(args, &ui).await {
-        ui.error(format!("{err:?}").trim());
+        ui.error_block(format!("{err:?}").trim());
         exit(1);
     }
 }
