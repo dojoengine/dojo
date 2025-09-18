@@ -18,7 +18,7 @@ use super::local::{ResourceLocal, WorldLocal};
 use super::remote::{ResourceRemote, WorldRemote};
 use crate::config::ProfileConfig;
 use crate::local::ExternalContractLocal;
-use crate::{utils, ContractAddress, DojoSelector, ResourceType};
+use crate::{ContractAddress, DojoSelector, ResourceType, utils};
 
 mod compare;
 mod manifest;
@@ -58,8 +58,8 @@ pub enum WorldStatus {
 impl std::fmt::Display for WorldStatus {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            WorldStatus::NotDeployed => write!(f, "NotDeployed"),
-            WorldStatus::NewVersion => write!(f, "NewVersion"),
+            WorldStatus::NotDeployed => write!(f, "Not Deployed"),
+            WorldStatus::NewVersion => write!(f, "To Upgrade"),
             WorldStatus::Synced => write!(f, "Synced"),
         }
     }

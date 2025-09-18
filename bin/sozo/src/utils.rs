@@ -2,13 +2,13 @@ use std::collections::HashMap;
 use std::io::{self, Write};
 use std::sync::Arc;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use dojo_utils::provider as provider_utils;
+use dojo_world::ResourceType;
 use dojo_world::config::ProfileConfig;
 use dojo_world::contracts::ContractInfo;
 use dojo_world::diff::WorldDiff;
 use dojo_world::local::WorldLocal;
-use dojo_world::ResourceType;
 use scarb_interop::Scarb;
 use scarb_metadata::Metadata;
 use scarb_metadata_ext::MetadataDojoExt;
@@ -205,35 +205,35 @@ fn show_profile_details(profile_config: &ProfileConfig, ui: &SozoUi) {
     if let Some(mappings) = profile_config.namespace.mappings.as_ref() {
         local_ui.debug("namespace mappings:");
         for (namespace, names) in mappings {
-            local_ui.debug(format!("   {}: {}", namespace, names.join(", ")));
+            local_ui.debug(local_ui.indent(1, format!("{}: {}", namespace, names.join(", "))));
         }
     }
 
     if let Some(models) = profile_config.models.as_ref() {
         local_ui.verbose(format!("models: {}", models.len()));
         for model in models {
-            local_ui.debug(format!("   {}", model.tag));
+            local_ui.debug(local_ui.indent(1, model.tag.clone()));
         }
     }
 
     if let Some(contracts) = profile_config.contracts.as_ref() {
         local_ui.verbose(format!("contracts: {}", contracts.len()));
         for contract in contracts {
-            local_ui.debug(format!("   {}", contract.tag));
+            local_ui.debug(local_ui.indent(1, contract.tag.clone()));
         }
     }
 
     if let Some(events) = profile_config.events.as_ref() {
         local_ui.verbose(format!("events: {}", events.len()));
         for event in events {
-            local_ui.debug(format!("   {}", event.tag));
+            local_ui.debug(local_ui.indent(1, event.tag.clone()));
         }
     }
 
     if let Some(libraries) = profile_config.libraries.as_ref() {
         local_ui.verbose(format!("libraries: {}", libraries.len()));
         for library in libraries {
-            local_ui.debug(format!("   {}", library.tag));
+            local_ui.debug(local_ui.indent(1, library.tag.clone()));
         }
     }
 
@@ -245,36 +245,45 @@ fn show_profile_details(profile_config: &ProfileConfig, ui: &SozoUi) {
                 .as_ref()
                 .map(|x| format!(" (instance name: {})", x))
                 .unwrap_or(String::new());
-            local_ui.debug(format!(
-                "   contract_name: {}{}",
-                external_contract.contract_name, instance_name
+            local_ui.debug(local_ui.indent(
+                1,
+                format!("contract_name: {}{}", external_contract.contract_name, instance_name),
             ));
         }
     }
 
     if let Some(migration) = profile_config.migration.as_ref() {
         local_ui.debug("migration config:");
-        local_ui.debug(format!(
-            "   skip_contracts: {}",
-            migration.skip_contracts.as_ref().unwrap_or(&Vec::new()).join(", ")
+        local_ui.debug(local_ui.indent(
+            1,
+            format!(
+                "skip_contracts: {}",
+                migration.skip_contracts.as_ref().unwrap_or(&Vec::new()).join(", ")
+            ),
         ));
-        local_ui.debug(format!(
-            "   disable_multicall: {}",
-            migration.disable_multicall.unwrap_or(false)
+        local_ui.debug(local_ui.indent(
+            1,
+            format!("disable_multicall: {}", migration.disable_multicall.unwrap_or(false)),
         ));
-        local_ui.debug(format!(
-            "   order_inits: {}",
-            migration.order_inits.as_ref().unwrap_or(&Vec::new()).join(", ")
+        local_ui.debug(local_ui.indent(
+            1,
+            format!(
+                "order_inits: {}",
+                migration.order_inits.as_ref().unwrap_or(&Vec::new()).join(", ")
+            ),
         ));
     }
 
     if let Some(writers) = profile_config.writers.as_ref() {
         local_ui.debug("writers:");
         for (name, tags) in writers {
-            local_ui.debug(format!(
-                "   {}: {}",
-                name,
-                tags.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(", ")
+            local_ui.debug(local_ui.indent(
+                1,
+                format!(
+                    "{}: {}",
+                    name,
+                    tags.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(", ")
+                ),
             ));
         }
     }
@@ -282,10 +291,13 @@ fn show_profile_details(profile_config: &ProfileConfig, ui: &SozoUi) {
     if let Some(owners) = profile_config.owners.as_ref() {
         local_ui.debug("owners:");
         for (name, tags) in owners {
-            local_ui.debug(format!(
-                "   {}: {}",
-                name,
-                tags.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(", ")
+            local_ui.debug(local_ui.indent(
+                1,
+                format!(
+                    "{}: {}",
+                    name,
+                    tags.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(", ")
+                ),
             ));
         }
     }
@@ -293,10 +305,13 @@ fn show_profile_details(profile_config: &ProfileConfig, ui: &SozoUi) {
     if let Some(init_call_args) = profile_config.init_call_args.as_ref() {
         local_ui.debug("init call args:");
         for (name, tags) in init_call_args {
-            local_ui.debug(format!(
-                "   {}: {}",
-                name,
-                tags.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(", ")
+            local_ui.debug(local_ui.indent(
+                1,
+                format!(
+                    "{}: {}",
+                    name,
+                    tags.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(", ")
+                ),
             ));
         }
     }
@@ -304,43 +319,57 @@ fn show_profile_details(profile_config: &ProfileConfig, ui: &SozoUi) {
     if let Some(lib_versions) = profile_config.lib_versions.as_ref() {
         local_ui.debug("lib versions:");
         for (name, version) in lib_versions {
-            local_ui.debug(format!("   {}: {}", name, version));
+            local_ui.debug(local_ui.indent(1, format!("{}: {}", name, version)));
         }
     }
 
     if let Some(env) = profile_config.env.as_ref() {
         local_ui.debug("environment:");
-        local_ui.debug(format!(
-            "   account_address: {}",
-            env.account_address.as_ref().unwrap_or(&"Not set".to_string())
+        local_ui.debug(local_ui.indent(
+            1,
+            format!(
+                "account_address: {}",
+                env.account_address.as_ref().unwrap_or(&"Not set".to_string())
+            ),
         ));
-        local_ui.debug(format!(
-            "   world_address: {}",
-            env.world_address.as_ref().unwrap_or(&"Not set".to_string())
+        local_ui.debug(local_ui.indent(
+            1,
+            format!(
+                "world_address: {}",
+                env.world_address.as_ref().unwrap_or(&"Not set".to_string())
+            ),
         ));
-        local_ui.debug(format!(
-            "   world_block: {}",
-            env.world_block.as_ref().map(|x| x.to_string()).unwrap_or("None".to_string())
+        local_ui.debug(local_ui.indent(
+            1,
+            format!(
+                "world_block: {}",
+                env.world_block.as_ref().map(|x| x.to_string()).unwrap_or("None".to_string())
+            ),
         ));
-        local_ui.debug(format!(
-            "   max_block_range: {}",
-            env.max_block_range.as_ref().map(|x| x.to_string()).unwrap_or("None".to_string())
+        local_ui.debug(local_ui.indent(
+            1,
+            format!(
+                "max_block_range: {}",
+                env.max_block_range.as_ref().map(|x| x.to_string()).unwrap_or("None".to_string())
+            ),
         ));
         if let Some(http_headers) = env.http_headers.as_ref() {
-            local_ui.debug("   http_headers:");
+            local_ui.debug(local_ui.indent(1, "http_headers:"));
             for header in http_headers {
-                local_ui.debug(format!("      name: {}, value: {}", header.name, header.value));
+                local_ui.debug(
+                    local_ui.indent(2, format!("name: {}, value: {}", header.name, header.value)),
+                );
             }
         } else {
-            local_ui.debug("   http_headers: None");
+            local_ui.debug(local_ui.indent(1, "http_headers: None"));
         }
 
         if let Some(ipfs_config) = env.ipfs_config.as_ref() {
-            local_ui.debug("   ipfs_config:");
-            local_ui.debug(format!("      username: {}", ipfs_config.username));
-            local_ui.debug(format!("      url: {}", ipfs_config.url));
+            local_ui.debug(local_ui.indent(1, "ipfs_config:"));
+            local_ui.debug(local_ui.indent(2, format!("username: {}", ipfs_config.username)));
+            local_ui.debug(local_ui.indent(2, format!("url: {}", ipfs_config.url)));
         } else {
-            local_ui.debug("   ipfs_config: None");
+            local_ui.debug(local_ui.indent(1, "ipfs_config: None"));
         }
     }
 }
@@ -357,12 +386,12 @@ fn show_world_diff_details(world_diff: &WorldDiff, ui: &SozoUi) {
 
     local_ui.debug("world entrypoints:");
     for entrypoint in &world_diff.world_info.entrypoints {
-        local_ui.debug(format!("   {}", entrypoint));
+        local_ui.debug(local_ui.indent(1, entrypoint.clone()));
     }
 
     local_ui.verbose(format!("namespaces: {}", world_diff.namespaces.len()));
     for namespace in &world_diff.namespaces {
-        local_ui.debug(format!("   {:#066x}", namespace));
+        local_ui.debug(local_ui.indent(1, format!("{:#066x}", namespace)));
     }
 
     local_ui.verbose(format!("resources: {}", world_diff.resources.len()));
@@ -380,17 +409,17 @@ fn show_world_diff_details(world_diff: &WorldDiff, ui: &SozoUi) {
 
     local_ui.verbose(format!("external writers: {}", world_diff.external_writers.len()));
     for (selector, writers) in &world_diff.external_writers {
-        local_ui.debug(format!("   {:#066x}:", selector));
+        local_ui.debug(local_ui.indent(1, format!("{:#066x}:", selector)));
         for writer in writers {
-            local_ui.debug(format!("      {:#066x}", writer));
+            local_ui.debug(local_ui.indent(2, format!("{:#066x}", writer)));
         }
     }
 
     local_ui.verbose(format!("external owners: {}", world_diff.external_owners.len()));
     for (selector, owners) in &world_diff.external_owners {
-        local_ui.debug(format!("   {:#066x}:", selector));
+        local_ui.debug(local_ui.indent(1, format!("{:#066x}:", selector)));
         for owner in owners {
-            local_ui.debug(format!("      {:#066x}", owner));
+            local_ui.debug(local_ui.indent(2, format!("{:#066x}", owner)));
         }
     }
 }

@@ -2,19 +2,20 @@
 
 use std::process::exit;
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use args::SozoArgs;
 use camino::Utf8PathBuf;
 use clap::Parser;
 use commands::Commands;
 use scarb_metadata::Metadata;
 use scarb_metadata_ext::MetadataDojoExt;
-use sozo_ui::SozoUi;
+use sozo_ui::{SozoUi, SozoUiTheme};
 use tracing::trace;
 mod args;
 mod commands;
 mod features;
 mod utils;
+use terminal_colorsaurus::{QueryOptions, ThemeMode, theme_mode};
 
 #[tokio::main]
 async fn main() {
@@ -22,7 +23,12 @@ async fn main() {
 
     let _ = args.init_logging(&args.verbose);
 
-    let ui = SozoUi::new(args.ui_verbosity());
+    let ui_theme = match theme_mode(QueryOptions::default()).unwrap() {
+        ThemeMode::Light => SozoUiTheme::light(),
+        ThemeMode::Dark => SozoUiTheme::dark(),
+    };
+
+    let ui = SozoUi::new(ui_theme, args.ui_verbosity());
 
     if let Err(err) = cli_main(args, &ui).await {
         ui.error(format!("{err:?}").trim());

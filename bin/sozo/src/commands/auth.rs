@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use cainome::cairo_serde::ContractAddress;
 use clap::{Args, Subcommand};
 use colored::Colorize;
@@ -14,8 +14,8 @@ use scarb_metadata::Metadata;
 use scarb_metadata_ext::MetadataDojoExt;
 use sozo_ui::SozoUi;
 use starknet::core::types::Felt;
-use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
+use starknet::providers::jsonrpc::HttpTransport;
 use tracing::trace;
 
 use super::options::account::{AccountOptions, SozoAccount};
@@ -495,8 +495,10 @@ async fn list_permissions(
 /// Pretty prints the permissions of a resource.
 fn print_diff_permissions(diff: &DiffPermissions, show_address: bool, ui: &SozoUi) {
     if !diff.only_local().is_empty() {
-        ui.print(format!(
-            "    local: {}",
+        ui.print(ui.indent(
+            1,
+            format!(
+            "local: {}",
             diff.only_local()
                 .iter()
                 .map(|w| format!(
@@ -510,12 +512,15 @@ fn print_diff_permissions(diff: &DiffPermissions, show_address: bool, ui: &SozoU
                 ))
                 .collect::<Vec<_>>()
                 .join(", ")
+        ),
         ));
     }
 
     if !diff.only_remote().is_empty() {
-        ui.print(format!(
-            "    remote: {}",
+        ui.print(ui.indent(
+            1,
+            format!(
+            "remote: {}",
             diff.only_remote()
                 .iter()
                 .map(|w| format!(
@@ -529,12 +534,15 @@ fn print_diff_permissions(diff: &DiffPermissions, show_address: bool, ui: &SozoU
                 ))
                 .collect::<Vec<_>>()
                 .join(", ")
+        ),
         ));
     }
 
     if !diff.synced().is_empty() {
-        ui.print(format!(
-            "    synced: {}",
+        ui.print(ui.indent(
+            1,
+            format!(
+            "synced: {}",
             diff.synced()
                 .iter()
                 .map(|w| format!(
@@ -548,6 +556,7 @@ fn print_diff_permissions(diff: &DiffPermissions, show_address: bool, ui: &SozoU
                 ))
                 .collect::<Vec<_>>()
                 .join(", ")
+        ),
         ));
     }
 }
