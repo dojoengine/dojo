@@ -27,19 +27,26 @@ pub struct EH {
     pub v: u32,
 }
 
+#[derive(Serde, Drop)]
+pub struct OtherType {
+    pub f1: felt252,
+    pub f2: u32,
+}
+
 #[starknet::interface]
 pub trait MyInterface<T> {
     fn system_1(ref self: T, k: felt252, v: felt252);
     fn system_2(ref self: T, k: felt252) -> felt252;
     fn system_3(ref self: T, k: felt252, v: u32);
     fn system_4(ref self: T, k: felt252);
+    fn system_5(ref self: T, o: OtherType, m: M);
 }
 
 #[dojo::contract]
 pub mod c1 {
     use dojo::event::EventStorage;
     use dojo::model::{Model, ModelStorage, ModelValueStorage};
-    use super::{E, EH, M, MValue, MyInterface};
+    use super::{E, EH, M, MValue, MyInterface, OtherType};
 
     fn dojo_init(self: @ContractState, v: felt252) {
         let m = M { k: 0, v };
@@ -92,6 +99,13 @@ pub mod c1 {
 
             world.erase_model_ptr(Model::<M>::ptr_from_id(entity_id));
         }
+
+        fn system_5(ref self: ContractState, o: OtherType, m: M) {}
+    }
+
+    #[external(v0)]
+    fn system_free(ref self: ContractState) -> u32 {
+        42
     }
 
     #[generate_trait]
