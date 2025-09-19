@@ -320,7 +320,11 @@ where
 
         ui.step(format!("Initialize {} contracts", invoker.calls.len()));
 
-        for (tag, args) in init_details {
+        let mut sorted_tags = init_details.keys().cloned().collect::<Vec<String>>();
+        sorted_tags.sort();
+
+        for tag in sorted_tags {
+            let args = init_details.get(&tag).unwrap();
             ui.verbose(ui.indent(1, format!("{} with args {}", tag, args)));
         }
 
@@ -1289,7 +1293,10 @@ fn display_resources_to_sync(ui: &SozoUi, resources_to_sync: &HashMap<&str, Vec<
     if !resources_to_sync.get("Dojo models").unwrap_or(&vec![]).is_empty() {
         ui.verbose(ui.indent(1, "Dojo models:"));
 
-        for model in resources_to_sync.get("Dojo models").unwrap_or(&vec![]) {
+        let mut models = resources_to_sync.get("Dojo models").unwrap_or(&vec![]).clone();
+        models.sort();
+
+        for model in models {
             ui.verbose(ui.indent(2, model.to_string()));
         }
     }
@@ -1299,7 +1306,10 @@ fn display_resources_to_sync(ui: &SozoUi, resources_to_sync: &HashMap<&str, Vec<
 
         ui.verbose(ui.indent(1, "Dojo events:"));
 
-        for event in resources_to_sync.get("Dojo events").unwrap_or(&vec![]) {
+        let mut events = resources_to_sync.get("Dojo events").unwrap_or(&vec![]).clone();
+        events.sort();
+
+        for event in events {
             ui.verbose(ui.indent(2, event.to_string()));
         }
     }
@@ -1309,7 +1319,10 @@ fn display_resources_to_sync(ui: &SozoUi, resources_to_sync: &HashMap<&str, Vec<
 
         ui.verbose(ui.indent(1, "Dojo contracts:"));
 
-        for contract in resources_to_sync.get("Dojo contracts").unwrap_or(&vec![]) {
+        let mut contracts = resources_to_sync.get("Dojo contracts").unwrap_or(&vec![]).clone();
+        contracts.sort();
+
+        for contract in contracts {
             ui.verbose(ui.indent(2, contract.to_string()));
         }
     }
@@ -1319,7 +1332,10 @@ fn display_resources_to_sync(ui: &SozoUi, resources_to_sync: &HashMap<&str, Vec<
 
         ui.verbose(ui.indent(1, "Libraries:"));
 
-        for library in resources_to_sync.get("Libraries").unwrap_or(&vec![]) {
+        let mut libraries = resources_to_sync.get("Libraries").unwrap_or(&vec![]).clone();
+        libraries.sort();
+
+        for library in libraries {
             ui.verbose(ui.indent(2, library.to_string()));
         }
     }
@@ -1329,9 +1345,11 @@ fn display_resources_to_sync(ui: &SozoUi, resources_to_sync: &HashMap<&str, Vec<
 
         ui.verbose(ui.indent(1, "External contracts deploys:"));
 
-        for external_contract in
-            resources_to_sync.get("External contracts deploys").unwrap_or(&vec![])
-        {
+        let mut external_contracts =
+            resources_to_sync.get("External contracts deploys").unwrap_or(&vec![]).clone();
+        external_contracts.sort();
+
+        for external_contract in external_contracts {
             ui.verbose(ui.indent(2, external_contract.to_string()));
         }
     }
@@ -1341,9 +1359,11 @@ fn display_resources_to_sync(ui: &SozoUi, resources_to_sync: &HashMap<&str, Vec<
 
         ui.verbose(ui.indent(1, "External contracts upgrades:"));
 
-        for external_contract in
-            resources_to_sync.get("External contracts upgrades").unwrap_or(&vec![])
-        {
+        let mut external_contracts =
+            resources_to_sync.get("External contracts upgrades").unwrap_or(&vec![]).clone();
+        external_contracts.sort();
+
+        for external_contract in external_contracts {
             ui.verbose(ui.indent(2, external_contract.to_string()));
         }
     }
@@ -1353,8 +1373,16 @@ fn display_resources_to_sync(ui: &SozoUi, resources_to_sync: &HashMap<&str, Vec<
 fn display_classes(ui: &SozoUi, classes: &HashMap<Felt, LabeledClass>) {
     let ui = ui.subsection();
 
-    for c in classes.values() {
-        ui.verbose(format!("{}: {:#066x}", c.label, c.class.class_hash()));
+    let mut felt_to_label = vec![];
+
+    for (felt, labeled_class) in classes {
+        felt_to_label.push((*felt, labeled_class.label.clone()));
+    }
+
+    felt_to_label.sort_by_key(|(_, label)| label.clone());
+
+    for (felt, label) in felt_to_label {
+        ui.verbose(format!("{}: {:#066x}", label, felt));
     }
 }
 
@@ -1366,7 +1394,11 @@ fn display_permissions(
 ) {
     ui.verbose(ui.indent(1, "Writers permissions:"));
 
-    for (grantee, resources) in writers_perms {
+    let mut writers_keys = writers_perms.keys().cloned().collect::<Vec<String>>();
+    writers_keys.sort();
+
+    for grantee in writers_keys {
+        let resources = writers_perms.get(&grantee).unwrap().clone();
         ui.verbose(ui.indent(2, format!("{} writer of {}", grantee, resources.join(", "))));
     }
 
@@ -1374,7 +1406,11 @@ fn display_permissions(
 
     ui.verbose(ui.indent(1, "Owners permissions:"));
 
-    for (grantee, resources) in owners_perms {
+    let mut owners_keys = owners_perms.keys().cloned().collect::<Vec<String>>();
+    owners_keys.sort();
+
+    for grantee in owners_keys {
+        let resources = owners_perms.get(&grantee).unwrap().clone();
         ui.verbose(ui.indent(2, format!("{} owner of {}", grantee, resources.join(", "))));
     }
 }
