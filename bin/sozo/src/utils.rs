@@ -402,7 +402,7 @@ fn show_world_diff_details(world_diff: &WorldDiff, ui: &SozoUi) {
             resource_type: resource.resource_type(),
             tag: resource.tag(),
             status: resource.status(),
-            selector: selector.to_string(),
+            selector: format!("{:#066x}", selector),
         })
         .collect::<Vec<_>>();
     local_ui.debug_block(format!("{}", Table::new(resources).with(Style::psql())));
