@@ -40,6 +40,7 @@ impl BindgenWriter for TsFileWriter {
         let models_path = Path::new(path).to_owned();
         let models = data.models.values().collect::<Vec<_>>();
         let events = data.events.values().collect::<Vec<_>>();
+        let other_types = data.other_types.values().collect::<Vec<_>>();
 
         let mut e_composites = events
             .iter()
@@ -67,7 +68,10 @@ impl BindgenWriter for TsFileWriter {
             .filter(|c| !(c.type_path.starts_with("dojo::") || c.type_path.starts_with("core::")))
             .collect::<Vec<_>>();
 
-        // Apply smart "Value" filtering
+        let mut other_composites =
+            other_types.iter().map(|t| t.to_composite().unwrap()).collect::<Vec<_>>();
+
+        // Apply "Value" filtering to remove ModelValue types which are not used.
         e_composites = filter_value_duplicates(e_composites);
         m_composites = filter_value_duplicates(m_composites);
 
@@ -75,24 +79,28 @@ impl BindgenWriter for TsFileWriter {
         // models.sort_by(|a, b| a.tag.cmp(&b.tag));
         m_composites.sort_by(|a, b| a.type_path.cmp(&b.type_path));
         e_composites.sort_by(|a, b| a.type_path.cmp(&b.type_path));
+        other_composites.sort_by(|a, b| a.type_path.cmp(&b.type_path));
 
         // Store the world name at the beginning of the buffer as a special marker
         let mut initial_buffer = Buffer::new();
         initial_buffer.push(format!("// WORLD_NAME:{}", data.world.name));
 
         let mut code_buffer = self.generators.iter().fold(initial_buffer, |mut acc, g| {
-            [m_composites.clone(), e_composites.clone()].concat().iter().for_each(|c| {
-                match g.generate(c, &mut acc) {
-                    Ok(code) => {
-                        if !code.is_empty() {
-                            acc.push(code)
+            [m_composites.clone(), e_composites.clone(), other_composites.clone()]
+                .concat()
+                .iter()
+                .for_each(|c| {
+                    match g.generate(c, &mut acc) {
+                        Ok(code) => {
+                            if !code.is_empty() {
+                                acc.push(code)
+                            }
                         }
-                    }
-                    Err(_e) => {
-                        log::error!("Failed to generate code for model {}", c.type_path);
-                    }
-                };
-            });
+                        Err(_e) => {
+                            log::error!("Failed to generate code for model {}", c.type_path);
+                        }
+                    };
+                });
             acc
         });
 
@@ -212,6 +220,7 @@ mod tests {
             contracts: HashMap::new(),
             world: DojoWorld { name: "0x01".to_string() },
             events: HashMap::new(),
+            other_types: HashMap::new(),
         };
 
         let (path, code) = writer.write("models.gen.ts", &data).unwrap();

@@ -1479,8 +1479,8 @@
   },
   "contracts": [
     {
-      "address": "0x550c315bd090673192a36445383484232dc113f638e98ad795b253597738421",
-      "class_hash": "0x524c41cba9e5219e23955706d50d6b54403bcf1f649a746bbee6f84da0ad991",
+      "address": "0x6e419a3ebf18bbcaef2529b2eb8cf393a3925dea7ae2f9b654eccceca01469f",
+      "class_hash": "0x560dd4268ec8bf39b9b05d8bd3da3d98f0b580c204244db6151fd9a276fdb27",
       "abi": [
         {
           "type": "impl",
@@ -1550,6 +1550,34 @@
           "interface_name": "dojo_simple::MyInterface"
         },
         {
+          "type": "struct",
+          "name": "dojo_simple::OtherType",
+          "members": [
+            {
+              "name": "f1",
+              "type": "core::felt252"
+            },
+            {
+              "name": "f2",
+              "type": "core::integer::u32"
+            }
+          ]
+        },
+        {
+          "type": "struct",
+          "name": "dojo_simple::M",
+          "members": [
+            {
+              "name": "k",
+              "type": "core::felt252"
+            },
+            {
+              "name": "v",
+              "type": "core::felt252"
+            }
+          ]
+        },
+        {
           "type": "interface",
           "name": "dojo_simple::MyInterface",
           "items": [
@@ -1612,6 +1640,22 @@
               ],
               "outputs": [],
               "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "system_5",
+              "inputs": [
+                {
+                  "name": "o",
+                  "type": "dojo_simple::OtherType"
+                },
+                {
+                  "name": "m",
+                  "type": "dojo_simple::M"
+                }
+              ],
+              "outputs": [],
+              "state_mutability": "external"
             }
           ]
         },
@@ -1669,6 +1713,17 @@
               "state_mutability": "external"
             }
           ]
+        },
+        {
+          "type": "function",
+          "name": "system_free",
+          "inputs": [],
+          "outputs": [
+            {
+              "type": "core::integer::u32"
+            }
+          ],
+          "state_mutability": "external"
         },
         {
           "type": "constructor",
@@ -1733,7 +1788,9 @@
         "system_2",
         "system_3",
         "system_4",
-        "upgrade"
+        "system_5",
+        "upgrade",
+        "system_free"
       ]
     },
     {
@@ -1913,8 +1970,8 @@
       ]
     },
     {
-      "address": "0x3cab568805806f5bb73747c885483f959fb1055d3ca943eeb6af1c602b4996",
-      "class_hash": "0x524c41cba9e5219e23955706d50d6b54403bcf1f649a746bbee6f84da0ad991",
+      "address": "0x1bc056c3a8199a1537900e1724a2ae449d7db9e999e3fdf0ff0c1da00f7abbe",
+      "class_hash": "0x560dd4268ec8bf39b9b05d8bd3da3d98f0b580c204244db6151fd9a276fdb27",
       "abi": [
         {
           "type": "impl",
@@ -1984,6 +2041,34 @@
           "interface_name": "dojo_simple::MyInterface"
         },
         {
+          "type": "struct",
+          "name": "dojo_simple::OtherType",
+          "members": [
+            {
+              "name": "f1",
+              "type": "core::felt252"
+            },
+            {
+              "name": "f2",
+              "type": "core::integer::u32"
+            }
+          ]
+        },
+        {
+          "type": "struct",
+          "name": "dojo_simple::M",
+          "members": [
+            {
+              "name": "k",
+              "type": "core::felt252"
+            },
+            {
+              "name": "v",
+              "type": "core::felt252"
+            }
+          ]
+        },
+        {
           "type": "interface",
           "name": "dojo_simple::MyInterface",
           "items": [
@@ -2046,6 +2131,22 @@
               ],
               "outputs": [],
               "state_mutability": "external"
+            },
+            {
+              "type": "function",
+              "name": "system_5",
+              "inputs": [
+                {
+                  "name": "o",
+                  "type": "dojo_simple::OtherType"
+                },
+                {
+                  "name": "m",
+                  "type": "dojo_simple::M"
+                }
+              ],
+              "outputs": [],
+              "state_mutability": "external"
             }
           ]
         },
@@ -2103,6 +2204,17 @@
               "state_mutability": "external"
             }
           ]
+        },
+        {
+          "type": "function",
+          "name": "system_free",
+          "inputs": [],
+          "outputs": [
+            {
+              "type": "core::integer::u32"
+            }
+          ],
+          "state_mutability": "external"
         },
         {
           "type": "constructor",
@@ -2167,7 +2279,9 @@
         "system_2",
         "system_3",
         "system_4",
-        "upgrade"
+        "system_5",
+        "upgrade",
+        "system_free"
       ]
     }
   ],

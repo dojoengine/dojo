@@ -48,6 +48,11 @@ pub(crate) fn generate_type_init(token: &Composite) -> String {
 pub(crate) fn token_is_option(token: &Composite) -> bool {
     token.type_path.starts_with(CAIRO_OPTION_TYPE_PATH)
 }
+
+pub(crate) fn token_has_inner_option(token: &Composite) -> bool {
+    token.inners.iter().any(|inner| inner.token.type_path().starts_with(CAIRO_OPTION_TYPE_PATH))
+}
+
 /// Checks if token has inner composite
 /// * token - The token to check
 fn token_has_inner_composite(token: &Composite) -> bool {
@@ -138,6 +143,9 @@ impl From<&Token> for JsPrimitiveType {
                 }
                 JsPrimitiveType::from(value.type_name().as_str())
             }
+            Token::Option(o) => JsPrimitiveType::from(
+                format!("CairoOption<{}>", JsPrimitiveType::from(&*o.inner)).as_str(),
+            ),
             _ => JsPrimitiveType::from(value.type_name().as_str()),
         }
     }
@@ -219,6 +227,9 @@ impl From<&Token> for JsPrimitiveInputType {
                 }
                 JsPrimitiveInputType::from(value.type_name().as_str())
             }
+            Token::Option(o) => JsPrimitiveInputType::from(
+                format!("CairoOption<{}>", JsPrimitiveInputType::from(&*o.inner)).as_str(),
+            ),
             _ => JsPrimitiveInputType::from(value.type_name().as_str()),
         }
     }
@@ -358,6 +369,7 @@ impl From<&Token> for JsPrimitiveDefaultValue {
                 .as_str(),
             ),
             Token::Composite(c) => JsPrimitiveDefaultValue::from(c),
+            Token::Option(_) => JsPrimitiveDefaultValue::from(CAIRO_OPTION),
             _ => JsPrimitiveDefaultValue::from(value.type_name().as_str()),
         }
     }

@@ -606,7 +606,7 @@ mod tests {
         .unwrap();
 
         assert!(world.class_hash != Felt::ZERO);
-        assert_eq!(world.resources.len(), 7);
+        assert_eq!(world.resources.len(), 8);
         assert_eq!(
             world.entrypoints,
             vec![
@@ -649,7 +649,18 @@ mod tests {
         .unwrap();
 
         let systems = systems_from_abi(&abi.abi);
-        assert_eq!(systems, vec!["system_1", "system_2", "system_3", "system_4", "upgrade"]);
+        assert_eq!(
+            systems,
+            vec![
+                "system_1",
+                "system_2",
+                "system_3",
+                "system_4",
+                "system_5",
+                "upgrade",
+                "system_free"
+            ]
+        );
     }
 
     #[test]

@@ -183,5 +183,6 @@ fn create_mock_dojo_data() -> DojoData {
         models: HashMap::new(),
         contracts: HashMap::new(),
         events: HashMap::new(),
+        other_types: HashMap::new(),
     }
 }

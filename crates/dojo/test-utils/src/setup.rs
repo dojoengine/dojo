@@ -22,8 +22,11 @@ impl TestSetup {
         let example_path = Utf8PathBuf::from(example_path).canonicalize_utf8().unwrap();
         let dojo_core = Utf8PathBuf::from(dojo_core).canonicalize_utf8().unwrap();
 
-        let packages: Vec<Utf8PathBuf> =
-            vec![example_path.join("spawn-and-move"), example_path.join("game-lib")];
+        let packages: Vec<Utf8PathBuf> = vec![
+            example_path.join("spawn-and-move"),
+            example_path.join("game-lib"),
+            example_path.join("simple"),
+        ];
 
         Self::from_paths(&dojo_core, &packages)
     }
