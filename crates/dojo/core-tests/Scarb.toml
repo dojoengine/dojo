@@ -2,7 +2,7 @@
 name = "dojo_core_test"
 description = "Testing library for Dojo using Starknet foundry."
 
-version = "1.7.0-alpha.4"
+version = "1.7.0"
 edition = "2024_07"
 cairo-version = "2.12"
 
