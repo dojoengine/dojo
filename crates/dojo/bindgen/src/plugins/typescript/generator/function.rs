@@ -128,6 +128,7 @@ impl TsFunctionGenerator {
             } else {
                 type_input = format!("{}{}", prefix, type_input);
             }
+
             acc.push(format!("{}: {}", input.0.to_case(Case::Camel), type_input));
             acc
         })
