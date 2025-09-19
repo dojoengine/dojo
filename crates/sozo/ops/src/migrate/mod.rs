@@ -638,7 +638,9 @@ where
             ));
         }
 
-        ui.result("External contracts registered.");
+        if n_external_contracts > 0 {
+            ui.result("External contracts registered.");
+        }
 
         Ok(has_changed)
     }
