@@ -4,8 +4,8 @@ use dojo_utils::{Invoker, TxnConfig};
 use dojo_world::config::calldata_decoder;
 use scarb_metadata::Metadata;
 use scarb_metadata_ext::MetadataDojoExt;
-use scarb_ui::Ui;
 use sozo_ops::resource_descriptor::ResourceDescriptor;
+use sozo_ui::SozoUi;
 #[cfg(feature = "walnut")]
 use sozo_walnut::WalnutDebugger;
 use starknet::core::types::Call;
@@ -64,7 +64,7 @@ and the move function of the ns-Actions contract, with the calldata [1,2]."))]
 }
 
 impl ExecuteArgs {
-    pub async fn run(self, scarb_metadata: &Metadata, ui: &Ui) -> Result<()> {
+    pub async fn run(self, scarb_metadata: &Metadata, ui: &SozoUi) -> Result<()> {
         trace!(args = ?self);
 
         let profile_config = scarb_metadata.load_dojo_profile_config()?;
@@ -85,6 +85,7 @@ impl ExecuteArgs {
             self.world,
             scarb_metadata,
             self.diff,
+            ui,
         )
         .await?;
 

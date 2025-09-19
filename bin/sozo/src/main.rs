@@ -9,26 +9,38 @@ use clap::Parser;
 use commands::Commands;
 use scarb_metadata::Metadata;
 use scarb_metadata_ext::MetadataDojoExt;
-use scarb_ui::{OutputFormat, Ui};
+use sozo_ui::{SozoUi, SozoUiTheme};
 use tracing::trace;
 mod args;
 mod commands;
 mod features;
 mod utils;
+use terminal_colorsaurus::{theme_mode, QueryOptions, ThemeMode};
 
 #[tokio::main]
 async fn main() {
     let args = SozoArgs::parse();
+
     let _ = args.init_logging(&args.verbose);
-    let ui = Ui::new(args.ui_verbosity(), OutputFormat::Text);
+
+    let ui_theme = if let Ok(theme) = theme_mode(QueryOptions::default()) {
+        match theme {
+            ThemeMode::Light => SozoUiTheme::light(),
+            ThemeMode::Dark => SozoUiTheme::dark(),
+        }
+    } else {
+        SozoUiTheme::dark()
+    };
+
+    let ui = SozoUi::new(ui_theme, args.ui_verbosity());
 
     if let Err(err) = cli_main(args, &ui).await {
-        ui.anyhow(&err);
+        ui.error_block(format!("{err:?}").trim());
         exit(1);
     }
 }
 
-async fn cli_main(args: SozoArgs, ui: &Ui) -> Result<()> {
+async fn cli_main(args: SozoArgs, ui: &SozoUi) -> Result<()> {
     if let Commands::Init(args) = args.command {
         args.run(ui)
     } else {

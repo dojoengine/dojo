@@ -38,4 +38,6 @@ where
     DeclareClassError(String),
     #[error(transparent)]
     DeployExternalContractError(anyhow::Error),
+    #[error(transparent)]
+    DeployWorldError(anyhow::Error),
 }

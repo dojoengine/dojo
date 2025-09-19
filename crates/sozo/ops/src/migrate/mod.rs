@@ -22,7 +22,6 @@ use std::collections::HashMap;
 
 use anyhow::anyhow;
 use cainome::cairo_serde::{ByteArray, ClassHash, ContractAddress};
-use colored::*;
 use dojo_utils::{
     Declarer, Deployer, Invoker, LabeledClass, TransactionResult, TransactionWaiter, TxnConfig,
 };
@@ -37,15 +36,14 @@ use dojo_world::metadata::MetadataStorage;
 use dojo_world::remote::ResourceRemote;
 use dojo_world::services::UploadService;
 use dojo_world::{utils, ResourceType};
-use starknet::accounts::{ConnectedAccount, SingleOwnerAccount};
+use sozo_ui::SozoUi;
+use starknet::accounts::{Account, ConnectedAccount, SingleOwnerAccount};
 use starknet::core::types::{Call, ReceiptBlock};
 use starknet::core::utils as snutils;
 use starknet::providers::AnyProvider;
 use starknet::signers::LocalWallet;
 use starknet_crypto::Felt;
 use tracing::trace;
-
-use crate::migration_ui::MigrationUi;
 
 pub mod error;
 pub use error::MigrationError;
@@ -94,16 +92,20 @@ where
     /// spinner.
     pub async fn migrate(
         &self,
-        ui: &mut MigrationUi,
+        ui: &SozoUi,
     ) -> Result<MigrationResult, MigrationError<A::SignError>> {
-        let world_has_changed = if !self.guest { self.ensure_world(ui).await? } else { false };
+        ui.title("Migrate");
+
+        let ui = ui.subsection();
+
+        let world_has_changed = if !self.guest { self.ensure_world(&ui).await? } else { false };
 
         let resources_have_changed =
-            if !self.diff.is_synced() { self.sync_resources(ui).await? } else { false };
+            if !self.diff.is_synced() { self.sync_resources(&ui).await? } else { false };
 
-        let permissions_have_changed = self.sync_permissions(ui).await?;
+        let permissions_have_changed = self.sync_permissions(&ui).await?;
 
-        let contracts_have_changed = self.initialize_contracts(ui).await?;
+        let contracts_have_changed = self.initialize_contracts(&ui).await?;
 
         Ok(MigrationResult {
             has_changes: world_has_changed
@@ -121,10 +123,11 @@ where
     /// # Returns
     pub async fn upload_metadata(
         &self,
-        ui: &mut MigrationUi,
+        ui: &SozoUi,
         service: &mut impl UploadService,
     ) -> anyhow::Result<()> {
-        ui.update_text("Uploading metadata...");
+        ui.title("Upload metadata");
+        let ui = ui.subsection();
 
         let mut invoker = Invoker::new(&self.world.account, self.txn_config);
 
@@ -169,15 +172,14 @@ where
         }
 
         if self.do_multicall() {
-            ui.update_text_boxed(format!("Uploading {} metadata...", invoker.calls.len()));
+            ui.step(format!("Upload {} metadata", invoker.calls.len()));
             invoker.multicall().await.map_err(|e| anyhow!(e.to_string()))?;
         } else {
-            ui.update_text_boxed(format!(
-                "Uploading {} metadata (sequentially)...",
-                invoker.calls.len()
-            ));
+            ui.step(format!("Upload {} metadata (sequentially)", invoker.calls.len()));
             invoker.invoke_all_sequentially().await.map_err(|e| anyhow!(e.to_string()))?;
         }
+
+        ui.result("Metadata uploaded.");
 
         Ok(())
     }
@@ -229,9 +231,10 @@ where
     /// Returns true if at least one contract has been initialized, false otherwise.
     async fn initialize_contracts(
         &self,
-        ui: &mut MigrationUi,
+        ui: &SozoUi,
     ) -> Result<bool, MigrationError<A::SignError>> {
-        ui.update_text("Initializing contracts...");
+        ui.title("Initialize contracts");
+        let ui = ui.subsection();
 
         let mut invoker = Invoker::new(&self.world.account, self.txn_config);
 
@@ -251,6 +254,8 @@ where
 
         // Keeps map between the order index and the call to initialize.
         let mut ordered_init_calls = HashMap::new();
+
+        let mut init_details: HashMap<String, String> = HashMap::new();
 
         for (selector, resource) in &self.diff.resources {
             if resource.resource_type() == ResourceType::Contract {
@@ -287,6 +292,8 @@ where
 
                     trace!(tag, ?args, "Initializing contract.");
 
+                    init_details.insert(tag.clone(), format!("{:?}", args));
+
                     if let Some(order_index) = ordered_init_tags.iter().position(|t| *t == tag) {
                         ordered_init_calls
                             .insert(order_index, self.world.init_contract_getcall(selector, &args));
@@ -311,19 +318,24 @@ where
 
         let has_changed = !invoker.calls.is_empty();
 
+        ui.step(format!("Initialize {} contracts", invoker.calls.len()));
+
+        let mut sorted_tags = init_details.keys().cloned().collect::<Vec<String>>();
+        sorted_tags.sort();
+
+        for tag in sorted_tags {
+            let args = init_details.get(&tag).unwrap();
+            ui.verbose(ui.indent(1, format!("{} with args {}", tag, args)));
+        }
+
         if !invoker.calls.is_empty() {
             if self.do_multicall() {
-                let ui_text = format!("Initializing {} contracts...", invoker.calls.len());
-                ui.update_text_boxed(ui_text);
-
                 invoker.multicall().await?;
             } else {
-                let ui_text =
-                    format!("Initializing {} contracts (sequentially)...", invoker.calls.len());
-                ui.update_text_boxed(ui_text);
-
                 invoker.invoke_all_sequentially().await?;
             }
+
+            ui.result("Contracts initialized.");
         }
 
         Ok(has_changed)
@@ -342,13 +354,14 @@ where
     /// overlay resource, which can contain also writers.
     ///
     /// Returns true if at least one permission has changed, false otherwise.
-    async fn sync_permissions(
-        &self,
-        ui: &mut MigrationUi,
-    ) -> Result<bool, MigrationError<A::SignError>> {
-        ui.update_text("Syncing permissions...");
+    async fn sync_permissions(&self, ui: &SozoUi) -> Result<bool, MigrationError<A::SignError>> {
+        ui.title("Sync permissions");
+        let ui = ui.subsection();
 
         let mut invoker = Invoker::new(&self.world.account, self.txn_config);
+
+        let mut writers_perms: HashMap<String, Vec<String>> = HashMap::new();
+        let mut owners_perms: HashMap<String, Vec<String>> = HashMap::new();
 
         // Only takes the local permissions that are not already set onchain to apply them.
         for (selector, resource) in &self.diff.resources {
@@ -360,10 +373,15 @@ where
             for pdiff in self.diff.get_writers(*selector).only_local() {
                 trace!(
                     target = resource.tag(),
-                    grantee_tag = pdiff.tag.unwrap_or_default(),
+                    grantee_tag = pdiff.tag.clone().unwrap_or_default(),
                     grantee_address = format!("{:#066x}", pdiff.address),
                     "Granting writer permission."
                 );
+
+                let display_key_grantee =
+                    format!("{} ({:#066x})", pdiff.tag.clone().unwrap_or_default(), pdiff.address);
+
+                writers_perms.entry(display_key_grantee).or_default().push(resource.tag());
 
                 invoker.add_call(
                     self.world.grant_writer_getcall(selector, &ContractAddress(pdiff.address)),
@@ -373,10 +391,15 @@ where
             for pdiff in self.diff.get_owners(*selector).only_local() {
                 trace!(
                     target = resource.tag(),
-                    grantee_tag = pdiff.tag.unwrap_or_default(),
+                    grantee_tag = pdiff.tag.clone().unwrap_or_default(),
                     grantee_address = format!("{:#066x}", pdiff.address),
                     "Granting owner permission."
                 );
+
+                let display_key_grantee =
+                    format!("{} ({:#066x})", pdiff.tag.clone().unwrap_or_default(), pdiff.address);
+
+                owners_perms.entry(display_key_grantee).or_default().push(resource.tag());
 
                 invoker.add_call(
                     self.world.grant_owner_getcall(selector, &ContractAddress(pdiff.address)),
@@ -384,18 +407,22 @@ where
             }
         }
 
+        ui.step(format!("Sync {} permissions", invoker.calls.len()));
+
+        display_permissions(&ui, &writers_perms, &owners_perms);
+
         let has_changed = !invoker.calls.is_empty();
 
         if self.do_multicall() {
-            let ui_text = format!("Syncing {} permissions...", invoker.calls.len());
-            ui.update_text_boxed(ui_text);
-
-            invoker.multicall().await?;
+            let txs_results = invoker.multicall().await?;
+            display_transaction_results(&ui, &txs_results, "Sync permissions");
         } else {
-            let ui_text = format!("Syncing {} permissions (sequentially)...", invoker.calls.len());
-            ui.update_text_boxed(ui_text);
+            let txs_results = invoker.invoke_all_sequentially().await?;
+            display_transaction_results(&ui, &txs_results, "Sync permissions");
+        }
 
-            invoker.invoke_all_sequentially().await?;
+        if has_changed {
+            ui.result("Permissions synced.");
         }
 
         Ok(has_changed)
@@ -404,7 +431,7 @@ where
     /// Declare classes.
     async fn declare_classes(
         &self,
-        ui: &mut MigrationUi,
+        ui: &SozoUi,
         classes: HashMap<Felt, LabeledClass>,
     ) -> Result<(), MigrationError<A::SignError>> {
         // Declaration can be slow, and can be speed up by using multiple accounts.
@@ -413,48 +440,65 @@ where
         let accounts = self.get_accounts().await;
         let n_classes = classes.len();
 
+        let ui_text = format!("Declare {} classes", n_classes);
+        ui.step(ui_text);
+
+        display_classes(ui, &classes);
+
         if accounts.is_empty() {
             trace!("Declaring classes with migrator account.");
             let mut declarer = Declarer::new(&self.world.account, self.txn_config);
             declarer.extend_classes(classes.into_values().collect());
 
-            let ui_text = format!("Declaring {} classes...", n_classes);
-            ui.update_text_boxed(ui_text);
+            ui.debug(format!(
+                "Declaring with migrator account address: {}",
+                self.world.account.address()
+            ));
 
             declarer.declare_all().await?;
         } else {
             trace!("Declaring classes with {} accounts.", accounts.len());
             let mut declarers = vec![];
+            let mut declarers_addresses = vec![];
             for account in accounts {
+                declarers_addresses.push(account.address());
                 declarers.push(Declarer::new(account, self.txn_config));
             }
+
+            ui.debug(format!("Declaring with accounts addresses: {:?}", declarers_addresses));
 
             for (idx, (_, labeled_class)) in classes.into_iter().enumerate() {
                 let declarer_idx = idx % declarers.len();
                 declarers[declarer_idx].add_class(labeled_class.clone());
             }
 
-            let ui_text =
-                format!("Declaring {} classes with {} accounts...", n_classes, declarers.len());
-            ui.update_text_boxed(ui_text);
-
             let declarers_futures =
                 futures::future::join_all(declarers.into_iter().map(|d| d.declare_all())).await;
 
             for declarer_results in declarers_futures {
-                if let Err(e) = declarer_results {
-                    // The issue is that `e` is bound to concrete type `SingleOwnerAccount`.
-                    // Thus, we can't return `e` directly.
-                    // Might have a better solution by addind a new variant?
-                    if e.to_string().contains("Class already declared") {
-                        // If the class is already declared, it might be because it was already
-                        // declared in a previous run or an other declarer.
-                        continue;
+                match declarer_results {
+                    Ok(results) => {
+                        display_transaction_results(ui, &results, "Declare");
                     }
+                    Err(e) => {
+                        // The issue is that `e` is bound to concrete type `SingleOwnerAccount`.
+                        // Thus, we can't return `e` directly.
+                        // Might have a better solution by addind a new variant?
+                        if e.to_string().contains("Class already declared") {
+                            // If the class is already declared, it might be because it was already
+                            // declared in a previous run or an other declarer.
+                            ui.debug(format!("Class already declared by another declarer: {}", e));
+                            continue;
+                        }
 
-                    return Err(MigrationError::DeclareClassError(e.to_string()));
+                        return Err(MigrationError::DeclareClassError(e.to_string()));
+                    }
                 }
             }
+        }
+
+        if n_classes > 0 {
+            ui.result("Classes declared.");
         }
 
         Ok(())
@@ -463,15 +507,13 @@ where
     /// Syncs the resources by declaring the classes and registering/upgrading the resources.
     ///
     /// Returns true if at least one resource has changed, false otherwise.
-    async fn sync_resources(
-        &self,
-        ui: &mut MigrationUi,
-    ) -> Result<bool, MigrationError<A::SignError>> {
-        ui.update_text("Syncing resources...");
+    async fn sync_resources(&self, ui: &SozoUi) -> Result<bool, MigrationError<A::SignError>> {
+        ui.title("Sync resources");
+        let ui = ui.subsection();
 
         let mut invoker = Invoker::new(&self.world.account, self.txn_config);
 
-        // separate calls for external contracts to be able to handle block number
+        // separate calls for contracts to be able to handle block number
         let mut deploy_calls = HashMap::<String, Call>::new();
         let mut deploy_block_numbers = HashMap::<String, u64>::new();
 
@@ -481,6 +523,7 @@ where
         let mut classes: HashMap<Felt, LabeledClass> = HashMap::new();
         let mut not_upgradeable_contract_names = vec![];
         let mut n_resources = 0;
+        let mut resources_to_sync: HashMap<&str, Vec<String>> = HashMap::new();
 
         // Collects the calls and classes to be declared to sync the resources.
         for resource in self.diff.resources.values() {
@@ -496,6 +539,8 @@ where
 
                     if !contract_calls.is_empty() {
                         n_resources += 1;
+
+                        resources_to_sync.entry("Dojo contracts").or_default().push(resource.tag());
                     }
 
                     invoker.extend_calls(contract_calls);
@@ -514,10 +559,20 @@ where
 
                     if let Some(call) = deploy_call {
                         deploy_calls.insert(resource.tag(), call);
+
+                        resources_to_sync
+                            .entry("External contracts deploys")
+                            .or_default()
+                            .push(resource.tag());
                     }
 
                     if let Some(call) = upgrade_call {
                         invoker.add_call(call);
+
+                        resources_to_sync
+                            .entry("External contracts upgrades")
+                            .or_default()
+                            .push(resource.tag());
                     }
 
                     classes.extend(contract_classes);
@@ -528,6 +583,8 @@ where
 
                     if !library_calls.is_empty() {
                         n_resources += 1;
+
+                        resources_to_sync.entry("Libraries").or_default().push(resource.tag());
                     }
 
                     invoker.extend_calls(library_calls);
@@ -538,6 +595,8 @@ where
 
                     if !model_calls.is_empty() {
                         n_resources += 1;
+
+                        resources_to_sync.entry("Dojo models").or_default().push(resource.tag());
                     }
 
                     invoker.extend_calls(model_calls);
@@ -548,6 +607,8 @@ where
 
                     if !event_calls.is_empty() {
                         n_resources += 1;
+
+                        resources_to_sync.entry("Dojo events").or_default().push(resource.tag());
                     }
 
                     invoker.extend_calls(event_calls);
@@ -561,15 +622,20 @@ where
         let has_calls = !invoker.calls.is_empty();
         let mut has_changed = has_classes || has_calls;
 
-        self.declare_classes(ui, classes).await?;
+        self.declare_classes(&ui, classes).await?;
+
+        ui.step(format!("Register {} resources", n_resources));
+
+        display_resources_to_sync(&ui, &resources_to_sync);
 
         if self.do_multicall() {
-            let ui_text = format!("Registering {} resources...", n_resources);
-            ui.update_text_boxed(ui_text);
+            ui.debug("Deploying resources with multicall");
 
             invoker.extend_calls(deploy_calls.values().cloned().collect());
 
             let txs_results = invoker.multicall().await?;
+
+            display_transaction_results(&ui, &txs_results, "Register");
 
             // If some external contracts have been deployed, we need to
             // get the block number of the multicall tx.
@@ -589,10 +655,9 @@ where
                 }
             }
         } else {
-            let ui_text = format!("Registering {} resources (sequentially)...", n_resources);
-            ui.update_text_boxed(ui_text);
+            let txs_results = invoker.invoke_all_sequentially().await?;
 
-            invoker.invoke_all_sequentially().await?;
+            display_transaction_results(&ui, &txs_results, "Register");
 
             for (name, call) in deploy_calls {
                 let tx = invoker.invoke(call).await?;
@@ -603,6 +668,10 @@ where
                     deploy_block_numbers.insert(name, block_number);
                 }
             }
+        }
+
+        if n_resources > 0 {
+            ui.result("Resources registered.");
         }
 
         // Handle external contract registering in a second step as we need block numbers of
@@ -624,27 +693,23 @@ where
         has_changed = has_changed || !invoker.calls.is_empty();
 
         if self.do_multicall() {
-            let ui_text = format!("Registering {} external contracts...", n_external_contracts);
-            ui.update_text_boxed(ui_text);
+            ui.step(format!("Register {} external contracts", n_external_contracts));
             invoker.multicall().await?;
         } else {
-            let ui_text = format!(
-                "Registering {} external contracts (sequentially)...",
-                n_external_contracts
-            );
-            ui.update_text_boxed(ui_text);
+            ui.step(format!("Register {} external contracts (sequentially)", n_external_contracts));
             invoker.invoke_all_sequentially().await?;
         }
 
         if !not_upgradeable_contract_names.is_empty() {
-            let msg = format!(
+            ui.warn_block(format!(
                 "The following external contracts are NOT upgradeable as they don't export an \
                  `upgrade(ClassHash)` function:\n{}",
                 not_upgradeable_contract_names.join("\n")
-            );
-            println!();
-            println!("{}", msg.as_str().bright_yellow());
-            println!();
+            ));
+        }
+
+        if n_external_contracts > 0 {
+            ui.result("External contracts registered.");
         }
 
         Ok(has_changed)
@@ -1099,14 +1164,14 @@ where
     /// Ensures the world is declared and deployed if necessary.
     ///
     /// Returns true if the world has to be deployed/updated, false otherwise.
-    async fn ensure_world(
-        &self,
-        ui: &mut MigrationUi,
-    ) -> Result<bool, MigrationError<A::SignError>> {
+    async fn ensure_world(&self, ui: &SozoUi) -> Result<bool, MigrationError<A::SignError>> {
         match &self.diff.world_info.status {
-            WorldStatus::Synced => return Ok(false),
+            WorldStatus::Synced => {
+                ui.result("World already synced.");
+                return Ok(false);
+            }
             WorldStatus::NotDeployed => {
-                ui.update_text("Deploying the world...");
+                ui.step("Deploy the world");
                 trace!("Deploying the first world.");
 
                 let labeled_class = LabeledClass {
@@ -1121,11 +1186,13 @@ where
                 tx_config.wait = true;
                 tx_config.receipt = true;
 
-                Declarer::declare(labeled_class, &self.world.account, &tx_config).await?;
+                let tx_result =
+                    Declarer::declare(labeled_class, &self.world.account, &tx_config).await?;
+                display_transaction_results(ui, &vec![tx_result], "Declare world");
 
                 let deployer = Deployer::new(&self.world.account, tx_config);
 
-                let res = deployer
+                let (world_address, res) = deployer
                     .deploy_via_udc(
                         self.diff.world_info.class_hash,
                         utils::world_salt(&self.profile_config.world.seed)?,
@@ -1134,8 +1201,10 @@ where
                     )
                     .await?;
 
+                display_transaction_results(ui, &vec![res.clone()], "Deploy world");
+
                 match res {
-                    TransactionResult::HashReceipt(hash, receipt) => {
+                    TransactionResult::HashReceipt(_, receipt) => {
                         let block_msg = match receipt.block {
                             ReceiptBlock::Block { block_number, .. } => block_number.to_string(),
                             ReceiptBlock::PreConfirmed { block_number } => {
@@ -1143,22 +1212,26 @@ where
                             }
                         };
 
-                        ui.stop_and_persist_boxed(
-                            "🌍",
-                            format!(
-                                "World deployed at block {} with txn hash: {:#066x}",
-                                block_msg, hash
-                            ),
-                        );
-
-                        ui.restart("World deployed, continuing...");
+                        ui.result(format!(
+                            "World deployed at block {} and at address {:#066x}",
+                            block_msg, world_address
+                        ));
                     }
-                    _ => unreachable!(),
+                    _ => {
+                        return Err(MigrationError::DeployWorldError(anyhow!(
+                            "The world address provided in your configuration file does not refer \
+                             to a deployed world while the world address computed from the seed \
+                             refers to a deployed world. \n- If you want to upgrade your world, \
+                             please set your world address in the configuration file.\n- If you \
+                             want to deploy a new world, please change your world seed.
+                            "
+                        )));
+                    }
                 }
             }
             WorldStatus::NewVersion => {
                 trace!("Upgrading the world.");
-                ui.update_text("Upgrading the world...");
+                ui.step("Upgrade the world");
 
                 let labeled_class = LabeledClass {
                     label: "world".to_string(),
@@ -1175,6 +1248,8 @@ where
                 );
 
                 invoker.multicall().await?;
+
+                ui.result("World upgraded.");
             }
         };
 
@@ -1195,5 +1270,147 @@ where
         dojo_utils::get_predeployed_accounts(&self.world.account, &self.rpc_url)
             .await
             .unwrap_or_default()
+    }
+}
+
+/// Displays the transaction results in the UI.
+fn display_transaction_results(ui: &SozoUi, txs_results: &Vec<TransactionResult>, action: &str) {
+    for r in txs_results {
+        match r {
+            TransactionResult::Hash(tx_hash) => {
+                ui.debug(format!("{} tx hash: {:?}", action, tx_hash));
+            }
+            TransactionResult::HashReceipt(tx_hash, receipt) => {
+                ui.debug(format!("{} tx hash: {:?} with receipt {:?}", action, tx_hash, receipt));
+            }
+            TransactionResult::Noop => {}
+        }
+    }
+}
+
+/// Displays the resources to sync in the UI.
+fn display_resources_to_sync(ui: &SozoUi, resources_to_sync: &HashMap<&str, Vec<String>>) {
+    if !resources_to_sync.get("Dojo models").unwrap_or(&vec![]).is_empty() {
+        ui.verbose(ui.indent(1, "Dojo models:"));
+
+        let mut models = resources_to_sync.get("Dojo models").unwrap_or(&vec![]).clone();
+        models.sort();
+
+        for model in models {
+            ui.verbose(ui.indent(2, model.to_string()));
+        }
+    }
+
+    if !resources_to_sync.get("Dojo events").unwrap_or(&vec![]).is_empty() {
+        ui.new_line();
+
+        ui.verbose(ui.indent(1, "Dojo events:"));
+
+        let mut events = resources_to_sync.get("Dojo events").unwrap_or(&vec![]).clone();
+        events.sort();
+
+        for event in events {
+            ui.verbose(ui.indent(2, event.to_string()));
+        }
+    }
+
+    if !resources_to_sync.get("Dojo contracts").unwrap_or(&vec![]).is_empty() {
+        ui.new_line();
+
+        ui.verbose(ui.indent(1, "Dojo contracts:"));
+
+        let mut contracts = resources_to_sync.get("Dojo contracts").unwrap_or(&vec![]).clone();
+        contracts.sort();
+
+        for contract in contracts {
+            ui.verbose(ui.indent(2, contract.to_string()));
+        }
+    }
+
+    if !resources_to_sync.get("Libraries").unwrap_or(&vec![]).is_empty() {
+        ui.new_line();
+
+        ui.verbose(ui.indent(1, "Libraries:"));
+
+        let mut libraries = resources_to_sync.get("Libraries").unwrap_or(&vec![]).clone();
+        libraries.sort();
+
+        for library in libraries {
+            ui.verbose(ui.indent(2, library.to_string()));
+        }
+    }
+
+    if !resources_to_sync.get("External contracts deploys").unwrap_or(&vec![]).is_empty() {
+        ui.new_line();
+
+        ui.verbose(ui.indent(1, "External contracts deploys:"));
+
+        let mut external_contracts =
+            resources_to_sync.get("External contracts deploys").unwrap_or(&vec![]).clone();
+        external_contracts.sort();
+
+        for external_contract in external_contracts {
+            ui.verbose(ui.indent(2, external_contract.to_string()));
+        }
+    }
+
+    if !resources_to_sync.get("External contracts upgrades").unwrap_or(&vec![]).is_empty() {
+        ui.new_line();
+
+        ui.verbose(ui.indent(1, "External contracts upgrades:"));
+
+        let mut external_contracts =
+            resources_to_sync.get("External contracts upgrades").unwrap_or(&vec![]).clone();
+        external_contracts.sort();
+
+        for external_contract in external_contracts {
+            ui.verbose(ui.indent(2, external_contract.to_string()));
+        }
+    }
+}
+
+/// Displays the classes to declare in the UI.
+fn display_classes(ui: &SozoUi, classes: &HashMap<Felt, LabeledClass>) {
+    let ui = ui.subsection();
+
+    let mut felt_to_label = vec![];
+
+    for (felt, labeled_class) in classes {
+        felt_to_label.push((*felt, labeled_class.label.clone()));
+    }
+
+    felt_to_label.sort_by_key(|(_, label)| label.clone());
+
+    for (felt, label) in felt_to_label {
+        ui.verbose(format!("{}: {:#066x}", label, felt));
+    }
+}
+
+/// Displays the permissions to sync in the UI.
+fn display_permissions(
+    ui: &SozoUi,
+    writers_perms: &HashMap<String, Vec<String>>,
+    owners_perms: &HashMap<String, Vec<String>>,
+) {
+    ui.verbose(ui.indent(1, "Writers permissions:"));
+
+    let mut writers_keys = writers_perms.keys().cloned().collect::<Vec<String>>();
+    writers_keys.sort();
+
+    for grantee in writers_keys {
+        let resources = writers_perms.get(&grantee).unwrap().clone();
+        ui.verbose(ui.indent(2, format!("{} writer of {}", grantee, resources.join(", "))));
+    }
+
+    ui.new_line();
+
+    ui.verbose(ui.indent(1, "Owners permissions:"));
+
+    let mut owners_keys = owners_perms.keys().cloned().collect::<Vec<String>>();
+    owners_keys.sort();
+
+    for grantee in owners_keys {
+        let resources = owners_perms.get(&grantee).unwrap().clone();
+        ui.verbose(ui.indent(2, format!("{} owner of {}", grantee, resources.join(", "))));
     }
 }

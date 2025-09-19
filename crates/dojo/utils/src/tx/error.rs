@@ -1,6 +1,6 @@
 use starknet::accounts::AccountError;
 use starknet::core::types::contract::ComputeClassHashError;
-use starknet::core::types::{StarknetError, TransactionExecutionErrorData};
+use starknet::core::types::{ContractExecutionError, StarknetError, TransactionExecutionErrorData};
 use starknet::providers::ProviderError;
 use thiserror::Error;
 
@@ -15,7 +15,7 @@ where
     SigningError(S),
     #[error(transparent)]
     Provider(ProviderError),
-    #[error("Transaction execution error: {0:?}")]
+    #[error("{}", display_tx_execution_error(.0))]
     TransactionExecution(TransactionExecutionErrorData),
     #[error("{0}")]
     TransactionValidation(String),
@@ -54,6 +54,27 @@ where
                 TransactionError::TransactionValidation(ve)
             }
             _ => TransactionError::Provider(value),
+        }
+    }
+}
+
+fn display_tx_execution_error(error: &TransactionExecutionErrorData) -> String {
+    format!(
+        "Transaction error (index: {})\n{}",
+        error.transaction_index,
+        display_tx_execution_detail(&error.execution_error)
+    )
+}
+
+fn display_tx_execution_detail(detail: &ContractExecutionError) -> String {
+    match detail {
+        ContractExecutionError::Message(msg) => format!("Message: {}", msg.clone()),
+        ContractExecutionError::Nested(nested) => {
+            format!(
+                "Error in contract at {}\n{}",
+                nested.contract_address,
+                display_tx_execution_detail(&nested.error)
+            )
         }
     }
 }

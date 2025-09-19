@@ -29,3 +29,16 @@ pub enum ResourceType {
     ExternalContract,
     Library,
 }
+
+impl std::fmt::Display for ResourceType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ResourceType::Namespace => write!(f, "Namespace"),
+            ResourceType::Contract => write!(f, "Contract"),
+            ResourceType::Model => write!(f, "Model"),
+            ResourceType::Event => write!(f, "Event"),
+            ResourceType::ExternalContract => write!(f, "ExternalContract"),
+            ResourceType::Library => write!(f, "Library"),
+        }
+    }
+}

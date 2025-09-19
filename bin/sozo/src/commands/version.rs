@@ -7,6 +7,7 @@ use scarb_metadata::Metadata;
 #[derive(Debug, Args)]
 pub struct VersionArgs {}
 
+// TODO RBA: this command should be removed as we already have the --version flag.
 impl VersionArgs {
     pub fn run(&self, scarb_metadata: &Metadata) -> Result<()> {
         let Some(app) = &scarb_metadata.app_exe else {

@@ -129,4 +129,14 @@ impl ResourceDiff {
             ResourceDiff::Synced(local, _) => local.abi(),
         }
     }
+
+    pub fn status(&self) -> String {
+        let res = match self {
+            ResourceDiff::Created(_) => "Created",
+            ResourceDiff::Updated(_, _) => "Updated",
+            ResourceDiff::Synced(_, _) => "Synced",
+        };
+
+        res.to_string()
+    }
 }

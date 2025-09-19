@@ -16,5 +16,6 @@ scarb-interop.workspace = true
 scarb-metadata.workspace = true
 scarb-metadata-ext.workspace = true
 sozo-ops = { workspace = true, features = [ "test-utils" ] }
+sozo-ui.workspace = true
 starknet.workspace = true
 tokio.workspace = true
