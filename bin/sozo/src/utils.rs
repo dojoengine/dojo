@@ -3,22 +3,24 @@ use std::io::{self, Write};
 use std::sync::Arc;
 
 use anyhow::{anyhow, Context, Result};
-use colored::*;
 use dojo_utils::provider as provider_utils;
 use dojo_world::config::ProfileConfig;
 use dojo_world::contracts::ContractInfo;
 use dojo_world::diff::WorldDiff;
 use dojo_world::local::WorldLocal;
+use dojo_world::ResourceType;
 use scarb_interop::Scarb;
 use scarb_metadata::Metadata;
 use scarb_metadata_ext::MetadataDojoExt;
 use semver::{Version, VersionReq};
-use sozo_ops::migration_ui::MigrationUi;
+use sozo_ui::SozoUi;
 use starknet::accounts::{Account, ConnectedAccount};
 use starknet::core::types::Felt;
 use starknet::core::utils as snutils;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
+use tabled::settings::Style;
+use tabled::{Table, Tabled};
 use tracing::trace;
 
 use crate::commands::options::account::{AccountOptions, SozoAccount};
@@ -48,11 +50,24 @@ Sozo supports some prefixes that you can use to automatically parse some types. 
     - u256farr: A fixed-size array of u256.
     - no prefix: A cairo felt or any type that fit into one felt.";
 
+#[derive(Tabled)]
+struct ResourceDetails {
+    #[tabled(rename = "Resource Type")]
+    resource_type: ResourceType,
+    #[tabled(rename = "Tag")]
+    tag: String,
+    #[tabled(rename = "Selector")]
+    selector: String,
+    #[tabled(rename = "Status")]
+    status: String,
+}
+
 // Computes the world address based on the provided options.
 pub fn get_world_address(
     profile_config: &ProfileConfig,
     world: &WorldOptions,
     world_local: &WorldLocal,
+    ui: &SozoUi,
 ) -> Result<Felt> {
     let env = profile_config.env.as_ref();
 
@@ -60,18 +75,15 @@ pub fn get_world_address(
 
     if let Some(wa) = world.address(env)? {
         if wa != deterministic_world_address && !world.guest {
-            println!(
-                "{}",
-                format!(
-                    "The world address computed from the seed is different from the address \
-                     provided in config:\n\ndeterministic address: {:#x}\nconfig address: \
-                     {:#x}\n\nThe address in the config file is preferred, consider commenting it \
-                     out from the config file if you attempt to migrate the world with a new \
-                     seed.\n\nIf you are upgrading the world, you can ignore this message.",
-                    deterministic_world_address, wa
-                )
-                .yellow()
-            );
+            ui.warn_block(format!(
+                "warning: The world address computed from the seed is different from the \
+                     address provided in config:\n  - deterministic address: {:#066x}\n  - config \
+                     address       : {:#066x}\n\nThe address in the config file is preferred, \
+                     consider commenting it out from the config file if you attempt to migrate \
+                     the world with a new seed.\nIf you are upgrading the world, please set your \
+                     current world address in your config file.",
+                deterministic_world_address, wa
+            ));
         }
 
         Ok(wa)
@@ -87,13 +99,14 @@ pub async fn get_world_diff_and_provider(
     starknet: StarknetOptions,
     world: WorldOptions,
     scarb_metadata: &Metadata,
+    ui: &SozoUi,
 ) -> Result<(WorldDiff, JsonRpcClient<HttpTransport>, String)> {
     let world_local = scarb_metadata.load_dojo_world_local()?;
     let profile_config = scarb_metadata.load_dojo_profile_config()?;
 
     let env = profile_config.env.as_ref();
 
-    let world_address = get_world_address(&profile_config, &world, &world_local)?;
+    let world_address = get_world_address(&profile_config, &world, &world_local, ui)?;
 
     let (provider, rpc_url) = starknet.provider(env)?;
     let provider = Arc::new(provider);
@@ -148,32 +161,272 @@ pub async fn get_world_diff_and_account(
     starknet: StarknetOptions,
     world: WorldOptions,
     scarb_metadata: &Metadata,
-    ui: &mut Option<&mut MigrationUi>,
+    ui: &SozoUi,
 ) -> Result<(WorldDiff, SozoAccount<JsonRpcClient<HttpTransport>>, String)> {
+    ui.step("Compute world diff");
+    let step_ui = ui.subsection();
+
     let profile_config = scarb_metadata.load_dojo_profile_config()?;
     let env = profile_config.env.as_ref();
 
     let (world_diff, provider, rpc_url) =
-        get_world_diff_and_provider(starknet.clone(), world, scarb_metadata).await?;
+        get_world_diff_and_provider(starknet.clone(), world, scarb_metadata, &step_ui).await?;
 
-    // Ensures we don't interfere with the spinner if a password must be prompted.
-    if let Some(ui) = ui {
-        ui.stop();
-    }
+    show_world_details(&profile_config, &world_diff, &step_ui);
+
+    ui.result("World diff computed.");
 
     let contracts = (&world_diff).into();
 
     let account = { account.account(provider, env, &starknet, &contracts).await? };
 
-    if let Some(ui) = ui {
-        ui.restart("Verifying account...");
-    }
+    ui.step("Verify account");
 
     if !dojo_utils::is_deployed(account.address(), &account.provider()).await? {
-        return Err(anyhow!("Account with address {:#x} doesn't exist.", account.address()));
+        return Err(anyhow!("Account with address {:#066x} doesn't exist.", account.address()));
     }
 
+    ui.result("Account verified.");
+
     Ok((world_diff, account, rpc_url))
+}
+
+fn show_profile_details(profile_config: &ProfileConfig, ui: &SozoUi) {
+    ui.verbose("local profile");
+    let local_ui = ui.subsection();
+
+    local_ui.verbose(format!(
+        "world: (seed: {}, name: {})",
+        profile_config.world.seed, profile_config.world.name
+    ));
+
+    local_ui.verbose(format!("default namespace: {}", profile_config.namespace.default));
+
+    if let Some(mappings) = profile_config.namespace.mappings.as_ref() {
+        local_ui.debug("namespace mappings:");
+        for (namespace, names) in mappings {
+            local_ui.debug(local_ui.indent(1, format!("{}: {}", namespace, names.join(", "))));
+        }
+    }
+
+    if let Some(models) = profile_config.models.as_ref() {
+        local_ui.verbose(format!("models: {}", models.len()));
+        for model in models {
+            local_ui.debug(local_ui.indent(1, model.tag.clone()));
+        }
+    }
+
+    if let Some(contracts) = profile_config.contracts.as_ref() {
+        local_ui.verbose(format!("contracts: {}", contracts.len()));
+        for contract in contracts {
+            local_ui.debug(local_ui.indent(1, contract.tag.clone()));
+        }
+    }
+
+    if let Some(events) = profile_config.events.as_ref() {
+        local_ui.verbose(format!("events: {}", events.len()));
+        for event in events {
+            local_ui.debug(local_ui.indent(1, event.tag.clone()));
+        }
+    }
+
+    if let Some(libraries) = profile_config.libraries.as_ref() {
+        local_ui.verbose(format!("libraries: {}", libraries.len()));
+        for library in libraries {
+            local_ui.debug(local_ui.indent(1, library.tag.clone()));
+        }
+    }
+
+    if let Some(external_contracts) = profile_config.external_contracts.as_ref() {
+        local_ui.verbose(format!("external contracts: {}", external_contracts.len()));
+        for external_contract in external_contracts {
+            let instance_name = external_contract
+                .instance_name
+                .as_ref()
+                .map(|x| format!(" (instance name: {})", x))
+                .unwrap_or(String::new());
+            local_ui.debug(local_ui.indent(
+                1,
+                format!("contract_name: {}{}", external_contract.contract_name, instance_name),
+            ));
+        }
+    }
+
+    if let Some(migration) = profile_config.migration.as_ref() {
+        local_ui.debug("migration config:");
+        local_ui.debug(local_ui.indent(
+            1,
+            format!(
+                "skip_contracts: {}",
+                migration.skip_contracts.as_ref().unwrap_or(&Vec::new()).join(", ")
+            ),
+        ));
+        local_ui.debug(local_ui.indent(
+            1,
+            format!("disable_multicall: {}", migration.disable_multicall.unwrap_or(false)),
+        ));
+        local_ui.debug(local_ui.indent(
+            1,
+            format!(
+                "order_inits: {}",
+                migration.order_inits.as_ref().unwrap_or(&Vec::new()).join(", ")
+            ),
+        ));
+    }
+
+    if let Some(writers) = profile_config.writers.as_ref() {
+        local_ui.debug("writers:");
+        for (name, tags) in writers {
+            local_ui.debug(local_ui.indent(
+                1,
+                format!(
+                    "{}: {}",
+                    name,
+                    tags.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(", ")
+                ),
+            ));
+        }
+    }
+
+    if let Some(owners) = profile_config.owners.as_ref() {
+        local_ui.debug("owners:");
+        for (name, tags) in owners {
+            local_ui.debug(local_ui.indent(
+                1,
+                format!(
+                    "{}: {}",
+                    name,
+                    tags.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(", ")
+                ),
+            ));
+        }
+    }
+
+    if let Some(init_call_args) = profile_config.init_call_args.as_ref() {
+        local_ui.debug("init call args:");
+        for (name, tags) in init_call_args {
+            local_ui.debug(local_ui.indent(
+                1,
+                format!(
+                    "{}: {}",
+                    name,
+                    tags.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(", ")
+                ),
+            ));
+        }
+    }
+
+    if let Some(lib_versions) = profile_config.lib_versions.as_ref() {
+        local_ui.debug("lib versions:");
+        for (name, version) in lib_versions {
+            local_ui.debug(local_ui.indent(1, format!("{}: {}", name, version)));
+        }
+    }
+
+    if let Some(env) = profile_config.env.as_ref() {
+        local_ui.debug("environment:");
+        local_ui.debug(local_ui.indent(
+            1,
+            format!(
+                "account_address: {}",
+                env.account_address.as_ref().unwrap_or(&"Not set".to_string())
+            ),
+        ));
+        local_ui.debug(local_ui.indent(
+            1,
+            format!(
+                "world_address: {}",
+                env.world_address.as_ref().unwrap_or(&"Not set".to_string())
+            ),
+        ));
+        local_ui.debug(local_ui.indent(
+            1,
+            format!(
+                "world_block: {}",
+                env.world_block.as_ref().map(|x| x.to_string()).unwrap_or("None".to_string())
+            ),
+        ));
+        local_ui.debug(local_ui.indent(
+            1,
+            format!(
+                "max_block_range: {}",
+                env.max_block_range.as_ref().map(|x| x.to_string()).unwrap_or("None".to_string())
+            ),
+        ));
+        if let Some(http_headers) = env.http_headers.as_ref() {
+            local_ui.debug(local_ui.indent(1, "http_headers:"));
+            for header in http_headers {
+                local_ui.debug(
+                    local_ui.indent(2, format!("name: {}, value: {}", header.name, header.value)),
+                );
+            }
+        } else {
+            local_ui.debug(local_ui.indent(1, "http_headers: None"));
+        }
+
+        if let Some(ipfs_config) = env.ipfs_config.as_ref() {
+            local_ui.debug(local_ui.indent(1, "ipfs_config:"));
+            local_ui.debug(local_ui.indent(2, format!("username: {}", ipfs_config.username)));
+            local_ui.debug(local_ui.indent(2, format!("url: {}", ipfs_config.url)));
+        } else {
+            local_ui.debug(local_ui.indent(1, "ipfs_config: None"));
+        }
+    }
+}
+
+fn show_world_diff_details(world_diff: &WorldDiff, ui: &SozoUi) {
+    ui.verbose("world diff");
+    let local_ui = ui.subsection();
+
+    local_ui.verbose(format!("world status: {}", world_diff.world_info.status));
+    local_ui.verbose(format!("world address: {:#066x}", world_diff.world_info.address));
+    local_ui.debug(format!("world class hash: {:#066x}", world_diff.world_info.class_hash));
+    local_ui
+        .debug(format!("world casm class hash: {:#066x}", world_diff.world_info.casm_class_hash));
+
+    local_ui.debug("world entrypoints:");
+    for entrypoint in &world_diff.world_info.entrypoints {
+        local_ui.debug(local_ui.indent(1, entrypoint.clone()));
+    }
+
+    local_ui.verbose(format!("namespaces: {}", world_diff.namespaces.len()));
+    for namespace in &world_diff.namespaces {
+        local_ui.debug(local_ui.indent(1, format!("{:#066x}", namespace)));
+    }
+
+    local_ui.verbose(format!("resources: {}", world_diff.resources.len()));
+    let resources = world_diff
+        .resources
+        .iter()
+        .map(|(selector, resource)| ResourceDetails {
+            resource_type: resource.resource_type(),
+            tag: resource.tag(),
+            status: resource.status(),
+            selector: format!("{:#066x}", selector),
+        })
+        .collect::<Vec<_>>();
+    local_ui.debug_block(format!("{}", Table::new(resources).with(Style::psql())));
+
+    local_ui.verbose(format!("external writers: {}", world_diff.external_writers.len()));
+    for (selector, writers) in &world_diff.external_writers {
+        local_ui.debug(local_ui.indent(1, format!("{:#066x}:", selector)));
+        for writer in writers {
+            local_ui.debug(local_ui.indent(2, format!("{:#066x}", writer)));
+        }
+    }
+
+    local_ui.verbose(format!("external owners: {}", world_diff.external_owners.len()));
+    for (selector, owners) in &world_diff.external_owners {
+        local_ui.debug(local_ui.indent(1, format!("{:#066x}:", selector)));
+        for owner in owners {
+            local_ui.debug(local_ui.indent(2, format!("{:#066x}", owner)));
+        }
+    }
+}
+
+fn show_world_details(profile_config: &ProfileConfig, world_diff: &WorldDiff, ui: &SozoUi) {
+    show_profile_details(profile_config, ui);
+    show_world_diff_details(world_diff, ui);
 }
 
 /// Checks if the provided version string is compatible with the expected version string using
@@ -229,12 +482,13 @@ pub async fn contracts_from_manifest_or_diff(
     world: WorldOptions,
     scarb_metadata: &Metadata,
     force_diff: bool,
+    ui: &SozoUi,
 ) -> Result<HashMap<String, ContractInfo>> {
     let local_manifest = scarb_metadata.read_dojo_manifest_profile()?;
 
     let contracts: HashMap<String, ContractInfo> = if force_diff || local_manifest.is_none() {
         let (world_diff, _, _) =
-            get_world_diff_and_account(account, starknet, world, scarb_metadata, &mut None).await?;
+            get_world_diff_and_account(account, starknet, world, scarb_metadata, ui).await?;
         (&world_diff).into()
     } else {
         let local_manifest = local_manifest.unwrap();

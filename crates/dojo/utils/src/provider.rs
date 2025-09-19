@@ -17,10 +17,8 @@ pub async fn health_check_provider<P: Provider + Sync + std::fmt::Debug + 'stati
             );
             Ok(())
         }
-        Err(_) => {
-            let error_info =
-                format!("Unhealthy provider {:?}, please check your configuration.", provider);
-            Err(anyhow::anyhow!(error_info))
-        }
+        Err(_) => Err(anyhow::anyhow!(
+            "Unhealthy RPC provider. Please check your configuration and that the node is running."
+        )),
     }
 }

@@ -19,6 +19,7 @@ members = [
 	"crates/sozo/scarb_interop",
 	"crates/sozo/scarb_metadata_ext",
 	"crates/sozo/signers",
+	"crates/sozo/ui",
 	"crates/sozo/walnut",
 	"examples/spawn-and-move",
 	"scripts/verify_db_balances",
@@ -80,6 +81,7 @@ scarb-metadata-ext = { path = "crates/sozo/scarb_metadata_ext" }
 sozo-mcp = { path = "crates/sozo/mcp" }
 sozo-ops = { path = "crates/sozo/ops" }
 sozo-signers = { path = "crates/sozo/signers" }
+sozo-ui = { path = "crates/sozo/ui" }
 sozo-walnut = { path = "crates/sozo/walnut" }
 
 # macros
@@ -97,7 +99,6 @@ auto_impl = "1.2.0"
 base64 = "0.21.2"
 bigdecimal = "0.4.1"
 bytes = "1.6"
-cairo-lang-macro = "0.2.0"
 cairo-lang-compiler = "2.12.2"
 cairo-lang-debug = "2.12.2"
 cairo-lang-defs = "2.12.2"
@@ -105,6 +106,7 @@ cairo-lang-diagnostics = "2.12.2"
 cairo-lang-filesystem = "2.12.2"
 cairo-lang-formatter = "2.12.2"
 cairo-lang-lowering = "2.12.2"
+cairo-lang-macro = "0.2.0"
 cairo-lang-parser = "2.12.2"
 cairo-lang-plugins = { version = "2.12.2", features = [ "testing" ] }
 cairo-lang-primitive-token = "1"

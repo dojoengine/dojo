@@ -1,7 +1,7 @@
 use anyhow::Result;
 use clap::{Args, Subcommand};
 use scarb_metadata::Metadata;
-use scarb_ui::Ui;
+use sozo_ui::SozoUi;
 
 use crate::WalnutDebugger;
 
@@ -23,7 +23,7 @@ pub enum WalnutVerifyCommand {
 pub struct WalnutVerifyOptions {}
 
 impl WalnutArgs {
-    pub async fn run(self, scarb_metadata: &Metadata, ui: &Ui) -> Result<()> {
+    pub async fn run(self, scarb_metadata: &Metadata, ui: &SozoUi) -> Result<()> {
         match self.command {
             WalnutVerifyCommand::Verify(_options) => {
                 WalnutDebugger::verify(scarb_metadata, ui).await?;

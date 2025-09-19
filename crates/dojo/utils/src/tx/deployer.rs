@@ -69,13 +69,13 @@ where
         salt: Felt,
         constructor_calldata: &[Felt],
         deployer_address: Felt,
-    ) -> Result<TransactionResult, TransactionError<A::SignError>> {
+    ) -> Result<(Felt, TransactionResult), TransactionError<A::SignError>> {
         let (contract_address, call) = match self
             .deploy_via_udc_getcall(class_hash, salt, constructor_calldata, deployer_address)
             .await?
         {
             Some(res) => res,
-            None => return Ok(TransactionResult::Noop),
+            None => return Ok((Felt::ZERO, TransactionResult::Noop)),
         };
 
         let InvokeTransactionResult { transaction_hash } =
@@ -92,11 +92,14 @@ where
                 TransactionWaiter::new(transaction_hash, &self.account.provider()).await?;
 
             if self.txn_config.receipt {
-                return Ok(TransactionResult::HashReceipt(transaction_hash, Box::new(receipt)));
+                return Ok((
+                    contract_address,
+                    TransactionResult::HashReceipt(transaction_hash, Box::new(receipt)),
+                ));
             }
         }
 
-        Ok(TransactionResult::Hash(transaction_hash))
+        Ok((contract_address, TransactionResult::Hash(transaction_hash)))
     }
 }
 

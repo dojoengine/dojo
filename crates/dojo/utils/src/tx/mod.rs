@@ -59,7 +59,7 @@ pub enum TxnAction {
     Simulate,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum TransactionResult {
     /// In some occasions, the transaction is not sent and it's not an error.
     /// Typically for the deployer/declarer/invoker that have internal logic to check if the

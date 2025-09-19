@@ -25,17 +25,18 @@ resolve-path = "0.1.0"
 scarb-interop.workspace = true
 scarb-metadata.workspace = true
 scarb-metadata-ext.workspace = true
-scarb-ui.workspace = true
 semver.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 smol_str.workspace = true
 sozo-mcp.workspace = true
 sozo-ops.workspace = true
+sozo-ui.workspace = true
 sozo-walnut = { workspace = true, optional = true }
 starknet.workspace = true
 starknet-crypto.workspace = true
 tabled = { version = "0.16.0", features = [ "ansi" ] }
+terminal-colorsaurus = "1.0.0"
 thiserror.workspace = true
 tokio.workspace = true
 toml.workspace = true

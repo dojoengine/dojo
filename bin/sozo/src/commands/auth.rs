@@ -12,7 +12,7 @@ use dojo_world::contracts::{ContractInfo, WorldContract};
 use dojo_world::diff::{DiffPermissions, WorldDiff};
 use scarb_metadata::Metadata;
 use scarb_metadata_ext::MetadataDojoExt;
-use sozo_ops::migration_ui::MigrationUi;
+use sozo_ui::SozoUi;
 use starknet::core::types::Felt;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
@@ -138,7 +138,7 @@ Some examples:
 }
 
 impl AuthArgs {
-    pub async fn run(self, scarb_metadata: &Metadata) -> Result<()> {
+    pub async fn run(self, scarb_metadata: &Metadata, ui: &SozoUi) -> Result<()> {
         trace!(args = ?self);
 
         let profile_config = scarb_metadata.load_dojo_profile_config()?;
@@ -151,6 +151,7 @@ impl AuthArgs {
                     common.world.clone(),
                     scarb_metadata,
                     false,
+                    ui,
                 )
                 .await?;
 
@@ -158,11 +159,11 @@ impl AuthArgs {
 
                 match kind {
                     AuthKind::Writer { pairs } => {
-                        update_writers(&contracts, &common, &profile_config, pairs, do_grant)
+                        update_writers(&contracts, &common, &profile_config, pairs, do_grant, ui)
                             .await?;
                     }
                     AuthKind::Owner { pairs } => {
-                        update_owners(&contracts, &common, &profile_config, pairs, do_grant)
+                        update_owners(&contracts, &common, &profile_config, pairs, do_grant, ui)
                             .await?;
                     }
                 }
@@ -174,6 +175,7 @@ impl AuthArgs {
                     common.world.clone(),
                     scarb_metadata,
                     false,
+                    ui,
                 )
                 .await?;
 
@@ -181,17 +183,18 @@ impl AuthArgs {
 
                 match kind {
                     AuthKind::Writer { pairs } => {
-                        update_writers(&contracts, &common, &profile_config, pairs, do_grant)
+                        update_writers(&contracts, &common, &profile_config, pairs, do_grant, ui)
                             .await?;
                     }
                     AuthKind::Owner { pairs } => {
-                        update_owners(&contracts, &common, &profile_config, pairs, do_grant)
+                        update_owners(&contracts, &common, &profile_config, pairs, do_grant, ui)
                             .await?;
                     }
                 }
             }
             AuthCommand::List { resource, show_address, starknet, world } => {
-                list_permissions(resource, show_address, starknet, world, scarb_metadata).await?;
+                list_permissions(resource, show_address, starknet, world, scarb_metadata, ui)
+                    .await?;
             }
             AuthCommand::Clone { revoke_from, common, from, to } => {
                 if from == to {
@@ -201,7 +204,7 @@ impl AuthArgs {
                     );
                 }
 
-                clone_permissions(common, scarb_metadata, revoke_from, from, to).await?;
+                clone_permissions(common, scarb_metadata, revoke_from, from, to, ui).await?;
             }
         };
 
@@ -216,18 +219,16 @@ async fn clone_permissions(
     revoke_from: bool,
     from_tag_or_address: String,
     to_tag_or_address: String,
+    ui: &SozoUi,
 ) -> Result<()> {
-    let mut migration_ui = MigrationUi::new_with_frames(
-        "Gathering permissions from the world...",
-        vec!["🌍", "🔍", "📜"],
-    );
+    ui.title("Gather permissions from the world");
 
     let (world_diff, account, _) = utils::get_world_diff_and_account(
         options.account,
         options.starknet,
         options.world,
         scarb_metadata,
-        &mut Some(&mut migration_ui),
+        ui,
     )
     .await?;
 
@@ -280,13 +281,9 @@ async fn clone_permissions(
         && external_writer_of.is_empty()
         && external_owner_of.is_empty()
     {
-        migration_ui.stop();
-
-        println!("No permissions to clone.");
+        ui.print("No permissions to clone.");
         return Ok(());
     }
-
-    migration_ui.stop();
 
     let mut writers_resource_selectors = writer_of
         .iter()
@@ -332,14 +329,15 @@ async fn clone_permissions(
         format!("\n    owners: {}", owners_of_tags)
     };
 
-    println!(
+    ui.print(format!(
         "Confirm the following permissions to be cloned from {} to {}\n{}{}",
         from_tag_or_address.bright_blue(),
         to_tag_or_address.bright_blue(),
         writers_txt.bright_green(),
         owners_txt.bright_yellow(),
-    );
+    ));
 
+    // TODO RBA: move to SozoUi
     let confirm = utils::prompt_confirm("\nContinue?")?;
     if !confirm {
         return Ok(());
@@ -357,10 +355,10 @@ async fn clone_permissions(
     }
 
     if revoke_from {
-        println!(
+        ui.print(format!(
             "{}",
             format!("\n!Permissions from {} will be revoked!", from_tag_or_address).bright_red()
-        );
+        ));
         if !utils::prompt_confirm("\nContinue?")? {
             return Ok(());
         }
@@ -376,7 +374,7 @@ async fn clone_permissions(
 
     let txs_results = invoker.multicall().await?;
     for r in &txs_results {
-        println!("{}", r);
+        ui.print(format!("{}", r));
     }
 
     Ok(())
@@ -401,20 +399,17 @@ async fn list_permissions(
     starknet: StarknetOptions,
     world: WorldOptions,
     scarb_metadata: &Metadata,
+    ui: &SozoUi,
 ) -> Result<()> {
-    let mut migration_ui = MigrationUi::new_with_frames(
-        "Gathering permissions from the world...",
-        vec!["🌍", "🔍", "📜"],
-    );
+    ui.title("Gather permissions from the world");
+    let permissions_ui = ui.subsection();
 
     let (world_diff, _, _) =
-        utils::get_world_diff_and_provider(starknet, world, scarb_metadata).await?;
+        utils::get_world_diff_and_provider(starknet, world, scarb_metadata, ui).await?;
 
     // Sort resources by tag for deterministic output.
     let mut resources = world_diff.resources.values().collect::<Vec<_>>();
     resources.sort_by_key(|r| r.tag().clone());
-
-    migration_ui.stop();
 
     let mut world_writers = world_diff
         .external_writers
@@ -432,22 +427,23 @@ async fn list_permissions(
     world_writers.sort();
     world_owners.sort();
 
-    println!("{}", "World".bright_red());
+    ui.new_line();
+    ui.print(format!("{}", "World".bright_blue()));
     if !world_writers.is_empty() {
-        println!(
-            "writers: {}",
-            world_writers.iter().map(|w| format!("{:#066x}", w)).collect::<Vec<_>>().join(", ")
-        );
+        permissions_ui.print("writers: ");
+        for writer in world_writers.iter() {
+            permissions_ui.print(permissions_ui.indent(1, format!("{:#066x}", writer)));
+        }
     }
 
     if !world_owners.is_empty() {
-        println!(
-            "owners: {}",
-            world_owners.iter().map(|o| format!("{:#066x}", o)).collect::<Vec<_>>().join(", ")
-        );
+        permissions_ui.print("owners: ");
+        for owner in world_owners.iter() {
+            permissions_ui.print(permissions_ui.indent(1, format!("{:#066x}", owner)));
+        }
     }
 
-    println!();
+    ui.new_line();
 
     if let Some(resource) = resource {
         let selector = dojo_types::naming::compute_selector_from_tag_or_name(&resource);
@@ -459,7 +455,7 @@ async fn list_permissions(
     }
 
     if resources.is_empty() {
-        println!("No resource found.");
+        ui.print("No resource found.");
         return Ok(());
     }
 
@@ -476,33 +472,35 @@ async fn list_permissions(
 
         has_printed_at_least_one = true;
 
-        println!("{}", resource.tag().bright_blue());
+        ui.print(format!("{}", resource.tag().bright_blue()));
 
         if !writers.is_empty() {
-            println!("writers: ");
-            print_diff_permissions(&writers, show_address);
+            permissions_ui.print("writers: ");
+            print_diff_permissions(&writers, show_address, &permissions_ui);
         }
 
         if !owners.is_empty() {
-            println!("owners: ");
-            print_diff_permissions(&owners, show_address);
+            permissions_ui.print("owners: ");
+            print_diff_permissions(&owners, show_address, &permissions_ui);
         }
 
-        println!();
+        ui.new_line();
     }
 
     if resources.len() == 1 && !has_printed_at_least_one {
-        println!("No permission found.");
+        ui.print("No permission found.");
     }
 
     Ok(())
 }
 
 /// Pretty prints the permissions of a resource.
-fn print_diff_permissions(diff: &DiffPermissions, show_address: bool) {
+fn print_diff_permissions(diff: &DiffPermissions, show_address: bool, ui: &SozoUi) {
     if !diff.only_local().is_empty() {
-        println!(
-            "    local: {}",
+        ui.print(ui.indent(
+            1,
+            format!(
+            "local: {}",
             diff.only_local()
                 .iter()
                 .map(|w| format!(
@@ -516,12 +514,15 @@ fn print_diff_permissions(diff: &DiffPermissions, show_address: bool) {
                 ))
                 .collect::<Vec<_>>()
                 .join(", ")
-        );
+        ),
+        ));
     }
 
     if !diff.only_remote().is_empty() {
-        println!(
-            "    remote: {}",
+        ui.print(ui.indent(
+            1,
+            format!(
+            "remote: {}",
             diff.only_remote()
                 .iter()
                 .map(|w| format!(
@@ -535,12 +536,15 @@ fn print_diff_permissions(diff: &DiffPermissions, show_address: bool) {
                 ))
                 .collect::<Vec<_>>()
                 .join(", ")
-        );
+        ),
+        ));
     }
 
     if !diff.synced().is_empty() {
-        println!(
-            "    synced: {}",
+        ui.print(ui.indent(
+            1,
+            format!(
+            "synced: {}",
             diff.synced()
                 .iter()
                 .map(|w| format!(
@@ -554,7 +558,8 @@ fn print_diff_permissions(diff: &DiffPermissions, show_address: bool) {
                 ))
                 .collect::<Vec<_>>()
                 .join(", ")
-        );
+        ),
+        ));
     }
 }
 
@@ -565,6 +570,7 @@ async fn update_owners(
     profile_config: &ProfileConfig,
     pairs: Vec<PermissionPair>,
     do_grant: bool,
+    ui: &SozoUi,
 ) -> Result<()> {
     let selectors_addresses = pairs
         .iter()
@@ -596,7 +602,7 @@ async fn update_owners(
 
     let txs_results = invoker.multicall().await?;
     for r in &txs_results {
-        println!("{}", r);
+        ui.print(format!("{}", r));
     }
 
     Ok(())
@@ -609,6 +615,7 @@ async fn update_writers(
     profile_config: &ProfileConfig,
     pairs: Vec<PermissionPair>,
     do_grant: bool,
+    ui: &SozoUi,
 ) -> Result<()> {
     let selectors_addresses = pairs
         .iter()
@@ -640,7 +647,7 @@ async fn update_writers(
 
     let txs_results = invoker.multicall().await?;
     for r in &txs_results {
-        println!("{}", r);
+        ui.print(format!("{}", r));
     }
 
     Ok(())

@@ -12,12 +12,12 @@ use dojo_world::services::MockUploadService;
 use katana_runner::RunnerCtx;
 use scarb_interop::Profile;
 use scarb_metadata_ext::MetadataDojoExt;
+use sozo_ui::SozoUi;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use starknet_crypto::Felt;
 
 use crate::migrate::{Migration, MigrationResult};
-use crate::migration_ui::MigrationUi;
 
 /// Sets up the world diff from the environment and returns the world diff used to create a
 /// migration.
@@ -70,13 +70,13 @@ async fn migrate_spawn_and_move(sequencer: &RunnerCtx, with_metadata: bool) -> M
         is_guest,
     );
 
-    let mut ui = MigrationUi::new(None).with_silent();
+    let sozo_ui = SozoUi::default();
 
-    let res = migration.migrate(&mut ui).await.expect("Migration spawn-and-move failed.");
+    let res = migration.migrate(&sozo_ui).await.expect("Migration spawn-and-move failed.");
 
     if with_metadata {
         let mut service = MockUploadService::default();
-        migration.upload_metadata(&mut ui, &mut service).await.expect("Upload metadata failed");
+        migration.upload_metadata(&sozo_ui, &mut service).await.expect("Upload metadata failed");
     }
 
     res
