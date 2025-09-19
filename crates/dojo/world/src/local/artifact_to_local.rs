@@ -606,7 +606,7 @@ mod tests {
         .unwrap();
 
         assert!(world.class_hash != Felt::ZERO);
-        assert_eq!(world.resources.len(), 7);
+        assert_eq!(world.resources.len(), 8);
         assert_eq!(
             world.entrypoints,
             vec![

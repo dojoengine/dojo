@@ -27,6 +27,21 @@ pub struct EH {
     pub v: u32,
 }
 
+#[derive(Introspect, Serde, Drop, DojoStore)]
+pub struct TypeTest {
+    pub f1: felt252,
+    pub f2: u32,
+    pub f3: Option<felt252>,
+    pub f4: u256,
+}
+
+#[dojo::model]
+pub struct ModelTest {
+    #[key]
+    pub k: felt252,
+    pub v: TypeTest,
+}
+
 #[derive(Serde, Drop)]
 pub struct OtherType {
     pub f1: felt252,
@@ -34,6 +49,26 @@ pub struct OtherType {
     pub f3: Option<felt252>,
     pub f4: Option<M>,
     pub f5: u256,
+}
+
+// Types to test a type without being a model with Value as suffix.
+// Those types also don't belong to any model or event, they are pulled
+// from the contract ABI since they are present as function inputs or outputs.
+#[derive(Serde, Drop, Introspect)]
+pub struct SocialPlatform {
+    pub platform: felt252,
+    pub username: felt252,
+}
+
+#[derive(Serde, Drop, Introspect)]
+pub enum PlayerSetting {
+    Undefined,
+    OptOutNotifications: SocialPlatform,
+}
+#[derive(Serde, Drop, Introspect)]
+pub enum PlayerSettingValue {
+    Undefined,
+    Boolean: bool,
 }
 
 #[starknet::interface]
@@ -49,7 +84,7 @@ pub trait MyInterface<T> {
 pub mod c1 {
     use dojo::event::EventStorage;
     use dojo::model::{Model, ModelStorage, ModelValueStorage};
-    use super::{E, EH, M, MValue, MyInterface, OtherType};
+    use super::{E, EH, M, MValue, MyInterface, OtherType, PlayerSetting, PlayerSettingValue};
 
     fn dojo_init(self: @ContractState, v: felt252) {
         let m = M { k: 0, v };
@@ -108,7 +143,12 @@ pub mod c1 {
 
     #[external(v0)]
     fn system_free(
-        ref self: ContractState, o: Option<felt252>, o2: Option<OtherType>, o3: u256,
+        ref self: ContractState,
+        o: Option<felt252>,
+        o2: Option<OtherType>,
+        o3: u256,
+        o4: PlayerSetting,
+        o5: PlayerSettingValue,
     ) -> Option<u32> {
         Some(42)
     }

@@ -13,12 +13,12 @@ use error::BindgenResult;
 use tracing::debug;
 
 mod plugins;
+use plugins::BuiltinPlugin;
+pub use plugins::BuiltinPlugins;
 use plugins::recs::TypescriptRecsPlugin;
 use plugins::typescript::TypescriptPlugin;
 use plugins::unity::UnityPlugin;
 use plugins::unrealengine::UnrealEnginePlugin;
-use plugins::BuiltinPlugin;
-pub use plugins::BuiltinPlugins;
 
 use crate::error::Error;
 
@@ -174,6 +174,40 @@ fn gather_dojo_data(
 
                 let tokens = AbiParser::collect_tokens(&c.common.class.abi, &HashMap::new())?;
 
+                // Ensures that all types that are inputs or output of functions are added to the
+                // other types.
+                for s in &tokens.structs {
+                    if let Token::Composite(c) = s {
+                        let name = c.type_path_no_generic();
+
+                        // Skip builtin IWorldDispatcher struct.
+                        if name.ends_with("::IWorldDispatcher")
+                            || name.ends_with("upgradeable::upgradeable_cpt::Upgraded")
+                        {
+                            continue;
+                        }
+
+                        if !other_types.contains_key(&name) && !c.is_builtin() {
+                            other_types.insert(name.clone(), s.clone());
+                        }
+                    }
+                }
+
+                for e in &tokens.enums {
+                    if let Token::Composite(c) = e {
+                        let name = c.type_path_no_generic();
+
+                        // Skip builtin Event enum.
+                        if name.ends_with("::Event") {
+                            continue;
+                        }
+
+                        if !other_types.contains_key(&name) && !c.is_builtin() {
+                            other_types.insert(name.clone(), e.clone());
+                        }
+                    }
+                }
+
                 // Identify the systems -> for now only take the functions from the
                 // interfaces.
                 let mut systems = vec![];
@@ -190,7 +224,6 @@ fn gather_dojo_data(
                             if !function_blacklist
                                 .contains(&func.to_function().unwrap().name.as_str())
                             {
-                                extract_other_types_from_func(&mut other_types, func);
                                 systems.push(func.clone());
                             }
                         }
@@ -200,7 +233,6 @@ fn gather_dojo_data(
                 // Ensure even free functions are added to the systems.
                 for func in &tokens.functions {
                     if !function_blacklist.contains(&func.to_function().unwrap().name.as_str()) {
-                        extract_other_types_from_func(&mut other_types, func);
                         systems.push(func.clone());
                     }
                 }
@@ -308,28 +340,6 @@ pub fn compare_tokens_by_type_name(a: &Token, b: &Token) -> Ordering {
     a_name.cmp(&b_name)
 }
 
-/// Extracts tokens that represent a type as input or output of a function.
-/// This function doesn't check if the type is already a model or an event.
-pub fn extract_other_types_from_func(other_types: &mut HashMap<String, Token>, func: &Token) {
-    for (_, token) in &func.to_function().unwrap().inputs {
-        if let Token::Composite(c) = token {
-            let name = c.type_path_no_generic();
-            if !other_types.contains_key(&name) && !c.is_builtin() {
-                other_types.insert(name.clone(), token.clone());
-            }
-        }
-    }
-
-    for token in &func.to_function().unwrap().outputs {
-        if let Token::Composite(c) = token {
-            let name = c.type_path_no_generic();
-            if !other_types.contains_key(&name) && !c.is_builtin() {
-                other_types.insert(name.clone(), token.clone());
-            }
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use dojo_test_utils::setup::TestSetup;
@@ -414,9 +424,17 @@ mod tests {
         contracts_keys.sort();
         systems_keys.sort();
 
-        assert_eq!(models_keys, ["ns-M", "ns2-M"]);
+        assert_eq!(models_keys, ["ns-M", "ns-ModelTest", "ns2-M"]);
         assert_eq!(events_keys, ["ns-E", "ns-EH"]);
-        assert_eq!(other_types_keys, ["dojo_simple::OtherType"]);
+        assert_eq!(
+            other_types_keys,
+            [
+                "dojo_simple::OtherType",
+                "dojo_simple::PlayerSetting",
+                "dojo_simple::PlayerSettingValue",
+                "dojo_simple::SocialPlatform"
+            ]
+        );
         assert_eq!(contracts_keys, ["ns-c1", "ns-c2", "ns2-c1"]);
 
         // Systems are duplicated since c1 contract is registered in two namespaces.

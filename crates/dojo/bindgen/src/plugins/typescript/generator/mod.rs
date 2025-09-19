@@ -48,6 +48,11 @@ pub(crate) fn generate_type_init(token: &Composite) -> String {
 pub(crate) fn token_is_option(token: &Composite) -> bool {
     token.type_path.starts_with(CAIRO_OPTION_TYPE_PATH)
 }
+
+pub(crate) fn token_has_inner_option(token: &Composite) -> bool {
+    token.inners.iter().any(|inner| inner.token.type_path().starts_with(CAIRO_OPTION_TYPE_PATH))
+}
+
 /// Checks if token has inner composite
 /// * token - The token to check
 fn token_has_inner_composite(token: &Composite) -> bool {
