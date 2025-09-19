@@ -13,12 +13,12 @@ use error::BindgenResult;
 use tracing::debug;
 
 mod plugins;
-use plugins::BuiltinPlugin;
-pub use plugins::BuiltinPlugins;
 use plugins::recs::TypescriptRecsPlugin;
 use plugins::typescript::TypescriptPlugin;
 use plugins::unity::UnityPlugin;
 use plugins::unrealengine::UnrealEnginePlugin;
+use plugins::BuiltinPlugin;
+pub use plugins::BuiltinPlugins;
 
 use crate::error::Error;
 
