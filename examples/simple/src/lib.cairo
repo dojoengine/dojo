@@ -33,6 +33,7 @@ pub struct OtherType {
     pub f2: u32,
     pub f3: Option<felt252>,
     pub f4: Option<M>,
+    pub f5: u256,
 }
 
 #[starknet::interface]
@@ -106,7 +107,9 @@ pub mod c1 {
     }
 
     #[external(v0)]
-    fn system_free(ref self: ContractState, o: Option<felt252>, o2: Option<OtherType>) -> Option<u32> {
+    fn system_free(
+        ref self: ContractState, o: Option<felt252>, o2: Option<OtherType>, o3: u256,
+    ) -> Option<u32> {
         Some(42)
     }
 

@@ -314,7 +314,7 @@ pub fn extract_other_types_from_func(other_types: &mut HashMap<String, Token>, f
     for (_, token) in &func.to_function().unwrap().inputs {
         if let Token::Composite(c) = token {
             let name = c.type_path_no_generic();
-            if !other_types.contains_key(&name) {
+            if !other_types.contains_key(&name) && !c.is_builtin() {
                 other_types.insert(name.clone(), token.clone());
             }
         }
@@ -323,7 +323,7 @@ pub fn extract_other_types_from_func(other_types: &mut HashMap<String, Token>, f
     for token in &func.to_function().unwrap().outputs {
         if let Token::Composite(c) = token {
             let name = c.type_path_no_generic();
-            if !other_types.contains_key(&name) {
+            if !other_types.contains_key(&name) && !c.is_builtin() {
                 other_types.insert(name.clone(), token.clone());
             }
         }

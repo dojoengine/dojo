@@ -14,7 +14,7 @@ cargo run --bin dojo-world-abigen -r
 
 # Some formatting.
 bash ./scripts/rust_fmt.sh --fix
-bash ./scripts/cairo_fmt.sh fmt
+bash ./scripts/cairo_fmt.sh --fix
 
 # Re-run the minimal tests, this will re-build the projects + generate the build artifacts.
 ./target/release/sozo build --manifest-path examples/simple/Scarb.toml

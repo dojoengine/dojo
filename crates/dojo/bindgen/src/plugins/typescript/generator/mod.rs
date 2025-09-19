@@ -137,7 +137,7 @@ impl From<&Token> for JsPrimitiveType {
                     return JsPrimitiveType::from(format!("{}Enum", c.type_name()).as_str());
                 }
                 JsPrimitiveType::from(value.type_name().as_str())
-            },
+            }
             Token::Option(o) => JsPrimitiveType::from(
                 format!("CairoOption<{}>", JsPrimitiveType::from(&*o.inner)).as_str(),
             ),
@@ -221,7 +221,7 @@ impl From<&Token> for JsPrimitiveInputType {
                     return JsPrimitiveInputType::from("CairoCustomEnum");
                 }
                 JsPrimitiveInputType::from(value.type_name().as_str())
-            },
+            }
             Token::Option(o) => JsPrimitiveInputType::from(
                 format!("CairoOption<{}>", JsPrimitiveInputType::from(&*o.inner)).as_str(),
             ),
