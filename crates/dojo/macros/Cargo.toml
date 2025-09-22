@@ -3,7 +3,14 @@ name = "dojo_macros"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
+documentation.workspace = true
+homepage.workspace = true
 version.workspace = true
+description = """
+Cairo proc macros for the Dojo framework.
+"""
+keywords = ["dojo", "cairo", "starknet", "web3"]
+exclude = [".github/**", "images/**"]
 
 [lib]
 crate-type = ["rlib","cdylib"]
