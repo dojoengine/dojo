@@ -3,18 +3,18 @@ version = 1
 
 [[package]]
 name = "dojo"
-version = "1.7.0-alpha.4"
+version = "1.7.0"
 dependencies = [
- "dojo_macros",
+ "dojo_cairo_macros",
 ]
 
 [[package]]
-name = "dojo_macros"
-version = "1.7.0-alpha.4"
+name = "dojo_cairo_macros"
+version = "1.7.0"
 
 [[package]]
 name = "dojo_snf_test"
-version = "1.7.0-alpha.4"
+version = "1.7.0"
 dependencies = [
  "dojo",
  "snforge_std",

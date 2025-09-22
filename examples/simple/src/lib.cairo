@@ -173,6 +173,7 @@ pub mod c3 {}
 #[cfg(test)]
 mod tests {
     use dojo::model::ModelStorage;
+    use dojo::world::world;
     use dojo_cairo_test::{
         ContractDefTrait, NamespaceDef, TestResource, WorldStorageTestTrait, spawn_test_world,
     };
@@ -183,13 +184,13 @@ mod tests {
         let ndef = NamespaceDef {
             namespace: "ns",
             resources: [
-                TestResource::Model(m_M::TEST_CLASS_HASH.try_into().unwrap()),
-                TestResource::Contract(c1::TEST_CLASS_HASH.try_into().unwrap()),
+                TestResource::Model(m_M::TEST_CLASS_HASH),
+                TestResource::Contract(c1::TEST_CLASS_HASH),
             ]
                 .span(),
         };
 
-        let world = spawn_test_world([ndef].span());
+        let world = spawn_test_world(world::TEST_CLASS_HASH, [ndef].span());
 
         let c1_def = ContractDefTrait::new(@"ns", @"c1")
             .with_writer_of([dojo::utils::bytearray_hash(@"ns")].span())

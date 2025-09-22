@@ -2,25 +2,19 @@ use core::option::OptionTrait;
 use core::result::ResultTrait;
 use core::traits::{Into, TryInto};
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait, WorldStorage, WorldStorageTrait, world};
-use starknet::ContractAddress;
+use starknet::{ContractAddress, ClassHash};
 use starknet::syscalls::deploy_syscall;
-
-pub type TestClassHash = felt252;
 
 /// In Cairo test runner, all the classes are expected to be declared already.
 /// If a contract belong to an other crate, it must be added to the `build-external-contract`,
 /// event for testing, since Scarb does not do that automatically anymore.
-///
-/// The [`TestResource`] enum uses a felt252 to represent the class hash, this avoids
-/// having to write `bar::TEST_CLASS_HASH.try_into().unwrap()` in the test file, simply use
-/// `bar::TEST_CLASS_HASH`.
 #[derive(Drop, Debug)]
 pub enum TestResource {
-    Event: TestClassHash,
-    Model: TestClassHash,
-    Contract: TestClassHash,
-    /// (test_class_hash, name, version)
-    Library: (TestClassHash, @ByteArray, @ByteArray),
+    Event: ClassHash,
+    Model: ClassHash,
+    Contract: ClassHash,
+    /// (class_hash, name, version)
+    Library: (ClassHash, @ByteArray, @ByteArray),
 }
 
 #[derive(Drop, Copy, Debug)]
@@ -109,13 +103,13 @@ pub impl ContractDefImpl of ContractDefTrait {
 /// # Returns
 ///
 /// * World dispatcher
-pub fn spawn_test_world(namespaces_defs: Span<NamespaceDef>) -> WorldStorage {
+pub fn spawn_test_world(world_class_hash: ClassHash, namespaces_defs: Span<NamespaceDef>) -> WorldStorage {
     let salt = core::testing::get_available_gas();
 
     let (world_address, _) = deploy_syscall(
-        world::TEST_CLASS_HASH.try_into().unwrap(),
+        world_class_hash,
         salt.into(),
-        [world::TEST_CLASS_HASH.try_into().unwrap()].span(),
+        [world_class_hash.into()].span(),
         false,
     )
         .unwrap();
@@ -135,13 +129,13 @@ pub fn spawn_test_world(namespaces_defs: Span<NamespaceDef>) -> WorldStorage {
         for r in ns.resources.clone() {
             match r {
                 TestResource::Event(ch) => {
-                    world.register_event(namespace.clone(), (*ch).try_into().unwrap());
+                    world.register_event(namespace.clone(), *ch);
                 },
                 TestResource::Model(ch) => {
-                    world.register_model(namespace.clone(), (*ch).try_into().unwrap());
+                    world.register_model(namespace.clone(), *ch);
                 },
                 TestResource::Contract(ch) => {
-                    world.register_contract(*ch, namespace.clone(), (*ch).try_into().unwrap());
+                    world.register_contract((*ch).try_into().unwrap(), namespace.clone(), *ch);
                 },
                 TestResource::Library((
                     ch, name, version,
@@ -149,7 +143,7 @@ pub fn spawn_test_world(namespaces_defs: Span<NamespaceDef>) -> WorldStorage {
                     world
                         .register_library(
                             namespace.clone(),
-                            (*ch).try_into().unwrap(),
+                            *ch,
                             (*name).clone(),
                             (*version).clone(),
                         );

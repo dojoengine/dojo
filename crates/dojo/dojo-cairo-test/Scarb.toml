@@ -8,12 +8,11 @@ cairo-version = "2.12"
 repository = "https://github.com/dojoengine/dojo"
 documentation = "https://book.dojoengine.org"
 keywords = ["dojo", "contracts", "starknet", "testing"]
-experimental-features = ["negative_impls"]
 
 [dependencies]
 starknet = "2.12"
 cairo_test = "2.12"
 
-dojo = { path = "../core", version = "1.7.0" }
+dojo = { path = "../core", version = "1.7" }
 
 [lib]
