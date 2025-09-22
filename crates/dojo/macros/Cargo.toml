@@ -1,5 +1,5 @@
 [package]
-name = "dojo_macros"
+name = "dojo-cairo-macros"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
