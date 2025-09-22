@@ -5,8 +5,12 @@ version = 1
 name = "dojo"
 version = "1.7.0"
 dependencies = [
- "dojo_macros",
+ "dojo_cairo_macros",
 ]
+
+[[package]]
+name = "dojo_cairo_macros"
+version = "1.7.0"
 
 [[package]]
 name = "dojo_cairo_test"
@@ -16,14 +20,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "dojo_macros"
-version = "1.7.0"
-
-[[package]]
 name = "dojo_simple"
 version = "1.7.0"
 dependencies = [
  "dojo",
+ "dojo_cairo_macros",
  "dojo_cairo_test",
- "dojo_macros",
 ]

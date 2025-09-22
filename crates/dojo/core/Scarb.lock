@@ -5,9 +5,9 @@ version = 1
 name = "dojo"
 version = "1.7.0"
 dependencies = [
- "dojo_macros",
+ "dojo_cairo_macros",
 ]
 
 [[package]]
-name = "dojo_macros"
+name = "dojo_cairo_macros"
 version = "1.7.0"

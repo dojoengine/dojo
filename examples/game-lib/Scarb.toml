@@ -14,4 +14,4 @@ license = "MIT"
 [workspace.dependencies]
 starknet = "2.12"
 dojo = { path = "../../crates/dojo/core/" }
-dojo_macros = { path = "../../crates/dojo/macros" }
+dojo_cairo_macros = { path = "../../crates/dojo/macros" }

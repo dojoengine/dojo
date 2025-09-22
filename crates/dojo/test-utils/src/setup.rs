@@ -141,7 +141,12 @@ impl TestSetup {
         let root_path = dojo_core_path.parent().unwrap();
 
         update_dependency(manifest_path, &mut table, "dojo", dojo_core_path);
-        update_dependency(manifest_path, &mut table, "dojo_macros", &root_path.join("macros"));
+        update_dependency(
+            manifest_path,
+            &mut table,
+            "dojo_cairo_macros",
+            &root_path.join("macros"),
+        );
         update_dev_dependency(&mut table, "dojo_snf_test", &root_path.join("dojo-snf-test"));
         update_dev_dependency(&mut table, "dojo_cairo_test", &root_path.join("dojo-cairo-test"));
 

@@ -10,7 +10,7 @@ cairo-version = "2.12"
 starknet = "2.12"
 
 dojo = { path = "../core" }
-dojo_macros = { path = "../macros" }
+dojo_cairo_macros = { path = "../macros" }
 dojo_snf_test = { path = "../dojo-snf-test" }
 
 [dev-dependencies]

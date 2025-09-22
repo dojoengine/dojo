@@ -6,7 +6,7 @@ name = "armory"
 version = "1.7.0"
 dependencies = [
  "dojo",
- "dojo_macros",
+ "dojo_cairo_macros",
 ]
 
 [[package]]
@@ -14,15 +14,19 @@ name = "bestiary"
 version = "1.7.0"
 dependencies = [
  "dojo",
- "dojo_macros",
+ "dojo_cairo_macros",
 ]
 
 [[package]]
 name = "dojo"
 version = "1.7.0"
 dependencies = [
- "dojo_macros",
+ "dojo_cairo_macros",
 ]
+
+[[package]]
+name = "dojo_cairo_macros"
+version = "1.7.0"
 
 [[package]]
 name = "dojo_examples"
@@ -31,15 +35,11 @@ dependencies = [
  "armory",
  "bestiary",
  "dojo",
- "dojo_macros",
+ "dojo_cairo_macros",
  "dojo_snf_test",
  "openzeppelin",
  "snforge_std",
 ]
-
-[[package]]
-name = "dojo_macros"
-version = "1.7.0"
 
 [[package]]
 name = "dojo_snf_test"

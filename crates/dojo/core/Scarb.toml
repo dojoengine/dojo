@@ -8,10 +8,11 @@ license = "MIT"
 repository = "https://github.com/dojoengine/dojo"
 documentation = "https://book.dojoengine.org"
 keywords = ["dojo", "contracts", "starknet"]
+experimental-features = ["negative_impls"]
 
 [dependencies]
 starknet = "2.12"
-dojo_cairo_macros = { path = "../macros" }
+dojo_cairo_macros = { path = "../macros", version = "1.7.0" }
 
 [lib]
 

@@ -8,7 +8,7 @@ cairo-version.workspace = true
 [dependencies]
 starknet.workspace = true
 dojo.workspace = true
-dojo_macros.workspace = true
+dojo_cairo_macros.workspace = true
 
 [dev-dependencies]
 cairo_test = "2.12"

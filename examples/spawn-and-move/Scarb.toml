@@ -16,7 +16,7 @@ starknet = "2.12.2"
 armory = { path = "../game-lib/armory" }
 bestiary = { path = "../game-lib/bestiary" }
 dojo = { path = "../../crates/dojo/core" }
-dojo_macros = { path = "../../crates/dojo/macros" }
+dojo_cairo_macros = { path = "../../crates/dojo/macros" }
 
 [dev-dependencies]
 snforge_std = "0.48.0"

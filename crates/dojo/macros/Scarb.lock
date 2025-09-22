@@ -2,5 +2,5 @@
 version = 1
 
 [[package]]
-name = "dojo_macros"
+name = "dojo_cairo_macros"
 version = "1.7.0"

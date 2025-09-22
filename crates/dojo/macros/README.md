@@ -23,5 +23,5 @@ Add the following to your `Scarb.toml` file:
 
 ```toml
 [dependencies]
-dojo_macros = "1.7.0"
+dojo_cairo_macros = "1.7.0"
 ```
