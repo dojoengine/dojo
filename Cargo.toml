@@ -61,20 +61,6 @@ dojo-world = { path = "crates/dojo/world" }
 # dojo-world
 topological-sort = "0.2"
 
-# torii
-torii-cli = { path = "crates/torii/cli" }
-torii-client = { path = "crates/torii/client" }
-torii-graphql = { path = "crates/torii/graphql" }
-torii-grpc = { path = "crates/torii/grpc" }
-torii-indexer = { path = "crates/torii/indexer" }
-torii-mcp = { path = "crates/torii/mcp" }
-torii-relay = { path = "crates/torii/libp2p" }
-torii-runner = { path = "crates/torii/runner" }
-torii-server = { path = "crates/torii/server" }
-torii-sqlite = { path = "crates/torii/sqlite/sqlite" }
-torii-sqlite-types = { path = "crates/torii/sqlite/types" }
-torii-typed-data = { path = "crates/torii/typed-data" }
-
 # sozo
 scarb-interop = { path = "crates/sozo/scarb_interop" }
 scarb-metadata-ext = { path = "crates/sozo/scarb_metadata_ext" }
@@ -203,41 +189,9 @@ mime_guess = "2.0"
 hyper = "1.5"
 warp = "0.3"
 
-# gRPC
-prost = "0.12"
-tonic = { version = "0.11", features = [ "gzip", "tls", "tls-roots", "tls-webpki-roots" ] }
-tonic-build = "0.11"
-tonic-reflection = "0.11"
-tonic-web = "0.11"
-
-# WASM-compatible gRPC deps
-tonic-web-wasm-client = "0.6.0"
-wasm-prost = { version = "0.13", package = "prost" }
-wasm-tonic = { version = "0.12", default-features = false, features = [ "codegen", "gzip", "prost" ], package = "tonic" }
-wasm-tonic-build = { version = "0.12", default-features = false, features = [ "prost" ], package = "tonic-build" }
-
-criterion = "0.5.1"
-pprof = { version = "0.13.0", features = [ "criterion", "flamegraph" ] }
-
 # Slot integration. Dojo don't need to manually include `account_sdk` as dependency as `slot` already re-exports it.
 slot-core = { git = "https://github.com/cartridge-gg/slot", branch = "compartmentalization" }
 slot-session = { git = "https://github.com/cartridge-gg/slot", branch = "compartmentalization" }
-
-# alloy core
-alloy-primitives = { version = "0.8", default-features = false }
-alloy-sol-types = { version = "0.8", default-features = false }
-
-# alloy
-alloy-contract = { version = "0.4", default-features = false }
-alloy-json-rpc = { version = "0.4", default-features = false }
-alloy-network = { version = "0.4", default-features = false }
-alloy-provider = { version = "0.4", default-features = false }
-alloy-rpc-types-eth = { version = "0.4", default-features = false }
-alloy-signer = { version = "0.4", default-features = false }
-alloy-transport = { version = "0.4", default-features = false }
-
-# starknet = "0.15.1"
-#starknet-crypto = { version = "0.7.3" }
 
 starknet = "0.17"
 starknet-crypto = "0.8"
