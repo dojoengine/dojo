@@ -2,8 +2,8 @@ use core::option::OptionTrait;
 use core::result::ResultTrait;
 use core::traits::{Into, TryInto};
 use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait, WorldStorage, WorldStorageTrait, world};
-use starknet::{ContractAddress, ClassHash};
 use starknet::syscalls::deploy_syscall;
+use starknet::{ClassHash, ContractAddress};
 
 /// In Cairo test runner, all the classes are expected to be declared already.
 /// If a contract belong to an other crate, it must be added to the `build-external-contract`,
@@ -103,14 +103,13 @@ pub impl ContractDefImpl of ContractDefTrait {
 /// # Returns
 ///
 /// * World dispatcher
-pub fn spawn_test_world(world_class_hash: ClassHash, namespaces_defs: Span<NamespaceDef>) -> WorldStorage {
+pub fn spawn_test_world(
+    world_class_hash: ClassHash, namespaces_defs: Span<NamespaceDef>,
+) -> WorldStorage {
     let salt = core::testing::get_available_gas();
 
     let (world_address, _) = deploy_syscall(
-        world_class_hash,
-        salt.into(),
-        [world_class_hash.into()].span(),
-        false,
+        world_class_hash, salt.into(), [world_class_hash.into()].span(), false,
     )
         .unwrap();
 
@@ -128,12 +127,8 @@ pub fn spawn_test_world(world_class_hash: ClassHash, namespaces_defs: Span<Names
 
         for r in ns.resources.clone() {
             match r {
-                TestResource::Event(ch) => {
-                    world.register_event(namespace.clone(), *ch);
-                },
-                TestResource::Model(ch) => {
-                    world.register_model(namespace.clone(), *ch);
-                },
+                TestResource::Event(ch) => { world.register_event(namespace.clone(), *ch); },
+                TestResource::Model(ch) => { world.register_model(namespace.clone(), *ch); },
                 TestResource::Contract(ch) => {
                     world.register_contract((*ch).try_into().unwrap(), namespace.clone(), *ch);
                 },
@@ -142,10 +137,7 @@ pub fn spawn_test_world(world_class_hash: ClassHash, namespaces_defs: Span<Names
                 )) => {
                     world
                         .register_library(
-                            namespace.clone(),
-                            *ch,
-                            (*name).clone(),
-                            (*version).clone(),
+                            namespace.clone(), *ch, (*name).clone(), (*version).clone(),
                         );
                 },
             }
