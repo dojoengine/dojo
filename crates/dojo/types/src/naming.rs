@@ -92,6 +92,11 @@ pub fn compute_selector_from_tag(tag: &str) -> Felt {
     compute_selector_from_names(&namespace, &name)
 }
 
+pub fn try_compute_selector_from_tag(tag: &str) -> Result<Felt> {
+    let (namespace, name) = split_tag(tag)?;
+    Ok(compute_selector_from_names(&namespace, &name))
+}
+
 pub fn compute_selector_from_tag_or_name(tag_or_name: &str) -> Felt {
     if is_valid_tag(tag_or_name) {
         compute_selector_from_tag(tag_or_name)
@@ -198,5 +203,18 @@ mod tests {
             compute_selector_from_tag_or_name("namespace"),
             compute_bytearray_hash("namespace")
         );
+    }
+
+    #[test]
+    fn test_try_compute_selector_from_tag_success() {
+        assert_eq!(
+            try_compute_selector_from_tag("namespace-model").unwrap(),
+            compute_selector_from_tag("namespace-model")
+        );
+    }
+
+    #[test]
+    fn test_try_compute_selector_from_tag_failure() {
+        assert!(try_compute_selector_from_tag("inv-alid-tag fh").is_err());
     }
 }
