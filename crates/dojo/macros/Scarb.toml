@@ -1,7 +1,11 @@
 [package]
-name = "dojo_macros"
-description = "Dojo proc macros."
+name = "dojo_cairo_macros"
+description = "Dojo Cairo proc macros."
 version = "1.7.0"
 edition = "2024_07"
+license = "MIT"
+repository = "https://github.com/dojoengine/dojo"
+documentation = "https://book.dojoengine.org"
+keywords = ["dojo", "cairo", "starknet", "macros"]
 
 [cairo-plugin]

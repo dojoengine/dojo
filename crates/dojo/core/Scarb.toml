@@ -4,11 +4,14 @@ edition = "2024_07"
 description = "The Dojo Core library for autonomous worlds."
 name = "dojo"
 version = "1.7.0"
-experimental-features = ["negative_impls"]
+license = "MIT"
+repository = "https://github.com/dojoengine/dojo"
+documentation = "https://book.dojoengine.org"
+keywords = ["dojo", "contracts", "starknet"]
 
 [dependencies]
 starknet = "2.12"
-dojo_macros = { path = "../macros" }
+dojo_cairo_macros = { path = "../macros" }
 
 [lib]
 
