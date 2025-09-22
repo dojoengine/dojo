@@ -1,17 +1,20 @@
 [package]
 name = "dojo_snf_test"
-description = "Testing library for Dojo using snfoundry test runner."
-
+description = "Testing library for Dojo using Starknet Foundry."
+license = "MIT"
 version = "1.7.0"
 edition = "2024_07"
-cairo-version = "2.12.0"
+cairo-version = "2.12"
+repository = "https://github.com/dojoengine/dojo"
+documentation = "https://book.dojoengine.org"
+keywords = ["dojo", "starknet", "testing"]
 
 [dependencies]
-starknet = "2.12.0"
+starknet = "2.12"
 snforge_std = "0.48.0"
-assert_macros = "2.12.0"
+assert_macros = "2.12"
 
-dojo = { path = "../core" }
+dojo = { path = "../core", version = "1.7" }
 
 [tool.scarb]
 allow-prebuilt-plugins = ["snforge_std"]
