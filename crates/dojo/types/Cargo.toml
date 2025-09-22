@@ -2,6 +2,14 @@
 edition.workspace = true
 name = "dojo-types"
 version.workspace = true
+license.workspace = true
+documentation.workspace = true
+homepage.workspace = true
+description = """
+Primitives to interact with the Dojo framework types.
+"""
+keywords = ["dojo", "cairo", "starknet", "web3"]
+exclude = [".github/**", "images/**"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
