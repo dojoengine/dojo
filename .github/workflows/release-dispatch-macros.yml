@@ -1,0 +1,65 @@
+# Dojo Cairo Macros release dispatch workflow.
+#
+# Dojo Cairo Macros must be released first if changes are made to the macros,
+# to ensure all the other Dojo packages can use it.
+name: release-dispatch
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to release
+        required: true
+        type: string
+
+jobs:
+  propose-release:
+    permissions:
+      pull-requests: write
+      contents: write
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/dojoengine/dojo-dev:v1.7.0-alpha.4
+    env:
+      VERSION: ""
+    steps:
+      # Workaround described here: https://github.com/actions/checkout/issues/760
+      - uses: actions/checkout@v4
+      - uses: software-mansion/setup-scarb@v1
+        with:
+          scarb-version: "2.12.2"
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - name: Normalize version and update files
+        working-directory: crates/dojo/macros
+        id: version
+        run: |
+          INPUT_VERSION="${{ inputs.version }}"
+
+          if [[ -z "$INPUT_VERSION" ]]; then
+            echo "Error: Version input is empty"
+            exit 1
+          fi
+
+          CLEAN_VERSION=${INPUT_VERSION#v}
+          DISPLAY_VERSION="v${CLEAN_VERSION}"
+
+          // replace the version in the Scarb.toml and Scarb.lock files.
+          sed -i '' 's/version = ".*"/version = "${CLEAN_VERSION}"/' Scarb.toml
+
+          cargo release version ${CLEAN_VERSION} --execute --no-confirm && cargo release replace --execute --no-confirm
+
+          echo "display_version=${DISPLAY_VERSION}" >> $GITHUB_OUTPUT
+      - name: Rebuild Cairo files to update Scarb.lock files
+        working-directory: crates/dojo/macros
+        run: |
+          scarb build
+
+      - uses: peter-evans/create-pull-request@v7
+        with:
+          # We have to use a PAT in order to trigger ci
+          token: ${{ secrets.CREATE_PR_TOKEN }}
+          title: "release(prepare): ${{ steps.version.outputs.display_version }}"
+          commit-message: "Prepare release: ${{ steps.version.outputs.display_version }}"
+          branch: prepare-release-macros
+          base: main
+          delete-branch: true
