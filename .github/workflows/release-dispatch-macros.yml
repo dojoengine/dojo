@@ -2,7 +2,7 @@
 #
 # Dojo Cairo Macros must be released first if changes are made to the macros,
 # to ensure all the other Dojo packages can use it.
-name: release-dispatch
+name: release-dispatch-macros
 
 on:
   workflow_dispatch:
