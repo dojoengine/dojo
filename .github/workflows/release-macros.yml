@@ -76,7 +76,7 @@ jobs:
           cd ./crates/dojo/macros
           cargo build --release --locked --target ${{ matrix.job.target }}
 
-          VERSION_NAME=$(grep -oP 'version = "\K[^"]+' ./Cargo.toml)
+          VERSION_NAME=$(cargo metadata --format-version=1 --no-deps | jq -r '.packages[0].version')
 
           # Determine library extension based on platform
           if [ "$PLATFORM_NAME" == "linux" ]; then
