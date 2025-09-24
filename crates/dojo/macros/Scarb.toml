@@ -8,4 +8,10 @@ repository = "https://github.com/dojoengine/dojo"
 documentation = "https://book.dojoengine.org"
 keywords = ["dojo", "cairo", "starknet", "macros"]
 
+# This is where the pre-built binaries have to be copied to.
+# This way, developers can use `allow-prebuilt-plugins` to avoid
+# rebuilding the plugin locally.
+# https://docs.swmansion.com/scarb/docs/reference/procedural-macro.html#prebuilt-procedural-macros
+include = ["target/scarb/cairo-plugin/"]
+
 [cairo-plugin]
