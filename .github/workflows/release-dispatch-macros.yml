@@ -43,7 +43,7 @@ jobs:
           DISPLAY_VERSION="v${CLEAN_VERSION}"
 
           cd ./crates/dojo/macros
-          sed -i '' "s/version = \".*\"/version = \"${CLEAN_VERSION}\"/" Scarb.toml
+          sed -i "s/version = \".*\"/version = \"${CLEAN_VERSION}\"/" Scarb.toml
           cargo release version ${CLEAN_VERSION} --execute --no-confirm && cargo release replace --execute --no-confirm
 
           echo "display_version=${DISPLAY_VERSION}" >> $GITHUB_OUTPUT
