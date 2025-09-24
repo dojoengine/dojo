@@ -847,7 +847,7 @@ dependencies = [
 
 [[package]]
 name = "dojo_cairo_macros"
-version = "1.7.0"
+version = "1.7.1"
 dependencies = [
  "anyhow",
  "cairo-lang-defs",
