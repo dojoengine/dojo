@@ -1,11 +1,14 @@
 [package]
-name = "dojo-cairo-macros"
-edition.workspace = true
-license.workspace = true
-repository.workspace = true
-documentation.workspace = true
-homepage.workspace = true
-version.workspace = true
+name = "dojo_cairo_macros"
+edition = "2021"
+license = "Apache-2.0"
+repository = "https://github.com/dojoengine/dojo/"
+documentation = "https://book.dojoengine.org"
+homepage = "https://dojoengine.org"
+# The version of this package doesn't depend on the workspace version,
+# since it has to be published to Scarb registry before a Dojo package update.
+# Use the workflow "publish-dojo-macros-scarbs-xyz" to publish this package to Scarb registry.
+version = "1.7.1"
 description = """
 Cairo proc macros for the Dojo framework.
 """
@@ -16,20 +19,17 @@ exclude = [".github/**", "images/**"]
 crate-type = ["rlib","cdylib"]
 
 [dependencies]
-anyhow.workspace = true
-dojo-types.workspace = true
-cairo-lang-primitive-token.workspace = true
-cairo-lang-macro.workspace = true
-cairo-lang-parser.workspace = true
-cairo-lang-utils.workspace = true
-cairo-lang-syntax.workspace = true
-cairo-lang-defs.workspace = true
-cairo-lang-diagnostics.workspace = true
-smol_str.workspace = true
-
-cainome.workspace = true
-cainome-cairo-serde.workspace = true
-starknet-crypto.workspace = true
-starknet.workspace = true
-regex.workspace = true
-itertools.workspace = true
+anyhow = "1.0"
+dojo-types = { path = "../types", version = "1.7.0" }
+cairo-lang-primitive-token = "1"
+cairo-lang-macro = "0.2.0"
+cairo-lang-parser = "2.12.2"
+cairo-lang-utils = "2.12.2"
+cairo-lang-syntax = "2.12.2"
+cairo-lang-defs = "2.12.2"
+cairo-lang-diagnostics = "2.12.2"
+smol_str = "0.3"
+starknet-crypto = "0.8"
+starknet = "0.17"
+regex = "1.10.3"
+itertools = "0.12.1"

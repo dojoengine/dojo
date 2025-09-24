@@ -1323,37 +1323,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cairo-lang-macro"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "221e399ef5d91483e1ff3be9860a7e74b91ba37d95f1211704cd330baa6a28fe"
-dependencies = [
- "bumpalo",
- "cairo-lang-macro-attributes",
- "cairo-lang-macro-stable",
- "cairo-lang-primitive-token",
- "cairo-lang-quote",
- "linkme",
-]
-
-[[package]]
-name = "cairo-lang-macro-attributes"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a13b61d5054ecc80a7a034f0cafc94abe20748741cfd3cd1efb69a893c7234da"
-dependencies = [
- "quote",
- "scarb-stable-hash",
- "syn 2.0.106",
-]
-
-[[package]]
-name = "cairo-lang-macro-stable"
-version = "2.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "414b7ba40b5ec3f26101b5c76df5739190832834b95689a723f3f88ec1695fe3"
-
-[[package]]
 name = "cairo-lang-parser"
 version = "2.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1421,16 +1390,6 @@ dependencies = [
  "serde",
  "thiserror 2.0.12",
  "toml 0.8.22",
-]
-
-[[package]]
-name = "cairo-lang-quote"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3112c71b991ab1617d95737c32193873b63ff6a11926f8e38271a70eb260ed31"
-dependencies = [
- "proc-macro2",
- "quote",
 ]
 
 [[package]]
@@ -2534,28 +2493,6 @@ dependencies = [
  "thiserror 1.0.69",
  "tokio",
  "tracing",
-]
-
-[[package]]
-name = "dojo-cairo-macros"
-version = "1.7.0"
-dependencies = [
- "anyhow",
- "cainome",
- "cainome-cairo-serde",
- "cairo-lang-defs",
- "cairo-lang-diagnostics",
- "cairo-lang-macro",
- "cairo-lang-parser",
- "cairo-lang-primitive-token",
- "cairo-lang-syntax",
- "cairo-lang-utils",
- "dojo-types",
- "itertools 0.12.1",
- "regex",
- "smol_str",
- "starknet",
- "starknet-crypto",
 ]
 
 [[package]]
@@ -4607,26 +4544,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "linkme"
-version = "0.3.32"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "22d227772b5999ddc0690e733f734f95ca05387e329c4084fe65678c51198ffe"
-dependencies = [
- "linkme-impl",
-]
-
-[[package]]
-name = "linkme-impl"
-version = "0.3.32"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "71a98813fa0073a317ed6a8055dcd4722a49d9b862af828ee68449adb799b6be"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.106",
-]
-
-[[package]]
 name = "linux-raw-sys"
 version = "0.3.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6551,16 +6468,6 @@ dependencies = [
  "smol_str",
  "toml 0.8.22",
  "tracing",
-]
-
-[[package]]
-name = "scarb-stable-hash"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1902536b23a05dd165d3992865870aaf1b0650317767cbf171ed2ca5903732a9"
-dependencies = [
- "data-encoding",
- "xxhash-rust",
 ]
 
 [[package]]

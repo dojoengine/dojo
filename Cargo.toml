@@ -6,7 +6,6 @@ members = [
 	"bin/sozo",
 	"crates/dojo/bindgen",
 	"crates/dojo/core",
-	"crates/dojo/macros",
 	"crates/dojo/test-utils",
 	"crates/dojo/types",
 	"crates/dojo/utils",
@@ -24,6 +23,9 @@ members = [
 	"examples/spawn-and-move",
 	"scripts/verify_db_balances",
 	"xtask/generate-test-db",
+]
+exclude = [
+	"crates/dojo/macros",
 ]
 
 [workspace.package]
@@ -109,8 +111,6 @@ cairo-lang-starknet-classes = "2.12.2"
 cairo-lang-syntax = "2.12.2"
 cairo-lang-test-plugin = "2.12.2"
 cairo-lang-test-runner = "2.12.2"
-cairo-lang-test-utils = "2.12.2"
-cairo-lang-utils = "2.12.2"
 camino = { version = "1.1.2", features = [ "serde1" ] }
 chrono = { version = "0.4.24", features = [ "serde" ] }
 clap = { version = "4.5.16", features = [ "derive", "env" ] }
