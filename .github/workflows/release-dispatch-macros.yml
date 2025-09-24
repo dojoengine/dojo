@@ -30,7 +30,6 @@ jobs:
           scarb-version: "2.12.2"
       - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - name: Normalize version and update files
-        working-directory: crates/dojo/macros
         id: version
         run: |
           INPUT_VERSION="${{ inputs.version }}"
@@ -43,14 +42,15 @@ jobs:
           CLEAN_VERSION=${INPUT_VERSION#v}
           DISPLAY_VERSION="v${CLEAN_VERSION}"
 
+          cd ./crates/dojo/macros
           sed -i '' 's/version = ".*"/version = "${CLEAN_VERSION}"/' Scarb.toml
-
           cargo release version ${CLEAN_VERSION} --execute --no-confirm && cargo release replace --execute --no-confirm
 
           echo "display_version=${DISPLAY_VERSION}" >> $GITHUB_OUTPUT
+
       - name: Rebuild Cairo files to update Scarb.lock files
-        working-directory: crates/dojo/macros
         run: |
+          cd ./crates/dojo/macros
           scarb build
 
       - uses: peter-evans/create-pull-request@v7
