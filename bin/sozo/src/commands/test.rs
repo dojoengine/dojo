@@ -1,5 +1,4 @@
 //! Compiles and runs tests for a Dojo project using Scarb.
-use cairo_lang_runner::profiling::ProfilerConfig;
 use clap::Args;
 use scarb_interop::Scarb;
 use scarb_metadata::Metadata;
@@ -12,15 +11,6 @@ pub enum ProfilerMode {
     None,
     Cairo,
     Sierra,
-}
-
-impl From<ProfilerMode> for ProfilerConfig {
-    fn from(mode: ProfilerMode) -> Self {
-        match mode {
-            ProfilerMode::None | ProfilerMode::Cairo => ProfilerConfig::Cairo,
-            ProfilerMode::Sierra => ProfilerConfig::Sierra,
-        }
-    }
 }
 
 /// Execute all unit tests of a local package.
