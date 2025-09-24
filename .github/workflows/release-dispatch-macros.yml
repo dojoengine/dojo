@@ -43,7 +43,6 @@ jobs:
           CLEAN_VERSION=${INPUT_VERSION#v}
           DISPLAY_VERSION="v${CLEAN_VERSION}"
 
-          // replace the version in the Scarb.toml and Scarb.lock files.
           sed -i '' 's/version = ".*"/version = "${CLEAN_VERSION}"/' Scarb.toml
 
           cargo release version ${CLEAN_VERSION} --execute --no-confirm && cargo release replace --execute --no-confirm

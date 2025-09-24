@@ -9,7 +9,7 @@
 # The Dojo docker image is not built during this workflow, to decouple the release of the binaries from the docker image,
 # which happens in the `docker.yml` workflow.
 #
-name: release-macros
+name: release
 
 on:
   workflow_dispatch:

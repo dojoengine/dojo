@@ -1,6 +1,6 @@
 # Dojo Cairo Macros release workflow.
 #
-name: release
+name: release-macros
 
 on:
   workflow_dispatch:
