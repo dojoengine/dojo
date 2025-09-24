@@ -6,7 +6,6 @@ members = [
 	"bin/sozo",
 	"crates/dojo/bindgen",
 	"crates/dojo/core",
-	"crates/dojo/macros",
 	"crates/dojo/test-utils",
 	"crates/dojo/types",
 	"crates/dojo/utils",
@@ -24,6 +23,14 @@ members = [
 	"examples/spawn-and-move",
 	"scripts/verify_db_balances",
 	"xtask/generate-test-db",
+]
+
+# Since the Dojo macros is published at a different pace of the rest of the
+# of the Workspace, it is excluded from the workspace and must be released
+# on its own before bumping Dojo.
+# The proc macros is expected to change less often than the rest of the Workspace.
+exclude = [
+	"crates/dojo/macros",
 ]
 
 [workspace.package]
@@ -60,9 +67,6 @@ dojo-test-utils = { path = "crates/dojo/test-utils" }
 dojo-types = { path = "crates/dojo/types", version = "1.7.0" }
 dojo-world = { path = "crates/dojo/world" }
 
-# dojo-world
-topological-sort = "0.2"
-
 # sozo
 scarb-interop = { path = "crates/sozo/scarb_interop" }
 scarb-metadata-ext = { path = "crates/sozo/scarb_metadata_ext" }
@@ -87,33 +91,10 @@ auto_impl = "1.2.0"
 base64 = "0.21.2"
 bigdecimal = "0.4.1"
 bytes = "1.6"
-cairo-lang-compiler = "2.12.2"
-cairo-lang-debug = "2.12.2"
-cairo-lang-defs = "2.12.2"
-cairo-lang-diagnostics = "2.12.2"
-cairo-lang-filesystem = "2.12.2"
-cairo-lang-formatter = "2.12.2"
-cairo-lang-lowering = "2.12.2"
-cairo-lang-macro = "0.2.0"
-cairo-lang-parser = "2.12.2"
-cairo-lang-plugins = { version = "2.12.2", features = [ "testing" ] }
-cairo-lang-primitive-token = "1"
-cairo-lang-project = "2.12.2"
-cairo-lang-runner = "2.12.2"
-cairo-lang-semantic = "2.12.2"
-cairo-lang-sierra = "2.12.2"
-cairo-lang-sierra-generator = "2.12.2"
-cairo-lang-sierra-to-casm = "2.12.2"
-cairo-lang-starknet = "2.12.2"
 cairo-lang-starknet-classes = "2.12.2"
-cairo-lang-syntax = "2.12.2"
-cairo-lang-test-plugin = "2.12.2"
-cairo-lang-test-runner = "2.12.2"
-cairo-lang-test-utils = "2.12.2"
-cairo-lang-utils = "2.12.2"
 camino = { version = "1.1.2", features = [ "serde1" ] }
 chrono = { version = "0.4.24", features = [ "serde" ] }
-clap = { version = "4.5.16", features = [ "derive", "env" ] }
+clap = { version = "4.5.16", features = [ "derive", "env", "string" ] }
 clap-verbosity-flag = "2.0.1"
 clap_complete = "4.3"
 colored = "2.0.0"
@@ -154,10 +135,7 @@ rpassword = "7.2.0"
 rstest = "0.18.2"
 rstest_reuse = "0.6.0"
 salsa = "0.16.1"
-
 scarb-metadata = "1.15.1"
-scarb-ui = "0.1.7"
-
 semver = "1.0.5"
 serde = { version = "1.0", features = [ "derive" ] }
 serde_json = { version = "1.0.142", features = [ "arbitrary_precision" ] }
@@ -200,8 +178,3 @@ starknet-crypto = "0.8"
 starknet-types-core = { version = "0.2", features = [ "arbitrary", "hash" ] }
 
 bitvec = "1.0.1"
-
-# macro
-proc-macro2 = "1.0"
-quote = "1.0"
-syn = { version = "2.0", default-features = false }

@@ -12,7 +12,6 @@ slot-session = { workspace = true, optional = true }
 anyhow.workspace = true
 async-trait.workspace = true
 cainome.workspace = true
-cairo-lang-runner.workspace = true
 camino.workspace = true
 clap.workspace = true
 clap-verbosity-flag.workspace = true

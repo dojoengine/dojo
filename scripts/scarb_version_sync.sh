@@ -43,7 +43,9 @@ done
 # Finder
 find_scarb() {
   # -print0 so we safely handle weird paths
+  # Exclude crates/dojo/macros/Scarb.toml as it's managed independently.
   find "$ROOT" -type d \( -name .git -o -name target \) -prune -o \
+       -path "*/crates/dojo/macros/Scarb.toml" -prune -o \
        -type f -name Scarb.toml -print0
 }
 

@@ -4,7 +4,6 @@
 //! `sozo_ops` crate. This is not efficient, but limited by the nature of the Scarb's `Config` type.
 //!
 //! In future versions, this will not be necessary anymore.
-
 use std::future::Future;
 
 use anyhow::Result;
