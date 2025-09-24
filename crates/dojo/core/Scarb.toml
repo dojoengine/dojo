@@ -9,6 +9,7 @@ repository = "https://github.com/dojoengine/dojo"
 documentation = "https://book.dojoengine.org"
 keywords = ["dojo", "contracts", "starknet"]
 experimental-features = ["negative_impls"]
+re-export-cairo-plugins = ["dojo_cairo_macros"]
 
 [dependencies]
 starknet = "2.12"
