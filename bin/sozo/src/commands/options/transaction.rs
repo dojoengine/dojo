@@ -37,9 +37,10 @@ pub struct TransactionOptions {
     pub walnut: bool,
 
     #[arg(long)]
-    #[arg(help = "Maximum number of calls to send in a single transaction. By default, there is \
-                  no limit and Sozo will attempt to send all the calls in one transaction.")]
+    #[arg(help = "Maximum number of calls to send in a single transaction. By default, Sozo \
+                  will limit the number of calls to 10.")]
     #[arg(global = true)]
+    #[arg(default_value = "10")]
     pub max_calls: Option<usize>,
 }
 

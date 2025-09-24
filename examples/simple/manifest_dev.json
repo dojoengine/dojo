@@ -1479,8 +1479,8 @@
   },
   "contracts": [
     {
-      "address": "0x6e419a3ebf18bbcaef2529b2eb8cf393a3925dea7ae2f9b654eccceca01469f",
-      "class_hash": "0x560dd4268ec8bf39b9b05d8bd3da3d98f0b580c204244db6151fd9a276fdb27",
+      "address": "0x7e93e911c4ee63f7f3fb7f9f18571b669f5d68937f25a502aee604f73a1df9e",
+      "class_hash": "0x540dea8d96c387ac6fa5c1a0524b50f40fc10fab4dd7a73812c357c2edd5911",
       "abi": [
         {
           "type": "impl",
@@ -1550,16 +1550,16 @@
           "interface_name": "dojo_simple::MyInterface"
         },
         {
-          "type": "struct",
-          "name": "dojo_simple::OtherType",
-          "members": [
+          "type": "enum",
+          "name": "core::option::Option::<core::felt252>",
+          "variants": [
             {
-              "name": "f1",
+              "name": "Some",
               "type": "core::felt252"
             },
             {
-              "name": "f2",
-              "type": "core::integer::u32"
+              "name": "None",
+              "type": "()"
             }
           ]
         },
@@ -1574,6 +1574,60 @@
             {
               "name": "v",
               "type": "core::felt252"
+            }
+          ]
+        },
+        {
+          "type": "enum",
+          "name": "core::option::Option::<dojo_simple::M>",
+          "variants": [
+            {
+              "name": "Some",
+              "type": "dojo_simple::M"
+            },
+            {
+              "name": "None",
+              "type": "()"
+            }
+          ]
+        },
+        {
+          "type": "struct",
+          "name": "core::integer::u256",
+          "members": [
+            {
+              "name": "low",
+              "type": "core::integer::u128"
+            },
+            {
+              "name": "high",
+              "type": "core::integer::u128"
+            }
+          ]
+        },
+        {
+          "type": "struct",
+          "name": "dojo_simple::OtherType",
+          "members": [
+            {
+              "name": "f1",
+              "type": "core::felt252"
+            },
+            {
+              "name": "f2",
+              "type": "core::integer::u32"
+            },
+            {
+              "name": "f3",
+              "type": "core::option::Option::<core::felt252>"
+            },
+            {
+              "name": "f4",
+              "type": "core::option::Option::<dojo_simple::M>"
+            },
+            {
+              "name": "f5",
+              "type": "core::integer::u256"
             }
           ]
         },
@@ -1715,12 +1769,117 @@
           ]
         },
         {
+          "type": "enum",
+          "name": "core::option::Option::<dojo_simple::OtherType>",
+          "variants": [
+            {
+              "name": "Some",
+              "type": "dojo_simple::OtherType"
+            },
+            {
+              "name": "None",
+              "type": "()"
+            }
+          ]
+        },
+        {
+          "type": "struct",
+          "name": "dojo_simple::SocialPlatform",
+          "members": [
+            {
+              "name": "platform",
+              "type": "core::felt252"
+            },
+            {
+              "name": "username",
+              "type": "core::felt252"
+            }
+          ]
+        },
+        {
+          "type": "enum",
+          "name": "dojo_simple::PlayerSetting",
+          "variants": [
+            {
+              "name": "Undefined",
+              "type": "()"
+            },
+            {
+              "name": "OptOutNotifications",
+              "type": "dojo_simple::SocialPlatform"
+            }
+          ]
+        },
+        {
+          "type": "enum",
+          "name": "core::bool",
+          "variants": [
+            {
+              "name": "False",
+              "type": "()"
+            },
+            {
+              "name": "True",
+              "type": "()"
+            }
+          ]
+        },
+        {
+          "type": "enum",
+          "name": "dojo_simple::PlayerSettingValue",
+          "variants": [
+            {
+              "name": "Undefined",
+              "type": "()"
+            },
+            {
+              "name": "Boolean",
+              "type": "core::bool"
+            }
+          ]
+        },
+        {
+          "type": "enum",
+          "name": "core::option::Option::<core::integer::u32>",
+          "variants": [
+            {
+              "name": "Some",
+              "type": "core::integer::u32"
+            },
+            {
+              "name": "None",
+              "type": "()"
+            }
+          ]
+        },
+        {
           "type": "function",
           "name": "system_free",
-          "inputs": [],
+          "inputs": [
+            {
+              "name": "o",
+              "type": "core::option::Option::<core::felt252>"
+            },
+            {
+              "name": "o2",
+              "type": "core::option::Option::<dojo_simple::OtherType>"
+            },
+            {
+              "name": "o3",
+              "type": "core::integer::u256"
+            },
+            {
+              "name": "o4",
+              "type": "dojo_simple::PlayerSetting"
+            },
+            {
+              "name": "o5",
+              "type": "dojo_simple::PlayerSettingValue"
+            }
+          ],
           "outputs": [
             {
-              "type": "core::integer::u32"
+              "type": "core::option::Option::<core::integer::u32>"
             }
           ],
           "state_mutability": "external"
@@ -1970,8 +2129,8 @@
       ]
     },
     {
-      "address": "0x1bc056c3a8199a1537900e1724a2ae449d7db9e999e3fdf0ff0c1da00f7abbe",
-      "class_hash": "0x560dd4268ec8bf39b9b05d8bd3da3d98f0b580c204244db6151fd9a276fdb27",
+      "address": "0x37e04b253c7ffdb0f30b323d045c193c39438b6a2be85dbaa40b09b2de1bb41",
+      "class_hash": "0x540dea8d96c387ac6fa5c1a0524b50f40fc10fab4dd7a73812c357c2edd5911",
       "abi": [
         {
           "type": "impl",
@@ -2041,16 +2200,16 @@
           "interface_name": "dojo_simple::MyInterface"
         },
         {
-          "type": "struct",
-          "name": "dojo_simple::OtherType",
-          "members": [
+          "type": "enum",
+          "name": "core::option::Option::<core::felt252>",
+          "variants": [
             {
-              "name": "f1",
+              "name": "Some",
               "type": "core::felt252"
             },
             {
-              "name": "f2",
-              "type": "core::integer::u32"
+              "name": "None",
+              "type": "()"
             }
           ]
         },
@@ -2065,6 +2224,60 @@
             {
               "name": "v",
               "type": "core::felt252"
+            }
+          ]
+        },
+        {
+          "type": "enum",
+          "name": "core::option::Option::<dojo_simple::M>",
+          "variants": [
+            {
+              "name": "Some",
+              "type": "dojo_simple::M"
+            },
+            {
+              "name": "None",
+              "type": "()"
+            }
+          ]
+        },
+        {
+          "type": "struct",
+          "name": "core::integer::u256",
+          "members": [
+            {
+              "name": "low",
+              "type": "core::integer::u128"
+            },
+            {
+              "name": "high",
+              "type": "core::integer::u128"
+            }
+          ]
+        },
+        {
+          "type": "struct",
+          "name": "dojo_simple::OtherType",
+          "members": [
+            {
+              "name": "f1",
+              "type": "core::felt252"
+            },
+            {
+              "name": "f2",
+              "type": "core::integer::u32"
+            },
+            {
+              "name": "f3",
+              "type": "core::option::Option::<core::felt252>"
+            },
+            {
+              "name": "f4",
+              "type": "core::option::Option::<dojo_simple::M>"
+            },
+            {
+              "name": "f5",
+              "type": "core::integer::u256"
             }
           ]
         },
@@ -2206,12 +2419,117 @@
           ]
         },
         {
+          "type": "enum",
+          "name": "core::option::Option::<dojo_simple::OtherType>",
+          "variants": [
+            {
+              "name": "Some",
+              "type": "dojo_simple::OtherType"
+            },
+            {
+              "name": "None",
+              "type": "()"
+            }
+          ]
+        },
+        {
+          "type": "struct",
+          "name": "dojo_simple::SocialPlatform",
+          "members": [
+            {
+              "name": "platform",
+              "type": "core::felt252"
+            },
+            {
+              "name": "username",
+              "type": "core::felt252"
+            }
+          ]
+        },
+        {
+          "type": "enum",
+          "name": "dojo_simple::PlayerSetting",
+          "variants": [
+            {
+              "name": "Undefined",
+              "type": "()"
+            },
+            {
+              "name": "OptOutNotifications",
+              "type": "dojo_simple::SocialPlatform"
+            }
+          ]
+        },
+        {
+          "type": "enum",
+          "name": "core::bool",
+          "variants": [
+            {
+              "name": "False",
+              "type": "()"
+            },
+            {
+              "name": "True",
+              "type": "()"
+            }
+          ]
+        },
+        {
+          "type": "enum",
+          "name": "dojo_simple::PlayerSettingValue",
+          "variants": [
+            {
+              "name": "Undefined",
+              "type": "()"
+            },
+            {
+              "name": "Boolean",
+              "type": "core::bool"
+            }
+          ]
+        },
+        {
+          "type": "enum",
+          "name": "core::option::Option::<core::integer::u32>",
+          "variants": [
+            {
+              "name": "Some",
+              "type": "core::integer::u32"
+            },
+            {
+              "name": "None",
+              "type": "()"
+            }
+          ]
+        },
+        {
           "type": "function",
           "name": "system_free",
-          "inputs": [],
+          "inputs": [
+            {
+              "name": "o",
+              "type": "core::option::Option::<core::felt252>"
+            },
+            {
+              "name": "o2",
+              "type": "core::option::Option::<dojo_simple::OtherType>"
+            },
+            {
+              "name": "o3",
+              "type": "core::integer::u256"
+            },
+            {
+              "name": "o4",
+              "type": "dojo_simple::PlayerSetting"
+            },
+            {
+              "name": "o5",
+              "type": "dojo_simple::PlayerSettingValue"
+            }
+          ],
           "outputs": [
             {
-              "type": "core::integer::u32"
+              "type": "core::option::Option::<core::integer::u32>"
             }
           ],
           "state_mutability": "external"
@@ -2292,6 +2610,12 @@
       "class_hash": "0x6f6917641fa1dd687c19c434c82ef85f2ed5d9bc4b2358ff1a0f8a3a62125b4",
       "tag": "ns-M",
       "selector": "0x50aac05281bbfaa5393cacacc12e86f59ab7d5f3ee619427dd33a0756526f24"
+    },
+    {
+      "members": [],
+      "class_hash": "0x194f481175dcb6825ff5b59239a46190b56be792d4c14a531b53cbe75efcb4",
+      "tag": "ns-ModelTest",
+      "selector": "0x7c4174c68c17cf1722d42a401236440eb2001b74204bc20d994768a9d5f7176"
     },
     {
       "members": [],

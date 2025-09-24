@@ -26,6 +26,7 @@ where
 {
     /// Creates a new invoker.
     pub fn new(account: A, txn_config: TxnConfig) -> Self {
+        trace!(?txn_config, "Creating new invoker.");
         Self { account, txn_config, calls: vec![] }
     }
 
