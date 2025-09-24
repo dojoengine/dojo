@@ -57,8 +57,8 @@ jobs:
         with:
           # We have to use a PAT in order to trigger ci
           token: ${{ secrets.CREATE_PR_TOKEN }}
-          title: "release(prepare): ${{ steps.version.outputs.display_version }}"
-          commit-message: "Prepare release: ${{ steps.version.outputs.display_version }}"
+          title: "release-macros(prepare): ${{ steps.version.outputs.display_version }}"
+          commit-message: "Prepare Cairo macros release: ${{ steps.version.outputs.display_version }}"
           branch: prepare-release-macros
           base: main
           delete-branch: true
