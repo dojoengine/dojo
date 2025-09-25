@@ -74,9 +74,12 @@ jobs:
         id: artifacts
         run: |
           cd ./crates/dojo/macros
-          cargo build --release --locked --target ${{ matrix.job.target }}
+          cargo build --release --locked --target "${TARGET}"
+
+          ls -la ./target/"${TARGET}"/release
 
           VERSION_NAME=$(cargo metadata --format-version=1 --no-deps | jq -r '.packages[0].version')
+          echo "version_name=${VERSION_NAME}"
 
           # Determine library extension based on platform
           if [ "$PLATFORM_NAME" == "linux" ]; then
