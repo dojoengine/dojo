@@ -77,17 +77,21 @@ jobs:
           cargo build --release --locked --target ${{ matrix.job.target }}
 
           VERSION_NAME=$(cargo metadata --format-version=1 --no-deps | jq -r '.packages[0].version')
+          ARCHIVE_NAME="dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz"
 
           # Determine library extension based on platform
           if [ "$PLATFORM_NAME" == "linux" ]; then
             DLL_EXT="so"
             LIBRARY_NAME="dojo_cairo_macros_v${VERSION_NAME}_${TARGET}.${DLL_EXT}"
+            ARCHIVE_NAME=
 
             # Rename the library to the desired format
             mv "./target/${TARGET}/release/libdojo_cairo_macros.${DLL_EXT}" "./target/${TARGET}/release/${LIBRARY_NAME}"
 
-            tar -czvf "dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz" -C ./target/${TARGET}/release "${LIBRARY_NAME}"
-            echo "file_name=dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz" >> $GITHUB_OUTPUT
+            tar -czvf "${ARCHIVE_NAME}" -C ./target/${TARGET}/release "${LIBRARY_NAME}"
+            mv "${ARCHIVE_NAME}" ../../../
+
+            echo "file_name=${ARCHIVE_NAME}" >> $GITHUB_OUTPUT
           elif [ "$PLATFORM_NAME" == "darwin" ]; then
             DLL_EXT="dylib"
             LIBRARY_NAME="dojo_cairo_macros_v${VERSION_NAME}_${TARGET}.${DLL_EXT}"
@@ -97,8 +101,10 @@ jobs:
 
             # We need to use gtar here otherwise the archive is corrupt.
             # See: https://github.com/actions/virtual-environments/issues/2619
-            gtar -czvf "dojo_${PLATFORM_NAME}_${ARCH}.tar.gz" -C ./target/${TARGET}/release "${LIBRARY_NAME}"
-            echo "file_name=dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz" >> $GITHUB_OUTPUT
+            gtar -czvf "${ARCHIVE_NAME}" -C ./target/${TARGET}/release "${LIBRARY_NAME}"
+            mv "${ARCHIVE_NAME}" ../../../
+
+            echo "file_name=${ARCHIVE_NAME}" >> $GITHUB_OUTPUT
           else
             # Error with unsupported platform, to prevent one from adding
             # a platform to the matrix without adding the corresponding logic.
