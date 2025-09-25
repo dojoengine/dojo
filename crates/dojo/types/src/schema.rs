@@ -142,7 +142,11 @@ impl Ty {
     pub fn serialize(&self, legacy_storage: bool) -> Result<Vec<Felt>, PrimitiveError> {
         let mut felts = vec![];
 
-        fn serialize_inner(ty: &Ty, felts: &mut Vec<Felt>, legacy_storage: bool) -> Result<(), PrimitiveError> {
+        fn serialize_inner(
+            ty: &Ty,
+            felts: &mut Vec<Felt>,
+            legacy_storage: bool,
+        ) -> Result<(), PrimitiveError> {
             match ty {
                 Ty::Primitive(c) => {
                     felts.extend(c.serialize()?);
@@ -155,13 +159,12 @@ impl Ty {
                 Ty::Enum(e) => {
                     if let Some(option) = e.option {
                         // For new storage system, enum variant indices start from 1
-                        let serialized_option = if legacy_storage {
-                            option
-                        } else {
-                            option + 1
-                        };
-                        felts.push(Felt::from(serialized_option));
-                        
+                        let mut serialized_option = Felt::from(option);
+                        if !legacy_storage {
+                            serialized_option += Felt::ONE;
+                        }
+                        felts.push(serialized_option);
+
                         // Only serialize the selected option
                         if let Some(selected_option) = e.options.get(option as usize) {
                             serialize_inner(&selected_option.ty, felts, legacy_storage)?;
@@ -169,7 +172,7 @@ impl Ty {
                     } else {
                         // For uninitialized enum in new storage system, use 0
                         if !legacy_storage {
-                            felts.push(Felt::from(0u8));
+                            felts.push(Felt::ZERO);
                         } else {
                             return Err(PrimitiveError::MissingFieldElement);
                         }
