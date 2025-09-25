@@ -112,6 +112,9 @@ jobs:
     needs: [build-artifacts]
     steps:
       - uses: actions/checkout@v4
+      - uses: software-mansion/setup-scarb@v1
+        with:
+          scarb-version: "2.12.2"
       - uses: actions/download-artifact@v4
         with:
           pattern: artifacts-*
