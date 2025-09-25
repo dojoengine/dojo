@@ -74,31 +74,24 @@ jobs:
         id: artifacts
         run: |
           cd ./crates/dojo/macros
-          cargo build --release --locked --target ${{ matrix.job.target }}
+          cargo build --release --locked --target "${TARGET}"
+
+          ls -la ./target/"${TARGET}"/release
 
           VERSION_NAME=$(cargo metadata --format-version=1 --no-deps | jq -r '.packages[0].version')
+          echo "version_name=${VERSION_NAME}"
 
           # Determine library extension based on platform
           if [ "$PLATFORM_NAME" == "linux" ]; then
             DLL_EXT="so"
             LIBRARY_NAME="dojo_cairo_macros_v${VERSION_NAME}_${TARGET}.${DLL_EXT}"
-
-            # Rename the library to the desired format
-            mv "./target/${TARGET}/release/libdojo_cairo_macros.${DLL_EXT}" "./target/${TARGET}/release/${LIBRARY_NAME}"
-
-            tar -czvf "dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz" -C ./target/${TARGET}/release "${LIBRARY_NAME}"
-            echo "file_name=dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz" >> $GITHUB_OUTPUT
+            mv "./target/${TARGET}/release/libdojo_cairo_macros.${DLL_EXT}" "../../../${LIBRARY_NAME}"
+            echo "file_name=${LIBRARY_NAME}" >> $GITHUB_OUTPUT
           elif [ "$PLATFORM_NAME" == "darwin" ]; then
             DLL_EXT="dylib"
             LIBRARY_NAME="dojo_cairo_macros_v${VERSION_NAME}_${TARGET}.${DLL_EXT}"
-
-            # Rename the library to the desired format
-            mv "./target/${TARGET}/release/libdojo_cairo_macros.${DLL_EXT}" "./target/${TARGET}/release/${LIBRARY_NAME}"
-
-            # We need to use gtar here otherwise the archive is corrupt.
-            # See: https://github.com/actions/virtual-environments/issues/2619
-            gtar -czvf "dojo_${PLATFORM_NAME}_${ARCH}.tar.gz" -C ./target/${TARGET}/release "${LIBRARY_NAME}"
-            echo "file_name=dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz" >> $GITHUB_OUTPUT
+            mv "./target/${TARGET}/release/libdojo_cairo_macros.${DLL_EXT}" "../../../${LIBRARY_NAME}"
+            echo "file_name=${LIBRARY_NAME}" >> $GITHUB_OUTPUT
           else
             # Error with unsupported platform, to prevent one from adding
             # a platform to the matrix without adding the corresponding logic.
@@ -114,50 +107,29 @@ jobs:
           path: ${{ steps.artifacts.outputs.file_name }}
           retention-days: 1
 
-  prepare-scarb-plugin:
+  publish-scarb-plugin:
     runs-on: ubuntu-latest
     needs: [build-artifacts]
     steps:
       - uses: actions/checkout@v4
+      - uses: software-mansion/setup-scarb@v1
+        with:
+          scarb-version: "2.12.2"
       - uses: actions/download-artifact@v4
         with:
           pattern: artifacts-*
           path: artifacts
           merge-multiple: true
-      - name: Extract libraries and prepare Scarb plugin structure
+      - name: Extract libraries and publish to Scarb registry
         run: |
-          cd ./crates/dojo/macros
           # Create the target directory required by Scarb publish command
           # to include pre-built binaries.
           # https://docs.swmansion.com/scarb/docs/reference/procedural-macro.html#prebuilt-procedural-macros
-          mkdir -p ./target/scarb/cairo-plugin
+          mkdir -p ./crates/dojo/macros/target/scarb/cairo-plugin
 
-          # Process each artifact (excluding Windows).
-          for artifact in artifacts/artifacts-*; do
-            if [[ -f "$artifact" ]]; then
-              echo "Processing artifact: $artifact"
-
-              if [[ "$artifact" == *.tar.gz ]]; then
-                tar -xzf "$artifact" -C /tmp/
-
-                for lib in /tmp/dojo_cairo_macros_*.{so,dylib}; do
-                  if [[ -f "$lib" ]]; then
-                    cp "$lib" crates/dojo/macros/target/scarb/cairo-plugin/
-                  fi
-                done
-
-                rm -f /tmp/dojo_cairo_macros_*.{so,dylib}
-              fi
-            fi
+          for file in artifacts/*; do
+            cp "$file" ./crates/dojo/macros/target/scarb/cairo-plugin/
           done
 
-          # Display the final structure for debug at the moment.
-          echo "Final Scarb plugin structure:"
-          ls -la .
-          ls -la ./target/scarb/cairo-plugin/
-
-      # - name: Publish to Scarb registry
-      #   run: |
-      #     cd crates/dojo/macros
-      #     SCARB_REGISTRY_AUTH_TOKEN={{secrets.SCARB_REGISTRY_AUTH_TOKEN}} scarb publish --allow-dirty
-
+          cd ./crates/dojo/macros
+          SCARB_REGISTRY_AUTH_TOKEN=${{ secrets.SCARB_REGISTRY_AUTH_TOKEN }} scarb publish --allow-dirty

@@ -46,6 +46,7 @@ find_scarb() {
   # Exclude crates/dojo/macros/Scarb.toml as it's managed independently.
   find "$ROOT" -type d \( -name .git -o -name target \) -prune -o \
        -path "*/crates/dojo/macros/Scarb.toml" -prune -o \
+       -path "*/crates/dojo/macros/Scarb.lock" -prune -o \
        -type f -name Scarb.toml -print0
 }
 
