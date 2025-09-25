@@ -129,4 +129,4 @@ jobs:
           done
 
           cd ./crates/dojo/macros
-          SCARB_REGISTRY_AUTH_TOKEN={{ secrets.SCARB_REGISTRY_AUTH_TOKEN }} scarb publish --allow-dirty
+          SCARB_REGISTRY_AUTH_TOKEN=${{ secrets.SCARB_REGISTRY_AUTH_TOKEN }} scarb publish --allow-dirty
