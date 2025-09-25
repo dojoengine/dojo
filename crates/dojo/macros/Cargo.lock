@@ -826,7 +826,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-types"
-version = "1.7.0"
+version = "1.7.1"
 dependencies = [
  "anyhow",
  "cainome",
