@@ -83,7 +83,7 @@ jobs:
           if [ "$PLATFORM_NAME" == "linux" ]; then
             DLL_EXT="so"
             LIBRARY_NAME="dojo_cairo_macros_v${VERSION_NAME}_${TARGET}.${DLL_EXT}"
-            ARCHIVE_NAME=
+            ARCHIVE_NAME=dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz
 
             # Rename the library to the desired format
             mv "./target/${TARGET}/release/libdojo_cairo_macros.${DLL_EXT}" "./target/${TARGET}/release/${LIBRARY_NAME}"
