@@ -153,7 +153,7 @@ impl Ty {
                 }
                 Ty::Struct(s) => {
                     for child in &s.children {
-                        serialize_inner(&child.ty, felts, legacy_storage)?;
+                        serialize_inner(&child.ty, felts, child.key || legacy_storage)?;
                     }
                 }
                 Ty::Enum(e) => {
