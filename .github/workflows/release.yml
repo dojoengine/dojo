@@ -95,18 +95,6 @@ jobs:
       - name: Build binaries
         run: cargo build --release --locked --bin sozo --target ${{ matrix.job.target }}
 
-      - name: Build and publish Dojo cairo packages
-        run: |
-          # Skip dojo since already published the two other have failed. To be uncommented after the release 1.7.1.
-          #cd crates/dojo/core
-          #SCARB_REGISTRY_AUTH_TOKEN=${{ secrets.SCARB_REGISTRY_AUTH_TOKEN }} scarb publish
-
-          cd ./crates/dojo/dojo-snf-test
-          SCARB_REGISTRY_AUTH_TOKEN=${{ secrets.SCARB_REGISTRY_AUTH_TOKEN }} scarb publish
-
-          cd ../dojo-cairo-test
-          SCARB_REGISTRY_AUTH_TOKEN=${{ secrets.SCARB_REGISTRY_AUTH_TOKEN }} scarb publish
-
       - name: Archive binaries
         id: artifacts
         env:
@@ -135,9 +123,73 @@ jobs:
           path: ${{ steps.artifacts.outputs.file_name }}
           retention-days: 1
 
+  publish-scarb-packages:
+    
+    runs-on: ubuntu-latest
+    needs: [prepare]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: software-mansion/setup-scarb@v1
+        with:
+          scarb-version: "2.12.2"
+
+      - name: Check if Dojo Cairo packages exist on Scarb registry
+        id: check_packages
+        run: |
+          VERSION_NO_V=${{ needs.prepare.outputs.tag_name }}
+          VERSION_NO_V=${VERSION_NO_V#v}
+          
+          echo "Checking if Dojo Cairo packages v${VERSION_NO_V} exist on Scarb registry..."
+          
+          # Check dojo_cairo_macros
+          if curl -f -s "https://scarbs.xyz/api/v1/dl/dojo/${VERSION_NO_V}" > /dev/null; then
+            echo "✅ dojo_cairo_macros v${VERSION_NO_V} already exists"
+            echo "macros_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "❌ dojo_cairo_macros v${VERSION_NO_V} not found (404)"
+            echo "macros_exists=false" >> $GITHUB_OUTPUT
+          fi
+          
+          # Check dojo_cairo_test
+          if curl -f -s "https://scarbs.xyz/api/v1/dl/dojo_cairo_test/${VERSION_NO_V}" > /dev/null; then
+            echo "✅ dojo_cairo_test v${VERSION_NO_V} already exists"
+            echo "cairo_test_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "❌ dojo_cairo_test v${VERSION_NO_V} not found (404)"
+            echo "cairo_test_exists=false" >> $GITHUB_OUTPUT
+          fi
+          
+          # Check dojo_snf_test
+          if curl -f -s "https://scarbs.xyz/api/v1/dl/dojo_snf_test/${VERSION_NO_V}" > /dev/null; then
+            echo "✅ dojo_snf_test v${VERSION_NO_V} already exists"
+            echo "snf_test_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "❌ dojo_snf_test v${VERSION_NO_V} not found (404)"
+            echo "snf_test_exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Publish dojo_cairo_macros
+        if: steps.check_packages.outputs.macros_exists == 'false'
+        run: |
+          cd ./crates/dojo/macros
+          SCARB_REGISTRY_AUTH_TOKEN=${{ secrets.SCARB_REGISTRY_AUTH_TOKEN }} scarb publish
+
+      - name: Publish dojo_cairo_test
+        if: steps.check_packages.outputs.cairo_test_exists == 'false'
+        run: |
+          cd ./crates/dojo/dojo-cairo-test
+          SCARB_REGISTRY_AUTH_TOKEN=${{ secrets.SCARB_REGISTRY_AUTH_TOKEN }} scarb publish
+
+      - name: Publish dojo_snf_test
+        if: steps.check_packages.outputs.snf_test_exists == 'false'
+        run: |
+          cd ./crates/dojo/dojo-snf-test
+          SCARB_REGISTRY_AUTH_TOKEN=${{ secrets.SCARB_REGISTRY_AUTH_TOKEN }} scarb publish
+
   create-draft-release:
     runs-on: ubuntu-latest
-    needs: [prepare, release]
+    needs: [prepare, release, publish-scarb-packages]
     env:
       GITHUB_USER: ${{ github.repository_owner }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
