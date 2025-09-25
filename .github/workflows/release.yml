@@ -95,9 +95,15 @@ jobs:
       - name: Build binaries
         run: cargo build --release --locked --bin sozo --target ${{ matrix.job.target }}
 
-      - name: Build and publish Dojo cairo package
+      - name: Build and publish Dojo cairo packages
         run: |
           cd crates/dojo/core
+          SCARB_REGISTRY_AUTH_TOKEN=${{ secrets.SCARB_REGISTRY_AUTH_TOKEN }} scarb publish
+
+          cd ../dojo-snf-test
+          SCARB_REGISTRY_AUTH_TOKEN=${{ secrets.SCARB_REGISTRY_AUTH_TOKEN }} scarb publish
+
+          cd ../dojo-cairo-test
           SCARB_REGISTRY_AUTH_TOKEN=${{ secrets.SCARB_REGISTRY_AUTH_TOKEN }} scarb publish
 
       - name: Archive binaries
