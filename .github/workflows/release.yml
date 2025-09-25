@@ -88,8 +88,17 @@ jobs:
         with:
           cache-on-failure: true
 
+      - uses: software-mansion/setup-scarb@v1
+        with:
+          scarb-version: "2.12.2"
+
       - name: Build binaries
         run: cargo build --release --locked --bin sozo --target ${{ matrix.job.target }}
+
+      - name: Build and publish Dojo cairo package
+        run: |
+          cd crates/dojo/core
+          SCARB_REGISTRY_AUTH_TOKEN=${{ secrets.SCARB_REGISTRY_AUTH_TOKEN }} scarb publish
 
       - name: Archive binaries
         id: artifacts
