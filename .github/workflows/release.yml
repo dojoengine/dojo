@@ -97,8 +97,9 @@ jobs:
 
       - name: Build and publish Dojo cairo packages
         run: |
-          cd crates/dojo/core
-          SCARB_REGISTRY_AUTH_TOKEN=${{ secrets.SCARB_REGISTRY_AUTH_TOKEN }} scarb publish
+          # Skip dojo since already published the two other have failed. To be uncommented after the release 1.7.1.
+          #cd crates/dojo/core
+          #SCARB_REGISTRY_AUTH_TOKEN=${{ secrets.SCARB_REGISTRY_AUTH_TOKEN }} scarb publish
 
           cd ../dojo-snf-test
           SCARB_REGISTRY_AUTH_TOKEN=${{ secrets.SCARB_REGISTRY_AUTH_TOKEN }} scarb publish
