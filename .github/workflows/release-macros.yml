@@ -107,7 +107,7 @@ jobs:
           path: ${{ steps.artifacts.outputs.file_name }}
           retention-days: 1
 
-  prepare-scarb-plugin:
+  publish-scarb-plugin:
     runs-on: ubuntu-latest
     needs: [build-artifacts]
     steps:
@@ -117,7 +117,7 @@ jobs:
           pattern: artifacts-*
           path: artifacts
           merge-multiple: true
-      - name: Extract libraries and prepare Scarb plugin structure
+      - name: Extract libraries and publish to Scarb registry
         run: |
           # Create the target directory required by Scarb publish command
           # to include pre-built binaries.
@@ -129,14 +129,4 @@ jobs:
           done
 
           cd ./crates/dojo/macros
-
-          # Display the final structure for debug at the moment.
-          echo "Final Scarb plugin structure:"
-          ls -la .
-          ls -la ./target/scarb/cairo-plugin/
-
-      # - name: Publish to Scarb registry
-      #   run: |
-      #     cd crates/dojo/macros
-      #     SCARB_REGISTRY_AUTH_TOKEN={{secrets.SCARB_REGISTRY_AUTH_TOKEN}} scarb publish --allow-dirty
-
+          SCARB_REGISTRY_AUTH_TOKEN={{ secrets.SCARB_REGISTRY_AUTH_TOKEN }} scarb publish --allow-dirty
