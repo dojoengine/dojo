@@ -71,6 +71,16 @@ fn test_contract_getter() {
 }
 
 #[test]
+fn test_world_version_matches_constant() {
+    let world = deploy_world();
+    let world = world.dispatcher;
+
+    let version = world.world_version();
+
+    assert(version == world_contract::WORLD_VERSION, 'world version mismatch');
+}
+
+#[test]
 #[available_gas(l2_gas: 6000000)]
 fn test_emit() {
     let bob: ContractAddress = 0xb0b.try_into().unwrap();
