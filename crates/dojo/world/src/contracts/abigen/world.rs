@@ -4139,6 +4139,20 @@ impl<A: starknet::accounts::ConnectedAccount + Sync> WorldContract<A> {
     }
     #[allow(clippy::ptr_arg)]
     #[allow(clippy::too_many_arguments)]
+    pub fn world_version(
+        &self,
+    ) -> cainome::cairo_serde::call::FCall<A::Provider, starknet::core::types::Felt> {
+        use cainome::cairo_serde::CairoSerde;
+        let mut __calldata = vec![];
+        let __call = starknet::core::types::FunctionCall {
+            contract_address: self.address,
+            entry_point_selector: starknet::macros::selector!("world_version"),
+            calldata: __calldata,
+        };
+        cainome::cairo_serde::call::FCall::new(__call, self.provider())
+    }
+    #[allow(clippy::ptr_arg)]
+    #[allow(clippy::too_many_arguments)]
     pub fn delete_entities_getcall(
         &self,
         model_selector: &starknet::core::types::Felt,
@@ -5133,6 +5147,20 @@ impl<P: starknet::providers::Provider + Sync> WorldContractReader<P> {
         let __call = starknet::core::types::FunctionCall {
             contract_address: self.address,
             entry_point_selector: starknet::macros::selector!("resource"),
+            calldata: __calldata,
+        };
+        cainome::cairo_serde::call::FCall::new(__call, self.provider())
+    }
+    #[allow(clippy::ptr_arg)]
+    #[allow(clippy::too_many_arguments)]
+    pub fn world_version(
+        &self,
+    ) -> cainome::cairo_serde::call::FCall<P, starknet::core::types::Felt> {
+        use cainome::cairo_serde::CairoSerde;
+        let mut __calldata = vec![];
+        let __call = starknet::core::types::FunctionCall {
+            contract_address: self.address,
+            entry_point_selector: starknet::macros::selector!("world_version"),
             calldata: __calldata,
         };
         cainome::cairo_serde::call::FCall::new(__call, self.provider())

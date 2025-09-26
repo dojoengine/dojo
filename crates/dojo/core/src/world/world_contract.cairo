@@ -54,6 +54,7 @@ pub mod world {
 
     pub const WORLD: felt252 = 0;
     pub const DOJO_INIT_SELECTOR: felt252 = selector!("dojo_init");
+    pub const WORLD_VERSION: felt252 = '1.7.1';
 
     #[event]
     #[derive(Drop, starknet::Event)]
@@ -369,6 +370,10 @@ pub mod world {
 
     #[abi(embed_v0)]
     impl World of IWorld<ContractState> {
+        fn world_version(self: @ContractState) -> felt252 {
+            WORLD_VERSION
+        }
+
         fn metadata(self: @ContractState, resource_selector: felt252) -> ResourceMetadata {
             let (_, internal_ns_hash) = self.world_internal_namespace();
 

@@ -9,6 +9,7 @@ version.workspace = true
 pre-release-replacements = [
 	{ file = "Scarb.lock", search = "^name = \"dojo\"\nversion = \".*\"$", replace = "name = \"dojo\"\nversion = \"{{version}}\"", min = 1 },
 	{ file = "Scarb.toml", search = "^version = \".*\"$", replace = "version = \"{{version}}\"", min = 1 },
+	{ file = "src/world/world_contract.cairo", search = "^\\s*pub const WORLD_VERSION: felt252 = '.*';$", replace = "    pub const WORLD_VERSION: felt252 = '{{version}}';", min = 1 },
 ]
 
 [lib]

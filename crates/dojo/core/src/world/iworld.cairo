@@ -26,6 +26,9 @@ pub trait IWorld<T> {
     ///   * `Resource` - the resource data associated with the selector.
     fn resource(self: @T, selector: felt252) -> Resource;
 
+    /// Returns the version of the world contract as a short string.
+    fn world_version(self: @T) -> felt252;
+
     /// Issues an autoincremented id to the caller.
     /// This functionalities is useful to generate unique, but sequential ids.
     ///
