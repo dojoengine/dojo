@@ -66,7 +66,11 @@ jobs:
     needs: prepare
     strategy:
       matrix:
-        platform: [linux/amd64, linux/arm64]
+        job:
+          - os: ubuntu-latest
+            platform: linux/amd64
+          - os: ubuntu-24.04-arm
+            platform: linux/arm64
 
     steps:
       - name: Checkout repository
