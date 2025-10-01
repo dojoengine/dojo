@@ -2,3 +2,4 @@ scarb 2.12.2
 starknet-foundry 0.48.1
 cairo-profiler 0.9.0
 katana 1.7.0-alpha.3
+torii 1.7.3

@@ -2,7 +2,7 @@
 #
 # This workflow is triggered by a workflow_dispatch event or when a new release with a tag starting with `v` is published.
 #
-# The docker image is built by using `dojoup` to bundle the Dojo binaries with the docker image, there is no heavy compilation
+# The docker image is built by using `asdf` to bundle the Dojo binaries with the docker image, there is no heavy compilation
 # of the Dojo binaries during this workflow.
 #
 # The docker image is pushed to the GitHub Container Registry: https://github.com/dojoengine/dojo/pkgs/container/dojo
@@ -58,13 +58,15 @@ jobs:
             fi
             echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
 
-            # Dojoup doesn't require the prefix v and automatically adds it.
             echo "dojo_version=${{ inputs.dojo_version }}" >> $GITHUB_OUTPUT
           fi
 
   docker-build-and-push:
     runs-on: ubuntu-latest-32-cores
     needs: prepare
+    strategy:
+      matrix:
+        platform: [linux/amd64, linux/arm64]
 
     steps:
       - name: Checkout repository
@@ -85,6 +87,6 @@ jobs:
         with:
           push: true
           tags: ghcr.io/${{ github.repository }}:latest,ghcr.io/${{ github.repository }}:${{ needs.prepare.outputs.tag_name }}
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ matrix.platform }}
           build-args: |
             DOJO_VERSION=${{ needs.prepare.outputs.dojo_version }}
