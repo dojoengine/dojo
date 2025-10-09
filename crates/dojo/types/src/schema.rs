@@ -6,7 +6,8 @@ use itertools::Itertools;
 use num_traits::ToPrimitive;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value as JsonValue};
-use starknet::core::{codec::Decode, types::Felt};
+use starknet::core::codec::Decode;
+use starknet::core::types::Felt;
 use strum_macros::AsRefStr;
 
 use crate::primitive::{Primitive, PrimitiveError};
@@ -289,7 +290,7 @@ impl Ty {
                 let bytearray = starknet::core::types::ByteArray::decode_iter(&mut iterator)?;
                 let cairo_bytearray = ByteArray::cairo_deserialize(&felts, 0)?;
                 felts.drain(0..ByteArray::cairo_serialized_size(&cairo_bytearray));
-                
+
                 let bytes: Vec<u8> = bytearray.into();
 
                 *string = String::from_utf8_lossy(bytes.as_slice()).to_string();
