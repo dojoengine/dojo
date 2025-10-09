@@ -285,7 +285,7 @@ impl Ty {
                 }
             }
             Ty::ByteArray(string) => {
-                let bytearray = ByteArray::cairo_deserialize(&felts, 0)?;
+                let bytearray = ByteArray::cairo_deserialize(felts, 0)?;
                 felts.drain(0..ByteArray::cairo_serialized_size(&bytearray));
 
                 *string = bytearray.to_string_lossy().to_string();
