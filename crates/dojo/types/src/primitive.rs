@@ -83,6 +83,8 @@ pub enum PrimitiveError {
     FromUtf8Error(#[from] std::string::FromUtf8Error),
     #[error(transparent)]
     FeltFromFeltError(#[from] crate::primitive_conversion::PrimitiveFromFeltError),
+    #[error(transparent)]
+    CodecError(#[from] starknet::core::codec::Error),
 }
 
 #[derive(AsRefStr, Debug, Display, EnumString, PartialEq)]
