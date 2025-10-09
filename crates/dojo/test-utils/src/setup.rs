@@ -77,34 +77,23 @@ impl TestSetup {
             }
         }
         fn update_dependency(
-            manifest_path: &Utf8PathBuf,
+            _manifest_path: &Utf8PathBuf,
             table: &mut toml::map::Map<String, Value>,
             dep_name: &str,
             new_dep_path: &Utf8PathBuf,
         ) {
             let dep = if table.contains_key("workspace") {
-                table["workspace"]["dependencies"]
-                    .get_mut(dep_name)
-                    .unwrap_or_else(|| {
-                        panic!("{manifest_path} should contain {dep_name} dependency")
-                    })
-                    .as_table_mut()
+                table["workspace"]["dependencies"].get_mut(dep_name).and_then(|d| d.as_table_mut())
             } else {
-                table["dependencies"]
-                    .get_mut(dep_name)
-                    .unwrap_or_else(|| {
-                        panic!("{manifest_path} should contain {dep_name} dependency")
-                    })
-                    .as_table_mut()
+                table["dependencies"].get_mut(dep_name).and_then(|d| d.as_table_mut())
             };
 
-            if dep.is_none() {
-                // We just skip the dependency since in some setups,
-                // when paths are not used, we don't need to update the dependency.
-                return;
+            if let Some(dep) = dep {
+                update_dep_path(dep, new_dep_path);
             }
 
-            update_dep_path(dep.unwrap(), new_dep_path);
+            // Skip if the dependency is not found - in some setups,
+            // when paths are not used, we don't need to update the dependency.
         }
         fn update_dev_dependency(
             table: &mut toml::map::Map<String, Value>,
