@@ -101,27 +101,23 @@ impl TestSetup {
             new_dep_path: &Utf8PathBuf,
         ) {
             let dep = if table.contains_key("workspace") {
-                if table["workspace"].as_table().unwrap().contains_key("dev-dependencies")
-                    && table["workspace"]["dev-dependencies"]
-                        .as_table()
-                        .unwrap()
-                        .contains_key(dep_name)
-                {
-                    Some(table["workspace"]["dev-dependencies"][dep_name].as_table_mut().unwrap())
-                } else {
-                    None
-                }
-            } else if table.contains_key("dev-dependencies")
-                && table["dev-dependencies"].as_table().unwrap().contains_key(dep_name)
-            {
-                Some(table["dev-dependencies"][dep_name].as_table_mut().unwrap())
+                table["workspace"]
+                    .get_mut("dev-dependencies")
+                    .and_then(|deps| deps.get_mut(dep_name))
+                    .and_then(|d| d.as_table_mut())
             } else {
-                None
+                table
+                    .get_mut("dev-dependencies")
+                    .and_then(|deps| deps.get_mut(dep_name))
+                    .and_then(|d| d.as_table_mut())
             };
 
             if let Some(dep) = dep {
                 update_dep_path(dep, new_dep_path);
             }
+
+            // Skip if the dev-dependency is not found - in some setups,
+            // when paths are not used, we don't need to update the dependency.
         }
 
         let mut contents = String::new();
