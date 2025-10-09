@@ -89,7 +89,6 @@ impl TestSetup {
                         panic!("{manifest_path} should contain {dep_name} dependency")
                     })
                     .as_table_mut()
-                    .unwrap()
             } else {
                 table["dependencies"]
                     .get_mut(dep_name)
@@ -97,10 +96,15 @@ impl TestSetup {
                         panic!("{manifest_path} should contain {dep_name} dependency")
                     })
                     .as_table_mut()
-                    .unwrap()
             };
 
-            update_dep_path(dep, new_dep_path);
+            if dep.is_none() {
+                // We just skip the dependency since in some setups,
+                // when paths are not used, we don't need to update the dependency.
+                return;
+            }
+
+            update_dep_path(dep.unwrap(), new_dep_path);
         }
         fn update_dev_dependency(
             table: &mut toml::map::Map<String, Value>,
