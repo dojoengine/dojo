@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 
 # Run installer with:
-# curl -L https://raw.githubusercontent.com/dojoengine/dojo/main/dojoup/asdf-install | bash
+# curl -L https://install.dojoengine.org | bash
 
 set -e
 
 # Check if asdf is installed
 if ! command -v asdf &> /dev/null; then
     echo "Error: asdf is not installed or not in PATH"
-    echo "Please install asdf first by following the instructions at:"
+    echo "Please install asdf by following the instructions at:"
     echo "https://asdf-vm.com/guide/getting-started.html"
     exit 1
 fi
@@ -18,15 +18,33 @@ echo "Installing Dojo toolchain with asdf..."
 # Install the asdf plugins
 PLUGINS=(sozo katana torii)
 for plugin in "${PLUGINS[@]}"; do
+
+    # Install plugin from source
     if ! asdf plugin list | grep -q "^$plugin$"; then
         asdf plugin add $plugin https://github.com/dojoengine/asdf-$plugin.git
     fi
 
+    # Install latest version and set as global default
     latest=$(asdf latest $plugin)
     if ! asdf list $plugin 2>/dev/null | grep -q "$latest"; then
         asdf install $plugin $latest
         asdf set --home $plugin $latest
     fi
+
+    # Set local version if in an asdf directory
+    if [ -f ".tool-versions" ]; then
+        asdf set "$plugin" "$latest"
+    fi
 done
 
+# Warn if legacy ~/.dojo exists, which can interfere with asdf
+if [ -d "$HOME/.dojo" ]; then
+    echo
+    echo "Warning: Detected existing Dojoup installation."
+    echo "This may shadow your asdf installation."
+    echo "Please remove it by running:"
+    echo "rm -rf ~/.dojo"
+fi
+
+echo
 echo "Dojo toolchain installation complete!"
