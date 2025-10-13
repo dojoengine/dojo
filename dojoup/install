@@ -1,157 +1,32 @@
 #!/usr/bin/env bash
+
+# Run installer with:
+# curl -L https://raw.githubusercontent.com/dojoengine/dojo/main/dojoup/asdf-install | bash
+
 set -e
 
-echo Installing dojoup...
-
-check_cmd() {
-  command -v "$1" &>/dev/null
-}
-
-need_cmd() {
-  if ! check_cmd "$1"; then
-    err "need '$1' (command not found)"
-  fi
-}
-
-need_cmd curl
-
-BASE_DIR=${XDG_CONFIG_HOME:-$HOME}
-DOJO_DIR=${DOJO_DIR-"$BASE_DIR/.dojo"}
-DOJO_BIN_DIR="$DOJO_DIR/bin"
-DOJO_DOJOUP_DIR="$DOJO_DIR/dojoup"
-DOJO_MAN_DIR="$DOJO_DIR/share/man/man1"
-
-# Use first argument as BIN_URL if provided, otherwise default to GitHub main.
-BIN_URL=${1:-"https://raw.githubusercontent.com/dojoengine/dojo/main/dojoup/dojoup"}
-BIN_PATH="$DOJO_DOJOUP_DIR/dojoup"
-
-# Create the .dojo bin directory and dojoup binary if it doesn't exist.
-mkdir -p $DOJO_BIN_DIR
-mkdir -p $DOJO_DOJOUP_DIR
-
-# Handle both remote and local dojoup binary sources.
-# To test dojoup, having a local dojoup binary is useful.
-if [[ "$BIN_URL" == http* ]]; then
-    echo "Downloading dojoup from $BIN_URL..."
-    curl -# -L "$BIN_URL" -o "$BIN_PATH"
-else
-    echo "Copying local dojoup from $BIN_URL..."
-    cp "$BIN_URL" "$BIN_PATH"
+# Check if asdf is installed
+if ! command -v asdf &> /dev/null; then
+    echo "Error: asdf is not installed or not in PATH"
+    echo "Please install asdf first by following the instructions at:"
+    echo "https://asdf-vm.com/guide/getting-started.html"
+    exit 1
 fi
 
-chmod +x "$BIN_PATH"
+echo "Installing Dojo toolchain with asdf..."
 
-# Create the man directory for future man files if it doesn't exist.
-mkdir -p $DOJO_MAN_DIR
-
-# Create env file with PATH configuration
-ENV_FILE="$DOJO_DIR/env"
-cat > $ENV_FILE << EOF
-#!/bin/sh
-# dojoup shell setup
-# affix colons on either side of \$PATH to simplify matching
-case ":\${PATH}:" in
-    *:"$DOJO_BIN_DIR":*)
-        ;;
-    *)
-        # Appending path for dojo binary directory
-        export PATH="\$PATH:$DOJO_BIN_DIR"
-        ;;
-esac
-
-case ":\${PATH}:" in
-    *:"$DOJO_DOJOUP_DIR":*)
-        ;;
-    *)
-        # Appending path for dojoup directory
-        export PATH="\$PATH:$DOJO_DOJOUP_DIR"
-        ;;
-esac
-EOF
-
-SOURCE_COMMAND=". \"$ENV_FILE\""
-
-case $(basename "$SHELL") in
-zsh)
-	commands=("$SOURCE_COMMAND")
-
-    zsh_config=$HOME/.zshrc
-
-    if [[ -w $zsh_config ]]; then
-        {
-            echo -e '\n# dojo'
-            for command in "${commands[@]}"; do
-                echo "$command"
-            done
-        } >>"$zsh_config"
-
-        echo "Added \"$ENV_FILE\" to \$PATH in \"$zsh_config\""
-    else
-        echo "Manually add the directory to $zsh_config (or similar):"
-        for command in "${commands[@]}"; do
-            echo "  $command"
-        done
-    fi
-    ;;
-bash)
-    commands=("$SOURCE_COMMAND")
-
-    bash_configs=(
-        "$HOME/.bashrc"
-        "$HOME/.bash_profile"
-    )
-
-    if [[ ${XDG_CONFIG_HOME:-} ]]; then
-        bash_configs+=(
-            "$XDG_CONFIG_HOME/.bash_profile"
-            "$XDG_CONFIG_HOME/.bashrc"
-            "$XDG_CONFIG_HOME/bash_profile"
-            "$XDG_CONFIG_HOME/bashrc"
-        )
+# Install the asdf plugins
+PLUGINS=(sozo katana torii)
+for plugin in "${PLUGINS[@]}"; do
+    if ! asdf plugin list | grep -q "^$plugin$"; then
+        asdf plugin add $plugin https://github.com/dojoengine/asdf-$plugin.git
     fi
 
-    set_manually=true
-    for bash_config in "${bash_configs[@]}"; do
-    	# if file is writable
-        if [[ -w $bash_config ]]; then
-            {
-                echo -e '\n# dojo'
-                for command in "${commands[@]}"; do
-                    echo "$command"
-                done
-            } >>"$bash_config"
-
-            echo "Added \"$ENV_FILE\" to \$PATH in \"$bash_config\""
-
-            set_manually=false
-            break
-        fi
-    done
-
-    if [[ $set_manually = true ]]; then
-        echo "Manually add the directory to $bash_config (or similar):"
-        for command in "${commands[@]}"; do
-            echo "  $command"
-        done
+    latest=$(asdf latest $plugin)
+    if ! asdf list $plugin 2>/dev/null | grep -q "$latest"; then
+        asdf install $plugin $latest
+        asdf set --home $plugin $latest
     fi
-    ;;
-*)
-    echo 'Manually add the directory to ~/.bashrc (or similar):'
-    echo "  $SOURCE_COMMAND"
-    ;;
-esac
+done
 
-echo
-echo -e "\033[1mDojoup is installed now.\033[0m"
-echo
-echo "To get started you may need to restart your current shell."
-echo "This would reload your \$PATH environment variable to include"
-echo "Dojo's bin directory ($DOJO_BIN_DIR)."
-echo
-echo "To configure your current shell, you need to source"
-echo "the corresponding env file under $DOJO_DIR."
-echo
-echo "This is usually done by running the following (note the leading DOT):"
-echo "$SOURCE_COMMAND           # For sh/bash/zsh/ash/dash/pdksh"
-echo
-echo "Then, simply run 'dojoup install' to install a Dojo toolchain."
+echo "Dojo toolchain installation complete!"
