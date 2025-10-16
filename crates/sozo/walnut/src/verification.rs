@@ -42,7 +42,7 @@ pub async fn walnut_verify(scarb_metadata: &Metadata, ui: &SozoUi) -> anyhow::Re
     let root_dir: &Path = manifest.parent().unwrap().as_std_path();
 
     let source_code = collect_source_code(root_dir)?;
-    let cairo_version = scarb_metadata.version;
+    let cairo_version = scarb_metadata.app_version_info.version.clone();
 
     let verification_payload =
         VerificationPayload { source_code, cairo_version: cairo_version.to_string() };
