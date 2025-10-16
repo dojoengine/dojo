@@ -11,7 +11,7 @@ keywords = ["dojo", "starknet", "testing"]
 
 [dependencies]
 starknet = "2.12"
-snforge_std = "0.48.0"
+snforge_std = "0.50.0"
 assert_macros = "2.12"
 
 dojo = { path = "../core", version = "1.7" }

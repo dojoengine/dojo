@@ -14,7 +14,7 @@ dojo_cairo_macros = { path = "../macros" }
 dojo_snf_test = { path = "../dojo-snf-test" }
 
 [dev-dependencies]
-snforge_std = "0.48.1"
+snforge_std = "0.50.0"
 assert_macros = "2.12"
 
 [[target.starknet-contract]]
