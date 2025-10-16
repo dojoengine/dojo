@@ -1,5 +1,5 @@
 scarb 2.12.2
-starknet-foundry 0.48.1
+starknet-foundry 0.50.0
 cairo-profiler 0.9.0
 katana 1.7.0
 torii 1.8.3
