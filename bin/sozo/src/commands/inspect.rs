@@ -1025,7 +1025,7 @@ fn resource_diff_display(world_diff: &WorldDiff, resource: &ResourceDiff) -> Res
 /// Generates Cairo code for FactoryConfig initialization.
 fn inspect_world_factory(world_diff: &WorldDiff) -> Result<()> {
     let world_class_hash = format!("{:#066x}", world_diff.world_info.class_hash);
-    
+
     // Get the first namespace or use a default
     let default_namespace = world_diff
         .resources
@@ -1033,7 +1033,7 @@ fn inspect_world_factory(world_diff: &WorldDiff) -> Result<()> {
         .find(|r| matches!(r.resource_type(), ResourceType::Namespace))
         .map(|r| r.name())
         .unwrap_or_else(|| "dojo".to_string());
-    
+
     // Collect contracts (excluding external contracts)
     let mut contracts: Vec<(String, String, String)> = world_diff
         .resources
@@ -1046,7 +1046,7 @@ fn inspect_world_factory(world_diff: &WorldDiff) -> Result<()> {
         })
         .collect();
     contracts.sort_by(|a, b| a.0.cmp(&b.0));
-    
+
     // Collect models
     let mut models: Vec<String> = world_diff
         .resources
@@ -1055,7 +1055,7 @@ fn inspect_world_factory(world_diff: &WorldDiff) -> Result<()> {
         .map(|r| format!("{:#066x}", r.current_class_hash()))
         .collect();
     models.sort();
-    
+
     // Collect events
     let mut events: Vec<String> = world_diff
         .resources
@@ -1064,62 +1064,69 @@ fn inspect_world_factory(world_diff: &WorldDiff) -> Result<()> {
         .map(|r| format!("{:#066x}", r.current_class_hash()))
         .collect();
     events.sort();
-    
+
     // Print the Cairo code
     println!("let factory_config = FactoryConfig {{");
     println!("    version: '1',");
-    println!("    world_class_hash: TryInto::<felt252, ClassHash>::try_into({}).unwrap(),", world_class_hash);
+    println!(
+        "    world_class_hash: TryInto::<felt252, ClassHash>::try_into({}).unwrap(),",
+        world_class_hash
+    );
     println!("    default_namespace: \"{}\",", default_namespace);
-    
+
     // Print contracts
     println!("    contracts: array![");
     for (tag, _, class_hash) in &contracts {
-        println!("        (selector_from_tag!(\"{}\"), TryInto::<felt252, ClassHash>::try_into({}).unwrap(), array![]),", tag, class_hash);
+        println!(
+            "        (selector_from_tag!(\"{}\"), TryInto::<felt252, \
+             ClassHash>::try_into({}).unwrap(), array![]),",
+            tag, class_hash
+        );
     }
     println!("    ],");
-    
+
     // Print models
     println!("    models: array![");
     for model_hash in &models {
         println!("        TryInto::<felt252, ClassHash>::try_into({}).unwrap(),", model_hash);
     }
     println!("    ],");
-    
+
     // Print events
     println!("    events: array![");
     for event_hash in &events {
         println!("        TryInto::<felt252, ClassHash>::try_into({}).unwrap(),", event_hash);
     }
     println!("    ],");
-    
+
     println!("}};");
-    
+
     // Print the sozo command line
     println!();
     println!("# Sozo command to execute:");
     print!("sozo -P <PROFILE> execute factory set_config <VERSION> {}", world_class_hash);
     print!(" str:{}", default_namespace);
-    
+
     // Contracts array
     print!(" {}", contracts.len());
     for (_, selector, class_hash) in &contracts {
         print!(" {} {} 0", selector, class_hash);
     }
-    
+
     // Models array
     print!(" {}", models.len());
     for model_hash in &models {
         print!(" {}", model_hash);
     }
-    
+
     // Events array
     print!(" {}", events.len());
     for event_hash in &events {
         print!(" {}", event_hash);
     }
-    
+
     println!();
-    
+
     Ok(())
 }
 
