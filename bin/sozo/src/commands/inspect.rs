@@ -26,6 +26,9 @@ pub struct InspectArgs {
     #[arg(long, help = "Output in JSON format")]
     json: bool,
 
+    #[arg(long, help = "Output Cairo code for FactoryConfig initialization")]
+    output_factory: bool,
+
     #[command(flatten)]
     world: WorldOptions,
 
@@ -37,13 +40,15 @@ impl InspectArgs {
     pub async fn run(self, scarb_metadata: &Metadata, ui: &SozoUi) -> Result<()> {
         trace!(args = ?self);
 
-        let InspectArgs { world, starknet, element, json } = self;
+        let InspectArgs { world, starknet, element, json, output_factory } = self;
 
         let (world_diff, _, _) =
             utils::get_world_diff_and_provider(starknet.clone(), world, scarb_metadata, ui).await?;
 
         if let Some(element) = element {
             inspect_element(&element, &world_diff, json)?;
+        } else if output_factory {
+            inspect_world_factory(&world_diff)?;
         } else {
             inspect_world(&world_diff, json);
         }
@@ -141,6 +146,8 @@ struct ModelInspect {
     status: ResourceStatus,
     #[tabled(rename = "Dojo Selector")]
     selector: String,
+    #[tabled(rename = "Class Hash")]
+    current_class_hash: String,
 }
 
 #[derive(Debug, Tabled, Serialize)]
@@ -151,6 +158,8 @@ struct EventInspect {
     status: ResourceStatus,
     #[tabled(rename = "Dojo Selector")]
     selector: String,
+    #[tabled(rename = "Class Hash")]
+    current_class_hash: String,
 }
 
 #[derive(Debug, Tabled, Serialize)]
@@ -249,6 +258,7 @@ struct JsonModelInfo {
     tag: String,
     status: String,
     selector: String,
+    class_hash: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -256,6 +266,7 @@ struct JsonEventInfo {
     tag: String,
     status: String,
     selector: String,
+    class_hash: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -661,6 +672,7 @@ fn inspect_world(world_diff: &WorldDiff, json: bool) {
                         tag: resource.tag(),
                         status,
                         selector: format!("{:#066x}", resource.dojo_selector()),
+                        class_hash: format!("{:#066x}", resource.current_class_hash()),
                     });
                 }
                 ResourceType::Event => {
@@ -673,6 +685,7 @@ fn inspect_world(world_diff: &WorldDiff, json: bool) {
                         tag: resource.tag(),
                         status,
                         selector: format!("{:#066x}", resource.dojo_selector()),
+                        class_hash: format!("{:#066x}", resource.current_class_hash()),
                     });
                 }
                 ResourceType::ExternalContract => {
@@ -935,6 +948,7 @@ fn resource_diff_display(world_diff: &WorldDiff, resource: &ResourceDiff) -> Res
                 tag: resource.tag(),
                 status,
                 selector: format!("{:#066x}", resource.dojo_selector()),
+                current_class_hash: format!("{:#066x}", resource.current_class_hash()),
             })
         }
         ResourceType::Event => {
@@ -960,6 +974,7 @@ fn resource_diff_display(world_diff: &WorldDiff, resource: &ResourceDiff) -> Res
                 tag: resource.tag(),
                 status,
                 selector: format!("{:#066x}", resource.dojo_selector()),
+                current_class_hash: format!("{:#066x}", resource.current_class_hash()),
             })
         }
         ResourceType::ExternalContract => {
@@ -1005,6 +1020,107 @@ fn resource_diff_display(world_diff: &WorldDiff, resource: &ResourceDiff) -> Res
             })
         }
     }
+}
+
+/// Generates Cairo code for FactoryConfig initialization.
+fn inspect_world_factory(world_diff: &WorldDiff) -> Result<()> {
+    let world_class_hash = format!("{:#066x}", world_diff.world_info.class_hash);
+    
+    // Get the first namespace or use a default
+    let default_namespace = world_diff
+        .resources
+        .values()
+        .find(|r| matches!(r.resource_type(), ResourceType::Namespace))
+        .map(|r| r.name())
+        .unwrap_or_else(|| "dojo".to_string());
+    
+    // Collect contracts (excluding external contracts)
+    let mut contracts: Vec<(String, String, String)> = world_diff
+        .resources
+        .values()
+        .filter(|r| matches!(r.resource_type(), ResourceType::Contract))
+        .map(|r| {
+            let tag = r.tag();
+            let selector = format!("{:#066x}", naming::compute_selector_from_tag(&tag));
+            (tag, selector, format!("{:#066x}", r.current_class_hash()))
+        })
+        .collect();
+    contracts.sort_by(|a, b| a.0.cmp(&b.0));
+    
+    // Collect models
+    let mut models: Vec<String> = world_diff
+        .resources
+        .values()
+        .filter(|r| matches!(r.resource_type(), ResourceType::Model))
+        .map(|r| format!("{:#066x}", r.current_class_hash()))
+        .collect();
+    models.sort();
+    
+    // Collect events
+    let mut events: Vec<String> = world_diff
+        .resources
+        .values()
+        .filter(|r| matches!(r.resource_type(), ResourceType::Event))
+        .map(|r| format!("{:#066x}", r.current_class_hash()))
+        .collect();
+    events.sort();
+    
+    // Print the Cairo code
+    println!("let factory_config = FactoryConfig {{");
+    println!("    version: '1',");
+    println!("    world_class_hash: TryInto::<felt252, ClassHash>::try_into({}).unwrap(),", world_class_hash);
+    println!("    default_namespace: \"{}\",", default_namespace);
+    
+    // Print contracts
+    println!("    contracts: array![");
+    for (tag, _, class_hash) in &contracts {
+        println!("        (selector_from_tag!(\"{}\"), TryInto::<felt252, ClassHash>::try_into({}).unwrap(), array![]),", tag, class_hash);
+    }
+    println!("    ],");
+    
+    // Print models
+    println!("    models: array![");
+    for model_hash in &models {
+        println!("        TryInto::<felt252, ClassHash>::try_into({}).unwrap(),", model_hash);
+    }
+    println!("    ],");
+    
+    // Print events
+    println!("    events: array![");
+    for event_hash in &events {
+        println!("        TryInto::<felt252, ClassHash>::try_into({}).unwrap(),", event_hash);
+    }
+    println!("    ],");
+    
+    println!("}};");
+    
+    // Print the sozo command line
+    println!();
+    println!("# Sozo command to execute:");
+    print!("sozo -P <PROFILE> execute factory set_config <VERSION> {}", world_class_hash);
+    print!(" str:{}", default_namespace);
+    
+    // Contracts array
+    print!(" {}", contracts.len());
+    for (_, selector, class_hash) in &contracts {
+        print!(" {} {} 0", selector, class_hash);
+    }
+    
+    // Models array
+    print!(" {}", models.len());
+    for model_hash in &models {
+        print!(" {}", model_hash);
+    }
+    
+    // Events array
+    print!(" {}", events.len());
+    for event_hash in &events {
+        print!(" {}", event_hash);
+    }
+    
+    println!();
+    
+    Ok(())
 }
 
 /// Prints a table.
