@@ -8,12 +8,32 @@ pub struct TransactionOptions {
     #[arg(help_heading = "Transaction options - STRK")]
     #[arg(long, help = "Maximum L1 gas amount.")]
     #[arg(global = true)]
-    pub gas: Option<u64>,
+    pub l1_gas: Option<u64>,
 
     #[arg(help_heading = "Transaction options - STRK")]
     #[arg(long, help = "Maximum L1 gas price in STRK.")]
     #[arg(global = true)]
-    pub gas_price: Option<u128>,
+    pub l1_gas_price: Option<u128>,
+
+    #[arg(help_heading = "Transaction options - STRK")]
+    #[arg(long, help = "Maximum L1 Data gas amount.")]
+    #[arg(global = true)]
+    pub l1_data_gas: Option<u64>,
+
+    #[arg(help_heading = "Transaction options - STRK")]
+    #[arg(long, help = "Maximum L1 Data gas price in STRK.")]
+    #[arg(global = true)]
+    pub l1_data_gas_price: Option<u128>,
+
+    #[arg(help_heading = "Transaction options - STRK")]
+    #[arg(long, help = "Maximum L2 gas amount.")]
+    #[arg(global = true)]
+    pub l2_gas: Option<u64>,
+
+    #[arg(help_heading = "Transaction options - STRK")]
+    #[arg(long, help = "Maximum L2 gas price in STRK.")]
+    #[arg(global = true)]
+    pub l2_gas_price: Option<u128>,
 
     #[arg(long)]
     #[arg(help = "Wait until the transaction is accepted by the sequencer, returning the status \
@@ -59,7 +79,14 @@ impl TransactionOptions {
             (false, false) => Ok(TxnAction::Send {
                 wait: self.wait || self.walnut,
                 receipt: self.receipt,
-                fee_config: FeeConfig { gas: self.gas, gas_price: self.gas_price },
+                fee_config: FeeConfig {
+                    l1_gas: self.l1_gas,
+                    l1_gas_price: self.l1_gas_price,
+                    l1_data_gas: self.l1_data_gas,
+                    l1_data_gas_price: self.l1_data_gas_price,
+                    l2_gas: self.l2_gas,
+                    l2_gas_price: self.l2_gas_price,
+                },
                 walnut: self.walnut,
                 max_calls: self.max_calls,
             }),
@@ -75,7 +102,14 @@ impl TryFrom<TransactionOptions> for TxnConfig {
             wait: value.wait || value.walnut,
             receipt: value.receipt,
             walnut: value.walnut,
-            fee_config: FeeConfig { gas: value.gas, gas_price: value.gas_price },
+            fee_config: FeeConfig {
+                l1_gas: value.l1_gas,
+                l1_gas_price: value.l1_gas_price,
+                l1_data_gas: value.l1_data_gas,
+                l1_data_gas_price: value.l1_data_gas_price,
+                l2_gas: value.l2_gas,
+                l2_gas_price: value.l2_gas_price,
+            },
             max_calls: value.max_calls,
         })
     }
@@ -92,8 +126,12 @@ mod tests {
         let opts = TransactionOptions {
             wait: true,
             receipt: true,
-            gas: Some(1000),
-            gas_price: Some(100),
+            l1_gas: Some(1_000),
+            l1_gas_price: Some(100),
+            l1_data_gas: Some(20),
+            l1_data_gas_price: Some(200),
+            l2_gas: Some(10_000),
+            l2_gas_price: Some(1_000),
             walnut: false,
             max_calls: Some(10),
         };
@@ -105,8 +143,12 @@ mod tests {
         assert!(!config.walnut);
         assert_eq!(config.max_calls, Some(10));
 
-        assert_eq!(config.fee_config.gas, Some(1000));
-        assert_eq!(config.fee_config.gas_price, Some(100));
+        assert_eq!(config.fee_config.l1_gas, Some(1_000));
+        assert_eq!(config.fee_config.l1_gas_price, Some(100));
+        assert_eq!(config.fee_config.l1_data_gas, Some(20));
+        assert_eq!(config.fee_config.l1_data_gas_price, Some(200));
+        assert_eq!(config.fee_config.l2_gas, Some(10_000));
+        assert_eq!(config.fee_config.l2_gas_price, Some(1_000));
 
         Ok(())
     }
