@@ -1035,6 +1035,7 @@ fn inspect_world_factory(world_diff: &WorldDiff) -> Result<()> {
         .unwrap_or_else(|| "dojo".to_string());
 
     // Collect contracts (excluding external contracts)
+    // (tag, selector, class_hash)
     let mut contracts: Vec<(String, String, String)> = world_diff
         .resources
         .values()
@@ -1104,13 +1105,15 @@ fn inspect_world_factory(world_diff: &WorldDiff) -> Result<()> {
     // Print the sozo command line
     println!();
     println!("# Sozo command to execute:");
-    print!("sozo -P <PROFILE> execute factory set_config <VERSION> {}", world_class_hash);
+    print!("sozo -P <PROFILE> execute factory set_config <VERSION> <MAX_ACTION_default_20_is_good> {}", world_class_hash);
     print!(" str:{}", default_namespace);
+    print!(" <BOOL_TO_SET_WRITERS_ALL_CONTRACTS_ON_DEFAULT_NAMESPACE>");
 
     // Contracts array
     print!(" {}", contracts.len());
+    // For now, init_args, writers and owners are not supported, hence empty array.
     for (_, selector, class_hash) in &contracts {
-        print!(" {} {} 0", selector, class_hash);
+        print!(" {} {} 0 0 0", selector, class_hash);
     }
 
     // Models array
