@@ -1105,7 +1105,10 @@ fn inspect_world_factory(world_diff: &WorldDiff) -> Result<()> {
     // Print the sozo command line
     println!();
     println!("# Sozo command to execute:");
-    print!("sozo -P <PROFILE> execute factory set_config <VERSION> <MAX_ACTION_default_20_is_good> {}", world_class_hash);
+    print!(
+        "sozo -P <PROFILE> execute factory set_config <VERSION> <MAX_ACTION_default_20_is_good> {}",
+        world_class_hash
+    );
     print!(" str:{}", default_namespace);
     print!(" <BOOL_TO_SET_WRITERS_ALL_CONTRACTS_ON_DEFAULT_NAMESPACE>");
 
