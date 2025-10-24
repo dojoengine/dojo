@@ -24,9 +24,17 @@ use starknet::signers::{LocalWallet, SigningKey};
 #[derive(Debug, Default, Copy, Clone)]
 pub struct FeeConfig {
     /// The maximum L1 gas amount.
-    pub gas: Option<u64>,
+    pub l1_gas: Option<u64>,
     /// The maximum L1 gas price in STRK.
-    pub gas_price: Option<u128>,
+    pub l1_gas_price: Option<u128>,
+    /// The Maximum L1 Data gas amount.
+    pub l1_data_gas: Option<u64>,
+    /// The Maximum L1 Data gas price in STRK.
+    pub l1_data_gas_price: Option<u128>,
+    /// The Maximum L2 gas amount.
+    pub l2_gas: Option<u64>,
+    /// The Maximum L2 gas price in STRK.
+    pub l2_gas_price: Option<u128>,
 }
 
 /// The transaction configuration to use when sending a transaction.
@@ -102,8 +110,8 @@ pub trait TransactionExt<T> {
     type R;
     type U;
 
-    /// Sets `l1_gas` and `l1_gas_price` from `TxnConfig` if its present before
-    /// calling `send` method on the respective type.
+    /// Sets `l1_gas`, `l1_gas_price`, `l1_data_gas`, `l1_data_gas_price`, `l2_gas`, `l2_gas_price`
+    /// from `TxnConfig` if its present before calling `send` method on the respective type.
     async fn send_with_cfg(self, txn_config: &TxnConfig) -> Result<Self::R, Self::U>;
 }
 
@@ -118,12 +126,28 @@ where
         mut self,
         txn_config: &TxnConfig,
     ) -> Result<Self::R, AccountError<T::SignError>> {
-        if let Some(g) = txn_config.fee_config.gas {
+        if let Some(g) = txn_config.fee_config.l1_gas {
             self = self.l1_gas(g);
         }
 
-        if let Some(gp) = txn_config.fee_config.gas_price {
+        if let Some(gp) = txn_config.fee_config.l1_gas_price {
             self = self.l1_gas_price(gp);
+        }
+
+        if let Some(g) = txn_config.fee_config.l1_data_gas {
+            self = self.l1_data_gas(g);
+        }
+
+        if let Some(gp) = txn_config.fee_config.l1_data_gas_price {
+            self = self.l1_data_gas_price(gp);
+        }
+
+        if let Some(g) = txn_config.fee_config.l2_gas {
+            self = self.l2_gas(g);
+        }
+
+        if let Some(gp) = txn_config.fee_config.l2_gas_price {
+            self = self.l2_gas_price(gp);
         }
 
         self.send().await
@@ -141,12 +165,28 @@ where
         mut self,
         txn_config: &TxnConfig,
     ) -> Result<Self::R, AccountError<T::SignError>> {
-        if let Some(g) = txn_config.fee_config.gas {
+        if let Some(g) = txn_config.fee_config.l1_gas {
             self = self.l1_gas(g);
         }
 
-        if let Some(gp) = txn_config.fee_config.gas_price {
+        if let Some(gp) = txn_config.fee_config.l1_gas_price {
             self = self.l1_gas_price(gp);
+        }
+
+        if let Some(g) = txn_config.fee_config.l1_data_gas {
+            self = self.l1_data_gas(g);
+        }
+
+        if let Some(gp) = txn_config.fee_config.l1_data_gas_price {
+            self = self.l1_data_gas_price(gp);
+        }
+
+        if let Some(g) = txn_config.fee_config.l2_gas {
+            self = self.l2_gas(g);
+        }
+
+        if let Some(gp) = txn_config.fee_config.l2_gas_price {
+            self = self.l2_gas_price(gp);
         }
 
         self.send().await
@@ -164,12 +204,28 @@ where
         mut self,
         txn_config: &TxnConfig,
     ) -> Result<Self::R, AccountFactoryError<<T>::SignError>> {
-        if let Some(g) = txn_config.fee_config.gas {
+        if let Some(g) = txn_config.fee_config.l1_gas {
             self = self.l1_gas(g);
         }
 
-        if let Some(gp) = txn_config.fee_config.gas_price {
+        if let Some(gp) = txn_config.fee_config.l1_gas_price {
             self = self.l1_gas_price(gp);
+        }
+
+        if let Some(g) = txn_config.fee_config.l1_data_gas {
+            self = self.l1_data_gas(g);
+        }
+
+        if let Some(gp) = txn_config.fee_config.l1_data_gas_price {
+            self = self.l1_data_gas_price(gp);
+        }
+
+        if let Some(g) = txn_config.fee_config.l2_gas {
+            self = self.l2_gas(g);
+        }
+
+        if let Some(gp) = txn_config.fee_config.l2_gas_price {
+            self = self.l2_gas_price(gp);
         }
 
         self.send().await
