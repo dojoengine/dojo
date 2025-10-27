@@ -142,13 +142,13 @@ jobs:
           
           echo "Checking if Dojo Cairo packages v${VERSION_NO_V} exist on Scarb registry..."
           
-          # Check dojo_cairo_macros
+          # Check dojo core
           if curl -f -s "https://scarbs.xyz/api/v1/dl/dojo/${VERSION_NO_V}" > /dev/null; then
-            echo "✅ dojo_cairo_macros v${VERSION_NO_V} already exists"
-            echo "macros_exists=true" >> $GITHUB_OUTPUT
+            echo "✅ dojo core v${VERSION_NO_V} already exists"
+            echo "core_exists=true" >> $GITHUB_OUTPUT
           else
-            echo "❌ dojo_cairo_macros v${VERSION_NO_V} not found (404)"
-            echo "macros_exists=false" >> $GITHUB_OUTPUT
+            echo "❌ dojo core v${VERSION_NO_V} not found (404)"
+            echo "core_exists=false" >> $GITHUB_OUTPUT
           fi
           
           # Check dojo_cairo_test
@@ -169,10 +169,10 @@ jobs:
             echo "snf_test_exists=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Publish dojo_cairo_macros
-        if: steps.check_packages.outputs.macros_exists == 'false'
+      - name: Publish dojo core
+        if: steps.check_packages.outputs.core_exists == 'false'
         run: |
-          cd ./crates/dojo/macros
+          cd ./crates/dojo/core
           SCARB_REGISTRY_AUTH_TOKEN=${{ secrets.SCARB_REGISTRY_AUTH_TOKEN }} scarb publish
 
       - name: Publish dojo_cairo_test
