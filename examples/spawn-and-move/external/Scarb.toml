@@ -1,6 +1,6 @@
 [package]
 name = "hello"
-version = "1.7.1"
+version = "1.7.2"
 edition = "2024_07"
 
 [dependencies]

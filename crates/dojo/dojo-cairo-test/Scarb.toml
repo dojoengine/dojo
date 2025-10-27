@@ -2,7 +2,7 @@
 name = "dojo_cairo_test"
 description = "Testing library for Dojo using cairo test runner."
 license = "MIT"
-version = "1.7.1"
+version = "1.7.2"
 edition = "2024_07"
 cairo-version = "2.12"
 repository = "https://github.com/dojoengine/dojo"
