@@ -88,8 +88,9 @@ where
         );
 
         if self.txn_config.wait {
-            let receipt =
-                TransactionWaiter::new(transaction_hash, &self.account.provider()).await?;
+            let receipt = TransactionWaiter::new(transaction_hash, &self.account.provider())
+                .with_tx_status(self.txn_config.finality_status)
+                .await?;
 
             if self.txn_config.receipt {
                 return Ok((

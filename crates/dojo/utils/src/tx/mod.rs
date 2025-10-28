@@ -15,7 +15,7 @@ use starknet::accounts::{
 };
 use starknet::core::types::{
     BlockId, BlockTag, DeclareTransactionResult, DeployAccountTransactionResult, Felt,
-    InvokeTransactionResult, TransactionReceiptWithBlockInfo,
+    InvokeTransactionResult, TransactionFinalityStatus, TransactionReceiptWithBlockInfo,
 };
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{AnyProvider, JsonRpcClient, Provider};
@@ -38,7 +38,7 @@ pub struct FeeConfig {
 }
 
 /// The transaction configuration to use when sending a transaction.
-#[derive(Debug, Copy, Clone, Default)]
+#[derive(Debug, Copy, Clone)]
 pub struct TxnConfig {
     /// Whether to wait for the transaction to be accepted or reverted on L2.
     pub wait: bool,
@@ -52,6 +52,24 @@ pub struct TxnConfig {
     /// This number could vary depending on the calls content, and is mostly
     /// here to ensure the migration is not stuck if too much resources have to be registered.
     pub max_calls: Option<usize>,
+    /// The finality status to wait for.
+    /// Since 0.14, the nodes syncing is sometime not fast enough to propagate the transaction to
+    /// the nodes in the PRE-CONFIRMED state. Exposing the finality status allows to wait for
+    /// the transaction to be accepted on L2 when a more robust migration is needed.
+    pub finality_status: TransactionFinalityStatus,
+}
+
+impl Default for TxnConfig {
+    fn default() -> Self {
+        Self {
+            wait: true,
+            receipt: false,
+            walnut: false,
+            fee_config: FeeConfig::default(),
+            max_calls: None,
+            finality_status: TransactionFinalityStatus::AcceptedOnL2,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -62,6 +80,7 @@ pub enum TxnAction {
         fee_config: FeeConfig,
         walnut: bool,
         max_calls: Option<usize>,
+        finality_status: TransactionFinalityStatus,
     },
     Estimate,
     Simulate,
