@@ -65,8 +65,9 @@ where
         trace!(transaction_hash = format!("{:#066x}", tx.transaction_hash), "Invoke contract.");
 
         if self.txn_config.wait {
-            let receipt =
-                TransactionWaiter::new(tx.transaction_hash, &self.account.provider()).await?;
+            let receipt = TransactionWaiter::new(tx.transaction_hash, &self.account.provider())
+                .with_tx_status(self.txn_config.finality_status)
+                .await?;
 
             if self.txn_config.receipt {
                 return Ok(TransactionResult::HashReceipt(tx.transaction_hash, Box::new(receipt)));
@@ -114,6 +115,7 @@ where
                 if self.txn_config.wait {
                     let receipt =
                         TransactionWaiter::new(tx.transaction_hash, &self.account.provider())
+                            .with_tx_status(self.txn_config.finality_status)
                             .await?;
 
                     if self.txn_config.receipt {
@@ -141,8 +143,9 @@ where
             );
 
             if self.txn_config.wait {
-                let receipt =
-                    TransactionWaiter::new(tx.transaction_hash, &self.account.provider()).await?;
+                let receipt = TransactionWaiter::new(tx.transaction_hash, &self.account.provider())
+                    .with_tx_status(self.txn_config.finality_status)
+                    .await?;
 
                 if self.txn_config.receipt {
                     return Ok(vec![TransactionResult::HashReceipt(
