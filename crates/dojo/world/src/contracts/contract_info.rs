@@ -206,9 +206,11 @@ mod tests {
                 class_hash: felt!("0x4444"),
                 members: vec![],
                 selector: felt!("0x5555"),
+                abi: vec![],
             }],
             events: vec![],
             external_contracts: vec![],
+            abis: HashMap::new(),
         };
 
         let contracts_info: HashMap<String, ContractInfo> = (&manifest).into();

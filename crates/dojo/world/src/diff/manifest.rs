@@ -1,9 +1,12 @@
 //! Manifest data to store the diff result in files.
 
+use std::collections::HashMap;
+
+use serde::ser::SerializeSeq;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use starknet::core::serde::unsigned_field_element::UfeHex;
-use starknet::core::types::contract::AbiEntry;
+use starknet::core::types::contract::{AbiEntry, AbiEvent, TypedAbiEvent, UntypedAbiEvent};
 use starknet::core::types::Felt;
 
 use super::{ResourceDiff, WorldDiff};
@@ -20,6 +23,13 @@ pub struct Manifest {
     pub models: Vec<DojoModel>,
     pub events: Vec<DojoEvent>,
     pub external_contracts: Vec<ExternalContract>,
+    /// The all in one ABIs without duplicates, but keep the original `AbiEntry` serialization as a
+    /// vector. When serialized, the entries are always sorted alphabetically by name.
+    #[serde(
+        serialize_with = "serialize_abis_hashmap",
+        deserialize_with = "deserialize_abis_hashmap"
+    )]
+    pub abis: HashMap<String, AbiEntry>,
 }
 
 #[serde_as]
@@ -37,7 +47,8 @@ pub struct WorldContract {
     pub name: String,
     /// Entrypoints of the world.
     pub entrypoints: Vec<String>,
-    /// Abi of the world.
+    /// Abi of the world, skipped during serialization in favor of the `abis` field.
+    #[serde(skip)]
     pub abi: Vec<AbiEntry>,
 }
 
@@ -50,7 +61,8 @@ pub struct DojoContract {
     /// Class hash of the contract.
     #[serde_as(as = "UfeHex")]
     pub class_hash: Felt,
-    /// ABI of the contract.
+    /// ABI of the contract, skipped during serialization in favor of the `abis` field.
+    #[serde(skip)]
     pub abi: Vec<AbiEntry>,
     /// Initialization call data.
     #[serde(default)]
@@ -70,7 +82,8 @@ pub struct DojoLibrary {
     /// Class hash of the contract.
     #[serde_as(as = "UfeHex")]
     pub class_hash: Felt,
-    /// ABI of the contract.
+    /// ABI of the contract, skipped during serialization in favor of the `abis` field.
+    #[serde(skip)]
     pub abi: Vec<AbiEntry>,
     /// Tag of the contract.
     pub tag: String,
@@ -85,7 +98,6 @@ pub struct DojoLibrary {
 
 #[serde_as]
 #[derive(Clone, Default, Debug, Serialize, Deserialize)]
-#[cfg_attr(test, derive(PartialEq))]
 pub struct DojoModel {
     /// Members of the model.
     pub members: Vec<Member>,
@@ -97,11 +109,24 @@ pub struct DojoModel {
     /// Selector of the model.
     #[serde_as(as = "UfeHex")]
     pub selector: Felt,
+    /// ABI of the model, skipped during serialization in favor of the `abis` field.
+    #[serde(skip)]
+    pub abi: Vec<AbiEntry>,
+}
+
+#[cfg(test)]
+impl PartialEq for DojoModel {
+    fn eq(&self, other: &Self) -> bool {
+        self.members == other.members
+            && self.class_hash == other.class_hash
+            && self.tag == other.tag
+            && self.selector == other.selector
+            && self.abi.len() == other.abi.len()
+    }
 }
 
 #[serde_as]
 #[derive(Clone, Default, Debug, Serialize, Deserialize)]
-#[cfg_attr(test, derive(PartialEq))]
 pub struct DojoEvent {
     /// Members of the event.
     pub members: Vec<Member>,
@@ -113,8 +138,21 @@ pub struct DojoEvent {
     /// Selector of the event.
     #[serde_as(as = "UfeHex")]
     pub selector: Felt,
+    /// ABI of the event, skipped during serialization in favor of the `abis` field.
+    #[serde(skip)]
+    pub abi: Vec<AbiEntry>,
 }
 
+#[cfg(test)]
+impl PartialEq for DojoEvent {
+    fn eq(&self, other: &Self) -> bool {
+        self.members == other.members
+            && self.class_hash == other.class_hash
+            && self.tag == other.tag
+            && self.selector == other.selector
+            && self.abi.len() == other.abi.len()
+    }
+}
 #[serde_as]
 #[derive(Clone, Default, Debug, Serialize, Deserialize)]
 pub struct ExternalContract {
@@ -129,6 +167,8 @@ pub struct ExternalContract {
     #[serde_as(as = "UfeHex")]
     pub address: Felt,
     /// ABI of the contract.
+    /// Ignored during serialization in favor of the `abis` field.
+    #[serde(skip)]
     pub abi: Vec<AbiEntry>,
     /// Human-readeable constructor call data.
     #[serde(default)]
@@ -170,6 +210,9 @@ impl Manifest {
         let mut events = Vec::new();
         let mut libraries = Vec::new();
         let mut external_contracts = Vec::new();
+        let mut abis = HashMap::new();
+
+        add_abi_entries(&mut abis, diff.world_info.class.abi.clone());
 
         for resource in diff.resources.values() {
             if diff.profile_config.is_skipped(&resource.tag()) {
@@ -199,7 +242,13 @@ impl Manifest {
         events.sort_by_key(|e| e.tag.clone());
         external_contracts.sort_by_key(|c| c.tag.clone());
 
-        Self { world, contracts, models, events, libraries, external_contracts }
+        contracts.iter().for_each(|c| add_abi_entries(&mut abis, c.abi.clone()));
+        models.iter().for_each(|m| add_abi_entries(&mut abis, m.abi.clone()));
+        events.iter().for_each(|e| add_abi_entries(&mut abis, e.abi.clone()));
+        libraries.iter().for_each(|l| add_abi_entries(&mut abis, l.abi.clone()));
+        external_contracts.iter().for_each(|e| add_abi_entries(&mut abis, e.abi.clone()));
+
+        Self { world, contracts, models, events, libraries, external_contracts, abis }
     }
 
     pub fn get_contract_address(&self, tag: &str) -> Option<Felt> {
@@ -353,6 +402,7 @@ fn resource_diff_to_dojo_model(resource: &ResourceDiff) -> DojoModel {
             class_hash: l.common.class_hash,
             tag,
             selector: resource.dojo_selector(),
+            abi: l.common.class.abi.clone(),
         },
         ResourceDiff::Updated(ResourceLocal::Model(l), _)
         | ResourceDiff::Synced(ResourceLocal::Model(l), _) => DojoModel {
@@ -364,6 +414,7 @@ fn resource_diff_to_dojo_model(resource: &ResourceDiff) -> DojoModel {
             class_hash: l.common.class_hash,
             tag,
             selector: resource.dojo_selector(),
+            abi: l.common.class.abi.clone(),
         },
         _ => unreachable!(),
     }
@@ -382,6 +433,7 @@ fn resource_diff_to_dojo_event(resource: &ResourceDiff) -> DojoEvent {
             class_hash: l.common.class_hash,
             tag,
             selector: resource.dojo_selector(),
+            abi: l.common.class.abi.clone(),
         },
         ResourceDiff::Updated(ResourceLocal::Event(l), _)
         | ResourceDiff::Synced(ResourceLocal::Event(l), _) => DojoEvent {
@@ -393,7 +445,80 @@ fn resource_diff_to_dojo_event(resource: &ResourceDiff) -> DojoEvent {
             class_hash: l.common.class_hash,
             tag,
             selector: resource.dojo_selector(),
+            abi: l.common.class.abi.clone(),
         },
         _ => unreachable!(),
+    }
+}
+
+/// Gets the name of the ABI entry.
+fn get_abi_name(abi_entry: &AbiEntry) -> String {
+    match abi_entry {
+        AbiEntry::Function(function) => function.name.clone(),
+        AbiEntry::Event(event) => match event {
+            AbiEvent::Typed(TypedAbiEvent::Struct(s)) => s.name.clone(),
+            AbiEvent::Typed(TypedAbiEvent::Enum(e)) => e.name.clone(),
+            AbiEvent::Untyped(UntypedAbiEvent { name, .. }) => name.clone(),
+        },
+        AbiEntry::Struct(struct_) => struct_.name.clone(),
+        AbiEntry::Enum(enum_) => enum_.name.clone(),
+        AbiEntry::Constructor(constructor) => constructor.name.clone(),
+        AbiEntry::Impl(impl_) => impl_.name.clone(),
+        AbiEntry::Interface(interface) => interface.name.clone(),
+        AbiEntry::L1Handler(l1_handler) => l1_handler.name.clone(),
+    }
+}
+
+/// Serializes the ABI entries into a vector sorted alphabetically by name.
+/// This ensures compatibility with any tool expecting a Cairo contract ABI.
+fn serialize_abis_hashmap<S>(
+    value: &HashMap<String, AbiEntry>,
+    serializer: S,
+) -> std::result::Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    let mut seq = serializer.serialize_seq(Some(value.len()))?;
+
+    // Sort alphabetically by name.
+    let mut sorted_entries = value.values().collect::<Vec<_>>();
+    sorted_entries.sort_by_key(|e| get_abi_name(e));
+
+    for abi_entry in sorted_entries {
+        seq.serialize_element(abi_entry)?;
+    }
+
+    seq.end()
+}
+
+/// Deserializes the ABI entries from a vector into a hashmap.
+fn deserialize_abis_hashmap<'de, D>(
+    deserializer: D,
+) -> std::result::Result<HashMap<String, AbiEntry>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let entries = Vec::<AbiEntry>::deserialize(deserializer)?;
+
+    let mut map = HashMap::new();
+
+    for abi_entry in entries {
+        map.insert(get_abi_name(&abi_entry), abi_entry);
+    }
+
+    Ok(map)
+}
+
+/// Adds the ABI entries to the manifest, deduplicating them by name.
+fn add_abi_entries(abis: &mut HashMap<String, AbiEntry>, abi: Vec<AbiEntry>) {
+    for abi_entry in abi {
+        // We can strip out `impl` type entries, since they are not meaningful for the manifest.
+        // Keeping the interface is enough.
+        if matches!(abi_entry, AbiEntry::Impl(_)) {
+            continue;
+        }
+
+        let entry_name = get_abi_name(&abi_entry);
+        abis.insert(entry_name, abi_entry);
     }
 }

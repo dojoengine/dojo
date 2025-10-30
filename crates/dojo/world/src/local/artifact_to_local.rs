@@ -10,7 +10,8 @@ use cairo_lang_starknet_classes::contract_class::ContractClass;
 use dojo_types::naming::{compute_bytearray_hash, compute_selector_from_names};
 use serde_json;
 use starknet::core::types::contract::{
-    AbiEntry, AbiEvent, AbiImpl, CompiledClass, SierraClass, StateMutability, TypedAbiEvent,
+    AbiEntry, AbiEvent, AbiImpl, AbiStruct, CompiledClass, SierraClass, StateMutability,
+    TypedAbiEvent,
 };
 use starknet::core::types::Felt;
 use starknet::core::utils as snutils;
@@ -213,7 +214,7 @@ impl WorldLocal {
                                             class_hash,
                                             casm_class_hash,
                                         },
-                                        members: vec![],
+                                        members: members_from_abi(&abi),
                                     });
 
                                     resources.push(resource);
@@ -241,7 +242,7 @@ impl WorldLocal {
                                             class_hash,
                                             casm_class_hash,
                                         },
-                                        members: vec![],
+                                        members: members_from_abi(&abi),
                                     });
 
                                     resources.push(resource);
@@ -497,6 +498,58 @@ fn systems_from_abi(abi: &[AbiEntry]) -> Vec<String> {
     }
 
     abi.iter().flat_map(extract_systems_from_abi_entry).collect()
+}
+
+/// Extracts the model or event events member from the ABI.
+/// Since dojo is always adding an `ensure_abi` function to make sure the model or event
+/// type is present in the ABI, we can use it to determine the model or event name
+/// to after parse the struct from the ABI.
+fn members_from_abi(abi: &[AbiEntry]) -> Vec<Member> {
+    // Since the function comes after the struct or enum definition, we need to keep any struct
+    // until we find the actual `ensure_abi` function.
+    // And as we use the `Value` suffix to determine which members are values, we need to ensure
+    // both ensure_abi and ensure_values are parsed.
+    let mut structs: HashMap<String, AbiStruct> = HashMap::new();
+    let mut model_or_event_name = None;
+    let mut members = vec![];
+
+    for entry in abi.iter() {
+        match entry {
+            AbiEntry::Struct(s) => {
+                structs.insert(s.name.clone(), s.clone());
+            }
+            AbiEntry::Function(f) => {
+                if f.name == "ensure_abi" {
+                    let model_entry = f.inputs.first().expect("ensure_abi should have one input");
+
+                    model_or_event_name = Some(model_entry.r#type.clone());
+                }
+            }
+            _ => {}
+        }
+    }
+
+    let name = model_or_event_name.expect("Model or event name not found");
+    let value_name = format!("{name}Value");
+
+    let struct_entry =
+        structs.get(&name).unwrap_or_else(|| panic!("Struct not found in ABI: {name}"));
+
+    let struct_entry_value = structs
+        .get(&value_name)
+        .unwrap_or_else(|| panic!("Struct value not found in ABI: {value_name}"));
+
+    for member in &struct_entry.members {
+        let is_value = struct_entry_value.members.iter().any(|m| m.name == member.name);
+
+        members.push(Member {
+            name: member.name.clone(),
+            ty: member.r#type.clone(),
+            key: !is_value,
+        });
+    }
+
+    members
 }
 
 /// Get the contract name from the ABI.
