@@ -518,6 +518,7 @@ fn add_abi_entries(abis: &mut HashMap<String, AbiEntry>, abi: Vec<AbiEntry>) {
             continue;
         }
 
-        abis.insert(get_abi_name(&abi_entry), abi_entry);
+        let entry_name = get_abi_name(&abi_entry);
+        abis.insert(entry_name, abi_entry);
     }
 }

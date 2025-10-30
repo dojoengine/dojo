@@ -116,61 +116,226 @@
   ],
   "models": [
     {
-      "members": [],
+      "members": [
+        {
+          "name": "enemy_type",
+          "type": "dojo_examples::models::EnemyType",
+          "key": true
+        },
+        {
+          "name": "properties",
+          "type": "core::array::Array::<dojo_examples::models::EnemyProperty>",
+          "key": false
+        }
+      ],
       "class_hash": "0x1d69fdc01c28150691a0b38435c3e1a9ba93ad8395b1630e3aee7244752d828",
       "tag": "ns-Enemy",
       "selector": "0x1a658aafaf58552ddd7f6d147664760c732c2e4aa85225becb84f136a0b1121"
     },
     {
-      "members": [],
+      "members": [
+        {
+          "name": "id",
+          "type": "core::integer::u32",
+          "key": true
+        },
+        {
+          "name": "atk_speek",
+          "type": "core::integer::u32",
+          "key": false
+        },
+        {
+          "name": "range",
+          "type": "core::integer::u32",
+          "key": false
+        }
+      ],
       "class_hash": "0xcbc67f154058f2fb812d04b6c8d23984e889d81a4bb284a1343d4c9b93a10d",
       "tag": "ns-Flatbow",
       "selector": "0x27a35f8bac96f1deebf4d3e83fc6b94a3da4e6d30a1ce34d5893d2fb602725d"
     },
     {
-      "members": [],
+      "members": [
+        {
+          "name": "identity",
+          "type": "core::starknet::contract_address::ContractAddress",
+          "key": true
+        },
+        {
+          "name": "channel",
+          "type": "core::felt252",
+          "key": true
+        },
+        {
+          "name": "salt",
+          "type": "core::felt252",
+          "key": true
+        },
+        {
+          "name": "message",
+          "type": "core::byte_array::ByteArray",
+          "key": false
+        }
+      ],
       "class_hash": "0x574ebeba1b0f3bb0856efc58763dd46514419a94753ef006505fd435fbef15b",
       "tag": "ns-Message",
       "selector": "0x7e77b60a338fa7414998176fd93ff265e4ca04b93105ac98f155bcb2e9e8438"
     },
     {
-      "members": [],
+      "members": [
+        {
+          "name": "account",
+          "type": "core::starknet::contract_address::ContractAddress",
+          "key": true
+        },
+        {
+          "name": "amount",
+          "type": "core::integer::u128",
+          "key": false
+        }
+      ],
       "class_hash": "0x69f6f49562b605776c50cf42df3e87e157424f6bbcedd8cd8380031f400b457",
       "tag": "ns-MockToken",
       "selector": "0x23ee42c8f47d1d693b966176dcd5deca0ec147b33e42186382d9d027603a6fd"
     },
     {
-      "members": [],
+      "members": [
+        {
+          "name": "player",
+          "type": "core::starknet::contract_address::ContractAddress",
+          "key": true
+        },
+        {
+          "name": "remaining",
+          "type": "core::integer::u8",
+          "key": false
+        },
+        {
+          "name": "last_direction",
+          "type": "dojo_examples::models::Direction",
+          "key": false
+        }
+      ],
       "class_hash": "0x6538c217b87a4594361147171ba10127a08d5ab3594f5b387bf91f7df9251c",
       "tag": "ns-Moves",
       "selector": "0x54104f060e63bdd9d68bb872f2dc6d40a101e168e18b999c10de348d06ea24a"
     },
     {
-      "members": [],
+      "members": [
+        {
+          "name": "player",
+          "type": "core::starknet::contract_address::ContractAddress",
+          "key": true
+        },
+        {
+          "name": "name",
+          "type": "core::byte_array::ByteArray",
+          "key": false
+        },
+        {
+          "name": "items",
+          "type": "core::array::Array::<dojo_examples::models::PlayerItem>",
+          "key": false
+        },
+        {
+          "name": "favorite_item",
+          "type": "core::option::Option::<core::integer::u32>",
+          "key": false
+        }
+      ],
       "class_hash": "0x740a7beab3f1989289b212a5d86359c5893c1233bccc33c6e9156dab6d3dd17",
       "tag": "ns-PlayerConfig",
       "selector": "0x3bea561c3e142a660a00d1471d7712b70695dc4ee3b173aeaefd5178f7a21af"
     },
     {
-      "members": [],
+      "members": [
+        {
+          "name": "player",
+          "type": "core::starknet::contract_address::ContractAddress",
+          "key": true
+        },
+        {
+          "name": "vec",
+          "type": "dojo_examples::models::Vec2",
+          "key": false
+        }
+      ],
       "class_hash": "0x315de8775d0f8a30f8a02801075225694edf29d60101892ffc9eb06567cd289",
       "tag": "ns-Position",
       "selector": "0x5e12c61e9cf30881c126a6d298975c8d79f95abed1a05c2d38b7803ed19445f"
     },
     {
-      "members": [],
+      "members": [
+        {
+          "name": "id",
+          "type": "core::integer::u32",
+          "key": true
+        },
+        {
+          "name": "health",
+          "type": "core::integer::u32",
+          "key": false
+        },
+        {
+          "name": "armor",
+          "type": "core::integer::u32",
+          "key": false
+        },
+        {
+          "name": "attack",
+          "type": "core::integer::u32",
+          "key": false
+        }
+      ],
       "class_hash": "0x686fc03ac7fa65b99f501e5e8216057c9b8a98e283ea5252334c22e25be621",
       "tag": "ns-RiverSkale",
       "selector": "0x47f763aa7de3b872f7fbec198275547e06751dbe26b66281b9cffaed9938f24"
     },
     {
-      "members": [],
+      "members": [
+        {
+          "name": "player",
+          "type": "core::starknet::contract_address::ContractAddress",
+          "key": true
+        },
+        {
+          "name": "server_id",
+          "type": "core::integer::u32",
+          "key": true
+        },
+        {
+          "name": "name",
+          "type": "core::byte_array::ByteArray",
+          "key": false
+        }
+      ],
       "class_hash": "0x743b052a8a9352bd7a089814c666fff98a2a9df1655278f3412c0da69debc4a",
       "tag": "ns-ServerProfile",
       "selector": "0x641dc5f178aff0c7935a8f1ae30c6038a3d3512ea164d486f98bc37b6beabf"
     },
     {
-      "members": [],
+      "members": [
+        {
+          "name": "enemy_type",
+          "type": "dojo_examples::models::EnemyType",
+          "key": true
+        },
+        {
+          "name": "characteristics",
+          "type": "dojo_examples::models::VintageEnemyCharacteristics",
+          "key": false
+        },
+        {
+          "name": "speed",
+          "type": "dojo_examples::models::EnemySpeed",
+          "key": false
+        },
+        {
+          "name": "is_set",
+          "type": "core::bool",
+          "key": false
+        }
+      ],
       "class_hash": "0x580a643892566350d7a892328169be2f3f8bced1cf605636205e134ef66d0b8",
       "tag": "ns-VintageEnemy",
       "selector": "0x189cce252214bd8ef882db814a8322c38f469817df10b4b19d0c869a120f43c"
@@ -178,13 +343,35 @@
   ],
   "events": [
     {
-      "members": [],
+      "members": [
+        {
+          "name": "player",
+          "type": "core::starknet::contract_address::ContractAddress",
+          "key": true
+        },
+        {
+          "name": "direction",
+          "type": "dojo_examples::models::Direction",
+          "key": false
+        }
+      ],
       "class_hash": "0x334ab91d93f4cbb6768b3f6814d570149f191333b035d9d51bf490c21bf9da8",
       "tag": "ns-Moved",
       "selector": "0x6d4c1ac3717ba997500153c52344a2acac5123bbfa0f78d3dcc04cb786826b0"
     },
     {
-      "members": [],
+      "members": [
+        {
+          "name": "caller",
+          "type": "core::starknet::contract_address::ContractAddress",
+          "key": true
+        },
+        {
+          "name": "value",
+          "type": "core::integer::u8",
+          "key": false
+        }
+      ],
       "class_hash": "0x1267dcd7f9a0a7114afcc8ab8fd4c847891e312060f65630db76d3feb292fff",
       "tag": "ns-MyInit",
       "selector": "0xe1c030210beae7e2153a7b996d7d2ae6a428faf16a61f192f02178718b6f0"
