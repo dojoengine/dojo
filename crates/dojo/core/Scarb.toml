@@ -1,5 +1,4 @@
 [package]
-cairo-version = "2.12"
 edition = "2024_07"
 description = "The Dojo Core library for autonomous worlds."
 name = "dojo"
@@ -12,7 +11,7 @@ experimental-features = ["negative_impls"]
 re-export-cairo-plugins = ["dojo_cairo_macros"]
 
 [dependencies]
-starknet = "2.12"
+starknet = "2.13"
 dojo_cairo_macros = { path = "../macros", version = "1.7.1" }
 
 [lib]

@@ -1,21 +1,19 @@
 [package]
 name = "dojo_core_test"
 description = "Testing library for Dojo using Starknet foundry."
-
 version = "1.7.2"
 edition = "2024_07"
-cairo-version = "2.12"
 
 [dependencies]
-starknet = "2.12"
+starknet = "2.13"
 
 dojo = { path = "../core" }
 dojo_cairo_macros = { path = "../macros" }
 dojo_snf_test = { path = "../dojo-snf-test" }
 
 [dev-dependencies]
-snforge_std = "0.50.0"
-assert_macros = "2.12"
+snforge_std = "0.51"
+assert_macros = "2.13"
 
 [[target.starknet-contract]]
 build-external-contracts = ["dojo::world::world_contract::world"]
