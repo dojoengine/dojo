@@ -62,7 +62,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: software-mansion/setup-scarb@v1
         with:
-          scarb-version: "2.12.2"
+          scarb-version: "2.13.1"
       - uses: Swatinem/rust-cache@v2
       - uses: actions/download-artifact@v4
         with:
@@ -120,7 +120,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: software-mansion/setup-scarb@v1
         with:
-          scarb-version: "2.12.2"
+          scarb-version: "2.13.1"
       - run: bash scripts/cairo_fmt.sh
 
   dojo-core-test:
@@ -130,7 +130,7 @@ jobs:
       - uses: foundry-rs/setup-snfoundry@v3
       - uses: software-mansion/setup-scarb@v1
         with:
-          scarb-version: "2.12.2"
+          scarb-version: "2.13.1"
       - uses: actions/download-artifact@v4
         with:
           name: dojo-bins
@@ -147,7 +147,7 @@ jobs:
       - uses: foundry-rs/setup-snfoundry@v3
       - uses: software-mansion/setup-scarb@v1
         with:
-          scarb-version: "2.12.2"
+          scarb-version: "2.13.1"
       - uses: actions/download-artifact@v4
         with:
           name: dojo-bins

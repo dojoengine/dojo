@@ -90,7 +90,7 @@ jobs:
 
       - uses: software-mansion/setup-scarb@v1
         with:
-          scarb-version: "2.12.2"
+          scarb-version: "2.13.1"
 
       - name: Build binaries
         run: cargo build --release --locked --bin sozo --target ${{ matrix.job.target }}
@@ -132,7 +132,7 @@ jobs:
 
       - uses: software-mansion/setup-scarb@v1
         with:
-          scarb-version: "2.12.2"
+          scarb-version: "2.13.1"
 
       - name: Check if Dojo Cairo packages exist on Scarb registry
         id: check_packages
