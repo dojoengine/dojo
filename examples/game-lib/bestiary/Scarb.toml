@@ -3,7 +3,6 @@ name = "bestiary"
 version = "1.7.2"
 description = "Some scary foes to fight."
 edition.workspace = true
-cairo-version.workspace = true
 
 [dependencies]
 starknet.workspace = true
