@@ -54,7 +54,7 @@ pub mod world {
 
     pub const WORLD: felt252 = 0;
     pub const DOJO_INIT_SELECTOR: felt252 = selector!("dojo_init");
-    pub const WORLD_VERSION: felt252 = '1.7.2';
+    pub const WORLD_VERSION: felt252 = '1.8.0';
 
     #[event]
     #[derive(Drop, starknet::Event)]

@@ -1,6 +1,6 @@
 [package]
 name = "dojo_simple"
-version = "1.7.2"
+version = "1.8.0"
 edition = "2024_07"
 license = "MIT"
 

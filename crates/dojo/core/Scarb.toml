@@ -2,7 +2,7 @@
 edition = "2024_07"
 description = "The Dojo Core library for autonomous worlds."
 name = "dojo"
-version = "1.7.2"
+version = "1.8.0"
 license = "MIT"
 repository = "https://github.com/dojoengine/dojo"
 documentation = "https://book.dojoengine.org"

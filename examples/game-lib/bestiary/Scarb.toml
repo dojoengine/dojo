@@ -1,6 +1,6 @@
 [package]
 name = "bestiary"
-version = "1.7.2"
+version = "1.8.0"
 description = "Some scary foes to fight."
 edition.workspace = true
 
