@@ -25,7 +25,7 @@ impl DojoFormatter {
         with_self: bool,
         use_serde: bool,
     ) -> String {
-        let member_name = member_ast.name(db).text(db).to_string();
+        let member_name = member_ast.name(db).text(db).to_string(db);
         Self::serialize_primitive_member_ty(&member_name, with_self, use_serde)
     }
 
@@ -48,10 +48,10 @@ impl DojoFormatter {
         use_serde: bool,
         input_name: &str,
     ) -> String {
-        let member_name = member_ast.name(db).text(db).to_string();
+        let member_name = member_ast.name(db).text(db).to_string(db);
         let member_ty = match member_ast.type_clause(db).ty(db) {
-            Expr::Tuple(expr) => expr.as_syntax_node().get_text_without_trivia(db),
-            _ => member_ast.type_clause(db).ty(db).as_syntax_node().get_text_without_trivia(db),
+            Expr::Tuple(expr) => expr.as_syntax_node().get_text_without_trivia(db).to_string(db),
+            _ => member_ast.type_clause(db).ty(db).as_syntax_node().get_text_without_trivia(db).to_string(db),
         };
 
         Self::deserialize_primitive_member_ty(&member_name, &member_ty, use_serde, input_name)
@@ -69,9 +69,9 @@ impl DojoFormatter {
         )
     }
 
-    pub fn serialize_keys_and_values(
+    pub fn serialize_keys_and_values<'a>(
         db: &dyn SyntaxGroup,
-        members: impl Iterator<Item = MemberAst>,
+        members: impl Iterator<Item = MemberAst<'a>>,
         serialized_keys: &mut Vec<String>,
         serialized_values: &mut Vec<String>,
         use_serde: bool,
@@ -101,7 +101,7 @@ impl DojoFormatter {
                 .elements(db)
                 .filter_map(|el| {
                     if let GenericParam::Type(typ) = el {
-                        Some(typ.name(db).text(db).to_string())
+                        Some(typ.name(db).text(db).to_string(db))
                     } else {
                         None
                     }

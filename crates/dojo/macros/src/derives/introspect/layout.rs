@@ -26,7 +26,7 @@ pub(crate) fn get_layout_from_type_clause(
         }
     };
 
-    format!("dojo::meta::introspect::Introspect::<{}>::layout()", type_str)
+    format!("dojo::meta::introspect::Introspect::<{}>::layout()", type_str.to_string(db))
 }
 
 pub fn is_custom_layout(layout: &str) -> bool {
@@ -72,16 +72,16 @@ pub fn get_packed_field_layout_from_type_clause(
 ) -> Vec<String> {
     match type_clause.ty(db) {
         Expr::Path(path) => {
-            let path_type = path.as_syntax_node().get_text_without_trivia(db);
+            let path_type = path.as_syntax_node().get_text_without_trivia(db).to_string(db);
             get_packed_item_layout_from_type(diagnostics, path_type.trim())
         }
         Expr::Tuple(expr) => {
             let tuple_type = expr.as_syntax_node().get_text_without_trivia(db);
-            get_packed_tuple_layout_from_type(diagnostics, &tuple_type)
+            get_packed_tuple_layout_from_type(diagnostics, &tuple_type.to_string(db))
         }
         Expr::FixedSizeArray(expr) => {
             let arr_type = expr.as_syntax_node().get_text_without_trivia(db);
-            get_packed_item_layout_from_type(diagnostics, &arr_type)
+            get_packed_item_layout_from_type(diagnostics, &arr_type.to_string(db))
         }
         _ => {
             diagnostics.push_error("Unexpected expression for variant data type.".to_string());

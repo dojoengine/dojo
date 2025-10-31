@@ -40,7 +40,7 @@ impl DojoLibrary {
     fn process_ast(db: &SimpleParserDatabase, module_ast: &ast::ItemModule) -> ProcMacroResult {
         let mut library = DojoLibrary::new();
 
-        let name = module_ast.name(db).text(db).to_string();
+        let name = module_ast.name(db).text(db).to_string(db);
 
         if let Some(failure) = DojoChecker::is_name_valid("library", &name) {
             return failure;
@@ -53,17 +53,17 @@ impl DojoLibrary {
                 .map(|el| {
                     match el {
                         ast::ModuleItem::Enum(ref enum_ast) => {
-                            if enum_ast.name(db).text(db) == "Event" {
+                            if enum_ast.name(db).text(db).to_string(db) == "Event" {
                                 return library.merge_event(db, enum_ast.clone());
                             }
                         }
                         ast::ModuleItem::Struct(ref struct_ast) => {
-                            if struct_ast.name(db).text(db) == "Storage" {
+                            if struct_ast.name(db).text(db).to_string(db) == "Storage" {
                                 return library.merge_storage(db, struct_ast.clone());
                             }
                         }
                         ast::ModuleItem::FreeFunction(ref fn_ast) => {
-                            let fn_name = fn_ast.declaration(db).name(db).text(db);
+                            let fn_name = fn_ast.declaration(db).name(db).text(db).to_string(db);
 
                             if fn_name == CONSTRUCTOR_FN {
                                 library.has_constructor = true;

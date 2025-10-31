@@ -40,7 +40,7 @@ impl DojoEnumIntrospect {
         enum_ast: &ItemEnum,
         is_packed: bool,
     ) -> TokenStream {
-        let enum_name = enum_ast.name(db).text(db).into();
+        let enum_name = enum_ast.name(db).text(db).to_string(db);
         let (variant_sizes, identical_variants) = self.compute_enum_variant_sizes(db, enum_ast);
 
         let layout = if is_packed {
@@ -239,7 +239,7 @@ impl DojoEnumIntrospect {
     }
 
     pub fn build_variant_ty(&self, db: &SimpleParserDatabase, variant: &Variant) -> String {
-        let name = variant.name(db).text(db).to_string();
+        let name = variant.name(db).text(db).to_string(db);
         match variant.type_clause(db) {
             OptionTypeClause::Empty(_) => {
                 // use an empty tuple if the variant has no data

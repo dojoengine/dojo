@@ -18,7 +18,7 @@ pub(crate) fn process(token_stream: TokenStream) -> ProcMacroResult {
 
 fn process_ast(db: &dyn SyntaxGroup, expr: &ast::ExprParenthesized) -> ProcMacroResult {
     if let ast::Expr::String(s) = expr.expr(db) {
-        let tag = s.text(db).to_string().replace("\"", "");
+        let tag = s.text(db).to_string(db).replace("\"", "");
 
         if !naming::is_valid_tag(&tag) {
             return ProcMacroResult::fail(
@@ -36,7 +36,7 @@ fn process_ast(db: &dyn SyntaxGroup, expr: &ast::ExprParenthesized) -> ProcMacro
 
     ProcMacroResult::fail(format!(
         "selector_from_tag: invalid parameter type (arg: {})",
-        expr.as_syntax_node().get_text_without_trivia(db)
+        expr.as_syntax_node().get_text_without_trivia(db).to_string(db)
     ))
 }
 

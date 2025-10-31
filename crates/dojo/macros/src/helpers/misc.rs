@@ -15,11 +15,11 @@ pub fn get_serialization_path_and_prefix(use_serde: bool) -> (String, String) {
 
 /// Compute a unique hash based on the element name and types and names of members.
 /// This hash is used in element contracts to ensure uniqueness.
-pub fn compute_unique_hash(
+pub fn compute_unique_hash<'a>(
     db: &SimpleParserDatabase,
     element_name: &str,
     is_packed: bool,
-    members: impl Iterator<Item = Member>,
+    members: impl Iterator<Item = Member<'a>>,
 ) -> Felt {
     let mut hashes = vec![
         if is_packed { Felt::ONE } else { Felt::ZERO },
@@ -29,9 +29,9 @@ pub fn compute_unique_hash(
         members
             .map(|m| {
                 poseidon_hash_many(&[
-                    naming::compute_bytearray_hash(&m.name(db).text(db)),
+                    naming::compute_bytearray_hash(&m.name(db).text(db).to_string(db)),
                     naming::compute_bytearray_hash(
-                        &m.type_clause(db).ty(db).as_syntax_node().get_text_without_trivia(db),
+                        &m.type_clause(db).ty(db).as_syntax_node().get_text_without_trivia(db).to_string(db),
                     ),
                 ])
             })

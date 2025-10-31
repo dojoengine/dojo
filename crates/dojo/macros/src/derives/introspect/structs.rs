@@ -39,7 +39,7 @@ impl DojoStructIntrospect {
         struct_ast: &ItemStruct,
         is_packed: bool,
     ) -> TokenStream {
-        let struct_name = struct_ast.name(db).text(db).into();
+        let struct_name = struct_ast.name(db).text(db).to_string(db);
         let struct_size = self.compute_struct_layout_size(db, struct_ast);
         let ty = self.build_struct_ty(db, &struct_name, struct_ast);
 
@@ -97,7 +97,7 @@ impl DojoStructIntrospect {
     }
 
     pub fn build_member_ty(&self, db: &SimpleParserDatabase, member: &Member) -> String {
-        let name = member.name(db).text(db).to_string();
+        let name = member.name(db).text(db).to_string(db);
         let attrs = if member.has_attr(db, "key") { vec!["'key'"] } else { vec![] };
 
         format!(
@@ -152,7 +152,7 @@ impl DojoStructIntrospect {
 
                 // Check if the member type uses the `usize` type, either
                 // directly or as a nested type (the tuple (u8, usize, u32) for example)
-                if type_contains_usize(&member_type) {
+                if type_contains_usize(&member_type.to_string(db)) {
                     self.diagnostics.push_error(
                         "Use u32 rather than usize for model keys, as usize size is architecture \
                          dependent."
@@ -160,7 +160,7 @@ impl DojoStructIntrospect {
                     );
                 }
             } else {
-                let field_name = member.name(db).text(db);
+                let field_name = member.name(db).text(db).to_string(db);
                 let field_selector = get_selector_from_name(&field_name).unwrap();
                 let field_layout = super::layout::get_layout_from_type_clause(
                     db,

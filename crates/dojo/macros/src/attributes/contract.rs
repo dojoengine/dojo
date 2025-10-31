@@ -40,7 +40,7 @@ impl DojoContract {
     fn process_ast(db: &SimpleParserDatabase, module_ast: &ast::ItemModule) -> ProcMacroResult {
         let mut contract = DojoContract::new();
 
-        let name = module_ast.name(db).text(db).to_string();
+        let name = module_ast.name(db).text(db).to_string(db);
 
         if let Some(failure) = DojoChecker::is_name_valid("contract", &name) {
             return failure;
@@ -53,17 +53,17 @@ impl DojoContract {
                 .map(|el| {
                     match el {
                         ast::ModuleItem::Enum(ref enum_ast) => {
-                            if enum_ast.name(db).text(db) == "Event" {
+                            if enum_ast.name(db).text(db).to_string(db) == "Event" {
                                 return contract.merge_event(db, enum_ast);
                             }
                         }
                         ast::ModuleItem::Struct(ref struct_ast) => {
-                            if struct_ast.name(db).text(db) == "Storage" {
+                            if struct_ast.name(db).text(db).to_string(db) == "Storage" {
                                 return contract.merge_storage(db, struct_ast);
                             }
                         }
                         ast::ModuleItem::FreeFunction(ref fn_ast) => {
-                            let fn_name = fn_ast.declaration(db).name(db).text(db);
+                            let fn_name = fn_ast.declaration(db).name(db).text(db).to_string(db);
 
                             if fn_name == CONSTRUCTOR_FN {
                                 return contract.handle_constructor_fn(db, fn_ast);
