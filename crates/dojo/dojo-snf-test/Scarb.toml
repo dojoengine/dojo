@@ -2,7 +2,7 @@
 name = "dojo_snf_test"
 description = "Testing library for Dojo using Starknet Foundry."
 license = "MIT"
-version = "1.7.2"
+version = "1.8.0"
 edition = "2024_07"
 repository = "https://github.com/dojoengine/dojo"
 documentation = "https://book.dojoengine.org"
