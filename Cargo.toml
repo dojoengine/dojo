@@ -64,7 +64,7 @@ dojo-metrics = { path = "crates/metrics" }
 dojo-bindgen = { path = "crates/dojo/bindgen" }
 dojo-core = { path = "crates/dojo/core" }
 dojo-test-utils = { path = "crates/dojo/test-utils" }
-dojo-types = { path = "crates/dojo/types", version = "1.7.2" }
+dojo-types = { path = "crates/dojo/types", version = "1.8.0" }
 dojo-world = { path = "crates/dojo/world" }
 
 # sozo

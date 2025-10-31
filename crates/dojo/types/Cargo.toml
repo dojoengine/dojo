@@ -1,7 +1,10 @@
 [package]
 edition.workspace = true
 name = "dojo-types"
-version.workspace = true
+#version.workspace = true
+# Currently managing this version separately from the workspace version to more easily
+# publish the dojo macros which depends on this crate.
+version = "1.8.0"
 license.workspace = true
 documentation.workspace = true
 homepage.workspace = true

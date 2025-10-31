@@ -1913,7 +1913,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-types"
-version = "1.7.2"
+version = "1.8.0"
 dependencies = [
  "anyhow",
  "assert_matches",
