@@ -8,7 +8,7 @@ homepage = "https://dojoengine.org"
 # The version of this package doesn't depend on the workspace version,
 # since it has to be published to Scarb registry before a Dojo package update.
 # Use the workflow "publish-dojo-macros-scarbs-xyz" to publish this package to Scarb registry.
-version = "1.7.1"
+version = "1.8.0"
 description = """
 Cairo proc macros for the Dojo framework.
 """
