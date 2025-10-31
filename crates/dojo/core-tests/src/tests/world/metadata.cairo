@@ -109,7 +109,7 @@ fn test_set_metadata_not_possible_for_random_account() {
 
 #[test]
 #[should_panic(
-    expected: "Contract `0x384b52e0b89bb6221ef3158cab06c8da5e0be5a37ca0450794550c28e2896b2` does NOT have OWNER role on model (or its namespace) `Foo`",
+    expected: "Contract `0x5b99b010a37a9aaa048ace8907aa2e0a2c337eb48d0524f93a1a2dec7daff66` does NOT have OWNER role on model (or its namespace) `Foo`",
 )]
 fn test_set_metadata_through_malicious_contract() {
     let (world, model_selector) = deploy_world_and_foo();

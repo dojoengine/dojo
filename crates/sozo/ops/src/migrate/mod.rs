@@ -1196,7 +1196,7 @@ where
                     .deploy_via_udc(
                         self.diff.world_info.class_hash,
                         utils::world_salt(&self.profile_config.world.seed)?,
-                        &[self.diff.world_info.class_hash],
+                        &[],
                         Felt::ZERO,
                     )
                     .await?;

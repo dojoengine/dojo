@@ -109,7 +109,7 @@ pub fn spawn_test_world(
     let salt = core::testing::get_available_gas();
 
     let (world_address, _) = deploy_syscall(
-        world_class_hash, salt.into(), [world_class_hash.into()].span(), false,
+        world_class_hash, salt.into(), [].span(), false,
     )
         .unwrap();
 

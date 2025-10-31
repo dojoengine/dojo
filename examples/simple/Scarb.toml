@@ -22,3 +22,4 @@ dojo_cairo_test = { path = "../../crates/dojo/dojo-cairo-test" }
 default = []
 
 [profile.sepolia]
+[profile.mainnet]
