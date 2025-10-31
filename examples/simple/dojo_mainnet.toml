@@ -4,12 +4,11 @@ name = "simple"
 seed = "simple-b"
 
 [env]
-rpc_url = "https://api.cartridge.gg/x/starknet/sepolia"
-# Default account for katana with seed = 0
-account_address = "0x4ba5ae775eb7da75f092b3b30b03bce15c3476337ef5f9e3cdf18db7a7534bd"
-keystore_path = "~/.snaccounts/dev-sepolia.key"
-#world_address = "0x015c2830806702b5eeecc5f2fc0a854ceb2e40a0d36964e411d0d8e54ea91b0b"
-world_block = 2730612
+rpc_url = "https://api.cartridge.gg/x/starknet/mainnet"
+account_address = "0x140d66c6cdc197415ce02abce9605fd67b781d4f956acb52fc80093948596ca"
+keystore_path = "~/.snaccounts/c7e1-mainnet.key"
+#world_address = "0x06dff4f9293504572c7fef37f0d9bfcd11665b9cb96d0b8fb6e93d1fde935c45"
+world_block = 3287454
 
 [namespace]
 default = "ns"

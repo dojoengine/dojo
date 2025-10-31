@@ -288,15 +288,9 @@ pub mod world {
 
     /// Constructor for the world contract.
     ///
-    /// # Arguments
-    ///
-    /// * `world_class_hash` - The class hash of the world contract that is being deployed.
-    ///   As currently Starknet doesn't support a syscall to get the class hash of the
-    ///   deploying contract, the hash of the world contract has to be provided at spawn time
-    ///   This also ensures the world's address is always deterministic since the world class
-    ///   hash can change when the world contract is upgraded.
+    /// The account originating the transaction is the creator of the world.
     #[constructor]
-    fn constructor(ref self: ContractState, world_class_hash: ClassHash) {
+    fn constructor(ref self: ContractState) {
         let creator = starknet::get_tx_info().unbox().account_contract_address;
 
         let (internal_ns, internal_ns_hash) = self.world_internal_namespace();
@@ -315,6 +309,13 @@ pub mod world {
                 metadata::resource_metadata_selector(internal_ns_hash),
                 Resource::Model((default_address(), default_class_hash().into())),
             );
+
+        // It is valid to call the syscall to get the class hash of the deploying contract,
+        // even in the constructor.
+        let world_class_hash = starknet::syscalls::get_class_hash_at_syscall(
+            starknet::get_contract_address(),
+        )
+            .unwrap();
 
         self.emit(WorldSpawned { creator, class_hash: world_class_hash });
     }

@@ -10,7 +10,7 @@ pub fn compute_world_address(
     world_class_hash: Felt,
 ) -> Result<Felt, CairoShortStringToFeltError> {
     let salt = world_salt(seed)?;
-    Ok(snutils::get_contract_address(salt, world_class_hash, &[world_class_hash], Felt::ZERO))
+    Ok(snutils::get_contract_address(salt, world_class_hash, &[], Felt::ZERO))
 }
 
 /// Computes the deterministic address of a Dojo contract based on the given selector, class hash

@@ -50,7 +50,7 @@ fn test_grant_owner_not_registered_resource() {
 
 #[test]
 #[should_panic(
-    expected: "Contract `0x384b52e0b89bb6221ef3158cab06c8da5e0be5a37ca0450794550c28e2896b2` does NOT have OWNER role on model (or its namespace) `Foo`",
+    expected: "Contract `0x5b99b010a37a9aaa048ace8907aa2e0a2c337eb48d0524f93a1a2dec7daff66` does NOT have OWNER role on model (or its namespace) `Foo`",
 )]
 fn test_grant_owner_through_malicious_contract() {
     let (world, foo_selector) = deploy_world_and_foo();
@@ -87,7 +87,7 @@ fn test_grant_owner_fails_for_non_owner() {
 
 #[test]
 #[should_panic(
-    expected: "Contract `0x384b52e0b89bb6221ef3158cab06c8da5e0be5a37ca0450794550c28e2896b2` does NOT have OWNER role on model (or its namespace) `Foo`",
+    expected: "Contract `0x5b99b010a37a9aaa048ace8907aa2e0a2c337eb48d0524f93a1a2dec7daff66` does NOT have OWNER role on model (or its namespace) `Foo`",
 )]
 fn test_revoke_owner_through_malicious_contract() {
     let (world, foo_selector) = deploy_world_and_foo();
@@ -150,7 +150,7 @@ fn test_writer_not_registered_resource() {
 
 #[test]
 #[should_panic(
-    expected: "Contract `0x384b52e0b89bb6221ef3158cab06c8da5e0be5a37ca0450794550c28e2896b2` does NOT have OWNER role on model (or its namespace) `Foo`",
+    expected: "Contract `0x5b99b010a37a9aaa048ace8907aa2e0a2c337eb48d0524f93a1a2dec7daff66` does NOT have OWNER role on model (or its namespace) `Foo`",
 )]
 fn test_grant_writer_through_malicious_contract() {
     let (world, foo_selector) = deploy_world_and_foo();
@@ -187,7 +187,7 @@ fn test_grant_writer_fails_for_non_owner() {
 
 #[test]
 #[should_panic(
-    expected: "Contract `0x384b52e0b89bb6221ef3158cab06c8da5e0be5a37ca0450794550c28e2896b2` does NOT have OWNER role on model (or its namespace) `Foo`",
+    expected: "Contract `0x5b99b010a37a9aaa048ace8907aa2e0a2c337eb48d0524f93a1a2dec7daff66` does NOT have OWNER role on model (or its namespace) `Foo`",
 )]
 fn test_revoke_writer_through_malicious_contract() {
     let (world, foo_selector) = deploy_world_and_foo();

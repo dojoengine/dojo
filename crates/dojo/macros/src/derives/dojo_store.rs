@@ -28,7 +28,7 @@ pub(crate) fn process(token_stream: TokenStream) -> ProcMacroResult {
 }
 
 fn process_struct(db: &SimpleParserDatabase, struct_ast: &ast::ItemStruct) -> ProcMacroResult {
-    let struct_name = struct_ast.name(db).text(db).to_string();
+    let struct_name = struct_ast.name(db).text(db).to_string(db);
     let gen_types = DojoFormatter::build_generic_types(db, struct_ast.generic_params(db));
 
     let gen_impls = DojoFormatter::build_generic_impls(
@@ -42,7 +42,7 @@ fn process_struct(db: &SimpleParserDatabase, struct_ast: &ast::ItemStruct) -> Pr
     let mut member_names = vec![];
 
     for member in struct_ast.members(db).elements(db) {
-        let member_name = member.name(db).text(db).to_string();
+        let member_name = member.name(db).text(db).to_string(db);
 
         let member_ty = member.type_clause(db).ty(db).as_syntax_node().get_text_without_trivia(db);
 
@@ -53,7 +53,7 @@ fn process_struct(db: &SimpleParserDatabase, struct_ast: &ast::ItemStruct) -> Pr
         ));
         deserialized_members.push(DojoFormatter::deserialize_primitive_member_ty(
             &member_name,
-            &member_ty,
+            &member_ty.to_string(db),
             false,
             "values",
         ));
@@ -102,7 +102,7 @@ fn process_struct(db: &SimpleParserDatabase, struct_ast: &ast::ItemStruct) -> Pr
 }
 
 fn process_enum(db: &SimpleParserDatabase, enum_ast: &ast::ItemEnum) -> ProcMacroResult {
-    let enum_name = enum_ast.name(db).text(db).to_string();
+    let enum_name = enum_ast.name(db).text(db).to_string(db);
     let gen_types = DojoFormatter::build_generic_types(db, enum_ast.generic_params(db));
 
     let enum_name_with_generics = format!("{enum_name}<{}>", gen_types.join(", "));
@@ -117,13 +117,13 @@ fn process_enum(db: &SimpleParserDatabase, enum_ast: &ast::ItemEnum) -> ProcMacr
     let mut deserialized_variants = vec![];
 
     for (index, variant) in enum_ast.variants(db).elements(db).enumerate() {
-        let variant_name = variant.name(db).text(db).to_string();
+        let variant_name = variant.name(db).text(db).to_string(db);
         let full_variant_name = format!("{enum_name}::{variant_name}");
         let variant_index = index + 1;
 
         let (serialized_variant, deserialized_variant) = match variant.type_clause(db) {
             OptionTypeClause::TypeClause(ty) => {
-                let ty = ty.ty(db).as_syntax_node().get_text_without_trivia(db);
+                let ty = ty.ty(db).as_syntax_node().get_text_without_trivia(db).to_string(db);
 
                 let serialized = format!(
                     "{full_variant_name}(d) => {{

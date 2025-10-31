@@ -138,8 +138,8 @@ pub fn deploy_with_world_address(class_hash: felt252, world: IWorldDispatcher) -
 ///
 /// * World dispatcher
 pub fn spawn_test_world(namespaces_defs: Span<NamespaceDef>) -> WorldStorage {
-    let (world_contract, class_hash) = declare("world");
-    let world_address = deploy(world_contract, @array![class_hash.into()]);
+    let (world_contract, _class_hash) = declare("world");
+    let world_address = deploy(world_contract, @array![]);
 
     let world = IWorldDispatcher { contract_address: world_address };
 

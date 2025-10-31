@@ -1,5 +1,4 @@
 [package]
-cairo-version = "2.12.2"
 name = "dojo_simple"
 version = "1.7.2"
 edition = "2024_07"
@@ -13,13 +12,14 @@ build-external-contracts = ["dojo::world::world_contract::world"]
 [dependencies]
 dojo = { path = "../../crates/dojo/core" }
 dojo_cairo_macros = { path = "../../crates/dojo/macros" }
-starknet = "2.12.2"
+starknet = "2.13"
 
 [dev-dependencies]
-cairo_test = "2.12.2"
+cairo_test = "2.13"
 dojo_cairo_test = { path = "../../crates/dojo/dojo-cairo-test" }
 
 [features]
 default = []
 
 [profile.sepolia]
+[profile.mainnet]

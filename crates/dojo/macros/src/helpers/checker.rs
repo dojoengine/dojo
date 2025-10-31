@@ -15,10 +15,10 @@ pub struct DojoChecker {}
 impl DojoChecker {
     /// Be sure there is no conflict among `derive` attributes
     /// set on a Cairo element.
-    pub fn check_derive_conflicts(
+    pub fn check_derive_conflicts<'a>(
         db: &SimpleParserDatabase,
         diagnostics: &mut Vec<Diagnostic>,
-        attrs: impl Iterator<Item = Attribute>,
+        attrs: impl Iterator<Item = Attribute<'a>>,
     ) {
         let attr_names = DojoParser::extract_derive_attr_names(db, diagnostics, attrs);
 
@@ -62,7 +62,7 @@ impl DojoChecker {
         if !struct_ast.generic_params(db).is_empty(db) {
             return Some(ProcMacroResult::fail(format!(
                 "The {element_name} '{}' cannot be generic",
-                struct_ast.name(db).as_syntax_node().get_text_without_trivia(db)
+                struct_ast.name(db).as_syntax_node().get_text_without_trivia(db).to_string(db)
             )));
         }
 

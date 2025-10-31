@@ -3,7 +3,6 @@ name = "bestiary"
 version = "1.7.2"
 description = "Some scary foes to fight."
 edition.workspace = true
-cairo-version.workspace = true
 
 [dependencies]
 starknet.workspace = true
@@ -11,7 +10,7 @@ dojo.workspace = true
 dojo_cairo_macros.workspace = true
 
 [dev-dependencies]
-cairo_test = "2.12"
+cairo_test = "2.13"
 dojo_cairo_test = { path = "../../../crates/dojo/dojo-cairo-test" }
 
 [lib]

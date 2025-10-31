@@ -832,7 +832,10 @@ fn test_legacy_model_with_enum_key_multiple_models() {
     };
 
     // read uninitialized models
-    let keys = [(11, EnumKey::KEY_1), (12, EnumKey::KEY_2), (13, EnumKey::KEY_3)].span();
+    let keys: Span<(u8, EnumKey)> = [
+        (11, EnumKey::KEY_1), (12, EnumKey::KEY_2), (13, EnumKey::KEY_3),
+    ]
+        .span();
     let models: Array<LegacyModelWithEnumKey> = world.read_models(keys);
 
     assert!(models.len() == 3, "LegacyModelWithEnumKey: read uninitialized models bad length");
@@ -1377,7 +1380,10 @@ fn test_dojo_store_model_with_enum_key_multiple_models() {
     };
 
     // read uninitialized models
-    let keys = [(11, EnumKey::KEY_1), (12, EnumKey::KEY_2), (13, EnumKey::KEY_3)].span();
+    let keys: Span<(u8, EnumKey)> = [
+        (11, EnumKey::KEY_1), (12, EnumKey::KEY_2), (13, EnumKey::KEY_3),
+    ]
+        .span();
     let models: Array<DojoStoreModelWithEnumKey> = world.read_models(keys);
 
     assert!(models.len() == 3, "DojoStoreModelWithEnumKey: read uninitialized models bad length");

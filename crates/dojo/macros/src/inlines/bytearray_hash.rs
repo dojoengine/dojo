@@ -18,7 +18,7 @@ pub(crate) fn process(token_stream: TokenStream) -> ProcMacroResult {
 
 fn process_ast(db: &dyn SyntaxGroup, expr: &ast::ExprParenthesized) -> ProcMacroResult {
     if let ast::Expr::String(s) = expr.expr(db) {
-        let input = s.text(db).to_string().replace("\"", "");
+        let input = s.text(db).to_string(db).replace("\"", "");
         let hash = naming::compute_bytearray_hash(&input);
         let hash = format!("{:#64x}", hash);
 
@@ -28,7 +28,7 @@ fn process_ast(db: &dyn SyntaxGroup, expr: &ast::ExprParenthesized) -> ProcMacro
 
     ProcMacroResult::fail(format!(
         "bytearray_hash: invalid parameter type (arg: {})",
-        expr.as_syntax_node().get_text_without_trivia(db)
+        expr.as_syntax_node().get_text_without_trivia(db).to_string(db)
     ))
 }
 

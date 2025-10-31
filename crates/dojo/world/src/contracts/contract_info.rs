@@ -322,12 +322,12 @@ mod tests {
         assert_eq!(contracts_info.len(), 3);
         assert_eq!(
             contracts_info["world"].address,
-            felt!("0x66c1fe28a8f6c5f1dfe797df547fb683d1c9d18c87b049021f115f026be8077")
+            felt!("0x49de5704214d59f9c776457b9fa2b1f66f0dc9ecfac0b1c7856353cd044ba24")
         );
         assert_eq!(contracts_info["world"].entrypoints, vec!["execute".to_string()]);
         assert_eq!(
             contracts_info["ns-test_contract"].address,
-            felt!("0x2a03d1761c3e0ee912794d32d5f9be9ae7d1af0fc349fc040fe292a096785ad")
+            felt!("0x1a3aaba625d265269a54b2dc2aaa15acd212b9ab98a7a98eee75b7f607d839a")
         );
         assert_eq!(contracts_info["ns-test_contract"].entrypoints, vec!["system_1".to_string()]);
         assert_eq!(contracts_info["ns-test_contract"].tag_or_name, "ns-test_contract".to_string());
