@@ -12,7 +12,7 @@ re-export-cairo-plugins = ["dojo_cairo_macros"]
 
 [dependencies]
 starknet = "2.13"
-dojo_cairo_macros = { path = "../macros", version = "1.7.1" }
+dojo_cairo_macros = { path = "../macros", version = "1.8.0" }
 
 [lib]
 
