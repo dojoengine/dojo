@@ -1,8 +1,10 @@
 use dojo::utils::operator::OperatorMode;
-use starknet::SyscallResultTrait;
 use dojo::utils::{IOperatorDispatcher, IOperatorDispatcherTrait};
-use snforge_std::{ContractClassTrait, DeclareResultTrait};
-use starknet::{ClassHash, ContractAddress};
+use snforge_std::{ContractClassTrait, DeclareResultTrait, start_cheat_block_timestamp_global};
+use starknet::{ContractAddress, SyscallResultTrait};
+
+const OTHER: ContractAddress = 'OTHER'.try_into().unwrap();
+const OPERATOR: ContractAddress = 'OPERATOR'.try_into().unwrap();
 
 #[starknet::interface]
 pub trait IMockContract<T> {
@@ -45,22 +47,88 @@ mod mock_contract {
     }
 }
 
-fn setup_mock() -> (ContractAddress, ClassHash) {
+fn setup_mock() -> (IOperatorDispatcher, IMockContractDispatcher) {
     let contract = snforge_std::declare("mock_contract").unwrap_syscall().contract_class();
     let (addr, _) = contract.deploy(@array![]).unwrap_syscall();
 
-    (addr, *contract.class_hash)
+    (
+        IOperatorDispatcher { contract_address: addr },
+        IMockContractDispatcher { contract_address: addr },
+    )
 }
 
 #[test]
-fn test_operator_initialize() {
-    let (contract_address, _) = setup_mock();
-
-    let op_dispatcher = IOperatorDispatcher { contract_address };
-    let mock_dispatcher = IMockContractDispatcher { contract_address };
+fn test_operator_initialize_and_owner() {
+    // Default mode, operator mode is disabled.
+    let (op_dispatcher, mock_dispatcher) = setup_mock();
 
     mock_dispatcher.test_call();
 
-    // snforge_std::start_cheat_caller_address_global('OTHER'.try_into().unwrap());
-    // op_dispatcher.change_mode(OperatorMode::Disabled);
+    // Switch to expiry mode.
+    start_cheat_block_timestamp_global(100);
+    op_dispatcher.change_mode(OperatorMode::ExpireAt(200));
+
+    op_dispatcher.grant_operator(OPERATOR);
+
+    snforge_std::start_cheat_caller_address_global(OPERATOR);
+    mock_dispatcher.test_call();
+
+    // Switch to never expire mode.
+    snforge_std::start_cheat_caller_address_global(starknet::get_contract_address());
+    op_dispatcher.change_mode(OperatorMode::NeverExpire);
+
+    snforge_std::start_cheat_caller_address_global(OPERATOR);
+    mock_dispatcher.test_call();
+}
+
+#[test]
+fn test_operator_expire_at() {
+    let (op_dispatcher, mock_dispatcher) = setup_mock();
+
+    op_dispatcher.change_mode(OperatorMode::ExpireAt(100));
+    start_cheat_block_timestamp_global(101);
+
+    // Can be called without operator being valid, since operator mode is expired.
+    mock_dispatcher.test_call();
+}
+
+#[test]
+#[should_panic(expected: 'call not allowed')]
+fn test_invalid_operator() {
+    let (op_dispatcher, mock_dispatcher) = setup_mock();
+
+    op_dispatcher.change_mode(OperatorMode::NeverExpire);
+
+    snforge_std::start_cheat_caller_address_global(OTHER);
+    mock_dispatcher.test_call();
+}
+
+#[test]
+#[should_panic(expected: 'caller is not owner')]
+fn test_not_owner_change_mode() {
+    let (op_dispatcher, _) = setup_mock();
+
+    snforge_std::start_cheat_caller_address_global(OTHER);
+
+    op_dispatcher.change_mode(OperatorMode::NeverExpire);
+}
+
+#[test]
+#[should_panic(expected: 'caller is not owner')]
+fn test_not_owner_grant_operator() {
+    let (op_dispatcher, _) = setup_mock();
+
+    snforge_std::start_cheat_caller_address_global(OTHER);
+
+    op_dispatcher.grant_operator(OPERATOR);
+}
+
+#[test]
+#[should_panic(expected: 'caller is not owner')]
+fn test_not_owner_revoke_operator() {
+    let (op_dispatcher, _) = setup_mock();
+
+    snforge_std::start_cheat_caller_address_global(OTHER);
+
+    op_dispatcher.revoke_operator(OPERATOR);
 }
