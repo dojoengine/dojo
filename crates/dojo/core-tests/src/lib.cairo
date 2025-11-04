@@ -74,6 +74,7 @@ mod tests {
         mod key;
         mod layout;
         mod naming;
+        mod operator;
     }
 
     mod world {

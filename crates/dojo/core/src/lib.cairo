@@ -97,6 +97,9 @@ pub mod utils {
 
     pub mod serde;
     pub use serde::{deserialize_unwrap, serialize_inline};
+
+    pub mod operator;
+    pub use operator::{IOperator, IOperatorDispatcher, IOperatorDispatcherTrait, OperatorComponent};
 }
 
 pub mod world {

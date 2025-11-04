@@ -36,9 +36,10 @@ pub mod world {
     };
     use dojo::model::{Model, ModelIndex, ResourceMetadata, metadata};
     use dojo::storage;
+    use dojo::utils::OperatorComponent::InternalTrait as OperatorInternal;
     use dojo::utils::{
-        bytearray_hash, default_address, default_class_hash, entity_id_from_serialized_keys,
-        selector_from_namespace_and_name,
+        OperatorComponent as operator_cpt, bytearray_hash, default_address, default_class_hash,
+        entity_id_from_serialized_keys, selector_from_namespace_and_name,
     };
     use dojo::world::{IUpgradeableWorld, IWorld, Resource, ResourceIsNoneTrait, errors};
     use starknet::storage::Map;
@@ -80,6 +81,8 @@ pub mod world {
         StoreDelRecord: StoreDelRecord,
         WriterUpdated: WriterUpdated,
         OwnerUpdated: OwnerUpdated,
+        #[flat]
+        OperatorEvent: operator_cpt::Event,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -284,7 +287,11 @@ pub mod world {
         writers: Map<(felt252, ContractAddress), bool>,
         owner_count: Map<felt252, u64>,
         initialized_contracts: Map<felt252, bool>,
+        #[substorage(v0)]
+        operator: operator_cpt::Storage,
     }
+
+    component!(path: operator_cpt, storage: operator, event: OperatorEvent);
 
     /// Constructor for the world contract.
     ///
@@ -292,6 +299,8 @@ pub mod world {
     #[constructor]
     fn constructor(ref self: ContractState) {
         let creator = starknet::get_tx_info().unbox().account_contract_address;
+
+        self.operator.initialize(creator);
 
         let (internal_ns, internal_ns_hash) = self.world_internal_namespace();
 
@@ -1073,6 +1082,8 @@ pub mod world {
             values: Span<felt252>,
             layout: Layout,
         ) {
+            assert(self.operator.is_call_allowed(), errors::OPERATOR_CHECK_FAILED);
+
             if let Resource::Model((_, _)) = self.resources.read(model_selector) {
                 self.assert_caller_permissions(model_selector, Permission::Writer);
                 self.set_entity_internal(model_selector, index, values, layout);
