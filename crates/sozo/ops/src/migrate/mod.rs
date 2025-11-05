@@ -819,10 +819,12 @@ where
         if let ResourceDiff::Created(ResourceLocal::ExternalContract(contract)) = resource {
             match contract {
                 ExternalContractLocal::SozoManaged(c) => {
-                    let block_number =
-                        deploy_block_numbers.get(&contract.tag()).unwrap_or_else(|| {
-                            &0
-                        });
+                    let block_number = deploy_block_numbers.get(&contract.tag()).unwrap_or({
+                        // Against the pre-confirmed state, the block number is not available.
+                        // Since the block number is only registered for indexing purposes,
+                        // using 0 is acceptable for now.
+                        &0
+                    });
 
                     calls.push(self.world.register_external_contract_getcall(
                         &ByteArray::from_string(&contract.namespace())?,
@@ -925,7 +927,12 @@ where
                 .await?
             {
                 Some((_, call)) => deploy_call = Some(call),
-                None => deploy_call = None,
+                None => {
+                    deploy_call = {
+                        // Already deployed, no need to deploy again.
+                        None
+                    }
+                }
             }
 
             is_upgradeable = contract.is_upgradeable;
