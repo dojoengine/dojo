@@ -821,11 +821,7 @@ where
                 ExternalContractLocal::SozoManaged(c) => {
                     let block_number =
                         deploy_block_numbers.get(&contract.tag()).unwrap_or_else(|| {
-                            panic!(
-                                "Block number should be available for sozo-managed {} external \
-                                 contract.",
-                                contract.tag()
-                            )
+                            &0
                         });
 
                     calls.push(self.world.register_external_contract_getcall(
@@ -929,13 +925,7 @@ where
                 .await?
             {
                 Some((_, call)) => deploy_call = Some(call),
-                None => {
-                    return Err(MigrationError::DeployExternalContractError(anyhow!(
-                        "Failed to deploy external contract `{}` in namespace `{}`",
-                        contract.common.name,
-                        contract.common.namespace
-                    )));
-                }
+                None => deploy_call = None,
             }
 
             is_upgradeable = contract.is_upgradeable;
