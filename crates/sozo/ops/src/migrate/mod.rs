@@ -819,14 +819,12 @@ where
         if let ResourceDiff::Created(ResourceLocal::ExternalContract(contract)) = resource {
             match contract {
                 ExternalContractLocal::SozoManaged(c) => {
-                    let block_number =
-                        deploy_block_numbers.get(&contract.tag()).unwrap_or_else(|| {
-                            panic!(
-                                "Block number should be available for sozo-managed {} external \
-                                 contract.",
-                                contract.tag()
-                            )
-                        });
+                    let block_number = deploy_block_numbers.get(&contract.tag()).unwrap_or({
+                        // Against the pre-confirmed state, the block number is not available.
+                        // Since the block number is only registered for indexing purposes,
+                        // using 0 is acceptable for now.
+                        &0
+                    });
 
                     calls.push(self.world.register_external_contract_getcall(
                         &ByteArray::from_string(&contract.namespace())?,
@@ -930,11 +928,10 @@ where
             {
                 Some((_, call)) => deploy_call = Some(call),
                 None => {
-                    return Err(MigrationError::DeployExternalContractError(anyhow!(
-                        "Failed to deploy external contract `{}` in namespace `{}`",
-                        contract.common.name,
-                        contract.common.namespace
-                    )));
+                    deploy_call = {
+                        // Already deployed, no need to deploy again.
+                        None
+                    }
                 }
             }
 
