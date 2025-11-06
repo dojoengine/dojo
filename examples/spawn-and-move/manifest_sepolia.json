@@ -1,8 +1,8 @@
 {
   "world": {
     "class_hash": "0x613551abceb2b37073b1149bb862ea70cf029981ce1ca47e9dd7c7ab97cb65d",
-    "address": "0x1ff0ee02b7bda29c851bad698138cebc3c537041ba6d77b09f765a0073ab5ed",
-    "seed": "dojo_examples-glihm3",
+    "address": "0x49d7cc298754716b38b3ba46f179f8df5f544691e258e8cb897eafe71b3bf2e",
+    "seed": "dojo_examples-glihm6",
     "name": "example",
     "entrypoints": [
       "uuid",
@@ -33,7 +33,7 @@
   },
   "contracts": [
     {
-      "address": "0x18dc1caf2f3afcb38cfefedac15214835e899cb1b5b65e3e9d822f3aa229a7c",
+      "address": "0x12d8cde4cc183fe17c487344b042760b7b3fc64c29943e5549431ca3271ebce",
       "class_hash": "0x7b7e70256844cc4c23e6477f2d5e98106856e1e440dbc5c5a61b80b8c885eac",
       "init_calldata": [],
       "tag": "ns-actions",
@@ -53,7 +53,7 @@
       ]
     },
     {
-      "address": "0x3f9f5a72ab2f65962e17289a3931ca123f9b4950ef62a30fdcf43af1e236a",
+      "address": "0x3a7487a7a29b172c7c2cdd3e01dc65354fd17d5f934a1b369654f977dc2eb1e",
       "class_hash": "0x5b91120905700e5f4b8add97dbe69504dad099e50c52233872ab8fcf82915c7",
       "init_calldata": [],
       "tag": "ns-dungeon",
@@ -63,7 +63,7 @@
       ]
     },
     {
-      "address": "0x42a5c4dfb9fffdaab07a26ebb72479ecc32d6127fd44a619581b686eaa16197",
+      "address": "0x449217e6b05dc1b2d6d243923b481b8a423a103f87bc02e3f5d88008db19967",
       "class_hash": "0x13e92f5650e07611d6fb37cad0a1b25c26cf31860015c682fd48e068730aa76",
       "init_calldata": [],
       "tag": "ns-mock_token",
@@ -73,7 +73,7 @@
       ]
     },
     {
-      "address": "0x7195c5a73d796f70909964c55175f2267b5c9441b99eddeb8519aae44ae72d1",
+      "address": "0xb0a578ac2f6e7ce31f6c14f09f59076015f70f2c3a9db66ac379d7a345e56e",
       "class_hash": "0x6f84a65b4aa2aa4c91548d35cd61fa431c2b479f5e5be24739651ca0c2327f8",
       "init_calldata": [
         "0xff"
@@ -85,7 +85,7 @@
       ]
     },
     {
-      "address": "0x660092e86ef8e30dd64a4751f1684a7dd0beb94ccedbd5564960daa6306da57",
+      "address": "0x5f4da022db92dbe6cffe2fc10ac4d5822922f6541351683479fc1cab998834b",
       "class_hash": "0x7b7e70256844cc4c23e6477f2d5e98106856e1e440dbc5c5a61b80b8c885eac",
       "init_calldata": [],
       "tag": "ns2-actions",
