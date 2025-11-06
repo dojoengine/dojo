@@ -67,8 +67,8 @@ pub struct TransactionOptions {
     #[arg(long)]
     #[arg(help = "The finality status to wait for. Since 0.14, the nodes syncing is sometime \
                   not fast enough to propagate the transaction to the nodes in the \
-                  PRE-CONFIRMED state. The default is ACCEPTED_ON_L2. Available options are: \
-                  PRE-CONFIRMED, ACCEPTED_ON_L2, ACCEPTED_ON_L1.")]
+                  PRE_CONFIRMED state. The default is ACCEPTED_ON_L2. Available options are: \
+                  PRE_CONFIRMED, ACCEPTED_ON_L2.")]
     #[arg(global = true)]
     #[arg(default_value = "ACCEPTED_ON_L2")]
     pub finality_status: Option<String>,
@@ -141,7 +141,6 @@ fn parse_finality_status(status: Option<String>) -> Result<TransactionFinalitySt
         match status.to_uppercase().as_str() {
             "PRE_CONFIRMED" => Ok(TransactionFinalityStatus::PreConfirmed),
             "ACCEPTED_ON_L2" => Ok(TransactionFinalityStatus::AcceptedOnL2),
-            "ACCEPTED_ON_L1" => Ok(TransactionFinalityStatus::AcceptedOnL1),
             _ => bail!("Invalid finality status: {}", status),
         }
     } else {

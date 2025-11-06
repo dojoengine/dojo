@@ -39,3 +39,4 @@ default = [ "dungeon" ]
 dungeon = [  ]
 
 [profile.saya]
+[profile.sepolia]
