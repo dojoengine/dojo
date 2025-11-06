@@ -1,7 +1,7 @@
 [world]
 description = "example world"
 name = "example"
-seed = "dojo_examples-glihm6"
+seed = "dojo_examples-glihm-op1"
 
 [[models]]
 tag = "ns-Message"

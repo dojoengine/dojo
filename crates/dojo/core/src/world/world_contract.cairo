@@ -293,6 +293,9 @@ pub mod world {
 
     component!(path: operator_cpt, storage: operator, event: OperatorEvent);
 
+    #[abi(embed_v0)]
+    impl OperatorImpl = operator_cpt::OperatorImpl<ContractState>;
+
     /// Constructor for the world contract.
     ///
     /// The account originating the transaction is the creator of the world.

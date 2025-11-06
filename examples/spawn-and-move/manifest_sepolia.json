@@ -1,8 +1,8 @@
 {
   "world": {
-    "class_hash": "0x613551abceb2b37073b1149bb862ea70cf029981ce1ca47e9dd7c7ab97cb65d",
-    "address": "0x49d7cc298754716b38b3ba46f179f8df5f544691e258e8cb897eafe71b3bf2e",
-    "seed": "dojo_examples-glihm6",
+    "class_hash": "0x97d49ff37ce4aff2e5a80b4a6f26a945d1f8a4a7563621198dc15410e4e731",
+    "address": "0x7f60f7bcafa4d422bdfd85c05ac5ff824f07a5859fe21b133407b91c81d6251",
+    "seed": "dojo_examples-glihm-op1",
     "name": "example",
     "entrypoints": [
       "uuid",
@@ -28,12 +28,15 @@
       "revoke_owner",
       "grant_writer",
       "revoke_writer",
-      "upgrade"
+      "upgrade",
+      "change_mode",
+      "grant_operator",
+      "revoke_operator"
     ]
   },
   "contracts": [
     {
-      "address": "0x12d8cde4cc183fe17c487344b042760b7b3fc64c29943e5549431ca3271ebce",
+      "address": "0x4e64d58a252da7e324cbfd13bc65ae64aa7859a2df5f177afecbb73aa44ff7c",
       "class_hash": "0x7b7e70256844cc4c23e6477f2d5e98106856e1e440dbc5c5a61b80b8c885eac",
       "init_calldata": [],
       "tag": "ns-actions",
@@ -53,7 +56,7 @@
       ]
     },
     {
-      "address": "0x3a7487a7a29b172c7c2cdd3e01dc65354fd17d5f934a1b369654f977dc2eb1e",
+      "address": "0x58647c509380170f16d07ec67179332957686e158e3fed3bae4efab70202963",
       "class_hash": "0x5b91120905700e5f4b8add97dbe69504dad099e50c52233872ab8fcf82915c7",
       "init_calldata": [],
       "tag": "ns-dungeon",
@@ -63,7 +66,7 @@
       ]
     },
     {
-      "address": "0x449217e6b05dc1b2d6d243923b481b8a423a103f87bc02e3f5d88008db19967",
+      "address": "0x165cb17593593390f4e9d04531e9e7ca6ab575519415460f5444dc861c1cec4",
       "class_hash": "0x13e92f5650e07611d6fb37cad0a1b25c26cf31860015c682fd48e068730aa76",
       "init_calldata": [],
       "tag": "ns-mock_token",
@@ -73,7 +76,7 @@
       ]
     },
     {
-      "address": "0xb0a578ac2f6e7ce31f6c14f09f59076015f70f2c3a9db66ac379d7a345e56e",
+      "address": "0x5862c24ded652c77fde47476248e77ae9671a5291d017cb95b86e330bcb975b",
       "class_hash": "0x6f84a65b4aa2aa4c91548d35cd61fa431c2b479f5e5be24739651ca0c2327f8",
       "init_calldata": [
         "0xff"
@@ -85,7 +88,7 @@
       ]
     },
     {
-      "address": "0x5f4da022db92dbe6cffe2fc10ac4d5822922f6541351683479fc1cab998834b",
+      "address": "0x5240339c650327ba31c2d684f157f863a6a8013f4e318df6abf4f4ef9fda096",
       "class_hash": "0x7b7e70256844cc4c23e6477f2d5e98106856e1e440dbc5c5a61b80b8c885eac",
       "init_calldata": [],
       "tag": "ns2-actions",
@@ -1321,6 +1324,124 @@
     },
     {
       "type": "interface",
+      "name": "dojo::utils::operator::IOperator",
+      "items": [
+        {
+          "type": "function",
+          "name": "change_mode",
+          "inputs": [
+            {
+              "name": "mode",
+              "type": "dojo::utils::operator::OperatorMode"
+            }
+          ],
+          "outputs": [],
+          "state_mutability": "external"
+        },
+        {
+          "type": "function",
+          "name": "grant_operator",
+          "inputs": [
+            {
+              "name": "operator",
+              "type": "core::starknet::contract_address::ContractAddress"
+            }
+          ],
+          "outputs": [],
+          "state_mutability": "external"
+        },
+        {
+          "type": "function",
+          "name": "revoke_operator",
+          "inputs": [
+            {
+              "name": "operator",
+              "type": "core::starknet::contract_address::ContractAddress"
+            }
+          ],
+          "outputs": [],
+          "state_mutability": "external"
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "name": "dojo::utils::operator::OperatorComponent::Event",
+      "kind": "enum",
+      "variants": [
+        {
+          "name": "OperatorModeChanged",
+          "type": "dojo::utils::operator::OperatorComponent::OperatorModeChanged",
+          "kind": "nested"
+        },
+        {
+          "name": "OperatorGranted",
+          "type": "dojo::utils::operator::OperatorComponent::OperatorGranted",
+          "kind": "nested"
+        },
+        {
+          "name": "OperatorRevoked",
+          "type": "dojo::utils::operator::OperatorComponent::OperatorRevoked",
+          "kind": "nested"
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "name": "dojo::utils::operator::OperatorComponent::OperatorGranted",
+      "kind": "struct",
+      "members": [
+        {
+          "name": "operator",
+          "type": "core::starknet::contract_address::ContractAddress",
+          "kind": "data"
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "name": "dojo::utils::operator::OperatorComponent::OperatorModeChanged",
+      "kind": "struct",
+      "members": [
+        {
+          "name": "mode",
+          "type": "dojo::utils::operator::OperatorMode",
+          "kind": "data"
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "name": "dojo::utils::operator::OperatorComponent::OperatorRevoked",
+      "kind": "struct",
+      "members": [
+        {
+          "name": "operator",
+          "type": "core::starknet::contract_address::ContractAddress",
+          "kind": "data"
+        }
+      ]
+    },
+    {
+      "type": "enum",
+      "name": "dojo::utils::operator::OperatorMode",
+      "variants": [
+        {
+          "name": "Disabled",
+          "type": "()"
+        },
+        {
+          "name": "NeverExpire",
+          "type": "()"
+        },
+        {
+          "name": "ExpireAt",
+          "type": "core::integer::u64"
+        }
+      ]
+    },
+    {
+      "type": "interface",
       "name": "dojo::world::iworld::IUpgradeableWorld",
       "items": [
         {
@@ -2144,6 +2265,11 @@
           "name": "OwnerUpdated",
           "type": "dojo::world::world_contract::world::OwnerUpdated",
           "kind": "nested"
+        },
+        {
+          "name": "OperatorEvent",
+          "type": "dojo::utils::operator::OperatorComponent::Event",
+          "kind": "flat"
         }
       ]
     },
