@@ -70,14 +70,14 @@ fn test_operator_initialize_and_owner() {
 
     op_dispatcher.grant_operator(OPERATOR);
 
-    snforge_std::start_cheat_caller_address_global(OPERATOR);
+    snforge_std::start_cheat_account_contract_address_global(OPERATOR);
     mock_dispatcher.test_call();
 
     // Switch to never expire mode.
     snforge_std::start_cheat_caller_address_global(starknet::get_contract_address());
     op_dispatcher.change_mode(OperatorMode::NeverExpire);
 
-    snforge_std::start_cheat_caller_address_global(OPERATOR);
+    snforge_std::start_cheat_account_contract_address_global(OPERATOR);
     mock_dispatcher.test_call();
 }
 

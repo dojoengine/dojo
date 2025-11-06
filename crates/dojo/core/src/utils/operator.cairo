@@ -131,19 +131,23 @@ pub mod OperatorComponent {
             assert(self.owner.read() == starknet::get_caller_address(), errors::ONLY_OWNER);
         }
 
-        /// Checks if the caller is allowed to make the call.
+        /// Checks if the originator of the transaction is allowed to make the call.
         ///
-        /// If the operator mode is disabled, the caller is always allowed to make the call.
-        /// If the operator mode is never expired, the caller is always allowed to make the call.
-        /// Otherwise, the caller is allowed to make the call if it is an operator.
+        /// The caller is not used because the caller is most of the time the system contract,
+        /// but optimistic katana needs the account address to be whitelisted to make calls.
+        ///
+        /// If the operator mode is disabled, the originator is always allowed to make the call.
+        /// If the operator mode is never expired, the originator is always allowed to make the
+        /// call.
+        /// Otherwise, the originator is allowed to make the call if it is an operator.
         fn is_call_allowed(ref self: ComponentState<TContractState>) -> bool {
-            let caller = starknet::get_caller_address();
+            let originator = starknet::get_tx_info().unbox().account_contract_address;
 
             match self.mode.read() {
                 OperatorMode::Disabled => true,
-                OperatorMode::NeverExpire => self.operators.read(caller),
+                OperatorMode::NeverExpire => self.operators.read(originator),
                 OperatorMode::ExpireAt(expires_at) => if starknet::get_block_timestamp() < expires_at {
-                    self.operators.read(caller)
+                    self.operators.read(originator)
                 } else {
                     true
                 },

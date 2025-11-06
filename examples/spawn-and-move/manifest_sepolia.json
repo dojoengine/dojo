@@ -1,7 +1,7 @@
 {
   "world": {
-    "class_hash": "0x97d49ff37ce4aff2e5a80b4a6f26a945d1f8a4a7563621198dc15410e4e731",
-    "address": "0x7f60f7bcafa4d422bdfd85c05ac5ff824f07a5859fe21b133407b91c81d6251",
+    "class_hash": "0x240c060f3d888ca34d5fe26cf6d35be7f276b01a6802376a3127bd79524b7bc",
+    "address": "0x5ac67831d4c0fbf2a95f00addcffcb2bcb9f7abf0a846b6e68903406b17a832",
     "seed": "dojo_examples-glihm-op1",
     "name": "example",
     "entrypoints": [
@@ -36,7 +36,7 @@
   },
   "contracts": [
     {
-      "address": "0x4e64d58a252da7e324cbfd13bc65ae64aa7859a2df5f177afecbb73aa44ff7c",
+      "address": "0x4de150524981c389fb6a301959448a9c955e36d9782a6b9227013b84229a95d",
       "class_hash": "0x7b7e70256844cc4c23e6477f2d5e98106856e1e440dbc5c5a61b80b8c885eac",
       "init_calldata": [],
       "tag": "ns-actions",
@@ -56,7 +56,7 @@
       ]
     },
     {
-      "address": "0x58647c509380170f16d07ec67179332957686e158e3fed3bae4efab70202963",
+      "address": "0x131f245bdae5bdff34adaa346e3231eda716bc1f86fb6cebc23163e365f8ac",
       "class_hash": "0x5b91120905700e5f4b8add97dbe69504dad099e50c52233872ab8fcf82915c7",
       "init_calldata": [],
       "tag": "ns-dungeon",
@@ -66,7 +66,7 @@
       ]
     },
     {
-      "address": "0x165cb17593593390f4e9d04531e9e7ca6ab575519415460f5444dc861c1cec4",
+      "address": "0x47cd3cb2d90ffe7e9f405a61c5fb6f96343059dd299d7ecc891e3548bfcddcb",
       "class_hash": "0x13e92f5650e07611d6fb37cad0a1b25c26cf31860015c682fd48e068730aa76",
       "init_calldata": [],
       "tag": "ns-mock_token",
@@ -76,7 +76,7 @@
       ]
     },
     {
-      "address": "0x5862c24ded652c77fde47476248e77ae9671a5291d017cb95b86e330bcb975b",
+      "address": "0x13d404fa8f1a546976b41fd59bdf8805e13bde12e4e37c7a04ab844beea9e39",
       "class_hash": "0x6f84a65b4aa2aa4c91548d35cd61fa431c2b479f5e5be24739651ca0c2327f8",
       "init_calldata": [
         "0xff"
@@ -88,7 +88,7 @@
       ]
     },
     {
-      "address": "0x5240339c650327ba31c2d684f157f863a6a8013f4e318df6abf4f4ef9fda096",
+      "address": "0x6657500859fd167394f011c9f115d1a50fae456dece93a523f6de2afa28c1e6",
       "class_hash": "0x7b7e70256844cc4c23e6477f2d5e98106856e1e440dbc5c5a61b80b8c885eac",
       "init_calldata": [],
       "tag": "ns2-actions",
