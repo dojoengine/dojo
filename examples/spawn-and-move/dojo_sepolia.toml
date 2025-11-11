@@ -1,7 +1,7 @@
 [world]
 description = "example world"
 name = "example"
-seed = "dojo_examples-glihm-op1"
+seed = "dojo_examples-glihm-k2"
 
 [[models]]
 tag = "ns-Message"
@@ -65,10 +65,12 @@ default = "ns"
 mappings = { "ns" = ["actions", "GoldToken", "Bank"], "ns2" = ["actions", "GoldToken"], "ns3" = ["Bank"] }
 
 [env]
-rpc_url = "https://api.cartridge.gg/x/starknet/sepolia"
+#rpc_url = "https://api.cartridge.gg/x/starknet/sepolia"
+rpc_url = "http://localhost:5050/"
 # Default account for katana with seed = 0
 account_address = "0x4ba5ae775eb7da75f092b3b30b03bce15c3476337ef5f9e3cdf18db7a7534bd"
 keystore_path = "~/.snaccounts/dev-sepolia.key"
+world_address = "0x00df94fc773508daf74449b7a3a605f9bf2b59f8e46dd48ead8998ecf0e791b6"
 world_block = 2791680
 
 [init_call_args]

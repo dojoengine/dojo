@@ -4,7 +4,8 @@ name = "simple"
 seed = "simple-b"
 
 [env]
-rpc_url = "https://api.cartridge.gg/x/starknet/sepolia"
+#rpc_url = "https://api.cartridge.gg/x/starknet/sepolia"
+rpc_url = "http://localhost:5050/"
 # Default account for katana with seed = 0
 account_address = "0x4ba5ae775eb7da75f092b3b30b03bce15c3476337ef5f9e3cdf18db7a7534bd"
 keystore_path = "~/.snaccounts/dev-sepolia.key"

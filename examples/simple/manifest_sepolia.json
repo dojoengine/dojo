@@ -1,7 +1,7 @@
 {
   "world": {
-    "class_hash": "0x3cd4fcaeaa409accaf9717d5f552db2099dc34221167703c48b74142380bf99",
-    "address": "0x480e3edd118762069a827b763b1fe41f0a7fe4ff09b14658475644c05aa1403",
+    "class_hash": "0x240c060f3d888ca34d5fe26cf6d35be7f276b01a6802376a3127bd79524b7bc",
+    "address": "0x159d87b76defef7eb2ae2443d6388f929fa9f855f1e95be88ad537d7a89dff3",
     "seed": "simple-b",
     "name": "simple",
     "entrypoints": [
@@ -28,12 +28,15 @@
       "revoke_owner",
       "grant_writer",
       "revoke_writer",
-      "upgrade"
+      "upgrade",
+      "change_mode",
+      "grant_operator",
+      "revoke_operator"
     ]
   },
   "contracts": [
     {
-      "address": "0x1ea11967b21fe4aa40623e49aae4e254b303d5f434dd4f1418e0d96df511ef4",
+      "address": "0x735c51cbce055e2f2b39b5046f9a713f6b06dece6300202b41e25c85fba024a",
       "class_hash": "0x7a5fe3698d562af5aad58694b1af9f79cf2409bd44e19c7b7a0fdcb11536c0c",
       "init_calldata": [
         "0xfffe"
@@ -51,7 +54,7 @@
       ]
     },
     {
-      "address": "0x60994ad4861bdf735b7eb33726b6af8b0660fa779eacc11caece2a746546256",
+      "address": "0xb8c3f42abaf8b04a636c0e2ee68c11ec8d738c701a7d1595021e8a5c57c608",
       "class_hash": "0x333387983c76b08d957752a25ac8b38da7d89917471f65964fbfee1280e24ca",
       "init_calldata": [],
       "tag": "ns-c2",
@@ -61,7 +64,7 @@
       ]
     },
     {
-      "address": "0x778781fe17bb1b146b2f27a1aa592496748e2fb37261fc49a1d4eb1e485d8ea",
+      "address": "0x759912a0c50ee9010271a16a6336936b0e9fa5ed9d11410904b8ac3bc10d5af",
       "class_hash": "0x7a5fe3698d562af5aad58694b1af9f79cf2409bd44e19c7b7a0fdcb11536c0c",
       "init_calldata": [
         "0xfffe"
@@ -763,6 +766,124 @@
         {
           "name": "metadata_hash",
           "type": "core::felt252"
+        }
+      ]
+    },
+    {
+      "type": "interface",
+      "name": "dojo::utils::operator::IOperator",
+      "items": [
+        {
+          "type": "function",
+          "name": "change_mode",
+          "inputs": [
+            {
+              "name": "mode",
+              "type": "dojo::utils::operator::OperatorMode"
+            }
+          ],
+          "outputs": [],
+          "state_mutability": "external"
+        },
+        {
+          "type": "function",
+          "name": "grant_operator",
+          "inputs": [
+            {
+              "name": "operator",
+              "type": "core::starknet::contract_address::ContractAddress"
+            }
+          ],
+          "outputs": [],
+          "state_mutability": "external"
+        },
+        {
+          "type": "function",
+          "name": "revoke_operator",
+          "inputs": [
+            {
+              "name": "operator",
+              "type": "core::starknet::contract_address::ContractAddress"
+            }
+          ],
+          "outputs": [],
+          "state_mutability": "external"
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "name": "dojo::utils::operator::OperatorComponent::Event",
+      "kind": "enum",
+      "variants": [
+        {
+          "name": "OperatorModeChanged",
+          "type": "dojo::utils::operator::OperatorComponent::OperatorModeChanged",
+          "kind": "nested"
+        },
+        {
+          "name": "OperatorGranted",
+          "type": "dojo::utils::operator::OperatorComponent::OperatorGranted",
+          "kind": "nested"
+        },
+        {
+          "name": "OperatorRevoked",
+          "type": "dojo::utils::operator::OperatorComponent::OperatorRevoked",
+          "kind": "nested"
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "name": "dojo::utils::operator::OperatorComponent::OperatorGranted",
+      "kind": "struct",
+      "members": [
+        {
+          "name": "operator",
+          "type": "core::starknet::contract_address::ContractAddress",
+          "kind": "data"
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "name": "dojo::utils::operator::OperatorComponent::OperatorModeChanged",
+      "kind": "struct",
+      "members": [
+        {
+          "name": "mode",
+          "type": "dojo::utils::operator::OperatorMode",
+          "kind": "data"
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "name": "dojo::utils::operator::OperatorComponent::OperatorRevoked",
+      "kind": "struct",
+      "members": [
+        {
+          "name": "operator",
+          "type": "core::starknet::contract_address::ContractAddress",
+          "kind": "data"
+        }
+      ]
+    },
+    {
+      "type": "enum",
+      "name": "dojo::utils::operator::OperatorMode",
+      "variants": [
+        {
+          "name": "Disabled",
+          "type": "()"
+        },
+        {
+          "name": "NeverExpire",
+          "type": "()"
+        },
+        {
+          "name": "ExpireAt",
+          "type": "core::integer::u64"
         }
       ]
     },
@@ -1591,6 +1712,11 @@
           "name": "OwnerUpdated",
           "type": "dojo::world::world_contract::world::OwnerUpdated",
           "kind": "nested"
+        },
+        {
+          "name": "OperatorEvent",
+          "type": "dojo::utils::operator::OperatorComponent::Event",
+          "kind": "flat"
         }
       ]
     },
