@@ -1,7 +1,7 @@
 {
   "world": {
-    "class_hash": "0x691da17eb9ef169b385eaaf3a303972d187479e30be146d3337423eaec6272d",
-    "address": "0x70226336298e730de483d0cff4a8a16a59b45a736b336298b82af750409fbf1",
+    "class_hash": "0x240c060f3d888ca34d5fe26cf6d35be7f276b01a6802376a3127bd79524b7bc",
+    "address": "0x14843c98e3b5232530b45bfbd591f53a9c6787ae1e1c5d06a0742a05b0cd612",
     "seed": "dojo_examples",
     "name": "example",
     "entrypoints": [
@@ -28,13 +28,16 @@
       "revoke_owner",
       "grant_writer",
       "revoke_writer",
-      "upgrade"
+      "upgrade",
+      "change_mode",
+      "grant_operator",
+      "revoke_operator"
     ]
   },
   "contracts": [
     {
-      "address": "0x5b7bd0131139080c313fef43cdbff8153a0571776e0e1de8234ae081dde90f2",
-      "class_hash": "0x7d1e2c25518204483355d842b6af7c8c21b769b61c578de76bf4d57f67988eb",
+      "address": "0x7392d4d5e3a22a610896577ff0db69d05306d308943cb3f26ab44d5fa47319a",
+      "class_hash": "0x7b7e70256844cc4c23e6477f2d5e98106856e1e440dbc5c5a61b80b8c885eac",
       "init_calldata": [],
       "tag": "ns-actions",
       "selector": "0x44f0e209e9c5b4b85306833a20e81c3b1a053fa9b3606cfcc59b30b28cb62f6",
@@ -53,8 +56,8 @@
       ]
     },
     {
-      "address": "0x13679ce8a79506062da194256c52323f8888b1f19906e9e518730ad5c3b0841",
-      "class_hash": "0x46d47e0c35cedf32dd9bf436a7f57f173553cc135a321bd62ba3f231fef9051",
+      "address": "0x363299b9e94bb5f8201ccdf71048b6d80b095100b8aee8ccf73db1c21aad889",
+      "class_hash": "0x5b91120905700e5f4b8add97dbe69504dad099e50c52233872ab8fcf82915c7",
       "init_calldata": [],
       "tag": "ns-dungeon",
       "selector": "0x4aec73bbf4f68c244877172d4792673ba5ea7af66e3dc7c86893a94bc9a3208",
@@ -63,8 +66,8 @@
       ]
     },
     {
-      "address": "0x57b236aa2d1c0888af6d078d99d344de5dce4803998eabf65074534cdaca62c",
-      "class_hash": "0x1ee1b3760b89c4b7c99157eb85d743aae31b12779d7d38d61be5df96ea0c8eb",
+      "address": "0x2692bab89981a9fed76361c4a2639734b9a2adfa957031acea04164b86aeeb6",
+      "class_hash": "0x13e92f5650e07611d6fb37cad0a1b25c26cf31860015c682fd48e068730aa76",
       "init_calldata": [],
       "tag": "ns-mock_token",
       "selector": "0x60a349ec0f14dd202f31c637ccccde03c97ac47110edd585dffb3f0c8fb72b4",
@@ -73,8 +76,8 @@
       ]
     },
     {
-      "address": "0x70b7b609935b2d88b3411152b0dbd8b8f1672d71f2c7746c67d800ea3b04406",
-      "class_hash": "0x6b185d12bfbf70c6e5481fef15018d7075ef7a43b5d87122141faeedad2922d",
+      "address": "0x7a7db2208641c77e37f8368e33c616f4f9cb65b738bbe81009590dea2beee37",
+      "class_hash": "0x6f84a65b4aa2aa4c91548d35cd61fa431c2b479f5e5be24739651ca0c2327f8",
       "init_calldata": [
         "0xff"
       ],
@@ -85,8 +88,8 @@
       ]
     },
     {
-      "address": "0x80065bc5fb3764a3d044ca4064e54c535bd0634b63db885b6621754d16cbab",
-      "class_hash": "0x7d1e2c25518204483355d842b6af7c8c21b769b61c578de76bf4d57f67988eb",
+      "address": "0xc1385568c52f6ee6240963d68ba370791438e747e05e8c755d8094c3e83853",
+      "class_hash": "0x7b7e70256844cc4c23e6477f2d5e98106856e1e440dbc5c5a61b80b8c885eac",
       "init_calldata": [],
       "tag": "ns2-actions",
       "selector": "0x1a920eff7b3fd2be618d5a222e63e805a2a82e71579f97ba06d716a45d1ae25",
@@ -107,7 +110,7 @@
   ],
   "libraries": [
     {
-      "class_hash": "0x66379b33372ce461f5e5fe17884897419e8e31eaf72baba8b94742b68c8c7ab",
+      "class_hash": "0x1abb2a8d6863416ca228fa6ee31ae9177c12ace52dc4612fc161e664eb7cd93",
       "tag": "ns-simple_math_v0_1_0",
       "selector": "0x43022cc9b4933e6509e2292bf7dfa1c4fadb9a9d0c7a864b3e6487b8502e481",
       "systems": [],
@@ -128,7 +131,7 @@
           "key": false
         }
       ],
-      "class_hash": "0x1d69fdc01c28150691a0b38435c3e1a9ba93ad8395b1630e3aee7244752d828",
+      "class_hash": "0x385a09ee9f336eb7d933cafb5a5d27303536f426207c0e3787b748133759307",
       "tag": "ns-Enemy",
       "selector": "0x1a658aafaf58552ddd7f6d147664760c732c2e4aa85225becb84f136a0b1121"
     },
@@ -150,7 +153,7 @@
           "key": false
         }
       ],
-      "class_hash": "0xcbc67f154058f2fb812d04b6c8d23984e889d81a4bb284a1343d4c9b93a10d",
+      "class_hash": "0x50303e66e021455c2d1c91e7f78975b641432b1a2bb18cc347bf8f4b697c18a",
       "tag": "ns-Flatbow",
       "selector": "0x27a35f8bac96f1deebf4d3e83fc6b94a3da4e6d30a1ce34d5893d2fb602725d"
     },
@@ -177,7 +180,7 @@
           "key": false
         }
       ],
-      "class_hash": "0x574ebeba1b0f3bb0856efc58763dd46514419a94753ef006505fd435fbef15b",
+      "class_hash": "0x225a478b735e46d70d104c7fd7cbc5c5417af06e10c8dbfe50b90e2e106944a",
       "tag": "ns-Message",
       "selector": "0x7e77b60a338fa7414998176fd93ff265e4ca04b93105ac98f155bcb2e9e8438"
     },
@@ -194,7 +197,7 @@
           "key": false
         }
       ],
-      "class_hash": "0x69f6f49562b605776c50cf42df3e87e157424f6bbcedd8cd8380031f400b457",
+      "class_hash": "0x22cc1446254a4a7d1230fb2a3542049dbcfd789e035cd5c49c554d72301389c",
       "tag": "ns-MockToken",
       "selector": "0x23ee42c8f47d1d693b966176dcd5deca0ec147b33e42186382d9d027603a6fd"
     },
@@ -216,7 +219,7 @@
           "key": false
         }
       ],
-      "class_hash": "0x6538c217b87a4594361147171ba10127a08d5ab3594f5b387bf91f7df9251c",
+      "class_hash": "0x6975b4e73bdfa2576d7e4c793ace89e576934d9b6cfea25ffbcffaa9e9e0d68",
       "tag": "ns-Moves",
       "selector": "0x54104f060e63bdd9d68bb872f2dc6d40a101e168e18b999c10de348d06ea24a"
     },
@@ -243,7 +246,7 @@
           "key": false
         }
       ],
-      "class_hash": "0x740a7beab3f1989289b212a5d86359c5893c1233bccc33c6e9156dab6d3dd17",
+      "class_hash": "0x1d54176a8cb0837afc163b39365502c9e7e7a58119dfc3ce406b7f3fcc4bef9",
       "tag": "ns-PlayerConfig",
       "selector": "0x3bea561c3e142a660a00d1471d7712b70695dc4ee3b173aeaefd5178f7a21af"
     },
@@ -260,7 +263,7 @@
           "key": false
         }
       ],
-      "class_hash": "0x315de8775d0f8a30f8a02801075225694edf29d60101892ffc9eb06567cd289",
+      "class_hash": "0x258e9284dc73b6c6a631e7aaaf9a60ad709f82d9f1586628d160428818e7a6a",
       "tag": "ns-Position",
       "selector": "0x5e12c61e9cf30881c126a6d298975c8d79f95abed1a05c2d38b7803ed19445f"
     },
@@ -287,7 +290,7 @@
           "key": false
         }
       ],
-      "class_hash": "0x686fc03ac7fa65b99f501e5e8216057c9b8a98e283ea5252334c22e25be621",
+      "class_hash": "0x2345d02df575542b32ac3389554b5184cf7072f2edf499e30ad49e4813a004",
       "tag": "ns-RiverSkale",
       "selector": "0x47f763aa7de3b872f7fbec198275547e06751dbe26b66281b9cffaed9938f24"
     },
@@ -309,7 +312,7 @@
           "key": false
         }
       ],
-      "class_hash": "0x743b052a8a9352bd7a089814c666fff98a2a9df1655278f3412c0da69debc4a",
+      "class_hash": "0x401b0d838b416738fa92d00d3f1f6035eef36d851ba02b4644c51c8dd8ddb5a",
       "tag": "ns-ServerProfile",
       "selector": "0x641dc5f178aff0c7935a8f1ae30c6038a3d3512ea164d486f98bc37b6beabf"
     },
@@ -336,7 +339,7 @@
           "key": false
         }
       ],
-      "class_hash": "0x580a643892566350d7a892328169be2f3f8bced1cf605636205e134ef66d0b8",
+      "class_hash": "0x6f3b64df1bf6c55295d9cd2d87dc8a5fc1b1142dd79a572c0b7b2f6aa8bacdc",
       "tag": "ns-VintageEnemy",
       "selector": "0x189cce252214bd8ef882db814a8322c38f469817df10b4b19d0c869a120f43c"
     }
@@ -355,7 +358,7 @@
           "key": false
         }
       ],
-      "class_hash": "0x334ab91d93f4cbb6768b3f6814d570149f191333b035d9d51bf490c21bf9da8",
+      "class_hash": "0x56476996d4da32221fef7adc63b72e0aeaaf0123dc543a24b12203d049529ed",
       "tag": "ns-Moved",
       "selector": "0x6d4c1ac3717ba997500153c52344a2acac5123bbfa0f78d3dcc04cb786826b0"
     },
@@ -372,17 +375,17 @@
           "key": false
         }
       ],
-      "class_hash": "0x1267dcd7f9a0a7114afcc8ab8fd4c847891e312060f65630db76d3feb292fff",
+      "class_hash": "0x4c73392b780fe7d9fa95b4418d87c16dc857e4d40a59c81b68266f2785a74e",
       "tag": "ns-MyInit",
       "selector": "0xe1c030210beae7e2153a7b996d7d2ae6a428faf16a61f192f02178718b6f0"
     }
   ],
   "external_contracts": [
     {
-      "class_hash": "0x7b89795e168d2c9402c764b66f515c0a40621084e1af852aa5cf56afd8b15af",
+      "class_hash": "0x28ecfb1c77c1598d2ac45a9e8ea746229f6e5d831cb9b4a6871789e044b110d",
       "contract_name": "ERC721Token",
       "tag": "ns-Badge",
-      "address": "0x66d75ae1c1a594839c5a1b2599e05111b74fe87b0d0259885d2a67623850ba5",
+      "address": "0x20e49b7891797c16597d1abb6c14f5eb5d0f484682382d9dc4f2fe22bea8660",
       "constructor_calldata": [
         "0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba",
         "str:Badge",
@@ -424,10 +427,10 @@
       "block_number": null
     },
     {
-      "class_hash": "0x1e04173cfe35a1f21e8c4bc52bd80f7458d432342be4520657efc223ea5df85",
+      "class_hash": "0x27c53a21e35c003e1207c42f6f1ae9619fae087a68a34b100c33918fd90a319",
       "contract_name": "Bank",
       "tag": "ns-Bank",
-      "address": "0xa7c007ca3a290467b0e173d09574fcef061066e32fc8a3a33ab019db147bde",
+      "address": "0x405582674cc93c6873ee140a917a3d2ad9ae78543903508991b1a9af57caf41",
       "constructor_calldata": [
         "0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba"
       ],
@@ -440,10 +443,10 @@
       "block_number": null
     },
     {
-      "class_hash": "0xcbeced21d60a4ef944dda94a020521fd8e91d6b3ace5e128e63a61a67b4e89",
+      "class_hash": "0x596f2a80126a8af0285808c79c3c66969bc08f89c9844bcfa14ef156fbc02e",
       "contract_name": "ERC20Token",
       "tag": "ns-GoldToken",
-      "address": "0x49700be0ffe7f4be45753e1e49cb23c3c89d0281aa1d10d5a94136e47f26956",
+      "address": "0x77e565b7c480b0ba01c37ffb1ba4af557b5ccc1d8cade2bd075207c43a63cf1",
       "constructor_calldata": [
         "0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba",
         "str:Gold",
@@ -478,10 +481,10 @@
       "block_number": null
     },
     {
-      "class_hash": "0x326de3b775229868ca1f50096d4a1d017ab48c70fddfc03c8cae0596e3f0f73",
+      "class_hash": "0x5958adeff0d79357e3d1f381b1591efa525447dda5da05cdfcb9f6816b2a5e2",
       "contract_name": "ERC1155Token",
       "tag": "ns-Rewards",
-      "address": "0x1f875ee2ff52dc911b2a66cfc01d41767e209a06e1b2ac87a1379e3c7eb25da",
+      "address": "0x8be915256870f22b8017e3ee373d989a836cda9228a4e3d9e56290194ed0fe",
       "constructor_calldata": [
         "0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba",
         "str:https://rewards.com/"
@@ -517,10 +520,10 @@
       "block_number": null
     },
     {
-      "class_hash": "0x45a9a6b403f4b5e1dc046ad3e9035fea661838dfdc2e5bf58421990dd7bd3fd",
+      "class_hash": "0x87654796ef9f4057346dc61f2dc65f4235f143f3b8b62ac9f2ebde993ba913",
       "contract_name": "Saloon",
       "tag": "ns-Saloon",
-      "address": "0x674ba65efab5bc15d51a9154333b8f1cdbed158ca284d153bd2fa7dbdf33b4d",
+      "address": "0x471cc9cddc518c1fad723da0780b5afea98bec90496e37f2d681bcac309321f",
       "constructor_calldata": [],
       "encoded_constructor_calldata": [],
       "entrypoints": [
@@ -529,10 +532,10 @@
       "block_number": null
     },
     {
-      "class_hash": "0xcbeced21d60a4ef944dda94a020521fd8e91d6b3ace5e128e63a61a67b4e89",
+      "class_hash": "0x596f2a80126a8af0285808c79c3c66969bc08f89c9844bcfa14ef156fbc02e",
       "contract_name": "ERC20Token",
       "tag": "ns-WoodToken",
-      "address": "0x1701605de77e099296e71e8c82787b07ad47bf07c046542a8eed4e39254972c",
+      "address": "0x51cb990a29e77b02984bc50e40d04b0a1ccb9688b1d9fbbdd2c298c209f6e0e",
       "constructor_calldata": [
         "0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba",
         "str:Wood",
@@ -567,10 +570,10 @@
       "block_number": null
     },
     {
-      "class_hash": "0xcbeced21d60a4ef944dda94a020521fd8e91d6b3ace5e128e63a61a67b4e89",
+      "class_hash": "0x596f2a80126a8af0285808c79c3c66969bc08f89c9844bcfa14ef156fbc02e",
       "contract_name": "ERC20Token",
       "tag": "ns2-GoldToken",
-      "address": "0x23a275c2714c14d92806507a132b0cd237ef6f95345ccf5af34b1e9d81f76ab",
+      "address": "0x200a69831ab8b38bd28bd159c5d44f95caf5a87035ec804cffde5d7e3a32cae",
       "constructor_calldata": [
         "0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba",
         "str:Gold",
@@ -605,10 +608,10 @@
       "block_number": null
     },
     {
-      "class_hash": "0x1e04173cfe35a1f21e8c4bc52bd80f7458d432342be4520657efc223ea5df85",
+      "class_hash": "0x27c53a21e35c003e1207c42f6f1ae9619fae087a68a34b100c33918fd90a319",
       "contract_name": "Bank",
       "tag": "ns3-Bank",
-      "address": "0x4abc92490796c6a1ea4d273fc5e4abd14677b1f5db8171b361cc7af71390a6a",
+      "address": "0x3ff0a5472217dc0c7854fe8c0b68f93230dd84f240a8b74b2f47e37098b01db",
       "constructor_calldata": [
         "0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba"
       ],
@@ -870,7 +873,7 @@
         },
         {
           "name": "pending_word_len",
-          "type": "core::integer::u32"
+          "type": "core::internal::bounded_int::BoundedInt::<0, 30>"
         }
       ]
     },
@@ -1316,6 +1319,124 @@
         {
           "name": "metadata_hash",
           "type": "core::felt252"
+        }
+      ]
+    },
+    {
+      "type": "interface",
+      "name": "dojo::utils::operator::IOperator",
+      "items": [
+        {
+          "type": "function",
+          "name": "change_mode",
+          "inputs": [
+            {
+              "name": "mode",
+              "type": "dojo::utils::operator::OperatorMode"
+            }
+          ],
+          "outputs": [],
+          "state_mutability": "external"
+        },
+        {
+          "type": "function",
+          "name": "grant_operator",
+          "inputs": [
+            {
+              "name": "operator",
+              "type": "core::starknet::contract_address::ContractAddress"
+            }
+          ],
+          "outputs": [],
+          "state_mutability": "external"
+        },
+        {
+          "type": "function",
+          "name": "revoke_operator",
+          "inputs": [
+            {
+              "name": "operator",
+              "type": "core::starknet::contract_address::ContractAddress"
+            }
+          ],
+          "outputs": [],
+          "state_mutability": "external"
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "name": "dojo::utils::operator::OperatorComponent::Event",
+      "kind": "enum",
+      "variants": [
+        {
+          "name": "OperatorModeChanged",
+          "type": "dojo::utils::operator::OperatorComponent::OperatorModeChanged",
+          "kind": "nested"
+        },
+        {
+          "name": "OperatorGranted",
+          "type": "dojo::utils::operator::OperatorComponent::OperatorGranted",
+          "kind": "nested"
+        },
+        {
+          "name": "OperatorRevoked",
+          "type": "dojo::utils::operator::OperatorComponent::OperatorRevoked",
+          "kind": "nested"
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "name": "dojo::utils::operator::OperatorComponent::OperatorGranted",
+      "kind": "struct",
+      "members": [
+        {
+          "name": "operator",
+          "type": "core::starknet::contract_address::ContractAddress",
+          "kind": "data"
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "name": "dojo::utils::operator::OperatorComponent::OperatorModeChanged",
+      "kind": "struct",
+      "members": [
+        {
+          "name": "mode",
+          "type": "dojo::utils::operator::OperatorMode",
+          "kind": "data"
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "name": "dojo::utils::operator::OperatorComponent::OperatorRevoked",
+      "kind": "struct",
+      "members": [
+        {
+          "name": "operator",
+          "type": "core::starknet::contract_address::ContractAddress",
+          "kind": "data"
+        }
+      ]
+    },
+    {
+      "type": "enum",
+      "name": "dojo::utils::operator::OperatorMode",
+      "variants": [
+        {
+          "name": "Disabled",
+          "type": "()"
+        },
+        {
+          "name": "NeverExpire",
+          "type": "()"
+        },
+        {
+          "name": "ExpireAt",
+          "type": "core::integer::u64"
         }
       ]
     },
@@ -2144,6 +2265,11 @@
           "name": "OwnerUpdated",
           "type": "dojo::world::world_contract::world::OwnerUpdated",
           "kind": "nested"
+        },
+        {
+          "name": "OperatorEvent",
+          "type": "dojo::utils::operator::OperatorComponent::Event",
+          "kind": "flat"
         }
       ]
     },

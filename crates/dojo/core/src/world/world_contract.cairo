@@ -332,6 +332,19 @@ pub mod world {
         self.emit(WorldSpawned { creator, class_hash: world_class_hash });
     }
 
+    // Temporary function to initialize the operator if a world has been upgraded.
+    #[abi(per_item)]
+    #[generate_trait]
+    impl InitializeOperatorImpl of InitOperator {
+        #[external(v0)]
+        fn initialize_operator(ref self: ContractState) {
+            let caller = starknet::get_caller_address();
+            if self.is_owner(WORLD, caller) {
+                self.operator.initialize(caller);
+            }
+        }
+    }
+
     #[cfg(target: "test")]
     #[abi(embed_v0)]
     impl WorldTestImpl of dojo::world::IWorldTest<ContractState> {

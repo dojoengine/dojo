@@ -1,11 +1,10 @@
 {
   "world": {
-    "class_hash": "0x47c41807219075c4db28fbc39859d31d3d1d03c4a8f389d17691e912093ce0d",
-    "address": "0x78f8cd4445973f76ae00608bc89404806d29f9527295e5215b329fef868b458",
-    "seed": "simple",
+    "class_hash": "0x240c060f3d888ca34d5fe26cf6d35be7f276b01a6802376a3127bd79524b7bc",
+    "address": "0xbb56126f63ed17c7e8183e4ba4970704500a260e9ef255ff9e05608575461b",
+    "seed": "sepolia2-simple-b",
     "name": "simple",
     "entrypoints": [
-      "initialize_operator",
       "uuid",
       "set_metadata",
       "register_namespace",
@@ -37,7 +36,7 @@
   },
   "contracts": [
     {
-      "address": "0x15b822d16eec0924529b4aadf9d5d7de9657c53957dbd1967d8772f7c1aa5f3",
+      "address": "0x78cc50c133e230d4798605cfa1b31d6f8305bae3b1463da0d55ece2c7db327d",
       "class_hash": "0x7a5fe3698d562af5aad58694b1af9f79cf2409bd44e19c7b7a0fdcb11536c0c",
       "init_calldata": [
         "0xfffe"
@@ -55,7 +54,7 @@
       ]
     },
     {
-      "address": "0x49e7b5a9585a6ffabe21b1612fa88f2fe2571d36dee5c24851aeb52548af114",
+      "address": "0x5efe2a9c4fc86a72c7fcf270cb1e33391d3fab09f12e5fd84664c30fa36792a",
       "class_hash": "0x333387983c76b08d957752a25ac8b38da7d89917471f65964fbfee1280e24ca",
       "init_calldata": [],
       "tag": "ns-c2",
@@ -65,7 +64,7 @@
       ]
     },
     {
-      "address": "0x171bbd6a488721a651807107a8cf851bb10038fa61029d81b39bb909f46995",
+      "address": "0x21901990d4a0980d52224778715466ac039b745dc291075f1e7f2d610b67d48",
       "class_hash": "0x7a5fe3698d562af5aad58694b1af9f79cf2409bd44e19c7b7a0fdcb11536c0c",
       "init_calldata": [
         "0xfffe"
@@ -2530,13 +2529,6 @@
       ],
       "outputs": [],
       "state_mutability": "view"
-    },
-    {
-      "type": "function",
-      "name": "initialize_operator",
-      "inputs": [],
-      "outputs": [],
-      "state_mutability": "external"
     },
     {
       "type": "function",

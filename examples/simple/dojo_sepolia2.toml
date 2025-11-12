@@ -1,7 +1,7 @@
 [world]
 description = "Simple world."
 name = "simple"
-seed = "simple-b"
+seed = "sepolia2-simple-b"
 
 [env]
 rpc_url = "https://api.cartridge.gg/x/starknet/sepolia"
