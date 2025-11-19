@@ -150,7 +150,7 @@ pub mod c1 {
         o4: PlayerSetting,
         o5: PlayerSettingValue,
     ) -> Option<u32> {
-        Some(41)
+        Some(48)
     }
 
     #[generate_trait]

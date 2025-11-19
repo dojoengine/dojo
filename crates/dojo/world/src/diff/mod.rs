@@ -179,26 +179,24 @@ impl WorldDiff {
     where
         P: Provider,
     {
-        let is_deployed = match provider
-            .get_class_hash_at(BlockId::Tag(BlockTag::Latest), world_address)
-            .await
-        {
-            Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => {
-                trace!(
-                    contract_address = format!("{:#066x}", world_address),
-                    "World not deployed."
-                );
-                Ok(false)
-            }
-            Ok(_) => {
-                trace!(
-                    contract_address = format!("{:#066x}", world_address),
-                    "World already deployed."
-                );
-                Ok(true)
-            }
-            Err(e) => Err(e),
-        }?;
+        let is_deployed =
+            match provider.get_class_hash_at(BlockId::Tag(BlockTag::Latest), world_address).await {
+                Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => {
+                    trace!(
+                        contract_address = format!("{:#066x}", world_address),
+                        "World not deployed."
+                    );
+                    Ok(false)
+                }
+                Ok(_) => {
+                    trace!(
+                        contract_address = format!("{:#066x}", world_address),
+                        "World already deployed."
+                    );
+                    Ok(true)
+                }
+                Err(e) => Err(e),
+            }?;
 
         let namespaces = if whitelisted_namespaces.is_empty() {
             None

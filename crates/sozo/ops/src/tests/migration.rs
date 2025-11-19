@@ -29,7 +29,9 @@ async fn setup_migration(
     let setup = TestSetup::from_examples("../../dojo/core", "../../../examples/");
     let metadata = setup.load_metadata(example_project, profile);
 
-    let world_local = metadata.load_dojo_world_local().unwrap();
+    // Currently, Katana doesn't use the blake2s class hash.
+    let use_blake2s_casm_class_hash = false;
+    let world_local = metadata.load_dojo_world_local(use_blake2s_casm_class_hash).unwrap();
     let world_address = world_local.deterministic_world_address().unwrap();
 
     let whitelisted_namespaces = vec![];

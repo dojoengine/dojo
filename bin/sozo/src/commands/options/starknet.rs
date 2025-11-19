@@ -18,6 +18,14 @@ pub struct StarknetOptions {
     #[arg(help = "The Starknet RPC endpoint.")]
     #[arg(global = true)]
     pub rpc_url: Option<Url>,
+
+    #[arg(long, default_value = "false")]
+    #[arg(help = "Whether to use the blake2s class hash, which is currently required for \
+                  Sepolia. Sozo will attempt to detect the chain id from the rpc url and set \
+                  this flag automatically if the RPC URL contains `sepolia` or `testnet`. \
+                  Otherwise, use this flag to manually set it.")]
+    #[arg(global = true)]
+    pub use_blake2s_casm_class_hash: bool,
 }
 
 impl StarknetOptions {

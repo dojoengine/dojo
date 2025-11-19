@@ -51,7 +51,7 @@ pub trait MetadataDojoExt {
     /// Loads the Dojo profile config for the current profile.
     fn load_dojo_profile_config(&self) -> Result<ProfileConfig>;
     /// Loads the local world from the workspace configuration.
-    fn load_dojo_world_local(&self) -> Result<WorldLocal>;
+    fn load_dojo_world_local(&self, use_blake2s_casm_class_hash: bool) -> Result<WorldLocal>;
     /// Writes the Dojo manifest for the current profile.
     fn write_dojo_manifest_profile(&self, manifest: impl Serialize) -> Result<()>;
     /// Reads the Dojo manifest for the current profile.
@@ -165,11 +165,12 @@ impl MetadataDojoExt for Metadata {
         Ok(config)
     }
 
-    fn load_dojo_world_local(&self) -> Result<WorldLocal> {
+    fn load_dojo_world_local(&self, use_blake2s_casm_class_hash: bool) -> Result<WorldLocal> {
         WorldLocal::from_directory(
             self.target_dir_profile(),
             &self.current_profile,
             self.load_dojo_profile_config()?,
+            use_blake2s_casm_class_hash,
         )
     }
 

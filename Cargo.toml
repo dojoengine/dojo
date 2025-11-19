@@ -92,7 +92,6 @@ base64 = "0.21.2"
 bigdecimal = "0.4.1"
 bytes = "1.6"
 cairo-lang-starknet-classes = "=2.13.1"
-casm-compiler-v2 = { package = "cairo-lang-starknet", version = "=2.13.1" }
 camino = { version = "1.1.2", features = [ "serde1" ] }
 chrono = { version = "0.4.24", features = [ "serde" ] }
 clap = { version = "4.5.16", features = [ "derive", "env", "string" ] }

@@ -34,7 +34,9 @@ async fn migrate_spawn_and_move(db_path: &Path) -> Result<Manifest> {
 
     let profile_config = metadata.load_dojo_profile_config()?;
 
-    let world_local = metadata.load_dojo_world_local()?;
+    // Currently, Katana doesn't use the blake2s class hash.
+    let use_blake2s_casm_class_hash = false;
+    let world_local = metadata.load_dojo_world_local(use_blake2s_casm_class_hash)?;
 
     // In the case of testing, if the addresses are different it means that the example hasn't been
     // migrated correctly.

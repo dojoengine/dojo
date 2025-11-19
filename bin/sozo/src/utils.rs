@@ -96,7 +96,7 @@ pub async fn get_world_diff_and_provider(
     scarb_metadata: &Metadata,
     ui: &SozoUi,
 ) -> Result<(WorldDiff, JsonRpcClient<HttpTransport>, String)> {
-    let world_local = scarb_metadata.load_dojo_world_local()?;
+    let world_local = scarb_metadata.load_dojo_world_local(starknet.use_blake2s_casm_class_hash)?;
     let profile_config = scarb_metadata.load_dojo_profile_config()?;
 
     let env = profile_config.env.as_ref();

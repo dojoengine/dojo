@@ -147,7 +147,15 @@ fn gather_dojo_data(
         )));
     }
 
-    let world_local = WorldLocal::from_directory(&target_dir, profile_name, profile_config)?;
+    // TODO: Currently, the class hashes are not used by the bindgen.
+    // However, we would need to surface it in the future.
+    let use_blake2s_casm_class_hash = false;
+    let world_local = WorldLocal::from_directory(
+        &target_dir,
+        profile_name,
+        profile_config,
+        use_blake2s_casm_class_hash,
+    )?;
 
     let mut models = HashMap::new();
     let mut contracts = HashMap::new();
