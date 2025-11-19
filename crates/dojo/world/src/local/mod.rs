@@ -12,7 +12,7 @@ use std::collections::HashMap;
 
 use cairo_lang_starknet_classes::casm_contract_class::CasmContractClass;
 use dojo_types::naming;
-use starknet::core::types::contract::{CompiledClass, SierraClass};
+use starknet::core::types::contract::SierraClass;
 use starknet::core::types::Felt;
 use starknet::core::utils::CairoShortStringToFeltError;
 

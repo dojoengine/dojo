@@ -1,7 +1,7 @@
 {
   "world": {
-    "class_hash": "0x3cd4fcaeaa409accaf9717d5f552db2099dc34221167703c48b74142380bf99",
-    "address": "0x480e3edd118762069a827b763b1fe41f0a7fe4ff09b14658475644c05aa1403",
+    "class_hash": "0x613551abceb2b37073b1149bb862ea70cf029981ce1ca47e9dd7c7ab97cb65d",
+    "address": "0x4b87c64cb2309ced9b54a614d341c01a872941aaa3430d433d2ca24078b245a",
     "seed": "simple-b",
     "name": "simple",
     "entrypoints": [
@@ -33,8 +33,8 @@
   },
   "contracts": [
     {
-      "address": "0x1ea11967b21fe4aa40623e49aae4e254b303d5f434dd4f1418e0d96df511ef4",
-      "class_hash": "0x7a5fe3698d562af5aad58694b1af9f79cf2409bd44e19c7b7a0fdcb11536c0c",
+      "address": "0x6274037e49db7ca177155bc4955338dd284456491a5d5d2ed6cc18679ead0b",
+      "class_hash": "0x19ab2e113ff610e80eb61ad781c191b3bfdfd8e32a215ecc22036c31a20585b",
       "init_calldata": [
         "0xfffe"
       ],
@@ -51,7 +51,7 @@
       ]
     },
     {
-      "address": "0x60994ad4861bdf735b7eb33726b6af8b0660fa779eacc11caece2a746546256",
+      "address": "0x26d9c000b59993d3235f0e6cb6313e1a5e18abf166a80b97ccdc18c3a3dbddb",
       "class_hash": "0x333387983c76b08d957752a25ac8b38da7d89917471f65964fbfee1280e24ca",
       "init_calldata": [],
       "tag": "ns-c2",
@@ -61,8 +61,8 @@
       ]
     },
     {
-      "address": "0x778781fe17bb1b146b2f27a1aa592496748e2fb37261fc49a1d4eb1e485d8ea",
-      "class_hash": "0x7a5fe3698d562af5aad58694b1af9f79cf2409bd44e19c7b7a0fdcb11536c0c",
+      "address": "0x1b9a4677e80dfc0fc6711558ea67a27fe48bb9454d6853a1d82113520cf709",
+      "class_hash": "0x19ab2e113ff610e80eb61ad781c191b3bfdfd8e32a215ecc22036c31a20585b",
       "init_calldata": [
         "0xfffe"
       ],

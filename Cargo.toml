@@ -91,10 +91,8 @@ auto_impl = "1.2.0"
 base64 = "0.21.2"
 bigdecimal = "0.4.1"
 bytes = "1.6"
-#cairo-lang-starknet-classes = { git = "https://github.com/dojoengine/cairo", branch = "types-rs-100" }
-#cairo-lang-starknet-classes = { path = "/Users/glihm/cgg/cairo/crates/cairo-lang-starknet-classes" }
-cairo-lang-starknet-classes = "=2.12.3"
-casm-compiler-v2 = { package = "cairo-lang-starknet", version = "=2.12.3" }
+cairo-lang-starknet-classes = "=2.13.1"
+casm-compiler-v2 = { package = "cairo-lang-starknet", version = "=2.13.1" }
 camino = { version = "1.1.2", features = [ "serde1" ] }
 chrono = { version = "0.4.24", features = [ "serde" ] }
 clap = { version = "4.5.16", features = [ "derive", "env", "string" ] }
@@ -147,8 +145,7 @@ similar-asserts = "1.5.0"
 smol_str = { version = "0.3", features = [ "serde" ] }
 spinoff = "0.8.0"
 sqlx = { version = "0.8.2", features = [ "chrono", "macros", "regexp", "runtime-async-std", "runtime-tokio", "sqlite", "uuid" ] }
-#starknet_api = "0.11.0"
-starknet_api = { git = "https://github.com/dojoengine/sequencer", rev = "802c5dc" }
+starknet_api = "0.16.0-rc.1"
 strum = "0.25"
 strum_macros = "0.25"
 tempfile = "3.9.0"

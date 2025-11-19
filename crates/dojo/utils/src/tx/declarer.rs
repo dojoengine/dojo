@@ -42,10 +42,6 @@ where
     pub txn_config: TxnConfig,
     /// The classes to declare,  identified by their casm class hash.
     pub classes: HashMap<Felt, LabeledClass>,
-    /// Whether to use the blake2s class hash.
-    /// This should be removed once `0.14.1` hits mainnet. Currently
-    /// Sepolia requires the blake2s class hash.
-    pub use_blake2s_class_hash: bool,
 }
 
 impl<A> Declarer<A>
@@ -53,8 +49,8 @@ where
     A: ConnectedAccount + Send + Sync,
 {
     /// Creates a new declarer.
-    pub fn new(account: A, txn_config: TxnConfig, use_blake2s_class_hash: bool) -> Self {
-        Self { account, txn_config, classes: HashMap::new(), use_blake2s_class_hash }
+    pub fn new(account: A, txn_config: TxnConfig) -> Self {
+        Self { account, txn_config, classes: HashMap::new() }
     }
 
     /// Adds a class to the declarer, do nothing if the class is already known.
@@ -80,7 +76,7 @@ where
         let mut results = vec![];
 
         for (_, labeled_class) in self.classes {
-            results.push(Self::declare(labeled_class, &self.account, &self.txn_config, self.use_blake2s_class_hash).await?);
+            results.push(Self::declare(labeled_class, &self.account, &self.txn_config).await?);
         }
 
         Ok(results)
@@ -91,7 +87,6 @@ where
         labeled_class: LabeledClass,
         account: &A,
         txn_config: &TxnConfig,
-        use_blake2s_class_hash: bool,
     ) -> Result<TransactionResult, TransactionError<A::SignError>> {
         let class_hash = labeled_class.class.class_hash();
 

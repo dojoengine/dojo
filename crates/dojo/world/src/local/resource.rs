@@ -1,6 +1,6 @@
 use cairo_lang_starknet_classes::casm_contract_class::CasmContractClass;
 use dojo_types::naming;
-use starknet::core::types::contract::{AbiEntry, CompiledClass, SierraClass};
+use starknet::core::types::contract::{AbiEntry, SierraClass};
 use starknet::core::types::Felt;
 
 use crate::{DojoSelector, ResourceType};

@@ -26,22 +26,21 @@ use dojo_utils::{
     Declarer, Deployer, Invoker, LabeledClass, TransactionResult, TransactionWaiter, TxnConfig,
 };
 use dojo_world::config::calldata_decoder::decode_calldata;
-use dojo_world::config::{metadata_config, ProfileConfig, ResourceConfig, WorldMetadata};
+use dojo_world::config::{ProfileConfig, ResourceConfig, WorldMetadata, metadata_config};
 use dojo_world::constants::WORLD;
-use dojo_world::contracts::abigen::world::ResourceMetadata;
 use dojo_world::contracts::WorldContract;
+use dojo_world::contracts::abigen::world::ResourceMetadata;
 use dojo_world::diff::{Manifest, ResourceDiff, WorldDiff, WorldStatus};
 use dojo_world::local::{ExternalContractLocal, ResourceLocal, UPGRADE_CONTRACT_FN_NAME};
 use dojo_world::metadata::MetadataStorage;
 use dojo_world::remote::ResourceRemote;
 use dojo_world::services::UploadService;
-use dojo_world::{utils, ResourceType};
+use dojo_world::{ResourceType, utils};
 use sozo_ui::SozoUi;
 use starknet::accounts::{Account, ConnectedAccount, SingleOwnerAccount};
-use starknet::core::chain_id::SEPOLIA;
 use starknet::core::types::{Call, ReceiptBlock};
 use starknet::core::utils as snutils;
-use starknet::providers::{AnyProvider, Provider};
+use starknet::providers::AnyProvider;
 use starknet::signers::LocalWallet;
 use starknet_crypto::Felt;
 use tracing::trace;
@@ -62,9 +61,6 @@ where
     // Ideally, we want this rpc url to be exposed from the world.account.provider().
     rpc_url: String,
     guest: bool,
-    // Currently Sepolia requires the blake2s class hash. This should be removed once `0.14.1` hits mainnet.
-    // This will be automatically detected from the chain id.
-    use_blake2s_class_hash: bool,
 }
 
 #[derive(Debug)]
@@ -86,11 +82,7 @@ where
         rpc_url: String,
         guest: bool,
     ) -> Result<Self, MigrationError<A::SignError>> {
-
-        // Currently Sepolia requires the blake2s class hash. This should be removed once `0.14.1` hits mainnet.
-        let use_blake2s_class_hash = world.provider().chain_id().await.map_err(MigrationError::Provider)? == SEPOLIA;
-
-        Ok(Self { diff, world, txn_config, profile_config, rpc_url, guest, use_blake2s_class_hash })
+        Ok(Self { diff, world, txn_config, profile_config, rpc_url, guest })
     }
 
     /// Migrates the world by syncing the namespaces, resources, permissions and initializing the
@@ -455,7 +447,7 @@ where
 
         if accounts.is_empty() {
             trace!("Declaring classes with migrator account.");
-            let mut declarer = Declarer::new(&self.world.account, self.txn_config, self.use_blake2s_class_hash);
+            let mut declarer = Declarer::new(&self.world.account, self.txn_config);
             declarer.extend_classes(classes.into_values().collect());
 
             ui.debug(format!(
@@ -470,7 +462,7 @@ where
             let mut declarers_addresses = vec![];
             for account in accounts {
                 declarers_addresses.push(account.address());
-                declarers.push(Declarer::new(account, self.txn_config, self.use_blake2s_class_hash));
+                declarers.push(Declarer::new(account, self.txn_config));
             }
 
             ui.debug(format!("Declaring with accounts addresses: {:?}", declarers_addresses));
@@ -827,14 +819,12 @@ where
         if let ResourceDiff::Created(ResourceLocal::ExternalContract(contract)) = resource {
             match contract {
                 ExternalContractLocal::SozoManaged(c) => {
-                    let block_number =
-                        deploy_block_numbers.get(&contract.tag()).unwrap_or_else(|| {
-                            panic!(
-                                "Block number should be available for sozo-managed {} external \
-                                 contract.",
-                                contract.tag()
-                            )
-                        });
+                    let block_number = deploy_block_numbers.get(&contract.tag()).unwrap_or({
+                        // Against the pre-confirmed state, the block number is not available.
+                        // Since the block number is only registered for indexing purposes,
+                        // using 0 is acceptable for now.
+                        &0
+                    });
 
                     calls.push(self.world.register_external_contract_getcall(
                         &ByteArray::from_string(&contract.namespace())?,
@@ -938,11 +928,10 @@ where
             {
                 Some((_, call)) => deploy_call = Some(call),
                 None => {
-                    return Err(MigrationError::DeployExternalContractError(anyhow!(
-                        "Failed to deploy external contract `{}` in namespace `{}`",
-                        contract.common.name,
-                        contract.common.namespace
-                    )));
+                    deploy_call = {
+                        // Already deployed, no need to deploy again.
+                        None
+                    }
                 }
             }
 
@@ -1195,7 +1184,7 @@ where
                 tx_config.receipt = true;
 
                 let tx_result =
-                    Declarer::declare(labeled_class, &self.world.account, &tx_config, self.use_blake2s_class_hash).await?;
+                    Declarer::declare(labeled_class, &self.world.account, &tx_config).await?;
                 display_transaction_results(ui, &vec![tx_result], "Declare world");
 
                 let deployer = Deployer::new(&self.world.account, tx_config);
@@ -1247,7 +1236,7 @@ where
                     class: self.diff.world_info.class.clone().flatten()?,
                 };
 
-                Declarer::declare(labeled_class, &self.world.account, &self.txn_config, self.use_blake2s_class_hash).await?;
+                Declarer::declare(labeled_class, &self.world.account, &self.txn_config).await?;
 
                 let mut invoker = Invoker::new(&self.world.account, self.txn_config);
 

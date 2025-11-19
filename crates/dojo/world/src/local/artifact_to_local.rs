@@ -11,7 +11,7 @@ use dojo_types::naming::{compute_bytearray_hash, compute_selector_from_names};
 use serde_json;
 use starknet::core::types::Felt;
 use starknet::core::types::contract::{
-    AbiEntry, AbiEvent, AbiImpl, AbiStruct, CompiledClass, SierraClass, StateMutability,
+    AbiEntry, AbiEvent, AbiImpl, AbiStruct, SierraClass, StateMutability,
     TypedAbiEvent,
 };
 use starknet::core::utils as snutils;
