@@ -46,7 +46,7 @@ impl WorldRemote {
         let is_katana =
             chain_id != felt!("0x534e5f5345504f4c4941") && chain_id != felt!("0x534e5f4d41494e");
 
-        match provider.get_class_hash_at(BlockId::Tag(BlockTag::PreConfirmed), world_address).await
+        match provider.get_class_hash_at(BlockId::Tag(BlockTag::Latest), world_address).await
         {
             Ok(_) => {
                 // The world contract exists, we can continue and fetch the events.

@@ -132,7 +132,7 @@ impl AccountOptions {
 
         // The default is `Latest` in starknet-rs, which does not reflect
         // the nonce changes in the pending block.
-        account.set_block_id(BlockId::Tag(BlockTag::PreConfirmed));
+        account.set_block_id(BlockId::Tag(BlockTag::Latest));
         Ok(account)
     }
 

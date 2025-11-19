@@ -109,7 +109,7 @@ pub async fn is_deployed<P>(contract_address: Felt, provider: &P) -> Result<bool
 where
     P: Provider,
 {
-    match provider.get_class_hash_at(BlockId::Tag(BlockTag::PreConfirmed), contract_address).await {
+    match provider.get_class_hash_at(BlockId::Tag(BlockTag::Latest), contract_address).await {
         Err(ProviderError::StarknetError(StarknetError::ContractNotFound)) => Ok(false),
         Ok(_) => {
             trace!(

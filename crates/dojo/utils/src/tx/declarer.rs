@@ -93,11 +93,7 @@ where
         txn_config: &TxnConfig,
         use_blake2s_class_hash: bool,
     ) -> Result<TransactionResult, TransactionError<A::SignError>> {
-        let class_hash = if use_blake2s_class_hash {
-            labeled_class.class.class_hash_blake2s()?
-        } else {
-            labeled_class.class.class_hash()
-        };
+        let class_hash = labeled_class.class.class_hash();
 
         if is_declared(&labeled_class.label, class_hash, account.provider()).await? {
             return Ok(TransactionResult::Noop);
@@ -165,7 +161,7 @@ pub async fn is_declared<P>(
 where
     P: Provider,
 {
-    match provider.get_class(BlockId::Tag(BlockTag::PreConfirmed), class_hash).await {
+    match provider.get_class(BlockId::Tag(BlockTag::Latest), class_hash).await {
         Err(ProviderError::StarknetError(StarknetError::ClassHashNotFound)) => Ok(false),
         Ok(_) => {
             trace!(
