@@ -78,7 +78,7 @@ impl MigrateArgs {
             profile_config.clone(),
             rpc_url,
             is_guest,
-        );
+        ).await?;
 
         let MigrationResult { manifest, has_changes } =
             migration.migrate(ui).await.context("Migration failed.")?;

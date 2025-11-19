@@ -38,9 +38,10 @@ use dojo_world::services::UploadService;
 use dojo_world::{utils, ResourceType};
 use sozo_ui::SozoUi;
 use starknet::accounts::{Account, ConnectedAccount, SingleOwnerAccount};
+use starknet::core::chain_id::SEPOLIA;
 use starknet::core::types::{Call, ReceiptBlock};
 use starknet::core::utils as snutils;
-use starknet::providers::AnyProvider;
+use starknet::providers::{AnyProvider, Provider};
 use starknet::signers::LocalWallet;
 use starknet_crypto::Felt;
 use tracing::trace;
@@ -61,6 +62,9 @@ where
     // Ideally, we want this rpc url to be exposed from the world.account.provider().
     rpc_url: String,
     guest: bool,
+    // Currently Sepolia requires the blake2s class hash. This should be removed once `0.14.1` hits mainnet.
+    // This will be automatically detected from the chain id.
+    use_blake2s_class_hash: bool,
 }
 
 #[derive(Debug)]
@@ -74,15 +78,19 @@ where
     A: ConnectedAccount + Sync + Send,
 {
     /// Creates a new migration.
-    pub fn new(
+    pub async fn new(
         diff: WorldDiff,
         world: WorldContract<A>,
         txn_config: TxnConfig,
         profile_config: ProfileConfig,
         rpc_url: String,
         guest: bool,
-    ) -> Self {
-        Self { diff, world, txn_config, profile_config, rpc_url, guest }
+    ) -> Result<Self, MigrationError<A::SignError>> {
+
+        // Currently Sepolia requires the blake2s class hash. This should be removed once `0.14.1` hits mainnet.
+        let use_blake2s_class_hash = world.provider().chain_id().await.map_err(MigrationError::Provider)? == SEPOLIA;
+
+        Ok(Self { diff, world, txn_config, profile_config, rpc_url, guest, use_blake2s_class_hash })
     }
 
     /// Migrates the world by syncing the namespaces, resources, permissions and initializing the
@@ -447,7 +455,7 @@ where
 
         if accounts.is_empty() {
             trace!("Declaring classes with migrator account.");
-            let mut declarer = Declarer::new(&self.world.account, self.txn_config);
+            let mut declarer = Declarer::new(&self.world.account, self.txn_config, self.use_blake2s_class_hash);
             declarer.extend_classes(classes.into_values().collect());
 
             ui.debug(format!(
@@ -462,7 +470,7 @@ where
             let mut declarers_addresses = vec![];
             for account in accounts {
                 declarers_addresses.push(account.address());
-                declarers.push(Declarer::new(account, self.txn_config));
+                declarers.push(Declarer::new(account, self.txn_config, self.use_blake2s_class_hash));
             }
 
             ui.debug(format!("Declaring with accounts addresses: {:?}", declarers_addresses));
@@ -1187,7 +1195,7 @@ where
                 tx_config.receipt = true;
 
                 let tx_result =
-                    Declarer::declare(labeled_class, &self.world.account, &tx_config).await?;
+                    Declarer::declare(labeled_class, &self.world.account, &tx_config, self.use_blake2s_class_hash).await?;
                 display_transaction_results(ui, &vec![tx_result], "Declare world");
 
                 let deployer = Deployer::new(&self.world.account, tx_config);
@@ -1239,7 +1247,7 @@ where
                     class: self.diff.world_info.class.clone().flatten()?,
                 };
 
-                Declarer::declare(labeled_class, &self.world.account, &self.txn_config).await?;
+                Declarer::declare(labeled_class, &self.world.account, &self.txn_config, self.use_blake2s_class_hash).await?;
 
                 let mut invoker = Invoker::new(&self.world.account, self.txn_config);
 

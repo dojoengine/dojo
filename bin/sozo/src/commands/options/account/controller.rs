@@ -2,13 +2,11 @@ use std::collections::HashMap;
 
 use anyhow::{bail, Result};
 use dojo_world::contracts::contract_info::ContractInfo;
-use slot_session::account_sdk::account::session::account::SessionAccount;
-use slot_session::account_sdk::account::session::merkle::MerkleTree;
-use slot_session::account_sdk::account::session::policy::{
-    CallPolicy, MerkleLeaf, Policy, ProvedPolicy,
-};
-use slot_session::account_sdk::provider::CartridgeJsonRpcProvider;
-use slot_session::{FullSessionInfo, PolicyMethod};
+use slot::account_sdk::account::session::account::SessionAccount;
+use slot::account_sdk::account::session::merkle::MerkleTree;
+use slot::account_sdk::account::session::policy::{CallPolicy, MerkleLeaf, Policy, ProvedPolicy};
+use slot::account_sdk::provider::CartridgeJsonRpcProvider;
+use slot::session::{FullSessionInfo, PolicyMethod};
 use starknet::core::types::Felt;
 use starknet::core::utils::get_selector_from_name;
 use starknet::macros::felt;
@@ -40,7 +38,7 @@ pub async fn create_controller(
     let chain_id = rpc_provider.chain_id().await?;
 
     trace!(target: "account::controller", "Loading Slot credentials.");
-    let credentials = slot_core::credentials::Credentials::load()?;
+    let credentials = slot::credential::Credentials::load()?;
     let username = credentials.account.id;
 
     // Right now, the Cartridge Controller API ensures that there's always a Controller associated
@@ -52,7 +50,7 @@ pub async fn create_controller(
     let policies = collect_policies(contract_address, contracts)?;
 
     // Check if the session exists, if not create a new one
-    let session_details = match slot_session::get(chain_id)? {
+    let session_details = match slot::session::get(chain_id)? {
         Some(session) => {
             trace!(target: "account::controller", expires_at = %session.session.inner.expires_at, policies = session.session.proved_policies.len(), "Found existing session.");
 
@@ -69,8 +67,8 @@ pub async fn create_controller(
                     "Policies have changed. Creating new session."
                 );
 
-                let session = slot_session::create(rpc_url.clone(), &policies).await?;
-                slot_session::store(chain_id, &session)?;
+                let session = slot::session::create(rpc_url.clone(), &policies).await?;
+                slot::session::store(chain_id, &session)?;
                 session
             }
         }
@@ -78,8 +76,8 @@ pub async fn create_controller(
         // Create a new session if not found
         None => {
             trace!(target: "account::controller", %username, chain = format!("{chain_id:#}"), "Creating new session.");
-            let session = slot_session::create(rpc_url.clone(), &policies).await?;
-            slot_session::store(chain_id, &session)?;
+            let session = slot::session::create(rpc_url.clone(), &policies).await?;
+            slot::session::store(chain_id, &session)?;
             session
         }
     };

@@ -10,6 +10,7 @@
 
 use std::collections::HashMap;
 
+use cairo_lang_starknet_classes::casm_contract_class::CasmContractClass;
 use dojo_types::naming;
 use starknet::core::types::contract::{CompiledClass, SierraClass};
 use starknet::core::types::Felt;
@@ -33,7 +34,7 @@ pub struct WorldLocal {
     /// The class hash of the world.
     pub class_hash: Felt,
     /// The casm class of the world.
-    pub casm_class: Option<CompiledClass>,
+    pub casm_class: Option<CasmContractClass>,
     /// The casm class hash of the world.
     pub casm_class_hash: Felt,
     /// The resources of the world.

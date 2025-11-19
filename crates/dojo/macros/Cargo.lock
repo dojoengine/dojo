@@ -279,8 +279,7 @@ checksum = "d71b6127be86fdcfddb610f7182ac57211d4b18a3e9c82eb2d17662f2227ad6a"
 [[package]]
 name = "cainome"
 version = "0.10.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f296568cda6f1f4934270a321151f9f51afa737450f67ef13a8534f2bd9afdac"
+source = "git+https://github.com/cartridge-gg/cainome?branch=types-rs-100-blake2s#daaea0dae7bd6fef352ffee1639a2228c3b80d99"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -306,8 +305,7 @@ dependencies = [
 [[package]]
 name = "cainome-cairo-serde"
 version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "95ae2d4c21db23c7730a85187c2e9d73fe00c123171839185fb13f31550f3240"
+source = "git+https://github.com/cartridge-gg/cainome?branch=types-rs-100-blake2s#daaea0dae7bd6fef352ffee1639a2228c3b80d99"
 dependencies = [
  "num-bigint",
  "serde",
@@ -319,8 +317,7 @@ dependencies = [
 [[package]]
 name = "cainome-cairo-serde-derive"
 version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d272424141f0ced49ca5f40bc4b756235ee6e7c9cf6ab01f7ef5ac010f5f8864"
+source = "git+https://github.com/cartridge-gg/cainome?branch=types-rs-100-blake2s#daaea0dae7bd6fef352ffee1639a2228c3b80d99"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -331,8 +328,7 @@ dependencies = [
 [[package]]
 name = "cainome-parser"
 version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4ffdbc6abfba9c7e91beb87fe7561f097d9f7bbda45c6ff74be3a9ff3f1a0124"
+source = "git+https://github.com/cartridge-gg/cainome?branch=types-rs-100-blake2s#daaea0dae7bd6fef352ffee1639a2228c3b80d99"
 dependencies = [
  "convert_case",
  "quote",
@@ -345,8 +341,7 @@ dependencies = [
 [[package]]
 name = "cainome-rs"
 version = "0.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "93aa5c33e66b58ff6723d3e43e60fe163ac20719ea89fce921096e654b15bcd6"
+source = "git+https://github.com/cartridge-gg/cainome?branch=types-rs-100-blake2s#daaea0dae7bd6fef352ffee1639a2228c3b80d99"
 dependencies = [
  "anyhow",
  "cainome-cairo-serde",
@@ -364,8 +359,7 @@ dependencies = [
 [[package]]
 name = "cainome-rs-macro"
 version = "0.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9d679cd9a88b9d412ed4ed30264b80f1bec6c1aa9656e238f06be560ddebb652"
+source = "git+https://github.com/cartridge-gg/cainome?branch=types-rs-100-blake2s#daaea0dae7bd6fef352ffee1639a2228c3b80d99"
 dependencies = [
  "anyhow",
  "cainome-cairo-serde",
@@ -1625,11 +1619,13 @@ dependencies = [
 
 [[package]]
 name = "lambdaworks-crypto"
-version = "0.10.0"
+version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bbc2a4da0d9e52ccfe6306801a112e81a8fc0c76aa3e4449fefeda7fef72bb34"
+checksum = "58b1a1c1102a5a7fbbda117b79fb3a01e033459c738a3c1642269603484fd1c1"
 dependencies = [
  "lambdaworks-math",
+ "rand 0.8.5",
+ "rand_chacha 0.3.1",
  "serde",
  "sha2",
  "sha3",
@@ -1637,10 +1633,14 @@ dependencies = [
 
 [[package]]
 name = "lambdaworks-math"
-version = "0.10.0"
+version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d1bd2632acbd9957afc5aeec07ad39f078ae38656654043bf16e046fa2730e23"
+checksum = "018a95aa873eb49896a858dee0d925c33f3978d073c64b08dd4f2c9b35a017c6"
 dependencies = [
+ "getrandom 0.2.16",
+ "num-bigint",
+ "num-traits",
+ "rand 0.8.5",
  "serde",
  "serde_json",
 ]
@@ -2657,8 +2657,7 @@ checksum = "a8f112729512f8e442d81f95a8a7ddf2b7c6b8a1a6f509a95864142b30cab2d3"
 [[package]]
 name = "starknet"
 version = "0.17.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f5ed01c14136e56dcdf21385d20c4a6fdd3509947cb56cca45fc765ef5809add"
+source = "git+https://github.com/dojoengine/starknet-rs?branch=feat%2Ftypes-rs-100-blake2s#50d5a7dcaf15eb4981597c54fd9685586205069b"
 dependencies = [
  "starknet-accounts",
  "starknet-contract",
@@ -2673,8 +2672,7 @@ dependencies = [
 [[package]]
 name = "starknet-accounts"
 version = "0.16.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4f7c118729bcdcfa1610844047cbdb23090fb1d4172a36bb97a663be8d022d1a"
+source = "git+https://github.com/dojoengine/starknet-rs?branch=feat%2Ftypes-rs-100-blake2s#50d5a7dcaf15eb4981597c54fd9685586205069b"
 dependencies = [
  "async-trait",
  "auto_impl",
@@ -2688,8 +2686,7 @@ dependencies = [
 [[package]]
 name = "starknet-contract"
 version = "0.16.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ccb64331b72caf51c0d8b684b62012f9a771015b4cf5e52cba9bf61be8384ad3"
+source = "git+https://github.com/dojoengine/starknet-rs?branch=feat%2Ftypes-rs-100-blake2s#50d5a7dcaf15eb4981597c54fd9685586205069b"
 dependencies = [
  "serde",
  "serde_json",
@@ -2703,8 +2700,7 @@ dependencies = [
 [[package]]
 name = "starknet-core"
 version = "0.16.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "efb7212226769766c1c7d79b70f9242ffbd213290a41604ecc7e78faa0ed0deb"
+source = "git+https://github.com/dojoengine/starknet-rs?branch=feat%2Ftypes-rs-100-blake2s#50d5a7dcaf15eb4981597c54fd9685586205069b"
 dependencies = [
  "base64 0.21.7",
  "crypto-bigint",
@@ -2726,8 +2722,7 @@ dependencies = [
 [[package]]
 name = "starknet-core-derive"
 version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b08520b7d80eda7bf1a223e8db4f9bb5779a12846f15ebf8f8d76667eca7f5ad"
+source = "git+https://github.com/dojoengine/starknet-rs?branch=feat%2Ftypes-rs-100-blake2s#50d5a7dcaf15eb4981597c54fd9685586205069b"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2737,8 +2732,7 @@ dependencies = [
 [[package]]
 name = "starknet-crypto"
 version = "0.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1004a16c25dc6113c19d4f9d0c19ff97d85804829894bba22c0d0e9e7b249812"
+source = "git+https://github.com/dojoengine/starknet-rs?branch=feat%2Ftypes-rs-100-blake2s#50d5a7dcaf15eb4981597c54fd9685586205069b"
 dependencies = [
  "crypto-bigint",
  "hex",
@@ -2756,8 +2750,7 @@ dependencies = [
 [[package]]
 name = "starknet-curve"
 version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "22c898ae81b6409532374cf237f1bd752d068b96c6ad500af9ebbd0d9bb712f6"
+source = "git+https://github.com/dojoengine/starknet-rs?branch=feat%2Ftypes-rs-100-blake2s#50d5a7dcaf15eb4981597c54fd9685586205069b"
 dependencies = [
  "starknet-types-core",
 ]
@@ -2765,8 +2758,7 @@ dependencies = [
 [[package]]
 name = "starknet-macros"
 version = "0.2.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6d59e1eb22f4366385b132ba7016faa5a6457f1f23f896f737a06da626455e7b"
+source = "git+https://github.com/dojoengine/starknet-rs?branch=feat%2Ftypes-rs-100-blake2s#50d5a7dcaf15eb4981597c54fd9685586205069b"
 dependencies = [
  "starknet-core",
  "syn 2.0.106",
@@ -2775,8 +2767,7 @@ dependencies = [
 [[package]]
 name = "starknet-providers"
 version = "0.16.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "15fc3d94cc008cea64e291b261e8349065424ee7491e5dd0fa9bd688818bece1"
+source = "git+https://github.com/dojoengine/starknet-rs?branch=feat%2Ftypes-rs-100-blake2s#50d5a7dcaf15eb4981597c54fd9685586205069b"
 dependencies = [
  "async-trait",
  "auto_impl",
@@ -2796,8 +2787,7 @@ dependencies = [
 [[package]]
 name = "starknet-signers"
 version = "0.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d839b06d899ef3a0de11b1e9a91a14c118b1ed36830ec8e59d9fbc9a1e51976b"
+source = "git+https://github.com/dojoengine/starknet-rs?branch=feat%2Ftypes-rs-100-blake2s#50d5a7dcaf15eb4981597c54fd9685586205069b"
 dependencies = [
  "async-trait",
  "auto_impl",
@@ -2812,17 +2802,19 @@ dependencies = [
 
 [[package]]
 name = "starknet-types-core"
-version = "0.2.0"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5fa3d91e38f091dbc543d33589eb7716bed2a8eb1c20879e484561977832b60a"
+checksum = "8a12690813e587969cb4a9e7d8ebdb069d4bb7ec8d03275c5f719310c8e1f07c"
 dependencies = [
  "blake2",
  "digest",
+ "generic-array",
  "lambdaworks-crypto",
  "lambdaworks-math",
  "num-bigint",
  "num-integer",
  "num-traits",
+ "rand 0.9.2",
  "serde",
  "zeroize",
 ]

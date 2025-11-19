@@ -53,8 +53,8 @@ debug = true
 inherits = "release"
 
 [workspace.dependencies]
-cainome = { version = "0.10.1", features = [ "abigen-rs" ] }
-cainome-cairo-serde = { version = "0.4.1" }
+cainome = { git = "https://github.com/cartridge-gg/cainome", branch = "types-rs-100-blake2s", features = [ "abigen-rs" ] }
+cainome-cairo-serde = { git = "https://github.com/cartridge-gg/cainome", branch = "types-rs-100-blake2s" }
 
 dojo-utils = { path = "crates/dojo/utils" }
 
@@ -80,9 +80,9 @@ sozo-walnut = { path = "crates/sozo/walnut" }
 merge-options = { path = "crates/macros/merge-options" }
 
 # On the branch to support rpc 0.9 (incl starknet bump)
-katana-runner = { git = "https://github.com/dojoengine/katana", rev = "eba352a" }
+katana-runner = { git = "https://github.com/dojoengine/katana", branch = "types-rs-100-blake2s" }
 
-anyhow = "1.0.89"
+anyhow = "1"
 arbitrary = { version = "1.3.2", features = [ "derive" ] }
 assert_fs = "1.1"
 assert_matches = "1.5.0"
@@ -91,7 +91,10 @@ auto_impl = "1.2.0"
 base64 = "0.21.2"
 bigdecimal = "0.4.1"
 bytes = "1.6"
-cairo-lang-starknet-classes = "2.13.1"
+#cairo-lang-starknet-classes = { git = "https://github.com/dojoengine/cairo", branch = "types-rs-100" }
+#cairo-lang-starknet-classes = { path = "/Users/glihm/cgg/cairo/crates/cairo-lang-starknet-classes" }
+cairo-lang-starknet-classes = "=2.12.3"
+casm-compiler-v2 = { package = "cairo-lang-starknet", version = "=2.12.3" }
 camino = { version = "1.1.2", features = [ "serde1" ] }
 chrono = { version = "0.4.24", features = [ "serde" ] }
 clap = { version = "4.5.16", features = [ "derive", "env", "string" ] }
@@ -138,7 +141,7 @@ salsa = "0.16.1"
 scarb-metadata = "1.15.1"
 semver = "1.0.5"
 serde = { version = "1.0", features = [ "derive" ] }
-serde_json = { version = "1.0.142", features = [ "arbitrary_precision" ] }
+serde_json = { version = "1", features = [ "arbitrary_precision" ] }
 serde_with = "3.11.0"
 similar-asserts = "1.5.0"
 smol_str = { version = "0.3", features = [ "serde" ] }
@@ -169,12 +172,10 @@ mime_guess = "2.0"
 hyper = "1.5"
 warp = "0.3"
 
-# Slot integration. Dojo don't need to manually include `account_sdk` as dependency as `slot` already re-exports it.
-slot-core = { git = "https://github.com/cartridge-gg/slot", branch = "compartmentalization" }
-slot-session = { git = "https://github.com/cartridge-gg/slot", branch = "compartmentalization" }
+slot = { git = "https://github.com/cartridge-gg/slot", branch = "types-rs-100-blake2s" }
 
-starknet = "0.17"
-starknet-crypto = "0.8"
-starknet-types-core = { version = "0.2", features = [ "arbitrary", "hash" ] }
+starknet = { git = "https://github.com/dojoengine/starknet-rs", branch = "feat/types-rs-100-blake2s" }
+starknet-crypto = { git = "https://github.com/dojoengine/starknet-rs", branch = "feat/types-rs-100-blake2s" }
+starknet-types-core = { version = "1.0.0", features = [ "arbitrary", "hash" ] }
 
 bitvec = "1.0.1"
