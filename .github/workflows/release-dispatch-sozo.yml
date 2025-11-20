@@ -1,0 +1,56 @@
+# Sozo release dispatch workflow.
+#
+# This workflow prepares a PR that bumps the Sozo version (via the shared workspace version)
+# without touching Cairo/Scarb packages. Merging that PR will trigger the Sozo release workflow.
+name: release-dispatch-sozo
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to release (with or without leading v)
+        required: true
+        type: string
+
+jobs:
+  propose-release:
+    permissions:
+      pull-requests: write
+      contents: write
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ""
+    steps:
+      # Workaround described here: https://github.com/actions/checkout/issues/760
+      - uses: actions/checkout@v4
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - name: Install cargo-release
+        run: cargo install cargo-release
+      - name: Normalize version and update files
+        id: version
+        working-directory: ./bin/sozo
+        run: |
+          INPUT_VERSION="${{ inputs.version }}"
+
+          if [[ -z "$INPUT_VERSION" ]]; then
+            echo "Error: Version input is empty"
+            exit 1
+          fi
+
+          CLEAN_VERSION=${INPUT_VERSION#v}
+          DISPLAY_VERSION="v${CLEAN_VERSION}"
+
+          cargo release version ${CLEAN_VERSION} --execute --no-confirm
+          cargo release replace --execute --no-confirm
+
+          echo "display_version=${DISPLAY_VERSION}" >> $GITHUB_OUTPUT
+
+      - uses: peter-evans/create-pull-request@v7
+        with:
+          # We have to use a PAT in order to trigger ci
+          token: ${{ secrets.CREATE_PR_TOKEN }}
+          title: "release-sozo(prepare): ${{ steps.version.outputs.display_version }}"
+          commit-message: "Prepare Sozo release: ${{ steps.version.outputs.display_version }}"
+          branch: prepare-release-sozo
+          base: main
+          delete-branch: true
