@@ -18,6 +18,8 @@ jobs:
       pull-requests: write
       contents: write
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/dojoengine/dojo-dev:v1.7.1
     env:
       VERSION: ""
     steps:
