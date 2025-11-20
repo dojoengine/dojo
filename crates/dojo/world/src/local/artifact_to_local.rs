@@ -10,8 +10,7 @@ use cairo_lang_starknet_classes::contract_class::ContractClass;
 use dojo_types::naming::{compute_bytearray_hash, compute_selector_from_names};
 use serde_json;
 use starknet::core::types::contract::{
-    AbiEntry, AbiEvent, AbiImpl, AbiStruct, CompiledClass, SierraClass, StateMutability,
-    TypedAbiEvent,
+    AbiEntry, AbiEvent, AbiImpl, AbiStruct, SierraClass, StateMutability, TypedAbiEvent,
 };
 use starknet::core::types::Felt;
 use starknet::core::utils as snutils;
@@ -32,7 +31,7 @@ const EVENT_INTF: &str = "dojo::event::interface::IEvent";
 struct ExternalContractClassLocal {
     pub casm_class_hash: Felt,
     pub class: SierraClass,
-    pub casm_class: Option<CompiledClass>,
+    pub casm_class: Option<CasmContractClass>,
     pub entrypoints: Vec<String>,
     pub is_upgradeable: bool,
 }
@@ -42,6 +41,7 @@ impl WorldLocal {
         dir: P,
         profile_name: &str,
         profile_config: ProfileConfig,
+        use_blake2s_casm_class_hash: bool,
     ) -> Result<Self> {
         trace!(
             ?profile_config,
@@ -49,6 +49,22 @@ impl WorldLocal {
             directory = %dir.as_ref().to_string_lossy(),
             "Loading world from directory."
         );
+
+        // Currently, we have no way to know the network chain-id from here.
+        // We try to read the rpc_url of the config to infer the chain-id.
+        let autodetect_blake2s_class_hash = profile_config
+            .env
+            .as_ref()
+            .map(|env| {
+                env.rpc_url.as_ref().unwrap().contains("sepolia")
+                    || env.rpc_url.as_ref().unwrap().contains("testnet")
+            })
+            .unwrap_or(false);
+
+        let use_blake2s_class_hash = use_blake2s_casm_class_hash || autodetect_blake2s_class_hash;
+
+        trace!(use_blake2s_class_hash, "Using blake2s class hash for local world.");
+
         let mut resources = vec![];
         let mut external_contract_classes = HashMap::new();
 
@@ -84,7 +100,7 @@ impl WorldLocal {
                     );
 
                     let casm_class = if casm_path.exists() {
-                        Some(serde_json::from_slice::<CompiledClass>(
+                        Some(serde_json::from_slice::<CasmContractClass>(
                             std::fs::read(&casm_path)?.as_slice(),
                         )?)
                     } else {
@@ -92,8 +108,12 @@ impl WorldLocal {
                     };
 
                     let abi = sierra.abi.clone();
+
                     let class_hash = sierra.class_hash()?;
-                    let casm_class_hash = casm_class_hash_from_sierra_file(&path)?;
+
+                    // TODO: the casm must also use blake2s?
+                    let casm_class_hash =
+                        casm_class_hash_from_sierra_file(&path, use_blake2s_class_hash)?;
 
                     let impls = abi
                         .iter()
@@ -114,6 +134,12 @@ impl WorldLocal {
                                 world_entrypoints = systems_from_abi(&abi);
                                 world_casm_class = casm_class.clone();
 
+                                trace!(
+                                    class_hash = format!("{:#066x}", class_hash),
+                                    casm_class_hash = format!("{:#066x}", casm_class_hash),
+                                    "World adding world resource."
+                                );
+
                                 dojo_resource_found = true;
                                 break;
                             }
@@ -126,6 +152,8 @@ impl WorldLocal {
                                     trace!(
                                         name,
                                         namespace = ns,
+                                        class_hash = format!("{:#066x}", class_hash),
+                                        casm_class_hash = format!("{:#066x}", casm_class_hash),
                                         "Adding local contract from artifact."
                                     );
 
@@ -160,6 +188,9 @@ impl WorldLocal {
                                                 name,
                                                 namespace = ns,
                                                 version = v,
+                                                class_hash = format!("{:#066x}", class_hash),
+                                                casm_class_hash =
+                                                    format!("{:#066x}", casm_class_hash),
                                                 "Adding local library from artifact."
                                             );
 
@@ -202,6 +233,8 @@ impl WorldLocal {
                                     trace!(
                                         name,
                                         namespace = ns,
+                                        class_hash = format!("{:#066x}", class_hash),
+                                        casm_class_hash = format!("{:#066x}", casm_class_hash),
                                         "Adding local model from artifact."
                                     );
 
@@ -230,6 +263,8 @@ impl WorldLocal {
                                     trace!(
                                         name,
                                         namespace = ns,
+                                        class_hash = format!("{:#066x}", class_hash),
+                                        casm_class_hash = format!("{:#066x}", casm_class_hash),
                                         "Adding local event from artifact."
                                     );
 
@@ -259,6 +294,8 @@ impl WorldLocal {
                     if !dojo_resource_found {
                         trace!(
                             filename = path.file_name().unwrap().to_str().unwrap(),
+                            class_hash = format!("{:#066x}", class_hash),
+                            casm_class_hash = format!("{:#066x}", casm_class_hash),
                             "Classic Starknet contract."
                         );
 
@@ -435,13 +472,23 @@ build-external-contracts = ["dojo::world::world_contract::world"]
 }
 
 /// Computes the casm class hash from a Sierra file path.
-fn casm_class_hash_from_sierra_file<P: AsRef<Path>>(path: P) -> Result<Felt> {
+fn casm_class_hash_from_sierra_file<P: AsRef<Path>>(
+    path: P,
+    use_blake2s_class_hash: bool,
+) -> Result<Felt> {
     let bytecode_max_size = usize::MAX;
     let sierra_class: ContractClass =
         serde_json::from_slice::<ContractClass>(std::fs::read(path)?.as_slice())?;
     let casm_class =
         CasmContractClass::from_contract_class(sierra_class, false, bytecode_max_size)?;
-    Ok(casm_class.compiled_class_hash())
+
+    use starknet_api::contract_class::compiled_class_hash::{HashVersion, HashableCompiledClass};
+
+    let hash_version = if use_blake2s_class_hash { HashVersion::V2 } else { HashVersion::V1 };
+
+    let hash = casm_class.hash(&hash_version);
+
+    Ok(Felt::from_bytes_be(&hash.0.to_bytes_be()))
 }
 
 /// A simple enum to identify the type of resource with their name.
@@ -651,10 +698,13 @@ mod tests {
         let namespace_config = NamespaceConfig::new("dojo");
         let profile_config = ProfileConfig::new("test", "seed", namespace_config);
 
+        let use_blake2s_casm_class_hash = false;
+
         let world = WorldLocal::from_directory(
             "../../../examples/simple/target/dev/",
             "dev",
             profile_config,
+            use_blake2s_casm_class_hash,
         )
         .unwrap();
 

@@ -45,6 +45,7 @@ pub async fn toml_to_json(toml_path: Utf8PathBuf) -> Result<String, McpError> {
 pub async fn load_world_local(
     manifest_path: Option<Utf8PathBuf>,
     profile: &str,
+    use_blake2s_casm_class_hash: bool,
 ) -> Result<WorldLocal, McpError> {
     let default_manifest = Utf8PathBuf::from("Scarb.toml");
     let manifest_path = manifest_path.as_ref().unwrap_or(&default_manifest);
@@ -56,7 +57,7 @@ pub async fn load_world_local(
         )
     })?;
 
-    let world = scarb_metadata.load_dojo_world_local().map_err(|e| {
+    let world = scarb_metadata.load_dojo_world_local(use_blake2s_casm_class_hash).map_err(|e| {
         McpError::internal_error(
             "world_load_failed",
             Some(json!({ "reason": format!("Failed to load world: {}", e) })),
@@ -109,8 +110,10 @@ async fn handle_contract_abi_resource(
     uri: &str,
     manifest_path: Option<Utf8PathBuf>,
 ) -> Result<ReadResourceResult, McpError> {
+    // TODO: may be exposed later to MCP as a choice.
+    let use_blake2s_casm_class_hash = false;
     let (profile, contract_name) = parse_contract_uri(uri)?;
-    let world = load_world_local(manifest_path, profile).await?;
+    let world = load_world_local(manifest_path, profile, use_blake2s_casm_class_hash).await?;
     let abi_json = get_contract_abi(&world, contract_name)?;
 
     Ok(ReadResourceResult { contents: vec![ResourceContents::text(abi_json, uri)] })
@@ -121,8 +124,10 @@ async fn handle_model_abi_resource(
     uri: &str,
     manifest_path: Option<Utf8PathBuf>,
 ) -> Result<ReadResourceResult, McpError> {
+    // TODO: may be exposed later to MCP as a choice.
+    let use_blake2s_casm_class_hash = false;
     let (profile, model_name) = parse_model_uri(uri)?;
-    let world = load_world_local(manifest_path, profile).await?;
+    let world = load_world_local(manifest_path, profile, use_blake2s_casm_class_hash).await?;
     let abi_json = get_model_abi(&world, model_name)?;
 
     Ok(ReadResourceResult { contents: vec![ResourceContents::text(abi_json, uri)] })
@@ -133,8 +138,10 @@ async fn handle_event_abi_resource(
     uri: &str,
     manifest_path: Option<Utf8PathBuf>,
 ) -> Result<ReadResourceResult, McpError> {
+    // TODO: may be exposed later to MCP as a choice.
+    let use_blake2s_casm_class_hash = false;
     let (profile, event_name) = parse_event_uri(uri)?;
-    let world = load_world_local(manifest_path, profile).await?;
+    let world = load_world_local(manifest_path, profile, use_blake2s_casm_class_hash).await?;
     let abi_json = get_event_abi(&world, event_name)?;
 
     Ok(ReadResourceResult { contents: vec![ResourceContents::text(abi_json, uri)] })

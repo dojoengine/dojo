@@ -32,7 +32,7 @@ use crate::commands::options::world::WorldOptions;
 /// providers.
 pub const MAX_BLOCK_RANGE: u64 = 200_000;
 
-pub const RPC_SPEC_VERSION: &str = "0.9.0-rc.2";
+pub const RPC_SPEC_VERSION: &str = "0.9.0";
 
 pub const CALLDATA_DOC: &str = "
 Space separated values e.g., 0x12345 128 u256:9999999999 str:'hello world'.
@@ -96,7 +96,7 @@ pub async fn get_world_diff_and_provider(
     scarb_metadata: &Metadata,
     ui: &SozoUi,
 ) -> Result<(WorldDiff, JsonRpcClient<HttpTransport>, String)> {
-    let world_local = scarb_metadata.load_dojo_world_local()?;
+    let world_local = scarb_metadata.load_dojo_world_local(starknet.use_blake2s_casm_class_hash)?;
     let profile_config = scarb_metadata.load_dojo_profile_config()?;
 
     let env = profile_config.env.as_ref();

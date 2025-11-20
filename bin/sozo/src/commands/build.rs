@@ -129,11 +129,16 @@ impl BuildArgs {
         // directly during the compilation to get the data we need from it.
         bindgen.generate(None).await?;
 
+        // During the build, the class hashes are not used. Set to true as default since it
+        // will be the standard once 0.14.1 hits mainnet.
+        let use_blake2s_casm_class_hash = true;
+
         if self.stats != StatOptions::default() {
             let world = WorldLocal::from_directory(
                 scarb_metadata.target_dir_profile(),
                 &scarb_metadata.current_profile,
                 scarb_metadata.load_dojo_profile_config().unwrap(),
+                use_blake2s_casm_class_hash,
             )?;
 
             let world_stat = world.to_stat_item();

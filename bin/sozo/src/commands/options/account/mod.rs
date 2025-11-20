@@ -8,7 +8,7 @@ use dojo_utils::env::DOJO_ACCOUNT_ADDRESS_ENV_VAR;
 use dojo_world::config::Environment;
 use dojo_world::contracts::ContractInfo;
 #[cfg(feature = "controller")]
-use slot_session::account_sdk::provider::CartridgeJsonRpcProvider;
+use slot::account_sdk::provider::CartridgeJsonRpcProvider;
 use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::types::{BlockId, BlockTag, Felt};
 use starknet::providers::Provider;
@@ -130,9 +130,9 @@ impl AccountOptions {
         let mut account =
             SingleOwnerAccount::new(provider, signer, account_address, chain_id, encoding);
 
-        // The default is `Latest` in starknet-rs, which does not reflect
-        // the nonce changes in the pending block.
-        account.set_block_id(BlockId::Tag(BlockTag::PreConfirmed));
+        // Since now the block frequency is higher than before, using latest is
+        // totally fine. We keep it explicitely set here to easy toggle if necessary.
+        account.set_block_id(BlockId::Tag(BlockTag::Latest));
         Ok(account)
     }
 

@@ -29,7 +29,7 @@ cairo-lang-syntax = "2.13.1"
 cairo-lang-defs = "2.13.1"
 cairo-lang-diagnostics = "2.13.1"
 smol_str = "0.3"
-starknet-crypto = "0.8"
-starknet = "0.17"
+starknet-crypto = { git = "https://github.com/dojoengine/starknet-rs", branch = "feat/types-rs-100-blake2s" }
+starknet = { git = "https://github.com/dojoengine/starknet-rs", branch = "feat/types-rs-100-blake2s" }
 regex = "1.10.3"
 itertools = "0.12.1"

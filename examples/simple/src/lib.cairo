@@ -132,7 +132,7 @@ pub mod c1 {
             world.erase_model(@m);
 
             let mut mv: MValue = world.read_value_from_id(entity_id);
-            mv.v = 12;
+            mv.v = 15;
             world.write_value_from_id(entity_id, @mv);
 
             world.erase_model_ptr(Model::<M>::ptr_from_id(entity_id));
@@ -150,7 +150,7 @@ pub mod c1 {
         o4: PlayerSetting,
         o5: PlayerSettingValue,
     ) -> Option<u32> {
-        Some(42)
+        Some(48)
     }
 
     #[generate_trait]

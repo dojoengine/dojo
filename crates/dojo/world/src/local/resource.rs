@@ -1,5 +1,6 @@
+use cairo_lang_starknet_classes::casm_contract_class::CasmContractClass;
 use dojo_types::naming;
-use starknet::core::types::contract::{AbiEntry, CompiledClass, SierraClass};
+use starknet::core::types::contract::{AbiEntry, SierraClass};
 use starknet::core::types::Felt;
 
 use crate::{DojoSelector, ResourceType};
@@ -25,7 +26,7 @@ pub struct CommonLocalInfo {
     /// The class of the resource.
     pub class: SierraClass,
     /// The casm class of the resource, optional since it's mostly used for stats.
-    pub casm_class: Option<CompiledClass>,
+    pub casm_class: Option<CasmContractClass>,
     /// The class hash of the resource.
     pub class_hash: Felt,
     /// The casm class hash of the resource.
