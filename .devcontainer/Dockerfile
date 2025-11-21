@@ -51,8 +51,6 @@ RUN rustup target add x86_64-pc-windows-msvc && \
 
 RUN cargo install cargo-nextest cargo-llvm-cov cargo-release cargo-get
 
-RUN curl -L https://install.dojoengine.org | bash
-
 # Platform specific tooling (hurl, llvm-tools)
 ARG TARGETPLATFORM
 
