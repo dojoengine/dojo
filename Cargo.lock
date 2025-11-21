@@ -1198,7 +1198,7 @@ dependencies = [
 
 [[package]]
 name = "cairo-bench"
-version = "1.8.0"
+version = "1.8.1"
 dependencies = [
  "anyhow",
  "camino",
@@ -2567,7 +2567,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-bindgen"
-version = "1.8.0"
+version = "1.8.1"
 dependencies = [
  "anyhow",
  "assert_matches",
@@ -2592,15 +2592,15 @@ dependencies = [
 
 [[package]]
 name = "dojo-contracts"
-version = "1.8.0"
+version = "1.8.1"
 
 [[package]]
 name = "dojo-examples-spawn-and-move"
-version = "1.8.0"
+version = "1.8.1"
 
 [[package]]
 name = "dojo-metrics"
-version = "1.8.0"
+version = "1.8.1"
 dependencies = [
  "bytes",
  "http-body-util",
@@ -2620,7 +2620,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-test-utils"
-version = "1.8.0"
+version = "1.8.1"
 dependencies = [
  "assert_fs",
  "camino",
@@ -2654,7 +2654,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-utils"
-version = "1.8.0"
+version = "1.8.1"
 dependencies = [
  "anyhow",
  "assert_matches",
@@ -2673,7 +2673,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-world"
-version = "1.8.0"
+version = "1.8.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2701,7 +2701,7 @@ dependencies = [
 
 [[package]]
 name = "dojo-world-abigen"
-version = "1.8.0"
+version = "1.8.1"
 dependencies = [
  "anyhow",
  "cainome",
@@ -4776,7 +4776,7 @@ dependencies = [
 
 [[package]]
 name = "merge-options"
-version = "1.8.0"
+version = "1.8.1"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -6563,7 +6563,7 @@ dependencies = [
 
 [[package]]
 name = "scarb-interop"
-version = "1.8.0"
+version = "1.8.1"
 dependencies = [
  "anyhow",
  "camino",
@@ -6590,7 +6590,7 @@ dependencies = [
 
 [[package]]
 name = "scarb-metadata-ext"
-version = "1.8.0"
+version = "1.8.1"
 dependencies = [
  "anyhow",
  "camino",
@@ -7170,7 +7170,7 @@ dependencies = [
 
 [[package]]
 name = "sozo"
-version = "1.8.0"
+version = "1.8.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -7214,7 +7214,7 @@ dependencies = [
 
 [[package]]
 name = "sozo-mcp"
-version = "1.8.0"
+version = "1.8.1"
 dependencies = [
  "anyhow",
  "camino",
@@ -7237,7 +7237,7 @@ dependencies = [
 
 [[package]]
 name = "sozo-ops"
-version = "1.8.0"
+version = "1.8.1"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -7271,7 +7271,7 @@ dependencies = [
 
 [[package]]
 name = "sozo-signers"
-version = "1.8.0"
+version = "1.8.1"
 dependencies = [
  "anyhow",
  "starknet",
@@ -7279,14 +7279,14 @@ dependencies = [
 
 [[package]]
 name = "sozo-ui"
-version = "1.8.0"
+version = "1.8.1"
 dependencies = [
  "colored 2.2.0",
 ]
 
 [[package]]
 name = "sozo-walnut"
-version = "1.8.0"
+version = "1.8.1"
 dependencies = [
  "anyhow",
  "clap",
@@ -8801,7 +8801,7 @@ dependencies = [
 
 [[package]]
 name = "verify_db_balances"
-version = "1.8.0"
+version = "1.8.1"
 dependencies = [
  "clap",
  "num-traits",
@@ -9616,7 +9616,7 @@ checksum = "32ac00cd3f8ec9c1d33fb3e7958a82df6989c42d747bd326c822b1d625283547"
 
 [[package]]
 name = "xtask-generate-test-db"
-version = "1.8.0"
+version = "1.8.1"
 dependencies = [
  "anyhow",
  "dojo-test-utils",

@@ -40,7 +40,7 @@ license-file = "LICENSE"
 repository = "https://github.com/dojoengine/dojo/"
 documentation = "https://book.dojoengine.org"
 homepage = "https://dojoengine.org"
-version = "1.8.0"
+version = "1.8.1"
 
 [profile.performance]
 codegen-units = 1
