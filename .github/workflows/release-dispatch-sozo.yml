@@ -19,7 +19,7 @@ jobs:
       contents: write
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dojoengine/dojo-dev:rust-190
+      image: ghcr.io/dojoengine/dojo-dev:v1.7.1
     env:
       VERSION: ""
     steps:
@@ -27,7 +27,7 @@ jobs:
       - uses: actions/checkout@v4
       - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - name: Install cargo-release
-        run: cargo install cargo-release
+        run: cargo install cargo-release --version 0.25.18
       - name: Normalize version and update files
         id: version
         working-directory: ./bin/sozo
