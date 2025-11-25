@@ -51,7 +51,17 @@ jobs:
 
           for manifest in $SOZO_MANIFESTS; do
             tmp="$(mktemp)"
-            if ! sed '/^\[package\]/,/^\[/{ s/^[[:space:]]*version[[:space:]]*=.*/version = "'"$CLEAN_VERSION"'"/; q }' "$manifest" > "$tmp"; then
+            if ! awk -v ver="$CLEAN_VERSION" '
+              BEGIN { updated = 0 }
+              !updated && /^[[:space:]]*version[[:space:]]*=/ {
+                sub(/=.*/, "= \"" ver "\"")
+                updated = 1
+              }
+              { print }
+              END {
+                if (!updated) exit 1
+              }
+            ' "$manifest" > "$tmp"; then
               echo "Failed to update version in $manifest"
               exit 1
             fi
