@@ -42,6 +42,30 @@ jobs:
           CLEAN_VERSION=${INPUT_VERSION#v}
           DISPLAY_VERSION="v${CLEAN_VERSION}"
 
+          # Manually update the version in the Cargo.toml files, until we have a proper
+          # rework of the Dojo crates and Sozo isolation.
+
+          set -euo pipefail
+
+          SOZO_MANIFESTS=(
+            "./Cargo.toml"
+            "../../crates/sozo/mcp/Cargo.toml"
+            "../../crates/sozo/ops/Cargo.toml"
+            "../../crates/sozo/signers/Cargo.toml"
+            "../../crates/sozo/ui/Cargo.toml"
+            "../../crates/sozo/walnut/Cargo.toml"
+          )
+
+          for manifest in "${SOZO_MANIFESTS[@]}"; do
+            tmp="$(mktemp)"
+            if ! sed '0,/^[[:space:]]*version[[:space:]]*=/s//version = "'"$CLEAN_VERSION"'"/' "$manifest" > "$tmp"; then
+              echo "Failed to update version in $manifest"
+              exit 1
+            fi
+
+            mv "$tmp" "$manifest"
+          done
+
           cargo release version ${CLEAN_VERSION} --execute --no-confirm
           cargo release replace --execute --no-confirm
 
@@ -49,7 +73,6 @@ jobs:
 
       - uses: peter-evans/create-pull-request@v7
         with:
-          # We have to use a PAT in order to trigger ci
           token: ${{ secrets.CREATE_PR_TOKEN }}
           title: "release-sozo(prepare): ${{ steps.version.outputs.display_version }}"
           commit-message: "Prepare Sozo release: ${{ steps.version.outputs.display_version }}"
