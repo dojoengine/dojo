@@ -45,7 +45,7 @@ jobs:
           # Manually update the version in the Cargo.toml files, until we have a proper
           # rework of the Dojo crates and Sozo isolation.
 
-          set -euo pipefail
+          set -e pipefail
 
           SOZO_MANIFESTS=(
             "./Cargo.toml"
