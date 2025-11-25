@@ -28,9 +28,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: Get version
         id: release_info
+        working-directory: ./bin/sozo
         run: |
           cargo install cargo-get
-          VERSION="v$(cargo get workspace.package.version)"
+          VERSION="v$(cargo get package.version)"
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "tag_name=sozo/${VERSION}" >> $GITHUB_OUTPUT
 
