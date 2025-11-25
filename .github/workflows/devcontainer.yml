@@ -63,7 +63,7 @@ jobs:
           file: .devcontainer/Dockerfile
           tags: ghcr.io/${{ github.repository }}-dev:latest,ghcr.io/${{ github.repository }}-dev:${{ env.DOCKER_TAG }}
           build-args: |
-            RUST_VERSION=1.88.0
+            RUST_VERSION=1.90.0
             DOJO_VERSION=${{ env.DOCKER_TAG }}
           platforms: linux/amd64,linux/arm64
           cache-from: type=registry,ref=ghcr.io/${{ github.repository }}-dev:latest

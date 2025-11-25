@@ -1,4 +1,4 @@
-ARG RUST_VERSION=1.89.0
+ARG RUST_VERSION=1.90.0
 FROM ubuntu:24.04
 ARG RUST_VERSION
 
@@ -50,8 +50,6 @@ RUN rustup target add x86_64-pc-windows-msvc && \
     rustup target add wasm32-unknown-unknown
 
 RUN cargo install cargo-nextest cargo-llvm-cov cargo-release cargo-get
-
-RUN curl -L https://install.dojoengine.org | bash
 
 # Platform specific tooling (hurl, llvm-tools)
 ARG TARGETPLATFORM
