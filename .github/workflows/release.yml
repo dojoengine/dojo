@@ -37,54 +37,6 @@ jobs:
           cargo install cargo-get
           echo "tag_name=v$(cargo get workspace.package.version)" >> $GITHUB_OUTPUT
 
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: dtolnay/rust-toolchain@master
-        name: Rust Toolchain Setup
-        with:
-          targets: ${{ matrix.job.target }}
-          toolchain: ${{ env.RUST_VERSION }}
-
-      - uses: Swatinem/rust-cache@v1
-        with:
-          cache-on-failure: true
-
-      - uses: software-mansion/setup-scarb@v1
-        with:
-          scarb-version: "2.13.1"
-
-      - name: Build binaries
-        run: cargo build --release --locked --bin sozo --target ${{ matrix.job.target }}
-
-      - name: Archive binaries
-        id: artifacts
-        env:
-          VERSION_NAME: ${{ needs.prepare.outputs.tag_name }}
-        run: |
-          if [ "$PLATFORM_NAME" == "linux" ]; then
-            tar -czvf "dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz" -C ./target/${TARGET}/release sozo
-            echo "file_name=dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz" >> $GITHUB_OUTPUT
-          elif [ "$PLATFORM_NAME" == "darwin" ]; then
-            # We need to use gtar here otherwise the archive is corrupt.
-            # See: https://github.com/actions/virtual-environments/issues/2619
-            gtar -czvf "dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz" -C ./target/${TARGET}/release sozo
-            echo "file_name=dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.tar.gz" >> $GITHUB_OUTPUT
-          else
-            cd ./target/${TARGET}/release
-            7z a -tzip "dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.zip" sozo.exe
-            mv "dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.zip" ../../../
-            echo "file_name=dojo_${VERSION_NAME}_${PLATFORM_NAME}_${ARCH}.zip" >> $GITHUB_OUTPUT
-          fi
-        shell: bash
-
-      - name: Upload release artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: artifacts-${{ matrix.job.target }}
-          path: ${{ steps.artifacts.outputs.file_name }}
-          retention-days: 1
-
   publish-scarb-packages:
     
     runs-on: ubuntu-latest
