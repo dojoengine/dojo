@@ -34,7 +34,7 @@ jobs:
         run: |
           INPUT_VERSION="${{ inputs.version }}"
 
-          if [[ -z "$INPUT_VERSION" ]]; then
+          if [ -z "$INPUT_VERSION" ]; then
             echo "Error: Version input is empty"
             exit 1
           fi
@@ -45,20 +45,13 @@ jobs:
           # Manually update the version in the Cargo.toml files, until we have a proper
           # rework of the Dojo crates and Sozo isolation.
 
-          set -e pipefail
+          set -e
 
-          SOZO_MANIFESTS=(
-            "./Cargo.toml"
-            "../../crates/sozo/mcp/Cargo.toml"
-            "../../crates/sozo/ops/Cargo.toml"
-            "../../crates/sozo/signers/Cargo.toml"
-            "../../crates/sozo/ui/Cargo.toml"
-            "../../crates/sozo/walnut/Cargo.toml"
-          )
+          SOZO_MANIFESTS="./Cargo.toml ../../crates/sozo/mcp/Cargo.toml ../../crates/sozo/ops/Cargo.toml ../../crates/sozo/signers/Cargo.toml ../../crates/sozo/ui/Cargo.toml ../../crates/sozo/walnut/Cargo.toml"
 
-          for manifest in "${SOZO_MANIFESTS[@]}"; do
+          for manifest in $SOZO_MANIFESTS; do
             tmp="$(mktemp)"
-            if ! sed '0,/^[[:space:]]*version[[:space:]]*=/s//version = "'"$CLEAN_VERSION"'"/' "$manifest" > "$tmp"; then
+            if ! sed "0,/^[[:space:]]*version[[:space:]]*=/s//version = \"$CLEAN_VERSION\"/" "$manifest" > "$tmp"; then
               echo "Failed to update version in $manifest"
               exit 1
             fi
