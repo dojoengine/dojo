@@ -191,7 +191,7 @@ pub async fn get_account_from_env(
     account: AccountOptions,
     starknet: &StarknetOptions,
 ) -> Result<SozoAccount<JsonRpcClient<HttpTransport>>> {
-    let provider = starknet.provider_from_url(None)?;
+    let provider = starknet.provider_from_url()?;
 
     account.account(provider, None, starknet, &HashMap::new()).await
 }

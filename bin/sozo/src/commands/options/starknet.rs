@@ -70,10 +70,7 @@ impl StarknetOptions {
     }
 
     /// Returns a [`JsonRpcClient`] from the given rpc url and headers.
-    pub fn provider_from_url(
-        &self,
-        headers: Option<Vec<(String, String)>>,
-    ) -> Result<JsonRpcClient<HttpTransport>> {
+    pub fn provider_from_url(&self) -> Result<JsonRpcClient<HttpTransport>> {
         let client =
             ClientBuilder::default().timeout(Self::DEFAULT_REQUEST_TIMEOUT).build().unwrap();
 
@@ -84,12 +81,6 @@ impl StarknetOptions {
 
         for header in &self.rpc_headers {
             transport.add_header(header.name.clone(), header.value.clone());
-        }
-
-        if let Some(headers) = headers {
-            for header in headers.into_iter() {
-                transport.add_header(header.0, header.1);
-            }
         }
 
         Ok(JsonRpcClient::new(transport))
