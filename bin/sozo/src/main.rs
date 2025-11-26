@@ -43,6 +43,10 @@ async fn main() {
 async fn cli_main(args: SozoArgs, ui: &SozoUi) -> Result<()> {
     if let Commands::Init(args) = args.command {
         args.run(ui)
+    } else if let Commands::Declare(args) = args.command {
+        args.run(ui).await
+    } else if let Commands::Deploy(args) = args.command {
+        args.run(ui).await
     } else {
         // Default to the current directory to mimic how Scarb works.
         let manifest_path = if let Some(manifest_path) = &args.manifest_path {

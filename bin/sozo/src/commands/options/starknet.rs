@@ -1,6 +1,8 @@
+use std::fmt::{Display, Formatter};
+use std::str::FromStr;
 use std::time::Duration;
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use clap::Args;
 use dojo_utils::env::STARKNET_RPC_URL_ENV_VAR;
 use dojo_world::config::Environment;
@@ -26,6 +28,12 @@ pub struct StarknetOptions {
                   Otherwise, use this flag to manually set it.")]
     #[arg(global = true)]
     pub use_blake2s_casm_class_hash: bool,
+
+    #[arg(long = "rpc-header")]
+    #[arg(value_name = "HEADER")]
+    #[arg(help = "Custom header(s) to add to Starknet RPC requests. Format: Name:Value")]
+    #[arg(global = true)]
+    pub rpc_headers: Vec<RpcHeader>,
 }
 
 impl StarknetOptions {
@@ -54,7 +62,28 @@ impl StarknetOptions {
             }
         }
 
+        for header in &self.rpc_headers {
+            transport.add_header(header.name.clone(), header.value.clone());
+        }
+
         Ok((JsonRpcClient::new(transport), url.to_string()))
+    }
+
+    /// Returns a [`JsonRpcClient`] from the given rpc url and headers.
+    pub fn provider_from_url(&self) -> Result<JsonRpcClient<HttpTransport>> {
+        let client =
+            ClientBuilder::default().timeout(Self::DEFAULT_REQUEST_TIMEOUT).build().unwrap();
+
+        let mut transport = HttpTransport::new_with_client(
+            self.rpc_url.clone().unwrap_or(Url::parse("http://localhost:5050").unwrap()),
+            client,
+        );
+
+        for header in &self.rpc_headers {
+            transport.add_header(header.name.clone(), header.value.clone());
+        }
+
+        Ok(JsonRpcClient::new(transport))
     }
 
     // We dont check the env var because that would be handled by `clap`.
@@ -72,6 +101,36 @@ impl StarknetOptions {
             trace!("Using default RPC URL: http://localhost:5050.");
             Ok(Url::parse("http://localhost:5050").unwrap())
         }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct RpcHeader {
+    pub name: String,
+    pub value: String,
+}
+
+impl FromStr for RpcHeader {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let (name, value) =
+            s.split_once(':').ok_or_else(|| anyhow!("Invalid header format. Use `Name:Value`"))?;
+
+        let name = name.trim();
+        let value = value.trim();
+
+        if name.is_empty() || value.is_empty() {
+            return Err(anyhow!("Header name and value must be non-empty."));
+        }
+
+        Ok(RpcHeader { name: name.to_string(), value: value.to_string() })
+    }
+}
+
+impl Display for RpcHeader {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}: {}", self.name, self.value)
     }
 }
 
