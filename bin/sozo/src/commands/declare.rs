@@ -69,9 +69,8 @@ impl DeclareArgs {
             let class = prepare_class(&path, use_blake2s)
                 .with_context(|| format!("Failed to prepare Sierra artifact {}", path.display()))?;
 
-            ui.step(format!("Compiled '{}'", class.label));
+            ui.step(format!("Compiled '{}' (class hash {:#066x})", class.label, class.class_hash));
             let detail_ui = ui.subsection();
-            detail_ui.verbose(format!("Class hash : {:#066x}", class.class_hash));
             detail_ui.verbose(format!("CASM hash  : {:#066x}", class.casm_class_hash));
             detail_ui.verbose(format!("Artifact   : {}", path.display()));
 
@@ -145,8 +144,11 @@ fn prepare_class(path: &Path, use_blake2s: bool) -> Result<PreparedClass> {
     let casm_hash = casm_class_hash_from_bytes(&data, use_blake2s)?;
 
     let label = path
-        .file_stem()
-        .and_then(|stem| stem.to_str())
+        .file_name()
+        .and_then(|name| name.to_str())
+        .ok_or_else(|| anyhow!("Unable to infer contract name from {}", path.display()))?
+        .split('.')
+        .next()
         .ok_or_else(|| anyhow!("Unable to infer contract name from {}", path.display()))?
         .to_string();
 

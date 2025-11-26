@@ -72,7 +72,7 @@ impl DeployArgs {
 
         let account = get_account_from_env(account, &starknet).await?;
 
-        ui.title("Deploy contract");
+        ui.title(format!("Deploy contract (class hash {:#066x})", class_hash));
         ui.step("Deploying contract via UDC");
         let params_ui = ui.subsection();
         params_ui.verbose(format!("Class hash : {:#066x}", class_hash));
@@ -122,7 +122,7 @@ impl DeployArgs {
                 let deployed =
                     if actual_address == Felt::ZERO { expected_address } else { actual_address };
                 ui.result(format!(
-                    "Deployment included on-chain.\n  Tx hash   : {hash:#066x}\n  Address   : \
+                    "Contract deployed onchain.\n  Tx hash   : {hash:#066x}\n  Address   : \
                      {deployed:#066x}"
                 ));
                 if deployed != expected_address {
