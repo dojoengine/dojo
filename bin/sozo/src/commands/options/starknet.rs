@@ -57,6 +57,28 @@ impl StarknetOptions {
         Ok((JsonRpcClient::new(transport), url.to_string()))
     }
 
+    /// Returns a [`JsonRpcClient`] from the given rpc url and headers.
+    pub fn provider_from_url(
+        &self,
+        headers: Option<Vec<(String, String)>>,
+    ) -> Result<JsonRpcClient<HttpTransport>> {
+        let client =
+            ClientBuilder::default().timeout(Self::DEFAULT_REQUEST_TIMEOUT).build().unwrap();
+
+        let mut transport = HttpTransport::new_with_client(
+            self.rpc_url.clone().unwrap_or(Url::parse("http://localhost:5050").unwrap()),
+            client,
+        );
+
+        if let Some(headers) = headers {
+            for header in headers.iter() {
+                transport.add_header(header.0.clone(), header.1.clone());
+            }
+        }
+
+        Ok(JsonRpcClient::new(transport))
+    }
+
     // We dont check the env var because that would be handled by `clap`.
     // This function is made public because [`JsonRpcClient`] does not expose
     // the raw rpc url.

@@ -11,6 +11,8 @@ pub(crate) mod bindgen;
 pub(crate) mod build;
 pub(crate) mod call;
 pub(crate) mod clean;
+pub(crate) mod declare;
+pub(crate) mod deploy;
 pub(crate) mod events;
 pub(crate) mod execute;
 pub(crate) mod hash;
@@ -28,6 +30,8 @@ use bindgen::BindgenArgs;
 use build::BuildArgs;
 use call::CallArgs;
 use clean::CleanArgs;
+use declare::DeclareArgs;
+use deploy::DeployArgs;
 use events::EventsArgs;
 use execute::ExecuteArgs;
 use hash::HashArgs;
@@ -59,6 +63,10 @@ pub enum Commands {
     Clean(Box<CleanArgs>),
     #[command(about = "Computes hash with different hash functions")]
     Hash(Box<HashArgs>),
+    #[command(about = "Declare Dojo contracts and Sozo-managed classes on Starknet")]
+    Declare(Box<DeclareArgs>),
+    #[command(about = "Deploy Dojo world or Sozo-managed contracts")]
+    Deploy(Box<DeployArgs>),
     #[command(about = "Initialize a new dojo project")]
     Init(Box<InitArgs>),
     #[command(about = "Inspect the world")]
@@ -90,6 +98,8 @@ impl fmt::Display for Commands {
             Commands::Events(_) => write!(f, "Events"),
             Commands::Execute(_) => write!(f, "Execute"),
             Commands::Hash(_) => write!(f, "Hash"),
+            Commands::Declare(_) => write!(f, "Declare"),
+            Commands::Deploy(_) => write!(f, "Deploy"),
             Commands::Init(_) => write!(f, "Init"),
             Commands::Inspect(_) => write!(f, "Inspect"),
             Commands::Migrate(_) => write!(f, "Migrate"),
@@ -117,6 +127,8 @@ pub async fn run(command: Commands, scarb_metadata: &Metadata, ui: &SozoUi) -> R
         Commands::Events(args) => args.run(scarb_metadata, ui).await,
         Commands::Execute(args) => args.run(scarb_metadata, ui).await,
         Commands::Hash(args) => args.run(scarb_metadata),
+        Commands::Declare(args) => args.run(ui).await,
+        Commands::Deploy(args) => args.run(ui).await,
         Commands::Inspect(args) => args.run(scarb_metadata, ui).await,
         Commands::Mcp(args) => args.run(scarb_metadata).await,
         Commands::Migrate(args) => args.run(scarb_metadata, ui).await,

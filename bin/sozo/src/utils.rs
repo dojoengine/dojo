@@ -186,6 +186,17 @@ pub async fn get_world_diff_and_account(
     Ok((world_diff, account, rpc_url))
 }
 
+// Gets the account from the environment.
+pub async fn get_account_from_env(
+    account: AccountOptions,
+    starknet: &StarknetOptions,
+    headers: Option<Vec<(String, String)>>,
+) -> Result<SozoAccount<JsonRpcClient<HttpTransport>>> {
+    let provider = starknet.provider_from_url(headers)?;
+
+    account.account(provider, None, starknet, &HashMap::new()).await
+}
+
 fn show_profile_details(profile_config: &ProfileConfig, ui: &SozoUi) {
     ui.verbose("local profile");
     let local_ui = ui.subsection();

@@ -46,6 +46,18 @@ pub struct SignerOptions {
 }
 
 impl SignerOptions {
+    pub fn with_private_key(&self, private_key: &str) -> Self {
+        let mut cloned = self.clone();
+        cloned.private_key = Some(private_key.to_owned());
+        cloned.keystore_path = None;
+        cloned.keystore_password = None;
+        cloned
+    }
+
+    pub fn has_custom_signer(&self) -> bool {
+        self.private_key.is_some() || self.keystore_path.is_some()
+    }
+
     /// Retrieves the signer from the CLI or environment metadata.
     /// First, attempt to locate the signer from CLI arguments or environment variables via CLAP.
     /// If unsuccessful, then search for the signer within the Dojo environment metadata.
