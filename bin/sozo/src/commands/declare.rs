@@ -48,12 +48,17 @@ impl DeclareArgs {
             return Err(anyhow!("At least one Sierra artifact path must be provided."));
         }
 
-        // TODO: allow cutom headers form the CLI.
-        let headers = None;
-        let account = get_account_from_env(account, &starknet, headers).await?;
+        let account = get_account_from_env(account, &starknet).await?;
 
-        // TODO: maybe add the detection from the provider URL too.
-        let use_blake2s = starknet.use_blake2s_casm_class_hash;
+        let use_blake2s = if let Some(rpc_url) = starknet.rpc_url {
+            if rpc_url.to_string().contains("sepolia") || rpc_url.to_string().contains("testnet") {
+                true
+            } else {
+                starknet.use_blake2s_casm_class_hash
+            }
+        } else {
+            starknet.use_blake2s_casm_class_hash
+        };
 
         let txn_config: TxnConfig = transaction.try_into()?;
 

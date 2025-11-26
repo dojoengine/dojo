@@ -70,9 +70,7 @@ impl DeployArgs {
 
         let txn_config: TxnConfig = transaction.try_into()?;
 
-        // TODO: allow custom headers from the CLI.
-        let headers = None;
-        let account = get_account_from_env(account, &starknet, headers).await?;
+        let account = get_account_from_env(account, &starknet).await?;
 
         ui.title("Deploy contract");
         ui.step("Deploying contract via UDC");

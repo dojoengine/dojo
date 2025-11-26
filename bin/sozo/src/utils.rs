@@ -190,9 +190,8 @@ pub async fn get_world_diff_and_account(
 pub async fn get_account_from_env(
     account: AccountOptions,
     starknet: &StarknetOptions,
-    headers: Option<Vec<(String, String)>>,
 ) -> Result<SozoAccount<JsonRpcClient<HttpTransport>>> {
-    let provider = starknet.provider_from_url(headers)?;
+    let provider = starknet.provider_from_url(None)?;
 
     account.account(provider, None, starknet, &HashMap::new()).await
 }
