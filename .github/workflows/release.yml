@@ -103,7 +103,7 @@ jobs:
 
   create-draft-release:
     runs-on: ubuntu-latest
-    needs: [prepare, release, publish-scarb-packages]
+    needs: [prepare, publish-scarb-packages]
     env:
       GITHUB_USER: ${{ github.repository_owner }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
