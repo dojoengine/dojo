@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use clap::Args;
 use dojo_utils::{Invoker, TxnConfig};
 use dojo_world::config::calldata_decoder;
@@ -17,21 +17,16 @@ use crate::utils::{get_account_from_env, CALLDATA_DOC};
                    world context to be loaded. Use the execute command to execute systems in the \
                    world context.")]
 pub struct InvokeArgs {
-    #[arg(value_name = "CONTRACT_ADDRESS", help = "Target contract address.")]
-    pub contract: Felt,
-
-    #[arg(value_name = "ENTRYPOINT", help = "Entrypoint to invoke on the contract.")]
-    pub entrypoint: String,
-
     #[arg(
-        value_name = "ARG",
-        num_args = 0..,
+        num_args = 1..,
+        required = true,
         help = format!(
-            "Calldata elements for the entrypoint (space separated).\n\n{}",
+            "Calls to invoke, separated by '/'. \
+            Each call follows the format <CONTRACT> <ENTRYPOINT> [CALLDATA...]\n\n{}",
             CALLDATA_DOC
         )
     )]
-    pub calldata: Vec<String>,
+    pub calls: Vec<String>,
 
     #[command(flatten)]
     pub transaction: TransactionOptions,
@@ -39,7 +34,11 @@ pub struct InvokeArgs {
     #[command(flatten)]
     pub starknet: StarknetOptions,
 
+    #[arg(long, default_value = "0x0", help = "Selector for the entrypoint in felt form.")]
+    pub selector: Option<Felt>,
+
     #[command(flatten)]
+    #[command(next_help_heading = "Account options")]
     pub account: AccountOptions,
 }
 
@@ -47,46 +46,85 @@ impl InvokeArgs {
     pub async fn run(self, ui: &SozoUi) -> Result<()> {
         trace!(args = ?self);
 
-        let InvokeArgs { contract, entrypoint, calldata, transaction, starknet, account } = self;
+        let account = get_account_from_env(self.account, &self.starknet).await?;
+        let txn_config: TxnConfig = self.transaction.try_into()?;
+        let mut invoker = Invoker::new(account, txn_config);
 
-        let account = get_account_from_env(account, &starknet).await?;
-        let txn_config: TxnConfig = transaction.try_into()?;
+        let mut calls_iter = self.calls.into_iter();
+        let mut call_index = 0usize;
 
-        ui.title(format!("Invoke contract {:#066x}", contract));
-        ui.step(format!("Entrypoint: {}", entrypoint));
+        while let Some(target) = calls_iter.next() {
+            if matches!(target.as_str(), "/" | "-" | "\\") {
+                continue;
+            }
 
-        let mut decoded = Vec::new();
-        for item in calldata {
-            let felt_values = calldata_decoder::decode_single_calldata(&item)
-                .with_context(|| format!("Failed to parse calldata argument `{item}`"))?;
-            decoded.extend(felt_values);
+            let entrypoint = calls_iter.next().ok_or_else(|| {
+                anyhow!(
+                    "Missing entrypoint for target `{target}`. Provide calls as `<CONTRACT> \
+                     <ENTRYPOINT> [CALLDATA...]`."
+                )
+            })?;
+
+            let contract_address = parse_contract_address(&target)?;
+            let selector = get_selector_from_name(&entrypoint)?;
+
+            let mut calldata = Vec::new();
+            for arg in calls_iter.by_ref() {
+                match arg.as_str() {
+                    "/" | "-" | "\\" => break,
+                    _ => {
+                        let felts =
+                            calldata_decoder::decode_single_calldata(&arg).with_context(|| {
+                                format!("Failed to parse calldata argument `{arg}`")
+                            })?;
+                        calldata.extend(felts);
+                    }
+                }
+            }
+
+            call_index += 1;
+            ui.step(format!("Call #{call_index}: {entrypoint} @ {:#066x}", contract_address));
+            if calldata.is_empty() {
+                ui.verbose("  Calldata: <empty>");
+            } else {
+                ui.verbose(format!("  Calldata ({} felt(s))", calldata.len()));
+            }
+
+            invoker.add_call(Call { to: contract_address, selector, calldata });
         }
 
-        if decoded.is_empty() {
-            ui.verbose("Calldata: <empty>");
-        } else {
-            ui.verbose(format!("Calldata ({} felt(s))", decoded.len()));
+        if invoker.calls.is_empty() {
+            bail!("No calls provided to invoke.");
         }
 
-        let selector = get_selector_from_name(&entrypoint)?;
-        let call = Call { to: contract, selector, calldata: decoded };
+        let results = invoker.multicall().await?;
 
-        let invoker = Invoker::new(account, txn_config);
-        let result = invoker.invoke(call).await?;
-
-        match result {
-            dojo_utils::TransactionResult::Noop => {
-                ui.result("Nothing to invoke (noop).");
-            }
-            dojo_utils::TransactionResult::Hash(hash) => {
-                ui.result(format!("Invocation sent.\n  Tx hash   : {hash:#066x}"));
-            }
-            dojo_utils::TransactionResult::HashReceipt(hash, receipt) => {
-                ui.result(format!("Invocation included on-chain.\n  Tx hash   : {hash:#066x}"));
-                ui.debug(format!("Receipt: {:?}", receipt));
+        for (idx, result) in results.iter().enumerate() {
+            let display_idx = idx + 1;
+            match result {
+                dojo_utils::TransactionResult::Noop => {
+                    ui.result(format!("Call #{display_idx} noop (no transaction sent)."));
+                }
+                dojo_utils::TransactionResult::Hash(hash) => {
+                    ui.result(format!("Call #{display_idx} sent.\n  Tx hash   : {hash:#066x}"));
+                }
+                dojo_utils::TransactionResult::HashReceipt(hash, receipt) => {
+                    ui.result(format!("Call #{display_idx} included.\n  Tx hash   : {hash:#066x}"));
+                    ui.debug(format!("Receipt: {:?}", receipt));
+                }
             }
         }
 
         Ok(())
     }
+}
+
+fn parse_contract_address(value: &str) -> Result<Felt> {
+    if let Ok(felt) = Felt::from_hex(value) {
+        return Ok(felt);
+    }
+
+    Felt::from_dec_str(value).map_err(|_| {
+        anyhow!("Invalid contract address `{value}`. Use hex (0x...) or decimal form.")
+    })
 }

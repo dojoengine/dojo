@@ -2,7 +2,7 @@ use anyhow::{self, Result};
 use cainome::cairo_serde::{ByteArray, CairoSerde};
 use num_bigint::BigUint;
 use starknet::core::types::{Felt, FromStrError};
-use starknet::core::utils::cairo_short_string_to_felt;
+use starknet::core::utils::{cairo_short_string_to_felt, get_selector_from_name};
 
 /// An error that occurs while decoding calldata.
 #[derive(thiserror::Error, Debug)]
@@ -31,6 +31,24 @@ const ITEM_PREFIX_DELIMITER: char = ':';
 /// A trait for decoding calldata into a vector of Felts.
 trait CalldataDecoder {
     fn decode(&self, input: &str) -> DecoderResult<Vec<Felt>>;
+}
+
+/// Decodes a selector into a [`Felt`].
+struct SelectorCalldataDecoder;
+impl CalldataDecoder for SelectorCalldataDecoder {
+    fn decode(&self, input: &str) -> DecoderResult<Vec<Felt>> {
+        let felt_selector = match get_selector_from_name(input) {
+            Ok(felt) => felt,
+            Err(_) => {
+                return Err(CalldataDecoderError::ParseError(format!(
+                    "Selector `{}` contains non-ASCII characters",
+                    input
+                )));
+            }
+        };
+
+        Ok(vec![felt_selector])
+    }
 }
 
 /// Decodes a u256 string into a [`Felt`]s array representing
@@ -224,6 +242,7 @@ pub fn decode_single_calldata(item: &str) -> DecoderResult<Vec<Felt>> {
 
     let felts = if let Some((prefix, value)) = item.split_once(ITEM_PREFIX_DELIMITER) {
         match prefix {
+            "selector" => SelectorCalldataDecoder.decode(value)?,
             "u256" => U256CalldataDecoder.decode(value)?,
             "str" => StrCalldataDecoder.decode(value)?,
             "sstr" => ShortStrCalldataDecoder.decode(value)?,
