@@ -18,6 +18,7 @@ pub(crate) mod execute;
 pub(crate) mod hash;
 pub(crate) mod init;
 pub(crate) mod inspect;
+pub(crate) mod invoke;
 pub(crate) mod mcp;
 pub(crate) mod migrate;
 pub(crate) mod model;
@@ -37,6 +38,7 @@ use execute::ExecuteArgs;
 use hash::HashArgs;
 use init::InitArgs;
 use inspect::InspectArgs;
+use invoke::InvokeArgs;
 use mcp::McpArgs;
 use migrate::MigrateArgs;
 use model::ModelArgs;
@@ -59,6 +61,8 @@ pub enum Commands {
     Events(Box<EventsArgs>),
     #[command(about = "Execute one or several systems with the given calldata.")]
     Execute(Box<ExecuteArgs>),
+    #[command(about = "Invoke a contract entrypoint on Starknet.")]
+    Invoke(Box<InvokeArgs>),
     #[command(about = "Clean the build directory")]
     Clean(Box<CleanArgs>),
     #[command(about = "Computes hash with different hash functions")]
@@ -98,6 +102,7 @@ impl fmt::Display for Commands {
             Commands::Events(_) => write!(f, "Events"),
             Commands::Execute(_) => write!(f, "Execute"),
             Commands::Hash(_) => write!(f, "Hash"),
+            Commands::Invoke(_) => write!(f, "Invoke"),
             Commands::Declare(_) => write!(f, "Declare"),
             Commands::Deploy(_) => write!(f, "Deploy"),
             Commands::Init(_) => write!(f, "Init"),
@@ -126,6 +131,7 @@ pub async fn run(command: Commands, scarb_metadata: &Metadata, ui: &SozoUi) -> R
         Commands::Clean(args) => args.run(scarb_metadata),
         Commands::Events(args) => args.run(scarb_metadata, ui).await,
         Commands::Execute(args) => args.run(scarb_metadata, ui).await,
+        Commands::Invoke(args) => args.run(ui).await,
         Commands::Hash(args) => args.run(scarb_metadata),
         Commands::Declare(args) => args.run(ui).await,
         Commands::Deploy(args) => args.run(ui).await,
