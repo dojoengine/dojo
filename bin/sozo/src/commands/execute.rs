@@ -19,7 +19,7 @@ use super::options::world::WorldOptions;
 use crate::utils::{self, CALLDATA_DOC};
 
 #[derive(Debug, Args)]
-#[command(about = "Execute one or several systems with the given calldata.")]
+#[command(about = "Execute one or several systems in the world context with the given calldata.")]
 pub struct ExecuteArgs {
     #[arg(num_args = 1..)]
     #[arg(required = true)]
