@@ -50,14 +50,15 @@ impl WorldLocal {
             "Loading world from directory."
         );
 
-        // Currently, we have no way to know the network chain-id from here.
-        // We try to read the rpc_url of the config to infer the chain-id.
+        // As of 10th of December 2025, Mainnet network is now using the blake2s class hash.
+        // But Katana doesn't yet. So we still need to autodetect it.
         let autodetect_blake2s_class_hash = profile_config
             .env
             .as_ref()
             .map(|env| {
                 env.rpc_url.as_ref().unwrap().contains("sepolia")
                     || env.rpc_url.as_ref().unwrap().contains("testnet")
+                    || env.rpc_url.as_ref().unwrap().contains("mainnet")
             })
             .unwrap_or(false);
 

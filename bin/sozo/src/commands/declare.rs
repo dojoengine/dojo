@@ -50,8 +50,13 @@ impl DeclareArgs {
 
         let account = get_account_from_env(account, &starknet).await?;
 
+        // As of 10th of December 2025, Mainnet network is now using the blake2s class hash.
+        // But Katana doesn't yet. So we still need to autodetect it.
         let use_blake2s = if let Some(rpc_url) = starknet.rpc_url {
-            if rpc_url.to_string().contains("sepolia") || rpc_url.to_string().contains("testnet") {
+            if rpc_url.to_string().contains("sepolia")
+                || rpc_url.to_string().contains("testnet")
+                || rpc_url.to_string().contains("mainnet")
+            {
                 true
             } else {
                 starknet.use_blake2s_casm_class_hash
