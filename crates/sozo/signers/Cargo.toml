@@ -4,7 +4,7 @@ edition.workspace = true
 license-file.workspace = true
 name = "sozo-signers"
 repository.workspace = true
-version = "1.8.4"
+version = "1.8.5"
 
 [dependencies]
 anyhow.workspace = true
