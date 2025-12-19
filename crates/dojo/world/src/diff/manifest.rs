@@ -10,6 +10,7 @@ use starknet::core::types::contract::{AbiEntry, AbiEvent, TypedAbiEvent, Untyped
 use starknet::core::types::Felt;
 
 use super::{ResourceDiff, WorldDiff};
+use crate::config::migration_config::ManifestAbiFormat;
 use crate::local::{ExternalContractLocal, ResourceLocal};
 use crate::remote::ResourceRemote;
 use crate::ResourceType;
@@ -27,7 +28,9 @@ pub struct Manifest {
     /// vector. When serialized, the entries are always sorted alphabetically by name.
     #[serde(
         serialize_with = "serialize_abis_hashmap",
-        deserialize_with = "deserialize_abis_hashmap"
+        deserialize_with = "deserialize_abis_hashmap",
+        default,
+        skip_serializing_if = "HashMap::is_empty"
     )]
     pub abis: HashMap<String, AbiEntry>,
 }
@@ -47,8 +50,8 @@ pub struct WorldContract {
     pub name: String,
     /// Entrypoints of the world.
     pub entrypoints: Vec<String>,
-    /// Abi of the world, skipped during serialization in favor of the `abis` field.
-    #[serde(skip)]
+    /// Abi of the world. Cleared when we omit inline ABIs from the manifest.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub abi: Vec<AbiEntry>,
 }
 
@@ -61,8 +64,8 @@ pub struct DojoContract {
     /// Class hash of the contract.
     #[serde_as(as = "UfeHex")]
     pub class_hash: Felt,
-    /// ABI of the contract, skipped during serialization in favor of the `abis` field.
-    #[serde(skip)]
+    /// ABI of the contract. Cleared when we omit inline ABIs from the manifest.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub abi: Vec<AbiEntry>,
     /// Initialization call data.
     #[serde(default)]
@@ -82,8 +85,8 @@ pub struct DojoLibrary {
     /// Class hash of the contract.
     #[serde_as(as = "UfeHex")]
     pub class_hash: Felt,
-    /// ABI of the contract, skipped during serialization in favor of the `abis` field.
-    #[serde(skip)]
+    /// ABI of the contract. Cleared when we omit inline ABIs from the manifest.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub abi: Vec<AbiEntry>,
     /// Tag of the contract.
     pub tag: String,
@@ -109,8 +112,8 @@ pub struct DojoModel {
     /// Selector of the model.
     #[serde_as(as = "UfeHex")]
     pub selector: Felt,
-    /// ABI of the model, skipped during serialization in favor of the `abis` field.
-    #[serde(skip)]
+    /// ABI of the model. Cleared when we omit inline ABIs from the manifest.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub abi: Vec<AbiEntry>,
 }
 
@@ -138,8 +141,8 @@ pub struct DojoEvent {
     /// Selector of the event.
     #[serde_as(as = "UfeHex")]
     pub selector: Felt,
-    /// ABI of the event, skipped during serialization in favor of the `abis` field.
-    #[serde(skip)]
+    /// ABI of the event. Cleared when we omit inline ABIs from the manifest.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub abi: Vec<AbiEntry>,
 }
 
@@ -166,9 +169,8 @@ pub struct ExternalContract {
     /// Contract address
     #[serde_as(as = "UfeHex")]
     pub address: Felt,
-    /// ABI of the contract.
-    /// Ignored during serialization in favor of the `abis` field.
-    #[serde(skip)]
+    /// ABI of the contract. Cleared when we omit inline ABIs from the manifest.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub abi: Vec<AbiEntry>,
     /// Human-readeable constructor call data.
     #[serde(default)]
@@ -249,6 +251,24 @@ impl Manifest {
         external_contracts.iter().for_each(|e| add_abi_entries(&mut abis, e.abi.clone()));
 
         Self { world, contracts, models, events, libraries, external_contracts, abis }
+    }
+
+    /// Removes inline ABI definitions so they are omitted during serialization.
+    pub fn strip_inline_abis(&mut self) {
+        self.world.abi.clear();
+        self.contracts.iter_mut().for_each(|c| c.abi.clear());
+        self.models.iter_mut().for_each(|m| m.abi.clear());
+        self.events.iter_mut().for_each(|e| e.abi.clear());
+        self.libraries.iter_mut().for_each(|l| l.abi.clear());
+        self.external_contracts.iter_mut().for_each(|c| c.abi.clear());
+    }
+
+    /// Applies the ABI layout requested for the manifest output.
+    pub fn apply_abi_format(&mut self, format: ManifestAbiFormat) {
+        match format {
+            ManifestAbiFormat::AllInOne => self.strip_inline_abis(),
+            ManifestAbiFormat::PerContract => self.abis.clear(),
+        }
     }
 
     pub fn get_contract_address(&self, tag: &str) -> Option<Felt> {
@@ -520,5 +540,73 @@ fn add_abi_entries(abis: &mut HashMap<String, AbiEntry>, abi: Vec<AbiEntry>) {
 
         let entry_name = get_abi_name(&abi_entry);
         abis.insert(entry_name, abi_entry);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+    use starknet::macros::felt;
+
+    use super::*;
+
+    #[test]
+    fn apply_abi_format_controls_serialization() {
+        let abi_entry: AbiEntry = serde_json::from_value(json!({
+            "type": "function",
+            "name": "foo",
+            "inputs": [],
+            "outputs": [],
+            "state_mutability": "view"
+        }))
+        .unwrap();
+
+        let mut manifest_base = Manifest {
+            world: WorldContract {
+                class_hash: felt!("0x1"),
+                address: felt!("0x2"),
+                seed: "seed".to_string(),
+                name: "world".to_string(),
+                entrypoints: vec!["execute".to_string()],
+                abi: vec![abi_entry.clone()],
+            },
+            contracts: vec![DojoContract {
+                address: felt!("0x3"),
+                class_hash: felt!("0x4"),
+                abi: vec![abi_entry.clone()],
+                init_calldata: vec![],
+                tag: "ns-contract".to_string(),
+                systems: vec!["system".to_string()],
+                selector: felt!("0x5"),
+            }],
+            libraries: vec![],
+            models: vec![],
+            events: vec![],
+            external_contracts: vec![],
+            abis: HashMap::new(),
+        };
+
+        manifest_base.abis.insert("foo".to_string(), abi_entry.clone());
+
+        let default_json = serde_json::to_value(&manifest_base).unwrap();
+        assert!(default_json["contracts"][0].get("abi").is_some());
+        assert!(default_json["world"].get("abi").is_some());
+        assert!(default_json.get("abis").is_some());
+
+        let mut all_in_one = manifest_base.clone();
+        all_in_one.apply_abi_format(ManifestAbiFormat::AllInOne);
+
+        let all_in_one_json = serde_json::to_value(&all_in_one).unwrap();
+        assert!(all_in_one_json["contracts"][0].get("abi").is_none());
+        assert!(all_in_one_json["world"].get("abi").is_none());
+        assert!(all_in_one_json.get("abis").is_some());
+
+        let mut per_contract = manifest_base;
+        per_contract.apply_abi_format(ManifestAbiFormat::PerContract);
+
+        let per_contract_json = serde_json::to_value(&per_contract).unwrap();
+        assert!(per_contract_json["contracts"][0].get("abi").is_some());
+        assert!(per_contract_json["world"].get("abi").is_some());
+        assert!(per_contract_json.get("abis").is_none());
     }
 }

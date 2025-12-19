@@ -1,9 +1,10 @@
 use std::sync::Arc;
 
 use anyhow::{anyhow, Context, Result};
-use clap::Args;
+use clap::{Args, ValueEnum};
 use colored::*;
 use dojo_utils::{self, provider as provider_utils, TxnConfig};
+use dojo_world::config::migration_config::ManifestAbiFormat;
 use dojo_world::contracts::WorldContract;
 use dojo_world::services::IpfsService;
 use scarb_metadata::Metadata;
@@ -39,6 +40,10 @@ pub struct MigrateArgs {
 
     #[command(flatten)]
     pub ipfs: IpfsOptions,
+
+    /// Select how ABIs are written in the generated manifest.
+    #[arg(long, value_enum, value_name = "FORMAT")]
+    pub manifest_abi_format: Option<ManifestAbiFormatArg>,
 }
 
 impl MigrateArgs {
@@ -48,7 +53,7 @@ impl MigrateArgs {
 
         scarb_metadata.ensure_profile_artifacts()?;
 
-        let MigrateArgs { world, starknet, account, ipfs, .. } = self;
+        let MigrateArgs { world, starknet, account, ipfs, manifest_abi_format, .. } = self;
 
         print_banner(ui, scarb_metadata, &starknet).await?;
 
@@ -80,8 +85,16 @@ impl MigrateArgs {
             is_guest,
         );
 
-        let MigrationResult { manifest, has_changes } =
+        let MigrationResult { mut manifest, has_changes } =
             migration.migrate(ui).await.context("Migration failed.")?;
+
+        let config_format =
+            profile_config.migration.as_ref().and_then(|m| m.manifest_abi_format.clone());
+
+        let manifest_abi_format =
+            manifest_abi_format.map(ManifestAbiFormat::from).or(config_format).unwrap_or_default();
+
+        manifest.apply_abi_format(manifest_abi_format);
 
         let ipfs_config =
             ipfs.config().or(profile_config.env.map(|env| env.ipfs_config).unwrap_or(None));
@@ -121,6 +134,22 @@ impl MigrateArgs {
         ui.new_line();
 
         Ok(())
+    }
+}
+
+#[derive(Debug, Clone, Copy, ValueEnum)]
+#[value(rename_all = "snake_case")]
+pub enum ManifestAbiFormatArg {
+    AllInOne,
+    PerContract,
+}
+
+impl From<ManifestAbiFormatArg> for ManifestAbiFormat {
+    fn from(value: ManifestAbiFormatArg) -> Self {
+        match value {
+            ManifestAbiFormatArg::AllInOne => ManifestAbiFormat::AllInOne,
+            ManifestAbiFormatArg::PerContract => ManifestAbiFormat::PerContract,
+        }
     }
 }
 
