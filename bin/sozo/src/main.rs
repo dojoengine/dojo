@@ -20,7 +20,6 @@ use terminal_colorsaurus::{theme_mode, QueryOptions, ThemeMode};
 #[tokio::main]
 async fn main() {
     let args = SozoArgs::parse();
-
     let _ = args.init_logging(&args.verbose);
 
     let ui_theme = if let Ok(theme) = theme_mode(QueryOptions::default()) {
@@ -50,6 +49,8 @@ async fn cli_main(args: SozoArgs, ui: &SozoUi) -> Result<()> {
     } else if let Commands::Invoke(args) = args.command {
         args.run(ui).await
     } else if let Commands::FunctionCall(args) = args.command {
+        args.run(ui).await
+    } else if let Commands::Starknet(args) = args.command {
         args.run(ui).await
     } else {
         // Default to the current directory to mimic how Scarb works.

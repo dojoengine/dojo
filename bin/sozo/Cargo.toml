@@ -15,6 +15,7 @@ camino.workspace = true
 clap.workspace = true
 clap-verbosity-flag.workspace = true
 colored.workspace = true
+colored_json.workspace = true
 dojo-bindgen.workspace = true
 dojo-types.workspace = true
 dojo-utils.workspace = true

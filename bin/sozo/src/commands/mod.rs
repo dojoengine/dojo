@@ -24,6 +24,7 @@ pub(crate) mod mcp;
 pub(crate) mod migrate;
 pub(crate) mod model;
 pub(crate) mod options;
+pub(crate) mod starknet;
 pub(crate) mod test;
 pub(crate) mod version;
 
@@ -46,6 +47,7 @@ use migrate::MigrateArgs;
 use model::ModelArgs;
 #[cfg(feature = "walnut")]
 use sozo_walnut::walnut::WalnutArgs;
+use starknet::StarknetArgs;
 use test::TestArgs;
 use version::VersionArgs;
 
@@ -93,6 +95,8 @@ pub enum Commands {
     Walnut(Box<WalnutArgs>),
     #[command(about = "Starts a MCP server")]
     Mcp(Box<McpArgs>),
+    #[command(alias = "sn", about = "Starknet utility commands (alias: sn)")]
+    Starknet(Box<StarknetArgs>),
 }
 
 impl fmt::Display for Commands {
@@ -119,6 +123,7 @@ impl fmt::Display for Commands {
             Commands::Mcp(_) => write!(f, "Mcp"),
             #[cfg(feature = "walnut")]
             Commands::Walnut(_) => write!(f, "WalnutVerify"),
+            Commands::Starknet(_) => write!(f, "Starknet"),
         }
     }
 }
@@ -152,6 +157,11 @@ pub async fn run(command: Commands, scarb_metadata: &Metadata, ui: &SozoUi) -> R
         Commands::Init(_) => {
             // `sozo init` is directly managed in main.rs as scarb metadata
             // cannot be loaded in this case (the project does not exist yet).
+            Ok(())
+        }
+        Commands::Starknet(_) => {
+            // `sozo starknet` is directly managed in main.rs as scarb metadata
+            // is not required for these utility commands.
             Ok(())
         }
     }

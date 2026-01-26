@@ -7180,6 +7180,7 @@ dependencies = [
  "clap",
  "clap-verbosity-flag",
  "colored 2.2.0",
+ "colored_json",
  "dojo-bindgen",
  "dojo-test-utils",
  "dojo-types",
