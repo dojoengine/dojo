@@ -15,6 +15,7 @@ pub(crate) mod declare;
 pub(crate) mod deploy;
 pub(crate) mod events;
 pub(crate) mod execute;
+pub(crate) mod function_call;
 pub(crate) mod hash;
 pub(crate) mod init;
 pub(crate) mod inspect;
@@ -35,6 +36,7 @@ use declare::DeclareArgs;
 use deploy::DeployArgs;
 use events::EventsArgs;
 use execute::ExecuteArgs;
+use function_call::FunctionCallArgs;
 use hash::HashArgs;
 use init::InitArgs;
 use inspect::InspectArgs;
@@ -61,6 +63,8 @@ pub enum Commands {
     Events(Box<EventsArgs>),
     #[command(about = "Execute one or several systems with the given calldata.")]
     Execute(Box<ExecuteArgs>),
+    #[command(about = "Call a contract function without requiring a Dojo project context.")]
+    FunctionCall(Box<FunctionCallArgs>),
     #[command(about = "Invoke a contract entrypoint on Starknet.")]
     Invoke(Box<InvokeArgs>),
     #[command(about = "Clean the build directory")]
@@ -101,6 +105,7 @@ impl fmt::Display for Commands {
             Commands::Clean(_) => write!(f, "Clean"),
             Commands::Events(_) => write!(f, "Events"),
             Commands::Execute(_) => write!(f, "Execute"),
+            Commands::FunctionCall(_) => write!(f, "FunctionCall"),
             Commands::Hash(_) => write!(f, "Hash"),
             Commands::Invoke(_) => write!(f, "Invoke"),
             Commands::Declare(_) => write!(f, "Declare"),
@@ -131,6 +136,7 @@ pub async fn run(command: Commands, scarb_metadata: &Metadata, ui: &SozoUi) -> R
         Commands::Clean(args) => args.run(scarb_metadata),
         Commands::Events(args) => args.run(scarb_metadata, ui).await,
         Commands::Execute(args) => args.run(scarb_metadata, ui).await,
+        Commands::FunctionCall(args) => args.run(ui).await,
         Commands::Invoke(args) => args.run(ui).await,
         Commands::Hash(args) => args.run(scarb_metadata),
         Commands::Declare(args) => args.run(ui).await,

@@ -49,6 +49,8 @@ async fn cli_main(args: SozoArgs, ui: &SozoUi) -> Result<()> {
         args.run(ui).await
     } else if let Commands::Invoke(args) = args.command {
         args.run(ui).await
+    } else if let Commands::FunctionCall(args) = args.command {
+        args.run(ui).await
     } else {
         // Default to the current directory to mimic how Scarb works.
         let manifest_path = if let Some(manifest_path) = &args.manifest_path {
