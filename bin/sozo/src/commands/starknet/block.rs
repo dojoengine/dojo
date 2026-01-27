@@ -1,7 +1,11 @@
 use anyhow::Result;
 use clap::Args;
 use sozo_ui::SozoUi;
-use starknet::providers::Provider;
+use starknet::core::types::requests::{
+    GetBlockWithReceiptsRequest, GetBlockWithTxHashesRequest, GetBlockWithTxsRequest,
+};
+use starknet::core::types::BlockId;
+use starknet::providers::{Provider, ProviderRequestData, ProviderResponseData};
 use tracing::trace;
 
 use super::{print_json, BlockIdOption, OutputOptions};
@@ -65,11 +69,11 @@ impl BlockHashArgs {
 #[derive(Debug, Args)]
 #[command(about = "Get block information")]
 pub struct BlockArgs {
-    #[command(flatten)]
-    pub starknet: StarknetOptions,
+    #[arg(help = "Block ID(s) - number, hash, 'latest', 'pending'. Supports multiple for batching")]
+    pub block_ids: Vec<String>,
 
     #[command(flatten)]
-    pub block_id: BlockIdOption,
+    pub starknet: StarknetOptions,
 
     #[arg(long, help = "Include full transaction details")]
     pub full: bool,
@@ -86,17 +90,71 @@ impl BlockArgs {
         trace!(args = ?self);
 
         let (provider, _) = self.starknet.provider(None)?;
-        let block_id = self.block_id.to_block_id()?;
 
-        if self.receipts {
-            let block = provider.get_block_with_receipts(block_id).await?;
-            print_json(ui, &block, self.output.raw)
-        } else if self.full {
-            let block = provider.get_block_with_txs(block_id).await?;
-            print_json(ui, &block, self.output.raw)
+        // If no block IDs provided, default to latest
+        let block_ids: Vec<BlockId> = if self.block_ids.is_empty() {
+            vec![BlockId::Tag(starknet::core::types::BlockTag::Latest)]
         } else {
-            let block = provider.get_block_with_tx_hashes(block_id).await?;
-            print_json(ui, &block, self.output.raw)
+            self.block_ids
+                .iter()
+                .map(|id| dojo_utils::parse_block_id(id.clone()))
+                .collect::<Result<Vec<_>>>()?
+        };
+
+        if block_ids.len() == 1 {
+            // Single request (existing behavior)
+            let block_id = block_ids[0].clone();
+            if self.receipts {
+                let block = provider.get_block_with_receipts(block_id).await?;
+                print_json(ui, &block, self.output.raw)
+            } else if self.full {
+                let block = provider.get_block_with_txs(block_id).await?;
+                print_json(ui, &block, self.output.raw)
+            } else {
+                let block = provider.get_block_with_tx_hashes(block_id).await?;
+                print_json(ui, &block, self.output.raw)
+            }
+        } else {
+            // Batch request
+            let requests: Vec<ProviderRequestData> = block_ids
+                .iter()
+                .map(|block_id| {
+                    if self.receipts {
+                        ProviderRequestData::GetBlockWithReceipts(GetBlockWithReceiptsRequest {
+                            block_id: block_id.clone(),
+                        })
+                    } else if self.full {
+                        ProviderRequestData::GetBlockWithTxs(GetBlockWithTxsRequest {
+                            block_id: block_id.clone(),
+                        })
+                    } else {
+                        ProviderRequestData::GetBlockWithTxHashes(GetBlockWithTxHashesRequest {
+                            block_id: block_id.clone(),
+                        })
+                    }
+                })
+                .collect();
+
+            let responses = provider.batch_requests(&requests).await?;
+
+            // Extract block data from responses
+            let blocks: Vec<serde_json::Value> = responses
+                .into_iter()
+                .map(|r| match r {
+                    ProviderResponseData::GetBlockWithTxHashes(block) => {
+                        serde_json::to_value(block).unwrap()
+                    }
+                    ProviderResponseData::GetBlockWithTxs(block) => {
+                        serde_json::to_value(block).unwrap()
+                    }
+                    ProviderResponseData::GetBlockWithReceipts(block) => {
+                        serde_json::to_value(block).unwrap()
+                    }
+                    _ => panic!("Unexpected response type"),
+                })
+                .collect();
+
+            print_json(ui, &blocks, self.output.raw)
         }
     }
 }

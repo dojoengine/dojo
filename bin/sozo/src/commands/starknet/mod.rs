@@ -3,6 +3,9 @@ pub mod network;
 pub mod state;
 pub mod transaction;
 
+#[cfg(test)]
+mod tests;
+
 use anyhow::Result;
 use clap::{Args, Subcommand};
 use colored_json::ToColoredJson;
