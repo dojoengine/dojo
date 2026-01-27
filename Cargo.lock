@@ -7170,7 +7170,7 @@ dependencies = [
 
 [[package]]
 name = "sozo"
-version = "1.8.5"
+version = "1.8.6"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -7217,7 +7217,7 @@ dependencies = [
 
 [[package]]
 name = "sozo-mcp"
-version = "1.8.5"
+version = "1.8.6"
 dependencies = [
  "anyhow",
  "camino",
@@ -7240,7 +7240,7 @@ dependencies = [
 
 [[package]]
 name = "sozo-ops"
-version = "1.8.5"
+version = "1.8.6"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -7274,7 +7274,7 @@ dependencies = [
 
 [[package]]
 name = "sozo-signers"
-version = "1.8.5"
+version = "1.8.6"
 dependencies = [
  "anyhow",
  "starknet",
@@ -7282,14 +7282,14 @@ dependencies = [
 
 [[package]]
 name = "sozo-ui"
-version = "1.8.5"
+version = "1.8.6"
 dependencies = [
  "colored 2.2.0",
 ]
 
 [[package]]
 name = "sozo-walnut"
-version = "1.8.5"
+version = "1.8.6"
 dependencies = [
  "anyhow",
  "clap",
