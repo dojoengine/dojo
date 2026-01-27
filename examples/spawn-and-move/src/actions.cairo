@@ -248,8 +248,6 @@ pub mod actions {
             world.erase_model(@position);
             // world.erase_model(@moves);
             world.erase_model(@config);
-
-            
         }
 
         fn set_player_server_profile(ref self: ContractState, server_id: u32, name: ByteArray) {
