@@ -28,11 +28,8 @@ impl TransactionArgs {
     pub async fn run(self, ui: &SozoUi) -> Result<()> {
         trace!(args = ?self);
 
-        let hashes: Vec<Felt> = self
-            .transaction_hashes
-            .iter()
-            .map(|h| parse_felt(h))
-            .collect::<Result<Vec<_>>>()?;
+        let hashes: Vec<Felt> =
+            self.transaction_hashes.iter().map(|h| parse_felt(h)).collect::<Result<Vec<_>>>()?;
 
         let (provider, _) = self.starknet.provider(None)?;
 
@@ -84,11 +81,8 @@ impl ReceiptArgs {
     pub async fn run(self, ui: &SozoUi) -> Result<()> {
         trace!(args = ?self);
 
-        let hashes: Vec<Felt> = self
-            .transaction_hashes
-            .iter()
-            .map(|h| parse_felt(h))
-            .collect::<Result<Vec<_>>>()?;
+        let hashes: Vec<Felt> =
+            self.transaction_hashes.iter().map(|h| parse_felt(h)).collect::<Result<Vec<_>>>()?;
 
         let (provider, _) = self.starknet.provider(None)?;
 
@@ -140,11 +134,8 @@ impl StatusArgs {
     pub async fn run(self, ui: &SozoUi) -> Result<()> {
         trace!(args = ?self);
 
-        let hashes: Vec<Felt> = self
-            .transaction_hashes
-            .iter()
-            .map(|h| parse_felt(h))
-            .collect::<Result<Vec<_>>>()?;
+        let hashes: Vec<Felt> =
+            self.transaction_hashes.iter().map(|h| parse_felt(h)).collect::<Result<Vec<_>>>()?;
 
         let (provider, _) = self.starknet.provider(None)?;
 

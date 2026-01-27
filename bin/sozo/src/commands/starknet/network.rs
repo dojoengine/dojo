@@ -72,24 +72,19 @@ impl SyncingArgs {
         let sync_status = provider.syncing().await?;
 
         match &sync_status {
-            SyncStatusType::NotSyncing => {
-                print_json(
-                    ui,
-                    &serde_json::json!({
-                        "syncing": false,
-                        "status": "fully synced"
-                    }),
-                    self.output.raw,
-                )
-            }
+            SyncStatusType::NotSyncing => print_json(
+                ui,
+                &serde_json::json!({
+                    "syncing": false,
+                    "status": "fully synced"
+                }),
+                self.output.raw,
+            ),
             SyncStatusType::Syncing(status) => {
                 let total = status.highest_block_num - status.starting_block_num;
                 let current = status.current_block_num - status.starting_block_num;
-                let progress = if total > 0 {
-                    (current as f64 / total as f64) * 100.0
-                } else {
-                    0.0
-                };
+                let progress =
+                    if total > 0 { (current as f64 / total as f64) * 100.0 } else { 0.0 };
 
                 print_json(
                     ui,

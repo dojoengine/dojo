@@ -24,7 +24,10 @@ const STRK_CONTRACT_ADDRESS: Felt =
 #[derive(Debug, Args)]
 #[command(about = "Get STRK or ETH balance of an address")]
 pub struct BalanceArgs {
-    #[arg(help = "Address(es) to check balance for - supports multiple for batching", required = true)]
+    #[arg(
+        help = "Address(es) to check balance for - supports multiple for batching",
+        required = true
+    )]
     pub addresses: Vec<String>,
 
     #[arg(long, help = "Get ETH balance instead of STRK")]
@@ -47,11 +50,8 @@ impl BalanceArgs {
     pub async fn run(self, ui: &SozoUi) -> Result<()> {
         trace!(args = ?self);
 
-        let addresses: Vec<Felt> = self
-            .addresses
-            .iter()
-            .map(|a| parse_felt(a))
-            .collect::<Result<Vec<_>>>()?;
+        let addresses: Vec<Felt> =
+            self.addresses.iter().map(|a| parse_felt(a)).collect::<Result<Vec<_>>>()?;
 
         let (provider, _) = self.starknet.provider(None)?;
         let block_id = self.block_id.to_block_id()?;
@@ -117,7 +117,7 @@ impl BalanceArgs {
                             entry_point_selector: balance_of_selector,
                             calldata: vec![*addr],
                         },
-                        block_id: block_id.clone(),
+                        block_id,
                     })
                 })
                 .collect();
@@ -195,11 +195,7 @@ fn format_balance_with_decimals(low: Felt, high: Felt, decimals: u32) -> String 
 
     // Trim trailing zeros from fraction
     let fraction = fraction.trim_end_matches('0');
-    if fraction.is_empty() {
-        integer.to_string()
-    } else {
-        format!("{}.{}", integer, fraction)
-    }
+    if fraction.is_empty() { integer.to_string() } else { format!("{}.{}", integer, fraction) }
 }
 
 #[derive(Debug, Args)]
@@ -222,11 +218,8 @@ impl NonceArgs {
     pub async fn run(self, ui: &SozoUi) -> Result<()> {
         trace!(args = ?self);
 
-        let addresses: Vec<Felt> = self
-            .addresses
-            .iter()
-            .map(|a| parse_felt(a))
-            .collect::<Result<Vec<_>>>()?;
+        let addresses: Vec<Felt> =
+            self.addresses.iter().map(|a| parse_felt(a)).collect::<Result<Vec<_>>>()?;
 
         let (provider, _) = self.starknet.provider(None)?;
         let block_id = self.block_id.to_block_id()?;
@@ -249,7 +242,7 @@ impl NonceArgs {
                 .iter()
                 .map(|addr| {
                     ProviderRequestData::GetNonce(GetNonceRequest {
-                        block_id: block_id.clone(),
+                        block_id,
                         contract_address: *addr,
                     })
                 })
@@ -341,11 +334,8 @@ impl ClassHashAtArgs {
     pub async fn run(self, ui: &SozoUi) -> Result<()> {
         trace!(args = ?self);
 
-        let addresses: Vec<Felt> = self
-            .addresses
-            .iter()
-            .map(|a| parse_felt(a))
-            .collect::<Result<Vec<_>>>()?;
+        let addresses: Vec<Felt> =
+            self.addresses.iter().map(|a| parse_felt(a)).collect::<Result<Vec<_>>>()?;
 
         let (provider, _) = self.starknet.provider(None)?;
         let block_id = self.block_id.to_block_id()?;
@@ -368,7 +358,7 @@ impl ClassHashAtArgs {
                 .iter()
                 .map(|addr| {
                     ProviderRequestData::GetClassHashAt(GetClassHashAtRequest {
-                        block_id: block_id.clone(),
+                        block_id,
                         contract_address: *addr,
                     })
                 })
@@ -418,11 +408,8 @@ impl ClassAtArgs {
     pub async fn run(self, ui: &SozoUi) -> Result<()> {
         trace!(args = ?self);
 
-        let addresses: Vec<Felt> = self
-            .addresses
-            .iter()
-            .map(|a| parse_felt(a))
-            .collect::<Result<Vec<_>>>()?;
+        let addresses: Vec<Felt> =
+            self.addresses.iter().map(|a| parse_felt(a)).collect::<Result<Vec<_>>>()?;
 
         let (provider, _) = self.starknet.provider(None)?;
         let block_id = self.block_id.to_block_id()?;
@@ -437,7 +424,7 @@ impl ClassAtArgs {
                 .iter()
                 .map(|addr| {
                     ProviderRequestData::GetClassAt(GetClassAtRequest {
-                        block_id: block_id.clone(),
+                        block_id,
                         contract_address: *addr,
                     })
                 })
@@ -479,11 +466,8 @@ impl ClassByHashArgs {
     pub async fn run(self, ui: &SozoUi) -> Result<()> {
         trace!(args = ?self);
 
-        let class_hashes: Vec<Felt> = self
-            .class_hashes
-            .iter()
-            .map(|h| parse_felt(h))
-            .collect::<Result<Vec<_>>>()?;
+        let class_hashes: Vec<Felt> =
+            self.class_hashes.iter().map(|h| parse_felt(h)).collect::<Result<Vec<_>>>()?;
 
         let (provider, _) = self.starknet.provider(None)?;
         let block_id = self.block_id.to_block_id()?;
@@ -497,10 +481,7 @@ impl ClassByHashArgs {
             let requests: Vec<ProviderRequestData> = class_hashes
                 .iter()
                 .map(|hash| {
-                    ProviderRequestData::GetClass(GetClassRequest {
-                        block_id: block_id.clone(),
-                        class_hash: *hash,
-                    })
+                    ProviderRequestData::GetClass(GetClassRequest { block_id, class_hash: *hash })
                 })
                 .collect();
 

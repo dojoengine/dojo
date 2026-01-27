@@ -18,8 +18,7 @@ const SEPOLIA_RPC_URL: &str = "https://api.cartridge.gg/x/starknet/sepolia";
 const TEST_BLOCK_NUMBER: u64 = 5_000_000;
 
 /// Block hash for block 5,000,000
-const TEST_BLOCK_HASH: &str =
-    "0x47569582123bf39767fe0cd204d244d5c014b7dd88804852c48fecf315e96f1";
+const TEST_BLOCK_HASH: &str = "0x47569582123bf39767fe0cd204d244d5c014b7dd88804852c48fecf315e96f1";
 
 /// First transaction hash in block 5,000,000
 const TEST_TX_HASH: &str = "0x7280a6f96f587021e1fe396dfd899527c193ac58c63e4c9976a989d5520ec3d";
@@ -41,8 +40,7 @@ const STRK_TOKEN_ADDRESS: &str =
     "0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d";
 
 /// STRK token class hash
-const STRK_CLASS_HASH: &str =
-    "0x4ad3c1dc8413453db314497945b6903e1c766495a1e60492d44da9c2a986e4b";
+const STRK_CLASS_HASH: &str = "0x4ad3c1dc8413453db314497945b6903e1c766495a1e60492d44da9c2a986e4b";
 
 fn create_starknet_options() -> StarknetOptions {
     StarknetOptions {

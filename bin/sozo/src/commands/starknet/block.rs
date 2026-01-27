@@ -103,7 +103,7 @@ impl BlockArgs {
 
         if block_ids.len() == 1 {
             // Single request (existing behavior)
-            let block_id = block_ids[0].clone();
+            let block_id = block_ids[0];
             if self.receipts {
                 let block = provider.get_block_with_receipts(block_id).await?;
                 print_json(ui, &block, self.output.raw)
@@ -121,15 +121,15 @@ impl BlockArgs {
                 .map(|block_id| {
                     if self.receipts {
                         ProviderRequestData::GetBlockWithReceipts(GetBlockWithReceiptsRequest {
-                            block_id: block_id.clone(),
+                            block_id: *block_id,
                         })
                     } else if self.full {
                         ProviderRequestData::GetBlockWithTxs(GetBlockWithTxsRequest {
-                            block_id: block_id.clone(),
+                            block_id: *block_id,
                         })
                     } else {
                         ProviderRequestData::GetBlockWithTxHashes(GetBlockWithTxHashesRequest {
-                            block_id: block_id.clone(),
+                            block_id: *block_id,
                         })
                     }
                 })
@@ -183,10 +183,7 @@ impl BlockTimeArgs {
 
         // Extract timestamp from the JSON representation
         let block_json = serde_json::to_value(&block)?;
-        let timestamp = block_json
-            .get("timestamp")
-            .and_then(|v| v.as_u64())
-            .unwrap_or(0);
+        let timestamp = block_json.get("timestamp").and_then(|v| v.as_u64()).unwrap_or(0);
 
         print_json(
             ui,
@@ -244,10 +241,7 @@ fn format_timestamp(timestamp: u64) -> String {
         }
         let day = day_count + 1;
 
-        format!(
-            "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}Z",
-            year, month, day, hours, minutes, seconds
-        )
+        format!("{:04}-{:02}-{:02}T{:02}:{:02}:{:02}Z", year, month, day, hours, minutes, seconds)
     } else {
         "invalid timestamp".to_string()
     }

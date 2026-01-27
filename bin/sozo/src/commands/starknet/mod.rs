@@ -103,21 +103,13 @@ pub struct OutputOptions {
 impl OutputOptions {
     /// Format a Felt value according to output options.
     pub fn format_felt(&self, felt: Felt) -> String {
-        if self.dec {
-            felt.to_string()
-        } else {
-            format!("{:#066x}", felt)
-        }
+        if self.dec { felt.to_string() } else { format!("{:#066x}", felt) }
     }
 
     /// Format a u64 value according to output options.
     #[allow(dead_code)]
     pub fn format_u64(&self, value: u64) -> String {
-        if self.dec {
-            value.to_string()
-        } else {
-            format!("{:#x}", value)
-        }
+        if self.dec { value.to_string() } else { format!("{:#x}", value) }
     }
 }
 
