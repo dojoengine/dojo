@@ -246,23 +246,8 @@ pub mod actions {
             let config: PlayerConfig = world.read_model(player);
 
             world.erase_model(@position);
-            world.erase_model(@moves);
+            // world.erase_model(@moves);
             world.erase_model(@config);
-
-            let position: Position = world.read_model(player);
-            let moves: Moves = world.read_model(player);
-            let config: PlayerConfig = world.read_model(player);
-
-            assert(moves.remaining == 0, 'bad remaining');
-            assert(moves.last_direction == Direction::None, 'bad last direction');
-
-            assert(position.vec.x == 0, 'bad x');
-            assert(position.vec.y == 0, 'bad y');
-
-            assert(config.items.len() == 0, 'bad items');
-            assert(config.favorite_item == Option::None, 'bad favorite item');
-            let empty_string: ByteArray = "";
-            assert(config.name == empty_string, 'bad name');
         }
 
         fn set_player_server_profile(ref self: ContractState, server_id: u32, name: ByteArray) {

@@ -15,6 +15,7 @@ pub(crate) mod declare;
 pub(crate) mod deploy;
 pub(crate) mod events;
 pub(crate) mod execute;
+pub(crate) mod function_call;
 pub(crate) mod hash;
 pub(crate) mod init;
 pub(crate) mod inspect;
@@ -23,6 +24,7 @@ pub(crate) mod mcp;
 pub(crate) mod migrate;
 pub(crate) mod model;
 pub(crate) mod options;
+pub(crate) mod starknet;
 pub(crate) mod test;
 pub(crate) mod version;
 
@@ -35,6 +37,7 @@ use declare::DeclareArgs;
 use deploy::DeployArgs;
 use events::EventsArgs;
 use execute::ExecuteArgs;
+use function_call::FunctionCallArgs;
 use hash::HashArgs;
 use init::InitArgs;
 use inspect::InspectArgs;
@@ -44,6 +47,7 @@ use migrate::MigrateArgs;
 use model::ModelArgs;
 #[cfg(feature = "walnut")]
 use sozo_walnut::walnut::WalnutArgs;
+use starknet::StarknetArgs;
 use test::TestArgs;
 use version::VersionArgs;
 
@@ -61,6 +65,8 @@ pub enum Commands {
     Events(Box<EventsArgs>),
     #[command(about = "Execute one or several systems with the given calldata.")]
     Execute(Box<ExecuteArgs>),
+    #[command(about = "Call a contract function without requiring a Dojo project context.")]
+    FunctionCall(Box<FunctionCallArgs>),
     #[command(about = "Invoke a contract entrypoint on Starknet.")]
     Invoke(Box<InvokeArgs>),
     #[command(about = "Clean the build directory")]
@@ -89,6 +95,8 @@ pub enum Commands {
     Walnut(Box<WalnutArgs>),
     #[command(about = "Starts a MCP server")]
     Mcp(Box<McpArgs>),
+    #[command(alias = "sn", about = "Starknet utility commands (alias: sn)")]
+    Starknet(Box<StarknetArgs>),
 }
 
 impl fmt::Display for Commands {
@@ -101,6 +109,7 @@ impl fmt::Display for Commands {
             Commands::Clean(_) => write!(f, "Clean"),
             Commands::Events(_) => write!(f, "Events"),
             Commands::Execute(_) => write!(f, "Execute"),
+            Commands::FunctionCall(_) => write!(f, "FunctionCall"),
             Commands::Hash(_) => write!(f, "Hash"),
             Commands::Invoke(_) => write!(f, "Invoke"),
             Commands::Declare(_) => write!(f, "Declare"),
@@ -114,6 +123,7 @@ impl fmt::Display for Commands {
             Commands::Mcp(_) => write!(f, "Mcp"),
             #[cfg(feature = "walnut")]
             Commands::Walnut(_) => write!(f, "WalnutVerify"),
+            Commands::Starknet(_) => write!(f, "Starknet"),
         }
     }
 }
@@ -131,6 +141,7 @@ pub async fn run(command: Commands, scarb_metadata: &Metadata, ui: &SozoUi) -> R
         Commands::Clean(args) => args.run(scarb_metadata),
         Commands::Events(args) => args.run(scarb_metadata, ui).await,
         Commands::Execute(args) => args.run(scarb_metadata, ui).await,
+        Commands::FunctionCall(args) => args.run(ui).await,
         Commands::Invoke(args) => args.run(ui).await,
         Commands::Hash(args) => args.run(scarb_metadata),
         Commands::Declare(args) => args.run(ui).await,
@@ -146,6 +157,11 @@ pub async fn run(command: Commands, scarb_metadata: &Metadata, ui: &SozoUi) -> R
         Commands::Init(_) => {
             // `sozo init` is directly managed in main.rs as scarb metadata
             // cannot be loaded in this case (the project does not exist yet).
+            Ok(())
+        }
+        Commands::Starknet(_) => {
+            // `sozo starknet` is directly managed in main.rs as scarb metadata
+            // is not required for these utility commands.
             Ok(())
         }
     }
