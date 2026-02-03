@@ -46,7 +46,7 @@ jobs:
 
       - uses: software-mansion/setup-scarb@v1
         with:
-          scarb-version: "2.13.1"
+          scarb-version: "2.15.0"
 
       - name: Check if Dojo Cairo packages exist on Scarb registry
         id: check_packages
