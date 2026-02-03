@@ -23,11 +23,11 @@ anyhow = "1.0"
 dojo-types = { path = "../types", version = "1.7.0" }
 cairo-lang-primitive-token = "1"
 cairo-lang-macro = "0.2.0"
-cairo-lang-parser = "2.13.1"
-cairo-lang-utils = "2.13.1"
-cairo-lang-syntax = "2.13.1"
-cairo-lang-defs = "2.13.1"
-cairo-lang-diagnostics = "2.13.1"
+cairo-lang-parser = "2.15.0"
+cairo-lang-utils = "2.15.0"
+cairo-lang-syntax = "2.15.0"
+cairo-lang-defs = "2.15.0"
+cairo-lang-diagnostics = "2.15.0"
 smol_str = "0.3"
 starknet-crypto = { git = "https://github.com/dojoengine/starknet-rs", branch = "feat/types-rs-100-blake2s" }
 starknet = { git = "https://github.com/dojoengine/starknet-rs", branch = "feat/types-rs-100-blake2s" }

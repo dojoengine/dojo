@@ -9,9 +9,9 @@ documentation = "https://book.dojoengine.org"
 keywords = ["dojo", "starknet", "testing"]
 
 [dependencies]
-starknet = "2.13"
-snforge_std = "0.51"
-assert_macros = "2.13"
+starknet = "2.15"
+snforge_std = "0.55"
+assert_macros = "2.15"
 
 dojo = { path = "../core", version = "1.7" }
 
