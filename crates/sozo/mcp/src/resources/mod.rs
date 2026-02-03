@@ -166,10 +166,10 @@ edition = "2023_01"
 
 [dependencies]
 dojo = { git = "https://github.com/dojoengine/dojo" }
-starknet = "2.4.0"
+starknet = "2.15.0"
 
 [dev-dependencies]
-cairo-lang-test-plugin = "2.4.0"
+cairo-lang-test-plugin = "2.15.0"
 
 [[target.dojo]]
 "#;
@@ -186,7 +186,7 @@ cairo-lang-test-plugin = "2.4.0"
         assert!(json_str.contains("2023_01"));
         assert!(json_str.contains("dojo"));
         assert!(json_str.contains("starknet"));
-        assert!(json_str.contains("2.4.0"));
+        assert!(json_str.contains("2.15.0"));
     }
 
     #[tokio::test]
