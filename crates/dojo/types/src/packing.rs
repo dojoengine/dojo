@@ -126,6 +126,12 @@ pub fn parse_ty(data: &[Felt]) -> Result<Ty, ParseError> {
 }
 
 fn parse_simple(data: &[Felt]) -> Result<Ty, ParseError> {
+    if data.is_empty() {
+        return Err(ParseError::invalid_schema_with_msg(
+            "parse_simple expects at least one felt",
+        ));
+    }
+
     let ty = parse_cairo_short_string(&data[0])?;
     let primitive = match Primitive::from_str(&ty) {
         Ok(primitive) => primitive,
