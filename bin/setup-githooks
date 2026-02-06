@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT=$(git rev-parse --show-toplevel)
+cd "$ROOT"
+
+if [[ -d .husky ]]; then
+  git config core.hooksPath .husky
+  echo "Configured git hooksPath to .husky"
+else
+  git config core.hooksPath .githooks
+  echo "Configured git hooksPath to .githooks"
+fi

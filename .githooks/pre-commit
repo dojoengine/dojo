@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACMRT)
+
+if [[ -z "$STAGED_FILES" ]]; then
+  exit 0
+fi
+
+# Rust
+if echo "$STAGED_FILES" | grep -qE '\.rs$|^Cargo\.(toml|lock)$|^rust-toolchain\.toml$|^\.clippy\.toml$|^rustfmt\.toml$'; then
+  echo 'Running Rust checks...'
+  ./scripts/rust_fmt.sh --check
+  ./scripts/clippy.sh
+  cargo test --workspace --all-features
+fi
+
+
+echo 'Pre-commit checks complete.'
