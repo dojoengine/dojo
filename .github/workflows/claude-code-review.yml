@@ -8,8 +8,8 @@ permissions:
   contents: read
   pull-requests: write
   issues: read
-  id-token: write
 
+  id-token: write
 jobs:
   claude-code-review:
     runs-on: ubuntu-latest
@@ -20,36 +20,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      # The Claude Code Action validates that the workflow file exists on the default branch
-      # and is identical. This makes first-time installation (or updates) fail on the PR that
-      # introduces changes to this file. We preflight and skip gracefully in that case.
-      - name: Preflight (workflow integrity)
-        id: preflight
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          file_path=".github/workflows/claude-code-review.yml"
-          default_branch="${{ github.event.repository.default_branch }}"
-
-          git fetch --no-tags --depth=1 origin "${default_branch}"
-
-          if git cat-file -e "origin/${default_branch}:${file_path}" 2>/dev/null; then
-            if git diff --quiet "origin/${default_branch}" -- "${file_path}"; then
-              echo "should_run=true" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
-
-            echo "should_run=false" >> "$GITHUB_OUTPUT"
-            echo "reason=workflow_differs_from_default_branch" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          echo "should_run=false" >> "$GITHUB_OUTPUT"
-          echo "reason=workflow_missing_on_default_branch" >> "$GITHUB_OUTPUT"
-
       - name: Claude Review
-        if: steps.preflight.outputs.should_run == 'true' && secrets.ANTHROPIC_API_KEY != ''
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -57,14 +28,3 @@ jobs:
           # CLAUDE.md is a symlink to AGENTS.md in this repo; keep repo rules there.
           claude_args: |
             --max-turns 4
-
-      - name: Claude Review (skipped)
-        if: steps.preflight.outputs.should_run != 'true'
-        run: |
-          echo "Skipping Claude review: ${{ steps.preflight.outputs.reason }}"
-          echo "This is expected when this workflow is first introduced or updated in a PR."
-
-      - name: Claude Review (skipped: missing secret)
-        if: steps.preflight.outputs.should_run == 'true' && secrets.ANTHROPIC_API_KEY == ''
-        run: |
-          echo "Skipping Claude review: missing ANTHROPIC_API_KEY secret."
