@@ -380,7 +380,7 @@ async fn is_session_registered_onchain(
         contract_address: controller_address,
         entry_point_selector: get_selector_from_name("is_session_registered")
             .context("Failed to resolve selector for `is_session_registered`")?,
-        calldata: vec![session_hash],
+        calldata: vec![session_hash, session.auth.owner_guid],
     };
 
     let result = provider.call(call, BlockId::Tag(BlockTag::Latest)).await?;
