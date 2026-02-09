@@ -383,8 +383,14 @@ fn collect_policies_from_contracts(
     policies.push(PolicyMethod { target: UDC_ADDRESS, method });
     trace!(target: "account::controller", "Adding UDC deployment policy");
 
-    // Keep a deterministic policy order so session root comparison remains stable across runs.
-    policies.sort_by(|a, b| a.target.cmp(&b.target).then_with(|| a.method.cmp(&b.method)));
+    // Keep canonical ordering aligned with controller/keychain sorting:
+    // contract address (as lowercase hex string) then method name.
+    policies.sort_by(|a, b| {
+        format!("{:#x}", a.target)
+            .to_lowercase()
+            .cmp(&format!("{:#x}", b.target).to_lowercase())
+            .then_with(|| a.method.cmp(&b.method))
+    });
 
     Ok(policies)
 }
@@ -544,6 +550,42 @@ mod tests {
         let policies_b = collect_policies_from_contracts(user_addr, &contracts_b).unwrap();
 
         assert_eq!(policies_a, policies_b);
+    }
+
+    #[test]
+    fn collect_policies_uses_controller_canonical_address_sort() {
+        let user_addr = felt!("0x123");
+        let addr_2 = felt!("0x2");
+        let addr_10 = felt!("0x10");
+
+        let mut contracts = HashMap::new();
+        contracts.insert(
+            "two".to_string(),
+            ContractInfo {
+                tag_or_name: "two".to_string(),
+                address: addr_2,
+                entrypoints: vec!["exec".into()],
+            },
+        );
+        contracts.insert(
+            "ten".to_string(),
+            ContractInfo {
+                tag_or_name: "ten".to_string(),
+                address: addr_10,
+                entrypoints: vec!["exec".into()],
+            },
+        );
+
+        let policies = collect_policies_from_contracts(user_addr, &contracts).unwrap();
+
+        // Controller canonical sort is string-based, so 0x10 comes before 0x2.
+        let first_two = policies
+            .iter()
+            .filter(|p| p.method == "exec")
+            .take(2)
+            .map(|p| p.target)
+            .collect::<Vec<_>>();
+        assert_eq!(first_two, vec![addr_10, addr_2]);
     }
 
     #[test]
