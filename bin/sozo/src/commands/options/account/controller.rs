@@ -26,8 +26,6 @@ pub type ControllerAccount = SessionAccount;
 const CONTROLLER_OAUTH_TIMEOUT_SECS: u64 = 300;
 const CONTROLLER_OAUTH_CALLBACK_PATH: &str = "/callback";
 const CONTROLLER_LOGIN_PATH: &str = "/slot";
-const CONTROLLER_SESSION_REGISTRATION_TIMEOUT_SECS: u64 = 60;
-const CONTROLLER_SESSION_REGISTRATION_POLL_MS: u64 = 1_500;
 const CONTROLLER_ACCOUNT_INFO_QUERY: &str = r#"
 query ControllerAccountInfo {
   me {
@@ -142,13 +140,6 @@ pub async fn create_controller(
                 );
 
                 let session = slot::session::create(rpc_url.clone(), &policies).await?;
-                ensure_session_registered_onchain(
-                    &rpc_provider,
-                    session.auth.address,
-                    chain_id,
-                    &session,
-                )
-                .await?;
                 slot::session::store(chain_id, &session)?;
                 session
             }
@@ -158,13 +149,6 @@ pub async fn create_controller(
         None => {
             trace!(target: "account::controller", %username, chain = format!("{chain_id:#}"), "Creating new session.");
             let session = slot::session::create(rpc_url.clone(), &policies).await?;
-            ensure_session_registered_onchain(
-                &rpc_provider,
-                session.auth.address,
-                chain_id,
-                &session,
-            )
-            .await?;
             slot::session::store(chain_id, &session)?;
             session
         }
@@ -385,35 +369,6 @@ async fn is_session_registered_onchain(
 
     let result = provider.call(call, BlockId::Tag(BlockTag::Latest)).await?;
     Ok(result.first().is_some_and(|v| *v != Felt::ZERO))
-}
-
-async fn ensure_session_registered_onchain(
-    provider: &CartridgeJsonRpcProvider,
-    controller_address: Felt,
-    chain_id: Felt,
-    session: &FullSessionInfo,
-) -> Result<()> {
-    if is_session_registered_onchain(provider, controller_address, chain_id, session).await? {
-        return Ok(());
-    }
-
-    let timeout = Duration::from_secs(CONTROLLER_SESSION_REGISTRATION_TIMEOUT_SECS);
-    let poll = Duration::from_millis(CONTROLLER_SESSION_REGISTRATION_POLL_MS);
-    let started = std::time::Instant::now();
-
-    while started.elapsed() < timeout {
-        tokio::time::sleep(poll).await;
-
-        if is_session_registered_onchain(provider, controller_address, chain_id, session).await? {
-            return Ok(());
-        }
-    }
-
-    bail!(
-        "Controller session was created locally but is not registered onchain yet (timeout: {}s). \
-         Please retry `sozo controller session create`.",
-        CONTROLLER_SESSION_REGISTRATION_TIMEOUT_SECS
-    );
 }
 
 /// Policies are the building block of a session key. It's what defines what methods are allowed for
