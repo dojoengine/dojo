@@ -101,9 +101,7 @@ async fn create_session(
     ui.print(format!("Policies          : {}", session.session.proved_policies.len()));
     ui.print(format!("Expires at (unix) : {}", session.session.inner.expires_at));
     ui.print(format!("Stored session    : {}", session_path.display()));
-    ui.print(
-        "Use `sozo execute ... --session` (or `--slot.controller`) to execute with this session.",
-    );
+    ui.print("Use `sozo execute ... --session` to execute with this session.");
 
     Ok(())
 }
@@ -122,7 +120,7 @@ async fn status_session(
             | slot::Error::MalformedCredentials
             | slot::Error::InvalidOAuth,
         ) => {
-            ui.warn("No controller credentials found. Run `sozo session create` first.");
+            ui.warn("No controller credentials found. Run `sozo controller session create` first.");
             return Ok(());
         }
         Err(err) => return Err(err.into()),

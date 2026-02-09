@@ -11,6 +11,8 @@ pub(crate) mod bindgen;
 pub(crate) mod build;
 pub(crate) mod call;
 pub(crate) mod clean;
+#[cfg(feature = "controller")]
+pub(crate) mod controller;
 pub(crate) mod declare;
 pub(crate) mod deploy;
 pub(crate) mod events;
@@ -35,6 +37,8 @@ use bindgen::BindgenArgs;
 use build::BuildArgs;
 use call::CallArgs;
 use clean::CleanArgs;
+#[cfg(feature = "controller")]
+use controller::ControllerArgs;
 use declare::DeclareArgs;
 use deploy::DeployArgs;
 use events::EventsArgs;
@@ -47,8 +51,6 @@ use invoke::InvokeArgs;
 use mcp::McpArgs;
 use migrate::MigrateArgs;
 use model::ModelArgs;
-#[cfg(feature = "controller")]
-use session::SessionArgs;
 #[cfg(feature = "walnut")]
 use sozo_walnut::walnut::WalnutArgs;
 use starknet::StarknetArgs;
@@ -91,8 +93,8 @@ pub enum Commands {
     #[command(about = "Inspect a model")]
     Model(Box<ModelArgs>),
     #[cfg(feature = "controller")]
-    #[command(about = "Manage Cartridge controller sessions")]
-    Session(Box<SessionArgs>),
+    #[command(about = "Controller utility commands")]
+    Controller(Box<ControllerArgs>),
     #[command(about = "Runs cairo tests")]
     Test(Box<TestArgs>),
     #[command(about = "Print version")]
@@ -126,7 +128,7 @@ impl fmt::Display for Commands {
             Commands::Migrate(_) => write!(f, "Migrate"),
             Commands::Model(_) => write!(f, "Model"),
             #[cfg(feature = "controller")]
-            Commands::Session(_) => write!(f, "Session"),
+            Commands::Controller(_) => write!(f, "Controller"),
             Commands::Test(_) => write!(f, "Test"),
             Commands::Version(_) => write!(f, "Version"),
             Commands::Mcp(_) => write!(f, "Mcp"),
@@ -160,7 +162,7 @@ pub async fn run(command: Commands, scarb_metadata: &Metadata, ui: &SozoUi) -> R
         Commands::Migrate(args) => args.run(scarb_metadata, ui).await,
         Commands::Model(args) => args.run(scarb_metadata, ui).await,
         #[cfg(feature = "controller")]
-        Commands::Session(args) => args.run(scarb_metadata, ui).await,
+        Commands::Controller(args) => args.run(scarb_metadata, ui).await,
         Commands::Test(args) => args.run(scarb_metadata),
         Commands::Version(args) => args.run(scarb_metadata),
         #[cfg(feature = "walnut")]

@@ -46,16 +46,9 @@ pub struct AccountOptions {
     pub katana_account: Option<KatanaAccount>,
 
     #[arg(global = true)]
-    #[arg(long = "slot.controller")]
-    #[arg(help_heading = "Controller options")]
-    #[arg(help = "Use Slot's Controller account")]
-    #[cfg(feature = "controller")]
-    pub controller: bool,
-
-    #[arg(global = true)]
     #[arg(long = "session")]
     #[arg(help_heading = "Controller options")]
-    #[arg(help = "Use Cartridge Controller session account (alias of --slot.controller)")]
+    #[arg(help = "Use Cartridge Controller session account")]
     #[cfg(feature = "controller")]
     pub session: bool,
 
@@ -92,7 +85,7 @@ impl AccountOptions {
         P: Send + Sync,
     {
         #[cfg(feature = "controller")]
-        if self.controller || self.session {
+        if self.session {
             let url = starknet.url(env_metadata)?;
             let cartridge_provider = CartridgeJsonRpcProvider::new(url.clone());
             let account = self.controller(url, cartridge_provider.clone(), contracts).await?;
@@ -231,10 +224,9 @@ mod tests {
 
     #[cfg(feature = "controller")]
     #[test]
-    fn controller_session_alias_flag_is_parsed() {
+    fn controller_session_flag_is_parsed() {
         let cmd = Command::parse_from(["sozo", "--session"]);
         assert!(cmd.account.session);
-        assert!(!cmd.account.controller);
     }
 
     #[test]

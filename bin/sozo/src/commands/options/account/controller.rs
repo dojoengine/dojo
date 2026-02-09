@@ -363,18 +363,7 @@ fn collect_policies_from_contracts(
     let mut policies: Vec<PolicyMethod> = Vec::new();
 
     for (tag, info) in contracts {
-        // Exclude core world entrypoints from session policies.
-        if tag == "world" {
-            trace!(target: "account::controller", tag, "Skipping world contract policies");
-            continue;
-        }
-
         for e in &info.entrypoints {
-            if !is_session_entrypoint(e) {
-                trace!(target: "account::controller", tag, method = %e, "Skipping non-session entrypoint");
-                continue;
-            }
-
             let policy = PolicyMethod { target: info.address, method: e.clone() };
             trace!(target: "account::controller", tag, target = format!("{:#x}", policy.target), method = %policy.method, "Adding policy");
             policies.push(policy);
@@ -394,12 +383,10 @@ fn collect_policies_from_contracts(
     policies.push(PolicyMethod { target: UDC_ADDRESS, method });
     trace!(target: "account::controller", "Adding UDC deployment policy");
 
-    Ok(policies)
-}
+    // Keep a deterministic policy order so session root comparison remains stable across runs.
+    policies.sort_by(|a, b| a.target.cmp(&b.target).then_with(|| a.method.cmp(&b.method)));
 
-fn is_session_entrypoint(method: &str) -> bool {
-    // Exclude internal/core methods from app sessions.
-    method != "upgrade" && !method.starts_with("__")
+    Ok(policies)
 }
 
 #[cfg(test)]
@@ -412,7 +399,9 @@ mod tests {
     use scarb_metadata_ext::MetadataDojoExt;
     use starknet::macros::felt;
 
-    use super::{PolicyMethod, collect_policies, extract_oauth_code};
+    use super::{
+        PolicyMethod, collect_policies, collect_policies_from_contracts, extract_oauth_code,
+    };
 
     #[test]
     fn collect_policies_from_project() {
@@ -425,6 +414,7 @@ mod tests {
         let world_address = contracts.get("world").unwrap().address;
         let actions = contracts.get("ns-actions").unwrap();
         let actions_address = actions.address;
+        let world = contracts.get("world").unwrap();
 
         let user_addr = felt!("0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba");
 
@@ -438,23 +428,18 @@ mod tests {
             policies.contains(&PolicyMethod { target: actions_address, method: "move".into() })
         );
 
-        // Should not include world/core policy methods.
+        // Should include world contract policies.
         assert!(
-            !policies.iter().any(|p| p.target == world_address),
-            "world entrypoints should not be included in session policies"
+            policies.iter().any(|p| p.target == world_address),
+            "world entrypoints should be included in session policies"
         );
 
-        // Should not include upgrade/internal methods.
-        assert!(
-            !policies.iter().any(|p| p.method == "upgrade"),
-            "upgrade should not be included in session policies"
-        );
-        assert!(
-            !policies
-                .iter()
-                .any(|p| p.method.starts_with("__") && p.method != "__declare_transaction__"),
-            "internal methods should not be included in session policies"
-        );
+        // World methods from manifest should be part of policies.
+        for method in &world.entrypoints {
+            assert!(
+                policies.contains(&PolicyMethod { target: world_address, method: method.clone() })
+            );
+        }
 
         // Should keep required meta policies.
         assert!(
@@ -474,7 +459,7 @@ mod tests {
     }
 
     #[test]
-    fn collect_policies_filters_world_and_upgrade() {
+    fn collect_policies_includes_world_and_upgrade() {
         let user_addr = felt!("0x123");
         let world_addr = felt!("0x456");
         let actions_addr = felt!("0x789");
@@ -499,10 +484,66 @@ mod tests {
 
         let policies = collect_policies(user_addr, &contracts).unwrap();
 
+        assert!(
+            policies
+                .contains(&PolicyMethod { target: world_addr, method: "register_model".into() })
+        );
+        assert!(
+            policies.contains(&PolicyMethod { target: world_addr, method: "set_entity".into() })
+        );
         assert!(policies.contains(&PolicyMethod { target: actions_addr, method: "spawn".into() }));
         assert!(policies.contains(&PolicyMethod { target: actions_addr, method: "move".into() }));
-        assert!(!policies.iter().any(|p| p.target == world_addr));
-        assert!(!policies.iter().any(|p| p.method == "upgrade"));
+        assert!(
+            policies.contains(&PolicyMethod { target: actions_addr, method: "upgrade".into() })
+        );
+    }
+
+    #[test]
+    fn collect_policies_has_stable_order() {
+        let user_addr = felt!("0x123");
+        let a_addr = felt!("0x2");
+        let b_addr = felt!("0x1");
+
+        let mut contracts_a = HashMap::new();
+        contracts_a.insert(
+            "a".to_string(),
+            ContractInfo {
+                tag_or_name: "a".to_string(),
+                address: a_addr,
+                entrypoints: vec!["z".into(), "a".into()],
+            },
+        );
+        contracts_a.insert(
+            "b".to_string(),
+            ContractInfo {
+                tag_or_name: "b".to_string(),
+                address: b_addr,
+                entrypoints: vec!["m".into()],
+            },
+        );
+
+        let mut contracts_b = HashMap::new();
+        contracts_b.insert(
+            "b".to_string(),
+            ContractInfo {
+                tag_or_name: "b".to_string(),
+                address: b_addr,
+                entrypoints: vec!["m".into()],
+            },
+        );
+        contracts_b.insert(
+            "a".to_string(),
+            ContractInfo {
+                tag_or_name: "a".to_string(),
+                address: a_addr,
+                entrypoints: vec!["z".into(), "a".into()],
+            },
+        );
+
+        let policies_a = collect_policies_from_contracts(user_addr, &contracts_a).unwrap();
+        let policies_b = collect_policies_from_contracts(user_addr, &contracts_b).unwrap();
+
+        assert_eq!(policies_a, policies_b);
     }
 
     #[test]
