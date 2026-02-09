@@ -363,7 +363,18 @@ fn collect_policies_from_contracts(
     let mut policies: Vec<PolicyMethod> = Vec::new();
 
     for (tag, info) in contracts {
+        // Exclude core world entrypoints from session policies.
+        if tag == "world" {
+            trace!(target: "account::controller", tag, "Skipping world contract policies");
+            continue;
+        }
+
         for e in &info.entrypoints {
+            if !is_session_entrypoint(e) {
+                trace!(target: "account::controller", tag, method = %e, "Skipping non-session entrypoint");
+                continue;
+            }
+
             let policy = PolicyMethod { target: info.address, method: e.clone() };
             trace!(target: "account::controller", tag, target = format!("{:#x}", policy.target), method = %policy.method, "Adding policy");
             policies.push(policy);
@@ -386,6 +397,11 @@ fn collect_policies_from_contracts(
     Ok(policies)
 }
 
+fn is_session_entrypoint(method: &str) -> bool {
+    // Exclude internal/core methods from app sessions.
+    method != "upgrade" && !method.starts_with("__")
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
@@ -406,24 +422,87 @@ mod tests {
         let manifest =
             scarb_metadata.read_dojo_manifest_profile().expect("Failed to read manifest").unwrap();
         let contracts: HashMap<String, ContractInfo> = (&manifest).into();
+        let world_address = contracts.get("world").unwrap().address;
+        let actions = contracts.get("ns-actions").unwrap();
+        let actions_address = actions.address;
 
         let user_addr = felt!("0x2af9427c5a277474c079a1283c880ee8a6f0f8fbf73ce969c08d88befec1bba");
 
         let policies = collect_policies(user_addr, &contracts).unwrap();
 
-        if std::env::var("POLICIES_FIX").is_ok() {
-            let policies_json = serde_json::to_string_pretty(&policies).unwrap();
-            println!("{}", policies_json);
-        } else {
-            let test_data = include_str!("../../../../tests/test_data/policies.json");
-            let expected_policies: Vec<PolicyMethod> = serde_json::from_str(test_data).unwrap();
+        // Should include user systems.
+        assert!(
+            policies.contains(&PolicyMethod { target: actions_address, method: "spawn".into() })
+        );
+        assert!(
+            policies.contains(&PolicyMethod { target: actions_address, method: "move".into() })
+        );
 
-            // Compare the collected policies with the test data.
-            assert_eq!(policies.len(), expected_policies.len());
-            expected_policies.iter().for_each(|p| {
-                assert!(policies.contains(p), "Policy method '{}' is missing", p.method)
-            });
-        }
+        // Should not include world/core policy methods.
+        assert!(
+            !policies.iter().any(|p| p.target == world_address),
+            "world entrypoints should not be included in session policies"
+        );
+
+        // Should not include upgrade/internal methods.
+        assert!(
+            !policies.iter().any(|p| p.method == "upgrade"),
+            "upgrade should not be included in session policies"
+        );
+        assert!(
+            !policies
+                .iter()
+                .any(|p| p.method.starts_with("__") && p.method != "__declare_transaction__"),
+            "internal methods should not be included in session policies"
+        );
+
+        // Should keep required meta policies.
+        assert!(
+            policies.contains(&PolicyMethod {
+                target: user_addr,
+                method: "__declare_transaction__".into(),
+            }),
+            "declare policy is missing"
+        );
+        assert!(
+            policies.contains(&PolicyMethod {
+                target: felt!("0x041a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf"),
+                method: "deployContract".into(),
+            }),
+            "UDC deployment policy is missing"
+        );
+    }
+
+    #[test]
+    fn collect_policies_filters_world_and_upgrade() {
+        let user_addr = felt!("0x123");
+        let world_addr = felt!("0x456");
+        let actions_addr = felt!("0x789");
+
+        let mut contracts = HashMap::new();
+        contracts.insert(
+            "world".to_string(),
+            ContractInfo {
+                tag_or_name: "world".to_string(),
+                address: world_addr,
+                entrypoints: vec!["register_model".into(), "set_entity".into()],
+            },
+        );
+        contracts.insert(
+            "ns-actions".to_string(),
+            ContractInfo {
+                tag_or_name: "ns-actions".to_string(),
+                address: actions_addr,
+                entrypoints: vec!["spawn".into(), "move".into(), "upgrade".into()],
+            },
+        );
+
+        let policies = collect_policies(user_addr, &contracts).unwrap();
+
+        assert!(policies.contains(&PolicyMethod { target: actions_addr, method: "spawn".into() }));
+        assert!(policies.contains(&PolicyMethod { target: actions_addr, method: "move".into() }));
+        assert!(!policies.iter().any(|p| p.target == world_addr));
+        assert!(!policies.iter().any(|p| p.method == "upgrade"));
     }
 
     #[test]
