@@ -10,10 +10,9 @@ use serde::{Deserialize, Serialize};
 use slot::account_sdk::account::session::account::SessionAccount;
 use slot::account_sdk::account::session::merkle::MerkleTree;
 use slot::account_sdk::account::session::policy::{CallPolicy, MerkleLeaf, Policy, ProvedPolicy};
-use slot::account_sdk::hash::MessageHashRev1;
 use slot::account_sdk::provider::CartridgeJsonRpcProvider;
 use slot::session::{FullSessionInfo, PolicyMethod};
-use starknet::core::types::{BlockId, BlockTag, Felt, FunctionCall};
+use starknet::core::types::Felt;
 use starknet::core::utils::get_selector_from_name;
 use starknet::macros::felt;
 use starknet::providers::Provider;
@@ -120,23 +119,14 @@ pub async fn create_controller(
             // Check if the policies have changed
             let is_equal = is_equal_to_existing(&policies, &session);
 
-            let is_registered = is_session_registered_onchain(
-                &rpc_provider,
-                session.auth.address,
-                chain_id,
-                &session,
-            )
-            .await?;
-
-            if is_equal && is_registered {
+            if is_equal {
                 session
             } else {
                 trace!(
                     target: "account::controller",
                     new_policies = policies.len(),
                     existing_policies = session.session.requested_policies.len(),
-                    is_registered,
-                    "Session missing onchain or policies changed. Creating new session."
+                    "Policies have changed. Creating new session."
                 );
 
                 let session = slot::session::create(rpc_url.clone(), &policies).await?;
@@ -350,25 +340,6 @@ fn is_equal_to_existing(new_policies: &[PolicyMethod], session_info: &FullSessio
 
     let new_policies_root = MerkleTree::compute_root(hashes[0], new_policies[0].proof.clone());
     new_policies_root == session_info.session.inner.allowed_policies_root
-}
-
-async fn is_session_registered_onchain(
-    provider: &CartridgeJsonRpcProvider,
-    controller_address: Felt,
-    chain_id: Felt,
-    session: &FullSessionInfo,
-) -> Result<bool> {
-    let session_hash = session.session.inner.get_message_hash_rev_1(chain_id, controller_address);
-
-    let call = FunctionCall {
-        contract_address: controller_address,
-        entry_point_selector: get_selector_from_name("is_session_registered")
-            .context("Failed to resolve selector for `is_session_registered`")?,
-        calldata: vec![session_hash, session.auth.owner_guid],
-    };
-
-    let result = provider.call(call, BlockId::Tag(BlockTag::Latest)).await?;
-    Ok(result.first().is_some_and(|v| *v != Felt::ZERO))
 }
 
 /// Policies are the building block of a session key. It's what defines what methods are allowed for
