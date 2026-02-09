@@ -10,9 +10,10 @@ use serde::{Deserialize, Serialize};
 use slot::account_sdk::account::session::account::SessionAccount;
 use slot::account_sdk::account::session::merkle::MerkleTree;
 use slot::account_sdk::account::session::policy::{CallPolicy, MerkleLeaf, Policy, ProvedPolicy};
+use slot::account_sdk::hash::MessageHashRev1;
 use slot::account_sdk::provider::CartridgeJsonRpcProvider;
 use slot::session::{FullSessionInfo, PolicyMethod};
-use starknet::core::types::Felt;
+use starknet::core::types::{BlockId, BlockTag, Felt, FunctionCall};
 use starknet::core::utils::get_selector_from_name;
 use starknet::macros::felt;
 use starknet::providers::Provider;
@@ -25,6 +26,8 @@ pub type ControllerAccount = SessionAccount;
 const CONTROLLER_OAUTH_TIMEOUT_SECS: u64 = 300;
 const CONTROLLER_OAUTH_CALLBACK_PATH: &str = "/callback";
 const CONTROLLER_LOGIN_PATH: &str = "/slot";
+const CONTROLLER_SESSION_REGISTRATION_TIMEOUT_SECS: u64 = 60;
+const CONTROLLER_SESSION_REGISTRATION_POLL_MS: u64 = 1_500;
 const CONTROLLER_ACCOUNT_INFO_QUERY: &str = r#"
 query ControllerAccountInfo {
   me {
@@ -119,17 +122,33 @@ pub async fn create_controller(
             // Check if the policies have changed
             let is_equal = is_equal_to_existing(&policies, &session);
 
-            if is_equal {
+            let is_registered = is_session_registered_onchain(
+                &rpc_provider,
+                session.auth.address,
+                chain_id,
+                &session,
+            )
+            .await?;
+
+            if is_equal && is_registered {
                 session
             } else {
                 trace!(
                     target: "account::controller",
                     new_policies = policies.len(),
                     existing_policies = session.session.requested_policies.len(),
-                    "Policies have changed. Creating new session."
+                    is_registered,
+                    "Session missing onchain or policies changed. Creating new session."
                 );
 
                 let session = slot::session::create(rpc_url.clone(), &policies).await?;
+                ensure_session_registered_onchain(
+                    &rpc_provider,
+                    session.auth.address,
+                    chain_id,
+                    &session,
+                )
+                .await?;
                 slot::session::store(chain_id, &session)?;
                 session
             }
@@ -139,6 +158,13 @@ pub async fn create_controller(
         None => {
             trace!(target: "account::controller", %username, chain = format!("{chain_id:#}"), "Creating new session.");
             let session = slot::session::create(rpc_url.clone(), &policies).await?;
+            ensure_session_registered_onchain(
+                &rpc_provider,
+                session.auth.address,
+                chain_id,
+                &session,
+            )
+            .await?;
             slot::session::store(chain_id, &session)?;
             session
         }
@@ -340,6 +366,54 @@ fn is_equal_to_existing(new_policies: &[PolicyMethod], session_info: &FullSessio
 
     let new_policies_root = MerkleTree::compute_root(hashes[0], new_policies[0].proof.clone());
     new_policies_root == session_info.session.inner.allowed_policies_root
+}
+
+async fn is_session_registered_onchain(
+    provider: &CartridgeJsonRpcProvider,
+    controller_address: Felt,
+    chain_id: Felt,
+    session: &FullSessionInfo,
+) -> Result<bool> {
+    let session_hash = session.session.inner.get_message_hash_rev_1(chain_id, controller_address);
+
+    let call = FunctionCall {
+        contract_address: controller_address,
+        entry_point_selector: get_selector_from_name("is_session_registered")
+            .context("Failed to resolve selector for `is_session_registered`")?,
+        calldata: vec![session_hash],
+    };
+
+    let result = provider.call(call, BlockId::Tag(BlockTag::Latest)).await?;
+    Ok(result.first().is_some_and(|v| *v != Felt::ZERO))
+}
+
+async fn ensure_session_registered_onchain(
+    provider: &CartridgeJsonRpcProvider,
+    controller_address: Felt,
+    chain_id: Felt,
+    session: &FullSessionInfo,
+) -> Result<()> {
+    if is_session_registered_onchain(provider, controller_address, chain_id, session).await? {
+        return Ok(());
+    }
+
+    let timeout = Duration::from_secs(CONTROLLER_SESSION_REGISTRATION_TIMEOUT_SECS);
+    let poll = Duration::from_millis(CONTROLLER_SESSION_REGISTRATION_POLL_MS);
+    let started = std::time::Instant::now();
+
+    while started.elapsed() < timeout {
+        tokio::time::sleep(poll).await;
+
+        if is_session_registered_onchain(provider, controller_address, chain_id, session).await? {
+            return Ok(());
+        }
+    }
+
+    bail!(
+        "Controller session was created locally but is not registered onchain yet (timeout: {}s). \
+         Please retry `sozo controller session create`.",
+        CONTROLLER_SESSION_REGISTRATION_TIMEOUT_SECS
+    );
 }
 
 /// Policies are the building block of a session key. It's what defines what methods are allowed for
