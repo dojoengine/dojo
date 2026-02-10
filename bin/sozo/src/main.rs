@@ -2,7 +2,7 @@
 
 use std::process::exit;
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use args::SozoArgs;
 use camino::Utf8PathBuf;
 use clap::Parser;
@@ -15,7 +15,7 @@ mod args;
 mod commands;
 mod features;
 mod utils;
-use terminal_colorsaurus::{theme_mode, QueryOptions, ThemeMode};
+use terminal_colorsaurus::{QueryOptions, ThemeMode, theme_mode};
 
 #[tokio::main]
 async fn main() {
@@ -67,8 +67,10 @@ async fn cli_main(args: SozoArgs, ui: &SozoUi) -> Result<()> {
             bail!("Unable to find {}", &manifest_path);
         }
 
-        let scarb_metadata =
-            Metadata::load(manifest_path, args.profile_spec.determine()?.as_str(), args.offline)?;
+        let profile = args.profile_spec.determine()?;
+        std::env::set_var("SOZO_PROFILE", profile.as_str());
+
+        let scarb_metadata = Metadata::load(manifest_path, profile.as_str(), args.offline)?;
 
         trace!(%scarb_metadata.runtime_manifest, "Configuration built successfully.");
 

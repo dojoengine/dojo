@@ -17,6 +17,9 @@ use super::options::starknet::StarknetOptions;
 use super::options::world::WorldOptions;
 use crate::utils;
 
+const LEGACY_SESSION_FILE_SUFFIX: &str = "-session.json";
+const MULTI_SESSION_FILE_INFIX: &str = "-session-";
+
 #[derive(Debug, Args)]
 pub struct SessionArgs {
     #[command(subcommand)]
@@ -141,15 +144,27 @@ async fn status_session(
     }
 
     let session_path = session_file_path(&credentials.account.id, chain_id);
+    let context_hash = controller::current_session_context_hash();
+    let session_variants =
+        chain_session_file_paths(&credentials.account.id, chain_id, Some(&context_hash))?;
+    let chain_variants = chain_session_file_paths(&credentials.account.id, chain_id, None)?;
     let session = slot::session::get(chain_id)?;
 
     if let Some(session) = session {
         ui.result("Session: active");
         ui.print(format!("Policies          : {}", session.session.proved_policies.len()));
         ui.print(format!("Expires at (unix) : {}", session.session.inner.expires_at));
+        ui.print(format!("Stored variants   : {}", session_variants.len()));
+        ui.print(format!("Chain variants    : {}", chain_variants.len()));
         ui.print(format!("Stored session    : {}", session_path.display()));
     } else {
         ui.warn("Session: not found for this network.");
+        if !session_variants.is_empty() {
+            ui.print(format!("Stored variants   : {}", session_variants.len()));
+        }
+        if !chain_variants.is_empty() {
+            ui.print(format!("Chain variants    : {}", chain_variants.len()));
+        }
         ui.print(format!("Expected path     : {}", session_path.display()));
     }
 
@@ -186,7 +201,7 @@ async fn discard_session(
                 let is_session = path
                     .file_name()
                     .and_then(|name| name.to_str())
-                    .is_some_and(|name| name.ends_with("-session.json"));
+                    .is_some_and(is_session_file_name);
 
                 if is_session {
                     fs::remove_file(&path)?;
@@ -203,14 +218,22 @@ async fn discard_session(
     let rpc_url = starknet.url(profile_config.env.as_ref())?;
     let chain_id = CartridgeJsonRpcProvider::new(rpc_url).chain_id().await?;
 
-    let session_path = session_file_path(&credentials.account.id, chain_id);
-    if session_path.exists() {
-        fs::remove_file(&session_path)?;
+    let context_hash = controller::current_session_context_hash();
+    let session_files =
+        chain_session_file_paths(&credentials.account.id, chain_id, Some(&context_hash))?;
+    if !session_files.is_empty() {
+        for path in &session_files {
+            fs::remove_file(path)?;
+            removed += 1;
+        }
         ui.result("Session discarded.");
-        ui.print(format!("Removed: {}", session_path.display()));
+        ui.print(format!("Removed {} file(s) for chain {chain_id:#x}.", removed));
     } else {
         ui.warn("No stored session found for this network.");
-        ui.print(format!("Expected path: {}", session_path.display()));
+        ui.print(format!(
+            "Expected path: {}",
+            session_file_path(&credentials.account.id, chain_id).display()
+        ));
     }
 
     Ok(())
@@ -243,16 +266,115 @@ fn session_file_path(username: &str, chain_id: starknet::core::types::Felt) -> P
     slot::utils::config_dir().join(username).join(format!("{chain_id:#x}-session.json"))
 }
 
+fn is_session_file_name(file_name: &str) -> bool {
+    file_name.ends_with(LEGACY_SESSION_FILE_SUFFIX)
+        || (file_name.contains(MULTI_SESSION_FILE_INFIX) && file_name.ends_with(".json"))
+}
+
+fn is_chain_session_file_name(file_name: &str, chain_id: starknet::core::types::Felt) -> bool {
+    let chain_prefix = format!("{chain_id:#x}");
+    if !file_name.starts_with(&chain_prefix) {
+        return false;
+    }
+
+    file_name == format!("{chain_prefix}{LEGACY_SESSION_FILE_SUFFIX}")
+        || (file_name.starts_with(&format!("{chain_prefix}{MULTI_SESSION_FILE_INFIX}"))
+            && file_name.ends_with(".json"))
+}
+
+fn is_chain_session_file_name_for_context(
+    file_name: &str,
+    chain_id: starknet::core::types::Felt,
+    context_hash: Option<&str>,
+) -> bool {
+    if !is_chain_session_file_name(file_name, chain_id) {
+        return false;
+    }
+
+    match context_hash {
+        Some(hash) => {
+            file_name == format!("{chain_id:#x}{LEGACY_SESSION_FILE_SUFFIX}")
+                || file_name.starts_with(&format!("{chain_id:#x}{MULTI_SESSION_FILE_INFIX}{hash}-"))
+        }
+        None => true,
+    }
+}
+
+fn chain_session_file_paths(
+    username: &str,
+    chain_id: starknet::core::types::Felt,
+    context_hash: Option<&str>,
+) -> Result<Vec<PathBuf>> {
+    let user_dir = slot::utils::config_dir().join(username);
+    if !user_dir.exists() {
+        return Ok(Vec::new());
+    }
+
+    let mut paths = Vec::new();
+    for entry in fs::read_dir(user_dir)? {
+        let path = entry?.path();
+        let is_chain_session =
+            path.file_name().and_then(|name| name.to_str()).is_some_and(|name| {
+                is_chain_session_file_name_for_context(name, chain_id, context_hash)
+            });
+        if is_chain_session {
+            paths.push(path);
+        }
+    }
+    Ok(paths)
+}
+
 #[cfg(test)]
 mod tests {
     use starknet::macros::felt;
 
-    use super::session_file_path;
+    use super::{
+        is_chain_session_file_name, is_chain_session_file_name_for_context, is_session_file_name,
+        session_file_path,
+    };
 
     #[test]
     fn session_file_path_contains_expected_suffix() {
         let path = session_file_path("my-user", felt!("0x534e5f5345504f4c4941"));
         let file = path.file_name().and_then(|name| name.to_str()).unwrap();
         assert!(file.ends_with("-session.json"));
+    }
+
+    #[test]
+    fn is_session_file_name_matches_legacy_and_multi_formats() {
+        assert!(is_session_file_name("0x1-session.json"));
+        assert!(is_session_file_name(
+            "0x1-session-0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef.json"
+        ));
+        assert!(!is_session_file_name("notes.json"));
+    }
+
+    #[test]
+    fn is_chain_session_file_name_filters_by_chain() {
+        let chain = felt!("0x534e5f5345504f4c4941");
+        assert!(is_chain_session_file_name("0x534e5f5345504f4c4941-session.json", chain));
+        assert!(is_chain_session_file_name("0x534e5f5345504f4c4941-session-deadbeef.json", chain));
+        assert!(!is_chain_session_file_name("0x123-session.json", chain));
+        assert!(!is_chain_session_file_name("0x534e5f5345504f4c4941-other.json", chain));
+    }
+
+    #[test]
+    fn is_chain_session_file_name_for_context_filters_context_hash() {
+        let chain = felt!("0x534e5f5345504f4c4941");
+        assert!(is_chain_session_file_name_for_context(
+            "0x534e5f5345504f4c4941-session-feedbeef-deadbeef.json",
+            chain,
+            Some("feedbeef")
+        ));
+        assert!(!is_chain_session_file_name_for_context(
+            "0x534e5f5345504f4c4941-session-cafebabe-deadbeef.json",
+            chain,
+            Some("feedbeef")
+        ));
+        assert!(is_chain_session_file_name_for_context(
+            "0x534e5f5345504f4c4941-session.json",
+            chain,
+            Some("feedbeef")
+        ));
     }
 }
