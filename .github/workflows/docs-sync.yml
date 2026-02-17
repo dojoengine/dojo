@@ -162,7 +162,7 @@ jobs:
 
             # Create PR
             if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-              gh pr create \
+              PR_URL=$(gh pr create \
                 --title "docs: Update documentation for dojo commit ${{ github.event.inputs.commit_sha }}" \
                 --body "This PR updates the documentation to reflect changes made in dojoengine/dojo commit ${{ github.event.inputs.commit_sha }}
 
@@ -171,10 +171,10 @@ jobs:
               - Files changed: ${{ steps.changed-files.outputs.changed_files }}
               - Trigger: Manual documentation sync
 
-              Please review the documentation changes to ensure they accurately reflect the dojo updates."
-              gh pr merge --auto --squash
+              Please review the documentation changes to ensure they accurately reflect the dojo updates.")
+              gh pr merge "$PR_URL" --auto --squash
             else
-              gh pr create \
+              PR_URL=$(gh pr create \
                 --title "docs: Update documentation for dojo PR #${{ github.event.pull_request.number }}" \
                 --body "This PR updates the documentation to reflect changes made in dojoengine/dojo#${{ github.event.pull_request.number }}
 
@@ -182,8 +182,8 @@ jobs:
               - Title: ${{ github.event.pull_request.title }}
               - Files changed: ${{ steps.changed-files.outputs.changed_files }}
 
-              Please review the documentation changes to ensure they accurately reflect the dojo updates."
-              gh pr merge --auto --squash
+              Please review the documentation changes to ensure they accurately reflect the dojo updates.")
+              gh pr merge "$PR_URL" --auto --squash
             fi
           else
             echo "No documentation changes were made by Claude"
