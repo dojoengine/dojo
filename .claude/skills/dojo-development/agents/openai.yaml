@@ -1,4 +1,0 @@
-interface:
-  display_name: "Dojo Development"
-  short_description: "Contributor workflow for dojoengine/dojo"
-  default_prompt: "Use $dojo-development to implement and validate changes in dojo."

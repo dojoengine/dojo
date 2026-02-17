@@ -1,9 +1,9 @@
 ---
-name: dojo-development
+name: dojo-contributing
 description: Contributor workflow for dojoengine/dojo. Use when implementing or reviewing changes in this repository, especially Rust workspace edits, Cairo fixture refreshes, and CI-parity formatting/lint/test checks.
 ---
 
-# Dojo Development
+# Dojo Contributing
 
 Use this skill to make scoped changes in `dojoengine/dojo` and validate them with repository-standard commands.
 

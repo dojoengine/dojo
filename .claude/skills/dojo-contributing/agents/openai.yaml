@@ -1,0 +1,4 @@
+interface:
+  display_name: "Dojo Contributing"
+  short_description: "Contributor workflow for dojoengine/dojo"
+  default_prompt: "Use $dojo-contributing to implement and validate changes in dojo."
