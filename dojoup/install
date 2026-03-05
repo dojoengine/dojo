@@ -16,7 +16,7 @@ fi
 echo "Installing Dojo toolchain with asdf..."
 
 # Install the asdf plugins
-PLUGINS=(sozo katana torii)
+PLUGINS=(sozo katana torii saya)
 for plugin in "${PLUGINS[@]}"; do
 
     # Install plugin from source
