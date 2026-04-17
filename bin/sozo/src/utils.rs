@@ -126,9 +126,8 @@ pub async fn get_world_diff_and_provider(
     match is_compatible_version(&spec_version, RPC_SPEC_VERSION) {
         Ok(true) => {}
         Ok(false) => ui.warn(format!(
-            "Starknet RPC version mismatch: node reports {spec_version}, sozo was built \
-             against {RPC_SPEC_VERSION}. Continuing anyway; operations may fail if RPC \
-             methods differ."
+            "Starknet RPC version mismatch: node reports {spec_version}, sozo was built against \
+             {RPC_SPEC_VERSION}. Continuing anyway; operations may fail if RPC methods differ."
         )),
         Err(e) => ui.warn(format!(
             "Could not parse Starknet RPC version '{spec_version}': {e}. Continuing."
