@@ -123,10 +123,16 @@ pub async fn get_world_diff_and_provider(
     let spec_version = provider.spec_version().await?;
     trace!(spec_version);
 
-    if !is_compatible_version(&spec_version, RPC_SPEC_VERSION)? {
-        return Err(anyhow!(
-            "Unsupported Starknet RPC version: {spec_version}, expected {RPC_SPEC_VERSION}.",
-        ));
+    match is_compatible_version(&spec_version, RPC_SPEC_VERSION) {
+        Ok(true) => {}
+        Ok(false) => ui.warn(format!(
+            "Starknet RPC version mismatch: node reports {spec_version}, sozo was built \
+             against {RPC_SPEC_VERSION}. Continuing anyway; operations may fail if RPC \
+             methods differ."
+        )),
+        Err(e) => ui.warn(format!(
+            "Could not parse Starknet RPC version '{spec_version}': {e}. Continuing."
+        )),
     }
 
     let chain_id = provider.chain_id().await?;
