@@ -120,17 +120,24 @@ pub async fn get_world_diff_and_provider(
     let provider = Arc::try_unwrap(provider).map_err(|_| anyhow!("Failed to unwrap Arc"))?;
     trace!(?provider, "Provider initialized.");
 
-    let spec_version = provider.spec_version().await?;
-    trace!(spec_version);
-
-    match is_compatible_version(&spec_version, RPC_SPEC_VERSION) {
-        Ok(true) => {}
-        Ok(false) => ui.warn(format!(
-            "Starknet RPC version mismatch: node reports {spec_version}, sozo was built against \
-             {RPC_SPEC_VERSION}. Continuing anyway; operations may fail if RPC methods differ."
-        )),
+    match provider.spec_version().await {
+        Ok(spec_version) => {
+            trace!(spec_version);
+            match is_compatible_version(&spec_version, RPC_SPEC_VERSION) {
+                Ok(true) => {}
+                Ok(false) => ui.warn(format!(
+                    "Starknet RPC version mismatch: node reports {spec_version}, sozo was built \
+                     against {RPC_SPEC_VERSION}. Continuing anyway; operations may fail if RPC \
+                     methods differ."
+                )),
+                Err(e) => ui.warn(format!(
+                    "Could not parse Starknet RPC version '{spec_version}': {e}. Continuing."
+                )),
+            }
+        }
         Err(e) => ui.warn(format!(
-            "Could not parse Starknet RPC version '{spec_version}': {e}. Continuing."
+            "Could not query Starknet RPC version: {e}. Continuing; operations may fail if RPC \
+             methods differ."
         )),
     }
 
