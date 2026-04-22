@@ -917,23 +917,18 @@ where
 
             let deployer = Deployer::new(&self.world.account, self.txn_config);
 
-            match deployer
+            // `deploy_via_udc_getcall` returns the UDC-derived contract
+            // address plus an Option<Call> — None means the contract is
+            // already deployed at that address and no call is needed.
+            let (_contract_address, call) = deployer
                 .deploy_via_udc_getcall(
                     contract.common.class_hash,
                     contract.salt,
                     &contract.encoded_constructor_data,
                     Felt::ZERO,
                 )
-                .await?
-            {
-                Some((_, call)) => deploy_call = Some(call),
-                None => {
-                    deploy_call = {
-                        // Already deployed, no need to deploy again.
-                        None
-                    }
-                }
-            }
+                .await?;
+            deploy_call = call;
 
             is_upgradeable = contract.is_upgradeable;
         }

@@ -35,14 +35,19 @@ where
         Self { account, txn_config }
     }
 
-    /// Get a Call for deploying a contract via the UDC.
+    /// Get the deterministic UDC-derived contract address along with the
+    /// Call required to deploy it (or `None` for the Call if the contract
+    /// is already deployed at that address).
+    ///
+    /// The address is always returned, even on the already-deployed path,
+    /// so callers don't have to re-derive it themselves.
     pub async fn deploy_via_udc_getcall(
         &self,
         class_hash: Felt,
         salt: Felt,
         constructor_calldata: &[Felt],
         deployer_address: Felt,
-    ) -> Result<Option<(Felt, Call)>, TransactionError<A::SignError>> {
+    ) -> Result<(Felt, Option<Call>), TransactionError<A::SignError>> {
         let udc_calldata = [
             vec![class_hash, salt, deployer_address, Felt::from(constructor_calldata.len())],
             constructor_calldata.to_vec(),
@@ -53,13 +58,13 @@ where
             get_contract_address(salt, class_hash, constructor_calldata, deployer_address);
 
         if is_deployed(contract_address, &self.account.provider()).await? {
-            return Ok(None);
+            return Ok((contract_address, None));
         }
 
-        Ok(Some((
+        Ok((
             contract_address,
-            Call { calldata: udc_calldata, selector: UDC_DEPLOY_SELECTOR, to: UDC_ADDRESS },
-        )))
+            Some(Call { calldata: udc_calldata, selector: UDC_DEPLOY_SELECTOR, to: UDC_ADDRESS }),
+        ))
     }
 
     /// Deploys a contract via the UDC.
@@ -70,12 +75,11 @@ where
         constructor_calldata: &[Felt],
         deployer_address: Felt,
     ) -> Result<(Felt, TransactionResult), TransactionError<A::SignError>> {
-        let (contract_address, call) = match self
+        let (contract_address, call) = self
             .deploy_via_udc_getcall(class_hash, salt, constructor_calldata, deployer_address)
-            .await?
-        {
-            Some(res) => res,
-            None => return Ok((Felt::ZERO, TransactionResult::Noop)),
+            .await?;
+        let Some(call) = call else {
+            return Ok((contract_address, TransactionResult::Noop));
         };
 
         let InvokeTransactionResult { transaction_hash } =
