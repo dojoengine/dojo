@@ -170,10 +170,8 @@ mod tests {
         assert!(call.is_some(), "expected deploy Call on the not-yet-deployed path");
 
         // Actually deploy it.
-        let (deployed_addr, _tx) = deployer
-            .deploy_via_udc(class_hash, salt, &calldata, deployer_address)
-            .await
-            .unwrap();
+        let (deployed_addr, _tx) =
+            deployer.deploy_via_udc(class_hash, salt, &calldata, deployer_address).await.unwrap();
         assert_eq!(deployed_addr, expected_address);
 
         // Second getcall with identical params: contract is already deployed
@@ -183,18 +181,13 @@ mod tests {
             .deploy_via_udc_getcall(class_hash, salt, &calldata, deployer_address)
             .await
             .unwrap();
-        assert_eq!(
-            addr, expected_address,
-            "address must be surfaced even when already deployed"
-        );
+        assert_eq!(addr, expected_address, "address must be surfaced even when already deployed");
         assert!(call.is_none(), "no deploy Call needed on the already-deployed path");
 
         // Second deploy_via_udc call: returns (real_address, Noop). Before
         // the fix this returned (Felt::ZERO, Noop).
-        let (addr, tx) = deployer
-            .deploy_via_udc(class_hash, salt, &calldata, deployer_address)
-            .await
-            .unwrap();
+        let (addr, tx) =
+            deployer.deploy_via_udc(class_hash, salt, &calldata, deployer_address).await.unwrap();
         assert_eq!(addr, expected_address);
         assert!(
             matches!(tx, TransactionResult::Noop),
