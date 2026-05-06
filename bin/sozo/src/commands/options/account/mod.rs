@@ -60,6 +60,12 @@ pub struct AccountOptions {
     #[arg(help = "Use legacy account (cairo0 account)")]
     #[arg(global = true)]
     pub legacy: bool,
+
+    #[arg(long = "account-block-id", value_name = "BLOCK_ID")]
+    #[arg(global = true)]
+    #[arg(help = "Block at which the account fetches its nonce and estimates fees. Accepts \
+                  'preconfirmed' (default), 'latest', a block number, or a block hash (0x...).")]
+    pub block_id: Option<String>,
 }
 
 impl AccountOptions {
@@ -147,9 +153,13 @@ impl AccountOptions {
         let mut account =
             SingleOwnerAccount::new(provider, signer, account_address, chain_id, encoding);
 
-        // Since now the block frequency is higher than before, using latest is
-        // totally fine. We keep it explicitely set here to easy toggle if necessary.
-        account.set_block_id(BlockId::Tag(BlockTag::Latest));
+        // `PreConfirmed` is already the starknet-rs default; we set it
+        // explicitly so the choice is visible and easy to override.
+        let block_id = match &self.block_id {
+            Some(s) => dojo_utils::parse_block_id(s.clone())?,
+            None => BlockId::Tag(BlockTag::PreConfirmed),
+        };
+        account.set_block_id(block_id);
         Ok(account)
     }
 
