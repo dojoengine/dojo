@@ -147,9 +147,10 @@ impl AccountOptions {
         let mut account =
             SingleOwnerAccount::new(provider, signer, account_address, chain_id, encoding);
 
-        // Since now the block frequency is higher than before, using latest is
-        // totally fine. We keep it explicitely set here to easy toggle if necessary.
-        account.set_block_id(BlockId::Tag(BlockTag::Latest));
+        // Use the pre-confirmed block so nonce lookups and fee estimation reflect
+        // the block the transaction will actually land in, rather than the
+        // already-mined latest block (whose gas prices may be stale).
+        account.set_block_id(BlockId::Tag(BlockTag::PreConfirmed));
         Ok(account)
     }
 
