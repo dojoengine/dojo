@@ -12,6 +12,10 @@ on:
 
 jobs:
   build-and-push:
+    # Only run for full Dojo releases (tags starting with `v`). Sozo-only releases
+    # use the `sozo/v*` tag format, which is invalid as a Docker image tag and is
+    # not what the devcontainer image represents.
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'release' && startsWith(github.event.release.tag_name, 'v'))
     runs-on: ubuntu-latest-4-cores
 
     env:
