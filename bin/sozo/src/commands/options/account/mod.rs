@@ -153,9 +153,8 @@ impl AccountOptions {
         let mut account =
             SingleOwnerAccount::new(provider, signer, account_address, chain_id, encoding);
 
-        // Default to the pre-confirmed block so nonce lookups and fee estimation
-        // reflect the block the transaction will actually land in, rather than the
-        // already-mined latest block (whose gas prices may be stale).
+        // `PreConfirmed` is already the starknet-rs default; we set it
+        // explicitly so the choice is visible and easy to override.
         let block_id = match &self.block_id {
             Some(s) => dojo_utils::parse_block_id(s.clone())?,
             None => BlockId::Tag(BlockTag::PreConfirmed),
