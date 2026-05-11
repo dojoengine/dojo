@@ -21,8 +21,8 @@ pub struct Member {
 }
 
 impl Member {
-    pub fn serialize(&self) -> Result<Vec<Felt>, PrimitiveError> {
-        self.ty.serialize()
+    pub fn serialize(&self, legacy_storage: bool) -> Result<Vec<Felt>, PrimitiveError> {
+        self.ty.serialize(legacy_storage)
     }
 }
 
@@ -139,52 +139,63 @@ impl Ty {
         }
     }
 
-    pub fn serialize(&self) -> Result<Vec<Felt>, PrimitiveError> {
+    pub fn serialize(&self, legacy_storage: bool) -> Result<Vec<Felt>, PrimitiveError> {
         let mut felts = vec![];
 
-        fn serialize_inner(ty: &Ty, felts: &mut Vec<Felt>) -> Result<(), PrimitiveError> {
+        fn serialize_inner(
+            ty: &Ty,
+            felts: &mut Vec<Felt>,
+            legacy_storage: bool,
+        ) -> Result<(), PrimitiveError> {
             match ty {
                 Ty::Primitive(c) => {
                     felts.extend(c.serialize()?);
                 }
                 Ty::Struct(s) => {
                     for child in &s.children {
-                        serialize_inner(&child.ty, felts)?;
+                        serialize_inner(&child.ty, felts, child.key || legacy_storage)?;
                     }
                 }
                 Ty::Enum(e) => {
-                    let option = e
-                        .option
-                        .map(|v| Ok(vec![Felt::from(v)]))
-                        .unwrap_or(Err(PrimitiveError::MissingFieldElement))?;
-                    felts.extend(option);
+                    if let Some(option) = e.option {
+                        // For new storage system, enum variant indices start from 1
+                        let mut serialized_option = Felt::from(option);
+                        if !legacy_storage {
+                            serialized_option += Felt::ONE;
+                        }
+                        felts.push(serialized_option);
 
-                    // TODO: we should increment `option` is the model does not use the legacy
-                    // storage system. But is this `serialize` function still
-                    // used ?
-
-                    for EnumOption { ty, .. } in &e.options {
-                        serialize_inner(ty, felts)?;
+                        // Only serialize the selected option
+                        if let Some(selected_option) = e.options.get(option as usize) {
+                            serialize_inner(&selected_option.ty, felts, legacy_storage)?;
+                        }
+                    } else {
+                        // For uninitialized enum in new storage system, use 0
+                        if !legacy_storage {
+                            felts.push(Felt::ZERO);
+                        } else {
+                            return Err(PrimitiveError::MissingFieldElement);
+                        }
                     }
                 }
                 Ty::Tuple(tys) => {
                     for ty in tys {
-                        serialize_inner(ty, felts)?;
+                        serialize_inner(ty, felts, legacy_storage)?;
                     }
                 }
                 Ty::Array(items_ty) => {
                     let _ = serialize_inner(
                         &Ty::Primitive(Primitive::U32(Some(items_ty.len().try_into().unwrap()))),
                         felts,
+                        legacy_storage,
                     );
                     for item_ty in items_ty {
-                        serialize_inner(item_ty, felts)?;
+                        serialize_inner(item_ty, felts, legacy_storage)?;
                     }
                 }
-                Ty::FixedSizeArray((items_ty, size)) => {
-                    let item_ty = &items_ty[0];
-                    for _ in 0..*size {
-                        serialize_inner(item_ty, felts)?;
+                Ty::FixedSizeArray((items_ty, _size)) => {
+                    for elem in items_ty {
+                        serialize_inner(elem, felts, legacy_storage)?;
                     }
                 }
                 Ty::ByteArray(bytes) => {
@@ -196,7 +207,7 @@ impl Ty {
             Ok(())
         }
 
-        serialize_inner(self, &mut felts)?;
+        serialize_inner(self, &mut felts, legacy_storage)?;
 
         Ok(felts)
     }
