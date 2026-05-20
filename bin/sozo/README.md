@@ -1,4 +1,4 @@
-# `dojoup`
+# `sozo`
 
 ```sh
 curl -L https://install.dojoengine.org | bash
