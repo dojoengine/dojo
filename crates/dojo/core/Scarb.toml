@@ -11,7 +11,7 @@ experimental-features = ["negative_impls"]
 re-export-cairo-plugins = ["dojo_cairo_macros"]
 
 [dependencies]
-starknet = "2.13"
+starknet = "2.15"
 dojo_cairo_macros = { path = "../macros", version = "1.8.0" }
 
 [lib]

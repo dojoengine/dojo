@@ -354,7 +354,7 @@ fn test_register_model_with_unregistered_namespace() {
 // and it's not the account that is calling the register_model function.
 #[test]
 #[should_panic(
-    expected: "Contract `0x5bb23c540d3ed4157ef96cbec40f5bd9c18ac499fe8271f4f93b0b4d4bad39d` does NOT have OWNER role on namespace `dojo`",
+    expected: "Contract `0x545d70eff535a99a145cf61a05ab9e0f6b808e831fb6a39b236925ffb7d69d3` does NOT have OWNER role on namespace `dojo`",
 )]
 fn test_register_model_through_malicious_contract() {
     let bob: ContractAddress = 0xb0b.try_into().unwrap();

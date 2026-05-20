@@ -10,7 +10,7 @@ dojo.workspace = true
 dojo_cairo_macros.workspace = true
 
 [dev-dependencies]
-cairo_test = "2.13"
+cairo_test = "2.15"
 dojo_cairo_test = { path = "../../../crates/dojo/dojo-cairo-test" }
 
 [lib]

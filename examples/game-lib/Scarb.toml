@@ -11,6 +11,6 @@ edition = "2024_07"
 license = "MIT"
 
 [workspace.dependencies]
-starknet = "2.13"
+starknet = "2.15"
 dojo = { path = "../../crates/dojo/core/" }
 dojo_cairo_macros = { path = "../../crates/dojo/macros" }

@@ -5,15 +5,15 @@ version = "1.8.0"
 edition = "2024_07"
 
 [dependencies]
-starknet = "2.13"
+starknet = "2.15"
 
 dojo = { path = "../core" }
 dojo_cairo_macros = { path = "../macros" }
 dojo_snf_test = { path = "../dojo-snf-test" }
 
 [dev-dependencies]
-snforge_std = "0.51"
-assert_macros = "2.13"
+snforge_std = "0.55"
+assert_macros = "2.15"
 
 [[target.starknet-contract]]
 build-external-contracts = ["dojo::world::world_contract::world"]

@@ -246,7 +246,7 @@ pub mod actions {
             let config: PlayerConfig = world.read_model(player);
 
             world.erase_model(@position);
-            // world.erase_model(@moves);
+            world.erase_model(@moves);
             world.erase_model(@config);
         }
 

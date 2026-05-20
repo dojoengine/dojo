@@ -12,10 +12,10 @@ build-external-contracts = ["dojo::world::world_contract::world"]
 [dependencies]
 dojo = { path = "../../crates/dojo/core" }
 dojo_cairo_macros = { path = "../../crates/dojo/macros" }
-starknet = "2.13"
+starknet = "2.15"
 
 [dev-dependencies]
-cairo_test = "2.13"
+cairo_test = "2.15"
 dojo_cairo_test = { path = "../../crates/dojo/dojo-cairo-test" }
 
 [features]
