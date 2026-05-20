@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use clap::{Args, ValueEnum};
 use dojo_utils::env::DOJO_ACCOUNT_ADDRESS_ENV_VAR;
 use dojo_world::config::Environment;
@@ -46,11 +46,11 @@ pub struct AccountOptions {
     pub katana_account: Option<KatanaAccount>,
 
     #[arg(global = true)]
-    #[arg(long = "slot.controller")]
+    #[arg(long = "session")]
     #[arg(help_heading = "Controller options")]
-    #[arg(help = "Use Slot's Controller account")]
+    #[arg(help = "Use Cartridge Controller session account")]
     #[cfg(feature = "controller")]
-    pub controller: bool,
+    pub session: bool,
 
     #[command(flatten)]
     #[command(next_help_heading = "Signer options")]
@@ -91,7 +91,7 @@ impl AccountOptions {
         P: Send + Sync,
     {
         #[cfg(feature = "controller")]
-        if self.controller {
+        if self.session {
             let url = starknet.url(env_metadata)?;
             let cartridge_provider = CartridgeJsonRpcProvider::new(url.clone());
             let account = self.controller(url, cartridge_provider.clone(), contracts).await?;
@@ -230,6 +230,13 @@ mod tests {
             cmd.account.account_address(Some(&env_metadata)).unwrap(),
             Felt::from_hex("0x0").unwrap()
         );
+    }
+
+    #[cfg(feature = "controller")]
+    #[test]
+    fn controller_session_flag_is_parsed() {
+        let cmd = Command::parse_from(["sozo", "--session"]);
+        assert!(cmd.account.session);
     }
 
     #[test]

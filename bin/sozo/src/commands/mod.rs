@@ -11,6 +11,8 @@ pub(crate) mod bindgen;
 pub(crate) mod build;
 pub(crate) mod call;
 pub(crate) mod clean;
+#[cfg(feature = "controller")]
+pub(crate) mod controller;
 pub(crate) mod declare;
 pub(crate) mod deploy;
 pub(crate) mod events;
@@ -24,6 +26,8 @@ pub(crate) mod mcp;
 pub(crate) mod migrate;
 pub(crate) mod model;
 pub(crate) mod options;
+#[cfg(feature = "controller")]
+pub(crate) mod session;
 pub(crate) mod starknet;
 pub(crate) mod test;
 pub(crate) mod version;
@@ -33,6 +37,8 @@ use bindgen::BindgenArgs;
 use build::BuildArgs;
 use call::CallArgs;
 use clean::CleanArgs;
+#[cfg(feature = "controller")]
+use controller::ControllerArgs;
 use declare::DeclareArgs;
 use deploy::DeployArgs;
 use events::EventsArgs;
@@ -86,6 +92,9 @@ pub enum Commands {
     Migrate(Box<MigrateArgs>),
     #[command(about = "Inspect a model")]
     Model(Box<ModelArgs>),
+    #[cfg(feature = "controller")]
+    #[command(about = "Controller utility commands")]
+    Controller(Box<ControllerArgs>),
     #[command(about = "Runs cairo tests")]
     Test(Box<TestArgs>),
     #[command(about = "Print version")]
@@ -118,6 +127,8 @@ impl fmt::Display for Commands {
             Commands::Inspect(_) => write!(f, "Inspect"),
             Commands::Migrate(_) => write!(f, "Migrate"),
             Commands::Model(_) => write!(f, "Model"),
+            #[cfg(feature = "controller")]
+            Commands::Controller(_) => write!(f, "Controller"),
             Commands::Test(_) => write!(f, "Test"),
             Commands::Version(_) => write!(f, "Version"),
             Commands::Mcp(_) => write!(f, "Mcp"),
@@ -150,6 +161,8 @@ pub async fn run(command: Commands, scarb_metadata: &Metadata, ui: &SozoUi) -> R
         Commands::Mcp(args) => args.run(scarb_metadata).await,
         Commands::Migrate(args) => args.run(scarb_metadata, ui).await,
         Commands::Model(args) => args.run(scarb_metadata, ui).await,
+        #[cfg(feature = "controller")]
+        Commands::Controller(args) => args.run(scarb_metadata, ui).await,
         Commands::Test(args) => args.run(scarb_metadata),
         Commands::Version(args) => args.run(scarb_metadata),
         #[cfg(feature = "walnut")]
